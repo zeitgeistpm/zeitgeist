@@ -37,8 +37,8 @@ const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
 const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
 const COURT_REQUIRED_STORAGE_VERSION: u16 = 1;
 const COURT_NEXT_STORAGE_VERSION: u16 = 2;
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 3;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 4;
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
 const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
 
@@ -200,7 +200,7 @@ where
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
         // Check that no saturation occurs.
-        for (market_id, market) in MarketCommonsPallet::<T>::market_iter().drain() {
+        for (market_id, market) in MarketCommonsPallet::<T>::market_iter() {
             if let MarketType::Scalar(range) = market.market_type {
                 assert!(
                     range.end().checked_mul(BASE).is_some(),
@@ -215,7 +215,7 @@ where
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        for (market_id, market) in MarketCommonsPallet::<T>::market_iter().drain() {
+        for (market_id, market) in MarketCommonsPallet::<T>::market_iter() {
             if let MarketType::Scalar(range) = market.market_type {
                 assert_ne!(
                     range.start(),

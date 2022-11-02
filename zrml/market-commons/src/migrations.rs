@@ -34,8 +34,8 @@ use zeitgeist_primitives::types::{
 };
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 3_u16;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 4_u16;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2_u16;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3_u16;
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct LegacyMarket<AI, BN, M> {
@@ -152,13 +152,18 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
             assert_eq!(updated_market.creator_fee, legacy_market.creator_fee);
             assert_eq!(updated_market.oracle, legacy_market.oracle);
             assert_eq!(updated_market.metadata, legacy_market.metadata);
-            assert_eq!(updated_market.market_type, legacy_market.market_type);
+            match legacy_market.market_type {
+                MarketType::Categorical(_) => {
+                    assert_eq!(updated_market.market_type, legacy_market.market_type);
+                    assert_eq!(updated_market.report, legacy_market.report);
+                    assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
+                }
+                _ => (),
+            };
             assert_eq!(updated_market.period, legacy_market.period);
             assert_eq!(updated_market.deadlines, legacy_market.deadlines);
             assert_eq!(updated_market.scoring_rule, legacy_market.scoring_rule);
             assert_eq!(updated_market.status, legacy_market.status);
-            assert_eq!(updated_market.report, legacy_market.report);
-            assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
             let dispute_mechanism = match legacy_market.dispute_mechanism {
                 LegacyMarketDisputeMechanism::Authorized(_) => MarketDisputeMechanism::Authorized,
                 LegacyMarketDisputeMechanism::Court => MarketDisputeMechanism::Court,
