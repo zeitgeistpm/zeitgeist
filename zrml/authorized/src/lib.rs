@@ -65,6 +65,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        // TODO update benchmark
         /// Overwrites already provided outcomes for the same market and account.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::authorize_market_outcome())]
@@ -95,10 +96,44 @@ mod pallet {
 
             Ok(())
         }
+
+        // TODO update benchmark
+        /// In case, that the authority did not report in time,
+        /// the market will resolve to the report of the oracle.
+        #[frame_support::transactional]
+        #[pallet::weight(5000)]
+        pub fn resolve_to_oracle_report(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
+            ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
+            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+                ensure!(
+                    !AuthorizedOutcomeReports::<T>::contains_key(market_id),
+                    Error::<T>::AuthorityReportPresent
+                );
+                let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+                let now = frame_system::Pallet::<T>::block_number();
+                ensure!(
+                    report.at.saturating_add(T::AuthorityReportPeriod::get()) < now,
+                    Error::<T>::TimeLeftForAuthority
+                );
+                T::DisputeResolution::resolve(&market_id, &market)?;
+                Ok(())
+            } else {
+                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
+            }
+        }
     }
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The period in which the authority has to report.
+        #[pallet::constant]
+        type AuthorityReportPeriod: Get<Self::BlockNumber>;
+
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -139,6 +174,12 @@ mod pallet {
         OutcomeMismatch,
         /// The authority already made its report.
         AuthorityAlreadyReported,
+        /// The authority has still time left to authorize an outcome.
+        TimeLeftForAuthority,
+        /// The market should be reported at this point.
+        MarketIsNotReported,
+        /// The authority has reported in time.
+        AuthorityReportPresent,
     }
 
     #[pallet::event]

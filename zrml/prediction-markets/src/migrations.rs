@@ -80,7 +80,7 @@ where
             storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
         {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-            
+
             if let Some(outcome) = old_value {
                 let resolve_at: Option<T::BlockNumber> = None;
                 let new_value = AuthorityReport { resolve_at, outcome };

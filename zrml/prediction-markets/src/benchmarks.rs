@@ -765,7 +765,6 @@ benchmarks! {
 
     dispute_authorized {
         let d in 0..(T::MaxDisputes::get() - 1);
-        let b in 0..63;
 
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
         let (caller, market_id) = create_close_and_report_market::<T>(
@@ -791,14 +790,6 @@ benchmarks! {
             let disputor = account("disputor", i, 0);
             T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
-
-        let now = frame_system::Pallet::<T>::block_number();
-        for i in 0..b {
-            MarketIdsPerDisputeBlock::<T>::try_mutate(
-                now,
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
         }
 
         let dispute_outcome = OutcomeReport::Scalar((d + 1).into());
