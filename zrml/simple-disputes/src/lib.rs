@@ -112,9 +112,12 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) {
-            Self::get_auto_resolve(disputes, market).map(|dispute_duration_ends_at_block| {
-                T::DisputeResolution::remove_auto_resolve(market_id, dispute_duration_ends_at_block)
-            });
+            if let Some(dispute_duration_ends_at_block) = Self::get_auto_resolve(disputes, market) {
+                T::DisputeResolution::remove_auto_resolve(
+                    market_id,
+                    dispute_duration_ends_at_block,
+                );
+            }
         }
     }
 

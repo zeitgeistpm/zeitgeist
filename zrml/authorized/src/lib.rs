@@ -134,6 +134,8 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// The authority already made its report.
+        AuthorityAlreadyReported,
         /// An unauthorized account attempts to submit a report.
         NotAuthorizedForThisMarket,
         /// The market unexpectedly has the incorrect dispute mechanism.
@@ -142,8 +144,6 @@ mod pallet {
         MarketIsNotDisputed,
         /// The report does not match the market's type.
         OutcomeMismatch,
-        /// The authority already made its report.
-        AuthorityAlreadyReported,
         /// The market should be reported at this point.
         MarketIsNotReported,
     }
@@ -169,9 +169,9 @@ mod pallet {
         }
 
         fn remove_auto_resolve(market_id: &MarketIdOf<T>) {
-            Self::get_auto_resolve(market_id).map(|resolve_at| {
-                T::DisputeResolution::remove_auto_resolve(&market_id, resolve_at);
-            });
+            if let Some(resolve_at) = Self::get_auto_resolve(market_id) {
+                T::DisputeResolution::remove_auto_resolve(market_id, resolve_at);
+            }
         }
     }
 
@@ -248,7 +248,6 @@ mod pallet {
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
 
-    // TODO storage migration from OutcomeReport to AuthorityReport
     /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]

@@ -15,9 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{CacheSize, Config, Disputes, Pallet};
+use crate::{CacheSize, Config, Disputes, MarketIdOf, Pallet};
 use alloc::{vec, vec::Vec};
-use sp_runtime::traits::One;
 use frame_support::{
     dispatch::Weight,
     log,
@@ -26,8 +25,8 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec,
 };
-use sp_runtime::traits::Saturating;
 use parity_scale_codec::EncodeLike;
+use sp_runtime::traits::{One, Saturating};
 use zeitgeist_primitives::{
     constants::BASE,
     types::{AuthorityReport, MarketDisputeMechanism, MarketType, OutcomeReport},
@@ -122,13 +121,14 @@ where
 pub struct UpdateMarketIdsPerDisputeBlock<T>(PhantomData<T>);
 
 // Delete the auto resolution of authorized and court from `MarketIdsPerDisputeBlock`
-impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade for UpdateMarketIdsPerDisputeBlock<T>
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade
+    for UpdateMarketIdsPerDisputeBlock<T>
 where
     <T as zrml_market_commons::Config>::MarketId:
         EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
     <T as zrml_market_commons::Config>::MarketId: EncodeLike<
         <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
-    >
+    >,
 {
     fn on_runtime_upgrade() -> Weight
     where
@@ -148,17 +148,17 @@ where
 
         let mut new_storage_map = Vec::new();
         let mut authorized_ids = Vec::new();
-        for (key, mut bounded_vec) in storage_iter::<
-            BoundedVec<<<T as crate::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId, CacheSize>,
-        >(PREDICTION_MARKETS, MARKET_IDS_PER_DISPUTE_BLOCK)
-        {
+        for (key, mut bounded_vec) in storage_iter::<BoundedVec<MarketIdOf<T>, CacheSize>>(
+            PREDICTION_MARKETS,
+            MARKET_IDS_PER_DISPUTE_BLOCK,
+        ) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             bounded_vec.retain(|id| {
-                if let Ok(market) = MarketCommonsPallet::<T>::market(id) {
+                if let Ok(market) = <T as crate::Config>::MarketCommons::market(id) {
                     match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized(_) => {
-                            authorized_ids.push(id);
+                            authorized_ids.push(*id);
                             false
                         }
                         MarketDisputeMechanism::Court => false,
@@ -174,7 +174,7 @@ where
         }
 
         for (key, new_bounded_vec) in new_storage_map {
-            put_storage_value::<BoundedVec<<<T as crate::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId, CacheSize>>(
+            put_storage_value::<BoundedVec<MarketIdOf<T>, CacheSize>>(
                 PREDICTION_MARKETS,
                 MARKET_IDS_PER_DISPUTE_BLOCK,
                 &key,
@@ -196,7 +196,7 @@ where
                 total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             }
             // is_full check above to ensure, that we can force_push
-            ids.force_push(*id);
+            ids.force_push(id);
             crate::MarketIdsPerDisputeBlock::<T>::insert(resolve_at, ids);
 
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -529,7 +529,7 @@ mod tests {
                 BoundedVec::try_from(vec![dispute.clone()]).unwrap(),
             );
 
-            let report = AuthorityReport { resolve_at: None, outcome: OutcomeReport::Scalar(19) };
+            let report = AuthorityReport { resolve_at: 42, outcome: OutcomeReport::Scalar(19) };
             AuthorizedOutcomeReports::<Runtime>::insert(market_id, report);
 
             let juror = 20;
@@ -588,7 +588,7 @@ mod tests {
                 BoundedVec::try_from(vec![dispute.clone()]).unwrap(),
             );
 
-            let report = AuthorityReport { resolve_at: None, outcome: OutcomeReport::Scalar(19) };
+            let report = AuthorityReport { resolve_at: 42, outcome: OutcomeReport::Scalar(19) };
             AuthorizedOutcomeReports::<Runtime>::insert(market_id, report);
 
             let juror = 20;

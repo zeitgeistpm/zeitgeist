@@ -499,27 +499,22 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+            ensure_signed(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(
-                market.status == MarketStatus::Disputed,
-                Error::<T>::InvalidMarketStatus
-            );
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             let disputes = Disputes::<T>::get(market_id);
             let is_fail = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized(_) => {
                     T::Authorized::is_fail(&disputes, &market_id, &market)?
                 }
-                MarketDisputeMechanism::Court => {
-                    T::Court::is_fail(&disputes, &market_id, &market)?
-                }
+                MarketDisputeMechanism::Court => T::Court::is_fail(&disputes, &market_id, &market)?,
                 MarketDisputeMechanism::SimpleDisputes => {
                     T::SimpleDisputes::is_fail(&disputes, &market_id, &market)?
                 }
             };
             ensure!(is_fail, Error::<T>::DisputeMechanismNotFailed);
 
-            Self::on_resolution(&market_id, &market);
+            Self::on_resolution(&market_id, &market)?;
 
             Self::deposit_event(Event::DisputeMechanismFailed(market_id));
 
@@ -1737,8 +1732,6 @@ mod pallet {
     #[pallet::storage]
     pub type LastTimeFrame<T: Config> = StorageValue<_, TimeFrame>;
 
-    // TODO storage migration: delete Court and Authorized markets from here,
-    // TODO simple disputes is okay as it is
     /// A mapping of market identifiers to the block they were disputed at.
     /// A market only ends up here if it was disputed.
     #[pallet::storage]
@@ -1905,13 +1898,13 @@ mod pallet {
                     let disputes = Disputes::<T>::get(market_id);
                     let auto_resolve_block_opt = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized(_) => {
-                            T::Authorized::get_auto_resolve(&disputes, &market_id, &market)?
+                            T::Authorized::get_auto_resolve(&disputes, market_id, &market)?
                         }
                         MarketDisputeMechanism::Court => {
-                            T::Court::get_auto_resolve(&disputes, &market_id, &market)?
+                            T::Court::get_auto_resolve(&disputes, market_id, &market)?
                         }
                         MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::get_auto_resolve(&disputes, &market_id, &market)?
+                            T::SimpleDisputes::get_auto_resolve(&disputes, market_id, &market)?
                         }
                     };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {

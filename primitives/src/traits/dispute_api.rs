@@ -52,14 +52,24 @@ pub trait DisputeApi {
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 
-    // TODO doc comment
+    /// Query the future resolution block of a disputed market.
+    /// Fails if the market dispute mechanism does not belong to the actual dispute mechanism.
+    ///
+    /// # Returns
+    ///
+    /// Returns the future resolution block if available, otherwise `None`.
     fn get_auto_resolve(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 
-    // TODO doc comment
+    /// Query if the dispute mechanism failed for a dispute market.
+    /// Fails if the market dispute mechanism does not belong to the actual dispute mechanism.
+    ///
+    /// # Returns
+    ///
+    /// Returns true, when the dispute mechanism failed. Otherwise false.
     fn is_fail(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
@@ -86,12 +96,17 @@ pub trait DisputeResolutionApi {
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<u64, DispatchError>;
 
-    // TODO doc comment
+    /// Add a future block resolution of a disputed market.
+    /// Fails in case of a storage overflow.
+    ///
+    /// # Returns
+    ///
+    /// Returns Ok if the market id was added succesfully.
     fn add_auto_resolve(
         market_id: &Self::MarketId,
         resolution: Self::BlockNumber,
     ) -> DispatchResult;
 
-    // TODO doc comment
+    /// Remove a future block resolution of a disputed market.
     fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber);
 }
