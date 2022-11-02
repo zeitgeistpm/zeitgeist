@@ -112,6 +112,7 @@ pub type Trader = (
     // In case the asset in question is the native currency, it will charge
     // the default base fee per second and deposits them into treasury
     FixedRateOfFungible<ZtgPerSecond, ToTreasury>,
+    FixedRateOfFungible<ZtgPerSecondCanonical, ToTreasury>,
     // For all other assets the base fee per second will tried to be derived
     // through the `fee_factor` entry in the asset registry. If the asset is
     // not present in the asset registry, the default base fee per second is used.
@@ -128,12 +129,12 @@ impl TakeRevenue for ToTreasury {
         use xcm_executor::traits::Convert;
 
         if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue.clone() {
+
             if let Ok(asset_id) =
                 <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location.clone())
             {
                 let _ = AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
             } else {
-                // TODO this is wrong, use target as second parameter
                 let _ = UnknownTokens::deposit(&revenue, &location);
             }
         }
@@ -142,11 +143,19 @@ impl TakeRevenue for ToTreasury {
 
 parameter_types! {
     pub CheckAccount: AccountId = PolkadotXcm::check_account();
-    /// The amount of ZTG charged per second of execution.
-    pub ZtgPerSecond: (AssetId, u128) = (
+    /// The amount of ZTG charged per second of execution (canonical multilocation).
+    pub ZtgPerSecondCanonical: (AssetId, u128) = (
         MultiLocation::new(
             0,
             X1(general_key(zeitgeist::KEY)),
+        ).into(),
+        native_per_second(),
+    );
+    /// The amount of canonical ZTG charged per second of execution.
+    pub ZtgPerSecond: (AssetId, u128) = (
+        MultiLocation::new(
+            1,
+            X2(Junction::Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
     );
