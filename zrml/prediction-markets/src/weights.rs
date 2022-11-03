@@ -59,7 +59,7 @@ pub trait WeightInfoZeitgeist {
     fn edit_market(m: u32) -> Weight;
     fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32) -> Weight;
     fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight;
-    fn dispute_authorized(d: u32, b: u32) -> Weight;
+    fn dispute_authorized(d: u32) -> Weight;
     fn handle_expired_advised_market() -> Weight;
     fn internal_resolve_categorical_reported() -> Weight;
     fn internal_resolve_categorical_disputed(d: u32) -> Weight;
@@ -290,10 +290,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
-    fn dispute_authorized(_d: u32, b: u32) -> Weight {
+    fn dispute_authorized(_d: u32) -> Weight {
         (77_511_000 as Weight)
-            // Standard Error: 3_000
-            .saturating_add((95_000 as Weight).saturating_mul(b as Weight))
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }

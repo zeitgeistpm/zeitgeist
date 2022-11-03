@@ -435,10 +435,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized(
-            T::MaxDisputes::get(),
-            CacheSize::get()
-        ))]
+        #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get()))]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -484,7 +481,7 @@ mod pallet {
                 market_dispute,
             ));
             // TODO(#782): add court benchmark
-            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
+            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes))).into())
         }
 
         /// Resolve the market, when the dispute mechanism failed.
