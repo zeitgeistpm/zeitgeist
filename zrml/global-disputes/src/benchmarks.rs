@@ -96,12 +96,15 @@ benchmarks! {
         <Winners<T>>::insert(market_id, winner_info);
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone(), amount)
     verify {
-        assert_last_event::<T>(Event::VotedOnOutcome::<T> {
-            market_id,
-            voter: caller,
-            outcome,
-            vote_amount: amount,
-        }.into());
+        assert_last_event::<T>(
+            Event::VotedOnOutcome::<T> {
+                market_id,
+                voter: caller,
+                outcome,
+                vote_amount: amount,
+            }
+            .into(),
+        );
     }
 
     unlock_vote_balance_set {
