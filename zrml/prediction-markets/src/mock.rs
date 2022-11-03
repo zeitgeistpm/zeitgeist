@@ -305,7 +305,7 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBondMaximum = ();
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SpendFunds = ();
-    type SpendOrigin = NeverEnsureOrigin<u128>;
+    type SpendOrigin = NeverEnsureOrigin<Balance>;
     type SpendPeriod = ();
     type WeightInfo = ();
 }

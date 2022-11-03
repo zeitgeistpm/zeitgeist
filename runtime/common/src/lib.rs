@@ -826,7 +826,7 @@ macro_rules! impl_config_traits {
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
-            type SpendOrigin = NeverEnsureOrigin<u128>;
+            type SpendOrigin = NeverEnsureOrigin<Balance>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
         }
