@@ -181,6 +181,8 @@ mod pallet {
         GlobalDisputeAlreadyFinished,
         /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
+        /// The maximum amount of owners is reached.
+        MaxOwnersReached,
         /// No global dispute present at the moment.
         NoGlobalDisputeStarted,
         /// The voting outcome has been already added.
@@ -611,17 +613,13 @@ mod pallet {
             match <Outcomes<T>>::get(market_id, &outcome) {
                 Some(mut outcome_info) => {
                     let outcome_sum = outcome_info.outcome_sum.saturating_add(initial_vote_balance);
-                    Self::update_winner(market_id, &outcome, outcome_sum);
                     outcome_info.outcome_sum = outcome_sum;
-                    if outcome_info.owners.try_push(owner.clone()).is_ok() {
-                        <Outcomes<T>>::insert(market_id, outcome, outcome_info);
-                    } else {
-                        log::warn!(
-                            "Global Disputes: The voting outcome was not added.  This happens \
-                             because there are too many voting outcome owners (length is {:?}).",
-                            &outcome_info.owners.len()
-                        );
-                    }
+                    outcome_info
+                        .owners
+                        .try_push(owner.clone())
+                        .map_err(|_| Error::<T>::MaxOwnersReached)?;
+                    Self::update_winner(market_id, &outcome, outcome_sum);
+                    <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                 }
                 None => {
                     // adding one item to BoundedVec can not fail
