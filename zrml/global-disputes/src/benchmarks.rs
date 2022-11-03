@@ -139,7 +139,7 @@ benchmarks! {
     }: {
         <Pallet<T>>::unlock_vote_balance(
             RawOrigin::Signed(caller.clone()).into(),
-            voter_lookup
+            voter_lookup,
         )
         .unwrap();
     } verify {
