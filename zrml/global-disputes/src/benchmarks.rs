@@ -181,7 +181,7 @@ benchmarks! {
     }: {
         <Pallet<T>>::unlock_vote_balance(
             RawOrigin::Signed(caller.clone()).into(),
-            voter_lookup
+            voter_lookup,
         )
         .unwrap();
     } verify {
@@ -208,7 +208,7 @@ benchmarks! {
         let winner_info = WinnerInfo {
             outcome: OutcomeReport::Scalar(0),
             is_finished: false,
-            outcome_info
+            outcome_info,
         };
 
         let caller: T::AccountId = whitelisted_caller();
@@ -274,11 +274,13 @@ benchmarks! {
         .unwrap();
     } verify {
         assert!(winner_info.outcome_info.owners.len() == o as usize);
-        assert_last_event::<T>(Event::OutcomeOwnersRewarded::<T> {
-            market_id,
-            owners: owners_vec,
-        }
-        .into());
+        assert_last_event::<T>(
+            Event::OutcomeOwnersRewarded::<T> {
+                market_id,
+                owners: owners_vec,
+            }
+            .into(),
+        );
         assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
     }
 
@@ -313,12 +315,10 @@ benchmarks! {
 
         deposit::<T>(&caller);
     }: {
-        <Pallet<T>>::reward_outcome_owner(RawOrigin::Signed(caller.clone()).into(), market_id).unwrap();
+        <Pallet<T>>::reward_outcome_owner(RawOrigin::Signed(caller.clone()).into(), market_id)
+            .unwrap();
     } verify {
-        assert_last_event::<T>(Event::NonReward::<T> {
-            market_id,
-        }
-        .into());
+        assert_last_event::<T>(Event::NonReward::<T> { market_id }.into());
     }
 
     purge_outcomes {
@@ -335,7 +335,7 @@ benchmarks! {
                 &market_id,
                 OutcomeReport::Scalar(i.into()),
                 &owner,
-                1_000_000_000u128.saturated_into()
+                1_000_000_000u128.saturated_into(),
             )
             .unwrap();
         }
@@ -369,10 +369,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller.clone()), market_id)
     verify {
         assert!(<Outcomes<T>>::iter_prefix(market_id).next().is_none());
-        assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> {
-            market_id,
-        }
-        .into());
+        assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> { market_id }.into());
     }
 }
 

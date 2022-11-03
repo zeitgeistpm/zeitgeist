@@ -705,7 +705,7 @@ benchmarks! {
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
-            OutcomeReport::Scalar(u128::MAX)
+            OutcomeReport::Scalar(u128::MAX),
         )?;
 
         // first element is the market id from above

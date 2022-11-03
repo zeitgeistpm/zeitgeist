@@ -43,17 +43,13 @@ fn the_lock(amount: u128) -> BalanceLock<u128> {
 fn add_vote_outcome_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let init_global_dispute = || {
-            // This starts the global dispute.
-            GlobalDisputes::push_voting_outcome(
-                &market_id,
-                OutcomeReport::Scalar(0),
-                &ALICE,
-                10 * BASE,
-            )
-            .unwrap();
-        };
-        init_global_dispute();
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(0),
+            &ALICE,
+            10 * BASE,
+        )
+        .unwrap();
         let free_balance_alice_before = Balances::free_balance(&ALICE);
         let free_balance_reward_account =
             Balances::free_balance(GlobalDisputes::reward_account(&market_id));
@@ -119,17 +115,13 @@ fn add_vote_outcome_fails_if_global_dispute_finished() {
 fn add_vote_outcome_fails_if_outcome_already_exists() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let init_global_dispute = || {
-            // This starts the global dispute.
-            GlobalDisputes::push_voting_outcome(
-                &market_id,
-                OutcomeReport::Scalar(0),
-                &ALICE,
-                10 * BASE,
-            )
-            .unwrap();
-        };
-        init_global_dispute();
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(0),
+            &ALICE,
+            10 * BASE,
+        )
+        .unwrap();
         <Outcomes<Runtime>>::insert(
             market_id,
             OutcomeReport::Scalar(20),
@@ -150,17 +142,13 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
 fn add_vote_outcome_fails_if_balance_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let init_global_dispute = || {
-            // This starts the global dispute.
-            GlobalDisputes::push_voting_outcome(
-                &market_id,
-                OutcomeReport::Scalar(0),
-                &ALICE,
-                10 * BASE,
-            )
-            .unwrap();
-        };
-        init_global_dispute();
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(0),
+            &ALICE,
+            10 * BASE,
+        )
+        .unwrap();
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
                 Origin::signed(POOR_PAUL),
