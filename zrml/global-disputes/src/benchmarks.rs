@@ -127,10 +127,8 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let voter: T::AccountId = account("voter", 0, 0);
         let voter_lookup = T::Lookup::unlookup(voter.clone());
-        let mut vote_locks: BoundedVec<(
-            MarketIdOf<T>,
-            BalanceOf<T>
-        ), T::MaxGlobalDisputeVotes> = Default::default();
+        let mut vote_locks: BoundedVec<(MarketIdOf<T>, BalanceOf<T>), T::MaxGlobalDisputeVotes> =
+            Default::default();
         for i in 0..l {
             let market_id: MarketIdOf<T> = i.saturated_into();
             let locked_balance: BalanceOf<T> = i.saturated_into();
