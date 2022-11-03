@@ -72,7 +72,7 @@ benchmarks! {
                 &market_id,
                 outcome.clone(),
                 &owner,
-                1_000_000_000u128.saturated_into()
+                1_000_000_000u128.saturated_into(),
             )
             .unwrap();
         }
