@@ -798,6 +798,77 @@ benchmarks! {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
 
+    resolve_failed_mdm_authorized_scalar {
+        let d in 1..T::MaxDisputes::get();
+
+        let report_outcome = OutcomeReport::Scalar(u128::MAX);
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            report_outcome,
+        )?;
+
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
+
+        let market = T::MarketCommons::market(&market_id)?;
+        if let MarketType::Scalar(range) = market.market_type {
+            assert!((d as u128) < *range.end());
+        } else {
+            panic!("Must create scalar market");
+        }
+        for i in 1..=d {
+            let outcome = OutcomeReport::Scalar(i.into());
+            let disputor = account("disputor", i, 0);
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+        }
+
+        let call = Call::<T>::resolve_failed_mdm { market_id };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+    } verify {
+        assert_last_event::<T>(Event::DisputeMechanismFailed::<T>(market_id).into());
+    }
+
+    resolve_failed_mdm_authorized_categorical {
+        let d in 1..T::MaxDisputes::get();
+
+        let categories = T::MaxCategories::get();
+        let (caller, market_id) =
+            setup_reported_categorical_market_with_pool::<T>(
+                categories.into(),
+                OutcomeReport::Categorical(0u16)
+            )?;
+
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
+
+        for i in 1..=d {
+            let outcome = OutcomeReport::Categorical((i % 2).saturated_into::<u16>());
+            let disputor = account("disputor", i, 0);
+            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
+            T::AssetManager::deposit(
+                Asset::Ztg,
+                &disputor,
+                dispute_bond,
+            )?;
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+        }
+
+        let call = Call::<T>::resolve_failed_mdm { market_id };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+    } verify {
+        assert_last_event::<T>(Event::DisputeMechanismFailed::<T>(market_id).into());
+    }
+
     handle_expired_advised_market {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
