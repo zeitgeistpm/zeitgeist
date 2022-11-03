@@ -2979,7 +2979,12 @@ fn authorized_correctly_resolves_disputed_market() {
         );
         assert_eq!(market_ids_3.len(), 1);
 
-        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get() - 1);
+
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Disputed);
+
+        run_blocks(1);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
