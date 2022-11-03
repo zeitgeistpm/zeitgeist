@@ -2280,7 +2280,10 @@ fn start_global_dispute_works_without_feature() {
         let non_market_id = 0;
 
         #[cfg(not(feature = "with-global-disputes"))]
-        assert_ok!(PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), non_market_id));
+        assert_noop!(
+            PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), non_market_id),
+            Error::<Runtime>::GlobalDisputesDisabled
+        );
 
         #[cfg(feature = "with-global-disputes")]
         assert_noop!(

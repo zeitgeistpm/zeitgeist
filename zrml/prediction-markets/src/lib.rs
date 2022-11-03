@@ -1184,9 +1184,6 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            #[allow(dead_code, unused)]
-            let mut weight: Weight = T::WeightInfo::start_global_dispute(CacheSize::get());
-
             #[cfg(feature = "with-global-disputes")]
             {
                 let market = T::MarketCommons::market(&market_id)?;
@@ -1244,10 +1241,10 @@ mod pallet {
 
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-                weight = T::WeightInfo::start_global_dispute(market_ids_len);
+                return Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into());
             }
 
-            Ok(Some(weight).into())
+            Err(Error::<T>::GlobalDisputesDisabled.into())
         }
     }
 
@@ -1442,6 +1439,8 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
+        /// The global dispute resolution system is disabled.
+        GlobalDisputesDisabled,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
