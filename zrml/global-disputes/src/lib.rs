@@ -343,9 +343,6 @@ mod pallet {
             let reward_account = Self::reward_account(&market_id);
             let reward_account_free_balance = T::Currency::free_balance(&reward_account);
             let owners_len = winner_info.outcome_info.owners.len() as u32;
-            let at_least_one_owner_str =
-                "Global Disputes: There should be always at least one owner for a voting outcome.";
-            debug_assert!(owners_len != 0u32, "{}", at_least_one_owner_str);
 
             if reward_account_free_balance.is_zero() {
                 Self::deposit_event(Event::NonReward { market_id });
@@ -376,7 +373,10 @@ mod pallet {
                     );
                 }
             } else {
-                log::error!("{}", at_least_one_owner_str);
+                log::error!(
+                    "Global Disputes: There should be always at least one owner for a voting \
+                     outcome."
+                );
                 debug_assert!(false);
             }
 
