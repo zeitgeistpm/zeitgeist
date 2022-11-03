@@ -321,7 +321,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::reward_outcome_owner_no_funds(T::MaxOwners::get()).max(
                 T::WeightInfo::reward_outcome_owner_with_funds(T::MaxOwners::get()),
-            ),
+            )
         )]
         pub fn reward_outcome_owner(
             origin: OriginFor<T>,
@@ -505,7 +505,7 @@ mod pallet {
             .max(T::WeightInfo::unlock_vote_balance_remove(
                 T::MaxGlobalDisputeVotes::get(),
                 T::MaxOwners::get(),
-            )),
+            ))
         )]
         pub fn unlock_vote_balance(
             origin: OriginFor<T>,

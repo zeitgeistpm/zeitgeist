@@ -1,5 +1,3 @@
-//! Global Disputes pallet benchmarking.
-
 // Copyright 2022 Forecasting Technologies LTD.
 // Copyright 2022 Zeitgeist PM LLC.
 //
@@ -17,6 +15,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+//! Global Disputes pallet benchmarking.
 
 #![allow(
     // Auto-generated code is a no man's land

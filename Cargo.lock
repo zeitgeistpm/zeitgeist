@@ -12713,7 +12713,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
