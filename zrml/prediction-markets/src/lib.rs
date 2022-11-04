@@ -1297,7 +1297,7 @@ mod pallet {
 
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-                return Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into());
+                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into())
             }
 
             #[cfg(not(feature = "with-global-disputes"))]

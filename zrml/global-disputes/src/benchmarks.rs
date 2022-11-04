@@ -318,7 +318,7 @@ benchmarks! {
         <Pallet<T>>::reward_outcome_owner(RawOrigin::Signed(caller.clone()).into(), market_id)
             .unwrap();
     } verify {
-        assert_last_event::<T>(Event::NonReward::<T> { market_id }.into());
+        assert_last_event::<T>(Event::OutcomeOwnersRewardedWithNoFunds::<T> { market_id }.into());
     }
 
     purge_outcomes {

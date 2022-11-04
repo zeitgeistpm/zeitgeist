@@ -46,7 +46,6 @@ use zeitgeist_primitives::{
 use zrml_market_commons::MarketCommonsPalletApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
-use sp_runtime::traits::{One, Zero};
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
