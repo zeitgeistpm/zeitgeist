@@ -244,6 +244,37 @@ fn reward_outcome_owner_works_for_multiple_owners() {
 }
 
 #[test]
+fn reward_outcome_owner_has_dust() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        <Outcomes<Runtime>>::insert(
+            market_id,
+            OutcomeReport::Scalar(20),
+            OutcomeInfo {
+                outcome_sum: Zero::zero(),
+                owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE, EVE, POOR_PAUL, DAVE])
+                    .unwrap(),
+            },
+        );
+        let _ = Balances::deposit_creating(&GlobalDisputes::reward_account(&market_id), 100 * BASE);
+        let winner_info = WinnerInfo {
+            outcome: OutcomeReport::Scalar(20),
+            is_finished: true,
+            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
+        };
+        <Winners<Runtime>>::insert(market_id, winner_info);
+
+        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+
+        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
+
+        // 100 * BASE = 1_000_000_000_000 checked_div 6 = 166_666_666_666
+        // 166_666_666_666 * 6 = 999_999_999_996 so 4 left
+        assert_eq!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)), 4);
+    });
+}
+
+#[test]
 fn reward_outcome_owner_works_for_one_owner() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
