@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{Config, Pallet};
-use alloc::{string::ToString, vec::Vec};
+use alloc::vec::Vec;
 use frame_support::{
     log,
     migration::{put_storage_value, storage_iter},
