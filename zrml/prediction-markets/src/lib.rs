@@ -83,7 +83,13 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+    >;
     pub type CacheSize = ConstU32<64>;
+    pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
 
     #[pallet::call]
@@ -134,6 +140,7 @@ mod pallet {
             };
             if market_status == MarketStatus::Proposed {
                 slash_market_creator(T::AdvisoryBond::get());
+                MarketIdsForEdit::<T>::remove(market_id);
             }
             if market_status != MarketStatus::Resolved
                 && market_status != MarketStatus::InsufficientSubsidy
@@ -327,6 +334,10 @@ mod pallet {
 
             T::MarketCommons::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+                ensure!(
+                    !MarketIdsForEdit::<T>::contains_key(market_id),
+                    Error::<T>::MarketEditRequestAlreadyInProgress
+                );
 
                 match m.scoring_rule {
                     ScoringRule::CPMM => {
@@ -352,6 +363,46 @@ mod pallet {
             // The ApproveOrigin should not pay fees for providing this service
             Ok((Some(T::WeightInfo::approve_market().saturating_add(extra_weight)), Pays::No)
                 .into())
+        }
+
+        /// Request an edit to a proposed market.
+        ///
+        /// Can only be called by the `RequestEditOrigin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market to edit.
+        /// * `edit_reason`: An short record of what needs to be changed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(edit_reason.len())`
+        #[pallet::weight((
+            T::WeightInfo::request_edit(edit_reason.len() as u32),
+            Pays::No,
+        ))]
+        #[transactional]
+        pub fn request_edit(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            edit_reason: Vec<u8>,
+        ) -> DispatchResult {
+            T::RequestEditOrigin::ensure_origin(origin)?;
+            let edit_reason: EditReason<T> = edit_reason
+                .try_into()
+                .map_err(|_| Error::<T>::EditReasonLengthExceedsMaxEditReasonLen)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+            MarketIdsForEdit::<T>::try_mutate(market_id, |reason| {
+                if reason.is_some() {
+                    Err(Error::<T>::MarketEditRequestAlreadyInProgress)
+                } else {
+                    *reason = Some(edit_reason.clone());
+                    Ok(())
+                }
+            })?;
+            Self::deposit_event(Event::MarketRequestedEdit(market_id, edit_reason));
+            Ok(())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -548,52 +599,23 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
-            Self::ensure_market_period_is_valid(&period)?;
-            ensure!(
-                deadlines.oracle_duration >= T::MinOracleDuration::get(),
-                Error::<T>::OracleDurationSmallerThanMinOracleDuration
-            );
-            ensure!(
-                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
-                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
-            );
-            ensure!(
-                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
-                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
-            );
-            ensure!(
-                deadlines.grace_period <= T::MaxGracePeriod::get(),
-                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
-            );
-            ensure!(
-                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
-                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
-            );
 
-            match market_type {
-                MarketType::Categorical(categories) => {
-                    ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-                    ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
-                }
-                MarketType::Scalar(ref outcome_range) => {
-                    ensure!(
-                        outcome_range.start() < outcome_range.end(),
-                        <Error<T>>::InvalidOutcomeRange
-                    );
-                }
-            }
-            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(&period)?;
-            }
+            let market = Self::construct_market(
+                sender.clone(),
+                0_u8,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                creation.clone(),
+                market_type,
+                dispute_mechanism,
+                scoring_rule,
+                None,
+                None,
+            )?;
 
-            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
-            // for a compiler error. Link an issue for this!
-            #[allow(irrefutable_let_patterns)]
-            let multihash =
-                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
-            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
-
-            let status: MarketStatus = match creation {
+            match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
@@ -602,11 +624,6 @@ mod pallet {
                         &sender,
                         required_bond,
                     )?;
-
-                    match scoring_rule {
-                        ScoringRule::CPMM => MarketStatus::Active,
-                        ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
-                    }
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
@@ -616,25 +633,9 @@ mod pallet {
                         &sender,
                         required_bond,
                     )?;
-                    MarketStatus::Proposed
                 }
-            };
+            }
 
-            let market = Market {
-                creation,
-                creator_fee: 0,
-                creator: sender,
-                market_type,
-                dispute_mechanism,
-                metadata: Vec::from(multihash),
-                oracle,
-                period: period.clone(),
-                deadlines,
-                report: None,
-                resolved_outcome: None,
-                status,
-                scoring_rule,
-            };
             let market_id = T::MarketCommons::push_market(market.clone())?;
             let market_account = Self::market_account(market_id);
             let mut extra_weight = 0;
@@ -643,26 +644,81 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            let ids_amount: u32 = match period {
-                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
-                    range.end,
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?,
-                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                    Self::calculate_time_frame_of_moment(range.end),
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?,
-            };
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
             Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
+        }
+
+        /// Edit a proposed market for which request is made.
+        ///
+        /// Edit can only be made by the creator of the market.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market to edit.
+        /// * `oracle`: Oracle to edit market.
+        /// * `period`: MarketPeriod to edit market.
+        /// * `deadlines`: Deadlines to edit market.
+        /// * `metadata`: MultiHash metadata to edit market.
+        /// * `market_type`: MarketType to edit market.
+        /// * `dispute_mechanism`: MarketDisputeMechanism to edit market.
+        /// * `scoring_rule`: ScoringRule to edit market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of markets
+        /// which end at the same time as the market before the edit.
+        #[pallet::weight(T::WeightInfo::edit_market(CacheSize::get()))]
+        #[transactional]
+        pub fn edit_market(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            market_type: MarketType,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            scoring_rule: ScoringRule,
+        ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                MarketIdsForEdit::<T>::contains_key(market_id),
+                Error::<T>::MarketEditNotRequested
+            );
+            let old_market = T::MarketCommons::market(&market_id)?;
+            ensure!(old_market.creator == sender, Error::<T>::EditorNotCreator);
+            ensure!(old_market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
+
+            Self::clear_auto_close(&market_id)?;
+            let edited_market = Self::construct_market(
+                old_market.creator,
+                old_market.creator_fee,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                old_market.creation,
+                market_type,
+                dispute_mechanism,
+                scoring_rule,
+                old_market.report,
+                old_market.resolved_outcome,
+            )?;
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                *market = edited_market.clone();
+                Ok(())
+            })?;
+
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
+
+            MarketIdsForEdit::<T>::remove(market_id);
+            Self::deposit_event(Event::MarketEdited(market_id, edited_market));
+
+            Ok(Some(T::WeightInfo::edit_market(ids_amount)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
@@ -1390,6 +1446,10 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
+        /// The maximum number of bytes allowed as edit reason.
+        #[pallet::constant]
+        type MaxEditReasonLen: Get<u32>;
+
         /// The module identifier.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
@@ -1406,6 +1466,9 @@ mod pallet {
         /// The number of blocks the reporting period remains open.
         #[pallet::constant]
         type ReportingPeriod: Get<Self::BlockNumber>;
+
+        /// The origin that is allowed to request edits in pending advised markets.
+        type RequestEditOrigin: EnsureOrigin<Self::Origin>;
 
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
@@ -1440,6 +1503,10 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
+        /// Only creator is able to edit the market.
+        EditorNotCreator,
+        /// EditReason's length greater than MaxEditReasonLen.
+        EditReasonLengthExceedsMaxEditReasonLen,
         /// The global dispute resolution system is disabled.
         GlobalDisputesDisabled,
         /// Market account does not have enough funds to pay out.
@@ -1456,6 +1523,10 @@ mod pallet {
         NotEnoughBalance,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// Market edit request is already in progress.
+        MarketEditRequestAlreadyInProgress,
+        /// Market is not requested for edit.
+        MarketEditNotRequested,
         /// Market was expected to be active.
         MarketIsNotActive,
         /// Market was expected to be closed.
@@ -1534,12 +1605,8 @@ mod pallet {
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
-        /// A market has been created \[market_id, market_account, creator\]
-        MarketCreated(
-            MarketIdOf<T>,
-            T::AccountId,
-            Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ),
+        /// A market has been created \[market_id, market_account, market\]
+        MarketCreated(MarketIdOf<T>, T::AccountId, MarketOf<T>),
         /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
@@ -1559,6 +1626,10 @@ mod pallet {
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
+        /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
+        MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
+        /// A proposed market has been edited by the market creator \[market_id\]
+        MarketEdited(MarketIdOf<T>, MarketOf<T>),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// An amount of winning outcomes have been redeemed
@@ -1771,10 +1842,16 @@ mod pallet {
         ValueQuery,
     >;
 
+    /// Contains market_ids for which advisor has requested edit.
+    /// Value for given market_id represents the reason for the edit.
+    #[pallet::storage]
+    pub type MarketIdsForEdit<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
+
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Vec<Asset<MarketIdOf<T>>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
@@ -1796,6 +1873,27 @@ mod pallet {
         #[inline]
         pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating(market_id.saturated_into::<u128>())
+        }
+
+        fn insert_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
+            let market = T::MarketCommons::market(market_id)?;
+
+            match market.period {
+                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
+                    range.end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                ),
+                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    Self::calculate_time_frame_of_moment(range.end),
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                ),
+            }
         }
 
         // Manually remove market from cache for auto close.
@@ -1926,7 +2024,7 @@ mod pallet {
 
         pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: MarketOf<T>,
             reject_reason: RejectReason<T>,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
@@ -1948,6 +2046,7 @@ mod pallet {
                 T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
+            MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketRejected(*market_id, reject_reason));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
             Ok(())
@@ -1955,7 +2054,7 @@ mod pallet {
 
         pub(crate) fn handle_expired_advised_market(
             market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
@@ -1972,6 +2071,7 @@ mod pallet {
                 T::OracleBond::get(),
             );
             T::MarketCommons::remove_market(market_id)?;
+            MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
             Ok(T::WeightInfo::handle_expired_advised_market())
         }
@@ -1980,10 +2080,7 @@ mod pallet {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
         }
 
-        fn calculate_internal_resolve_weight(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            total_disputes: u32,
-        ) -> Weight {
+        fn calculate_internal_resolve_weight(market: &MarketOf<T>, total_disputes: u32) -> Weight {
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market.status {
                     T::WeightInfo::internal_resolve_categorical_reported()
@@ -2017,9 +2114,7 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_market_is_active(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> DispatchResult {
+        fn ensure_market_is_active(market: &MarketOf<T>) -> DispatchResult {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             Ok(())
         }
@@ -2057,10 +2152,53 @@ mod pallet {
             Ok(())
         }
 
-        // Check that the market has reached the end of its period.
-        fn ensure_market_is_closed(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        fn ensure_market_deadlines_are_valid(
+            deadlines: &Deadlines<T::BlockNumber>,
         ) -> DispatchResult {
+            ensure!(
+                deadlines.oracle_duration >= T::MinOracleDuration::get(),
+                Error::<T>::OracleDurationSmallerThanMinOracleDuration
+            );
+            ensure!(
+                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
+            );
+            ensure!(
+                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
+            );
+            ensure!(
+                deadlines.grace_period <= T::MaxGracePeriod::get(),
+                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
+            );
+            ensure!(
+                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
+                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
+            );
+            Ok(())
+        }
+
+        fn ensure_market_type_is_valid(market_type: &MarketType) -> DispatchResult {
+            match market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(
+                        *categories >= T::MinCategories::get(),
+                        <Error<T>>::NotEnoughCategories
+                    );
+                    ensure!(*categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+                }
+                MarketType::Scalar(ref outcome_range) => {
+                    ensure!(
+                        outcome_range.start() < outcome_range.end(),
+                        <Error<T>>::InvalidOutcomeRange
+                    );
+                }
+            }
+            Ok(())
+        }
+
+        // Check that the market has reached the end of its period.
+        fn ensure_market_is_closed(market: &MarketOf<T>) -> DispatchResult {
             ensure!(market.status == MarketStatus::Closed, Error::<T>::MarketIsNotClosed);
             Ok(())
         }
@@ -2122,7 +2260,7 @@ mod pallet {
         /// Handle market state transitions at the end of its active phase.
         fn on_market_close(
             market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             match market.status {
                 MarketStatus::Active => Self::close_market(market_id),
@@ -2133,7 +2271,7 @@ mod pallet {
 
         pub fn on_resolution(
             market_id: &MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
                 T::AssetManager::unreserve_named(
@@ -2489,10 +2627,7 @@ mod pallet {
             mut mutation: F,
         ) -> Result<Weight, DispatchError>
         where
-            F: FnMut(
-                &MarketIdOf<T>,
-                Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
+            F: FnMut(&MarketIdOf<T>, MarketOf<T>) -> DispatchResult,
             MarketIdsPerBlock: frame_support::StorageMap<
                 T::BlockNumber,
                 BoundedVec<MarketIdOf<T>, CacheSize>,
@@ -2534,10 +2669,7 @@ mod pallet {
             mut cb: F,
         ) -> Result<Weight, DispatchError>
         where
-            F: FnMut(
-                &MarketIdOf<T>,
-                &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
+            F: FnMut(&MarketIdOf<T>, &MarketOf<T>) -> DispatchResult,
         {
             // Resolve all regularly reported markets.
             let market_ids_per_report_block = MarketIdsPerReportBlock::<T>::get(now);
@@ -2565,7 +2697,7 @@ mod pallet {
 
         // If the market is already disputed, does nothing.
         fn set_market_as_disputed(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             market_id: &MarketIdOf<T>,
         ) -> DispatchResult {
             if market.status != MarketStatus::Disputed {
@@ -2580,7 +2712,7 @@ mod pallet {
         // If a market has a pool that is `Active`, then changes from `Active` to `Clean`. If
         // the market does not exist or the market does not have a pool, does nothing.
         fn clean_up_pool(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
         ) -> Result<Weight, DispatchError> {
@@ -2602,7 +2734,7 @@ mod pallet {
         // Creates a pool for the market and registers the market in the list of markets
         // currently collecting subsidy.
         pub(crate) fn start_subsidy(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             market_id: MarketIdOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(
@@ -2639,7 +2771,7 @@ mod pallet {
 
         fn validate_dispute(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             num_disputes: u32,
             outcome_report: &OutcomeReport,
         ) -> DispatchResult {
@@ -2648,6 +2780,53 @@ mod pallet {
             Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome_report)?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
+        }
+
+        fn construct_market(
+            creator: T::AccountId,
+            creator_fee: u8,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            creation: MarketCreation,
+            market_type: MarketType,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            scoring_rule: ScoringRule,
+            report: Option<Report<T::AccountId, T::BlockNumber>>,
+            resolved_outcome: Option<OutcomeReport>,
+        ) -> Result<MarketOf<T>, DispatchError> {
+            let MultiHash::Sha3_384(multihash) = metadata;
+            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
+            Self::ensure_market_period_is_valid(&period)?;
+            Self::ensure_market_deadlines_are_valid(&deadlines)?;
+            Self::ensure_market_type_is_valid(&market_type)?;
+
+            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                Self::ensure_market_start_is_in_time(&period)?;
+            }
+            let status: MarketStatus = match creation {
+                MarketCreation::Permissionless => match scoring_rule {
+                    ScoringRule::CPMM => MarketStatus::Active,
+                    ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
+                },
+                MarketCreation::Advised => MarketStatus::Proposed,
+            };
+            Ok(Market {
+                creation,
+                creator_fee,
+                creator,
+                market_type,
+                dispute_mechanism,
+                metadata: Vec::from(multihash),
+                oracle,
+                period,
+                deadlines,
+                report,
+                resolved_outcome,
+                status,
+                scoring_rule,
+            })
         }
     }
 

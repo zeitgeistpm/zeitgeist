@@ -58,6 +58,7 @@ parameter_types! {
     pub const MaxDisputeDuration: BlockNumber = 5;
     pub const MaxGracePeriod: BlockNumber = 2;
     pub const MaxOracleDuration: BlockNumber = 3;
+    pub const MaxEditReasonLen: u32 = 1024;
     pub const MaxRejectReasonLen: u32 = 1024;
 }
 

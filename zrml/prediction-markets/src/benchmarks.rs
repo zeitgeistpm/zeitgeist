@@ -33,7 +33,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::Swaps,
@@ -273,10 +273,10 @@ benchmarks! {
 
         let disputes = Disputes::<T>::get(market_id);
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -328,9 +328,10 @@ benchmarks! {
         }
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -388,9 +389,10 @@ benchmarks! {
         let market = T::MarketCommons::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -424,9 +426,10 @@ benchmarks! {
         let market = T::MarketCommons::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -480,10 +483,10 @@ benchmarks! {
         let disputes = Disputes::<T>::get(market_id);
 
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -529,12 +532,12 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
-
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let market = T::MarketCommons::market(&market_id)?;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -561,6 +564,20 @@ benchmarks! {
 
         let approve_origin = T::ApproveOrigin::successful_origin();
         let call = Call::<T>::approve_market { market_id };
+    }: { call.dispatch_bypass_filter(approve_origin)? }
+
+    request_edit {
+        let r in 0..<T as Config>::MaxEditReasonLen::get();
+        let (_, market_id) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            None,
+        )?;
+
+        let approve_origin = T::ApproveOrigin::successful_origin();
+        let edit_reason = vec![0_u8; r as usize];
+        let call = Call::<T>::request_edit{ market_id, edit_reason };
     }: { call.dispatch_bypass_filter(approve_origin)? }
 
     buy_complete_set {
@@ -599,7 +616,61 @@ benchmarks! {
             metadata,
             creation,
             MarketType::Categorical(T::MaxCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+    )
+
+    edit_market {
+        let m in 0..63;
+
+        let market_type = MarketType::Categorical(T::MaxCategories::get());
+        let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        let scoring_rule = ScoringRule::CPMM;
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let period = MarketPeriod::Timestamp(range_start..range_end);
+        let (caller, oracle, deadlines, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Advised)?;
+        Call::<T>::create_market {
+            oracle: oracle.clone(),
+            period: period.clone(),
+            deadlines,
+            metadata: metadata.clone(),
+            creation,
+            market_type: market_type.clone(),
+            dispute_mechanism: dispute_mechanism.clone(),
+            scoring_rule,
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let market_id = T::MarketCommons::latest_market_id()?;
+
+        let approve_origin = T::ApproveOrigin::successful_origin();
+        let edit_reason = vec![0_u8; 1024];
+        Call::<T>::request_edit{ market_id, edit_reason }
+        .dispatch_bypass_filter(approve_origin)?;
+
+        for i in 0..m {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+        let new_deadlines = Deadlines::<T::BlockNumber> {
+            grace_period: 2_u32.into(),
+            oracle_duration: T::MinOracleDuration::get(),
+            dispute_duration: T::MinDisputeDuration::get(),
+        };
+    }: _(
+            RawOrigin::Signed(caller),
+            market_id,
+            oracle,
+            period,
+            new_deadlines,
+            metadata,
+            market_type,
+            dispute_mechanism,
+            scoring_rule
+    )
 
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -767,9 +838,10 @@ benchmarks! {
         }
 
         let now = frame_system::Pallet::<T>::block_number();
+        let resolves_at = now.saturating_add(market.deadlines.dispute_duration);
         for i in 0..b {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                now,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -995,9 +1067,10 @@ benchmarks! {
         let grace_period: u32 =
             (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
         pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
-        let current_block = frame_system::Pallet::<T>::block_number();
+        let report_at = frame_system::Pallet::<T>::block_number();
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..m {
-            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
+            MarketIdsPerReportBlock::<T>::try_mutate(resolves_at, |ids| {
                 ids.try_push(i.into())
             }).unwrap();
         }

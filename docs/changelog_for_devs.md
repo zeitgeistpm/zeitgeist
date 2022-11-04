@@ -27,6 +27,15 @@
   `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
   above parameter. `MarketRejected` event also contains `reject_reason` so that
   it can be cached for market creator.
+- `request_edit` extrinsic added, which enables a user satisfying
+  `RequestEditOrigin` to request edit in market with `Proposed` state, when
+  successful it emits `MarketRequestedEdit` event. `request_edit` requires
+  `edit_reason` parameter which is `Vec<u8>`. The config constant
+  `MaxEditReasonLen` defines maximum length of above parameter. The
+  `MarketRequestedEdit` event also contains `edit_reason`.
+- `edit_market` extrinsic added, which enables creator of the market to edit
+  market. It has same parameters as `create_market` except market_creation, on
+  success it returns `MarketEdited` event.
 
 # v0.3.6
 
