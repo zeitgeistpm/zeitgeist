@@ -146,6 +146,7 @@ parachain = [
     "log",
 ]
 runtime-benchmarks = [
+    "cumulus-pallet-parachain-system?/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
@@ -175,6 +176,7 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm?/runtime-benchmarks",
     "pallet-parachain-staking?/runtime-benchmarks",
+    "session-keys-primitives?/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder?/runtime-benchmarks",
     "zrml-authorized/runtime-benchmarks",

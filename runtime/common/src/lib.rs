@@ -36,7 +36,7 @@
 //     along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod weights;
@@ -1224,6 +1224,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
                             add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
+
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
                         }
