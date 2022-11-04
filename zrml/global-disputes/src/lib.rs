@@ -157,7 +157,7 @@ mod pallet {
         /// The winner of the global dispute system is determined.
         GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
         /// No funds could be spent as reward to the outcome owner(s).
-        NonReward { market_id: MarketIdOf<T> },
+        OutcomeOwnersRewardedWithNoFunds { market_id: MarketIdOf<T> },
         /// The outcome owner has been rewarded.
         OutcomeOwnersRewarded { market_id: MarketIdOf<T>, owners: Vec<AccountIdOf<T>> },
         /// The outcomes storage item is partially cleaned.
@@ -343,7 +343,7 @@ mod pallet {
             let owners_len = winner_info.outcome_info.owners.len() as u32;
 
             if reward_account_free_balance.is_zero() {
-                Self::deposit_event(Event::NonReward { market_id });
+                Self::deposit_event(Event::OutcomeOwnersRewardedWithNoFunds { market_id });
                 // return early case if there is no reward
                 return Ok((Some(T::WeightInfo::reward_outcome_owner_no_funds(owners_len))).into());
             }
