@@ -426,7 +426,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "cfg-if 1.0.0",
  "common-runtime",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "common-runtime"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "cfg-if 1.0.0",
  "cumulus-pallet-xcmp-queue",
@@ -12464,7 +12464,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "battery-station-runtime",
  "cfg-if 1.0.0",
@@ -12548,7 +12548,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -12566,7 +12566,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "cfg-if 1.0.0",
  "common-runtime",
@@ -12674,7 +12674,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12691,7 +12691,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "arrayvec 0.7.2",
  "frame-benchmarking",
@@ -12711,7 +12711,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12729,7 +12729,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -12745,7 +12745,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook-v1"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12774,7 +12774,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12821,7 +12821,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -12830,7 +12830,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "arbitrary",
  "cfg-if 1.0.0",
@@ -12863,7 +12863,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12880,7 +12880,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12896,7 +12896,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12938,7 +12938,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -12951,7 +12951,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
