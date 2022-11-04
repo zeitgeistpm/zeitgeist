@@ -804,7 +804,14 @@ benchmarks! {
         // the complexity depends on MarketIdsPerDisputeBlock at the current block
         // this is because a variable number of market ids need to be decoded from the storage
         MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
-    }: _(RawOrigin::Signed(caller), market_id)
+
+        let call = Call::<T>::start_global_dispute { market_id };
+    }: {
+        #[cfg(feature = "with-global-disputes")]
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+        #[cfg(not(feature = "with-global-disputes"))]
+        let _ = call.dispatch_bypass_filter(RawOrigin::Signed(caller).into());
+    }
 
     dispute_authorized {
         let d in 0..(T::MaxDisputes::get() - 1);
