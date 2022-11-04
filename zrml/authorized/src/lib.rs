@@ -58,10 +58,11 @@ mod pallet {
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+        <<T as Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+        <<T as Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type MomentOf<T> =
+        <<T as Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -75,7 +76,7 @@ mod pallet {
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = T::MarketCommonsAuthorized::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
             if let MarketDisputeMechanism::Authorized(ref account_id) = market.dispute_mechanism {
@@ -119,7 +120,7 @@ mod pallet {
         >;
 
         /// Market commons
-        type MarketCommons: MarketCommonsPalletApi<
+        type MarketCommonsAuthorized: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
         >;

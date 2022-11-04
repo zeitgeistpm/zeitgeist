@@ -57,7 +57,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
     for AddFieldToAuthorityReport<T>
 where
     <T as zrml_market_commons::Config>::MarketId: EncodeLike<
-        <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+        <<T as zrml_authorized::Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::MarketId,
     >,
 {
     fn on_runtime_upgrade() -> Weight
@@ -84,8 +84,8 @@ where
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             if let Some(outcome) = old_value {
-                let resolve_at: T::BlockNumber =
-                    now.saturating_add(T::AuthorityReportPeriod::get());
+                let resolve_at: T::BlockNumber = now
+                    .saturating_add(<T as zrml_authorized::Config>::AuthorityReportPeriod::get());
                 let new_value = AuthorityReport { resolve_at, outcome };
                 new_storage_map.push((key, new_value));
             }
@@ -127,7 +127,7 @@ where
     <T as zrml_market_commons::Config>::MarketId:
         EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
     <T as zrml_market_commons::Config>::MarketId: EncodeLike<
-        <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+        <<T as zrml_authorized::Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::MarketId,
     >,
 {
     fn on_runtime_upgrade() -> Weight
@@ -229,7 +229,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config + zrml_co
     OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T>
 where
     <T as zrml_market_commons::Config>::MarketId: EncodeLike<
-        <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+        <<T as zrml_authorized::Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::MarketId,
     >,
     <T as zrml_market_commons::Config>::MarketId:
         EncodeLike<<<T as zrml_court::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,

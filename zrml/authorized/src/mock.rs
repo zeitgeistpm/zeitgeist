@@ -85,7 +85,7 @@ impl crate::Config for Runtime {
     type Event = ();
     type CorrectionPeriod = CorrectionPeriod;
     type DisputeResolution = NoopResolution;
-    type MarketCommons = MarketCommons;
+    type MarketCommonsAuthorized = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

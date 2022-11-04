@@ -60,6 +60,8 @@ pub trait WeightInfoZeitgeist {
     fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32) -> Weight;
     fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight;
     fn dispute_authorized(d: u32) -> Weight;
+    fn resolve_failed_mdm_authorized_scalar(d: u32) -> Weight;
+    fn resolve_failed_mdm_authorized_categorical(d: u32) -> Weight;
     fn handle_expired_advised_market() -> Weight;
     fn internal_resolve_categorical_reported() -> Weight;
     fn internal_resolve_categorical_disputed(d: u32) -> Weight;
@@ -294,6 +296,37 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         (77_511_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
+    }
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
+    // Storage: Balances Reserves (r:2 w:2)
+    // Storage: System Account (r:2 w:2)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    fn resolve_failed_mdm_authorized_scalar(d: u32) -> Weight {
+        (80_390_000 as Weight)
+            // Standard Error: 25_000
+            .saturating_add((20_931_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
+            .saturating_add(T::DbWeight::get().writes(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
+    }
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
+    // Storage: Balances Reserves (r:2 w:2)
+    // Storage: System Account (r:2 w:2)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: Swaps Pools (r:1 w:1)
+    fn resolve_failed_mdm_authorized_categorical(d: u32) -> Weight {
+        (103_383_000 as Weight)
+            // Standard Error: 31_000
+            .saturating_add((20_787_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(7 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
+            .saturating_add(T::DbWeight::get().writes(5 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
     }
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)

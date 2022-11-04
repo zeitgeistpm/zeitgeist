@@ -458,6 +458,7 @@ mod pallet {
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
             )?;
+            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized(_) => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
@@ -480,7 +481,6 @@ mod pallet {
                 MarketStatus::Disputed,
                 market_dispute,
             ));
-            // TODO(#782): add court benchmark
             Ok((Some(T::WeightInfo::dispute_authorized(num_disputes))).into())
         }
 
@@ -490,7 +490,10 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
         // TODO update benchmarks
-        #[pallet::weight(5000)]
+        #[pallet::weight(
+            T::WeightInfo::resolve_failed_mdm_authorized_categorical(T::MaxDisputes::get())
+                .max(T::WeightInfo::resolve_failed_mdm_authorized_scalar(T::MaxDisputes::get()))
+        )]
         #[transactional]
         pub fn resolve_failed_mdm(
             origin: OriginFor<T>,
@@ -500,6 +503,8 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             let disputes = Disputes::<T>::get(market_id);
+            let disputes_len = disputes.len() as u32;
+            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             let is_fail = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized(_) => {
                     T::Authorized::is_fail(&disputes, &market_id, &market)?
@@ -515,7 +520,16 @@ mod pallet {
 
             Self::deposit_event(Event::DisputeMechanismFailed(market_id));
 
-            Ok(().into())
+            let weight = match market.market_type {
+                MarketType::Scalar(_) => {
+                    T::WeightInfo::resolve_failed_mdm_authorized_scalar(disputes_len)
+                }
+                MarketType::Categorical(_) => {
+                    T::WeightInfo::resolve_failed_mdm_authorized_categorical(disputes_len)
+                }
+            };
+
+            Ok((Some(weight)).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -1893,6 +1907,7 @@ mod pallet {
                 }
                 MarketStatus::Disputed => {
                     let disputes = Disputes::<T>::get(market_id);
+                    // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
                     let auto_resolve_block_opt = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized(_) => {
                             T::Authorized::get_auto_resolve(&disputes, market_id, &market)?
@@ -2249,6 +2264,7 @@ mod pallet {
                     report.outcome.clone()
                 }
                 MarketStatus::Disputed => {
+                    // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
                     // the oracle's report.
                     let resolved_outcome_option = match market.dispute_mechanism {

@@ -218,7 +218,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 
 benchmarks! {
     where_clause {
-        where T : pallet_timestamp::Config,
+        where T : pallet_timestamp::Config + zrml_authorized::Config,
     }
 
     admin_destroy_disputed_market{
@@ -830,6 +830,13 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
+        let authority_report_period = <T as zrml_authorized::Config>::AuthorityReportPeriod::get();
+        let now = <frame_system::Pallet<T>>::block_number();
+        // authorized mdm fails after the AuthorityReportPeriod
+        <frame_system::Pallet<T>>::set_block_number(
+            now + authority_report_period.saturated_into() + 1u64.saturated_into()
+        );
+
         let call = Call::<T>::resolve_failed_mdm { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
@@ -864,6 +871,13 @@ benchmarks! {
             )?;
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
+
+        let authority_report_period = <T as zrml_authorized::Config>::AuthorityReportPeriod::get();
+        let now = <frame_system::Pallet<T>>::block_number();
+        // authorized mdm fails after the AuthorityReportPeriod
+        <frame_system::Pallet<T>>::set_block_number(
+            now + authority_report_period.saturated_into() + 1u64.saturated_into()
+        );
 
         let call = Call::<T>::resolve_failed_mdm { market_id };
     }: {

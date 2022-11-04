@@ -33,7 +33,7 @@ benchmarks! {
     authorize_market_outcome {
         let caller: T::AccountId = whitelisted_caller();
         let market = market_mock::<T>(caller.clone());
-        T::MarketCommons::push_market(market).unwrap();
+        T::MarketCommonsAuthorized::push_market(market).unwrap();
     }: _(RawOrigin::Signed(caller), 0u32.into(), OutcomeReport::Scalar(1))
 }
 
