@@ -289,17 +289,15 @@ mod pallet {
                 <Winners<T>>::insert(market_id, winner_info);
             }
 
-            let mut all_purged = true;
             let mut removed_keys_amount = 0u32;
-            for (_, i) in <Outcomes<T>>::drain_prefix(market_id) {
+            for (_, i) in
+                <Outcomes<T>>::drain_prefix(market_id).take(T::RemoveKeysLimit::get() as usize)
+            {
                 owners_len = owners_len.max(i.owners.len() as u32);
                 removed_keys_amount = removed_keys_amount.saturating_add(1u32);
-                if removed_keys_amount >= T::RemoveKeysLimit::get() {
-                    all_purged = false;
-                }
             }
 
-            if all_purged {
+            if <Outcomes<T>>::iter_prefix(market_id).next().is_none() {
                 Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
             } else {
                 Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
