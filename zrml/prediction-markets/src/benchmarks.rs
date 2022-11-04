@@ -145,7 +145,7 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     } else if let MarketType::Scalar(range) = market_type {
         outcome = OutcomeReport::Scalar(*range.end());
     } else {
-        panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
+        panic!("setup_redeem_shares_common: Unsupported market type: {market_type:?}");
     }
 
     Pallet::<T>::do_buy_complete_set(
