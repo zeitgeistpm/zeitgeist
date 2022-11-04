@@ -22,7 +22,7 @@ use crate::{
             foreign, foreign_parent_multilocation, foreign_sibling_multilocation, ksm,
             register_foreign_parent, register_foreign_sibling, sibling, sibling_account,
             zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID,
-            PARA_ID_SIBLING,
+            PARA_ID_SIBLING, foreign_ztg_multilocation,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
@@ -52,17 +52,13 @@ fn convert_native() {
     // The way Ztg is represented relative within the Zeitgeist runtime
     let ztg_location_inner: MultiLocation = MultiLocation::new(0, X1(general_key(zeitgeist::KEY)));
 
-    assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(CurrencyId::Ztg),);
+    assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(CurrencyId::Ztg));
 
     // The canonical way Ztg is represented out in the wild
-    let ztg_location_canonical: MultiLocation =
-        MultiLocation::new(1, X2(Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)));
-
-    // TODO USE variable
     Zeitgeist::execute_with(|| {
         assert_eq!(
             <AssetConvert as C2<_, _>>::convert(CurrencyId::Ztg),
-            Some(ztg_location_canonical)
+            Some(foreign_ztg_multilocation())
         )
     });
 }

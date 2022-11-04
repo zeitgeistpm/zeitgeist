@@ -129,7 +129,6 @@ impl TakeRevenue for ToTreasury {
         use xcm_executor::traits::Convert;
 
         if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue.clone() {
-
             if let Ok(asset_id) =
                 <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location.clone())
             {
