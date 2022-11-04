@@ -51,7 +51,6 @@ fn transfer_ztg_to_sibling() {
 
     let alice_initial_balance = ztg(10);
     let transfer_amount = ztg(5);
-    let ztg_in_sibling = FOREIGN_ZTG_ID;
 
     Sibling::execute_with(|| {
         assert_eq!(
@@ -119,11 +118,13 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 
 	let alice_initial_balance = ztg(5);
 	let bob_initial_balance = ztg(5) - ztg_fee();
+    let sibling_sovereign_initial_balance = ztg(5);
 	let transfer_amount = ztg(1);
 	// Note: This asset was registered in `transfer_ztg_to_sibling`
 
 	Zeitgeist::execute_with(|| {
 		assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
+        assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance);
 	});
 
 	Sibling::execute_with(|| {
@@ -168,6 +169,9 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 			Balances::free_balance(&ALICE.into()),
 			alice_initial_balance + transfer_amount - ztg_fee(),
 		);
+
+        // Verify that the reserve has been adjusted properly
+        assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance - transfer_amount);
 	});
 }
 

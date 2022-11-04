@@ -23,13 +23,13 @@
 #![cfg(feature = "parachain")]
 
 use super::{
-    parameters::MAXIMUM_BLOCK_WEIGHT, xcm_config::config::zeitgeist::ID as ZTG_PARAID, Origin,
+    parameters::MAXIMUM_BLOCK_WEIGHT, Origin,
     ParachainInfo,
 };
-use frame_support::{parameter_types, weights::Weight};
+use frame_support::{parameter_types, traits::Get, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent, SaturatedConversion};
-use xcm::latest::{prelude::X1, Junction, MultiLocation, NetworkId};
+use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE, MICRO},
     types::Balance,
@@ -49,7 +49,7 @@ parameter_types! {
     pub const SignatureNetworkIdentifier:  &'static [u8] = b"zeitgeist-";
 
     // Cumulus and Polkadot
-    pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
+    pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
     // Have to change "Any" to "Kusama" for mainnet once we have separate runtimes
     pub const RelayNetwork: NetworkId = NetworkId::Any;
@@ -101,7 +101,7 @@ parameter_types! {
     /// Max instructions per XCM
     pub const MaxInstructions: u32 = 100;
     // Relative self location
-    pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Junction::Parachain(ZTG_PARAID)));
+    pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 }
 
 parameter_type_with_key! {
