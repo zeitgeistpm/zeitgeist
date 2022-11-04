@@ -1244,6 +1244,7 @@ mod pallet {
                 return Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into());
             }
 
+            #[cfg(not(feature = "with-global-disputes"))]
             Err(Error::<T>::GlobalDisputesDisabled.into())
         }
     }
