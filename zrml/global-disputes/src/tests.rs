@@ -259,7 +259,7 @@ fn reward_outcome_owner_works_for_one_owner() {
 }
 
 #[test]
-fn vote_fails_if_insufficient_amount() {
+fn vote_fails_if_amount_below_min_outcome_vote_amount() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         GlobalDisputes::push_voting_outcome(
@@ -299,6 +299,37 @@ fn vote_fails_if_insufficient_amount() {
                 MinOutcomeVoteAmount::get() - 1,
             ),
             Error::<Runtime>::AmountTooLow
+        );
+    });
+}
+
+#[test]
+fn vote_fails_for_insufficient_funds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(0),
+            &ALICE,
+            10 * BASE,
+        )
+        .unwrap();
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(20),
+            &ALICE,
+            20 * BASE,
+        )
+        .unwrap();
+        // Paul does not have 50 * BASE
+        assert_noop!(
+            GlobalDisputes::vote_on_outcome(
+                Origin::signed(POOR_PAUL),
+                market_id,
+                OutcomeReport::Scalar(0),
+                50 * BASE
+            ),
+            Error::<Runtime>::InsufficientAmount
         );
     });
 }
@@ -967,36 +998,6 @@ fn vote_fails_if_outcome_does_not_exist() {
                 50 * BASE
             ),
             Error::<Runtime>::OutcomeDoesNotExist
-        );
-    });
-}
-
-#[test]
-fn vote_fails_for_insufficient_funds() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            &ALICE,
-            20 * BASE,
-        )
-        .unwrap();
-        assert_noop!(
-            GlobalDisputes::vote_on_outcome(
-                Origin::signed(POOR_PAUL),
-                market_id,
-                OutcomeReport::Scalar(0),
-                50 * BASE
-            ),
-            Error::<Runtime>::InsufficientAmount
         );
     });
 }
