@@ -31,7 +31,8 @@ use crate::{
         config::{general_key, zeitgeist, AssetConvert},
         fees::default_per_second,
     },
-    AssetRegistry, Balance, Balances, CurrencyId, ExistentialDeposit, Origin, Tokens, XTokens, ZeitgeistTreasuryAccount,
+    AssetRegistry, Balance, Balances, CurrencyId, ExistentialDeposit, Origin, Tokens, XTokens,
+    ZeitgeistTreasuryAccount,
 };
 
 use frame_support::{assert_ok, traits::tokens::fungible::Mutate};
@@ -45,7 +46,6 @@ use xcm::{
 use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;
 use zeitgeist_primitives::constants::BalanceFractionalDecimals;
-
 
 #[test]
 fn transfer_ztg_to_sibling() {
@@ -123,9 +123,8 @@ fn transfer_ztg_sibling_to_zeitgeist() {
     // Note: This asset was registered in `transfer_ztg_to_sibling`
 
     Zeitgeist::execute_with(|| {
-        treasury_initial_balance =
-            Balances::free_balance(ZeitgeistTreasuryAccount::get());
-        
+        treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
+
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
         assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance);
     });
@@ -177,8 +176,6 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         )
     });
 }
-
-/*
 
 #[test]
 fn transfer_ksm_from_relay_chain() {
@@ -240,11 +237,84 @@ fn transfer_ksm_to_relay_chain() {
     });
 }
 
-*/
+#[test]
+fn transfer_ztg_to_sibling_with_custom_fee() {
+    TestNet::reset();
 
-// Test custom fees
+    let alice_initial_balance = ztg(10);
+    // 10x fee factor, so ZTG has 10x the worth of sibling currency.
+    let fee_factor = 100_000_000_000;
+    let transfer_amount = ztg(5);
+    let mut treasury_initial_balance = 0;
+
+    Sibling::execute_with(|| {
+        treasury_initial_balance =
+            Tokens::free_balance(FOREIGN_ZTG_ID, &ZeitgeistTreasuryAccount::get());
+        assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), 0);
+
+        register_foreign_ztg(None);
+        let custom_metadata = CustomMetadata {
+            xcm: XcmMetadata { fee_factor: Some(fee_factor) },
+            ..Default::default()
+        };
+        assert_ok!(AssetRegistry::do_update_asset(
+            FOREIGN_ZTG_ID,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(custom_metadata)
+        ));
+    });
+
+    Zeitgeist::execute_with(|| {
+        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
+        assert_eq!(Balances::free_balance(&sibling_account()), 0);
+        assert_ok!(XTokens::transfer(
+            Origin::signed(ALICE.into()),
+            CurrencyId::Ztg,
+            transfer_amount,
+            Box::new(
+                MultiLocation::new(
+                    1,
+                    X2(
+                        Parachain(PARA_ID_SIBLING),
+                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                    )
+                )
+                .into()
+            ),
+            4_000_000_000,
+        ));
+
+        // Confirm that Alice's balance is initial_balance - amount_transferred
+        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance - transfer_amount);
+
+        // Verify that the amount transferred is now part of the sibling account here
+        assert_eq!(Balances::free_balance(&sibling_account()), transfer_amount);
+    });
+
+    Sibling::execute_with(|| {
+        let current_balance = Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into());
+        let custom_fee = calc_fee(default_per_second(10) * 10);
+
+        // Verify that BOB now has (amount transferred - fee)
+        assert_eq!(current_balance, transfer_amount - custom_fee);
+
+        // Sanity check for the actual amount BOB ends up with
+        assert_eq!(current_balance, 49_360_000_000);
+
+        // Verify that fees (of foreign currency) have been put into treasury
+        assert_eq!(
+            Tokens::free_balance(FOREIGN_ZTG_ID, &ZeitgeistTreasuryAccount::get()),
+            treasury_initial_balance + custom_fee
+        )
+    });
+}
+
+
 // Test handling of unknown tokens
-// Test treasury assignments
 
 #[test]
 fn test_total_fee() {
