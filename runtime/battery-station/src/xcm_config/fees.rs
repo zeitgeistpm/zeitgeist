@@ -55,22 +55,23 @@ pub fn bmul(a: u128, b: u128, base: u128) -> Option<u128> {
 
 /// Our FixedConversionRateProvider, used to charge XCM-related fees for tokens registered in
 /// the asset registry that were not already handled by native Trader rules.
-pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
+pub struct FixedConversionRateProvider<AssetRegistry>(PhantomData<AssetRegistry>);
 
 impl<
-    OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
+    AssetRegistry: orml_traits::asset_registry::Inspect<
         AssetId = CurrencyId,
         Balance = Balance,
         CustomMetadata = CustomMetadata,
     >,
-> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
+> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
 {
     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-        let metadata = OrmlAssetRegistry::metadata_by_location(&location)?;
+        let metadata = AssetRegistry::metadata_by_location(&location)?;
         let default_per_second = default_per_second(metadata.decimals);
 
         if let Some(fee_factor) = metadata.additional.xcm.fee_factor {
-            bmul(default_per_second, fee_factor, metadata.decimals.into())
+            let base = 10u128.checked_pow(metadata.decimals.into())?;
+            bmul(default_per_second, fee_factor, base)
         } else {
             Some(default_per_second)
         }
