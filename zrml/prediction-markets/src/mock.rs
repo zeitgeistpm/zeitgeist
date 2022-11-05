@@ -250,9 +250,15 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 impl zrml_authorized::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }

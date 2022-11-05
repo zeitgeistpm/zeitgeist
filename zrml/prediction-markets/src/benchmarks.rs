@@ -417,8 +417,7 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -456,8 +455,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -514,8 +512,7 @@ benchmarks! {
             )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -825,8 +822,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -875,8 +871,7 @@ benchmarks! {
             OutcomeReport::Categorical(1u16),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
         let market = T::MarketCommons::market(&market_id)?;
@@ -898,8 +893,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -942,8 +936,7 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
         let market = T::MarketCommons::market(&market_id)?;
