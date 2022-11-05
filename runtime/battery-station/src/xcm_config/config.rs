@@ -18,7 +18,7 @@
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
     AccountId, Ancestry, AssetManager, AssetRegistry, Balance, Call, CurrencyId, MaxInstructions,
-    Origin, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, UnitWeightCost,
+    Origin, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, UnitWeightCost,
     UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
@@ -154,7 +154,7 @@ parameter_types! {
     pub ZtgPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Junction::Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)),
+            X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
     );
@@ -195,7 +195,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
         match id {
             Asset::Ztg => Some(MultiLocation::new(
                 1,
-                X2(Junction::Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)),
+                X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(zeitgeist::KEY)),
             )),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
             _ => None,
@@ -217,7 +217,7 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
                 parents: 1,
                 interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
             } => match para_id {
-                zeitgeist::ID => match &key[..] {
+                id if id == u32::from(ParachainInfo::parachain_id()) => match &key[..] {
                     zeitgeist::KEY => Ok(CurrencyId::Ztg),
                     _ => Err(location),
                 },

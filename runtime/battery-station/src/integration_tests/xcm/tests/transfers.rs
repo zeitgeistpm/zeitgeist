@@ -19,8 +19,9 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign, ksm, sibling, sibling_account, zeitgeist_account, ztg, ALICE, BOB,
-            FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING, register_foreign_ztg
+            foreign, ksm, register_foreign_ztg, sibling, sibling_account, zeitgeist_account, ztg,
+            ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING, register_foreign_parent, foreign_ztg_multilocation,
+            foreign_parent_multilocation,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
@@ -44,7 +45,6 @@ use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;
 use zeitgeist_primitives::constants::BalanceFractionalDecimals;
 
-
 #[test]
 fn transfer_ztg_to_sibling() {
     TestNet::reset();
@@ -53,13 +53,11 @@ fn transfer_ztg_to_sibling() {
     let transfer_amount = ztg(5);
 
     Sibling::execute_with(|| {
-        assert_eq!(
-            Balances::free_balance(&BOB.into()),
-            0
-        );
+        assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), 0);
 
         // We don't have to register ZTG because ZTG is the native currency
         // of the sibling chain (it is a Zeitgeist clone).
+        register_foreign_ztg(None);
     });
 
     Zeitgeist::execute_with(|| {
@@ -75,10 +73,7 @@ fn transfer_ztg_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 {
-                            network: NetworkId::Any,
-                            id: BOB.into(),
-                        }
+                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
                     )
                 )
                 .into()
@@ -87,17 +82,14 @@ fn transfer_ztg_to_sibling() {
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(
-            Balances::free_balance(&ALICE.into()),
-            alice_initial_balance - transfer_amount
-        );
+        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance - transfer_amount);
 
         // Verify that the amount transferred is now part of the sibling account here
         assert_eq!(Balances::free_balance(&sibling_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {
-        let current_balance = Balances::free_balance(&BOB.into());
+        let current_balance = Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into());
 
         // Verify that BOB now has (amount transferred - fee)
         assert_eq!(current_balance, transfer_amount - ztg_fee());
@@ -109,71 +101,142 @@ fn transfer_ztg_to_sibling() {
 
 #[test]
 fn transfer_ztg_sibling_to_zeitgeist() {
-	TestNet::reset();
+    TestNet::reset();
 
-	// In order to be able to transfer ZTG from Sibling to Zeitgeist, we need to first send
-	// ZTG from Zeitgeist to Sibling, or else it fails since it'd be like Sibling had minted
-	// ZTG on their side.
-	transfer_ztg_to_sibling();
+    // In order to be able to transfer ZTG from Sibling to Zeitgeist, we need to first send
+    // ZTG from Zeitgeist to Sibling, or else it fails since it'd be like Sibling had minted
+    // ZTG on their side.
+    transfer_ztg_to_sibling();
 
-	let alice_initial_balance = ztg(5);
-	let bob_initial_balance = ztg(5) - ztg_fee();
+    let alice_initial_balance = ztg(5);
+    let bob_initial_balance = ztg(5) - ztg_fee();
     let sibling_sovereign_initial_balance = ztg(5);
-	let transfer_amount = ztg(1);
-	// Note: This asset was registered in `transfer_ztg_to_sibling`
+    let transfer_amount = ztg(1);
+    // Note: This asset was registered in `transfer_ztg_to_sibling`
+
+    Zeitgeist::execute_with(|| {
+        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
+        assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance);
+    });
+
+    Sibling::execute_with(|| {
+        assert_eq!(Balances::free_balance(&zeitgeist_account()), 0);
+        assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance);
+    });
+
+    Sibling::execute_with(|| {
+        assert_ok!(XTokens::transfer(
+            Origin::signed(BOB.into()),
+            FOREIGN_ZTG_ID,
+            transfer_amount,
+            Box::new(
+                MultiLocation::new(
+                    1,
+                    X2(
+                        Parachain(zeitgeist::ID),
+                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                    )
+                )
+                .into()
+            ),
+            80_000_000,
+        ));
+
+        // Confirm that Bobs's balance is initial balance - amount transferred
+        assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance - transfer_amount);
+    });
+
+    Zeitgeist::execute_with(|| {
+        // Verify that ALICE now has initial balance + amount transferred - fee
+        assert_eq!(
+            Balances::free_balance(&ALICE.into()),
+            alice_initial_balance + transfer_amount - ztg_fee(),
+        );
+
+        // Verify that the reserve has been adjusted properly
+        assert_eq!(
+            Balances::free_balance(&sibling_account()),
+            sibling_sovereign_initial_balance - transfer_amount
+        );
+    });
+}
+
+#[test]
+fn transfer_ksm_from_relay_chain() {
+	let transfer_amount: Balance = ksm(1);
+
+    Zeitgeist::execute_with(|| {
+        register_foreign_parent(None);
+    });
+
+	KusamaNet::execute_with(|| {
+		assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+			kusama_runtime::Origin::signed(ALICE.into()),
+			Box::new(Parachain(zeitgeist::ID).into().into()),
+			Box::new(
+				Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: BOB,
+				}
+				.into()
+				.into()
+			),
+			Box::new((Here, transfer_amount).into()),
+			0
+		));
+	});
 
 	Zeitgeist::execute_with(|| {
-		assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance);
-	});
-
-	Sibling::execute_with(|| {
-		assert_eq!(Balances::free_balance(&zeitgeist_account()), 0);
 		assert_eq!(
-			Balances::free_balance(&BOB.into()),
-			bob_initial_balance
+			Tokens::free_balance(FOREIGN_PARENT_ID, &BOB.into()),
+			transfer_amount - ksm_fee()
 		);
 	});
+}
 
-	Sibling::execute_with(|| {
+/*
+#[test]
+fn transfer_ksm_to_relay_chain() {
+    let transfer_amount: Balance = ksm(1);
+
+	Zeitgeist::execute_with(|| {
+        let initial_balance = Tokens::free_balance(FOREIGN_PARENT_ID, &ALICE.into());
+        assert!(initial_balance >= transfer_amount);
+
+        register_foreign_parent(None);
+
 		assert_ok!(XTokens::transfer(
-			Origin::signed(BOB.into()),
-			CurrencyId::Ztg,
+			Origin::signed(ALICE.into()),
+			FOREIGN_PARENT_ID,
 			transfer_amount,
 			Box::new(
 				MultiLocation::new(
 					1,
-					X2(
-						Parachain(zeitgeist::ID),
-						Junction::AccountId32 {
-							network: NetworkId::Any,
-							id: ALICE.into(),
-						}
-					)
+					X1(Junction::AccountId32 {
+						id: BOB,
+						network: NetworkId::Any,
+					})
 				)
 				.into()
 			),
-            80_000_000,
+			4_000_000_000
 		));
 
-		// Confirm that Bobs's balance is initial balance - amount transferred
-		assert_eq!(
-			Balances::free_balance(&BOB.into()),
-			bob_initial_balance - transfer_amount
-		);
+        assert_eq!(
+            Tokens::free_balance(FOREIGN_PARENT_ID, &ALICE.into()),
+            initial_balance - transfer_amount
+        )
 	});
 
-	Zeitgeist::execute_with(|| {
-		// Verify that ALICE now has initial balance + amount transferred - fee
+	KusamaNet::execute_with(|| {
 		assert_eq!(
-			Balances::free_balance(&ALICE.into()),
-			alice_initial_balance + transfer_amount - ztg_fee(),
+			kusama_runtime::Balances::free_balance(&BOB.into()),
+			transfer_amount - ksm_fee()
 		);
-
-        // Verify that the reserve has been adjusted properly
-        assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance - transfer_amount);
 	});
 }
+*/
+
 
 // Test correct fees
 // Test handling of unknown tokens
@@ -201,7 +264,8 @@ fn fee(decimals: u32) -> Balance {
 // The fee associated with transferring KSM tokens
 #[inline]
 fn ksm_fee() -> Balance {
-    fee(12)
+    // fee(12)
+    320000
 }
 
 #[inline]
@@ -211,4 +275,3 @@ fn calc_fee(fee_per_second: Balance) -> Balance {
     // NOTE: it is possible that in different machines this value may differ. We shall see.
     (fee_per_second * 8).div_euclid(100_000_000)
 }
-

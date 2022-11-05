@@ -19,10 +19,10 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign, foreign_parent_multilocation, foreign_sibling_multilocation, ksm,
-            register_foreign_parent, register_foreign_sibling, sibling, sibling_account,
-            zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID,
-            PARA_ID_SIBLING, foreign_ztg_multilocation,
+            foreign, foreign_parent_multilocation, foreign_sibling_multilocation,
+            foreign_ztg_multilocation, ksm, register_foreign_parent, register_foreign_sibling,
+            sibling, sibling_account, zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID,
+            FOREIGN_SIBLING_ID, PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
