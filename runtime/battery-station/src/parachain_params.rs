@@ -53,7 +53,7 @@ parameter_types! {
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub UnitWeightCost: Weight = MICRO.saturated_into();
+    pub UnitWeightCost: Weight = 200_000_000;
 
     // Staking
     /// Rounds before the candidate bond increase/decrease can be executed
@@ -91,7 +91,7 @@ parameter_types! {
 
     // XCM
     /// Base weight for XCM execution
-    pub const BaseXcmWeight: Weight = 100_000_000;
+    pub const BaseXcmWeight: Weight = 200_000_000;
     /// The maximum number of distinct assets allowed to be transferred in a
     /// single helper extrinsic.
     pub const MaxAssetsForTransfer: usize = 2;

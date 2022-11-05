@@ -45,6 +45,8 @@ use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;
 use zeitgeist_primitives::constants::BalanceFractionalDecimals;
 
+
+
 #[test]
 fn transfer_ztg_to_sibling() {
     TestNet::reset();
@@ -78,7 +80,7 @@ fn transfer_ztg_to_sibling() {
                 )
                 .into()
             ),
-            80_000_000,
+			4_000_000_000,
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -95,7 +97,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(current_balance, transfer_amount - ztg_fee());
 
         // Sanity check for the actual amount BOB ends up with
-        //assert_eq!(current_balance, 4990730400000000000);
+        assert_eq!(current_balance, 49_936_000_000);
     });
 }
 
@@ -122,9 +124,6 @@ fn transfer_ztg_sibling_to_zeitgeist() {
     Sibling::execute_with(|| {
         assert_eq!(Balances::free_balance(&zeitgeist_account()), 0);
         assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance);
-    });
-
-    Sibling::execute_with(|| {
         assert_ok!(XTokens::transfer(
             Origin::signed(BOB.into()),
             FOREIGN_ZTG_ID,
@@ -139,7 +138,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                 )
                 .into()
             ),
-            80_000_000,
+			4_000_000_000,
         ));
 
         // Confirm that Bobs's balance is initial balance - amount transferred
@@ -194,8 +193,6 @@ fn transfer_ksm_from_relay_chain() {
 	});
 }
 
-// TODO
-
 #[test]
 fn transfer_ksm_to_relay_chain() {
     let transfer_amount: Balance = ksm(1);
@@ -237,22 +234,21 @@ fn transfer_ksm_to_relay_chain() {
 }
 
 
-// Test correct fees
+
 // Test handling of unknown tokens
 // Test treasury assignments
 
-/*
+
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 926960000000);
-    assert_eq!(ksm_fee(), 9269600000);
+    assert_eq!(ztg_fee(), 64000000);
+    assert_eq!(ksm_fee(), 6400000000);
 }
-*/
+
 
 #[inline]
 fn ztg_fee() -> Balance {
-    // fee(BalanceFractionalDecimals::get().into())
-    3200
+    fee(BalanceFractionalDecimals::get().into())
 }
 
 #[inline]
@@ -263,8 +259,7 @@ fn fee(decimals: u32) -> Balance {
 // The fee associated with transferring KSM tokens
 #[inline]
 fn ksm_fee() -> Balance {
-    // fee(12)
-    320000
+    fee(12)
 }
 
 #[inline]
@@ -272,5 +267,5 @@ fn calc_fee(fee_per_second: Balance) -> Balance {
     // We divide the fee to align its unit and multiply by 8 as that seems to be the unit of
     // time the tests take.
     // NOTE: it is possible that in different machines this value may differ. We shall see.
-    (fee_per_second * 8).div_euclid(100_000_000)
+    fee_per_second / 10_000 * 8
 }
