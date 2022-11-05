@@ -49,7 +49,7 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Balance
-    pub const ExistentialDeposit: u128 = 5 * CENT;
+    pub const ExistentialDeposit: u128 = 5 * MILLI;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 

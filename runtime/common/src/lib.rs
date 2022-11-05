@@ -139,6 +139,7 @@ macro_rules! decl_common_types {
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
+                    TreasuryPalletId::get(),
                 ];
 
                 if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {

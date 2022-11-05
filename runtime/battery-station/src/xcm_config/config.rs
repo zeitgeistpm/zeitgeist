@@ -18,8 +18,8 @@
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
     AccountId, Ancestry, AssetManager, AssetRegistry, Balance, Call, CurrencyId, MaxInstructions,
-    Origin, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, UnitWeightCost,
-    UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
+    Origin, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork,
+    UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
 use alloc::vec::Vec;
@@ -50,6 +50,7 @@ use xcm_executor::Config;
 use zeitgeist_primitives::types::Asset;
 
 pub mod zeitgeist {
+    #[cfg(test)]
     pub const ID: u32 = 2101;
     pub const KEY: &[u8] = &[0, 1];
 }
@@ -195,7 +196,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
         match id {
             Asset::Ztg => Some(MultiLocation::new(
                 1,
-                X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(zeitgeist::KEY)),
+                X2(
+                    Junction::Parachain(ParachainInfo::parachain_id().into()),
+                    general_key(zeitgeist::KEY),
+                ),
             )),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
             _ => None,
