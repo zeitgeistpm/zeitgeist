@@ -134,8 +134,6 @@ impl TakeRevenue for ToTreasury {
                 <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location.clone())
             {
                 let _ = AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
-            } else {
-                let _ = UnknownTokens::deposit(&revenue, &location);
             }
         }
     }

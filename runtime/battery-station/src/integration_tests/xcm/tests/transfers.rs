@@ -313,9 +313,6 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
     });
 }
 
-
-// Test handling of unknown tokens
-
 #[test]
 fn test_total_fee() {
     assert_eq!(ztg_fee(), 64000000);
