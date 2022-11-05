@@ -211,8 +211,14 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 impl zrml_authorized::Config for Runtime {
     type AuthorityReportPeriod = AuthorityReportPeriod;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type CorrectionPeriod = CorrectionPeriod;
     type Event = Event;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;

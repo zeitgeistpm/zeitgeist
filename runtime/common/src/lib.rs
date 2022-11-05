@@ -59,10 +59,11 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
                 zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
                 zrml_prediction_markets::migrations::UpdateMarketIdsPerDisputeBlock<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            ),
+            )
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -73,6 +74,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
                 zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
                 zrml_prediction_markets::migrations::UpdateMarketIdsPerDisputeBlock<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
@@ -873,6 +875,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_authorized::Config for Runtime {
             type AuthorityReportPeriod = AuthorityReportPeriod;
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;

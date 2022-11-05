@@ -22,19 +22,24 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 #[cfg(test)]
-use crate::Pallet as Court;
+use crate::Pallet as Authorized;
 use crate::{market_mock, Call, Config, Pallet};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_system::RawOrigin;
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_support::{dispatch::UnfilteredDispatchable, traits::EnsureOrigin};
 use zeitgeist_primitives::types::OutcomeReport;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 benchmarks! {
     authorize_market_outcome {
-        let caller: T::AccountId = whitelisted_caller();
-        let market = market_mock::<T>(caller.clone());
+        let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let market = market_mock::<T>();
         T::MarketCommonsAuthorized::push_market(market).unwrap();
-    }: _(RawOrigin::Signed(caller), 0u32.into(), OutcomeReport::Scalar(1))
+        let call = Call::<T>::authorize_market_outcome { market_id: 0_u32.into(), outcome: OutcomeReport::Scalar(1) };
+    }: { call.dispatch_bypass_filter(origin)? }
 }
 
-impl_benchmark_test_suite!(Court, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
+impl_benchmark_test_suite!(
+    Authorized,
+    crate::mock::ExtBuilder::default().build(),
+    crate::mock::Runtime
+);

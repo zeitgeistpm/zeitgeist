@@ -37,11 +37,11 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{OptionQuery, StorageMap},
+        pallet_prelude::{EnsureOrigin, OptionQuery, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::pallet_prelude::OriginFor;
     use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
@@ -75,27 +75,24 @@ mod pallet {
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+            T::AuthorizedDisputeResolutionOrigin::ensure_origin(origin)?;
             let market = T::MarketCommonsAuthorized::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            if let MarketDisputeMechanism::Authorized(ref account_id) = market.dispute_mechanism {
-                if account_id != &who {
-                    return Err(Error::<T>::NotAuthorizedForThisMarket.into());
+            match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    Self::remove_auto_resolve(&market_id);
+                    let now = frame_system::Pallet::<T>::block_number();
+                    let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
+                    T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
+
+                    let report = AuthorityReport { resolve_at: correction_period_ends_at, outcome };
+                    AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
+                    Ok(())
                 }
-            } else {
-                return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
+                _ => Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into()),
             }
-
-            Self::remove_auto_resolve(&market_id);
-            let now = frame_system::Pallet::<T>::block_number();
-            let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-            T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
-
-            let report = AuthorityReport { resolve_at: correction_period_ends_at, outcome };
-            AuthorizedOutcomeReports::<T>::insert(market_id, report);
-
-            Ok(())
         }
     }
 
@@ -124,6 +121,9 @@ mod pallet {
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
         >;
+
+        /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
+        type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::Origin>;
 
         /// Identifier of this pallet
         #[pallet::constant]
@@ -192,7 +192,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
                 if AuthorizedOutcomeReports::<T>::get(market_id).is_some() {
                     return Err(Error::<T>::AuthorityAlreadyReported.into());
                 }
@@ -207,7 +207,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
                 let result = AuthorizedOutcomeReports::<T>::get(market_id);
                 if result.is_some() {
                     AuthorizedOutcomeReports::<T>::remove(market_id);
@@ -223,7 +223,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
-            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
                 Ok(Self::get_auto_resolve(market_id))
             } else {
                 Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
@@ -235,7 +235,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<bool, DispatchError> {
-            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
                 let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
                 let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
                 let now = frame_system::Pallet::<T>::block_number();
@@ -257,9 +257,8 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>(
-    ai: T::AccountId,
-) -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>()
+-> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
 where
     T: crate::Config,
 {
@@ -272,7 +271,7 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),

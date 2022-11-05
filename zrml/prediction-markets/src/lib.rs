@@ -460,7 +460,7 @@ mod pallet {
             )?;
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized(_) => {
+                MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => {
@@ -577,7 +577,7 @@ mod pallet {
             deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
@@ -629,7 +629,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
@@ -715,7 +715,7 @@ mod pallet {
             deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
@@ -2268,7 +2268,7 @@ mod pallet {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
                     // the oracle's report.
                     let resolved_outcome_option = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => {
+                        MarketDisputeMechanism::Authorized => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }
                         MarketDisputeMechanism::Court => {
@@ -2712,7 +2712,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,

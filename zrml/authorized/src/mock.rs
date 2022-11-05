@@ -18,7 +18,10 @@
 #![cfg(test)]
 
 use crate::{self as zrml_authorized};
-use frame_support::{construct_runtime, pallet_prelude::DispatchError, traits::Everything};
+use frame_support::{
+    construct_runtime, ord_parameter_types, pallet_prelude::DispatchError, traits::Everything,
+};
+use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -54,6 +57,10 @@ construct_runtime!(
     }
 );
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 // NoopResolution implements DisputeResolutionApi with no-ops.
 pub struct NoopResolution;
 
@@ -87,6 +94,8 @@ impl crate::Config for Runtime {
     type DisputeResolution = NoopResolution;
     type MarketCommonsAuthorized = MarketCommons;
     type PalletId = AuthorizedPalletId;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 

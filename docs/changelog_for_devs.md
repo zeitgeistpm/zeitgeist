@@ -1,5 +1,10 @@
 # v0.3.7
 
+- Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence
+  `MarketDisputeMechanism::Authorized` does not need account_id. To create
+  market with Authorized MDM specifying account_id for Authorized MDM is not
+  required, any user satisfying `AuthorizedDisputeResolutionOrigin` can use
+  Authorized MDM for resolving market.
 - Transformed integer scalar markets to fixed point with ten digits after the
   decimal point. As soon as this update is deployed, the interpretation of the
   scalar values must be changed.
