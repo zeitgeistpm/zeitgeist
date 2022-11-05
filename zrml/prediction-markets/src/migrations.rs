@@ -157,7 +157,7 @@ where
             bounded_vec.retain(|id| {
                 if let Ok(market) = <T as crate::Config>::MarketCommons::market(id) {
                     match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => {
+                        MarketDisputeMechanism::Authorized => {
                             authorized_ids.push(*id);
                             false
                         }

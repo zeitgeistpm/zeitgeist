@@ -506,7 +506,7 @@ mod pallet {
             let disputes_len = disputes.len() as u32;
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             let is_fail = match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized(_) => {
+                MarketDisputeMechanism::Authorized => {
                     T::Authorized::is_fail(&disputes, &market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => T::Court::is_fail(&disputes, &market_id, &market)?,
@@ -1909,7 +1909,7 @@ mod pallet {
                     let disputes = Disputes::<T>::get(market_id);
                     // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
                     let auto_resolve_block_opt = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => {
+                        MarketDisputeMechanism::Authorized => {
                             T::Authorized::get_auto_resolve(&disputes, market_id, &market)?
                         }
                         MarketDisputeMechanism::Court => {

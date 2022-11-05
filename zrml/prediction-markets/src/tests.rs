@@ -2027,7 +2027,7 @@ fn dispute_fails_authority_reported_already() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized(FRED),
+            MarketDisputeMechanism::Authorized,
             ScoringRule::CPMM,
         ));
 
