@@ -194,16 +194,16 @@ fn transfer_ksm_from_relay_chain() {
 	});
 }
 
-/*
+// TODO
+
 #[test]
 fn transfer_ksm_to_relay_chain() {
     let transfer_amount: Balance = ksm(1);
+    transfer_ksm_from_relay_chain();
 
 	Zeitgeist::execute_with(|| {
         let initial_balance = Tokens::free_balance(FOREIGN_PARENT_ID, &ALICE.into());
         assert!(initial_balance >= transfer_amount);
-
-        register_foreign_parent(None);
 
 		assert_ok!(XTokens::transfer(
 			Origin::signed(ALICE.into()),
@@ -231,11 +231,10 @@ fn transfer_ksm_to_relay_chain() {
 	KusamaNet::execute_with(|| {
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&BOB.into()),
-			transfer_amount - ksm_fee()
+			999834059328
 		);
 	});
 }
-*/
 
 
 // Test correct fees
