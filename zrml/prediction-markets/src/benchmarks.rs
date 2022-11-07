@@ -850,7 +850,6 @@ benchmarks! {
             )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
