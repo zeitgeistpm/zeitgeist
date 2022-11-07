@@ -20,4 +20,3 @@
 pub mod asset_registry;
 pub mod config;
 pub mod fees;
-pub mod parachains;
