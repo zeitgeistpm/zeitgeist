@@ -2157,6 +2157,120 @@ mod pallet {
             }
         }
 
+        fn resolve_reported_market(market: &MarketOf<T>) -> Result<OutcomeReport, DispatchError> {
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            // the oracle bond gets returned if the reporter was the oracle
+            if report.by == market.oracle {
+                T::AssetManager::unreserve_named(
+                    &Self::reserve_id(),
+                    Asset::Ztg,
+                    &market.creator,
+                    T::OracleBond::get(),
+                );
+            } else {
+                let excess = T::AssetManager::slash_reserved_named(
+                    &Self::reserve_id(),
+                    Asset::Ztg,
+                    &market.creator,
+                    T::OracleBond::get(),
+                );
+                // deposit only to the real reporter what actually was slashed
+                let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
+
+                if let Err(err) =
+                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
+                {
+                    log::warn!(
+                        "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
+                        err
+                    );
+                }
+            }
+
+            Ok(report.outcome.clone())
+        }
+
+        fn resolve_disputed_market(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<OutcomeReport, DispatchError> {
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            let disputes = Disputes::<T>::get(market_id);
+            // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
+            // the oracle's report.
+            let resolved_outcome_option = match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    T::Authorized::on_resolution(&disputes, market_id, market)?
+                }
+                MarketDisputeMechanism::Court => {
+                    T::Court::on_resolution(&disputes, market_id, market)?
+                }
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                }
+            };
+            let resolved_outcome =
+                resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
+
+            let mut correct_reporters: Vec<T::AccountId> = Vec::new();
+
+            // If the oracle reported right, return the OracleBond, otherwise slash it to
+            // pay the correct reporters.
+            let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
+            if report.by == market.oracle && report.outcome == resolved_outcome {
+                T::AssetManager::unreserve_named(
+                    &Self::reserve_id(),
+                    Asset::Ztg,
+                    &market.creator,
+                    T::OracleBond::get(),
+                );
+            } else {
+                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                    &Self::reserve_id(),
+                    &market.creator,
+                    T::OracleBond::get().saturated_into::<u128>().saturated_into(),
+                );
+                overall_imbalance.subsume(imbalance);
+            }
+
+            for (i, dispute) in disputes.iter().enumerate() {
+                let actual_bond = default_dispute_bond::<T>(i);
+                if dispute.outcome == resolved_outcome {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &dispute.by,
+                        actual_bond,
+                    );
+
+                    correct_reporters.push(dispute.by.clone());
+                } else {
+                    let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                        &Self::reserve_id(),
+                        &dispute.by,
+                        actual_bond.saturated_into::<u128>().saturated_into(),
+                    );
+                    overall_imbalance.subsume(imbalance);
+                }
+            }
+
+            // Fold all the imbalances into one and reward the correct reporters. The
+            // number of correct reporters might be zero if the market defaults to the
+            // report after abandoned dispute. In that case, the rewards remain slashed.
+            if let Some(reward_per_each) =
+                overall_imbalance.peek().checked_div(&correct_reporters.len().saturated_into())
+            {
+                for correct_reporter in &correct_reporters {
+                    let (actual_reward, leftover) = overall_imbalance.split(reward_per_each);
+                    overall_imbalance = leftover;
+                    CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
+                }
+            }
+            T::Slash::on_unbalanced(overall_imbalance);
+
+            Ok(resolved_outcome)
+        }
+
         pub fn on_resolution(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2173,117 +2287,9 @@ mod pallet {
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
-            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
-
             let resolved_outcome = match market.status {
-                MarketStatus::Reported => {
-                    // the oracle bond gets returned if the reporter was the oracle
-                    if report.by == market.oracle {
-                        T::AssetManager::unreserve_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-                    } else {
-                        let excess = T::AssetManager::slash_reserved_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-                        // deposit only to the real reporter what actually was slashed
-                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
-
-                        if let Err(err) =
-                            T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
-                        {
-                            log::warn!(
-                                "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
-                                err
-                            );
-                        }
-                    }
-
-                    report.outcome.clone()
-                }
-                MarketStatus::Disputed => {
-                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
-                    // the oracle's report.
-                    let resolved_outcome_option = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized => {
-                            T::Authorized::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::Court => {
-                            T::Court::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
-                        }
-                    };
-                    let resolved_outcome =
-                        resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
-
-                    let mut correct_reporters: Vec<T::AccountId> = Vec::new();
-
-                    // If the oracle reported right, return the OracleBond, otherwise slash it to
-                    // pay the correct reporters.
-                    let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
-                    if report.outcome == resolved_outcome {
-                        T::AssetManager::unreserve_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-                    } else {
-                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                            &Self::reserve_id(),
-                            &market.creator,
-                            T::OracleBond::get().saturated_into::<u128>().saturated_into(),
-                        );
-                        overall_imbalance.subsume(imbalance);
-                    }
-
-                    for (i, dispute) in disputes.iter().enumerate() {
-                        let actual_bond = default_dispute_bond::<T>(i);
-                        if dispute.outcome == resolved_outcome {
-                            T::AssetManager::unreserve_named(
-                                &Self::reserve_id(),
-                                Asset::Ztg,
-                                &dispute.by,
-                                actual_bond,
-                            );
-
-                            correct_reporters.push(dispute.by.clone());
-                        } else {
-                            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                                &Self::reserve_id(),
-                                &dispute.by,
-                                actual_bond.saturated_into::<u128>().saturated_into(),
-                            );
-                            overall_imbalance.subsume(imbalance);
-                        }
-                    }
-
-                    // Fold all the imbalances into one and reward the correct reporters. The
-                    // number of correct reporters might be zero if the market defaults to the
-                    // report after abandoned dispute. In that case, the rewards remain slashed.
-                    if let Some(reward_per_each) = overall_imbalance
-                        .peek()
-                        .checked_div(&correct_reporters.len().saturated_into())
-                    {
-                        for correct_reporter in &correct_reporters {
-                            let (actual_reward, leftover) =
-                                overall_imbalance.split(reward_per_each);
-                            overall_imbalance = leftover;
-                            CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
-                        }
-                    }
-                    T::Slash::on_unbalanced(overall_imbalance);
-
-                    resolved_outcome
-                }
+                MarketStatus::Reported => Self::resolve_reported_market(market)?,
+                MarketStatus::Disputed => Self::resolve_disputed_market(market_id, market)?,
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
