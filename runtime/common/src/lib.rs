@@ -58,7 +58,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
+            (
+                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
+                zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
+            )
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -68,7 +71,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
+            (
+                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
+                zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
+            )
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -866,6 +872,7 @@ macro_rules! impl_config_traits {
         impl zrml_authorized::Config for Runtime {
             type Event = Event;
             type MarketCommons = MarketCommons;
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
             type PalletId = AuthorizedPalletId;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
