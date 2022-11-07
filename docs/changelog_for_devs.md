@@ -9,6 +9,11 @@
   prize pool (mint-sell/buy-burn resp.) and the amount of full sets
   minted/burned. Note that in addition to these events, the low-level
   `tokens.Deposited` and `tokens.Transfer` events are also emitted.
+- Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence
+  `MarketDisputeMechanism::Authorized` does not need account_id. To create
+  market with Authorized MDM specifying account_id for Authorized MDM is not
+  required, any user satisfying `AuthorizedDisputeResolutionOrigin` can use
+  Authorized MDM for resolving market.
 - Transformed integer scalar markets to fixed point with ten digits after the
   decimal point. As soon as this update is deployed, the interpretation of the
   scalar values must be changed.

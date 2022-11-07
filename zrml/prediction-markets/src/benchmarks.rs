@@ -34,7 +34,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{One, SaturatedConversion, Zero};
+use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::Swaps,
@@ -271,10 +271,10 @@ benchmarks! {
 
         let disputes = Disputes::<T>::get(market_id);
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -326,9 +326,10 @@ benchmarks! {
         }
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -386,9 +387,10 @@ benchmarks! {
         let market = T::MarketCommons::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -414,17 +416,17 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
         let market = T::MarketCommons::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -452,8 +454,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -478,10 +479,10 @@ benchmarks! {
         let disputes = Disputes::<T>::get(market_id);
 
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -510,8 +511,7 @@ benchmarks! {
             )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -527,12 +527,12 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
-
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let market = T::MarketCommons::market(&market_id)?;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -775,8 +775,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -794,9 +793,10 @@ benchmarks! {
         }
 
         let now = frame_system::Pallet::<T>::block_number();
+        let resolves_at = now.saturating_add(market.deadlines.dispute_duration);
         for i in 0..b {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                now,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -824,8 +824,7 @@ benchmarks! {
             OutcomeReport::Categorical(1u16),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
         let market = T::MarketCommons::market(&market_id)?;
@@ -847,8 +846,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -891,8 +889,7 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
         let market = T::MarketCommons::market(&market_id)?;
@@ -1022,9 +1019,10 @@ benchmarks! {
         let grace_period: u32 =
             (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
         pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
-        let current_block = frame_system::Pallet::<T>::block_number();
+        let report_at = frame_system::Pallet::<T>::block_number();
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..m {
-            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
+            MarketIdsPerReportBlock::<T>::try_mutate(resolves_at, |ids| {
                 ids.try_push(i.into())
             }).unwrap();
         }

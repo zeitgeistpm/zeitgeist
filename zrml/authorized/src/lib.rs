@@ -37,11 +37,11 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{OptionQuery, StorageMap},
+        pallet_prelude::{EnsureOrigin, OptionQuery, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::pallet_prelude::OriginFor;
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
@@ -70,19 +70,17 @@ mod pallet {
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+            T::AuthorizedDisputeResolutionOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            if let MarketDisputeMechanism::Authorized(ref account_id) = market.dispute_mechanism {
-                if account_id != &who {
-                    return Err(Error::<T>::NotAuthorizedForThisMarket.into());
+            match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
+                    Ok(())
                 }
-            } else {
-                return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
+                _ => Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into()),
             }
-            AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
-            Ok(())
         }
     }
 
@@ -97,6 +95,9 @@ mod pallet {
             BlockNumber = Self::BlockNumber,
         >;
 
+        /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
+        type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::Origin>;
+
         /// Identifier of this pallet
         #[pallet::constant]
         type PalletId: Get<PalletId>;
@@ -107,8 +108,6 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// An unauthorized account attempts to submit a report.
-        NotAuthorizedForThisMarket,
         /// The market unexpectedly has the incorrect dispute mechanism.
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
@@ -173,9 +172,8 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>(
-    ai: T::AccountId,
-) -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>()
+-> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
 where
     T: crate::Config,
 {
@@ -188,7 +186,7 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),

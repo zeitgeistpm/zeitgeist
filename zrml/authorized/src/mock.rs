@@ -18,7 +18,8 @@
 #![cfg(test)]
 
 use crate::{self as zrml_authorized};
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{construct_runtime, ord_parameter_types, traits::Everything};
+use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -52,10 +53,16 @@ construct_runtime!(
     }
 );
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 impl crate::Config for Runtime {
     type Event = ();
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
