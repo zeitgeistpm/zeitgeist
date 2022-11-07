@@ -131,7 +131,7 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         decimals: 10,
         name: "Zeitgeist".into(),
         symbol: "ZTG".into(),
-        existential_deposit: 500_000_000, // 0.05
+        existential_deposit: 50_000_000, // 0.005
         location: Some(VersionedMultiLocation::V1(foreign_ztg_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
@@ -145,7 +145,7 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         decimals: 10,
         name: "Sibling".into(),
         symbol: "SBL".into(),
-        existential_deposit: 500_000_000, // 0.05
+        existential_deposit: 50_000_000, // 0.005
         location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };

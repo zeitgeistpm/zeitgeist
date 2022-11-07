@@ -134,13 +134,6 @@ impl Contains<Call> for IsCallable {
 
 decl_common_types!();
 
-#[cfg(not(feature = "parachain"))]
-create_runtime_with_additional_pallets!(
-    // Others
-    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
-);
-
-#[cfg(feature = "parachain")]
 create_runtime_with_additional_pallets!(
     // Others
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,

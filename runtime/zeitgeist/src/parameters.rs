@@ -287,6 +287,8 @@ parameter_types! {
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
+    /// Treasury account.
+    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
