@@ -19,28 +19,23 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign, foreign_parent_multilocation, foreign_sibling_multilocation,
-            foreign_ztg_multilocation, ksm, register_foreign_parent, register_foreign_sibling,
-            sibling, sibling_account, zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID, PARA_ID_SIBLING,
+            foreign_parent_multilocation, foreign_sibling_multilocation,
+            foreign_ztg_multilocation, register_foreign_parent, register_foreign_sibling,
+            FOREIGN_PARENT_ID,
+            FOREIGN_SIBLING_ID, 
         },
-        test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
+        test_net::{Zeitgeist},
     },
     xcm_config::{
-        asset_registry::{CustomMetadata, XcmMetadata},
         config::{general_key, zeitgeist, AssetConvert},
-        fees::default_per_second,
     },
-    AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
+    CurrencyId
 };
 
-use frame_support::{assert_err, assert_ok};
-use orml_traits::{asset_registry::AssetMetadata, FixedConversionRateProvider, MultiCurrency};
-use parity_scale_codec::Encode;
+use frame_support::{assert_err};
 use sp_runtime::traits::Convert as C2;
 use xcm::{
-    latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId},
-    VersionedMultiLocation,
+    latest::{Junction::*, Junctions::*, MultiLocation},
 };
 use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;

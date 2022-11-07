@@ -19,32 +19,28 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign, foreign_parent_multilocation, foreign_ztg_multilocation, ksm,
-            register_foreign_parent, register_foreign_ztg, sibling, sibling_account,
-            zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID,
+            ksm,
+            register_foreign_parent, register_foreign_ztg, sibling_account,
+            zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID,
             FOREIGN_ZTG_ID, PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
     xcm_config::{
         asset_registry::{CustomMetadata, XcmMetadata},
-        config::{general_key, zeitgeist, AssetConvert},
+        config::{zeitgeist,},
         fees::default_per_second,
     },
-    AssetRegistry, Balance, Balances, CurrencyId, ExistentialDeposit, Origin, Tokens, XTokens,
+    AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
     ZeitgeistTreasuryAccount,
 };
 
-use frame_support::{assert_ok, traits::tokens::fungible::Mutate};
-use orml_traits::{asset_registry::AssetMetadata, FixedConversionRateProvider, MultiCurrency};
-use parity_scale_codec::Encode;
-use sp_runtime::traits::Convert as C2;
+use frame_support::{assert_ok};
+use orml_traits::{MultiCurrency};
 use xcm::{
-    latest::{Error::BadOrigin, Junction, Junction::*, Junctions::*, MultiLocation, NetworkId},
-    VersionedMultiLocation,
+    latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId},
 };
 use xcm_emulator::TestExt;
-use xcm_executor::traits::Convert as C1;
 use zeitgeist_primitives::constants::BalanceFractionalDecimals;
 
 #[test]

@@ -25,10 +25,10 @@
 use super::{parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo};
 use frame_support::{parameter_types, traits::Get, weights::Weight};
 use orml_traits::parameter_type_with_key;
-use sp_runtime::{Perbill, Percent, SaturatedConversion};
+use sp_runtime::{Perbill, Percent};
 use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
 use zeitgeist_primitives::{
-    constants::{BASE, BLOCKS_PER_MINUTE, MICRO},
+    constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,
 };
 

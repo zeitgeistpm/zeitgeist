@@ -27,7 +27,7 @@ use frame_support::{match_types, parameter_types, traits::Everything};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{location::AbsoluteReserveProvider, MultiCurrency};
 use orml_xcm_support::{
-    DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset, UnknownAsset,
+    DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
