@@ -14,3 +14,10 @@ pull_request_rules:
           - s:review-needed
       queue:
         name: default
+  - name: ask to resolve conflict
+    conditions:
+      - conflict
+    actions:
+        comment:
+          message: This pull request is now in conflicts. Could you fix it @{{author}}? 🙏
+
