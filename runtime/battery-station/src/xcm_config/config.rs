@@ -49,9 +49,9 @@ use xcm_builder::{
 use xcm_executor::Config;
 use zeitgeist_primitives::types::Asset;
 
-pub mod zeitgeist {
+pub mod battery_station {
     #[cfg(test)]
-    pub const ID: u32 = 2101;
+    pub const ID: u32 = 2050;
     pub const KEY: &[u8] = &[0, 1];
 }
 
@@ -145,7 +145,7 @@ parameter_types! {
     pub ZtgPerSecondCanonical: (AssetId, u128) = (
         MultiLocation::new(
             0,
-            X1(general_key(zeitgeist::KEY)),
+            X1(general_key(battery_station::KEY)),
         ).into(),
         native_per_second(),
     );
@@ -153,7 +153,7 @@ parameter_types! {
     pub ZtgPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
-            X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(zeitgeist::KEY)),
+            X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(battery_station::KEY)),
         ).into(),
         native_per_second(),
     );
@@ -196,7 +196,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
                 1,
                 X2(
                     Junction::Parachain(ParachainInfo::parachain_id().into()),
-                    general_key(zeitgeist::KEY),
+                    general_key(battery_station::KEY),
                 ),
             )),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
@@ -212,7 +212,7 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
             MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
-                zeitgeist::KEY => Ok(CurrencyId::Ztg),
+                battery_station::KEY => Ok(CurrencyId::Ztg),
                 _ => Err(location),
             },
             MultiLocation {
@@ -220,7 +220,7 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
                 interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
             } => match para_id {
                 id if id == u32::from(ParachainInfo::parachain_id()) => match &key[..] {
-                    zeitgeist::KEY => Ok(CurrencyId::Ztg),
+                    battery_station::KEY => Ok(CurrencyId::Ztg),
                     _ => Err(location),
                 },
                 _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),

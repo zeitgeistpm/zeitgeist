@@ -27,7 +27,7 @@ use crate::{
         test_net::{Zeitgeist},
     },
     xcm_config::{
-        config::{general_key, zeitgeist, AssetConvert},
+        config::{general_key, battery_station, AssetConvert},
     },
     CurrencyId
 };
@@ -42,10 +42,10 @@ use xcm_executor::traits::Convert as C1;
 
 #[test]
 fn convert_native() {
-    assert_eq!(zeitgeist::KEY.to_vec(), vec![0, 1]);
+    assert_eq!(battery_station::KEY.to_vec(), vec![0, 1]);
 
     // The way Ztg is represented relative within the Zeitgeist runtime
-    let ztg_location_inner: MultiLocation = MultiLocation::new(0, X1(general_key(zeitgeist::KEY)));
+    let ztg_location_inner: MultiLocation = MultiLocation::new(0, X1(general_key(battery_station::KEY)));
 
     assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(CurrencyId::Ztg));
 
@@ -111,7 +111,7 @@ fn convert_any_registered_sibling_multilocation() {
 #[test]
 fn convert_unkown_multilocation() {
     let unknown_location: MultiLocation =
-        MultiLocation::new(1, X2(Parachain(zeitgeist::ID), general_key(&[42])));
+        MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(&[42])));
 
     Zeitgeist::execute_with(|| {
         assert!(<AssetConvert as C1<_, _>>::convert(unknown_location.clone()).is_err());

@@ -17,7 +17,7 @@
 
 use crate::{
     parameters::ZeitgeistTreasuryAccount,
-    xcm_config::{config::zeitgeist},
+    xcm_config::{config::battery_station},
     AccountId, CurrencyId, DmpQueue, Origin, Runtime, XcmpQueue,
 };
 use cumulus_primitives_core::ParaId;
@@ -43,7 +43,7 @@ decl_test_parachain! {
         Origin = Origin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
-        new_ext = para_ext(zeitgeist::ID),
+        new_ext = para_ext(battery_station::ID),
     }
 }
 
@@ -64,8 +64,8 @@ decl_test_network! {
             // N.B: Ideally, we could use the defined para id constants but doing so
             // fails with: "error: arbitrary expressions aren't allowed in patterns"
 
-            // Be sure to use `xcm_config::config::zeitgeist::ID`
-            (2101, Zeitgeist),
+            // Be sure to use `xcm_config::config::battery_station::ID`
+            (2050, Zeitgeist),
             // Be sure to use `PARA_ID_SIBLING`
             (3000, Sibling),
         ],
@@ -80,7 +80,7 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
     pallet_balances::GenesisConfig::<Runtime> {
         balances: vec![
             (AccountId::from(ALICE), ksm(2002)),
-            (ParaId::from(zeitgeist::ID).into_account(), ztg(7)),
+            (ParaId::from(battery_station::ID).into_account(), ztg(7)),
             (ParaId::from(PARA_ID_SIBLING).into_account(), sibling(7)),
         ],
     }

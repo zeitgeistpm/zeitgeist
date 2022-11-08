@@ -19,9 +19,9 @@
 use crate::{
     xcm_config::{
         asset_registry::CustomMetadata,
-        config::{general_key, zeitgeist},
+        config::{general_key, battery_station},
     },
-    AccountId, AssetRegistry, Balance, CurrencyId, Origin, Runtime, System,
+    AccountId, AssetRegistry, Balance, CurrencyId, Origin, Runtime, System, ExistentialDeposit,
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;
@@ -38,7 +38,7 @@ pub(super) struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![], parachain_id: zeitgeist::ID }
+        Self { balances: vec![], parachain_id: battery_station::ID }
     }
 }
 
@@ -112,12 +112,12 @@ pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
 // Multilocations that are used to represent tokens from other chains
 #[inline]
 pub(super) fn foreign_ztg_multilocation() -> MultiLocation {
-    MultiLocation::new(1, X2(Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)))
+    MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(battery_station::KEY)))
 }
 
 #[inline]
 pub(super) fn foreign_sibling_multilocation() -> MultiLocation {
-    MultiLocation::new(1, X2(Parachain(PARA_ID_SIBLING), general_key(zeitgeist::KEY)))
+    MultiLocation::new(1, X2(Parachain(PARA_ID_SIBLING), general_key(battery_station::KEY)))
 }
 
 #[inline]
@@ -131,7 +131,7 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         decimals: 10,
         name: "Zeitgeist".into(),
         symbol: "ZTG".into(),
-        existential_deposit: 50_000_000, // 0.005
+        existential_deposit: ExistentialDeposit::get(),
         location: Some(VersionedMultiLocation::V1(foreign_ztg_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
@@ -145,7 +145,7 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         decimals: 10,
         name: "Sibling".into(),
         symbol: "SBL".into(),
-        existential_deposit: 50_000_000, // 0.005
+        existential_deposit: ExistentialDeposit::get(),
         location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
@@ -199,7 +199,7 @@ pub(super) fn sibling_account() -> AccountId {
 
 #[inline]
 pub(super) fn zeitgeist_account() -> AccountId {
-    parachain_account(zeitgeist::ID)
+    parachain_account(battery_station::ID)
 }
 
 #[inline]

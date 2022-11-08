@@ -28,7 +28,7 @@ use crate::{
     },
     xcm_config::{
         asset_registry::{CustomMetadata, XcmMetadata},
-        config::{zeitgeist,},
+        config::battery_station,
         fees::default_per_second,
     },
     AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
@@ -136,7 +136,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                 MultiLocation::new(
                     1,
                     X2(
-                        Parachain(zeitgeist::ID),
+                        Parachain(battery_station::ID),
                         Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
                     )
                 )
@@ -184,7 +184,7 @@ fn transfer_ksm_from_relay_chain() {
     KusamaNet::execute_with(|| {
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
             kusama_runtime::Origin::signed(ALICE.into()),
-            Box::new(Parachain(zeitgeist::ID).into().into()),
+            Box::new(Parachain(battery_station::ID).into().into()),
             Box::new(Junction::AccountId32 { network: NetworkId::Any, id: BOB }.into().into()),
             Box::new((Here, transfer_amount).into()),
             0

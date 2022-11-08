@@ -77,6 +77,8 @@ use sp_runtime::{
 use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 
+#[cfg(test)]
+pub mod integration_tests;
 #[cfg(feature = "parachain")]
 pub mod parachain_params;
 pub mod parameters;
