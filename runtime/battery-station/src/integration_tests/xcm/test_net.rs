@@ -16,9 +16,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    parameters::ZeitgeistTreasuryAccount,
-    xcm_config::{config::battery_station},
-    AccountId, CurrencyId, DmpQueue, Origin, Runtime, XcmpQueue,
+    parameters::ZeitgeistTreasuryAccount, xcm_config::config::battery_station, AccountId,
+    CurrencyId, DmpQueue, Origin, Runtime, XcmpQueue,
 };
 use cumulus_primitives_core::ParaId;
 use frame_support::{traits::GenesisBuild, weights::Weight};

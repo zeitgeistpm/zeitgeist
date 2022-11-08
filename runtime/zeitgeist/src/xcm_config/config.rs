@@ -23,7 +23,7 @@ use crate::{
 };
 
 use alloc::vec::Vec;
-use frame_support::{match_types, parameter_types, traits::Everything};
+use frame_support::{parameter_types, traits::Everything};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{location::AbsoluteReserveProvider, MultiCurrency};
 use orml_xcm_support::{
@@ -35,7 +35,7 @@ use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
         prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, NetworkId, X1, X2},
-        BodyId, Junction, Junctions, MultiLocation,
+        Junction, MultiLocation,
     },
     opaque::latest::Fungibility::Fungible,
 };
@@ -298,14 +298,6 @@ pub type XcmRouter = (
     // ..and XCMP to communicate with the sibling chains.
     XcmpQueue,
 );
-
-match_types! {
-    pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
-        MultiLocation { parents: 1, interior: Junctions::Here } |
-        // Potentially change "Unit" to "Executive" for mainnet once we have separate runtimes
-        MultiLocation { parents: 1, interior: X1(Junction::Plurality { id: BodyId::Unit, .. }) }
-    };
-}
 
 #[inline]
 pub(crate) fn general_key(key: &[u8]) -> Junction {

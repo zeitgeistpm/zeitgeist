@@ -19,24 +19,19 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign_parent_multilocation, foreign_sibling_multilocation,
-            foreign_ztg_multilocation, register_foreign_parent, register_foreign_sibling,
-            FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID, 
+            foreign_parent_multilocation, foreign_sibling_multilocation, foreign_ztg_multilocation,
+            register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
+            FOREIGN_SIBLING_ID,
         },
-        test_net::{Zeitgeist},
+        test_net::Zeitgeist,
     },
-    xcm_config::{
-        config::{general_key, battery_station, AssetConvert},
-    },
-    CurrencyId
+    xcm_config::config::{battery_station, general_key, AssetConvert},
+    CurrencyId,
 };
 
-use frame_support::{assert_err};
+use frame_support::assert_err;
 use sp_runtime::traits::Convert as C2;
-use xcm::{
-    latest::{Junction::*, Junctions::*, MultiLocation},
-};
+use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
 use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;
 
@@ -45,7 +40,8 @@ fn convert_native() {
     assert_eq!(battery_station::KEY.to_vec(), vec![0, 1]);
 
     // The way Ztg is represented relative within the Zeitgeist runtime
-    let ztg_location_inner: MultiLocation = MultiLocation::new(0, X1(general_key(battery_station::KEY)));
+    let ztg_location_inner: MultiLocation =
+        MultiLocation::new(0, X1(general_key(battery_station::KEY)));
 
     assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(CurrencyId::Ztg));
 

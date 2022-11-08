@@ -19,24 +19,19 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign_parent_multilocation, foreign_sibling_multilocation,
-            foreign_ztg_multilocation, register_foreign_parent, register_foreign_sibling,
-            FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID, 
+            foreign_parent_multilocation, foreign_sibling_multilocation, foreign_ztg_multilocation,
+            register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
+            FOREIGN_SIBLING_ID,
         },
-        test_net::{Zeitgeist},
+        test_net::Zeitgeist,
     },
-    xcm_config::{
-        config::{general_key, zeitgeist, AssetConvert},
-    },
-    CurrencyId
+    xcm_config::config::{general_key, zeitgeist, AssetConvert},
+    CurrencyId,
 };
 
-use frame_support::{assert_err};
+use frame_support::assert_err;
 use sp_runtime::traits::Convert as C2;
-use xcm::{
-    latest::{Junction::*, Junctions::*, MultiLocation},
-};
+use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
 use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;
 

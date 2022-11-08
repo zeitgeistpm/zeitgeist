@@ -19,10 +19,8 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            ksm,
-            register_foreign_parent, register_foreign_ztg, sibling_account,
-            zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID,
-            FOREIGN_ZTG_ID, PARA_ID_SIBLING,
+            ksm, register_foreign_parent, register_foreign_ztg, sibling_account, zeitgeist_account,
+            ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
@@ -35,11 +33,9 @@ use crate::{
     ZeitgeistTreasuryAccount,
 };
 
-use frame_support::{assert_ok};
-use orml_traits::{MultiCurrency};
-use xcm::{
-    latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId},
-};
+use frame_support::assert_ok;
+use orml_traits::MultiCurrency;
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 use xcm_emulator::TestExt;
 use zeitgeist_primitives::constants::BalanceFractionalDecimals;
 

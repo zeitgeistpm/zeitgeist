@@ -19,9 +19,9 @@
 use crate::{
     xcm_config::{
         asset_registry::CustomMetadata,
-        config::{general_key, battery_station},
+        config::{battery_station, general_key},
     },
-    AccountId, AssetRegistry, Balance, CurrencyId, Origin, Runtime, System, ExistentialDeposit,
+    AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, Origin, Runtime, System,
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;

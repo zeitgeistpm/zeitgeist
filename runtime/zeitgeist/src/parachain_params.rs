@@ -22,10 +22,8 @@
 )]
 #![cfg(feature = "parachain")]
 
-use super::{
-    parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo,
-};
-use frame_support::{parameter_types, traits::{Get}, weights::Weight};
+use super::{parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo};
+use frame_support::{parameter_types, traits::Get, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
 use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
@@ -33,7 +31,6 @@ use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,
 };
-
 
 parameter_types! {
     // Author-Mapping
@@ -51,8 +48,7 @@ parameter_types! {
     // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
-    // Have to change "Any" to "Kusama" for mainnet once we have separate runtimes
-    pub const RelayNetwork: NetworkId = NetworkId::Any;
+    pub const RelayNetwork: NetworkId = NetworkId::Kusama;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
@@ -103,7 +99,6 @@ parameter_types! {
     // Relative self location
     pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
 }
-
 
 parameter_type_with_key! {
     // XCM
