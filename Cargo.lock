@@ -12810,6 +12810,7 @@ dependencies = [
  "substrate-wasm-builder",
  "xcm",
  "xcm-builder",
+ "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
  "zrml-authorized",
