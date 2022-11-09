@@ -299,14 +299,6 @@ pub type XcmRouter = (
     XcmpQueue,
 );
 
-match_types! {
-    pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
-        MultiLocation { parents: 1, interior: Junctions::Here } |
-        // Potentially change "Unit" to "Executive" for mainnet once we have separate runtimes
-        MultiLocation { parents: 1, interior: X1(Junction::Plurality { id: BodyId::Unit, .. }) }
-    };
-}
-
 #[inline]
 pub(crate) fn general_key(key: &[u8]) -> Junction {
     GeneralKey(Vec::from(key))
