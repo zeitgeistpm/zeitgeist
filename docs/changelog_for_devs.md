@@ -1,7 +1,7 @@
-# v0.3.6
-- Asset::Ztg was renamed to Asset::Ztg. All currency symbols will be written in uppercase.
-- Added two more currencies: AUSD and KSM (or ROC on testnet)
+# v0.3.7
 - Added xTokens pallet to transfer tokens accross chains
+- Added AssetRegistry pallet to register foreign asset
+- Asset UnknownTokens pallet to handle unknown foreign assets
 
 # v0.3.5
 
