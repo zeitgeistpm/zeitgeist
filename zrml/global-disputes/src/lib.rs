@@ -378,17 +378,6 @@ mod pallet {
                 debug_assert!(false);
             }
 
-            // because of division remainders allow some dust
-            if 100u128.saturated_into::<BalanceOf<T>>() < remainder {
-                log::warn!(
-                    "Global Disputes: The reward remainder for the market id {:?} 
-                    should be near zero after the reward process. Reward remainder amount: {:?}",
-                    &market_id,
-                    remainder
-                );
-                debug_assert!(false);
-            }
-
             Self::deposit_event(Event::OutcomeOwnersRewarded {
                 market_id,
                 owners: winner_info.outcome_info.owners.to_vec(),
