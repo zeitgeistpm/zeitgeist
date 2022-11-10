@@ -47,7 +47,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
-        DispatchResult, SaturatedConversion,
+        DispatchResult,
     };
     use sp_std::{vec, vec::Vec};
     use zeitgeist_primitives::types::OutcomeReport;
