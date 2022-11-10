@@ -1,3 +1,41 @@
+# v0.3.7
+
+- Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence
+  `MarketDisputeMechanism::Authorized` does not need account_id. To create
+  market with Authorized MDM specifying account_id for Authorized MDM is not
+  required, any user satisfying `AuthorizedDisputeResolutionOrigin` can use
+  Authorized MDM for resolving market.
+- Transformed integer scalar markets to fixed point with ten digits after the
+  decimal point. As soon as this update is deployed, the interpretation of the
+  scalar values must be changed.
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
+- `request_edit` extrinsic added, which enables a user satisfying
+  `RequestEditOrigin` to request edit in market with `Proposed` state, when
+  successful it emits `MarketRequestedEdit` event. `request_edit` requires
+  `edit_reason` parameter which is `Vec<u8>`. The config constant
+  `MaxEditReasonLen` defines maximum length of above parameter. The
+  `MarketRequestedEdit` event also contains `edit_reason`.
+- `edit_market` extrinsic added, which enables creator of the market to edit
+  market. It has same parameters as `create_market` except market_creation, on
+  success it returns `MarketEdited` event.
+
+# v0.3.6
+
+- Added new field `deadlines` in Market structure, which has `grace_period`,
+  `oracle_duration` and `dispute_duration` fields, all of which represent
+  durations in number of blocks. The `create_market` extrinsic has a new
+  parameter to specify these deadlines.
+- Added `pallet-bounties` to the Zeitgeist runtime to facilitate community
+  projects.
+- Changed `MaxCategories` to `64`, as originally intended
+- Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
+  to 0%; this value can be quickly adjusted in the future by using the new
+  on-chain variable `AdvisoryBondSlashPercentage`.
+- Temporarily disabled removal of losing assets when a market resolves.
+
 # v0.3.5
 
 - Added `Initialized` status for pools. A pool now starts in `Initialized`
@@ -18,11 +56,12 @@
 
   Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
   on-chain constant `MaxSwapFee`.
+
 - Added new pallet: Styx. Dispatchable calls are:
   - `cross` - Burns native chain tokens to cross. In the case of Zeitgeist, this
-            is granting the ability to claim your zeitgeist avatar.
-  - `set_burn_amount(amount)` - Sets the new burn price for the cross.
-                              Intended to be called by governance.
+    is granting the ability to claim your zeitgeist avatar.
+  - `set_burn_amount(amount)` - Sets the new burn price for the cross. Intended
+    to be called by governance.
 
 # v0.3.4
 

@@ -152,6 +152,9 @@ pub enum Subcommand {
     /// Build a chain specification.
     BuildSpec(sc_cli::BuildSpecCmd),
 
+    /// Db meta columns information.
+    ChainInfo(sc_cli::ChainInfoCmd),
+
     /// Validate blocks.
     CheckBlock(sc_cli::CheckBlockCmd),
 
@@ -214,6 +217,16 @@ pub struct Cli {
 
     #[clap(subcommand)]
     pub subcommand: Option<Subcommand>,
+
+    /// Disable automatic hardware benchmarks.
+    ///
+    /// By default these benchmarks are automatically ran at startup and measure
+    /// the CPU speed, the memory bandwidth and the disk speed.
+    ///
+    /// The results are then printed out in the logs, and also sent as part of
+    /// telemetry, if telemetry is enabled.
+    #[clap(long)]
+    pub no_hardware_benchmarks: bool,
 
     /// Relaychain arguments
     #[cfg(feature = "parachain")]
@@ -327,8 +340,8 @@ where
 /// return them from a function. For returning them from a function there exists
 /// [`Client`]. However, the problem on how to use this client instance still
 /// exists. This trait "solves" it in a dirty way. It requires a type to
-/// implement this trait and than the [`execute_with_client`](ExecuteWithClient:
-/// :execute_with_client) function can be called with any possible client
+/// implement this trait and than the [`execute_with_client`](ExecuteWithClient::execute_with_client)
+/// function can be called with any possible client
 /// instance.
 ///
 /// In a perfect world, we could make a closure work in this way.
@@ -460,6 +473,10 @@ impl sc_client_api::BlockBackend<Block> for Client {
         hash: &<Block as BlockT>::Hash,
     ) -> sp_blockchain::Result<bool> {
         match_client!(self, has_indexed_transaction(hash))
+    }
+
+    fn requires_full_sync(&self) -> bool {
+        match_client!(self, requires_full_sync())
     }
 }
 

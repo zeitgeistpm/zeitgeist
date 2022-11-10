@@ -95,7 +95,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<
     let period = zeitgeist_runtime::BlockHashCount::get()
         .checked_next_power_of_two()
         .map(|c| c / 2)
-        .unwrap_or(2) as u64;
+        .unwrap_or(2);
     let extra: zeitgeist_runtime::SignedExtra = (
         zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
         zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
@@ -153,7 +153,7 @@ pub fn create_benchmark_extrinsic_battery_station<
     let period = battery_station_runtime::BlockHashCount::get()
         .checked_next_power_of_two()
         .map(|c| c / 2)
-        .unwrap_or(2) as u64;
+        .unwrap_or(2);
     let extra: battery_station_runtime::SignedExtra = (
         battery_station_runtime::CheckNonZeroSender::<battery_station_runtime::Runtime>::new(),
         battery_station_runtime::CheckSpecVersion::<battery_station_runtime::Runtime>::new(),

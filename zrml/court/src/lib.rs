@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Court
-
 // It is important to note that if a categorical market has only two outcomes, then winners
 // won't receive any rewards because accounts of the most voted outcome on the loser side are
 // simply registered as `JurorStatus::Tardy`.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
@@ -74,7 +73,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -254,8 +253,9 @@ mod pallet {
             })
         }
 
+        #[inline]
         pub(crate) fn treasury_account_id() -> T::AccountId {
-            T::TreasuryPalletId::get().into_account()
+            T::TreasuryPalletId::get().into_account_truncating()
         }
 
         // No-one can stake more than BalanceOf::<T>::max(), therefore, this function saturates

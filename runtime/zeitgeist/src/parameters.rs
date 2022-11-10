@@ -33,13 +33,17 @@ use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
-use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
+use sp_runtime::{
+    traits::AccountIdConversion, FixedPointNumber, Perbill, Percent, Permill, Perquintill,
+};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
+pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 
 parameter_types! {
     // Authorized
@@ -56,7 +60,8 @@ parameter_types! {
     // Collective
     // Note: MaxMembers does not influence the pallet logic, but the worst-case weight estimation.
     pub const AdvisoryCommitteeMaxMembers: u32 = 100;
-    pub const AdvisoryCommitteeMaxProposals: u32 = 300;
+    // The maximum of proposals is currently u8::MAX otherwise the pallet_collective benchmark fails
+    pub const AdvisoryCommitteeMaxProposals: u32 = 255;
     pub const AdvisoryCommitteeMotionDuration: BlockNumber = 3 * BLOCKS_PER_DAY;
     pub const CouncilMaxMembers: u32 = 100;
     pub const CouncilMaxProposals: u32 = 100;
@@ -132,12 +137,13 @@ parameter_types! {
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 200 * BASE;
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
@@ -159,7 +165,19 @@ parameter_types! {
     // 2_678_400_000 = 31 days.
     /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
+    /// The dispute_duration is time where users can dispute the outcome.
+    /// Minimum block period for a dispute.
+    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
+    /// Maximum block period for a dispute.
+    pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
+    /// Maximum block period for a grace_period.
+    /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
+    pub const MaxGracePeriod: BlockNumber = MAX_GRACE_PERIOD;
+    /// Minimum block period for an oracle_duration.
+    pub const MinOracleDuration: BlockNumber = MIN_ORACLE_DURATION;
+    /// Maximum block period for an oracle_duration.
+    /// The oracle_duration is a duration where the oracle has to submit its report.
+    pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
     /// The maximum market period.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
@@ -168,10 +186,14 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// Timeframe during which the oracle can report the final outcome after the market closed.
-    pub const ReportingPeriod: u32 = 4 * BLOCKS_PER_DAY as u32;
+    pub const ReportingPeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
+    /// Maximum string length for edit reason.
+    pub const MaxEditReasonLen: u32 = 1024;
+    /// Maximum string length allowed for reject reason.
+    pub const MaxRejectReasonLen: u32 = 1024;
 
     // Preimage
     pub const PreimageMaxSize: u32 = 4096 * 1024;
@@ -212,7 +234,7 @@ parameter_types! {
     /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.
-    pub const MaxTotalWeight: Balance = 128 * BASE;
+    pub const MaxTotalWeight: Balance = MaxWeight::get() * 2;
     /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 64 * BASE;
     /// Minimum amount of liquidity required to launch a CPMM pool.
@@ -273,7 +295,7 @@ parameter_types! {
 
     // Treasury
     /// Percentage of spare funds (if any) that are burnt per spend period.
-    pub const Burn: Permill = Permill::from_percent(50);
+    pub const Burn: Permill = Permill::from_percent(10);
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
@@ -287,6 +309,35 @@ parameter_types! {
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+
+    // Bounties
+    /// The amount held on deposit for placing a bounty proposal.
+    pub const BountyDepositBase: Balance = 100 * BASE;
+    /// The delay period that a bounty beneficiary needs to wait before being able to claim the payout.
+    pub const BountyDepositPayoutDelay: BlockNumber = 3 * BLOCKS_PER_DAY;
+
+    /// Bounty duration in blocks.
+    pub const BountyUpdatePeriod: BlockNumber = 35 * BLOCKS_PER_DAY;
+
+    /// The curator deposit is calculated as a percentage of the curator fee.
+    ///
+    /// This deposit has optional upper and lower bounds with `CuratorDepositMax` and
+    /// `CuratorDepositMin`.
+    pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
+
+    /// Maximum amount of funds that should be placed in a deposit for making a proposal.
+    pub const CuratorDepositMax: Balance = 500 * BASE;
+    /// Minimum amount of funds that should be placed in a deposit for making a proposal.
+    pub const CuratorDepositMin: Balance = 10 * BASE;
+    /// Minimum value for a bounty.
+    pub const BountyValueMinimum: Balance = 50 * BASE;
+
+    /// The amount held on deposit per byte within the tip report reason or bounty description.
+    pub DataDepositPerByte: Balance = BASE;
+    /// Maximum acceptable reason length.
+    ///
+    /// Benchmarks depend on this value, be sure to update weights file when changing this value
+    pub MaximumReasonLength: u32 = 8192;
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
