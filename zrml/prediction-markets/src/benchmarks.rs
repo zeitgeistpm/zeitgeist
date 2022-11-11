@@ -482,6 +482,13 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
+        // Authorize the outcome with the highest number of correct reporters to maximize the
+        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+        AuthorizedPallet::<T>::authorize_market_outcome(
+            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            market_id.into(),
+            OutcomeReport::Scalar(0),
+        )?;
 
         let last_dispute = disputes.last().unwrap();
         let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
@@ -491,14 +498,6 @@ benchmarks! {
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
-
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
-        AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
-            market_id.into(),
-            OutcomeReport::Scalar(0),
-        )?;
 
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
@@ -531,7 +530,7 @@ benchmarks! {
         for i in 0..d {
             let outcome = OutcomeReport::Categorical((i % 2).saturated_into::<u16>());
             let disputor = account("disputor", i + 1, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>((i + 1) as usize);
+            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
             T::AssetManager::deposit(
                 Asset::Ztg,
                 &disputor,
@@ -540,6 +539,14 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
+        // Authorize the outcome with the highest number of correct reporters to maximize the
+        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+        AuthorizedPallet::<T>::authorize_market_outcome(
+            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            market_id.into(),
+            OutcomeReport::Categorical(0),
+        )?;
+
         let last_dispute = disputes.last().unwrap();
         let market = <T as Config>::MarketCommons::market(&market_id)?;
         let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
@@ -549,14 +556,6 @@ benchmarks! {
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
-
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
-        AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
-            market_id.into(),
-            OutcomeReport::Categorical(0),
-        )?;
 
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
