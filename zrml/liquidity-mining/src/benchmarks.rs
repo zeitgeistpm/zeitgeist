@@ -24,7 +24,7 @@
 use crate::pallet::{BalanceOf, Call, Config, Pallet};
 #[cfg(test)]
 use crate::Pallet as LiquidityMining;
-use frame_benchmarking::{benchmarks};
+use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 

@@ -29,9 +29,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use crate::{fixed::bmul, Config};
-use frame_benchmarking::{
-    account, benchmarks, vec, whitelisted_caller, Vec,
-};
+use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -693,4 +691,3 @@ benchmarks! {
         crate::mock::Runtime,
     );
 }
-
