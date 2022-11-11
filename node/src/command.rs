@@ -234,10 +234,8 @@ pub fn run() -> sc_cli::Result<()> {
             let mut builder = sc_cli::LoggerBuilder::new("");
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
-            let chain_spec = &crate::cli::load_spec(
-                &params.chain.clone().unwrap_or_default(),
-                params.parachain_id.into(),
-            )?;
+            let chain_spec =
+                &crate::cli::load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
             let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
             let buf = match chain_spec {
@@ -283,8 +281,9 @@ pub fn run() -> sc_cli::Result<()> {
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
 
-            let raw_wasm_blob =
-                extract_genesis_wasm(cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
+            let raw_wasm_blob = extract_genesis_wasm(
+                cli.load_spec(&params.shared_params.chain.clone().unwrap_or_default())?,
+            )?;
             let output_buf = if params.raw {
                 raw_wasm_blob
             } else {

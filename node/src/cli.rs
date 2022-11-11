@@ -55,16 +55,10 @@ type RunCmd = cumulus_client_cli::RunCmd;
 #[cfg(not(feature = "parachain"))]
 type RunCmd = sc_cli::RunCmd;
 
-pub fn load_spec(
-    id: &str,
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+pub fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         #[cfg(feature = "with-battery-station-runtime")]
-        "" | "dev" => Box::new(crate::chain_spec::dev_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+        "" | "dev" => Box::new(crate::chain_spec::dev_config()?),
         "battery_station" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/bs_parachain.json")[..],
@@ -72,10 +66,7 @@ pub fn load_spec(
             &include_bytes!("../res/bs.json")[..],
         )?),
         #[cfg(feature = "with-battery-station-runtime")]
-        "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+        "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config()?),
         #[cfg(not(feature = "with-battery-station-runtime"))]
         "battery_station_staging" => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
@@ -85,10 +76,7 @@ pub fn load_spec(
             &include_bytes!("../res/zeitgeist.json")[..],
         )?),
         #[cfg(feature = "with-zeitgeist-runtime")]
-        "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+        "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config()?),
         #[cfg(not(feature = "with-zeitgeist-runtime"))]
         "zeitgeist_staging" => panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE),
         path => {
@@ -148,13 +136,11 @@ pub enum Subcommand {
 
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
-    #[clap(name = "export-genesis-state")]
-    ExportGenesisState(cli_parachain::ExportGenesisStateCommand),
+    ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
 
     /// Export the genesis wasm of the parachain.
     #[cfg(feature = "parachain")]
-    #[clap(name = "export-genesis-wasm")]
-    ExportGenesisWasm(cli_parachain::ExportGenesisWasmCommand),
+    ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
 
     /// Export the state of a given block into a chain spec.
     ExportState(sc_cli::ExportStateCmd),
@@ -242,16 +228,7 @@ impl SubstrateCli for Cli {
     }
 
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-        load_spec(
-            id,
-            #[cfg(feature = "parachain")]
-            match id {
-                "battery_station_staging" => {
-                    self.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
-                }
-                _ => self.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
-            },
-        )
+        load_spec(id)
     }
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {

@@ -120,9 +120,7 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
 
 generate_generic_genesis_function!(zeitgeist_runtime,);
 
-pub fn zeitgeist_staging_config(
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<ZeitgeistChainSpec, String> {
+pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
     let wasm = get_wasm()?;
 
     Ok(ZeitgeistChainSpec::from_genesis(
@@ -131,10 +129,7 @@ pub fn zeitgeist_staging_config(
         ChainType::Live,
         move || {
             generic_genesis(
-                additional_chain_spec_staging_zeitgeist(
-                    #[cfg(feature = "parachain")]
-                    parachain_id,
-                ),
+                additional_chain_spec_staging_zeitgeist(2101_u32.into()),
                 endowed_accounts_staging_zeitgeist(),
                 wasm,
             )
@@ -147,7 +142,7 @@ pub fn zeitgeist_staging_config(
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "kusama".into(),
-            parachain_id: parachain_id.into(),
+            parachain_id: 2101_u32.into(),
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
