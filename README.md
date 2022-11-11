@@ -23,6 +23,9 @@ virtually _anything_.
 - [authorized](./zrml/authorized) - Offers authorized resolution of disputes.
 - [court](./zrml/court) - An implementation of a court mechanism used to resolve
   disputes in a decentralized fashion.
+- [global-disputes](./zrml-global-disputes) - Global disputes sets one out of
+  multiple outcomes with the most locked ZTG tokens as the canonical outcome.
+  This is the default process if a dispute mechanism fails to resolve.
 - [liquidity-mining](./zrml/liquidity-mining) - This pallet implements the
   time-based incentivization with Zeitgeist tokens for continuously providing
   liquidity to swap pools.
