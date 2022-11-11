@@ -154,11 +154,7 @@ mod pallet {
             market_id: &Self::MarketId,
             _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            let result = AuthorizedOutcomeReports::<T>::get(market_id);
-            if result.is_some() {
-                AuthorizedOutcomeReports::<T>::remove(market_id);
-            }
-            Ok(result)
+            Ok(AuthorizedOutcomeReports::<T>::take(market_id))
         }
     }
 
