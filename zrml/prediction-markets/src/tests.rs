@@ -19,8 +19,9 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
-    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    default_dispute_bond, mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
+    MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -424,6 +425,64 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        assert_ne!(grace_period, 0);
+        run_to_block(grace_period + 1);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(grace_period + 2);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        let set_up_account = |account| {
+            assert_ok!(AssetManager::deposit(Asset::Ztg, account, SENTINEL_AMOUNT));
+            assert_ok!(Balances::reserve_named(
+                &PredictionMarkets::reserve_id(),
+                account,
+                SENTINEL_AMOUNT,
+            ));
+        };
+        set_up_account(&CHARLIE);
+        set_up_account(&DAVE);
+
+        let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
+        let balance_free_before_dave = Balances::free_balance(&DAVE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &DAVE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::free_balance(CHARLIE),
+            balance_free_before_charlie + default_dispute_bond::<Runtime>(0)
+        );
+        assert_eq!(
+            Balances::free_balance(DAVE),
+            balance_free_before_dave + default_dispute_bond::<Runtime>(1),
+        );
     });
 }
 
