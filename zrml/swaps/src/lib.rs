@@ -1330,6 +1330,13 @@ mod pallet {
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
                 let (amount, _) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
+                // Ensure that executing arbitrage doesn't decrease the base asset balance below
+                // the minimum allowed balance.
+                let balance_base_asset =
+                    balances.get(&pool.base_asset).ok_or(Error::<T>::AssetNotInPool)?;
+                let max_amount =
+                    balance_base_asset.saturating_sub(Self::min_balance(pool.base_asset));
+                let amount = amount.min(max_amount);
                 // We're faking a `buy_complete_sets` operation by transfering to the market prize
                 // pool.
                 T::AssetManager::transfer(
@@ -1345,6 +1352,16 @@ mod pallet {
                 Ok(T::WeightInfo::execute_arbitrage_mint_sell(asset_count))
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
                 let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
+                // Ensure that executing arbitrage doesn't decrease the outcome asset balances below
+                // the minimum allowed balance.
+                let (smallest_outcome, smallest_outcome_balance) = balances
+                    .iter()
+                    .filter(|(k, _)| **k != pool.base_asset)
+                    .min_by(|(_, v1), (_, v2)| v1.cmp(v2))
+                    .ok_or(Error::<T>::AssetNotInPool)?;
+                let max_amount =
+                    smallest_outcome_balance.saturating_sub(Self::min_balance(*smallest_outcome));
+                let amount = amount.min(max_amount);
                 T::AssetManager::transfer(
                     pool.base_asset,
                     &T::MarketCommons::market_account(pool.market_id),

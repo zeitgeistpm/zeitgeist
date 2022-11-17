@@ -27,6 +27,7 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
     BalanceOf, Config, Event, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
+    ARBITRAGE_MAX_ITERATIONS,
 };
 use frame_support::{
     assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin, traits::Hooks,
@@ -3240,6 +3241,134 @@ fn apply_to_cached_pools_only_drains_requested_pools() {
             PoolsCachedForArbitrage::<Runtime>::iter().count(),
             number_of_pools_to_retain as usize,
         );
+    });
+}
+
+#[test]
+fn execute_arbitrage_correctly_observes_min_balance_buy_burn() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Static requirement for this test is that base asset and outcome tokens have similar
+        // minimum balance.
+        assert!(Swaps::min_balance(ASSET_A) <= 3 * Swaps::min_balance(ASSET_B) / 2);
+        let min_balance = Swaps::min_balance(ASSET_A);
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            base_asset,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw most base tokens to push the total spot price below 1 and most of one of the
+        // outcome tokens to trigger an arbitrage that would cause minimum balances to be violated.
+        // The total spot price should be slightly above 1/3.
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        let amount_removed = balance - 3 * min_balance / 2;
+        assert_ok!(Currencies::withdraw(base_asset, &pool_account_id, amount_removed));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, amount_removed));
+
+        // Deposit funds into the prize pool to ensure that the transfers don't fail.
+        let market_id = 0;
+        let market_account_id = MarketCommons::market_account(market_id);
+        let arbitrage_amount = min_balance / 2;
+        assert_ok!(Currencies::deposit(
+            base_asset,
+            &market_account_id,
+            arbitrage_amount + SENTINEL_AMOUNT,
+        ));
+
+        assert_ok!(Swaps::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS));
+
+        assert_eq!(
+            Currencies::free_balance(base_asset, &pool_account_id),
+            balance + arbitrage_amount - amount_removed,
+        );
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), min_balance);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), SENTINEL_AMOUNT);
+        System::assert_has_event(Event::ArbitrageBuyBurn(pool_id, arbitrage_amount).into());
+    });
+}
+
+#[test]
+fn execute_arbitrage_observes_min_balances_mint_sell() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Static assumptions for this test are that minimum balances of all assets are similar.
+        assert!(Swaps::min_balance(ASSET_A) >= Swaps::min_balance(ASSET_B));
+        assert_eq!(Swaps::min_balance(ASSET_B), Swaps::min_balance(ASSET_C));
+        assert_eq!(Swaps::min_balance(ASSET_B), Swaps::min_balance(ASSET_D));
+        let min_balance = Swaps::min_balance(ASSET_A);
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            base_asset,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw a certain amount of outcome tokens to push the total spot price above 1
+        // (`ASSET_A` is the base asset, all other assets are considered outcomes). The exact choice
+        // of balance for `ASSET_A` ensures that after one iteration, we slightly overshoot the
+        // target (see below).
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            balance - 39 * min_balance / 30, // little less than 4 / 3
+        ));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, balance - min_balance));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, balance - min_balance));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, balance - min_balance));
+
+        // The arbitrage amount of mint-sell should always be so that min_balances are not
+        // violated (provided the pool starts in valid state), _except_ when the approximation
+        // overshoots the target. We simulate this by using exactly one iteration.
+        assert_ok!(Swaps::execute_arbitrage(pool_id, 1));
+
+        // Using only one iteration means that the arbitrage amount will be slightly more than
+        // 9 / 30 * min_balance, but that would result in a violation of the minimum balance of the
+        // base asset, so we instead arbitrage the maximum allowed amount:
+        let arbitrage_amount = 9 * min_balance / 30;
+        assert_eq!(Currencies::free_balance(base_asset, &pool_account_id), min_balance);
+        assert_eq!(
+            Currencies::free_balance(ASSET_B, &pool_account_id),
+            min_balance + arbitrage_amount,
+        );
+        assert_eq!(
+            Currencies::free_balance(ASSET_C, &pool_account_id),
+            min_balance + arbitrage_amount,
+        );
+        assert_eq!(
+            Currencies::free_balance(ASSET_D, &pool_account_id),
+            min_balance + arbitrage_amount,
+        );
+        let market_id = 0;
+        let market_account_id = MarketCommons::market_account(market_id);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), arbitrage_amount);
+        System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
     });
 }
 
