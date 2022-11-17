@@ -44,6 +44,9 @@
 //     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //     DEALINGS IN THE SOFTWARE.
 
+//! Helper functions for approximating preimages of increasing or decreasing functions used in
+//! [`crate::arbitrage`].
+
 use sp_runtime::traits::AtLeast32BitUnsigned;
 
 /// Calculate the preimage of `value` under `f` using bisection.

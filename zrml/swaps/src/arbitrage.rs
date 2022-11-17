@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+//! Traits and implementation for automatic arbitrage of CPMM pools.
+
 use crate::{math::calc_spot_price, root::calc_preimage};
 use alloc::collections::btree_map::BTreeMap;
 use parity_scale_codec::MaxEncodedLen;
