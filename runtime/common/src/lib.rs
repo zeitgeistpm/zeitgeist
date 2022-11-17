@@ -171,7 +171,7 @@ macro_rules! decl_common_types {
             frame_support::PalletId: AccountIdConversion<AccountId>,
         {
             fn contains(ai: &AccountId) -> bool {
-                let pallets = vec![
+                let mut pallets = vec![
                     AuthorizedPalletId::get(),
                     CourtPalletId::get(),
                     LiquidityMiningPalletId::get(),
@@ -179,6 +179,9 @@ macro_rules! decl_common_types {
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
                 ];
+
+                #[cfg(feature = "with-global-disputes")]
+                pallets.push(GlobalDisputesPalletId::get());
 
                 if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {
                     return pallets.contains(&pallet_id.0);
@@ -939,6 +942,10 @@ macro_rules! impl_config_traits {
             type DisputeFactor = DisputeFactor;
             type DisputePeriod = DisputePeriod;
             type Event = Event;
+            #[cfg(feature = "with-global-disputes")]
+            type GlobalDisputes = GlobalDisputes;
+            #[cfg(feature = "with-global-disputes")]
+            type GlobalDisputePeriod = GlobalDisputePeriod;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
@@ -993,6 +1000,21 @@ macro_rules! impl_config_traits {
             type Event = Event;
             type MarketCommons = MarketCommons;
             type PalletId = SimpleDisputesPalletId;
+        }
+
+        #[cfg(feature = "with-global-disputes")]
+        impl zrml_global_disputes::Config for Runtime {
+            type Currency = Balances;
+            type Event = Event;
+            type GlobalDisputeLockId = GlobalDisputeLockId;
+            type GlobalDisputesPalletId = GlobalDisputesPalletId;
+            type MarketCommons = MarketCommons;
+            type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+            type MaxOwners = MaxOwners;
+            type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
+            type RemoveKeysLimit = RemoveKeysLimit;
+            type VotingOutcomeFee = VotingOutcomeFee;
+            type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_swaps::Config for Runtime {
@@ -1137,6 +1159,8 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_court, Court);
+                    #[cfg(feature = "with-global-disputes")]
+                    list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
@@ -1213,6 +1237,8 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_court, Court);
+                    #[cfg(feature = "with-global-disputes")]
+                    add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);

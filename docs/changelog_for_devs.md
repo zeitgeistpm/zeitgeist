@@ -9,6 +9,26 @@
   prize pool (mint-sell/buy-burn resp.) and the amount of full sets
   minted/burned. Note that in addition to these events, the low-level
   `tokens.Deposited` and `tokens.Transfer` events are also emitted.
+- Added new pallet: GlobalDisputes. Dispatchable calls are:
+  - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for
+    a constant fee. Errors if the voting outcome already exists or if the global
+    dispute has not started or has already finished.
+  - `vote_on_outcome` - Vote on existing voting outcomes by locking native
+    tokens. Fails if the global dispute has not started or has already finished.
+  - `unlock_vote_balance` - Return all locked native tokens in a global dispute.
+    If the global dispute is not concluded yet the lock remains.
+  - `purge_outcomes` - Purge all outcomes to allow the winning outcome owner(s)
+    to get their reward. Fails if the global dispute is not concluded yet.
+  - `reward_outcome_owner` - Reward the collected fees to the owner(s) of a
+    voting outcome. Fails if not all outcomes are already purged. Events are:
+  - `AddedVotingOutcome` (user added a voting outcome)
+  - `GlobalDisputeWinnerDetermined` (finish the global dispute, set the winner)
+  - `NonReward` (show that no reward exits)
+  - `OutcomeOwnersRewarded` (reward process was finished and spent to outcome
+    owners)
+  - `OutcomesPartiallyCleaned` (outcomes storage item partially cleaned)
+  - `OutcomesFullyCleaned` (outcomes storage item fully cleaned)
+  - `VotedOnOutcome` (user voted on outcome)
 - Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence
   `MarketDisputeMechanism::Authorized` does not need account_id. To create
   market with Authorized MDM specifying account_id for Authorized MDM is not

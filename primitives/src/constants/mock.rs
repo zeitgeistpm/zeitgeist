@@ -5,7 +5,7 @@ use crate::{
     asset::Asset,
     types::{Balance, CurrencyId, Moment},
 };
-use frame_support::{parameter_types, PalletId};
+use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
 
 // Authorized
@@ -20,6 +20,17 @@ parameter_types! {
     pub const StakeWeight: u128 = 2 * BASE;
 }
 
+// Global disputes parameters
+parameter_types! {
+    pub const GlobalDisputeLockId: LockIdentifier = *b"zge/vote";
+    pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    pub const MaxOwners: u32 = 10;
+    pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
+    pub const RemoveKeysLimit: u32 = 250;
+    pub const VotingOutcomeFee: Balance = 100 * CENT;
+}
+
 // Liquidity Mining parameters
 parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
@@ -30,6 +41,7 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
+    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;

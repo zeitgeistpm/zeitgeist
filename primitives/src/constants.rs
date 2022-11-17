@@ -67,6 +67,11 @@ pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
 
+// Global Disputes
+pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
+/// Lock identifier, mainly used for the locks on the accounts.
+pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
+
 // Liqudity Mining
 /// Pallet identifier, mainly used for named balance reserves.
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
