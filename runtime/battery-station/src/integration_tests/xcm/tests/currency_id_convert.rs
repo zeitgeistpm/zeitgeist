@@ -89,7 +89,7 @@ fn convert_any_registered_sibling_multilocation() {
 
         assert_eq!(<AssetConvert as C2<_, _>>::convert(FOREIGN_SIBLING_ID), None,);
 
-        // Register parent as foreign asset in the Zeitgeist parachain
+        // Register sibling as foreign asset in the Zeitgeist parachain
         register_foreign_sibling(None);
 
         assert_eq!(
