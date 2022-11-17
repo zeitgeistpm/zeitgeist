@@ -43,12 +43,12 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-    pub fn balances(mut self, balances: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+    pub fn set_balances(mut self, balances: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
         self.balances = balances;
         self
     }
 
-    pub fn parachain_id(mut self, parachain_id: u32) -> Self {
+    pub fn set_parachain_id(mut self, parachain_id: u32) -> Self {
         self.parachain_id = parachain_id;
         self
     }
