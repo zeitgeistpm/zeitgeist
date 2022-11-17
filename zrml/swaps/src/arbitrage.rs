@@ -40,17 +40,35 @@ pub(crate) trait ArbitrageForCpmm<Balance, MarketId>
 where
     MarketId: MaxEncodedLen,
 {
+    /// Calculate the total spot price (sum of all spot prices of outcome tokens).
+    ///
+    /// Arguments:
+    ///
+    /// * `balances`: Maps assets to their current balance.
     fn calc_total_spot_price(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Fixed, &'static str>;
 
+    /// Approximate the amount to mint/sell to move the total spot price close to `1`.
+    ///
+    /// Arguments:
+    ///
+    /// * `balances`: Maps assets to their current balance.
+    /// * `max_iterations`: Maximum number of iterations allowed in the bisection method.
     fn calc_arbitrage_amount_mint_sell(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
         max_iterations: usize,
     ) -> Result<(Balance, usize), &'static str>;
 
+
+    /// Approximate the amount to buy/burn to move the total spot price close to `1`.
+    ///
+    /// Arguments:
+    ///
+    /// * `balances`: Maps assets to their current balance.
+    /// * `max_iterations`: Maximum number of iterations allowed in the bisection method.
     fn calc_arbitrage_amount_buy_burn(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,

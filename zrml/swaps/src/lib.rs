@@ -1235,8 +1235,13 @@ mod pallet {
             )
         }
 
+        /// Execute arbitrage on as many cached pools until `weight` is spent.
+        ///
+        /// Arguments:
+        ///
+        /// * `weight`: The maximum amount of weight allowed to spend by this function.
         fn execute_arbitrage_all(weight: Weight) -> Weight {
-            // The time complexity of `apply_cached_pools` is O(pool_count); we calculate the
+            // The time complexity of `apply_cached_pools` is `O(pool_count)`; we calculate the
             // minimum number of pools we can handle.
             let overhead = T::WeightInfo::apply_to_cached_pools_execute_arbitrage(0);
             let extra_weight_per_pool =
@@ -1262,8 +1267,14 @@ mod pallet {
             )
         }
 
-        // Apply a `mutation` to all pools cached for arbitrage (but at most `pool_count` many) and
-        // return the actual weight consumed.
+        /// Apply a `mutation` to all pools cached for arbitrage (but at most `pool_count` many)
+        /// and return the actual weight consumed.
+        ///
+        /// Arguments:
+        ///
+        /// * `pool_count`: The maximum number of pools to apply the `mutation` to.
+        /// * `mutation`: The `mutation` that is applied to the pools.
+        /// * `max_weight_per_pool`: The maximum weight consumed by `mutation` per pool.
         pub(crate) fn apply_to_cached_pools<F>(
             pool_count: u32,
             mutation: F,
@@ -1295,7 +1306,12 @@ mod pallet {
             total_weight
         }
 
-        // Execute arbitrage on a single pool.
+        /// Execute arbitrage on a single pool.
+        ///
+        /// Arguments:
+        ///
+        /// * `pool_id`: The id of the pool to arbitrage.
+        /// * `max_iterations`: The maximum number of iterations allowed in the bisection method.
         pub(crate) fn execute_arbitrage(
             pool_id: PoolId,
             max_iterations: usize,

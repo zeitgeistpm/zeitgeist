@@ -131,7 +131,7 @@ where
     Ok((mid, iteration_count))
 }
 
-// Return the sign of the (mathematical) difference x - y.
+/// Return the sign of the (mathematical) difference `x - y`.
 fn diff_sign<T: AtLeast32BitUnsigned>(x: T, y: T) -> i8 {
     // Ignore clippy to prevent an sp-std dependency.
     #[allow(clippy::comparison_chain)]
@@ -144,7 +144,7 @@ fn diff_sign<T: AtLeast32BitUnsigned>(x: T, y: T) -> i8 {
     }
 }
 
-// Check if `t` lies outside of `[x, y]` if `x <= y` or `[y, x]` if `y > x`.
+/// Check if `t` lies outside of `[x, y]` if `x <= y` or `[y, x]` if `y > x`.
 fn is_outside_of<T>(t: T, x: T, y: T) -> bool
 where
     T: AtLeast32BitUnsigned + Copy,
@@ -152,6 +152,7 @@ where
     diff_sign(x, t).saturating_mul(diff_sign(y, t)) > 0
 }
 
+/// Calculate the distance between `x` and `y`.
 fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
     if x > y { x - y } else { y - x }
 }
