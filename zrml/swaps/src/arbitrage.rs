@@ -62,7 +62,6 @@ where
         max_iterations: usize,
     ) -> Result<(Balance, usize), &'static str>;
 
-
     /// Approximate the amount to buy/burn to move the total spot price close to `1`.
     ///
     /// Arguments:
