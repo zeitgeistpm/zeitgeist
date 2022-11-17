@@ -49,7 +49,7 @@
 
 use sp_runtime::traits::AtLeast32BitUnsigned;
 
-/// Calculate the preimage of `value` under `f` using bisection.
+/// Approximate the preimage of `value` under `f` using bisection.
 ///
 /// This function always terminates (regardless of the properties of `f`), but `f` must be a
 /// monotonous function to guarantee that the result is correct. The algorithm _assumes_ that `f`
@@ -123,8 +123,6 @@ where
             fmax = fmid;
         } else {
             min = mid;
-            // We (surprisingly?) don't need this:
-            // fmin = fmid;
         }
     }
 
