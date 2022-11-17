@@ -79,7 +79,7 @@ impl Config for XcmConfig {
     type IsTeleporter = ();
     /// Means of inverting a location.
     type LocationInverter = LocationInverter<Ancestry>;
-    // How to get a call origin from a `OriginKind` value.
+    /// How to get a call origin from a `OriginKind` value.
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
     /// Module that handles responses of queries.
     type ResponseHandler = PolkadotXcm;
