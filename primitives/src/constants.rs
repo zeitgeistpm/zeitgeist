@@ -88,4 +88,4 @@ pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
 
 // Treasury
 /// Pallet identifier, used to derive treasury account
-pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/swap");
+pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/tsry");
