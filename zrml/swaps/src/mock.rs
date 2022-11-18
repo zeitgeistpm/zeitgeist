@@ -39,7 +39,7 @@ use zeitgeist_primitives::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
         MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy,
-        MinWeight, MinimumPeriod, SwapsPalletId, BASE,
+        MinWeight, MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -90,7 +90,6 @@ impl crate::Config for Runtime {
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
@@ -179,6 +178,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

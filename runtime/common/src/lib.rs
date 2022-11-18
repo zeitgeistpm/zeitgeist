@@ -902,6 +902,7 @@ macro_rules! impl_config_traits {
         impl zrml_market_commons::Config for Runtime {
             type Currency = Balances;
             type MarketId = MarketId;
+            type PredictionMarketsPalletId = PmPalletId;
             type Timestamp = Timestamp;
         }
 
@@ -1026,7 +1027,6 @@ macro_rules! impl_config_traits {
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
             type MarketCommons = MarketCommons;
-            type MarketId = MarketId;
             type MinAssets = MinAssets;
             type MaxAssets = MaxAssets;
             type MaxInRatio = MaxInRatio;

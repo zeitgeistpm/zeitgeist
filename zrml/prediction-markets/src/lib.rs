@@ -51,7 +51,7 @@ mod pallet {
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
+        traits::{CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -125,7 +125,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let market_status = market.status;
-            let market_account = Self::market_account(market_id);
+            let market_account = T::MarketCommons::market_account(market_id);
 
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
@@ -637,7 +637,7 @@ mod pallet {
             }
 
             let market_id = T::MarketCommons::push_market(market.clone())?;
-            let market_account = Self::market_account(market_id);
+            let market_account = T::MarketCommons::market_account(market_id);
             let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
@@ -912,7 +912,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
-            let market_account = Self::market_account(market_id);
+            let market_account = T::MarketCommons::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
 
@@ -1189,7 +1189,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = Self::market_account(market_id);
+            let market_account = T::MarketCommons::market_account(market_id);
             ensure!(
                 T::AssetManager::free_balance(Asset::Ztg, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
@@ -1870,11 +1870,6 @@ mod pallet {
             }
         }
 
-        #[inline]
-        pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account_truncating(market_id.saturated_into::<u128>())
-        }
-
         fn insert_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
 
@@ -2008,7 +2003,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = Self::market_account(market_id);
+            let market_account = T::MarketCommons::market_account(market_id);
             T::AssetManager::transfer(Asset::Ztg, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
@@ -2729,7 +2724,7 @@ mod pallet {
             } else {
                 return Ok(T::DbWeight::get().reads(1));
             };
-            let market_account = Self::market_account(*market_id);
+            let market_account = T::MarketCommons::market_account(*market_id);
             let weight = T::Swaps::clean_up_pool(
                 &market.market_type,
                 pool_id,

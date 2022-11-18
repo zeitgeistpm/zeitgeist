@@ -285,6 +285,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
@@ -331,7 +332,6 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;

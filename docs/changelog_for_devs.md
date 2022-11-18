@@ -1,5 +1,14 @@
 # v0.3.7
 
+- Added on-chain arbitrage. See
+  [ZIP-1](https://hackmd.io/@1ypDLjlbQ_e2Gp_1EW7kkg/BksyTQc-o) for details. When
+  a pool is arbitraged, we emit one of the following events:
+  `ArbitrageMintSell(pool_id, amount)`, `ArbitrageBuyBurn(pool_id, amount)` or
+  `ArbitrageSkipped(pool_id)`. The latter can be safely ignored by the indexer.
+  The `amount` parameter signifies the amount of funds moved into or out of the
+  prize pool (mint-sell/buy-burn resp.) and the amount of full sets
+  minted/burned. Note that in addition to these events, the low-level
+  `tokens.Deposited` and `tokens.Transfer` events are also emitted.
 - Added new pallet: GlobalDisputes. Dispatchable calls are:
   - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for
     a constant fee. Errors if the voting outcome already exists or if the global
