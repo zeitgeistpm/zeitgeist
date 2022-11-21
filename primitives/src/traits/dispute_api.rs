@@ -19,6 +19,15 @@ use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market}
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
 
+// Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
+// type aliases in traits.
+type MarketOfDisputeApi<T> = Market<
+    <T as DisputeApi>::AccountId,
+    <T as DisputeApi>::Balance,
+    <T as DisputeApi>::BlockNumber,
+    <T as DisputeApi>::Moment,
+>;
+
 pub trait DisputeApi {
     type AccountId;
     type Balance;
@@ -34,7 +43,7 @@ pub trait DisputeApi {
     fn on_dispute(
         previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &MarketOfDisputeApi<Self>,
     ) -> DispatchResult;
 
     /// Manage market resolution of a disputed market.
@@ -49,6 +58,6 @@ pub trait DisputeApi {
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 }

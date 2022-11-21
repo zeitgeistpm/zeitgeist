@@ -37,7 +37,7 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
+        traits::{Currency, Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, PalletId, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
@@ -53,6 +53,14 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
+    type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+    >;
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
     #[pallet::call]
@@ -145,25 +153,17 @@ mod pallet {
             }
         }
 
-        fn market_iter() -> PrefixIterator<(
-            Self::MarketId,
-            Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        )> {
+        fn market_iter() -> PrefixIterator<(Self::MarketId, MarketOf<T>)> {
             <Markets<T>>::iter()
         }
 
-        fn market(
-            market_id: &Self::MarketId,
-        ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>
-        {
+        fn market(market_id: &Self::MarketId) -> Result<MarketOf<T>, DispatchError> {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
         where
-            F: FnOnce(
-                &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-            ) -> DispatchResult,
+            F: FnOnce(&mut MarketOf<T>) -> DispatchResult,
         {
             <Markets<T>>::try_mutate(market_id, |opt| {
                 if let Some(market) = opt {
@@ -174,9 +174,7 @@ mod pallet {
             })
         }
 
-        fn push_market(
-            market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<Self::MarketId, DispatchError> {
+        fn push_market(market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
             let market_id = Self::next_market_id()?;
             <Markets<T>>::insert(market_id, market);
             Ok(market_id)
@@ -228,12 +226,7 @@ mod pallet {
 
     /// Holds all markets
     #[pallet::storage]
-    pub type Markets<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::MarketId,
-        Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-    >;
+    pub type Markets<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, MarketOf<T>>;
 
     /// The number of markets that have been created (including removed markets) and the next
     /// identifier for a created market.

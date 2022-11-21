@@ -28,7 +28,7 @@ use sp_runtime::RuntimeDebug;
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BN, M> {
+pub struct Market<AI, Balance, BN, M> {
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -56,9 +56,17 @@ pub struct Market<AI, BN, M> {
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
+    pub bonds: MarketBonds<Balance>,
 }
 
-impl<AI, BN, M> Market<AI, BN, M> {
+#[derive(Clone, Decode, Default, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct MarketBonds<Balance> {
+    pub advisory: Option<Balance>,
+    pub oracle: Balance,
+    pub validity: Option<Balance>,
+}
+
+impl<AI, Balance, BN, M> Market<AI, Balance, BN, M> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -84,11 +92,12 @@ impl<AI, BN, M> Market<AI, BN, M> {
     }
 }
 
-impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M>
+impl<AI, Balance, BN, M> MaxEncodedLen for Market<AI, Balance, BN, M>
 where
     AI: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
+    MarketBonds<Balance>: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
@@ -105,6 +114,7 @@ where
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
+            .saturating_add(<MarketBonds<Balance>>::max_encoded_len())
     }
 }
 
@@ -160,7 +170,9 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
 }
 
 /// Defines deadlines for market.
-#[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(
+    Clone, Copy, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo,
+)]
 pub struct Deadlines<BN> {
     pub grace_period: BN,
     pub oracle_duration: BN,
@@ -232,7 +244,7 @@ pub struct SubsidyUntil<BN, MO, MI> {
 mod tests {
     use crate::market::*;
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32>;
+    type Market = crate::market::Market<u32, u32, u32, u32>;
 
     #[test_case(
         MarketType::Categorical(6),
@@ -305,6 +317,7 @@ mod tests {
             report: None,
             resolved_outcome: None,
             dispute_mechanism: MarketDisputeMechanism::Authorized,
+            bonds: MarketBonds::default(),
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }

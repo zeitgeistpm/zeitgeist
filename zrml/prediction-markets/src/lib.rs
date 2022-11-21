@@ -58,9 +58,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
-            MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
-            ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -85,6 +85,7 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
     >;
@@ -1322,6 +1323,7 @@ mod pallet {
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
             Self::AccountId,
+            Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
             CurrencyId = Asset<MarketIdOf<Self>>,
             ReserveIdentifier = [u8; 8],
         >;
@@ -2829,6 +2831,8 @@ mod pallet {
                 resolved_outcome,
                 status,
                 scoring_rule,
+                // TODO,
+                bonds: MarketBonds::default(),
             })
         }
     }

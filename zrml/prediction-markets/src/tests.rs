@@ -36,9 +36,9 @@ use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
-        Asset, BlockNumber, Deadlines, Market, MarketCreation, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus,
-        ScalarPosition, ScoringRule,
+        AccountIdTest, Asset, Balance, BlockNumber, Deadlines, Market, MarketCreation,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment, MultiHash,
+        OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -3994,7 +3994,10 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
-fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResultWithPostInfo {
+fn deploy_swap_pool(
+    market: Market<AccountIdTest, Balance, BlockNumber, Moment>,
+    market_id: u128,
+) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
