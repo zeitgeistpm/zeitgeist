@@ -1383,6 +1383,7 @@ mod pallet {
             pool_id: &PoolId,
             asset_in: &Asset<MarketIdOf<T>>,
             asset_out: &Asset<MarketIdOf<T>>,
+            with_fees: bool,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pool = Self::pool_by_id(*pool_id)?;
             ensure!(pool.assets.binary_search(asset_in).is_ok(), Error::<T>::AssetNotInPool);
@@ -1394,7 +1395,12 @@ mod pallet {
                 let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
                 let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
-                let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
+
+                let swap_fee = if with_fees {
+                    pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?
+                } else {
+                    BalanceOf::<T>::zero()
+                };
 
                 return Ok(crate::math::calc_spot_price(
                     balance_in.saturated_into(),
@@ -1434,7 +1440,17 @@ mod pallet {
             }
 
             if *asset_in == base_asset {
-                T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)
+                let price_with_fee =
+                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?;
+                if with_fees {
+                    Ok(price_with_fee.saturated_into())
+                } else {
+                    let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
+                    let fee_plus_one = BASE.saturating_add(fee_pct);
+                    let price_without_fee: u128 =
+                        bdiv(price_with_fee.saturated_into(), fee_plus_one)?;
+                    Ok(price_without_fee.saturated_into())
+                }
             } else if *asset_out == base_asset {
                 let price_with_inverse_fee = bdiv(
                     BASE,
@@ -1444,9 +1460,13 @@ mod pallet {
                 .saturated_into();
                 let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
                 let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_with_fee: u128 =
-                    bmul(fee_plus_one, bmul(price_with_inverse_fee, fee_plus_one)?)?;
-                Ok(price_with_fee.saturated_into())
+                let price_without_fee: u128 = bmul(price_with_inverse_fee, fee_plus_one)?;
+                if with_fees {
+                    let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
+                    Ok(price_with_fee.saturated_into())
+                } else {
+                    Ok(price_without_fee.saturated_into())
+                }
             } else {
                 let price_without_fee = bdiv(
                     T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?
@@ -1455,10 +1475,14 @@ mod pallet {
                         .saturated_into(),
                 )?
                 .saturated_into();
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
-                let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
-                Ok(price_with_fee.saturated_into())
+                if with_fees {
+                    let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
+                    let fee_plus_one = BASE.saturating_add(fee_pct);
+                    let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
+                    Ok(price_with_fee.saturated_into())
+                } else {
+                    Ok(price_without_fee.saturated_into())
+                }
             }
         }
 
