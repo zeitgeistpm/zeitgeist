@@ -94,13 +94,11 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
-// dispute mechanism.
+// Currently disables Court, Rikiddo and creation of markets using Court.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
         use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
 
@@ -112,12 +110,9 @@ impl Contains<Call> for IsCallable {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
-                        ..
-                    } => false,
+                    // Disable Court dispute resolution mechanism
+                    create_market { dispute_mechanism: Court, .. } => false,
+                    create_cpmm_market_and_deploy_assets { dispute_mechanism: Court, .. } => false,
                     _ => true,
                 }
             }
@@ -128,8 +123,14 @@ impl Contains<Call> for IsCallable {
 
 decl_common_types!();
 
+#[cfg(feature = "with-global-disputes")]
 create_runtime_with_additional_pallets!(
-    // Others
+    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
+create_runtime_with_additional_pallets!(
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
 

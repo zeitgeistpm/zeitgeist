@@ -494,6 +494,7 @@ dependencies = [
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
+ "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
@@ -12611,6 +12612,7 @@ dependencies = [
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
+ "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
@@ -12675,6 +12677,25 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
+]
+
+[[package]]
+name = "zrml-global-disputes"
+version = "0.3.7"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "test-case",
  "zeitgeist-primitives",
  "zrml-market-commons",
 ]
@@ -12768,6 +12789,7 @@ dependencies = [
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
+ "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",

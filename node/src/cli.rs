@@ -1,4 +1,5 @@
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2017-2020 Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
 //

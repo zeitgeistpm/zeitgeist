@@ -29,12 +29,11 @@ use alloc::vec::Vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get, Hooks},
-    BoundedVec,
+    traits::{EnsureOrigin, Get},
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{One, SaturatedConversion, Zero};
+use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::Swaps,
@@ -45,6 +44,8 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+
+use frame_support::{traits::Hooks, BoundedVec};
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
@@ -271,10 +272,10 @@ benchmarks! {
 
         let disputes = Disputes::<T>::get(market_id);
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -326,9 +327,10 @@ benchmarks! {
         }
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -386,9 +388,10 @@ benchmarks! {
         let market = T::MarketCommons::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -414,17 +417,17 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
         let market = T::MarketCommons::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
-                report_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -452,8 +455,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -478,10 +480,10 @@ benchmarks! {
         let disputes = Disputes::<T>::get(market_id);
 
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -510,8 +512,7 @@ benchmarks! {
             )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -527,12 +528,12 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
-
         let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
+        let market = T::MarketCommons::market(&market_id)?;
+        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -763,6 +764,52 @@ benchmarks! {
         assert_eq!(pool.pool_status, PoolStatus::Active);
     }
 
+    start_global_dispute {
+        let m in 1..CacheSize::get();
+
+        // no benchmarking component for max disputes here,
+        // because MaxDisputes is enforced for the extrinsic
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        )?;
+
+        // first element is the market id from above
+        let mut market_ids = BoundedVec::try_from(vec![market_id]).unwrap();
+        assert_eq!(market_id, 0u128.saturated_into());
+        for i in 1..m {
+            market_ids.try_push(i.saturated_into()).unwrap();
+        }
+
+        let max_dispute_len = T::MaxDisputes::get();
+        for i in 0..max_dispute_len {
+            // ensure that the MarketIdsPerDisputeBlock does not interfere
+            // with the start_global_dispute execution block
+            <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
+            let disputor: T::AccountId = account("Disputor", i, 0);
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
+            let _ = Call::<T>::dispute {
+                market_id,
+                outcome: OutcomeReport::Scalar(i.into()),
+            }
+            .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+        }
+
+        let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
+        <frame_system::Pallet<T>>::set_block_number(current_block);
+        // the complexity depends on MarketIdsPerDisputeBlock at the current block
+        // this is because a variable number of market ids need to be decoded from the storage
+        MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
+
+        let call = Call::<T>::start_global_dispute { market_id };
+    }: {
+        #[cfg(feature = "with-global-disputes")]
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+        #[cfg(not(feature = "with-global-disputes"))]
+        let _ = call.dispatch_bypass_filter(RawOrigin::Signed(caller).into());
+    }
+
     dispute_authorized {
         let d in 0..(T::MaxDisputes::get() - 1);
         let b in 0..63;
@@ -775,8 +822,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -794,9 +840,10 @@ benchmarks! {
         }
 
         let now = frame_system::Pallet::<T>::block_number();
+        let resolves_at = now.saturating_add(market.deadlines.dispute_duration);
         for i in 0..b {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
-                now,
+                resolves_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -824,8 +871,7 @@ benchmarks! {
             OutcomeReport::Categorical(1u16),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
         let market = T::MarketCommons::market(&market_id)?;
@@ -847,8 +893,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
@@ -891,8 +936,7 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
-            let admin = account("admin", 0, 0);
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
         let market = T::MarketCommons::market(&market_id)?;
@@ -1022,9 +1066,10 @@ benchmarks! {
         let grace_period: u32 =
             (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
         pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
-        let current_block = frame_system::Pallet::<T>::block_number();
+        let report_at = frame_system::Pallet::<T>::block_number();
+        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..m {
-            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
+            MarketIdsPerReportBlock::<T>::try_mutate(resolves_at, |ids| {
                 ids.try_push(i.into())
             }).unwrap();
         }

@@ -120,9 +120,9 @@ fn market_creation(seed: u8) -> MarketCreation {
 }
 
 #[inline]
-fn market_dispute_mechanism(seed: u8) -> MarketDisputeMechanism<u128> {
+fn market_dispute_mechanism(seed: u8) -> MarketDisputeMechanism {
     match seed % 3 {
-        0 => MarketDisputeMechanism::Authorized(seed.into()),
+        0 => MarketDisputeMechanism::Authorized,
         1 => MarketDisputeMechanism::Court,
         _ => MarketDisputeMechanism::SimpleDisputes,
     }

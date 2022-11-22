@@ -18,13 +18,16 @@
 #![cfg(test)]
 
 use crate::{self as zrml_authorized};
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{construct_runtime, ord_parameter_types, traits::Everything};
+use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::mock::{AuthorizedPalletId, BlockHashCount, MaxReserves, MinimumPeriod, BASE},
+    constants::mock::{
+        AuthorizedPalletId, BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, BASE,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -50,10 +53,16 @@ construct_runtime!(
     }
 );
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 impl crate::Config for Runtime {
     type Event = ();
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
@@ -99,6 +108,7 @@ impl pallet_balances::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

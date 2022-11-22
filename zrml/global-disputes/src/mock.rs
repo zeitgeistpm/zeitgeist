@@ -17,19 +17,29 @@
 
 #![cfg(test)]
 
-use crate::{self as zrml_market_commons};
-use frame_support::{construct_runtime, traits::Everything};
+use crate::{self as zrml_global_disputes};
+use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::mock::{BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId},
+    constants::mock::{
+        BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
+        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, VotingOutcomeFee, BASE,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
     },
 };
+
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const EVE: AccountIdTest = 3;
+pub const POOR_PAUL: AccountIdTest = 4;
+pub const DAVE: AccountIdTest = 5;
 
 construct_runtime!(
     pub enum Runtime
@@ -40,16 +50,29 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
-        System: frame_system::{Call, Config,Event<T>, Pallet, Storage},
+        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
     }
 );
 
+parameter_types! {
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    pub const MaxOwners: u32 = 10;
+}
+
 impl crate::Config for Runtime {
     type Currency = Balances;
-    type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
-    type Timestamp = Timestamp;
+    type Event = Event;
+    type GlobalDisputeLockId = GlobalDisputeLockId;
+    type GlobalDisputesPalletId = GlobalDisputesPalletId;
+    type MarketCommons = MarketCommons;
+    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+    type MaxOwners = MaxOwners;
+    type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
+    type RemoveKeysLimit = RemoveKeysLimit;
+    type VotingOutcomeFee = VotingOutcomeFee;
+    type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
@@ -62,7 +85,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type Call = Call;
     type DbWeight = ();
-    type Event = ();
+    type Event = Event;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -83,7 +106,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type Event = Event;
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -98,17 +121,43 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-#[derive(Default)]
-pub struct ExtBuilder {}
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
+    type Timestamp = Timestamp;
+}
+
+pub struct ExtBuilder {
+    balances: Vec<(AccountIdTest, Balance)>,
+}
+
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            balances: vec![
+                (ALICE, 1_000 * BASE),
+                (BOB, 1_000 * BASE),
+                (CHARLIE, 1_000 * BASE),
+                (EVE, 1_000 * BASE),
+                (POOR_PAUL, 0),
+            ],
+        }
+    }
+}
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-        pallet_balances::GenesisConfig::<Runtime> { balances: vec![] }
+        pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
 
-        t.into()
+        let mut t: sp_io::TestExternalities = t.into();
+
+        t.execute_with(|| System::set_block_number(1));
+
+        t
     }
 }

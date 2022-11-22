@@ -37,18 +37,21 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
-        Blake2_128Concat, Parameter,
+        traits::{Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
+        Blake2_128Concat, PalletId, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
-        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, Saturating},
-        ArithmeticError, DispatchError,
+        traits::{
+            AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member,
+            Saturating,
+        },
+        ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
@@ -70,6 +73,11 @@ mod pallet {
             + MaybeSerializeDeserialize
             + Member
             + Parameter;
+
+        // TODO(#837): Remove when on-chain arbitrage is removed!
+        /// The prefix used to calculate the prize pool accounts.
+        #[pallet::constant]
+        type PredictionMarketsPalletId: Get<PalletId>;
 
         /// Time tracker
         type Timestamp: Time<Moment = u64>;
@@ -180,6 +188,13 @@ mod pallet {
             }
             <Markets<T>>::remove(market_id);
             Ok(())
+        }
+
+        // TODO(#837): Remove when on-chain arbitrage is removed!
+        #[inline]
+        fn market_account(market_id: Self::MarketId) -> Self::AccountId {
+            T::PredictionMarketsPalletId::get()
+                .into_sub_account_truncating(market_id.saturated_into::<u128>())
         }
 
         // MarketPool

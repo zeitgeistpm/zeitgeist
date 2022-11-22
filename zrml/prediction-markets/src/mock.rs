@@ -50,6 +50,13 @@ use zeitgeist_primitives::{
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+
+#[cfg(feature = "with-global-disputes")]
+use zeitgeist_primitives::constants::mock::{
+    GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
+    MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
+};
+
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -76,6 +83,34 @@ parameter_types! {
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
+#[cfg(feature = "with-global-disputes")]
+construct_runtime!(
+    pub enum Runtime
+    where
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
+    {
+        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        Court: zrml_court::{Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
+        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
+        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
+        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
+    }
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
 construct_runtime!(
     pub enum Runtime
     where
@@ -113,6 +148,10 @@ impl crate::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputes = GlobalDisputes;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
@@ -213,9 +252,15 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 impl zrml_authorized::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
@@ -242,6 +287,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
@@ -266,6 +312,21 @@ impl zrml_simple_disputes::Config for Runtime {
     type PalletId = SimpleDisputesPalletId;
 }
 
+#[cfg(feature = "with-global-disputes")]
+impl zrml_global_disputes::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type Currency = Balances;
+    type GlobalDisputeLockId = GlobalDisputeLockId;
+    type GlobalDisputesPalletId = GlobalDisputesPalletId;
+    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+    type MaxOwners = MaxOwners;
+    type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
+    type RemoveKeysLimit = RemoveKeysLimit;
+    type VotingOutcomeFee = VotingOutcomeFee;
+    type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
+}
+
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
@@ -273,7 +334,6 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
