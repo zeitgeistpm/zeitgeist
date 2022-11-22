@@ -171,6 +171,8 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 
 #[test]
 fn transfer_ksm_from_relay_chain() {
+    TestNet::reset();
+    
     let transfer_amount: Balance = ksm(1);
 
     Zeitgeist::execute_with(|| {
@@ -197,6 +199,8 @@ fn transfer_ksm_from_relay_chain() {
 
 #[test]
 fn transfer_ksm_to_relay_chain() {
+    TestNet::reset();
+
     let transfer_amount: Balance = ksm(1);
     transfer_ksm_from_relay_chain();
 
