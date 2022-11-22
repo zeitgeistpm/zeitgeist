@@ -159,7 +159,7 @@ parameter_types! {
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
-    pub const MaxDisputes: u16 = 3;
+    pub const MaxDisputes: u16 = 6;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
