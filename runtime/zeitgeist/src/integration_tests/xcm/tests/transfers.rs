@@ -229,7 +229,7 @@ fn transfer_ksm_to_relay_chain() {
     });
 
     KusamaNet::execute_with(|| {
-        assert_eq!(kusama_runtime::Balances::free_balance(&BOB.into()), 999834059328);
+        assert_eq!(kusama_runtime::Balances::free_balance(&BOB.into()), 999_834_059_328);
     });
 }
 
@@ -311,8 +311,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 64000000);
-    assert_eq!(ksm_fee(), 6400000000);
+    assert_eq!(ztg_fee(), 64_000_000);
+    assert_eq!(ksm_fee(), 6_400_000_000);
 }
 
 #[inline]
