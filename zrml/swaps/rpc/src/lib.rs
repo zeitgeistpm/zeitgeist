@@ -167,13 +167,14 @@ where
     ) -> RpcResult<SerdeWrapper<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        let res = api.get_spot_price(&at, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
-            CallError::Custom(ErrorObject::owned(
-                Error::RuntimeError.into(),
-                "Unable to get spot price.",
-                Some(e.to_string()),
-            ))
-        })?;
+        let res =
+            api.get_spot_price(&at, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
+                CallError::Custom(ErrorObject::owned(
+                    Error::RuntimeError.into(),
+                    "Unable to get spot price.",
+                    Some(e.to_string()),
+                ))
+            })?;
         Ok(res)
     }
 
@@ -190,8 +191,9 @@ where
             .into_iter()
             .map(|block| {
                 let hash = BlockId::number(block);
-                let res =
-                    api.get_spot_price(&hash, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
+                let res = api
+                    .get_spot_price(&hash, &pool_id, &asset_in, &asset_out, with_fees)
+                    .map_err(|e| {
                         CallError::Custom(ErrorObject::owned(
                             Error::RuntimeError.into(),
                             "Unable to get spot price.",

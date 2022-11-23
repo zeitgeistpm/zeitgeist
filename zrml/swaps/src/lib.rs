@@ -1462,14 +1462,10 @@ mod pallet {
                         .saturated_into(),
                 )?
                 .saturated_into();
-                if with_fees {
-                    let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
-                    let fee_plus_one = BASE.saturating_add(fee_pct);
-                    let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
-                    Ok(price_with_fee.saturated_into())
-                } else {
-                    Ok(price_without_fee.saturated_into())
-                }
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
+                let fee_plus_one = BASE.saturating_add(fee_pct);
+                let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
+                Ok(price_with_fee.saturated_into())
             }
         }
 
