@@ -66,6 +66,14 @@ pub struct MarketBonds<Balance> {
     pub validity: Option<Balance>,
 }
 
+impl<Balance: frame_support::traits::tokens::Balance> MarketBonds<Balance> {
+    pub fn total_amount_bonded(&self) -> Balance {
+        self.oracle
+            .saturating_add(self.advisory.unwrap_or(0u8.into()))
+            .saturating_add(self.validity.unwrap_or(0u8.into()))
+    }
+}
+
 impl<AI, Balance, BN, M> Market<AI, Balance, BN, M> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
@@ -321,6 +329,7 @@ mod tests {
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }
+
     #[test]
     fn max_encoded_len_market_type() {
         // `MarketType::Scalar` is the largest enum variant.
@@ -328,6 +337,7 @@ mod tests {
         let len = parity_scale_codec::Encode::encode(&market_type).len();
         assert_eq!(MarketType::max_encoded_len(), len);
     }
+
     #[test]
     fn max_encoded_len_market_period() {
         let market_period: MarketPeriod<u32, u32> = MarketPeriod::Block(Default::default());

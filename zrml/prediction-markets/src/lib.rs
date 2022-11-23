@@ -601,6 +601,25 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
 
+            let bonds = match creation {
+                MarketCreation::Permissionless => MarketBonds {
+                    advisory: None,
+                    oracle: T::OracleBond::get(),
+                    validity: Some(T::ValidityBond::get()),
+                },
+                MarketCreation::Advised => MarketBonds {
+                    advisory: Some(T::AdvisoryBond::get()),
+                    oracle: T::OracleBond::get(),
+                    validity: None,
+                },
+            };
+            T::AssetManager::reserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &sender,
+                bonds.total_amount_bonded(),
+            )?;
+
             let market = Self::construct_market(
                 sender.clone(),
                 0_u8,
@@ -614,28 +633,8 @@ mod pallet {
                 scoring_rule,
                 None,
                 None,
+                bonds,
             )?;
-
-            match creation {
-                MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        required_bond,
-                    )?;
-                }
-                MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        required_bond,
-                    )?;
-                }
-            }
 
             let market_id = T::MarketCommons::push_market(market.clone())?;
             let market_account = T::MarketCommons::market_account(market_id);
@@ -708,6 +707,7 @@ mod pallet {
                 scoring_rule,
                 old_market.report,
                 old_market.resolved_outcome,
+                old_market.bonds,
             )?;
             T::MarketCommons::mutate_market(&market_id, |market| {
                 *market = edited_market.clone();
@@ -2800,6 +2800,7 @@ mod pallet {
             scoring_rule: ScoringRule,
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
+            bonds: MarketBonds<BalanceOf<T>>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
@@ -2831,8 +2832,7 @@ mod pallet {
                 resolved_outcome,
                 status,
                 scoring_rule,
-                // TODO,
-                bonds: MarketBonds::default(),
+                bonds,
             })
         }
     }
