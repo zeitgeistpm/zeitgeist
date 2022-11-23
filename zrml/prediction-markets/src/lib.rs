@@ -351,14 +351,10 @@ mod pallet {
                     }
                 }
 
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &m.creator,
-                    T::AdvisoryBond::get(),
-                );
                 Ok(())
             })?;
+
+            Self::unreserve_advisory_bond(&market_id)?;
 
             Self::deposit_event(Event::MarketApproved(market_id, status));
             // The ApproveOrigin should not pay fees for providing this service
@@ -604,12 +600,12 @@ mod pallet {
             let bonds = match creation {
                 MarketCreation::Permissionless => MarketBonds {
                     advisory: None,
-                    oracle: T::OracleBond::get(),
+                    oracle: Some(T::OracleBond::get()),
                     validity: Some(T::ValidityBond::get()),
                 },
                 MarketCreation::Advised => MarketBonds {
                     advisory: Some(T::AdvisoryBond::get()),
-                    oracle: T::OracleBond::get(),
+                    oracle: Some(T::OracleBond::get()),
                     validity: None,
                 },
             };
@@ -1551,6 +1547,8 @@ mod pallet {
         MaxDisputesReached,
         /// The maximum number of disputes is needed for this operation.
         MaxDisputesNeeded,
+        /// Tried to unreserve missing bond.
+        MissingBond,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
@@ -1851,6 +1849,47 @@ mod pallet {
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
     impl<T: Config> Pallet<T> {
+        fn unreserve_advisory_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                ensure!(market.creation == MarketCreation::Advised);
+                T::AssetManager::unreserve_named(
+                    &Self::reserve_id(),
+                    Asset::Ztg,
+                    &market.creator,
+                    market.bonds.advisory.ok_or(Error::<T>::MissingBond)?,
+                );
+                market.bonds.advisory = None;
+                Ok(())
+            })
+        }
+
+        fn unreserve_oracle_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                T::AssetManager::unreserve_named(
+                    &Self::reserve_id(),
+                    Asset::Ztg,
+                    &market.creator,
+                    market.bonds.oracle.ok_or(Error::<T>::MissingBond)?,
+                );
+                market.bonds.oracle = None;
+                Ok(())
+            })
+        }
+
+        fn unreserve_validity_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                ensure!(market.creation == MarketCreation::Permissionless);
+                T::AssetManager::unreserve_named(
+                    &Self::reserve_id(),
+                    Asset::Ztg,
+                    &market.creator,
+                    market.bonds.validity.ok_or(Error::<T>::MissingBond)?,
+                );
+                market.bonds.validity = None;
+                Ok(())
+            })
+        }
+
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2025,23 +2064,13 @@ mod pallet {
             reject_reason: RejectReason<T>,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
+            Self::unreserve_advisory_bond(&market_id)?;
+            Self::unreserve_oracle_bond(&market_id)?;
             let creator = &market.creator;
             let advisory_bond_slash_amount =
                 T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
-            let advisory_bond_unreserve_amount =
-                T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
-            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                &Self::reserve_id(),
-                creator,
-                advisory_bond_slash_amount.saturated_into::<u128>().saturated_into(),
-            );
+            let (imbalance, _) = CurrencyOf::<T>::slash(creator, advisory_bond_slash_amount);
             T::Slash::on_unbalanced(imbalance);
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
-            );
             T::MarketCommons::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketRejected(*market_id, reject_reason));
@@ -2054,19 +2083,8 @@ mod pallet {
             market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            let creator = &market.creator;
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::AdvisoryBond::get(),
-            );
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::OracleBond::get(),
-            );
+            Self::unreserve_advisory_bond(&market_id)?;
+            Self::unreserve_oracle_bond(&market_id)?;
             T::MarketCommons::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
@@ -2266,16 +2284,14 @@ mod pallet {
             }
         }
 
-        fn resolve_reported_market(market: &MarketOf<T>) -> Result<OutcomeReport, DispatchError> {
+        fn resolve_reported_market(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<OutcomeReport, DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             // the oracle bond gets returned if the reporter was the oracle
             if report.by == market.oracle {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
+                Self::unreserve_oracle_bond(&market_id)?;
             } else {
                 let excess = T::AssetManager::slash_reserved_named(
                     &Self::reserve_id(),
@@ -2338,12 +2354,7 @@ mod pallet {
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
             if report.by == market.oracle && report.outcome == resolved_outcome {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
+                Self::unreserve_oracle_bond(&market_id)?;
             } else {
                 let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                     &Self::reserve_id(),
@@ -2396,19 +2407,14 @@ mod pallet {
             market: &MarketOf<T>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::ValidityBond::get(),
-                );
+                Self::unreserve_validity_bond(&market_id)?;
             }
 
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
             let resolved_outcome = match market.status {
-                MarketStatus::Reported => Self::resolve_reported_market(market)?,
+                MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
                 MarketStatus::Disputed => Self::resolve_disputed_market(market_id, market)?,
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
@@ -2516,24 +2522,11 @@ mod pallet {
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            let required_bond = T::ValidityBond::get()
-                                                .saturating_add(T::OracleBond::get());
-                                            T::AssetManager::unreserve_named(
-                                                &Self::reserve_id(),
-                                                Asset::Ztg,
-                                                &m.creator,
-                                                required_bond,
-                                            );
-                                        } else if m.creation == MarketCreation::Advised {
-                                            // AdvisoryBond was already returned when the market
-                                            // was approved. Approval is inevitable to reach this.
-                                            T::AssetManager::unreserve_named(
-                                                &Self::reserve_id(),
-                                                Asset::Ztg,
-                                                &m.creator,
-                                                T::OracleBond::get(),
-                                            );
+                                            Self::unreserve_validity_bond(&subsidy_info.market_id)?;
                                         }
+                                        // AdvisoryBond was already returned when the market
+                                        // was approved. Approval is inevitable to reach this.
+                                        Self::unreserve_oracle_bond(&subsidy_info.market_id)?;
 
                                         total_weight = total_weight
                                             .saturating_add(dbweight.reads(2))

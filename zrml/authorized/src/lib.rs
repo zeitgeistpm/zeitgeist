@@ -205,6 +205,6 @@ where
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
-        bonds: MarketBonds { advisory: None, oracle: 0u8.into(), validity: None },
+        bonds: MarketBonds { advisory: None, oracle: None, validity: None },
     }
 }

@@ -62,15 +62,16 @@ pub struct Market<AI, Balance, BN, M> {
 #[derive(Clone, Decode, Default, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct MarketBonds<Balance> {
     pub advisory: Option<Balance>,
-    pub oracle: Balance,
+    pub oracle: Option<Balance>,
     pub validity: Option<Balance>,
 }
 
 impl<Balance: frame_support::traits::tokens::Balance> MarketBonds<Balance> {
     pub fn total_amount_bonded(&self) -> Balance {
-        self.oracle
-            .saturating_add(self.advisory.unwrap_or(0u8.into()))
-            .saturating_add(self.validity.unwrap_or(0u8.into()))
+        self.advisory
+            .unwrap_or_default()
+            .saturating_add(self.oracle.unwrap_or_default())
+            .saturating_add(self.validity.unwrap_or_default())
     }
 }
 
