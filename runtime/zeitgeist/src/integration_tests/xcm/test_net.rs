@@ -79,8 +79,6 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
     pallet_balances::GenesisConfig::<Runtime> {
         balances: vec![
             (AccountId::from(ALICE), ksm(2002)),
-            (ParaId::from(zeitgeist::ID).into_account(), ztg(7)),
-            (ParaId::from(PARA_ID_SIBLING).into_account(), sibling(7)),
         ],
     }
     .assimilate_storage(&mut t)
