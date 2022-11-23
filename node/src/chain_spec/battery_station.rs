@@ -127,7 +127,10 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         ChainType::Live,
         move || {
             generic_genesis(
-                additional_chain_spec_staging_battery_station(),
+                additional_chain_spec_staging_battery_station(
+                    #[cfg(feature = "parachain")]
+                    2050_u32.into(),
+                ),
                 endowed_accounts_staging_battery_station(),
                 wasm,
             )
