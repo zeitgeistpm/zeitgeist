@@ -129,7 +129,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         ChainType::Live,
         move || {
             generic_genesis(
-                additional_chain_spec_staging_zeitgeist(2101_u32.into()),
+                additional_chain_spec_staging_zeitgeist(),
                 endowed_accounts_staging_zeitgeist(),
                 wasm,
             )

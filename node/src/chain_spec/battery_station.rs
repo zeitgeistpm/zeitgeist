@@ -127,7 +127,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         ChainType::Live,
         move || {
             generic_genesis(
-                additional_chain_spec_staging_battery_station(2050_u32.into()),
+                additional_chain_spec_staging_battery_station(),
                 endowed_accounts_staging_battery_station(),
                 wasm,
             )
