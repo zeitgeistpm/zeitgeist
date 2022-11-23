@@ -149,7 +149,7 @@ parameter_types! {
         ).into(),
         native_per_second(),
     );
-    /// The amount of canonical ZTG charged per second of execution.
+    /// The amount of ZTG charged per second of execution.
     pub ZtgPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             1,
