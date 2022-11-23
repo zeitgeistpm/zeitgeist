@@ -1412,6 +1412,7 @@ mod pallet {
                 .saturated_into());
             }
 
+            // TODO(#880): For now rikiddo does not respect with_fees flag.
             // Price when using Rikiddo.
             ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::PoolIsNotActive);
             let mut balances = Vec::new();
@@ -1440,17 +1441,7 @@ mod pallet {
             }
 
             if *asset_in == base_asset {
-                let price_with_fee =
-                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?;
-                if with_fees {
-                    Ok(price_with_fee.saturated_into())
-                } else {
-                    let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
-                    let fee_plus_one = BASE.saturating_add(fee_pct);
-                    let price_without_fee: u128 =
-                        bdiv(price_with_fee.saturated_into(), fee_plus_one)?;
-                    Ok(price_without_fee.saturated_into())
-                }
+                T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)
             } else if *asset_out == base_asset {
                 let price_with_inverse_fee = bdiv(
                     BASE,
@@ -1460,13 +1451,9 @@ mod pallet {
                 .saturated_into();
                 let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
                 let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_without_fee: u128 = bmul(price_with_inverse_fee, fee_plus_one)?;
-                if with_fees {
-                    let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
-                    Ok(price_with_fee.saturated_into())
-                } else {
-                    Ok(price_without_fee.saturated_into())
-                }
+                let price_with_fee: u128 =
+                    bmul(fee_plus_one, bmul(price_with_inverse_fee, fee_plus_one)?)?;
+                Ok(price_with_fee.saturated_into())
             } else {
                 let price_without_fee = bdiv(
                     T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?
