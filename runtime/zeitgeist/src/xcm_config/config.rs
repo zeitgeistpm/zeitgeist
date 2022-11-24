@@ -128,9 +128,9 @@ impl TakeRevenue for ToTreasury {
     fn take_revenue(revenue: MultiAsset) {
         use xcm_executor::traits::Convert;
 
-        if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue.clone() {
+        if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
             if let Ok(asset_id) =
-                <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location.clone())
+                <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
             {
                 let _ = AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
             }

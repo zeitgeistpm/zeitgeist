@@ -66,11 +66,11 @@ impl<
 > orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
 {
     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-        let metadata = AssetRegistry::metadata_by_location(&location)?;
+        let metadata = AssetRegistry::metadata_by_location(location)?;
         let default_per_second = default_per_second(metadata.decimals);
 
         if let Some(fee_factor) = metadata.additional.xcm.fee_factor {
-            let base = 10u128.checked_pow(metadata.decimals.into())?;
+            let base = 10u128.checked_pow(metadata.decimals)?;
             bmul(default_per_second, fee_factor, base)
         } else {
             Some(default_per_second)

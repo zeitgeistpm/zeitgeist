@@ -67,7 +67,7 @@ fn transfer_ztg_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: NetworkId::Any, id: BOB }
                     )
                 )
                 .into()
@@ -137,7 +137,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                     1,
                     X2(
                         Parachain(battery_station::ID),
-                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE }
                     )
                 )
                 .into()
@@ -283,7 +283,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: NetworkId::Any, id: BOB }
                     )
                 )
                 .into()

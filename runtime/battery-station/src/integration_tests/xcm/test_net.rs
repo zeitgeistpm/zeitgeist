@@ -19,14 +19,12 @@ use crate::{
     parameters::ZeitgeistTreasuryAccount, xcm_config::config::battery_station, AccountId,
     CurrencyId, DmpQueue, Origin, Runtime, XcmpQueue,
 };
-use cumulus_primitives_core::ParaId;
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
-use super::setup::{ksm, sibling, ztg, ExtBuilder, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
+use super::setup::{ksm, ztg, ExtBuilder, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
 
 decl_test_relay_chain! {
     pub struct KusamaNet {

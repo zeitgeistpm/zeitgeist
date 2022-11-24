@@ -173,11 +173,6 @@ pub(super) fn ztg(amount: Balance) -> Balance {
 }
 
 #[inline]
-pub(super) fn sibling(amount: Balance) -> Balance {
-    foreign(amount, 10)
-}
-
-#[inline]
 pub(super) fn ksm(amount: Balance) -> Balance {
     foreign(amount, 12)
 }
@@ -189,12 +184,12 @@ pub(super) fn foreign(amount: Balance, decimals: u32) -> Balance {
 
 #[inline]
 pub(super) fn dollar(decimals: u32) -> Balance {
-    10u128.saturating_pow(decimals.into())
+    10u128.saturating_pow(decimals)
 }
 
 #[inline]
 pub(super) fn sibling_parachain_account() -> AccountId {
-    parachain_account(PARA_ID_SIBLING.into())
+    parachain_account(PARA_ID_SIBLING)
 }
 
 #[inline]
