@@ -610,7 +610,7 @@ mod pallet {
             )?;
 
             let market = Self::construct_market(
-                sender.clone(),
+                sender,
                 0_u8,
                 oracle,
                 period,
@@ -1865,7 +1865,7 @@ mod pallet {
                 &market.creator,
                 unreserve_amount,
             );
-            T::MarketCommons::mutate_market(&market_id, |m| {
+            T::MarketCommons::mutate_market(market_id, |m| {
                 m.bonds.advisory = None;
                 Ok(())
             })?;
@@ -1881,7 +1881,7 @@ mod pallet {
                 &market.creator,
                 market.bonds.oracle.ok_or(Error::<T>::MissingBond)?,
             );
-            T::MarketCommons::mutate_market(&market_id, |m| {
+            T::MarketCommons::mutate_market(market_id, |m| {
                 m.bonds.oracle = None;
                 Ok(())
             })?;
@@ -1897,7 +1897,7 @@ mod pallet {
                 &market.creator,
                 market.bonds.validity.ok_or(Error::<T>::MissingBond)?,
             );
-            T::MarketCommons::mutate_market(&market_id, |m| {
+            T::MarketCommons::mutate_market(market_id, |m| {
                 m.bonds.validity = None;
                 Ok(())
             })?;
@@ -1905,7 +1905,7 @@ mod pallet {
         }
 
         fn unreserve_advisory_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
-            T::MarketCommons::mutate_market(&market_id, |market| {
+            T::MarketCommons::mutate_market(market_id, |market| {
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
@@ -1918,7 +1918,7 @@ mod pallet {
         }
 
         fn unreserve_oracle_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
-            T::MarketCommons::mutate_market(&market_id, |market| {
+            T::MarketCommons::mutate_market(market_id, |market| {
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
@@ -1931,7 +1931,7 @@ mod pallet {
         }
 
         fn unreserve_validity_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
-            T::MarketCommons::mutate_market(&market_id, |market| {
+            T::MarketCommons::mutate_market(market_id, |market| {
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
@@ -2117,8 +2117,8 @@ mod pallet {
             reject_reason: RejectReason<T>,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            Self::unreserve_oracle_bond(&market_id)?;
-            let (imbalance, _) = Self::slash_advisory_bond(&market_id, &market, false)?;
+            Self::unreserve_oracle_bond(market_id)?;
+            let (imbalance, _) = Self::slash_advisory_bond(market_id, &market, false)?;
             T::Slash::on_unbalanced(imbalance);
             T::MarketCommons::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
@@ -2132,8 +2132,8 @@ mod pallet {
             market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            Self::unreserve_advisory_bond(&market_id)?;
-            Self::unreserve_oracle_bond(&market_id)?;
+            Self::unreserve_advisory_bond(market_id)?;
+            Self::unreserve_oracle_bond(market_id)?;
             T::MarketCommons::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
@@ -2340,9 +2340,9 @@ mod pallet {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             // the oracle bond gets returned if the reporter was the oracle
             if report.by == market.oracle {
-                Self::unreserve_oracle_bond(&market_id)?;
+                Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let (negative_imbalance, _) = Self::slash_oracle_bond(&market_id, &market)?;
+                let (negative_imbalance, _) = Self::slash_oracle_bond(market_id, market)?;
 
                 // deposit only to the real reporter what actually was slashed
                 if let Err(err) =
@@ -2397,9 +2397,9 @@ mod pallet {
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
             if report.by == market.oracle && report.outcome == resolved_outcome {
-                Self::unreserve_oracle_bond(&market_id)?;
+                Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let (imbalance, _) = Self::slash_oracle_bond(&market_id, &market)?;
+                let (imbalance, _) = Self::slash_oracle_bond(market_id, market)?;
                 overall_imbalance.subsume(imbalance);
             }
 
@@ -2446,7 +2446,7 @@ mod pallet {
             market: &MarketOf<T>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                Self::unreserve_validity_bond(&market_id)?;
+                Self::unreserve_validity_bond(market_id)?;
             }
 
             let mut total_weight = 0;
