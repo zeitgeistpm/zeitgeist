@@ -131,7 +131,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
             generic_genesis(
                 additional_chain_spec_staging_zeitgeist(
                     #[cfg(feature = "parachain")]
-                    2101_u32.into(),
+                    crate::KUSAMA_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_zeitgeist(),
                 wasm,
@@ -145,7 +145,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "kusama".into(),
-            parachain_id: 2101_u32.into(),
+            parachain_id: crate::KUSAMA_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

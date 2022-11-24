@@ -129,7 +129,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
             generic_genesis(
                 additional_chain_spec_staging_battery_station(
                     #[cfg(feature = "parachain")]
-                    2050_u32.into(),
+                    crate::BATTERY_STATION_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_battery_station(),
                 wasm,
@@ -143,7 +143,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
-            parachain_id: 2050_u32.into(),
+            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

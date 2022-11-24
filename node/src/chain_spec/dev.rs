@@ -102,10 +102,7 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
         None,
         Some(token_properties("DEV", battery_station_runtime::SS58Prefix::get())),
         #[cfg(feature = "parachain")]
-        crate::chain_spec::Extensions {
-            relay_chain: "rococo-dev".into(),
-            parachain_id: 2050_u32.into(),
-        },
+        crate::chain_spec::Extensions { relay_chain: "rococo-dev".into(), parachain_id: 2050_u32 },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
     ))
