@@ -50,6 +50,9 @@
 - `edit_market` extrinsic added, which enables creator of the market to edit
   market. It has same parameters as `create_market` except market_creation, on
   success it returns `MarketEdited` event.
+- get_spot_price() RPC from Swaps support `with_fees` boolean parameter to
+  include/exclude swap_fees in spot price, Currently this flag only works for
+  CPMM.
 
 # v0.3.6
 

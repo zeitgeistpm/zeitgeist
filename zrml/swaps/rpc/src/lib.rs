@@ -62,6 +62,7 @@ where
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
         at: Option<BlockHash>,
+        with_fees: bool,
     ) -> RpcResult<SerdeWrapper<Balance>>;
 
     #[method(name = "swaps_getSpotPrices")]
@@ -71,6 +72,7 @@ where
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
         blocks: Vec<BlockNumber>,
+        with_fees: bool,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
 }
 
@@ -161,16 +163,18 @@ where
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
         at: Option<<Block as BlockT>::Hash>,
+        with_fees: bool,
     ) -> RpcResult<SerdeWrapper<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        let res = api.get_spot_price(&at, &pool_id, &asset_in, &asset_out).map_err(|e| {
-            CallError::Custom(ErrorObject::owned(
-                Error::RuntimeError.into(),
-                "Unable to get spot price.",
-                Some(e.to_string()),
-            ))
-        })?;
+        let res =
+            api.get_spot_price(&at, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
+                CallError::Custom(ErrorObject::owned(
+                    Error::RuntimeError.into(),
+                    "Unable to get spot price.",
+                    Some(e.to_string()),
+                ))
+            })?;
         Ok(res)
     }
 
@@ -180,14 +184,16 @@ where
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
         blocks: Vec<NumberFor<Block>>,
+        with_fees: bool,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>> {
         let api = self.client.runtime_api();
         blocks
             .into_iter()
             .map(|block| {
                 let hash = BlockId::number(block);
-                let res =
-                    api.get_spot_price(&hash, &pool_id, &asset_in, &asset_out).map_err(|e| {
+                let res = api
+                    .get_spot_price(&hash, &pool_id, &asset_in, &asset_out, with_fees)
+                    .map_err(|e| {
                         CallError::Custom(ErrorObject::owned(
                             Error::RuntimeError.into(),
                             "Unable to get spot price.",
