@@ -205,8 +205,9 @@ mod pallet {
         T: Config,
     {
         // pot/fund account
+        #[inline]
         pub(crate) fn pallet_account_id() -> T::AccountId {
-            T::PalletId::get().into_account()
+            T::PalletId::get().into_account_truncating()
         }
     }
 

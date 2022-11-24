@@ -3,9 +3,9 @@
 pub use super::*;
 use crate::{
     asset::Asset,
-    types::{Balance, BlockNumber, CurrencyId, Moment},
+    types::{Balance, CurrencyId, Moment},
 };
-use frame_support::{parameter_types, PalletId};
+use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
 
 // Authorized
@@ -20,6 +20,17 @@ parameter_types! {
     pub const StakeWeight: u128 = 2 * BASE;
 }
 
+// Global disputes parameters
+parameter_types! {
+    pub const GlobalDisputeLockId: LockIdentifier = *b"zge/vote";
+    pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    pub const MaxOwners: u32 = 10;
+    pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
+    pub const RemoveKeysLimit: u32 = 250;
+    pub const VotingOutcomeFee: Balance = 100 * CENT;
+}
+
 // Liquidity Mining parameters
 parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
@@ -30,7 +41,7 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
-    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
@@ -38,12 +49,17 @@ parameter_types! {
     pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
     pub const ValidityBond: Balance = 50 * CENT;
+    pub const MinDisputeDuration: BlockNumber = 2;
+    pub const MinOracleDuration: BlockNumber = 2;
+    pub const MaxDisputeDuration: BlockNumber = 5;
+    pub const MaxGracePeriod: BlockNumber = 2;
+    pub const MaxOracleDuration: BlockNumber = 3;
+    pub const MaxEditReasonLen: u32 = 1024;
+    pub const MaxRejectReasonLen: u32 = 1024;
 }
 
 // Simple disputes parameters
@@ -74,6 +90,12 @@ parameter_types! {
     pub const ExistentialDeposit: u128 = CENT;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
+}
+
+// Treasury
+parameter_types! {
+    pub const MaxApprovals: u32 = 1;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 }
 
 // ORML

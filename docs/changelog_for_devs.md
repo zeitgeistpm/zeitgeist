@@ -1,9 +1,85 @@
 # v0.3.7
+
+- Added on-chain arbitrage. See
+  [ZIP-1](https://hackmd.io/@1ypDLjlbQ_e2Gp_1EW7kkg/BksyTQc-o) for details. When
+  a pool is arbitraged, we emit one of the following events:
+  `ArbitrageMintSell(pool_id, amount)`, `ArbitrageBuyBurn(pool_id, amount)` or
+  `ArbitrageSkipped(pool_id)`. The latter can be safely ignored by the indexer.
+  The `amount` parameter signifies the amount of funds moved into or out of the
+  prize pool (mint-sell/buy-burn resp.) and the amount of full sets
+  minted/burned. Note that in addition to these events, the low-level
+  `tokens.Deposited` and `tokens.Transfer` events are also emitted.
+
+- Added new pallet: GlobalDisputes. Dispatchable calls are:
+  - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for
+    a constant fee. Errors if the voting outcome already exists or if the global
+    dispute has not started or has already finished.
+  - `vote_on_outcome` - Vote on existing voting outcomes by locking native
+    tokens. Fails if the global dispute has not started or has already finished.
+  - `unlock_vote_balance` - Return all locked native tokens in a global dispute.
+    If the global dispute is not concluded yet the lock remains.
+  - `purge_outcomes` - Purge all outcomes to allow the winning outcome owner(s)
+    to get their reward. Fails if the global dispute is not concluded yet.
+  - `reward_outcome_owner` - Reward the collected fees to the owner(s) of a
+    voting outcome. Fails if not all outcomes are already purged. Events are:
+  - `AddedVotingOutcome` (user added a voting outcome)
+  - `GlobalDisputeWinnerDetermined` (finish the global dispute, set the winner)
+  - `NonReward` (show that no reward exits)
+  - `OutcomeOwnersRewarded` (reward process was finished and spent to outcome
+    owners)
+  - `OutcomesPartiallyCleaned` (outcomes storage item partially cleaned)
+  - `OutcomesFullyCleaned` (outcomes storage item fully cleaned)
+  - `VotedOnOutcome` (user voted on outcome)
+
+- Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence
+  `MarketDisputeMechanism::Authorized` does not need account_id. To create
+  market with Authorized MDM specifying account_id for Authorized MDM is not
+  required, any user satisfying `AuthorizedDisputeResolutionOrigin` can use
+  Authorized MDM for resolving market.
+
 - Properly configured reserve asset transfers via XCM:
   - Added xTokens pallet to transfer tokens accross chains
   - Added AssetRegistry pallet to register foreign asset
   - Added UnknownTokens pallet to handle unknown foreign assets
   - More information at https://github.com/zeitgeistpm/zeitgeist/pull/661#top
+
+- Transformed integer scalar markets to fixed point with ten digits after the
+  decimal point. As soon as this update is deployed, the interpretation of the
+  scalar values must be changed.
+
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
+
+- `request_edit` extrinsic added, which enables a user satisfying
+  `RequestEditOrigin` to request edit in market with `Proposed` state, when
+  successful it emits `MarketRequestedEdit` event. `request_edit` requires
+  `edit_reason` parameter which is `Vec<u8>`. The config constant
+  `MaxEditReasonLen` defines maximum length of above parameter. The
+  `MarketRequestedEdit` event also contains `edit_reason`.
+
+- `edit_market` extrinsic added, which enables creator of the market to edit
+  market. It has same parameters as `create_market` except market_creation, on
+  success it returns `MarketEdited` event.
+  
+- `get_spot_price()` RPC from Swaps support `with_fees` boolean parameter to
+  include/exclude swap_fees in spot price, Currently this flag only works for
+  CPMM.
+
+# v0.3.6
+
+- Added new field `deadlines` in Market structure, which has `grace_period`,
+  `oracle_duration` and `dispute_duration` fields, all of which represent
+  durations in number of blocks. The `create_market` extrinsic has a new
+  parameter to specify these deadlines.
+- Added `pallet-bounties` to the Zeitgeist runtime to facilitate community
+  projects.
+- Changed `MaxCategories` to `64`, as originally intended
+- Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
+  to 0%; this value can be quickly adjusted in the future by using the new
+  on-chain variable `AdvisoryBondSlashPercentage`.
+- Temporarily disabled removal of losing assets when a market resolves.
 
 # v0.3.5
 
@@ -25,11 +101,12 @@
 
   Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
   on-chain constant `MaxSwapFee`.
+
 - Added new pallet: Styx. Dispatchable calls are:
   - `cross` - Burns native chain tokens to cross. In the case of Zeitgeist, this
-            is granting the ability to claim your zeitgeist avatar.
-  - `set_burn_amount(amount)` - Sets the new burn price for the cross.
-                              Intended to be called by governance.
+    is granting the ability to claim your zeitgeist avatar.
+  - `set_burn_amount(amount)` - Sets the new burn price for the cross. Intended
+    to be called by governance.
 
 # v0.3.4
 

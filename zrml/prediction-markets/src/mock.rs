@@ -24,10 +24,10 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize},
-    PalletId,
+    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -37,17 +37,26 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
+        MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
+        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
+        MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
+        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+
+#[cfg(feature = "with-global-disputes")]
+use zeitgeist_primitives::constants::mock::{
+    GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
+    MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
+};
+
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -58,20 +67,50 @@ pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 
+pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
+
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
-    pub const ReportingPeriod: u32 = 11;
-    pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+    pub const ReportingPeriod: BlockNumber = 11;
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
     pub const OracleBond: Balance = 25 * CENT;
     pub const ValidityBond: Balance = 53 * CENT;
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
+#[cfg(feature = "with-global-disputes")]
+construct_runtime!(
+    pub enum Runtime
+    where
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
+    {
+        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        Court: zrml_court::{Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
+        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
+        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
+        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
+    }
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
 construct_runtime!(
     pub enum Runtime
     where
@@ -93,11 +132,13 @@ construct_runtime!(
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
+    type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -107,21 +148,34 @@ impl crate::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputes = GlobalDisputes;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
+    type MinDisputeDuration = MinDisputeDuration;
+    type MinOracleDuration = MinOracleDuration;
+    type MaxDisputeDuration = MaxDisputeDuration;
+    type MaxGracePeriod = MaxGracePeriod;
+    type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
+    type MaxEditReasonLen = MaxEditReasonLen;
+    type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
+    type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
+    type Slash = Treasury;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -171,10 +225,10 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type OnDust = ();
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {
@@ -198,9 +252,15 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
 impl zrml_authorized::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
@@ -227,6 +287,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
@@ -251,6 +312,21 @@ impl zrml_simple_disputes::Config for Runtime {
     type PalletId = SimpleDisputesPalletId;
 }
 
+#[cfg(feature = "with-global-disputes")]
+impl zrml_global_disputes::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type Currency = Balances;
+    type GlobalDisputeLockId = GlobalDisputeLockId;
+    type GlobalDisputesPalletId = GlobalDisputesPalletId;
+    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+    type MaxOwners = MaxOwners;
+    type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
+    type RemoveKeysLimit = RemoveKeysLimit;
+    type VotingOutcomeFee = VotingOutcomeFee;
+    type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
+}
+
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
@@ -258,7 +334,6 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
@@ -276,6 +351,25 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Burn = ();
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ();
+    type ProposalBondMinimum = ();
+    type ProposalBondMaximum = ();
+    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type SpendFunds = ();
+    type SpendOrigin = NeverEnsureOrigin<Balance>;
+    type SpendPeriod = ();
+    type WeightInfo = ();
+}
+
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
@@ -284,13 +378,13 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (ALICE, 1_000 * BASE),
-                (BOB, 1_000 * BASE),
-                (CHARLIE, 1_000 * BASE),
-                (DAVE, 1_000 * BASE),
-                (EVE, 1_000 * BASE),
-                (FRED, 1_000 * BASE),
-                (SUDO, 1_000 * BASE),
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
+                (DAVE, INITIAL_BALANCE),
+                (EVE, INITIAL_BALANCE),
+                (FRED, INITIAL_BALANCE),
+                (SUDO, INITIAL_BALANCE),
             ],
         }
     }

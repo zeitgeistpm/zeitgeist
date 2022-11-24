@@ -73,7 +73,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -253,8 +253,9 @@ mod pallet {
             })
         }
 
+        #[inline]
         pub(crate) fn treasury_account_id() -> T::AccountId {
-            T::TreasuryPalletId::get().into_account()
+            T::TreasuryPalletId::get().into_account_truncating()
         }
 
         // No-one can stake more than BalanceOf::<T>::max(), therefore, this function saturates
@@ -541,8 +542,8 @@ mod pallet {
                 Self::manage_tardy_jurors(&requested_jurors, |_| false)?
             };
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
-            Votes::<T>::remove_prefix(market_id, None);
-            RequestedJurors::<T>::remove_prefix(market_id, None);
+            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
             Ok(Some(first))
         }
     }

@@ -58,9 +58,7 @@ generate_generic_genesis_function! {
 // Dev currently uses battery station runtime for the following reasons:
 // 1. It is the most experimental runtime (as of writing this)
 // 2. It offers the sudo pallet
-pub fn dev_config(
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<BatteryStationChainSpec, String> {
+pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
     let wasm = super::battery_station::get_wasm()?;
 
     Ok(BatteryStationChainSpec::from_genesis(
@@ -79,7 +77,7 @@ pub fn dev_config(
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     nominations: vec![],
-                    parachain_id,
+                    parachain_id: 2050_u32.into(),
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
@@ -111,10 +109,7 @@ pub fn dev_config(
         None,
         Some(token_properties("DEV", battery_station_runtime::SS58Prefix::get())),
         #[cfg(feature = "parachain")]
-        crate::chain_spec::Extensions {
-            relay_chain: "rococo-dev".into(),
-            parachain_id: parachain_id.into(),
-        },
+        crate::chain_spec::Extensions { relay_chain: "rococo-dev".into(), parachain_id: 2050_u32 },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
     ))

@@ -154,7 +154,7 @@ fn rikiddo_pallet_fee_return_correct_result() {
             FixedS::from_num(initial_fee).to_fixed_decimal(frac_dec_places).unwrap();
         let fee_pallet_balance = Rikiddo::fee(0).unwrap();
         let difference_abs =
-            (fee_pallet_balance as i128 - fee_reference_balance as i128).unsigned_abs() as u128;
+            (fee_pallet_balance as i128 - fee_reference_balance as i128).unsigned_abs();
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
@@ -188,7 +188,7 @@ fn rikiddo_pallet_cost_returns_correct_result() {
         let cost_reference_balance: Balance =
             FixedS::from_num(cost_reference).to_fixed_decimal(frac_dec_places).unwrap();
         let difference_abs =
-            (cost_pallet_balance as i128 - cost_reference_balance as i128).unsigned_abs() as u128;
+            (cost_pallet_balance as i128 - cost_reference_balance as i128).unsigned_abs();
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
@@ -208,7 +208,7 @@ fn rikiddo_pallet_cost_returns_correct_result() {
             FixedS::from_num(cost_reference_with_fee).to_fixed_decimal(frac_dec_places).unwrap();
         let difference_abs_with_fee = (cost_pallet_balance_with_fee as i128
             - cost_reference_balance_with_fee as i128)
-            .unsigned_abs() as u128;
+            .unsigned_abs();
         let max_difference_with_fee = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs_with_fee <= max_difference_with_fee,
@@ -236,7 +236,7 @@ fn rikiddo_pallet_initial_outstanding_assets_returns_correct_result() {
         let outstanding_assets_shifted =
             (outstanding_assets as f64) / (10f64.powf(frac_places as f64));
         let outstanding_assets_f64 = initial_outstanding_assets(num_assets, subsidy_f64, fee);
-        let difference_abs = (outstanding_assets_f64 - outstanding_assets_shifted as f64).abs();
+        let difference_abs = (outstanding_assets_f64 - outstanding_assets_shifted).abs();
         assert!(
             difference_abs <= 0.000001f64,
             "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
@@ -261,7 +261,7 @@ fn rikiddo_pallet_price_returns_correct_result() {
         let price_reference_balance: Balance =
             FixedS::from_num(price_reference).to_fixed_decimal(frac_dec_places).unwrap();
         let difference_abs =
-            (price_reference_balance as i128 - price_pallet_balance as i128).unsigned_abs() as u128;
+            (price_reference_balance as i128 - price_pallet_balance as i128).unsigned_abs();
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
@@ -280,9 +280,8 @@ fn rikiddo_pallet_price_returns_correct_result() {
         let price_reference_fee = price(fee, &asset_balances_f64, asset_balances_f64[0]);
         let price_reference_balance_fee: Balance =
             FixedS::from_num(price_reference_fee).to_fixed_decimal(frac_dec_places).unwrap();
-        let difference_abs_fee = (price_reference_balance_fee as i128
-            - price_pallet_balance_fee as i128)
-            .unsigned_abs() as u128;
+        let difference_abs_fee =
+            (price_reference_balance_fee as i128 - price_pallet_balance_fee as i128).unsigned_abs();
         let max_difference_fee = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs_fee <= max_difference_fee,
@@ -315,9 +314,7 @@ fn rikiddo_pallet_all_prices_returns_correct_result() {
         let difference_abs = all_prices_reference_balance
             .iter()
             .zip(all_prices_pallet_balance.iter())
-            .fold(0u128, |acc, elems| {
-                acc + (*elems.0 as i128 - *elems.1 as i128).unsigned_abs() as u128
-            });
+            .fold(0u128, |acc, elems| acc + (*elems.0 as i128 - *elems.1 as i128).unsigned_abs());
 
         let max_difference =
             asset_balances.len() as u128 * max_balance_difference(frac_dec_places, 0.3);
@@ -346,9 +343,7 @@ fn rikiddo_pallet_all_prices_returns_correct_result() {
         let difference_abs_fee = all_prices_reference_balance_fee
             .iter()
             .zip(all_prices_pallet_balance_fee.iter())
-            .fold(0u128, |acc, elems| {
-                acc + (*elems.0 as i128 - *elems.1 as i128).unsigned_abs() as u128
-            });
+            .fold(0u128, |acc, elems| acc + (*elems.0 as i128 - *elems.1 as i128).unsigned_abs());
 
         let max_difference_fee =
             asset_balances.len() as u128 * max_balance_difference(frac_dec_places, 0.3);

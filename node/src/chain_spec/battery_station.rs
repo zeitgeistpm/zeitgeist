@@ -124,9 +124,7 @@ generate_generic_genesis_function!(
     },
 );
 
-pub fn battery_station_staging_config(
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<BatteryStationChainSpec, String> {
+pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, String> {
     let wasm = get_wasm()?;
 
     Ok(BatteryStationChainSpec::from_genesis(
@@ -137,7 +135,7 @@ pub fn battery_station_staging_config(
             generic_genesis(
                 additional_chain_spec_staging_battery_station(
                     #[cfg(feature = "parachain")]
-                    parachain_id,
+                    crate::BATTERY_STATION_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_battery_station(),
                 wasm,
@@ -151,7 +149,7 @@ pub fn battery_station_staging_config(
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
-            parachain_id: parachain_id.into(),
+            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
