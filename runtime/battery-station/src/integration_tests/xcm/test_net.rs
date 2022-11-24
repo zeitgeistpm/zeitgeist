@@ -77,9 +77,7 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
     pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![
-            (AccountId::from(ALICE), ksm(2002)),
-        ],
+        balances: vec![(AccountId::from(ALICE), ksm(2002))],
     }
     .assimilate_storage(&mut t)
     .unwrap();

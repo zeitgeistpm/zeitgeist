@@ -29,7 +29,7 @@ use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
     constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-    types::{Balance},
+    types::Balance,
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;

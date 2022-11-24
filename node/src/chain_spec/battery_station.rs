@@ -28,7 +28,7 @@ use zeitgeist_primitives::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
         BASE,
     },
-    types::{AccountId},
+    types::AccountId,
 };
 
 #[cfg(feature = "parachain")]

@@ -19,8 +19,9 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            ksm, register_foreign_parent, register_foreign_ztg, sibling_parachain_account, zeitgeist_parachain_account,
-            ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,
+            ksm, register_foreign_parent, register_foreign_ztg, sibling_parachain_account,
+            zeitgeist_parachain_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID,
+            PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
@@ -118,7 +119,10 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
 
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_parachain_account()), sibling_sovereign_initial_balance);
+        assert_eq!(
+            Balances::free_balance(&sibling_parachain_account()),
+            sibling_sovereign_initial_balance
+        );
     });
 
     Sibling::execute_with(|| {
@@ -182,7 +186,7 @@ fn transfer_ksm_from_relay_chain() {
     KusamaNet::execute_with(|| {
         let initial_balance = kusama_runtime::Balances::free_balance(&ALICE.into());
         assert!(initial_balance >= transfer_amount);
-        
+
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
             kusama_runtime::Origin::signed(ALICE.into()),
             Box::new(Parachain(zeitgeist::ID).into().into()),

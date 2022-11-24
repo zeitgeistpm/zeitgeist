@@ -19,8 +19,9 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            ksm, register_foreign_parent, register_foreign_ztg, sibling_parachain_account, zeitgeist_parachain_account,
-            ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,
+            ksm, register_foreign_parent, register_foreign_ztg, sibling_parachain_account,
+            zeitgeist_parachain_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID,
+            PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
@@ -118,7 +119,10 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
 
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_parachain_account()), sibling_sovereign_initial_balance);
+        assert_eq!(
+            Balances::free_balance(&sibling_parachain_account()),
+            sibling_sovereign_initial_balance
+        );
     });
 
     Sibling::execute_with(|| {
@@ -203,7 +207,7 @@ fn transfer_ksm_from_relay_chain() {
 #[test]
 fn transfer_ksm_to_relay_chain() {
     TestNet::reset();
-    
+
     let transfer_amount: Balance = ksm(1);
     transfer_ksm_from_relay_chain();
 
