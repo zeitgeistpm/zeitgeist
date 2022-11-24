@@ -211,20 +211,27 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
-            MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
-                zeitgeist::KEY => Ok(CurrencyId::Ztg),
-                _ => Err(location),
-            },
+            MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => {
+                if &key[..] == zeitgeist::KEY {
+                    return Ok(CurrencyId::Ztg);
+                }
+                
+                Err(location)
+            }
             MultiLocation {
                 parents: 1,
                 interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
-            } => match para_id {
-                id if id == u32::from(ParachainInfo::parachain_id()) => match &key[..] {
-                    zeitgeist::KEY => Ok(CurrencyId::Ztg),
-                    _ => Err(location),
-                },
-                _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
-            },
+            } => {
+                if para_id == u32::from(ParachainInfo::parachain_id()) {
+                    if &key[..] == zeitgeist::KEY {
+                        return Ok(CurrencyId::Ztg);
+                    }
+
+                    return Err(location);
+                }
+
+                AssetRegistry::location_to_asset_id(location.clone()).ok_or(location)
+            }
             _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
         }
     }
