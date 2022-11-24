@@ -23,7 +23,7 @@
 #![cfg(feature = "parachain")]
 
 use super::{parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo};
-use frame_support::{parameter_types, traits::Get, weights::Weight};
+use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
 use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};

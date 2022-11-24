@@ -29,7 +29,7 @@ use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
     constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-    types::{Asset::ForeignAsset, Balance},
+    types::{Balance},
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
@@ -46,10 +46,6 @@ fn authority_keys_from_seed(
 
 generate_generic_genesis_function! {
     battery_station_runtime,
-    asset_registry: battery_station_runtime::AssetRegistryConfig {
-        assets: vec![],
-        last_asset_id: ForeignAsset(0),
-    },
     sudo: battery_station_runtime::SudoConfig {
         key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
     },

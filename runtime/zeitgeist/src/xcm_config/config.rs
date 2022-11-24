@@ -22,8 +22,7 @@ use crate::{
     UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
-use alloc::vec::Vec;
-use frame_support::{parameter_types, traits::Everything};
+use frame_support::{parameter_types, traits::Everything, WeakBoundedVec};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{location::AbsoluteReserveProvider, MultiCurrency};
 use orml_xcm_support::{
@@ -308,5 +307,5 @@ pub type XcmRouter = (
 
 #[inline]
 pub(crate) fn general_key(key: &[u8]) -> Junction {
-    GeneralKey(Vec::from(key))
+    GeneralKey(WeakBoundedVec::force_from(key.to_vec(), None))
 }

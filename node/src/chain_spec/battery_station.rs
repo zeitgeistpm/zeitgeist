@@ -28,7 +28,7 @@ use zeitgeist_primitives::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
         BASE,
     },
-    types::{AccountId, Asset::ForeignAsset},
+    types::{AccountId},
 };
 
 #[cfg(feature = "parachain")]
@@ -115,10 +115,6 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
 
 generate_generic_genesis_function!(
     battery_station_runtime,
-    asset_registry: battery_station_runtime::AssetRegistryConfig {
-        assets: vec![],
-        last_asset_id: ForeignAsset(0),
-    },
     sudo: battery_station_runtime::SudoConfig {
         key: Some(root_key_staging_battery_station()),
     },

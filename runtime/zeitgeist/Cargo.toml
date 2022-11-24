@@ -84,16 +84,17 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.17", default-features = false, optional = true }
 
 # XCM
-kusama-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-orml-asset-registry = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-unknown-tokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-xcm-support = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-xtokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-runtime-parachains = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-xcm-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+kusama-runtime = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+orml-asset-registry = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-unknown-tokens = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-xcm-support = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-xtokens = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+pallet-xcm = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-primitives = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-runtime-parachains = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm-builder = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm-executor = { branch = "release-v0.9.26", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 
 # Zeitgeist
 
@@ -113,7 +114,7 @@ zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/ru
 
 [dev-dependencies]
 sp-io = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
-xcm-emulator = { rev = "0460d04c798028e7bef82c907082e11753ed173b", git = "https://github.com/shaunxw/xcm-simulator" }
+xcm-emulator = { rev = "ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe", git = "https://github.com/shaunxw/xcm-simulator" }
 
 [features]
 default = ["std"]

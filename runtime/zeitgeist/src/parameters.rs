@@ -313,7 +313,7 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
     /// Treasury account.
-    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.
