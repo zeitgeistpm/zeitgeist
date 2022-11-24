@@ -47,32 +47,6 @@ members = [
 ]
 resolver = "2"
 
-[patch."https://github.com/purestake/crowdloan-rewards"]
-# This patch does ensure that crowdloan-rewards only uses partiytech dependencies.
-# If it is not used, the Zeitgeist runtimes will contain duplicate crates from
-# different repositories which results in bigger WASM-blobs, binary and the inability
-# to compile with the "runtime-benchmarks" feature.
-pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "polkadot-v0.9.26" }
-
-[patch."https://github.com/purestake/moonbeam"]
-# Use dependencies from Paritytech
-moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
-# Fix author-mapping migration
-pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
-# Use dependencies from Paritytech
-pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
-session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
-
-[patch."https://github.com/purestake/nimbus"]
-# Use dependencies from Paritytech
-nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
-# Use dependencies from Paritytech
-nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
-# Use dependencies from Paritytech
-pallet-author-inherent = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
-# Use dependencies from Paritytech
-pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
-
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of
 # their debug info might be missing) or to require to be frequently recompiled. We compile these

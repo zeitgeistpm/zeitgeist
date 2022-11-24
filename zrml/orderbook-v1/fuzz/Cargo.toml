@@ -6,7 +6,7 @@ test = false
 
 [dependencies]
 arbitrary = { features = ["derive"], version = "1.0" }
-frame-system = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 libfuzzer-sys = "0.4"
 zeitgeist-primitives = { path = "../../../primitives" }
 zrml-orderbook-v1 = { features = ["mock"], path = ".." }
