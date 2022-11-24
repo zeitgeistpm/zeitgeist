@@ -89,7 +89,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(current_balance, transfer_amount - ztg_fee());
 
         // Sanity check for the actual amount BOB ends up with
-        assert_eq!(current_balance, 49_936_000_000);
+        assert_eq!(current_balance, 49_907_304_000);
 
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
@@ -236,7 +236,7 @@ fn transfer_ksm_to_relay_chain() {
     });
 
     KusamaNet::execute_with(|| {
-        assert_eq!(kusama_runtime::Balances::free_balance(&BOB.into()), 999_834_059_328);
+        assert_eq!(kusama_runtime::Balances::free_balance(&BOB.into()), 999_988_476_752);
     });
 }
 
@@ -306,7 +306,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         assert_eq!(current_balance, transfer_amount - custom_fee);
 
         // Sanity check for the actual amount BOB ends up with
-        assert_eq!(current_balance, 49_360_000_000);
+        assert_eq!(current_balance, 49_073_040_000);
 
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
@@ -318,8 +318,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 64_000_000);
-    assert_eq!(ksm_fee(), 6_400_000_000);
+    assert_eq!(ztg_fee(), 92_696_000);
+    assert_eq!(ksm_fee(), 9_269_600_000);
 }
 
 #[inline]
