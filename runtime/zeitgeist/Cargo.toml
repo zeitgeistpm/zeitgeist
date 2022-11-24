@@ -163,6 +163,8 @@ runtime-benchmarks = [
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
     "hex-literal",
+    "kusama-runtime?/runtime-benchmarks",
+    "orml-asset-registry?/runtime-benchmarks",
     "orml-tokens/runtime-benchmarks",
     "orml-xtokens?/runtime-benchmarks",
     "orml-benchmarking",
