@@ -29,8 +29,7 @@ use alloc::vec::Vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get, Hooks},
-    BoundedVec,
+    traits::{EnsureOrigin, Get},
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -45,6 +44,8 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+
+use frame_support::{traits::Hooks, BoundedVec};
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
@@ -761,6 +762,52 @@ benchmarks! {
         let market_pool_id = T::MarketCommons::market_pool(&market_id.saturated_into())?;
         let pool = T::Swaps::pool(market_pool_id)?;
         assert_eq!(pool.pool_status, PoolStatus::Active);
+    }
+
+    start_global_dispute {
+        let m in 1..CacheSize::get();
+
+        // no benchmarking component for max disputes here,
+        // because MaxDisputes is enforced for the extrinsic
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        )?;
+
+        // first element is the market id from above
+        let mut market_ids = BoundedVec::try_from(vec![market_id]).unwrap();
+        assert_eq!(market_id, 0u128.saturated_into());
+        for i in 1..m {
+            market_ids.try_push(i.saturated_into()).unwrap();
+        }
+
+        let max_dispute_len = T::MaxDisputes::get();
+        for i in 0..max_dispute_len {
+            // ensure that the MarketIdsPerDisputeBlock does not interfere
+            // with the start_global_dispute execution block
+            <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
+            let disputor: T::AccountId = account("Disputor", i, 0);
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
+            let _ = Call::<T>::dispute {
+                market_id,
+                outcome: OutcomeReport::Scalar(i.into()),
+            }
+            .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+        }
+
+        let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
+        <frame_system::Pallet<T>>::set_block_number(current_block);
+        // the complexity depends on MarketIdsPerDisputeBlock at the current block
+        // this is because a variable number of market ids need to be decoded from the storage
+        MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
+
+        let call = Call::<T>::start_global_dispute { market_id };
+    }: {
+        #[cfg(feature = "with-global-disputes")]
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+        #[cfg(not(feature = "with-global-disputes"))]
+        let _ = call.dispatch_bypass_filter(RawOrigin::Signed(caller).into());
     }
 
     dispute_authorized {

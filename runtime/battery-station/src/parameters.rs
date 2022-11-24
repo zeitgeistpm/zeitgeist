@@ -39,6 +39,9 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
+#[cfg(feature = "with-global-disputes")]
+use frame_support::traits::LockIdentifier;
+
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -343,6 +346,27 @@ parameter_types! {
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
+}
+
+#[cfg(feature = "with-global-disputes")]
+parameter_types! {
+    // Global Disputes
+    /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
+    pub const GlobalDisputeLockId: LockIdentifier = GLOBAL_DISPUTES_LOCK_ID;
+    /// Pallet identifier
+    pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
+    /// The period for a global dispute to end.
+    pub const GlobalDisputePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+    pub const MaxOwners: u32 = 10;
+    /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    /// The minimum required amount to vote on an outcome.
+    pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
+    /// The fee required to add a voting outcome.
+    pub const VotingOutcomeFee: Balance = 200 * BASE;
+    /// The remove limit for the Outcomes storage double map.
+    pub const RemoveKeysLimit: u32 = 250;
 }
 
 parameter_type_with_key! {

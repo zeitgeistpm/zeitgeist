@@ -160,6 +160,7 @@ mod pallet {
             if market.status != MarketStatus::Disputed {
                 return Err(Error::<T>::InvalidMarketStatus.into());
             }
+
             if let Some(last_dispute) = disputes.last() {
                 Ok(Some(last_dispute.outcome.clone()))
             } else {

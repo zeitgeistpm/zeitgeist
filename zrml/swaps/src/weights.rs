@@ -63,9 +63,14 @@ pub trait WeightInfoZeitgeist {
     fn swap_exact_amount_in_rikiddo(a: u32) -> Weight;
     fn swap_exact_amount_out_cpmm() -> Weight;
     fn swap_exact_amount_out_rikiddo(a: u32) -> Weight;
-    fn open_pool(a: u32) -> Weight;
     fn close_pool(a: u32) -> Weight;
+    fn open_pool(a: u32) -> Weight;
     fn destroy_pool(a: u32) -> Weight;
+    fn apply_to_cached_pools_execute_arbitrage(a: u32) -> Weight;
+    fn apply_to_cached_pools_noop(a: u32) -> Weight;
+    fn execute_arbitrage_buy_burn(a: u32) -> Weight;
+    fn execute_arbitrage_mint_sell(a: u32) -> Weight;
+    fn execute_arbitrage_skipped(a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_swaps (automatically generated)
@@ -287,5 +292,61 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: Swaps PoolsCachedForArbitrage (r:1 w:0)
+    // Storage: Swaps Pools (r:6 w:0)
+    // Storage: Tokens Accounts (r:390 w:390)
+    // Storage: Tokens TotalIssuance (r:65 w:65)
+    fn apply_to_cached_pools_execute_arbitrage(a: u32) -> Weight {
+        (135_773_000 as Weight)
+            // Standard Error: 35_228_000
+            .saturating_add((3_291_495_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(45 as Weight))
+            .saturating_add(T::DbWeight::get().reads((67 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(44 as Weight))
+            .saturating_add(T::DbWeight::get().writes((66 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: Swaps PoolsCachedForArbitrage (r:1 w:0)
+    fn apply_to_cached_pools_noop(a: u32) -> Weight {
+        (909_000 as Weight)
+            // Standard Error: 426_000
+            .saturating_add((12_215_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: Swaps Pools (r:1 w:0)
+    // Storage: Tokens Accounts (r:3 w:3)
+    // Storage: System Account (r:1 w:0)
+    // Storage: Tokens TotalIssuance (r:1 w:1)
+    fn execute_arbitrage_buy_burn(a: u32) -> Weight {
+        (63_109_000 as Weight)
+            // Standard Error: 1_027_000
+            .saturating_add((51_014_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: Swaps Pools (r:1 w:0)
+    // Storage: Tokens Accounts (r:3 w:3)
+    // Storage: System Account (r:2 w:1)
+    // Storage: Tokens TotalIssuance (r:1 w:1)
+    fn execute_arbitrage_mint_sell(a: u32) -> Weight {
+        (71_394_000 as Weight)
+            // Standard Error: 736_000
+            .saturating_add((45_508_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: Swaps Pools (r:1 w:0)
+    // Storage: Tokens Accounts (r:2 w:0)
+    fn execute_arbitrage_skipped(a: u32) -> Weight {
+        (28_776_000 as Weight)
+            // Standard Error: 277_000
+            .saturating_add((9_748_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
     }
 }

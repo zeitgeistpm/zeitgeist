@@ -183,7 +183,15 @@ impl Contains<Call> for IsCallable {
 }
 
 decl_common_types!();
+
+#[cfg(feature = "with-global-disputes")]
+create_runtime_with_additional_pallets!(
+    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
 create_runtime_with_additional_pallets!();
+
 impl_config_traits!();
 create_runtime_api!();
 create_common_benchmark_logic!();

@@ -27,8 +27,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight,
-        BASE,
+        BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, PmPalletId,
+        StakeWeight, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -144,6 +144,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
