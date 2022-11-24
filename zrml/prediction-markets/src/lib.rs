@@ -1300,10 +1300,10 @@ mod pallet {
                 );
 
                 // add report outcome to voting choices
-                if let Some(report) = market.report {
+                if let Some(report) = &market.report {
                     T::GlobalDisputes::push_voting_outcome(
                         &market_id,
-                        report.outcome,
+                        report.outcome.clone(),
                         &report.by,
                         <BalanceOf<T>>::zero(),
                     )?;
@@ -1319,9 +1319,16 @@ mod pallet {
                     )?;
                 }
 
+                // TODO(#372): Allow court with global disputes.
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
-                Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+                if let Some(auto_resolve_block) =
+                    T::SimpleDisputes::get_auto_resolve(&disputes, &market_id, &market)?
+                {
+                    MarketIdsPerDisputeBlock::<T>::mutate(auto_resolve_block, |ids| {
+                        remove_item::<MarketIdOf<T>, _>(ids, &market_id);
+                    });
+                }
 
                 let now = <frame_system::Pallet<T>>::block_number();
                 let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
