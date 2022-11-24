@@ -193,12 +193,12 @@ pub(super) fn dollar(decimals: u32) -> Balance {
 }
 
 #[inline]
-pub(super) fn sibling_account() -> AccountId {
+pub(super) fn sibling_parachain_account() -> AccountId {
     parachain_account(PARA_ID_SIBLING.into())
 }
 
 #[inline]
-pub(super) fn zeitgeist_account() -> AccountId {
+pub(super) fn zeitgeist_parachain_account() -> AccountId {
     parachain_account(battery_station::ID)
 }
 

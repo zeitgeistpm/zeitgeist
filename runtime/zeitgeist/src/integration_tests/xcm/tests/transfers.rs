@@ -19,7 +19,7 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            ksm, register_foreign_parent, register_foreign_ztg, sibling_account, zeitgeist_account,
+            ksm, register_foreign_parent, register_foreign_ztg, sibling_parachain_account, zeitgeist_parachain_account,
             ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
@@ -56,7 +56,7 @@ fn transfer_ztg_to_sibling() {
 
     Zeitgeist::execute_with(|| {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_account()), 0);
+        assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             Origin::signed(ALICE.into()),
             CurrencyId::Ztg,
@@ -78,7 +78,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance - transfer_amount);
 
         // Verify that the amount transferred is now part of the sibling account here
-        assert_eq!(Balances::free_balance(&sibling_account()), transfer_amount);
+        assert_eq!(Balances::free_balance(&sibling_parachain_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {
@@ -118,11 +118,11 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
 
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_account()), sibling_sovereign_initial_balance);
+        assert_eq!(Balances::free_balance(&sibling_parachain_account()), sibling_sovereign_initial_balance);
     });
 
     Sibling::execute_with(|| {
-        assert_eq!(Balances::free_balance(&zeitgeist_account()), 0);
+        assert_eq!(Balances::free_balance(&zeitgeist_parachain_account()), 0);
         assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance);
         assert_ok!(XTokens::transfer(
             Origin::signed(BOB.into()),
@@ -157,7 +157,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 
         // Verify that the reserve has been adjusted properly
         assert_eq!(
-            Balances::free_balance(&sibling_account()),
+            Balances::free_balance(&sibling_parachain_account()),
             sibling_sovereign_initial_balance - transfer_amount
         );
 
@@ -266,7 +266,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
     Zeitgeist::execute_with(|| {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_account()), 0);
+        assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             Origin::signed(ALICE.into()),
             CurrencyId::Ztg,
@@ -288,7 +288,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance - transfer_amount);
 
         // Verify that the amount transferred is now part of the sibling account here
-        assert_eq!(Balances::free_balance(&sibling_account()), transfer_amount);
+        assert_eq!(Balances::free_balance(&sibling_parachain_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {
