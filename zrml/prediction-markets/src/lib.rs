@@ -131,25 +131,18 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            let slash_market_creator = |amount| {
-                T::AssetManager::slash_reserved_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    amount,
-                );
-            };
-            if market_status == MarketStatus::Proposed {
-                slash_market_creator(T::AdvisoryBond::get());
-                MarketIdsForEdit::<T>::remove(market_id);
+            if market.bonds.advisory.is_some() {
+                Self::slash_advisory_bond(&market_id, &market, true)?;
             }
-            if market_status != MarketStatus::Resolved
-                && market_status != MarketStatus::InsufficientSubsidy
-            {
-                if market.creation == MarketCreation::Permissionless {
-                    slash_market_creator(T::ValidityBond::get());
-                }
-                slash_market_creator(T::OracleBond::get());
+            if market.bonds.oracle.is_some() {
+                Self::slash_oracle_bond(&market_id, &market)?;
+            }
+            if market.bonds.validity.is_some() {
+                Self::slash_validity_bond(&market_id, &market)?;
+            }
+
+            if market_status == MarketStatus::Proposed {
+                MarketIdsForEdit::<T>::remove(market_id);
             }
 
             // NOTE: Currently we don't clean up outcome assets.
@@ -1849,9 +1842,70 @@ mod pallet {
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
     impl<T: Config> Pallet<T> {
+        fn slash_advisory_bond(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+            slash_all: bool,
+        ) -> Result<(NegativeImbalanceOf<T>, BalanceOf<T>), DispatchError> {
+            let advisory_bond = market.bonds.advisory.ok_or(Error::<T>::MissingBond)?;
+            let (slash_amount, unreserve_amount) = if slash_all {
+                (advisory_bond, BalanceOf::<T>::zero())
+            } else {
+                let slash_amount = T::AdvisoryBondSlashPercentage::get().mul_floor(advisory_bond);
+                (slash_amount, advisory_bond.saturating_sub(slash_amount))
+            };
+            let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
+                &Self::reserve_id(),
+                &market.creator,
+                slash_amount,
+            );
+            T::AssetManager::unreserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &market.creator,
+                unreserve_amount,
+            );
+            T::MarketCommons::mutate_market(&market_id, |m| {
+                m.bonds.advisory = None;
+                Ok(())
+            })?;
+            Ok((imbalance, excess))
+        }
+
+        fn slash_oracle_bond(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<(NegativeImbalanceOf<T>, BalanceOf<T>), DispatchError> {
+            let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
+                &Self::reserve_id(),
+                &market.creator,
+                market.bonds.oracle.ok_or(Error::<T>::MissingBond)?,
+            );
+            T::MarketCommons::mutate_market(&market_id, |m| {
+                m.bonds.oracle = None;
+                Ok(())
+            })?;
+            Ok((imbalance, excess))
+        }
+
+        fn slash_validity_bond(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<(NegativeImbalanceOf<T>, BalanceOf<T>), DispatchError> {
+            let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
+                &Self::reserve_id(),
+                &market.creator,
+                market.bonds.validity.ok_or(Error::<T>::MissingBond)?,
+            );
+            T::MarketCommons::mutate_market(&market_id, |m| {
+                m.bonds.validity = None;
+                Ok(())
+            })?;
+            Ok((imbalance, excess))
+        }
+
         fn unreserve_advisory_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
             T::MarketCommons::mutate_market(&market_id, |market| {
-                ensure!(market.creation == MarketCreation::Advised);
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
@@ -1878,7 +1932,6 @@ mod pallet {
 
         fn unreserve_validity_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
             T::MarketCommons::mutate_market(&market_id, |market| {
-                ensure!(market.creation == MarketCreation::Permissionless);
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
@@ -2064,12 +2117,8 @@ mod pallet {
             reject_reason: RejectReason<T>,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            Self::unreserve_advisory_bond(&market_id)?;
             Self::unreserve_oracle_bond(&market_id)?;
-            let creator = &market.creator;
-            let advisory_bond_slash_amount =
-                T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
-            let (imbalance, _) = CurrencyOf::<T>::slash(creator, advisory_bond_slash_amount);
+            let (imbalance, _) = Self::slash_advisory_bond(&market_id, &market, false)?;
             T::Slash::on_unbalanced(imbalance);
             T::MarketCommons::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
@@ -2293,17 +2342,11 @@ mod pallet {
             if report.by == market.oracle {
                 Self::unreserve_oracle_bond(&market_id)?;
             } else {
-                let excess = T::AssetManager::slash_reserved_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
-                // deposit only to the real reporter what actually was slashed
-                let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
+                let (negative_imbalance, _) = Self::slash_oracle_bond(&market_id, &market)?;
 
+                // deposit only to the real reporter what actually was slashed
                 if let Err(err) =
-                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
+                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance.peek())
                 {
                     log::warn!(
                         "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
@@ -2356,11 +2399,7 @@ mod pallet {
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(&market_id)?;
             } else {
-                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                    &Self::reserve_id(),
-                    &market.creator,
-                    T::OracleBond::get().saturated_into::<u128>().saturated_into(),
-                );
+                let (imbalance, _) = Self::slash_oracle_bond(&market_id, &market)?;
                 overall_imbalance.subsume(imbalance);
             }
 
