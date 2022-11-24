@@ -35,7 +35,7 @@ sp_api::decl_runtime_apis! {
             pool_id: &PoolId,
             asset_in: &Asset<MarketId>,
             asset_out: &Asset<MarketId>,
-            with_fees: bool
+            with_fees: bool,
         ) -> SerdeWrapper<Balance>;
     }
 }
