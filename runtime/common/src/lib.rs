@@ -36,7 +36,7 @@
 //     along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod weights;
@@ -45,7 +45,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -104,56 +104,56 @@ macro_rules! decl_common_types {
         // Council vote proportions
         // At least 50%
         type EnsureRootOrHalfCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
 
         // At least 66%
         type EnsureRootOrTwoThirdsCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
 
         // At least 75%
         type EnsureRootOrThreeFourthsCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
 
         // At least 100%
         type EnsureRootOrAllCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
 
         // Technical committee vote proportions
         // At least 50%
         #[cfg(feature = "parachain")]
-        type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
+        type EnsureRootOrHalfTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 2>,
         >;
 
         // At least 66%
-        type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
+        type EnsureRootOrTwoThirdsTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 2, 3>,
         >;
 
         // At least 100%
-        type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
+        type EnsureRootOrAllTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
         >;
 
         // Advisory committee vote proportions
         // At least 50%
-        type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
+        type EnsureRootOrHalfAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
         >;
 
         // Technical committee vote proportions
         // At least 66%
-        type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
+        type EnsureRootOrTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
         >;
 
         // At least 100%
-        type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
+        type EnsureRootOrAllAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
         >;
@@ -274,7 +274,7 @@ macro_rules! create_runtime {
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
+                TransactionPayment: pallet_transaction_payment::{Config, Event<T>, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
@@ -370,6 +370,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
+            type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type DmpMessageHandler = DmpQueue;
             type Event = Event;
             type OnSystemEvent = ();
@@ -439,7 +440,6 @@ macro_rules! impl_config_traits {
         impl pallet_author_inherent::Config for Runtime {
             type AccountLookup = AuthorMapping;
             type CanAuthor = AuthorFilter;
-            type EventHandler = ParachainStaking;
             type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
             type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
         }
@@ -507,6 +507,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl pallet_parachain_staking::Config for Runtime {
+            type BlockAuthor = AuthorInherent;
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DefaultBlocksPerRound = DefaultBlocksPerRound;
@@ -550,6 +551,8 @@ macro_rules! impl_config_traits {
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+            type OnKilledTokenAccount = ();
+            type OnNewTokenAccount = ();
             type ReserveIdentifier = [u8; 8];
             type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
         }
@@ -809,6 +812,7 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_transaction_payment::Config for Runtime {
+            type Event = Event;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
             type OnChargeTransaction =
@@ -831,6 +835,7 @@ macro_rules! impl_config_traits {
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
+            type SpendOrigin = NeverEnsureOrigin<Balance>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
         }
@@ -930,7 +935,7 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-            type ApproveOrigin = EnsureOneOf<
+            type ApproveOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
             >;
@@ -968,7 +973,7 @@ macro_rules! impl_config_traits {
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type ReportingPeriod = ReportingPeriod;
-            type RequestEditOrigin = EnsureOneOf<
+            type RequestEditOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
             >;
@@ -1252,6 +1257,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
                             add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
+
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
                         }

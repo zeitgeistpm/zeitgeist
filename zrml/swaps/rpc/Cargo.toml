@@ -1,9 +1,9 @@
 [dependencies]
-jsonrpsee = { version = "0.13.0", features = ["server", "macros"] }
+jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
 parity-scale-codec = { default-features = false, version = "3.0.0" }
-sp-api = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-blockchain = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-api = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-blockchain = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../../primitives" }
 zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "../runtime-api" }
 
