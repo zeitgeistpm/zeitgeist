@@ -1,7 +1,9 @@
 # v0.3.7
-- Added xTokens pallet to transfer tokens accross chains
-- Added AssetRegistry pallet to register foreign asset
-- Asset UnknownTokens pallet to handle unknown foreign assets
+- Properly configured reserve asset transfers via XCM:
+  - Added xTokens pallet to transfer tokens accross chains
+  - Added AssetRegistry pallet to register foreign asset
+  - Added UnknownTokens pallet to handle unknown foreign assets
+  - More information at https://github.com/zeitgeistpm/zeitgeist/pull/661#top
 
 # v0.3.5
 
