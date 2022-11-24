@@ -97,7 +97,7 @@ parameter_types! {
     /// Max instructions per XCM
     pub const MaxInstructions: u32 = 100;
     // Relative self location
-    pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
+    pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
 }
 
 parameter_type_with_key! {
