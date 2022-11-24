@@ -172,7 +172,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 #[test]
 fn transfer_ksm_from_relay_chain() {
     TestNet::reset();
-    
+
     let transfer_amount: Balance = ksm(1);
 
     Zeitgeist::execute_with(|| {
@@ -180,6 +180,9 @@ fn transfer_ksm_from_relay_chain() {
     });
 
     KusamaNet::execute_with(|| {
+        let initial_balance = kusama_runtime::Balances::free_balance(&ALICE.into());
+        assert!(initial_balance >= transfer_amount);
+        
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
             kusama_runtime::Origin::signed(ALICE.into()),
             Box::new(Parachain(zeitgeist::ID).into().into()),
