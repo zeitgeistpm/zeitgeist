@@ -41,14 +41,14 @@ const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
 const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
 const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
 
-const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
-const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
+const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 2;
+const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 3;
 const COURT_REQUIRED_STORAGE_VERSION: u16 = 1;
 const COURT_NEXT_STORAGE_VERSION: u16 = 2;
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 3;
 const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 4;
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 6;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 7;
 
 pub struct AddFieldToAuthorityReport<T>(PhantomData<T>);
 
@@ -109,12 +109,104 @@ where
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        for (key, old_value) in storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
+            if let Some(outcome) = old_value {
+                // save outcome and check it in post_upgrade
+                unimplemented!();
+            }
+        }
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        let now = <frame_system::Pallet<T>>::block_number();
+        assert_eq!(<T as zrml_authorized::Config>::AuthorityReportPeriod::get(), 43_200u32.into());
+        for (key, new_value) in storage_iter::<Option<AuthorityReport<T::BlockNumber>>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
+            if let Some(AuthorityReport { resolve_at, outcome }) = new_value {
+                assert_eq!(resolve_at, now.checked_add(<T as zrml_authorized::Config>::AuthorityReportPeriod::get()).unwrap());
+            }
+        }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests_authorized {
+    use super::*;
+    use crate::mock::{ExtBuilder, Runtime};
+    use frame_support::Twox64Concat;
+    use zeitgeist_primitives::types::{MarketId, OutcomeReport};
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_versions() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+            AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
+            let authorized_version = StorageVersion::get::<AuthorizedPallet<Runtime>>();
+            assert_eq!(authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION);
+        });
+    }
+
+    #[test]
+    fn on_runtime_sets_new_struct_with_resolve_at() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            <frame_system::Pallet<Runtime>>::set_block_number(10_000);
+
+            let hash = crate::migrations::utility::key_to_hash::<Twox64Concat, MarketId>(0);
+            let outcome = OutcomeReport::Categorical(42u16);
+            put_storage_value::<Option<OutcomeReport>>(
+                AUTHORIZED,
+                AUTHORIZED_OUTCOME_REPORTS,
+                &hash,
+                Some(outcome.clone()),
+            );
+
+            AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
+
+            let now = <frame_system::Pallet<Runtime>>::block_number();
+            let resolve_at: <Runtime as frame_system::Config>::BlockNumber = now
+                .saturating_add(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+            let expected = Some(AuthorityReport { resolve_at, outcome });
+
+            let actual = frame_support::migration::get_storage_value::<
+                Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
+            >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash)
+            .unwrap();
+            assert_eq!(expected, actual);
+        });
+    }
+
+    #[test]
+    fn on_runtime_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            // storage migration already executed (storage version is incremented already)
+            StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
+
+            let hash = crate::migrations::utility::key_to_hash::<Twox64Concat, MarketId>(0);
+            let outcome = OutcomeReport::Categorical(42u16);
+            let now = <frame_system::Pallet<Runtime>>::block_number();
+            let resolve_at: <Runtime as frame_system::Config>::BlockNumber = now
+                .saturating_add(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+            let report = AuthorityReport { resolve_at, outcome };
+            put_storage_value::<
+                Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
+            >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash, Some(report.clone()));
+
+            AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
+
+            let actual = frame_support::migration::get_storage_value::<
+                Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
+            >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash)
+            .unwrap();
+            assert_eq!(Some(report), actual);
+        });
+    }
+
+    fn set_up_chain() {
+        StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
     }
 }
 
@@ -216,6 +308,192 @@ where
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests_auto_resolution {
+    use super::*;
+    use crate::{
+        mock::{ExtBuilder, Runtime},
+        MomentOf,
+    };
+    use zeitgeist_primitives::types::{
+        Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus,
+        OutcomeReport, Report, ScoringRule,
+    };
+    use zrml_market_commons::Markets;
+
+    type Market = zeitgeist_primitives::types::Market<
+        <Runtime as frame_system::Config>::AccountId,
+        <Runtime as frame_system::Config>::BlockNumber,
+        MomentOf<Runtime>,
+    >;
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_versions() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+            UpdateMarketIdsPerDisputeBlock::<Runtime>::on_runtime_upgrade();
+            let prediction_markets_version = StorageVersion::get::<Pallet<Runtime>>();
+            assert_eq!(prediction_markets_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION);
+        });
+    }
+
+    #[test]
+    fn on_runtime_updates_market_ids_per_dispute_block_authorized_ids_full() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            let market_id = MarketId::from(0u64);
+            let market = get_market(MarketDisputeMechanism::Authorized);
+
+            Markets::<Runtime>::insert(market_id, market);
+
+            let now = <frame_system::Pallet<Runtime>>::block_number();
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
+                now,
+                BoundedVec::try_from(vec![market_id]).unwrap(),
+            );
+
+            let resolve_at = now
+                .saturating_add(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+
+            let full_ids: Vec<MarketId> = (MarketId::from(1u64)..=MarketId::from(64u64)).collect();
+
+            for id in full_ids.clone() {
+                let market = get_market(MarketDisputeMechanism::SimpleDisputes);
+                Markets::<Runtime>::insert(id, market);
+            }
+
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
+                resolve_at,
+                BoundedVec::try_from(full_ids.clone()).unwrap(),
+            );
+            assert!(crate::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at).is_full());
+
+            UpdateMarketIdsPerDisputeBlock::<Runtime>::on_runtime_upgrade();
+
+            assert_eq!(crate::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), full_ids);
+            assert!(
+                !crate::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at).contains(&market_id)
+            );
+            // store market id at the next block
+            assert_eq!(
+                crate::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at + 1),
+                vec![market_id]
+            );
+        });
+    }
+
+    #[test]
+    fn on_runtime_updates_market_ids_per_dispute_block_simple_disputes_unchanged() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            let market_id = MarketId::from(0u64);
+            let market = get_market(MarketDisputeMechanism::SimpleDisputes);
+
+            Markets::<Runtime>::insert(market_id, market);
+
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
+                0,
+                BoundedVec::try_from(vec![market_id]).unwrap(),
+            );
+
+            UpdateMarketIdsPerDisputeBlock::<Runtime>::on_runtime_upgrade();
+
+            // unchanged for simple disputes
+            assert_eq!(crate::MarketIdsPerDisputeBlock::<Runtime>::get(0), vec![market_id]);
+        });
+    }
+
+    #[test]
+    fn on_runtime_updates_market_ids_per_dispute_block_authorized_deleted() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            let market_id = MarketId::from(0u64);
+            let market = get_market(MarketDisputeMechanism::Authorized);
+
+            Markets::<Runtime>::insert(market_id, market);
+
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
+                0,
+                BoundedVec::try_from(vec![market_id]).unwrap(),
+            );
+
+            UpdateMarketIdsPerDisputeBlock::<Runtime>::on_runtime_upgrade();
+
+            // authority controls market resolution now (no auto resolution)
+            assert!(crate::MarketIdsPerDisputeBlock::<Runtime>::get(0).is_empty());
+        });
+    }
+
+    #[test]
+    fn on_runtime_updates_market_ids_per_dispute_block_court_deletion() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            let market_id = MarketId::from(0u64);
+            let market = get_market(MarketDisputeMechanism::Court);
+            Markets::<Runtime>::insert(market_id, market);
+
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
+                0,
+                BoundedVec::try_from(vec![market_id]).unwrap(),
+            );
+
+            UpdateMarketIdsPerDisputeBlock::<Runtime>::on_runtime_upgrade();
+
+            // court auto resolution is deactivated for now (court is disabled)
+            assert!(crate::MarketIdsPerDisputeBlock::<Runtime>::get(0).is_empty());
+        });
+    }
+
+    #[test]
+    fn on_runtime_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            // Don't set up chain to signal that storage is already up to date.
+
+            let market_id = MarketId::from(0u64);
+            let market = get_market(MarketDisputeMechanism::Court);
+            Markets::<Runtime>::insert(market_id, market);
+
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
+                0,
+                BoundedVec::try_from(vec![market_id]).unwrap(),
+            );
+
+            UpdateMarketIdsPerDisputeBlock::<Runtime>::on_runtime_upgrade();
+
+            // normally court auto resolution gets deleted with the storage migration,
+            // but because storage version is already updated,
+            // it is not
+            assert_eq!(crate::MarketIdsPerDisputeBlock::<Runtime>::get(0), vec![market_id]);
+        });
+    }
+
+    fn get_market(mdm: MarketDisputeMechanism) -> Market {
+        Market {
+            creator: 1,
+            creation: MarketCreation::Permissionless,
+            creator_fee: 2,
+            oracle: 3,
+            metadata: vec![4, 5],
+            market_type: MarketType::Categorical(14),
+            period: MarketPeriod::Block(6..7),
+            deadlines: Deadlines { grace_period: 8, oracle_duration: 9, dispute_duration: 10 },
+            scoring_rule: ScoringRule::CPMM,
+            status: MarketStatus::Disputed,
+            report: Some(Report { at: 11, by: 12, outcome: OutcomeReport::Categorical(13) }),
+            resolved_outcome: Some(OutcomeReport::Categorical(13)),
+            dispute_mechanism: mdm,
+        }
+    }
+
+    fn set_up_chain() {
+        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
     }
 }
 
