@@ -93,6 +93,71 @@ mod pallet {
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
 
+    macro_rules! impl_slash_bond {
+        ($fn_name:ident, $bond:ident) => {
+            fn $fn_name(
+                market_id: &MarketIdOf<T>,
+                market: &MarketOf<T>,
+            ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+                let bond = market.bonds.$bond.as_ref().ok_or(Error::<T>::MissingBond)?;
+                // Trying to settle a bond multiple times is always a logic error, not a runtime
+                // error, so we log a warning instead of raising an error.
+                if bond.is_settled {
+                    log::warn!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond),
+                        market_id,
+                    );
+                    return Ok(NegativeImbalanceOf::<T>::zero());
+                }
+                let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
+                    &Self::reserve_id(),
+                    &market.creator,
+                    bond.value,
+                );
+                // If there's excess, there's nothing we can do, so we don't count this as error
+                // and log a warning instead.
+                if excess != BalanceOf::<T>::zero() {
+                    log::warn!(
+                        "Failed to settle the {} bond of market {:?}",
+                        stringify!($bond),
+                        market_id,
+                    );
+                }
+                T::MarketCommons::mutate_market(market_id, |m| {
+                    m.bonds.$bond = Some(Bond { is_settled: true, ..*bond });
+                    Ok(())
+                })?;
+                Ok(imbalance)
+            }
+        };
+    }
+
+    macro_rules! impl_unreserve_bond {
+        ($fn_name:ident, $bond:ident) => {
+            fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
+                T::MarketCommons::mutate_market(market_id, |market| {
+                    let bond = market.bonds.$bond.as_ref().ok_or(Error::<T>::MissingBond)?;
+                    if bond.is_settled {
+                        log::warn!(
+                            "Attempting to settle the {} bond of market {:?} multiple times",
+                            stringify!($bond),
+                            market_id,
+                        );
+                    }
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &market.creator,
+                        bond.value,
+                    );
+                    market.bonds.$bond = Some(Bond { is_settled: true, ..*bond });
+                    Ok(())
+                })
+            }
+        }
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Destroy a market, including its outcome assets, market account and pool account.
@@ -1861,7 +1926,7 @@ mod pallet {
             // so we log a warning instead of raising an error.
             if advisory_bond.is_settled {
                 log::warn!("Attempting to settle a bond multiple times");
-                return Ok(NegativeImbalanceOf::<T>::zero())
+                return Ok(NegativeImbalanceOf::<T>::zero());
             }
             let value = advisory_bond.value;
             let (slash_amount, unreserve_amount) = if slash_all {
@@ -1891,110 +1956,11 @@ mod pallet {
             Ok(imbalance)
         }
 
-        fn slash_oracle_bond(
-            market_id: &MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
-            let bond = market.bonds.oracle.as_ref().ok_or(Error::<T>::MissingBond)?;
-            // Trying to settle a bond multiple times is always a logic error, not a runtime error,
-            // so we log a warning instead of raising an error.
-            if bond.is_settled {
-                log::warn!("Attempting to settle a bond multiple times");
-                return Ok(NegativeImbalanceOf::<T>::zero());
-            }
-            let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
-                &Self::reserve_id(),
-                &market.creator,
-                bond.value,
-            );
-            // If there's excess, there's nothing we can do, so we don't count this as error and
-            // log a warning instead.
-            if excess != BalanceOf::<T>::zero() {
-                log::warn!("Failed to settle oracle bond of market {:?}", market_id);
-            }
-            T::MarketCommons::mutate_market(market_id, |m| {
-                m.bonds.oracle = Some(Bond { is_settled: true, ..*bond });
-                Ok(())
-            })?;
-            Ok(imbalance)
-        }
-
-        fn slash_validity_bond(
-            market_id: &MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
-            let bond = market.bonds.validity.as_ref().ok_or(Error::<T>::MissingBond)?;
-            if bond.is_settled {
-                log::warn!("Attempting to settle a bond multiple times");
-                return Ok(NegativeImbalanceOf::<T>::zero());
-            }
-            let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
-                &Self::reserve_id(),
-                &market.creator,
-                bond.value,
-            );
-            // If there's excess, there's nothing we can do, so we don't count this as error and
-            // log a warning instead.
-            if excess != BalanceOf::<T>::zero() {
-                log::warn!("Failed to settle validity bond of market {:?}", market_id);
-            }
-            T::MarketCommons::mutate_market(market_id, |m| {
-                m.bonds.validity = Some(Bond { is_settled: true, ..*bond });
-                Ok(())
-            })?;
-            Ok(imbalance)
-        }
-
-        fn unreserve_advisory_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
-            T::MarketCommons::mutate_market(market_id, |market| {
-                let bond = market.bonds.advisory.as_ref().ok_or(Error::<T>::MissingBond)?;
-                if bond.is_settled {
-                    log::warn!("Attempting to settle a bond multiple times");
-                }
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    bond.value,
-                );
-                market.bonds.advisory = Some(Bond { is_settled: true, ..*bond });
-                Ok(())
-            })
-        }
-
-        fn unreserve_oracle_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
-            T::MarketCommons::mutate_market(market_id, |market| {
-                let bond = market.bonds.oracle.as_ref().ok_or(Error::<T>::MissingBond)?;
-                if bond.is_settled {
-                    log::warn!("Attempting to settle a bond multiple times");
-                }
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    bond.value,
-                );
-                market.bonds.oracle = Some(Bond { is_settled: true, ..*bond });
-                Ok(())
-            })
-        }
-
-        fn unreserve_validity_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
-            T::MarketCommons::mutate_market(market_id, |market| {
-                let bond = market.bonds.validity.as_ref().ok_or(Error::<T>::MissingBond)?;
-                if bond.is_settled {
-                    log::warn!("Attempting to settle a bond multiple times");
-                }
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    bond.value,
-                );
-                market.bonds.validity = Some(Bond { is_settled: true, ..*bond });
-                Ok(())
-            })
-        }
+        impl_slash_bond!(slash_oracle_bond, oracle);
+        impl_slash_bond!(slash_validity_bond, validity);
+        impl_unreserve_bond!(unreserve_advisory_bond, advisory);
+        impl_unreserve_bond!(unreserve_oracle_bond, oracle);
+        impl_unreserve_bond!(unreserve_validity_bond, validity);
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
