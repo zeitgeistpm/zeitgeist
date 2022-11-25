@@ -60,18 +60,34 @@ pub struct Market<AI, Balance, BN, M> {
 }
 
 #[derive(Clone, Decode, Default, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct Bond<Balance> {
+    pub value: Balance,
+    pub is_settled: bool,
+}
+
+impl<Balance> Bond<Balance> {
+    pub fn new(value: Balance) -> Bond<Balance> {
+        Bond { value, is_settled: false }
+    }
+}
+
+#[derive(Clone, Decode, Default, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct MarketBonds<Balance> {
-    pub advisory: Option<Balance>,
-    pub oracle: Option<Balance>,
-    pub validity: Option<Balance>,
+    pub advisory: Option<Bond<Balance>>,
+    pub oracle: Option<Bond<Balance>>,
+    pub validity: Option<Bond<Balance>>,
 }
 
 impl<Balance: frame_support::traits::tokens::Balance> MarketBonds<Balance> {
+    /// Return the combined value of the bonds (not considering unreserved or slashed funds).
     pub fn total_amount_bonded(&self) -> Balance {
-        self.advisory
-            .unwrap_or_default()
-            .saturating_add(self.oracle.unwrap_or_default())
-            .saturating_add(self.validity.unwrap_or_default())
+        let value_or_default = |bond: &Option<Bond<Balance>>| match bond {
+            Some(bond) => bond.value,
+            None => Balance::zero(),
+        };
+        value_or_default(&self.advisory)
+            .saturating_add(value_or_default(&self.oracle))
+            .saturating_add(value_or_default(&self.validity))
     }
 }
 

@@ -58,7 +58,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
             MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
             OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
@@ -131,15 +131,24 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            if market.bonds.advisory.is_some() {
-                Self::slash_advisory_bond(&market_id, &market, true)?;
-            }
-            if market.bonds.oracle.is_some() {
-                Self::slash_oracle_bond(&market_id, &market)?;
-            }
-            if market.bonds.validity.is_some() {
-                Self::slash_validity_bond(&market_id, &market)?;
-            }
+            match &market.bonds.advisory {
+                Some(bond) if !bond.is_settled => {
+                    Self::slash_advisory_bond(&market_id, &market, true)?;
+                }
+                _ => (),
+            };
+            match &market.bonds.oracle {
+                Some(bond) if !bond.is_settled => {
+                    Self::slash_oracle_bond(&market_id, &market)?;
+                }
+                _ => (),
+            };
+            match &market.bonds.validity {
+                Some(bond) if !bond.is_settled => {
+                    Self::slash_validity_bond(&market_id, &market)?;
+                }
+                _ => (),
+            };
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
@@ -593,12 +602,12 @@ mod pallet {
             let bonds = match creation {
                 MarketCreation::Permissionless => MarketBonds {
                     advisory: None,
-                    oracle: Some(T::OracleBond::get()),
-                    validity: Some(T::ValidityBond::get()),
+                    oracle: Some(Bond::new(T::OracleBond::get())),
+                    validity: Some(Bond::new(T::ValidityBond::get())),
                 },
                 MarketCreation::Advised => MarketBonds {
-                    advisory: Some(T::AdvisoryBond::get()),
-                    oracle: Some(T::OracleBond::get()),
+                    advisory: Some(Bond::new(T::AdvisoryBond::get())),
+                    oracle: Some(Bond::new(T::OracleBond::get())),
                     validity: None,
                 },
             };
@@ -1846,19 +1855,29 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             slash_all: bool,
-        ) -> Result<(NegativeImbalanceOf<T>, BalanceOf<T>), DispatchError> {
-            let advisory_bond = market.bonds.advisory.ok_or(Error::<T>::MissingBond)?;
+        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+            let advisory_bond = market.bonds.advisory.as_ref().ok_or(Error::<T>::MissingBond)?;
+            // Trying to settle a bond multiple times is always a logic error, not a runtime error,
+            // so we log a warning instead of raising an error.
+            if advisory_bond.is_settled {
+                log::warn!("Attempting to settle a bond multiple times");
+                return Ok(NegativeImbalanceOf::<T>::zero())
+            }
+            let value = advisory_bond.value;
             let (slash_amount, unreserve_amount) = if slash_all {
-                (advisory_bond, BalanceOf::<T>::zero())
+                (value, BalanceOf::<T>::zero())
             } else {
-                let slash_amount = T::AdvisoryBondSlashPercentage::get().mul_floor(advisory_bond);
-                (slash_amount, advisory_bond.saturating_sub(slash_amount))
+                let slash_amount = T::AdvisoryBondSlashPercentage::get().mul_floor(value);
+                (slash_amount, value.saturating_sub(slash_amount))
             };
             let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
                 &Self::reserve_id(),
                 &market.creator,
                 slash_amount,
             );
+            if excess != BalanceOf::<T>::zero() {
+                log::warn!("Failed to settle oracle bond of market {:?}", market_id);
+            }
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
@@ -1866,79 +1885,113 @@ mod pallet {
                 unreserve_amount,
             );
             T::MarketCommons::mutate_market(market_id, |m| {
-                m.bonds.advisory = None;
+                m.bonds.advisory = Some(Bond { is_settled: true, ..*advisory_bond });
                 Ok(())
             })?;
-            Ok((imbalance, excess))
+            Ok(imbalance)
         }
 
         fn slash_oracle_bond(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) -> Result<(NegativeImbalanceOf<T>, BalanceOf<T>), DispatchError> {
+        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+            let bond = market.bonds.oracle.as_ref().ok_or(Error::<T>::MissingBond)?;
+            // Trying to settle a bond multiple times is always a logic error, not a runtime error,
+            // so we log a warning instead of raising an error.
+            if bond.is_settled {
+                log::warn!("Attempting to settle a bond multiple times");
+                return Ok(NegativeImbalanceOf::<T>::zero());
+            }
             let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
                 &Self::reserve_id(),
                 &market.creator,
-                market.bonds.oracle.ok_or(Error::<T>::MissingBond)?,
+                bond.value,
             );
+            // If there's excess, there's nothing we can do, so we don't count this as error and
+            // log a warning instead.
+            if excess != BalanceOf::<T>::zero() {
+                log::warn!("Failed to settle oracle bond of market {:?}", market_id);
+            }
             T::MarketCommons::mutate_market(market_id, |m| {
-                m.bonds.oracle = None;
+                m.bonds.oracle = Some(Bond { is_settled: true, ..*bond });
                 Ok(())
             })?;
-            Ok((imbalance, excess))
+            Ok(imbalance)
         }
 
         fn slash_validity_bond(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) -> Result<(NegativeImbalanceOf<T>, BalanceOf<T>), DispatchError> {
+        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+            let bond = market.bonds.validity.as_ref().ok_or(Error::<T>::MissingBond)?;
+            if bond.is_settled {
+                log::warn!("Attempting to settle a bond multiple times");
+                return Ok(NegativeImbalanceOf::<T>::zero());
+            }
             let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
                 &Self::reserve_id(),
                 &market.creator,
-                market.bonds.validity.ok_or(Error::<T>::MissingBond)?,
+                bond.value,
             );
+            // If there's excess, there's nothing we can do, so we don't count this as error and
+            // log a warning instead.
+            if excess != BalanceOf::<T>::zero() {
+                log::warn!("Failed to settle validity bond of market {:?}", market_id);
+            }
             T::MarketCommons::mutate_market(market_id, |m| {
-                m.bonds.validity = None;
+                m.bonds.validity = Some(Bond { is_settled: true, ..*bond });
                 Ok(())
             })?;
-            Ok((imbalance, excess))
+            Ok(imbalance)
         }
 
         fn unreserve_advisory_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
             T::MarketCommons::mutate_market(market_id, |market| {
+                let bond = market.bonds.advisory.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    log::warn!("Attempting to settle a bond multiple times");
+                }
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
                     &market.creator,
-                    market.bonds.advisory.ok_or(Error::<T>::MissingBond)?,
+                    bond.value,
                 );
-                market.bonds.advisory = None;
+                market.bonds.advisory = Some(Bond { is_settled: true, ..*bond });
                 Ok(())
             })
         }
 
         fn unreserve_oracle_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
             T::MarketCommons::mutate_market(market_id, |market| {
+                let bond = market.bonds.oracle.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    log::warn!("Attempting to settle a bond multiple times");
+                }
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
                     &market.creator,
-                    market.bonds.oracle.ok_or(Error::<T>::MissingBond)?,
+                    bond.value,
                 );
-                market.bonds.oracle = None;
+                market.bonds.oracle = Some(Bond { is_settled: true, ..*bond });
                 Ok(())
             })
         }
 
         fn unreserve_validity_bond(market_id: &MarketIdOf<T>) -> DispatchResult {
             T::MarketCommons::mutate_market(market_id, |market| {
+                let bond = market.bonds.validity.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    log::warn!("Attempting to settle a bond multiple times");
+                }
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
                     &market.creator,
-                    market.bonds.validity.ok_or(Error::<T>::MissingBond)?,
+                    bond.value,
                 );
-                market.bonds.validity = None;
+                market.bonds.validity = Some(Bond { is_settled: true, ..*bond });
                 Ok(())
             })
         }
@@ -2118,7 +2171,7 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             Self::unreserve_oracle_bond(market_id)?;
-            let (imbalance, _) = Self::slash_advisory_bond(market_id, &market, false)?;
+            let imbalance = Self::slash_advisory_bond(market_id, &market, false)?;
             T::Slash::on_unbalanced(imbalance);
             T::MarketCommons::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
@@ -2342,7 +2395,7 @@ mod pallet {
             if report.by == market.oracle {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let (negative_imbalance, _) = Self::slash_oracle_bond(market_id, market)?;
+                let negative_imbalance = Self::slash_oracle_bond(market_id, market)?;
 
                 // deposit only to the real reporter what actually was slashed
                 if let Err(err) =
@@ -2399,7 +2452,7 @@ mod pallet {
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let (imbalance, _) = Self::slash_oracle_bond(market_id, market)?;
+                let imbalance = Self::slash_oracle_bond(market_id, market)?;
                 overall_imbalance.subsume(imbalance);
             }
 

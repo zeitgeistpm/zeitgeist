@@ -44,7 +44,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
-    bonds: MarketBonds { advisory: None, oracle: 0, validity: None },
+    bonds: MarketBonds { advisory: None, oracle: None, validity: None },
 };
 
 #[test]
