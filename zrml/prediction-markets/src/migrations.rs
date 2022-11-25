@@ -34,14 +34,16 @@ use zrml_market_commons::MarketCommonsPalletApi;
 const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
 const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
 
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 6;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 7;
+// TODO increase storage versions here, when last migration was executed
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
 
 const AUTHORIZED: &[u8] = b"Authorized";
 const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
 
-const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 2;
-const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 3;
+// TODO increase storage versions here, when last migration was executed
+const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
+const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
 
 pub struct UpdateMarketIdsPerDisputeBlock<T>(PhantomData<T>);
 
