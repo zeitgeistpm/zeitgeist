@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{CacheSize, Config, MarketIdOf, Pallet};
-use alloc::{vec::Vec};
+use alloc::vec::Vec;
 use frame_support::{
     dispatch::Weight,
     log,
@@ -27,11 +27,9 @@ use frame_support::{
 };
 use parity_scale_codec::EncodeLike;
 use sp_runtime::traits::{One, Saturating};
-use zeitgeist_primitives::{
-    types::{AuthorityReport, MarketDisputeMechanism, OutcomeReport},
-};
-use zrml_authorized::{Pallet as AuthorizedPallet};
-use zrml_market_commons::{MarketCommonsPalletApi};
+use zeitgeist_primitives::types::{AuthorityReport, MarketDisputeMechanism, OutcomeReport};
+use zrml_authorized::Pallet as AuthorizedPallet;
+use zrml_market_commons::MarketCommonsPalletApi;
 
 const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
 const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
@@ -155,7 +153,7 @@ mod tests_auto_resolution {
     };
     use zeitgeist_primitives::types::{
         Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus,
-        OutcomeReport, Report, ScoringRule, MarketType,
+        MarketType, OutcomeReport, Report, ScoringRule,
     };
     use zrml_market_commons::Markets;
 
