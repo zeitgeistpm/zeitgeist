@@ -437,12 +437,17 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "kusama-runtime",
  "log",
  "nimbus-primitives",
+ "orml-asset-registry",
  "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -472,6 +477,8 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
  "scale-info",
  "session-keys-primitives",
  "sp-api",
@@ -490,6 +497,7 @@ dependencies = [
  "substrate-wasm-builder",
  "xcm",
  "xcm-builder",
+ "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
  "zrml-authorized",
@@ -5121,6 +5129,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-asset-registry"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
@@ -5191,6 +5218,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-unknown-tokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
@@ -5202,6 +5244,41 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm-support"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
+dependencies = [
+ "frame-support",
+ "orml-traits",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "orml-xtokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.26#33dbc5e35305d0cf5937c896dae8655ca7da95d8"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-xcm-support",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -11296,9 +11373,9 @@ checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
 
 [[package]]
 name = "tracing"
-version = "0.1.34"
+version = "0.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d0ecdcb44a79f0fe9844f0c4f33a342cbcbb5117de8001e6ba0dc2351327d09"
+checksum = "8ce8c33a8d48bd45d624a6e523445fd21ec13d3653cd51f681abf67418f54eb8"
 dependencies = [
  "cfg-if 1.0.0",
  "pin-project-lite 0.2.9",
@@ -11319,11 +11396,11 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.26"
+version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f54c8ca710e81886d498c2fd3331b56c93aa248d49de2222ad2742247c60072f"
+checksum = "24eb03ba0eab1fd845050058ce5e616558e8f8d8fca633e6b163fe25c797213a"
 dependencies = [
- "lazy_static",
+ "once_cell",
  "valuable",
 ]
 
@@ -12415,6 +12492,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "xcm-emulator"
+version = "0.1.0"
+source = "git+https://github.com/shaunxw/xcm-simulator?rev=ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe#ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder",
+ "frame-support",
+ "frame-system",
+ "parachain-info",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "quote",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
 name = "xcm-executor"
 version = "0.9.26"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.26#d8785970175dce344f2a6ad1cd88297529a6dd59"
@@ -12581,12 +12683,17 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "kusama-runtime",
  "log",
  "nimbus-primitives",
+ "orml-asset-registry",
  "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -12615,6 +12722,8 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
  "scale-info",
  "session-keys-primitives",
  "sp-api",
@@ -12633,6 +12742,7 @@ dependencies = [
  "substrate-wasm-builder",
  "xcm",
  "xcm-builder",
+ "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
  "zrml-authorized",

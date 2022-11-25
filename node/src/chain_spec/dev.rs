@@ -44,8 +44,11 @@ fn authority_keys_from_seed(
     )
 }
 
-generate_generic_genesis_function! {battery_station_runtime,
-    sudo: battery_station_runtime::SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
+generate_generic_genesis_function! {
+    battery_station_runtime,
+    sudo: battery_station_runtime::SudoConfig {
+        key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+    },
 }
 
 // Dev currently uses battery station runtime for the following reasons:

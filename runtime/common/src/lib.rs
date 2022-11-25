@@ -178,6 +178,7 @@ macro_rules! decl_common_types {
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
+                    TreasuryPalletId::get(),
                 ];
 
                 #[cfg(feature = "with-global-disputes")]
@@ -335,6 +336,9 @@ macro_rules! create_runtime_with_additional_pallets {
             DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
             PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
+            AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
+            UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
+            XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
 
             // Third-party
             Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
@@ -359,6 +363,8 @@ macro_rules! create_runtime_with_additional_pallets {
 macro_rules! impl_config_traits {
     {} => {
         use common_runtime::weights;
+        #[cfg(feature = "parachain")]
+        use xcm_config::config::*;
 
         // Configure Pallets
         #[cfg(feature = "parachain")]
@@ -534,6 +540,17 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
+        #[cfg(feature = "parachain")]
+        impl orml_asset_registry::Config for Runtime {
+            type AssetId = CurrencyId;
+            type AssetProcessor = CustomAssetProcessor;
+            type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
+            type Balance = Balance;
+            type CustomMetadata = CustomMetadata;
+            type Event = Event;
+            type WeightInfo = ();
+        }
+
         impl orml_currencies::Config for Runtime {
             type GetNativeCurrencyId = GetNativeCurrencyId;
             type MultiCurrency = Tokens;
@@ -555,6 +572,29 @@ macro_rules! impl_config_traits {
             type OnNewTokenAccount = ();
             type ReserveIdentifier = [u8; 8];
             type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl orml_unknown_tokens::Config for Runtime {
+            type Event = Event;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl orml_xtokens::Config for Runtime {
+            type AccountIdToMultiLocation = AccountIdToMultiLocation;
+            type Balance = Balance;
+            type BaseXcmWeight = BaseXcmWeight;
+            type CurrencyId = CurrencyId;
+            type CurrencyIdConvert = AssetConvert;
+            type Event = Event;
+            type LocationInverter = LocationInverter<Ancestry>;
+            type MaxAssetsForTransfer = MaxAssetsForTransfer;
+            type MinXcmFee = ParachainMinFee;
+            type MultiLocationsFilter = Everything;
+            type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
+            type SelfLocation = SelfLocation;
+            type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
 
         #[cfg(feature = "parachain")]

@@ -19,7 +19,7 @@
       "ScalarOutcome": "(MarketId, ScalarPosition)",
       "CombinatorialOutcome": null,
       "PoolShare": "u128",
-      "Ztg": null
+      "ZTG": null
     }
   },
   "AuthorId": "AccountId",

@@ -108,6 +108,8 @@ macro_rules! generate_generic_genesis_function {
                     members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
+                #[cfg(feature = "parachain")]
+                asset_registry: Default::default(),
                 #[cfg(not(feature = "parachain"))]
                 aura: $runtime::AuraConfig {
                     authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
