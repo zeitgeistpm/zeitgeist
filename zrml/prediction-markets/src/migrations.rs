@@ -73,7 +73,7 @@ pub struct RecordBonds<T>(PhantomData<T>);
 
 impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T> {
     fn on_runtime_upgrade() -> Weight {
-        let mut total_weight = T::DbWeight::get().reads(4);
+        let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
@@ -103,7 +103,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                 let validity = if old_market.creation == MarketCreation::Permissionless {
                     Some(Bond {
                         value: T::ValidityBond::get(),
-                        is_settled: old_market.status != MarketStatus::Resolved,
+                        is_settled: old_market.status == MarketStatus::Resolved,
                     })
                 } else {
                     None
@@ -127,6 +127,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                 (key, new_market)
             })
             .collect::<Vec<_>>();
+        println!("{:?}", new_markets.len());
 
         for (key, new_market) in new_markets {
             put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
@@ -134,7 +135,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
         }
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
-        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(4));
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         log::info!("RecordBonds: Done!");
         total_weight
     }
@@ -183,6 +184,222 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
             };
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        mock::{ExtBuilder, Runtime},
+        MarketIdOf,
+    };
+    use frame_support::{dispatch::fmt::Debug, Blake2_128Concat, StorageHasher};
+    use zrml_market_commons::MarketCommonsPalletApi;
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_version() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            RecordBonds::<Runtime>::on_runtime_upgrade();
+            assert_eq!(
+                StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
+                MARKET_COMMONS_NEXT_STORAGE_VERSION
+            );
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            // Don't set up chain to signal that storage is already up to date.
+            let test_vector = construct_test_vector();
+            let new_markets =
+                test_vector.into_iter().map(|(_, new_market)| new_market).collect::<Vec<_>>();
+            populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, MarketOf<Runtime>>(
+                &MARKET_COMMONS,
+                &MARKETS,
+                new_markets.clone(),
+            );
+            RecordBonds::<Runtime>::on_runtime_upgrade();
+            for (market_id, expected) in new_markets.iter().enumerate() {
+                let actual =
+                    <<Runtime as Config>::MarketCommons as MarketCommonsPalletApi>::market(
+                        &(market_id as u128),
+                    )
+                    .unwrap();
+                assert_eq!(actual, *expected);
+            }
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_correctly_updates_markets() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            let test_vector = construct_test_vector();
+            let (old_markets, new_markets): (_, Vec<MarketOf<Runtime>>) =
+                test_vector.into_iter().unzip();
+            populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, OldMarketOf<Runtime>>(
+                &MARKET_COMMONS,
+                &MARKETS,
+                old_markets,
+            );
+            RecordBonds::<Runtime>::on_runtime_upgrade();
+            for (market_id, expected) in new_markets.iter().enumerate() {
+                let actual =
+                    <<Runtime as Config>::MarketCommons as MarketCommonsPalletApi>::market(
+                        &(market_id as u128),
+                    )
+                    .unwrap();
+                assert_eq!(actual, *expected);
+            }
+        });
+    }
+
+    fn set_up_version() {
+        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION)
+            .put::<MarketCommonsPallet<Runtime>>();
+    }
+
+    fn construct_test_vector() -> Vec<(OldMarketOf<Runtime>, MarketOf<Runtime>)> {
+        let construct_markets = |creation: MarketCreation, status, bonds| {
+            let creator = 0;
+            let creator_fee = 1;
+            let oracle = 2;
+            let metadata = vec![3, 4, 5];
+            let market_type = MarketType::Categorical(6);
+            let period = MarketPeriod::Block(7..8);
+            let scoring_rule = ScoringRule::CPMM;
+            let report = None;
+            let resolved_outcome = None;
+            let dispute_mechanism = MarketDisputeMechanism::Authorized;
+            let deadlines = Deadlines::default();
+
+            let old_market = OldMarket {
+                creator,
+                creation: creation.clone(),
+                creator_fee,
+                oracle,
+                metadata: metadata.clone(),
+                market_type: market_type.clone(),
+                period: period.clone(),
+                scoring_rule,
+                status,
+                report: report.clone(),
+                resolved_outcome: resolved_outcome.clone(),
+                dispute_mechanism: dispute_mechanism.clone(),
+                deadlines,
+            };
+            let new_market = Market {
+                creator,
+                creation,
+                creator_fee,
+                oracle,
+                metadata,
+                market_type,
+                period,
+                scoring_rule,
+                status,
+                report,
+                resolved_outcome,
+                dispute_mechanism,
+                deadlines,
+                bonds,
+            };
+            (old_market, new_market)
+        };
+        vec![
+            construct_markets(
+                MarketCreation::Permissionless,
+                MarketStatus::Disputed,
+                MarketBonds {
+                    advisory: None,
+                    oracle: Some(Bond {
+                        value: <Runtime as Config>::OracleBond::get(),
+                        is_settled: false,
+                    }),
+                    validity: Some(Bond {
+                        value: <Runtime as Config>::ValidityBond::get(),
+                        is_settled: false,
+                    }),
+                },
+            ),
+            construct_markets(
+                MarketCreation::Permissionless,
+                MarketStatus::Resolved,
+                MarketBonds {
+                    advisory: None,
+                    oracle: Some(Bond {
+                        value: <Runtime as Config>::OracleBond::get(),
+                        is_settled: true,
+                    }),
+                    validity: Some(Bond {
+                        value: <Runtime as Config>::ValidityBond::get(),
+                        is_settled: true,
+                    }),
+                },
+            ),
+            construct_markets(
+                MarketCreation::Advised,
+                MarketStatus::Proposed,
+                MarketBonds {
+                    advisory: Some(Bond {
+                        value: <Runtime as Config>::AdvisoryBond::get(),
+                        is_settled: false,
+                    }),
+                    oracle: Some(Bond {
+                        value: <Runtime as Config>::OracleBond::get(),
+                        is_settled: false,
+                    }),
+                    validity: None,
+                },
+            ),
+            construct_markets(
+                MarketCreation::Advised,
+                MarketStatus::Active,
+                MarketBonds {
+                    advisory: Some(Bond {
+                        value: <Runtime as Config>::AdvisoryBond::get(),
+                        is_settled: true,
+                    }),
+                    oracle: Some(Bond {
+                        value: <Runtime as Config>::OracleBond::get(),
+                        is_settled: false,
+                    }),
+                    validity: None,
+                },
+            ),
+            construct_markets(
+                MarketCreation::Advised,
+                MarketStatus::Resolved,
+                MarketBonds {
+                    advisory: Some(Bond {
+                        value: <Runtime as Config>::AdvisoryBond::get(),
+                        is_settled: true,
+                    }),
+                    oracle: Some(Bond {
+                        value: <Runtime as Config>::OracleBond::get(),
+                        is_settled: true,
+                    }),
+                    validity: None,
+                },
+            ),
+        ]
+    }
+
+    #[allow(unused)]
+    fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
+    where
+        H: StorageHasher,
+        K: TryFrom<usize> + Encode,
+        V: Encode + Clone,
+        <K as TryFrom<usize>>::Error: Debug,
+    {
+        for (key, value) in data.iter().enumerate() {
+            let storage_hash = utility::key_to_hash::<H, K>(K::try_from(key).unwrap());
+            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
+        }
     }
 }
 
