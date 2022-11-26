@@ -510,9 +510,6 @@ macro_rules! impl_config_traits {
             type BlockAuthor = AuthorInherent;
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
-            type DefaultBlocksPerRound = DefaultBlocksPerRound;
-            type DefaultCollatorCommission = DefaultCollatorCommission;
-            type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
             type DelegationBondLessDelay = DelegationBondLessDelay;
             type Event = Event;
             type LeaveCandidatesDelay = LeaveCandidatesDelay;
@@ -1069,14 +1066,6 @@ macro_rules! create_runtime_api {
                     header: &<Block as BlockT>::Header
                 ) -> cumulus_primitives_core::CollationInfo {
                     ParachainSystem::collect_collation_info(header)
-                }
-            }
-
-            #[cfg(feature = "parachain")]
-            // Required to satisify trait bounds at the client implementation.
-            impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
-                fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
-                    panic!("AuthorFilterAPI is no longer supported. Please update your client.")
                 }
             }
 
@@ -1766,7 +1755,7 @@ macro_rules! create_common_tests {
                     pub BlockLength: frame_system::limits::BlockLength =
                         frame_system::limits::BlockLength::max(2 * 1024);
                     pub BlockWeights: frame_system::limits::BlockWeights =
-                        frame_system::limits::BlockWeights::simple_max(1024);
+                        frame_system::limits::BlockWeights::simple_max(Weight::from_ref_time(1024));
                 }
 
                 impl frame_system::Config for Runtime {

@@ -55,12 +55,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Styx Crossings (r:1 w:1)
     // Storage: Styx BurnAmount (r:1 w:0)
     fn cross() -> Weight {
-        (39_480_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(39_480_000)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Styx BurnAmount (r:0 w:1)
     fn set_burn_amount() -> Weight {
-        (15_900_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(15_900_000)
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

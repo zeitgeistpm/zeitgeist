@@ -50,89 +50,89 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T> {
     // Storage: Proxy Proxies (r:1 w:0)
     fn proxy(_p: u32) -> Weight {
-        (27_909_000 as Weight).saturating_add(T::DbWeight::get().reads(1 as Weight))
+        Weight::from_ref_time(27_909_000).saturating_add(T::DbWeight::get().reads(1 as u64))
     }
     // Storage: Proxy Proxies (r:1 w:0)
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn proxy_announced(a: u32, p: u32) -> Weight {
-        (44_326_000 as Weight)
+        Weight::from_ref_time(44_326_000)
             // Standard Error: 21_000
-            .saturating_add((318_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(Weight::from_ref_time(318_000).saturating_mul(a as u64))
             // Standard Error: 22_000
-            .saturating_add((126_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(126_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn remove_announcement(a: u32, _p: u32) -> Weight {
-        (35_854_000 as Weight)
+        Weight::from_ref_time(35_854_000)
             // Standard Error: 31_000
-            .saturating_add((236_000 as Weight).saturating_mul(a as Weight))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(236_000).saturating_mul(a as u64))
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn reject_announcement(a: u32, p: u32) -> Weight {
-        (26_915_000 as Weight)
+        Weight::from_ref_time(26_915_000)
             // Standard Error: 22_000
-            .saturating_add((416_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(Weight::from_ref_time(416_000).saturating_mul(a as u64))
             // Standard Error: 23_000
-            .saturating_add((86_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(86_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: Proxy Proxies (r:1 w:0)
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn announce(a: u32, p: u32) -> Weight {
-        (39_845_000 as Weight)
+        Weight::from_ref_time(39_845_000)
             // Standard Error: 23_000
-            .saturating_add((233_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(Weight::from_ref_time(233_000).saturating_mul(a as u64))
             // Standard Error: 24_000
-            .saturating_add((192_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(192_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: Proxy Proxies (r:1 w:1)
     fn add_proxy(p: u32) -> Weight {
-        (38_313_000 as Weight)
+        Weight::from_ref_time(38_313_000)
             // Standard Error: 23_000
-            .saturating_add((112_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(Weight::from_ref_time(112_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Proxy Proxies (r:1 w:1)
     fn remove_proxy(p: u32) -> Weight {
-        (40_783_000 as Weight)
+        Weight::from_ref_time(40_783_000)
             // Standard Error: 23_000
-            .saturating_add((70_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(Weight::from_ref_time(70_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Proxy Proxies (r:1 w:1)
     fn remove_proxies(p: u32) -> Weight {
-        (30_751_000 as Weight)
+        Weight::from_ref_time(30_751_000)
             // Standard Error: 19_000
-            .saturating_add((134_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(Weight::from_ref_time(134_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: unknown [0x3a65787472696e7369635f696e646578] (r:1 w:0)
     // Storage: Proxy Proxies (r:1 w:1)
     fn anonymous(_p: u32) -> Weight {
-        (55_336_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(55_336_000)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Proxy Proxies (r:1 w:1)
     fn kill_anonymous(p: u32) -> Weight {
-        (30_452_000 as Weight)
+        Weight::from_ref_time(30_452_000)
             // Standard Error: 35_000
-            .saturating_add((256_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(Weight::from_ref_time(256_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

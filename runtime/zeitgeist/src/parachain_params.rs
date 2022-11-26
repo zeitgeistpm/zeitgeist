@@ -67,10 +67,10 @@ parameter_types! {
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
     // Have to change "Any" to "Kusama" for mainnet once we have separate runtimes
     pub const RelayNetwork: NetworkId = NetworkId::Any;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+    pub const ReservedDmpWeight: Weight = Weight::from_ref_time(MAXIMUM_BLOCK_WEIGHT.ref_time() / 4);
+    pub const ReservedXcmpWeight: Weight = Weight::from_ref_time(MAXIMUM_BLOCK_WEIGHT.ref_time() / 4);
     pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub UnitWeightCost: Weight = MICRO.saturated_into();
+    pub UnitWeightCost: u64 = MICRO.saturated_into();
 
     // Staking
     /// Rounds before the candidate bond increase/decrease can be executed

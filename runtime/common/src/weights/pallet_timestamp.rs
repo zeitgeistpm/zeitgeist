@@ -51,11 +51,11 @@ impl<T: frame_system::Config> pallet_timestamp::weights::WeightInfo for WeightIn
     // Storage: Timestamp Now (r:1 w:1)
     // Storage: Aura CurrentSlot (r:1 w:0)
     fn set() -> Weight {
-        (12_640_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(12_640_000)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn on_finalize() -> Weight {
-        (4_510_000 as Weight)
+        Weight::from_ref_time(4_510_000)
     }
 }

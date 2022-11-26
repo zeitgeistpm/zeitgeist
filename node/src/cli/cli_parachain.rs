@@ -60,7 +60,7 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
     }
 
     fn base_path(&self) -> sc_cli::Result<Option<BasePath>> {
-        Ok(self.shared_params().base_path().or_else(|| self.base_path.clone().map(Into::into)))
+        self.shared_params().base_path().or_else(|_| Ok(self.base_path.clone().map(Into::into)))
     }
 
     fn chain_id(&self, is_dev: bool) -> sc_cli::Result<String> {
@@ -150,12 +150,8 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.shared_params()
     }
 
-    fn state_cache_child_ratio(&self) -> sc_cli::Result<Option<usize>> {
-        self.base.base.state_cache_child_ratio()
-    }
-
-    fn transaction_pool(&self) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
-        self.base.base.transaction_pool()
+    fn transaction_pool(&self, is_dev: bool) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
+        self.base.base.transaction_pool(is_dev)
     }
 }
 

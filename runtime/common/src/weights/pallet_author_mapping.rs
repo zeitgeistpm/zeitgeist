@@ -52,38 +52,38 @@ impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for Wei
     // Storage: System Account (r:1 w:1)
     // Storage: AuthorMapping NimbusLookup (r:0 w:1)
     fn add_association() -> Weight {
-        (48_320_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(48_320_000)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
     // Storage: AuthorMapping NimbusLookup (r:0 w:1)
     fn update_association() -> Weight {
-        (39_490_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(39_490_000)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     // Storage: AuthorMapping NimbusLookup (r:0 w:1)
     fn clear_association() -> Weight {
-        (50_410_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(50_410_000)
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AuthorMapping NimbusLookup (r:1 w:1)
     // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn remove_keys() -> Weight {
-        (48_640_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(48_640_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AuthorMapping NimbusLookup (r:1 w:1)
     // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
     fn set_keys() -> Weight {
-        (47_160_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(47_160_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
 }

@@ -31,6 +31,7 @@ impl Config for XcmConfig {
     type AssetTrap = PolkadotXcm;
     type Barrier = Barrier;
     type Call = Call;
+    type CallDispatcher = Call;
     type IsReserve = NativeAsset;
     type IsTeleporter = ();
     type LocationInverter = LocationInverter<Ancestry>;

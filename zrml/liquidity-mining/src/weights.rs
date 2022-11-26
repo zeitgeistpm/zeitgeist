@@ -53,6 +53,6 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: LiquidityMining PerBlockIncentive (r:0 w:1)
     fn set_per_block_distribution() -> Weight {
-        (1_510_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(1_510_000).saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

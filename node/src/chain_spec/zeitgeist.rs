@@ -29,7 +29,7 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    zeitgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
+    zeitgeist_runtime::{CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
 };
 
 cfg_if::cfg_if! {
@@ -72,6 +72,7 @@ fn additional_chain_spec_staging_zeitgeist(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
     AdditionalChainSpec {
+        blocks_per_round: DefaultBlocksPerRound::get(),
         candidates: vec![
             (
                 hex!["524e9aac979cbb9ecdb7acd1635755c3b15696321a3345ca77f0ab0ae23f675a"].into(),
@@ -92,9 +93,11 @@ fn additional_chain_spec_staging_zeitgeist(
                 DEFAULT_STAKING_AMOUNT_ZEITGEIST,
             ),
         ],
+        collator_commission: DefaultCollatorCommission::get(),
         crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_ZEITGEIST,
         inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
+        parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
         parachain_id,
     }
 }

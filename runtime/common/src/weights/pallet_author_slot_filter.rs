@@ -50,6 +50,6 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_slot_filter::weights::WeightInfo for WeightInfo<T> {
     // Storage: AuthorFilter EligibleCount (r:0 w:1)
     fn set_eligible() -> Weight {
-        (18_280_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(18_280_000).saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

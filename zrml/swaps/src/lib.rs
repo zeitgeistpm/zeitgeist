@@ -112,7 +112,7 @@ mod pallet {
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000;
+    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1098,7 +1098,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
             if remaining_weight < ON_IDLE_MIN_WEIGHT {
-                return 0;
+                return Weight::zero();
             }
             Self::execute_arbitrage_all(remaining_weight / 2)
         }
@@ -1114,7 +1114,7 @@ mod pallet {
         ) -> Weight {
             // CPMM handling of market profit not supported
             if pool.scoring_rule == ScoringRule::CPMM {
-                return 1_000_000;
+                return Weight::from_ref_time(1_000_000);
             }
 
             // Total pool shares
@@ -1249,19 +1249,18 @@ mod pallet {
             // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
             // the number of pools. This shouldn't ever happen, but if it does, we ensure that
             // `pool_count` is zero (this isn't really a runtime error).
-            let pool_count: u32 = weight
+            let pool_count = weight
                 .saturating_sub(overhead)
-                .checked_div(extra_weight_per_pool)
+                .checked_div(extra_weight_per_pool.ref_time())
                 .unwrap_or_else(|| {
                     log::warn!("Unexpected zero division when calculating arbitrage weight");
                     Weight::zero()
-                })
-                .saturated_into(); // Saturates only if we have u32::MAX trades per block.
-            if pool_count == 0 {
+                });
+            if pool_count == Weight::zero() {
                 return weight;
             }
             Self::apply_to_cached_pools(
-                pool_count,
+                pool_count.ref_time().saturated_into(),
                 |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
                 extra_weight_per_pool,
             )
@@ -1609,7 +1608,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut extra_weight = 0;
+            let mut extra_weight = Weight::from_ref_time(0);
             let mut total_assets = 0;
 
             Self::mutate_pool(pool_id, |pool| {
@@ -2204,7 +2203,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut weight = 0;
+            let mut weight = Weight::from_ref_time(0);
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Clean;

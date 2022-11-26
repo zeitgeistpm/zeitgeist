@@ -24,7 +24,7 @@ use super::{
 };
 
 #[cfg(feature = "parachain")]
-use battery_station_runtime::{EligibilityValue, PolkadotXcmConfig};
+use battery_station_runtime::{DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig};
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
@@ -62,14 +62,17 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
             generic_genesis(
                 #[cfg(feature = "parachain")]
                 AdditionalChainSpec {
+                    blocks_per_round: DefaultBlocksPerRound::get(),
                     candidates: vec![(
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
                         super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
+                    collator_commission: DefaultCollatorCommission::get(),
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     nominations: vec![],
+                    parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
                     parachain_id: 2050_u32.into(),
                 },
                 #[cfg(not(feature = "parachain"))]

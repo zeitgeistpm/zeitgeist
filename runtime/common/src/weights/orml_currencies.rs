@@ -48,34 +48,34 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: System Account (r:1 w:1)
     fn transfer_non_native_currency() -> Weight {
-        (54_850_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(54_850_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: System Account (r:1 w:1)
     fn transfer_native_currency() -> Weight {
-        (53_590_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(53_590_000)
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Tokens Accounts (r:1 w:1)
     // Storage: Tokens TotalIssuance (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn update_balance_non_native_currency() -> Weight {
-        (50_330_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(50_330_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: System Account (r:1 w:1)
     fn update_balance_native_currency_creating() -> Weight {
-        (35_080_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(35_080_000)
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: System Account (r:1 w:1)
     fn update_balance_native_currency_killing() -> Weight {
-        (31_430_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(31_430_000)
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

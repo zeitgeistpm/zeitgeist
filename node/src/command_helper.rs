@@ -30,13 +30,13 @@ use zeitgeist_primitives::types::Signature;
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
 /// Note: Should only be used for benchmarking.
-pub struct BenchmarkExtrinsicBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
+pub struct RemarksExtrinsicBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
     client: Arc<FullClient<RuntimeApi, Executor>>,
     is_zeitgeist: bool,
 }
 
 impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
-    BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
+    RemarksExtrinsicBuilder<RuntimeApi, Executor>
 {
     /// Creates a new [`Self`] from the given client.
     pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, is_zeitgeist: bool) -> Self {
@@ -45,9 +45,17 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 }
 
 impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
-    frame_benchmarking_cli::ExtrinsicBuilder for BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
+    frame_benchmarking_cli::ExtrinsicBuilder for RemarksExtrinsicBuilder<RuntimeApi, Executor>
 {
-    fn remark(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
+    fn pallet(&self) -> &str {
+        "system"
+    }
+
+    fn extrinsic(&self) -> &str {
+        "remark"
+    }
+
+    fn build(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
         let acc = Sr25519Keyring::Bob.pair();
 
         #[cfg(feature = "with-zeitgeist-runtime")]

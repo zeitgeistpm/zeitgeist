@@ -56,8 +56,8 @@ impl<T: frame_system::Config> pallet_author_inherent::weights::WeightInfo for We
     // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
     #[rustfmt::skip]
     fn kick_off_authorship_validation() -> Weight {
-        (20_862_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(6 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(20_862_000)
+            .saturating_add(T::DbWeight::get().reads(6 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

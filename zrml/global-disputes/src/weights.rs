@@ -46,89 +46,89 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     fn vote_on_outcome(o: u32, v: u32) -> Weight {
-        (42_462_000 as Weight)
+        Weight::from_ref_time(42_462_000)
             // Standard Error: 7_000
-            .saturating_add((1_036_000 as Weight).saturating_mul(o as Weight))
+            .saturating_add(Weight::from_ref_time(1_036_000).saturating_mul(o as u64))
             // Standard Error: 1_000
-            .saturating_add((76_000 as Weight).saturating_mul(v as Weight))
-            .saturating_add(T::DbWeight::get().reads(5 as Weight))
-            .saturating_add(T::DbWeight::get().writes(5 as Weight))
+            .saturating_add(Weight::from_ref_time(76_000).saturating_mul(v as u64))
+            .saturating_add(T::DbWeight::get().reads(5 as u64))
+            .saturating_add(T::DbWeight::get().writes(5 as u64))
     }
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:0)
     // Storage: GlobalDisputes Winners (r:5 w:0)
     fn unlock_vote_balance_set(l: u32, o: u32) -> Weight {
-        (17_468_000 as Weight)
+        Weight::from_ref_time(17_468_000)
             // Standard Error: 2_000
-            .saturating_add((4_146_000 as Weight).saturating_mul(l as Weight))
+            .saturating_add(Weight::from_ref_time(4_146_000).saturating_mul(l as u64))
             // Standard Error: 12_000
-            .saturating_add((938_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(l as Weight)))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(938_000).saturating_mul(o as u64))
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().reads((1 as u64).saturating_mul(l as u64)))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:0)
     // Storage: GlobalDisputes Winners (r:5 w:0)
     fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight {
-        (18_017_000 as Weight)
+        Weight::from_ref_time(18_017_000)
             // Standard Error: 1_000
-            .saturating_add((4_043_000 as Weight).saturating_mul(l as Weight))
+            .saturating_add(Weight::from_ref_time(4_043_000).saturating_mul(l as u64))
             // Standard Error: 7_000
-            .saturating_add((674_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(l as Weight)))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(674_000).saturating_mul(o as u64))
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().reads((1 as u64).saturating_mul(l as u64)))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: GlobalDisputes Winners (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn add_vote_outcome(w: u32) -> Weight {
-        (63_417_000 as Weight)
+        Weight::from_ref_time(63_417_000)
             // Standard Error: 8_000
-            .saturating_add((600_000 as Weight).saturating_mul(w as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(4 as Weight))
+            .saturating_add(Weight::from_ref_time(600_000).saturating_mul(w as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(4 as u64))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:1 w:0)
     // Storage: GlobalDisputes Winners (r:1 w:0)
     // Storage: System Account (r:2 w:2)
     fn reward_outcome_owner_with_funds(o: u32) -> Weight {
-        (41_887_000 as Weight)
+        Weight::from_ref_time(41_887_000)
             // Standard Error: 40_000
-            .saturating_add((28_572_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(o as Weight)))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(o as Weight)))
+            .saturating_add(Weight::from_ref_time(28_572_000).saturating_mul(o as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().reads((1 as u64).saturating_mul(o as u64)))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
+            .saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(o as u64)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:1 w:0)
     // Storage: GlobalDisputes Winners (r:1 w:0)
     // Storage: System Account (r:1 w:0)
     fn reward_outcome_owner_no_funds(o: u32) -> Weight {
-        (30_729_000 as Weight)
+        Weight::from_ref_time(30_729_000)
             // Standard Error: 3_000
-            .saturating_add((39_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(Weight::from_ref_time(39_000).saturating_mul(o as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: GlobalDisputes Winners (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:3 w:2)
     fn purge_outcomes(k: u32, o: u32) -> Weight {
-        (0 as Weight)
+        Weight::from_ref_time(0)
             // Standard Error: 25_000
-            .saturating_add((12_134_000 as Weight).saturating_mul(k as Weight))
+            .saturating_add(Weight::from_ref_time(12_134_000).saturating_mul(k as u64))
             // Standard Error: 1_052_000
-            .saturating_add((19_305_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(k as Weight)))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(k as Weight)))
+            .saturating_add(Weight::from_ref_time(19_305_000).saturating_mul(o as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().reads((1 as u64).saturating_mul(k as u64)))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
+            .saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(k as u64)))
     }
 }

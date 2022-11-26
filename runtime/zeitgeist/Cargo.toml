@@ -6,10 +6,10 @@ frame-executive = { branch = "moonbeam-polkadot-v0.9.29", default-features = fal
 frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/purestake/open-runtime-module-library" }
-orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
-orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
-orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
+orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-bounties = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }

@@ -59,23 +59,23 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Court RequestedJurors (r:1 w:0)
     // Storage: Court Votes (r:1 w:0)
     fn exit_court() -> Weight {
-        (59_161_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(5 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(59_161_000)
+            .saturating_add(T::DbWeight::get().reads(5 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: Court Jurors (r:1 w:1)
     // Storage: Court CounterForJurors (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     fn join_court() -> Weight {
-        (41_640_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(41_640_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: Court Jurors (r:1 w:0)
     // Storage: Court Votes (r:0 w:1)
     fn vote() -> Weight {
-        (12_470_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(12_470_000)
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

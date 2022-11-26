@@ -54,8 +54,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: Authorized AuthorizedOutcomeReports (r:0 w:1)
     fn authorize_market_outcome() -> Weight {
-        (13_450_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(13_450_000)
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }

@@ -48,37 +48,37 @@ impl<T: frame_system::Config> orml_tokens::WeightInfo for WeightInfo<T> {
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: System Account (r:1 w:1)
     fn transfer() -> Weight {
-        (47_920_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(47_920_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: System Account (r:1 w:1)
     fn transfer_all() -> Weight {
-        (58_860_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(58_860_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: System Account (r:1 w:1)
     fn transfer_keep_alive() -> Weight {
-        (51_660_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(51_660_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: System Account (r:2 w:1)
     fn force_transfer() -> Weight {
-        (57_860_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(57_860_000)
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: Tokens Accounts (r:1 w:1)
     // Storage: Tokens TotalIssuance (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn set_balance() -> Weight {
-        (41_780_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+        Weight::from_ref_time(41_780_000)
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
 }

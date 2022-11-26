@@ -49,24 +49,24 @@ use frame_support::{
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
     fn batch(c: u32) -> Weight {
-        (0 as Weight)
+        Weight::from_ref_time(0)
             // Standard Error: 24_000
-            .saturating_add((4_529_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(Weight::from_ref_time(4_529_000).saturating_mul(c as u64))
     }
     fn as_derivative() -> Weight {
-        (2_720_000 as Weight)
+        Weight::from_ref_time(2_720_000)
     }
     fn batch_all(c: u32) -> Weight {
-        (202_638_000 as Weight)
+        Weight::from_ref_time(202_638_000)
             // Standard Error: 43_000
-            .saturating_add((4_492_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(Weight::from_ref_time(4_492_000).saturating_mul(c as u64))
     }
     fn dispatch_as() -> Weight {
-        (12_980_000 as Weight)
+        Weight::from_ref_time(12_980_000)
     }
     fn force_batch(c: u32) -> Weight {
-        (0 as Weight)
+        Weight::from_ref_time(0)
             // Standard Error: 69_000
-            .saturating_add((4_940_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(Weight::from_ref_time(4_940_000).saturating_mul(c as u64))
     }
 }

@@ -17,7 +17,7 @@
 
 use super::{
     cli::{Cli, Subcommand},
-    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
+    command_helper::{inherent_benchmark_data, RemarksExtrinsicBuilder},
     service::{new_chain_ops, new_full, IdentifyVariant},
 };
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
@@ -151,12 +151,13 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), true);
+                                RemarksExtrinsicBuilder::new(params.client.clone(), true);
                             cmd.run(
                                 config,
                                 params.client,
                                 inherent_benchmark_data()?,
-                                Arc::new(ext_builder),
+                                Vec::new(),
+                                &ext_builder,
                             )
                         }),
                         #[cfg(feature = "with-battery-station-runtime")]
@@ -167,17 +168,22 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), false);
+                                RemarksExtrinsicBuilder::new(params.client.clone(), false);
                             cmd.run(
                                 config,
                                 params.client,
                                 inherent_benchmark_data()?,
-                                Arc::new(ext_builder),
+                                Vec::new(),
+                                &ext_builder,
                             )
                         }),
                         #[cfg(not(feature = "with-battery-station-runtime"))]
                         _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
+                },
+
+                BenchmarkCmd::Extrinsic(_cmd) => {
+                        return Err("BenchmarkCmd Extrinsic is not yet supported".into());
                 }
             }
         }
@@ -484,10 +490,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
-        if let sc_cli::Role::Light = config.role {
-            return Err("Light client not supported!".into());
-        }
-
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(

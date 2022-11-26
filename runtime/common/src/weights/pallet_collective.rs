@@ -53,32 +53,32 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Voting (r:255 w:255)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
     fn set_members(m: u32, _n: u32, p: u32) -> Weight {
-        (0 as Weight)
+        Weight::from_ref_time(0)
             // Standard Error: 222_000
-            .saturating_add((50_992_000 as Weight).saturating_mul(m as Weight))
+            .saturating_add(Weight::from_ref_time(50_992_000).saturating_mul(m as u64))
             // Standard Error: 103_000
-            .saturating_add((26_683_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(p as Weight)))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(p as Weight)))
+            .saturating_add(Weight::from_ref_time(26_683_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().reads((1 as u64).saturating_mul(p as u64)))
+            .saturating_add(T::DbWeight::get().writes(2 as u64))
+            .saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(p as u64)))
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     fn execute(b: u32, m: u32) -> Weight {
-        (25_469_000 as Weight)
+        Weight::from_ref_time(25_469_000)
             // Standard Error: 0
-            .saturating_add((2_000 as Weight).saturating_mul(b as Weight))
+            .saturating_add(Weight::from_ref_time(2_000).saturating_mul(b as u64))
             // Standard Error: 4_000
-            .saturating_add((68_000 as Weight).saturating_mul(m as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(Weight::from_ref_time(68_000).saturating_mul(m as u64))
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:0)
     fn propose_execute(_b: u32, m: u32) -> Weight {
-        (32_666_000 as Weight)
+        Weight::from_ref_time(32_666_000)
             // Standard Error: 3_000
-            .saturating_add((89_000 as Weight).saturating_mul(m as Weight))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(Weight::from_ref_time(89_000).saturating_mul(m as u64))
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:1)
@@ -86,48 +86,48 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee ProposalCount (r:1 w:1)
     // Storage: AdvisoryCommittee Voting (r:0 w:1)
     fn propose_proposed(_b: u32, m: u32, p: u32) -> Weight {
-        (65_105_000 as Weight)
+        Weight::from_ref_time(65_105_000)
             // Standard Error: 10_000
-            .saturating_add((86_000 as Weight).saturating_mul(m as Weight))
+            .saturating_add(Weight::from_ref_time(86_000).saturating_mul(m as u64))
             // Standard Error: 4_000
-            .saturating_add((162_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(4 as Weight))
+            .saturating_add(Weight::from_ref_time(162_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(4 as u64))
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee Voting (r:1 w:1)
     fn vote(m: u32) -> Weight {
-        (50_287_000 as Weight)
+        Weight::from_ref_time(50_287_000)
             // Standard Error: 10_000
-            .saturating_add((135_000 as Weight).saturating_mul(m as Weight))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(Weight::from_ref_time(135_000).saturating_mul(m as u64))
+            .saturating_add(T::DbWeight::get().reads(2 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: AdvisoryCommittee Voting (r:1 w:1)
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee ProposalOf (r:0 w:1)
     fn close_early_disapproved(_m: u32, p: u32) -> Weight {
-        (71_278_000 as Weight)
+        Weight::from_ref_time(71_278_000)
             // Standard Error: 5_000
-            .saturating_add((156_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+            .saturating_add(Weight::from_ref_time(156_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(3 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AdvisoryCommittee Voting (r:1 w:1)
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:1)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     fn close_early_approved(b: u32, m: u32, p: u32) -> Weight {
-        (58_716_000 as Weight)
+        Weight::from_ref_time(58_716_000)
             // Standard Error: 1_000
-            .saturating_add((5_000 as Weight).saturating_mul(b as Weight))
+            .saturating_add(Weight::from_ref_time(5_000).saturating_mul(b as u64))
             // Standard Error: 14_000
-            .saturating_add((99_000 as Weight).saturating_mul(m as Weight))
+            .saturating_add(Weight::from_ref_time(99_000).saturating_mul(m as u64))
             // Standard Error: 6_000
-            .saturating_add((219_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+            .saturating_add(Weight::from_ref_time(219_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AdvisoryCommittee Voting (r:1 w:1)
     // Storage: AdvisoryCommittee Members (r:1 w:0)
@@ -135,13 +135,13 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee ProposalOf (r:0 w:1)
     fn close_disapproved(m: u32, p: u32) -> Weight {
-        (66_989_000 as Weight)
+        Weight::from_ref_time(66_989_000)
             // Standard Error: 10_000
-            .saturating_add((5_000 as Weight).saturating_mul(m as Weight))
+            .saturating_add(Weight::from_ref_time(5_000).saturating_mul(m as u64))
             // Standard Error: 4_000
-            .saturating_add((138_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+            .saturating_add(Weight::from_ref_time(138_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AdvisoryCommittee Voting (r:1 w:1)
     // Storage: AdvisoryCommittee Members (r:1 w:0)
@@ -149,24 +149,24 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:1)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     fn close_approved(b: u32, m: u32, p: u32) -> Weight {
-        (40_814_000 as Weight)
+        Weight::from_ref_time(40_814_000)
             // Standard Error: 1_000
-            .saturating_add((15_000 as Weight).saturating_mul(b as Weight))
+            .saturating_add(Weight::from_ref_time(15_000).saturating_mul(b as u64))
             // Standard Error: 15_000
-            .saturating_add((194_000 as Weight).saturating_mul(m as Weight))
+            .saturating_add(Weight::from_ref_time(194_000).saturating_mul(m as u64))
             // Standard Error: 6_000
-            .saturating_add((258_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(5 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+            .saturating_add(Weight::from_ref_time(258_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(5 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee Voting (r:0 w:1)
     // Storage: AdvisoryCommittee ProposalOf (r:0 w:1)
     fn disapprove_proposal(p: u32) -> Weight {
-        (36_241_000 as Weight)
+        Weight::from_ref_time(36_241_000)
             // Standard Error: 5_000
-            .saturating_add((178_000 as Weight).saturating_mul(p as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+            .saturating_add(Weight::from_ref_time(178_000).saturating_mul(p as u64))
+            .saturating_add(T::DbWeight::get().reads(1 as u64))
+            .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
 }

@@ -3,8 +3,8 @@
 cumulus-pallet-xcmp-queue = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
-orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
+orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-mapping = { tag = "v0.27.2", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
