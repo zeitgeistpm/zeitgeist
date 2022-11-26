@@ -15,6 +15,177 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "try-runtime")]
+use crate::MarketIdOf;
+use crate::{Config, MarketOf, MomentOf};
+#[cfg(feature = "try-runtime")]
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
+#[cfg(feature = "try-runtime")]
+use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+use frame_support::{
+    dispatch::Weight,
+    log,
+    migration::{put_storage_value, storage_iter},
+    pallet_prelude::PhantomData,
+    traits::{Get, OnRuntimeUpgrade, StorageVersion},
+    RuntimeDebug,
+};
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use zeitgeist_primitives::types::{
+    Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
+};
+#[cfg(feature = "try-runtime")]
+use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_market_commons::Pallet as MarketCommonsPallet;
+
+const MARKET_COMMONS: &[u8] = b"MarketCommons";
+const MARKETS: &[u8] = b"Markets";
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 4;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 5;
+
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct OldMarket<AI, BN, M> {
+    pub creator: AI,
+    pub creation: MarketCreation,
+    pub creator_fee: u8,
+    pub oracle: AI,
+    pub metadata: Vec<u8>,
+    pub market_type: MarketType,
+    pub period: MarketPeriod<BN, M>,
+    pub deadlines: Deadlines<BN>,
+    pub scoring_rule: ScoringRule,
+    pub status: MarketStatus,
+    pub report: Option<Report<AI, BN>>,
+    pub resolved_outcome: Option<OutcomeReport>,
+    pub dispute_mechanism: MarketDisputeMechanism,
+}
+
+type OldMarketOf<T> = OldMarket<
+    <T as frame_system::Config>::AccountId,
+    <T as frame_system::Config>::BlockNumber,
+    MomentOf<T>,
+>;
+
+pub struct RecordBonds<T>(PhantomData<T>);
+
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T> {
+    fn on_runtime_upgrade() -> Weight {
+        let mut total_weight = T::DbWeight::get().reads(4);
+        let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
+        if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "RecordBonds: market-commons version is {:?}, but {:?} is required",
+                market_commons_version,
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("RecordBonds: Starting...");
+
+        let new_markets = storage_iter::<OldMarketOf<T>>(MARKET_COMMONS, MARKETS)
+            .map(|(key, old_market)| {
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+                let advisory = if old_market.creation == MarketCreation::Advised {
+                    Some(Bond {
+                        value: T::AdvisoryBond::get(),
+                        is_settled: old_market.status != MarketStatus::Proposed,
+                    })
+                } else {
+                    None
+                };
+                let oracle = Some(Bond {
+                    value: T::OracleBond::get(),
+                    is_settled: old_market.status == MarketStatus::Resolved,
+                });
+                let validity = if old_market.creation == MarketCreation::Permissionless {
+                    Some(Bond {
+                        value: T::ValidityBond::get(),
+                        is_settled: old_market.status != MarketStatus::Resolved,
+                    })
+                } else {
+                    None
+                };
+                let new_market = Market {
+                    creator: old_market.creator,
+                    creation: old_market.creation,
+                    creator_fee: old_market.creator_fee,
+                    oracle: old_market.oracle,
+                    metadata: old_market.metadata,
+                    market_type: old_market.market_type,
+                    period: old_market.period,
+                    scoring_rule: old_market.scoring_rule,
+                    status: old_market.status,
+                    report: old_market.report,
+                    resolved_outcome: old_market.resolved_outcome,
+                    dispute_mechanism: old_market.dispute_mechanism,
+                    deadlines: old_market.deadlines,
+                    bonds: MarketBonds { advisory, oracle, validity },
+                };
+                (key, new_market)
+            })
+            .collect::<Vec<_>>();
+
+        for (key, new_market) in new_markets {
+            put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+        }
+
+        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(4));
+        log::info!("RecordBonds: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        let old_markets =
+            storage_iter::<OldMarketOf<T>>(MARKET_COMMONS, MARKETS).collect::<BTreeMap<_, _>>();
+        Self::set_temp_storage(old_markets, "old_markets");
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        let old_markets: BTreeMap<MarketIdOf<T>, MarketOf<T>> =
+            Self::get_temp_storage("old_markets").unwrap();
+        let new_market_count = <T::MarketCommons as MarketCommonsPalletApi>::market_iter().count();
+        assert_eq!(old_markets.iter().count(), new_market_count);
+        for (market_id, new_market) in <T::MarketCommons as MarketCommonsPalletApi>::market_iter() {
+            let old_market = old_markets
+                .get(&market_id.into())
+                .expect(&format!("Market {:?} not found", market_id)[..]);
+            assert_eq!(new_market.creator, old_market.creator);
+            assert_eq!(new_market.creation, old_market.creation);
+            assert_eq!(new_market.creator_fee, old_market.creator_fee);
+            assert_eq!(new_market.oracle, old_market.oracle);
+            assert_eq!(new_market.metadata, old_market.metadata);
+            assert_eq!(new_market.market_type, old_market.market_type);
+            assert_eq!(new_market.period, old_market.period);
+            assert_eq!(new_market.deadlines, old_market.deadlines);
+            assert_eq!(new_market.scoring_rule, old_market.scoring_rule);
+            assert_eq!(new_market.status, old_market.status);
+            assert_eq!(new_market.report, old_market.report);
+            assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
+            assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
+            assert_eq!(new_market.bonds.oracle.unwrap().value, T::OracleBond::get());
+            match new_market.creation {
+                MarketCreation::Advised => {
+                    assert_eq!(new_market.bonds.advisory.unwrap().value, T::AdvisoryBond::get());
+                    assert_eq!(new_market.bonds.validity, None);
+                }
+                MarketCreation::Permissionless => {
+                    assert_eq!(new_market.bonds.advisory, None);
+                    assert_eq!(new_market.bonds.validity.unwrap().value, T::ValidityBond::get());
+                }
+            };
+        }
+        Ok(())
+    }
+}
+
 // We use these utilities to prevent having to make the swaps pallet a dependency of
 // prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
 // https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230

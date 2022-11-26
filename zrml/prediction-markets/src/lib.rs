@@ -155,7 +155,7 @@ mod pallet {
                     Ok(())
                 })
             }
-        }
+        };
     }
 
     #[pallet::call]

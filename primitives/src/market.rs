@@ -56,6 +56,7 @@ pub struct Market<AI, Balance, BN, M> {
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
+    /// The bonds reserved for this market.
     pub bonds: MarketBonds<Balance>,
 }
 
