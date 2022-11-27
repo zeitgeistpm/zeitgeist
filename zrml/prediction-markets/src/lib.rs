@@ -1614,7 +1614,7 @@ mod pallet {
         MaxDisputesReached,
         /// The maximum number of disputes is needed for this operation.
         MaxDisputesNeeded,
-        /// Tried to unreserve missing bond.
+        /// Tried to settle missing bond.
         MissingBond,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
