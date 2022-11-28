@@ -135,13 +135,18 @@ mod pallet {
         #[transactional]
         pub fn admin_clean_up_pool(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            // #[pallet::compact] market_id: MarketIdOf<T>,
+            market_id: <T as zrml_market_commons::Config>::MarketId,
             outcome_report: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
             // TODO(#785): This is not properly benchmarked for Rikiddo yet!
             ensure_root(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
-            let pool_id = T::MarketCommons::market_pool(&market_id)?;
+            // let market = T::MarketCommons::market(&market_id)?;
+            let market = zrml_market_commons::Markets::<T>::try_get(&market_id)
+                .map_err(|_err| zrml_market_commons::Error::<T>::MarketDoesNotExist)?;
+            // let pool_id = T::MarketCommons::market_pool(&market_id)?;
+            let pool_id = zrml_market_commons::MarketPool::<T>::try_get(&market_id)
+                .map_err(|_err| zrml_market_commons::Error::<T>::MarketPoolDoesNotExist)?;
             Self::clean_up_pool(
                 &market.market_type,
                 pool_id,

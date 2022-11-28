@@ -209,7 +209,7 @@ benchmarks! {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
         });
-    }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Categorical(0))
+    }: admin_clean_up_pool(RawOrigin::Root, 0_u32.into(), OutcomeReport::Categorical(0))
 
     admin_clean_up_pool_cpmm_scalar {
         let caller: T::AccountId = whitelisted_caller();
@@ -249,7 +249,7 @@ benchmarks! {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
         });
-    }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Scalar(33))
+    }: admin_clean_up_pool(RawOrigin::Root, 0_u32.into(), OutcomeReport::Scalar(33))
 
     // This is a worst-case benchmark for arbitraging a number of pools.
     apply_to_cached_pools_execute_arbitrage {
