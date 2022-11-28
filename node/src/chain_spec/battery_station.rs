@@ -34,7 +34,10 @@ use zeitgeist_primitives::{
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    battery_station_runtime::{CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig},
+    battery_station_runtime::{
+        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
+        DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
+    },
 };
 
 cfg_if::cfg_if! {

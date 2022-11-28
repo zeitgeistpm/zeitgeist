@@ -20,8 +20,8 @@ use {
     cumulus_primitives_core::ParaId,
     nimbus_primitives::NimbusId,
     pallet_parachain_staking::InflationInfo,
-    zeitgeist_primitives::types::{AccountId, Balance},
     sp_runtime::{Perbill, Percent},
+    zeitgeist_primitives::types::{AccountId, Balance},
 };
 
 #[cfg(feature = "parachain")]

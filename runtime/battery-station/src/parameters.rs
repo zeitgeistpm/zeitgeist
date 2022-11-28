@@ -34,7 +34,8 @@ use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{
-    traits::{AccountIdConversion, Bounded}, FixedPointNumber, Perbill, Percent, Permill, Perquintill,
+    traits::{AccountIdConversion, Bounded},
+    FixedPointNumber, Perbill, Percent, Permill, Perquintill,
 };
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
@@ -43,7 +44,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
+pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
+    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
@@ -381,5 +383,10 @@ parameter_type_with_key! {
 
 // Parameterized slow adjusting fee updated based on
 // https://research.web3.foundation/en/latest/polkadot/overview/2-token-economics.html#-2.-slow-adjusting-mechanism
-pub type SlowAdjustingFeeUpdate<R> =
-    TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier, MaximumMultiplier>;
+pub type SlowAdjustingFeeUpdate<R> = TargetedFeeAdjustment<
+    R,
+    TargetBlockFullness,
+    AdjustmentVariable,
+    MinimumMultiplier,
+    MaximumMultiplier,
+>;

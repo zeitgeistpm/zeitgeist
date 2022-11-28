@@ -29,7 +29,10 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    zeitgeist_runtime::{CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
+    zeitgeist_runtime::{
+        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
+        DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
+    },
 };
 
 cfg_if::cfg_if! {

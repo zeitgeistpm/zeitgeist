@@ -180,10 +180,10 @@ pub fn run() -> sc_cli::Result<()> {
                         #[cfg(not(feature = "with-battery-station-runtime"))]
                         _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
-                },
+                }
 
                 BenchmarkCmd::Extrinsic(_cmd) => {
-                        return Err("BenchmarkCmd Extrinsic is not yet supported".into());
+                    return Err("BenchmarkCmd Extrinsic is not yet supported".into());
                 }
             }
         }

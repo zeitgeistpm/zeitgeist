@@ -363,10 +363,10 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     fn base_on_initialize() -> Weight {
         Weight::from_ref_time(6_930_000).saturating_add(T::DbWeight::get().reads(1 as u64))
     }
-    	// Storage: ParachainStaking DelegatorState (r:1 w:0)
-	// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
+    // Storage: ParachainStaking DelegatorState (r:1 w:0)
+    // Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
 	#[rustfmt::skip]
-	fn set_auto_compound(x: u32, y: u32, ) -> Weight {
+    fn set_auto_compound(x: u32, y: u32, ) -> Weight {
 		Weight::from_ref_time(61_986_000 as u64)
 			// Standard Error: 4_000
 			.saturating_add(Weight::from_ref_time(244_000 as u64).saturating_mul(x as u64))
@@ -375,17 +375,17 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
 			.saturating_add(T::DbWeight::get().reads(2 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
-	// Storage: System Account (r:1 w:1)
-	// Storage: ParachainStaking DelegatorState (r:1 w:1)
-	// Storage: ParachainStaking CandidateInfo (r:1 w:1)
-	// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
-	// Storage: ParachainStaking TopDelegations (r:1 w:1)
-	// Storage: ParachainStaking CandidatePool (r:1 w:1)
-	// Storage: Balances Locks (r:1 w:1)
-	// Storage: ParachainStaking Total (r:1 w:1)
-	// Storage: ParachainStaking BottomDelegations (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    // Storage: ParachainStaking DelegatorState (r:1 w:1)
+    // Storage: ParachainStaking CandidateInfo (r:1 w:1)
+    // Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
+    // Storage: ParachainStaking TopDelegations (r:1 w:1)
+    // Storage: ParachainStaking CandidatePool (r:1 w:1)
+    // Storage: Balances Locks (r:1 w:1)
+    // Storage: ParachainStaking Total (r:1 w:1)
+    // Storage: ParachainStaking BottomDelegations (r:1 w:1)
 	#[rustfmt::skip]
-	fn delegate_with_auto_compound(x: u32, y: u32, _z: u32, ) -> Weight {
+    fn delegate_with_auto_compound(x: u32, y: u32, _z: u32, ) -> Weight {
 		Weight::from_ref_time(168_431_000 as u64)
 			// Standard Error: 5_000
 			.saturating_add(Weight::from_ref_time(73_000 as u64).saturating_mul(x as u64))

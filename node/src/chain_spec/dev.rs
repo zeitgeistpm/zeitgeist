@@ -24,7 +24,10 @@ use super::{
 };
 
 #[cfg(feature = "parachain")]
-use battery_station_runtime::{DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig};
+use battery_station_runtime::{
+    DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+    EligibilityValue, PolkadotXcmConfig,
+};
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
