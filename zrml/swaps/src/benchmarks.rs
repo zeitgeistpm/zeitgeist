@@ -423,7 +423,7 @@ benchmarks! {
     execute_arbitrage_buy_burn {
         let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
         let asset_count = a as usize;
-        let iteration_count = ARBITRAGE_MAX_ITERATIONS as usize;
+        let iteration_count = ARBITRAGE_MAX_ITERATIONS;
 
         let caller: T::AccountId = whitelisted_caller();
         let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();

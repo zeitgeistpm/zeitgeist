@@ -157,10 +157,10 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
         let old_markets: BTreeMap<MarketIdOf<T>, MarketOf<T>> =
             Self::get_temp_storage("old_markets").unwrap();
         let new_market_count = <T::MarketCommons as MarketCommonsPalletApi>::market_iter().count();
-        assert_eq!(old_markets.iter().count(), new_market_count);
+        assert_eq!(old_markets.len(), new_market_count);
         for (market_id, new_market) in <T::MarketCommons as MarketCommonsPalletApi>::market_iter() {
             let old_market = old_markets
-                .get(&market_id.into())
+                .get(&market_id)
                 .expect(&format!("Market {:?} not found", market_id)[..]);
             assert_eq!(new_market.creator, old_market.creator);
             assert_eq!(new_market.creation, old_market.creation);
@@ -221,8 +221,8 @@ mod tests {
             let new_markets =
                 test_vector.into_iter().map(|(_, new_market)| new_market).collect::<Vec<_>>();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, MarketOf<Runtime>>(
-                &MARKET_COMMONS,
-                &MARKETS,
+                MARKET_COMMONS,
+                MARKETS,
                 new_markets.clone(),
             );
             RecordBonds::<Runtime>::on_runtime_upgrade();
@@ -245,8 +245,8 @@ mod tests {
             let (old_markets, new_markets): (_, Vec<MarketOf<Runtime>>) =
                 test_vector.into_iter().unzip();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, OldMarketOf<Runtime>>(
-                &MARKET_COMMONS,
-                &MARKETS,
+                MARKET_COMMONS,
+                MARKETS,
                 old_markets,
             );
             RecordBonds::<Runtime>::on_runtime_upgrade();
