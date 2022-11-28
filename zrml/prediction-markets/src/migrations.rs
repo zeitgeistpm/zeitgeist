@@ -20,6 +20,8 @@ use crate::MarketIdOf;
 use crate::{Config, MarketOf, MomentOf};
 #[cfg(feature = "try-runtime")]
 use alloc::collections::BTreeMap;
+#[cfg(feature = "try-runtime")]
+use alloc::format;
 use alloc::vec::Vec;
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
@@ -130,7 +132,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                 (key, new_market)
             })
             .collect::<Vec<_>>();
-        println!("{:?}", new_markets.len());
 
         for (key, new_market) in new_markets {
             put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
