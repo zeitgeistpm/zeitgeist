@@ -342,6 +342,7 @@ try-runtime = [
     "pallet-parachain-staking?/try-runtime",
     # Required by pallet-parachain-staking@v0.26.1
     "parity-scale-codec/full",
+    "pallet-proxy/try-runtime",
 ]
 with-global-disputes = [
     "zrml-global-disputes",

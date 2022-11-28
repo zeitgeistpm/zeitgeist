@@ -1,6 +1,8 @@
 [dependencies]
+frame-executive = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -25,6 +27,9 @@ std = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
+    "frame-try-runtime",
+    "frame-executive/try-runtime",
+    "frame-system/try-runtime",
 ]
 
 [package]

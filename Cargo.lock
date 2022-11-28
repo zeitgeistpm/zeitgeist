@@ -12700,8 +12700,10 @@ name = "zrml-authorized"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12718,8 +12720,10 @@ version = "0.3.6"
 dependencies = [
  "arrayvec 0.7.2",
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
@@ -12737,8 +12741,10 @@ name = "zrml-global-disputes"
 version = "0.3.7"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12756,8 +12762,10 @@ name = "zrml-liquidity-mining"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12773,8 +12781,10 @@ dependencies = [
 name = "zrml-market-commons"
 version = "0.3.6"
 dependencies = [
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12790,8 +12800,10 @@ name = "zrml-orderbook-v1"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -12819,8 +12831,10 @@ name = "zrml-prediction-markets"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "more-asserts",
  "orml-currencies",
  "orml-tokens",
@@ -12877,8 +12891,10 @@ version = "0.3.6"
 dependencies = [
  "arbitrary",
  "cfg-if 1.0.0",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "hashbrown 0.11.2",
  "pallet-balances",
  "pallet-timestamp",
@@ -12909,8 +12925,10 @@ name = "zrml-simple-disputes"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12926,8 +12944,10 @@ name = "zrml-styx"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12942,8 +12962,10 @@ name = "zrml-swaps"
 version = "0.3.6"
 dependencies = [
  "frame-benchmarking",
+ "frame-executive",
  "frame-support",
  "frame-system",
+ "frame-try-runtime",
  "more-asserts",
  "orml-currencies",
  "orml-tokens",
