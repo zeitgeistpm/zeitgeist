@@ -45,7 +45,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin};
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -1434,8 +1434,16 @@ macro_rules! create_runtime_api {
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
 
-                fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
-                    Executive::execute_block_no_check(block)
+                fn execute_block(block: Block, state_root_check: bool, try_state: TryStateSelect) -> frame_support::weights::Weight {
+                    log::info!(
+                        "try-runtime: executing block {:?} / root checks: {:?} / try-state-select: {:?}",
+                        block.header.hash(),
+                        state_root_check,
+                        select,
+                    );
+                    // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+                    // have a backtrace here.
+                    Executive::try_execute_block(block, state_root_check, select).expect("execute-block failed")
                 }
             }
 
