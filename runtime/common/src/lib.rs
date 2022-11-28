@@ -1434,16 +1434,16 @@ macro_rules! create_runtime_api {
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
 
-                fn execute_block(block: Block, state_root_check: bool, try_state: TryStateSelect) -> frame_support::weights::Weight {
+                fn execute_block(block: Block, state_root_check: bool, try_state: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
                     log::info!(
                         "try-runtime: executing block {:?} / root checks: {:?} / try-state-select: {:?}",
                         block.header.hash(),
                         state_root_check,
-                        select,
+                        try_state,
                     );
                     // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
                     // have a backtrace here.
-                    Executive::try_execute_block(block, state_root_check, select).expect("execute-block failed")
+                    Executive::try_execute_block(block, state_root_check, try_state).expect("execute-block failed")
                 }
             }
 
