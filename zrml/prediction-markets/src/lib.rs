@@ -1306,7 +1306,7 @@ mod pallet {
     }
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + zrml_market_commons::Config {
         /// The base amount of currency that must be bonded for a market approved by the
         ///  advisory committee.
         #[pallet::constant]
