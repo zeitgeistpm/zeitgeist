@@ -90,6 +90,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                 total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
                 let advisory = if old_market.creation == MarketCreation::Advised {
                     Some(Bond {
+                        who: old_market.creator.clone(),
                         value: T::AdvisoryBond::get(),
                         is_settled: old_market.status != MarketStatus::Proposed,
                     })
@@ -97,11 +98,13 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                     None
                 };
                 let oracle = Some(Bond {
+                    who: old_market.creator.clone(),
                     value: T::OracleBond::get(),
                     is_settled: old_market.status == MarketStatus::Resolved,
                 });
                 let validity = if old_market.creation == MarketCreation::Permissionless {
                     Some(Bond {
+                        who: old_market.creator.clone(),
                         value: T::ValidityBond::get(),
                         is_settled: old_market.status == MarketStatus::Resolved,
                     })
@@ -263,8 +266,8 @@ mod tests {
     }
 
     fn construct_test_vector() -> Vec<(OldMarketOf<Runtime>, MarketOf<Runtime>)> {
+        let creator = 999;
         let construct_markets = |creation: MarketCreation, status, bonds| {
-            let creator = 0;
             let creator_fee = 1;
             let oracle = 2;
             let metadata = vec![3, 4, 5];
@@ -316,10 +319,12 @@ mod tests {
                 MarketBonds {
                     advisory: None,
                     oracle: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
                     validity: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::ValidityBond::get(),
                         is_settled: false,
                     }),
@@ -331,10 +336,12 @@ mod tests {
                 MarketBonds {
                     advisory: None,
                     oracle: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: true,
                     }),
                     validity: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::ValidityBond::get(),
                         is_settled: true,
                     }),
@@ -345,10 +352,12 @@ mod tests {
                 MarketStatus::Proposed,
                 MarketBonds {
                     advisory: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::AdvisoryBond::get(),
                         is_settled: false,
                     }),
                     oracle: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
@@ -360,10 +369,12 @@ mod tests {
                 MarketStatus::Active,
                 MarketBonds {
                     advisory: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::AdvisoryBond::get(),
                         is_settled: true,
                     }),
                     oracle: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
@@ -375,10 +386,12 @@ mod tests {
                 MarketStatus::Resolved,
                 MarketBonds {
                     advisory: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::AdvisoryBond::get(),
                         is_settled: true,
                     }),
                     oracle: Some(Bond {
+                        who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: true,
                     }),

@@ -57,38 +57,52 @@ pub struct Market<AI, Balance, BN, M> {
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
     /// The bonds reserved for this market.
-    pub bonds: MarketBonds<Balance>,
+    pub bonds: MarketBonds<AI, Balance>,
 }
 
-#[derive(Clone, Decode, Default, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Bond<Balance> {
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct Bond<AccountId, Balance> {
+    pub who: AccountId,
     pub value: Balance,
     pub is_settled: bool,
 }
 
-impl<Balance> Bond<Balance> {
-    pub fn new(value: Balance) -> Bond<Balance> {
-        Bond { value, is_settled: false }
+impl<AccountId, Balance> Bond<AccountId, Balance> {
+    pub fn new(who: AccountId, value: Balance) -> Bond<AccountId, Balance> {
+        Bond { who, value, is_settled: false }
     }
 }
 
-#[derive(Clone, Decode, Default, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct MarketBonds<Balance> {
-    pub advisory: Option<Bond<Balance>>,
-    pub oracle: Option<Bond<Balance>>,
-    pub validity: Option<Bond<Balance>>,
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct MarketBonds<AccountId, Balance> {
+    pub advisory: Option<Bond<AccountId, Balance>>,
+    pub oracle: Option<Bond<AccountId, Balance>>,
+    pub validity: Option<Bond<AccountId, Balance>>,
 }
 
-impl<Balance: frame_support::traits::tokens::Balance> MarketBonds<Balance> {
-    /// Return the combined value of the bonds (not considering unreserved or slashed funds).
-    pub fn total_amount_bonded(&self) -> Balance {
-        let value_or_default = |bond: &Option<Bond<Balance>>| match bond {
-            Some(bond) => bond.value,
-            None => Balance::zero(),
+impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
+    MarketBonds<AccountId, Balance>
+{
+    /// Return the combined value of the open bonds for `who`.
+    pub fn total_amount_bonded(&self, who: &AccountId) -> Balance {
+        let value_or_default = |bond: &Option<Bond<AccountId, Balance>>| match bond {
+            Some(bond) if bond.who == *who => bond.value,
+            _ => Balance::zero(),
         };
         value_or_default(&self.advisory)
             .saturating_add(value_or_default(&self.oracle))
             .saturating_add(value_or_default(&self.validity))
+    }
+}
+
+// Used primarily for testing purposes.
+impl<AccountId, Balance> Default for MarketBonds<AccountId, Balance> {
+    fn default() -> Self {
+        MarketBonds {
+            advisory: None,
+            oracle: None,
+            validity: None,
+        }
     }
 }
 
@@ -123,7 +137,7 @@ where
     AI: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
-    MarketBonds<Balance>: MaxEncodedLen,
+    MarketBonds<AI, Balance>: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
@@ -140,7 +154,7 @@ where
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
-            .saturating_add(<MarketBonds<Balance>>::max_encoded_len())
+            .saturating_add(<MarketBonds<AI, Balance>>::max_encoded_len())
     }
 }
 

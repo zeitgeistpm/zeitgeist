@@ -112,7 +112,7 @@ mod pallet {
                 }
                 let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
                     &Self::reserve_id(),
-                    &market.creator,
+                    &bond.who,
                     bond.value,
                 );
                 // If there's excess, there's nothing we can do, so we don't count this as error
@@ -125,7 +125,7 @@ mod pallet {
                     );
                 }
                 T::MarketCommons::mutate_market(market_id, |m| {
-                    m.bonds.$bond = Some(Bond { is_settled: true, ..*bond });
+                    m.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })?;
                 Ok(imbalance)
@@ -148,10 +148,10 @@ mod pallet {
                     T::AssetManager::unreserve_named(
                         &Self::reserve_id(),
                         Asset::Ztg,
-                        &market.creator,
+                        &bond.who,
                         bond.value,
                     );
-                    market.bonds.$bond = Some(Bond { is_settled: true, ..*bond });
+                    market.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })
             }
@@ -667,12 +667,12 @@ mod pallet {
             let bonds = match creation {
                 MarketCreation::Permissionless => MarketBonds {
                     advisory: None,
-                    oracle: Some(Bond::new(T::OracleBond::get())),
-                    validity: Some(Bond::new(T::ValidityBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    validity: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
                 },
                 MarketCreation::Advised => MarketBonds {
-                    advisory: Some(Bond::new(T::AdvisoryBond::get())),
-                    oracle: Some(Bond::new(T::OracleBond::get())),
+                    advisory: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
                     validity: None,
                 },
             };
@@ -680,7 +680,7 @@ mod pallet {
                 &Self::reserve_id(),
                 Asset::Ztg,
                 &sender,
-                bonds.total_amount_bonded(),
+                bonds.total_amount_bonded(&sender),
             )?;
 
             let market = Self::construct_market(
@@ -1937,7 +1937,7 @@ mod pallet {
             };
             let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
                 &Self::reserve_id(),
-                &market.creator,
+                &advisory_bond.who,
                 slash_amount,
             );
             if excess != BalanceOf::<T>::zero() {
@@ -1946,11 +1946,11 @@ mod pallet {
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
-                &market.creator,
+                &advisory_bond.who,
                 unreserve_amount,
             );
             T::MarketCommons::mutate_market(market_id, |m| {
-                m.bonds.advisory = Some(Bond { is_settled: true, ..*advisory_bond });
+                m.bonds.advisory = Some(Bond { is_settled: true, ..advisory_bond.clone() });
                 Ok(())
             })?;
             Ok(imbalance)
@@ -2851,7 +2851,7 @@ mod pallet {
             scoring_rule: ScoringRule,
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
-            bonds: MarketBonds<BalanceOf<T>>,
+            bonds: MarketBonds<T::AccountId, BalanceOf<T>>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
