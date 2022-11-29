@@ -54,11 +54,11 @@ test = false
 
 [dependencies]
 arbitrary = { features = ["derive"], version = "1.0" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 libfuzzer-sys = "0.4"
 orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 rand = "0.8.4"
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 zeitgeist-primitives = { features = ["mock"], path = "../../../primitives" }
 zrml-swaps = { features = ["mock"], path = ".." }
 

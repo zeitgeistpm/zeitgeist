@@ -6,7 +6,7 @@ test = false
 
 [dependencies]
 arbitrary = { features = ["derive"], version = "1.0" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 libfuzzer-sys = "0.4"
 zeitgeist-primitives = { features = ["arbitrary", "mock"], default-features = false, path = "../../../primitives" }
 zrml-prediction-markets = { features = ["mock"], path = ".." }

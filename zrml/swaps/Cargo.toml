@@ -1,13 +1,13 @@
 [dependencies]
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
-frame-executive = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/substrate" }
+frame-executive = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
 orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
@@ -18,10 +18,10 @@ zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 
 orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/purestake/substrate", optional = true }
-sp-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/purestake/substrate", optional = true }
-sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/purestake/substrate", optional = true }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+sp-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
