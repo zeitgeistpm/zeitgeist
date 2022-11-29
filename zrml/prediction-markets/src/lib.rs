@@ -145,12 +145,7 @@ mod pallet {
                             market_id,
                         );
                     }
-                    T::AssetManager::unreserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &bond.who,
-                        bond.value,
-                    );
+                    CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                     market.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })
@@ -1943,9 +1938,8 @@ mod pallet {
             if excess != BalanceOf::<T>::zero() {
                 log::warn!("Failed to settle oracle bond of market {:?}", market_id);
             }
-            T::AssetManager::unreserve_named(
+            CurrencyOf::<T>::unreserve_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
                 &advisory_bond.who,
                 unreserve_amount,
             );
