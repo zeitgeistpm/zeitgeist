@@ -4053,7 +4053,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let dispute_mechanism = MarketDisputeMechanism::Authorized;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(creator),
-            oracle.clone(),
+            oracle,
             period.clone(),
             deadlines,
             metadata,
