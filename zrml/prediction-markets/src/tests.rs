@@ -38,7 +38,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Deadlines, Market, MarketCreation,
         MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment, MultiHash,
-        OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
+        OutcomeReport, PoolStatus, ScalarPosition, ScoringRule, Bond, MarketBonds
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -3991,6 +3991,74 @@ fn report_fails_if_reporter_is_not_the_oracle() {
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle,
         );
+    });
+}
+
+#[test_case(
+    MarketCreation::Advised,
+    ScoringRule::CPMM,
+    MarketStatus::Proposed,
+    MarketBonds {
+        advisory: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
+        oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        validity: None,
+    }
+)]
+#[test_case(
+    MarketCreation::Permissionless,
+    ScoringRule::CPMM,
+    MarketStatus::Active,
+    MarketBonds {
+        advisory: None,
+        oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        validity: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
+    }
+)]
+fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amount(
+    creation: MarketCreation,
+    scoring_rule: ScoringRule,
+    status: MarketStatus,
+    bonds: MarketBonds<AccountIdTest, Balance>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator = ALICE;
+        let oracle = BOB;
+        let period = MarketPeriod::Block(1..2);
+        let deadlines = Deadlines {
+            grace_period: 1,
+            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+        };
+        let metadata = gen_metadata(0x99);
+        let MultiHash::Sha3_384(multihash) = metadata;
+        let market_type = MarketType::Categorical(7);
+        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(creator),
+            oracle.clone(),
+            period.clone(),
+            deadlines,
+            metadata,
+            creation.clone(),
+            market_type.clone(),
+            dispute_mechanism.clone(),
+            scoring_rule,
+        ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.creator, creator);
+        assert_eq!(market.creation, creation);
+        assert_eq!(market.creator_fee, 0);
+        assert_eq!(market.oracle, oracle);
+        assert_eq!(market.metadata, multihash);
+        assert_eq!(market.market_type, market_type);
+        assert_eq!(market.period, period);
+        assert_eq!(market.deadlines, deadlines);
+        assert_eq!(market.scoring_rule, scoring_rule);
+        assert_eq!(market.status, status);
+        assert_eq!(market.report, None);
+        assert_eq!(market.resolved_outcome, None);
+        assert_eq!(market.dispute_mechanism, dispute_mechanism);
+        assert_eq!(market.bonds, bonds);
     });
 }
 
