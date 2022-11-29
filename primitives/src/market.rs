@@ -98,11 +98,7 @@ impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
 // Used primarily for testing purposes.
 impl<AccountId, Balance> Default for MarketBonds<AccountId, Balance> {
     fn default() -> Self {
-        MarketBonds {
-            advisory: None,
-            oracle: None,
-            validity: None,
-        }
+        MarketBonds { advisory: None, oracle: None, validity: None }
     }
 }
 
