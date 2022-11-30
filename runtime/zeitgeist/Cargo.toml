@@ -338,11 +338,23 @@ try-runtime = [
 
     # Parachain
     "pallet-author-mapping?/try-runtime",
+    "pallet-author-inherent?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
     "pallet-parachain-staking?/try-runtime",
     # Required by pallet-parachain-staking@v0.26.1
     "parity-scale-codec/full",
     "pallet-proxy/try-runtime",
+    "pallet-grandpa/try-runtime",
+    "pallet-aura/try-runtime",
+    "pallet-xcm/try-runtime",
+    "pallet-crowdloan-rewards/try-runtime",
+    # Cumulus
+
+    "cumulus-pallet-dmp-queue?/try-runtime",
+    "cumulus-pallet-parachain-system?/try-runtime",
+    "cumulus-pallet-xcm?/try-runtime",
+    "cumulus-pallet-xcmp-queue?/try-runtime",
+    "parachain-info?/try-runtime",
 ]
 with-global-disputes = [
     "zrml-global-disputes",

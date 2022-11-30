@@ -17,7 +17,7 @@
 
 #![allow(clippy::type_complexity)]
 use alloc::vec::Vec;
-use frame_support::traits::Get;
+use sp_runtime::traits::Get;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::NamedMultiReservableCurrency;
 use sp_runtime::DispatchError;
