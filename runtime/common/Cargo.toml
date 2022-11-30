@@ -67,7 +67,6 @@ std = [
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
 ]
-with-global-disputes = []
 try-runtime = [
     "cumulus-pallet-xcmp-queue?/try-runtime",
     "frame-system/try-runtime",
@@ -95,6 +94,7 @@ try-runtime = [
     "pallet-vesting/try-runtime",
     "pallet-parachain-staking?/try-runtime",
 ]
+with-global-disputes = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
