@@ -87,6 +87,7 @@ mod pallet {
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
+        MarketIdOf<T>,
     >;
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
@@ -537,6 +538,7 @@ mod pallet {
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
+            base_asset: Asset<MarketIdOf<T>>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -551,6 +553,7 @@ mod pallet {
 
             let create_market_weight = Self::create_market(
                 origin.clone(),
+                base_asset,
                 oracle,
                 period,
                 deadlines,
@@ -588,6 +591,7 @@ mod pallet {
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
+            base_asset: Asset<MarketIdOf<T>>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -600,7 +604,9 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
 
+            ensure!(base_asset == Asset::Ztg, Error::<T>::InvalidBaseAsset);
             let market = Self::construct_market(
+                base_asset,
                 sender.clone(),
                 0_u8,
                 oracle,
@@ -620,7 +626,7 @@ mod pallet {
                     let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
-                        Asset::Ztg,
+                        base_asset,
                         &sender,
                         required_bond,
                     )?;
@@ -674,6 +680,7 @@ mod pallet {
         #[transactional]
         pub fn edit_market(
             origin: OriginFor<T>,
+            base_asset: Asset<MarketIdOf<T>>,
             market_id: MarketIdOf<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -695,6 +702,7 @@ mod pallet {
 
             Self::clear_auto_close(&market_id)?;
             let edited_market = Self::construct_market(
+                base_asset,
                 old_market.creator,
                 old_market.creator_fee,
                 oracle,
@@ -1513,6 +1521,8 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
+        /// Provided base_asset is not allowed to be used as base_asset.
+        InvalidBaseAsset,
         /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
@@ -2786,6 +2796,7 @@ mod pallet {
         }
 
         fn construct_market(
+            base_asset: Asset<MarketIdOf<T>>,
             creator: T::AccountId,
             creator_fee: u8,
             oracle: T::AccountId,
@@ -2816,6 +2827,7 @@ mod pallet {
                 MarketCreation::Advised => MarketStatus::Proposed,
             };
             Ok(Market {
+                base_asset,
                 creation,
                 creator_fee,
                 creator,

@@ -17,13 +17,14 @@
 
 use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
 use frame_support::dispatch::DispatchResult;
+use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
 
 pub trait DisputeApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId;
+    type MarketId: MaxEncodedLen;
     type Moment;
     type Origin;
 
@@ -34,7 +35,7 @@ pub trait DisputeApi {
     fn on_dispute(
         previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
     ) -> DispatchResult;
 
     /// Manage market resolution of a disputed market.
@@ -49,6 +50,6 @@ pub trait DisputeApi {
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 }

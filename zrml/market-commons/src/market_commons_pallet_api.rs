@@ -50,22 +50,29 @@ pub trait MarketCommonsPalletApi {
 
     /// Return an iterator over the key-value pairs of markets. Altering market storage during
     /// iteration results in undefined behavior.
-    fn market_iter()
-    -> PrefixIterator<(Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>)>;
+    fn market_iter() -> PrefixIterator<(
+        Self::MarketId,
+        Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+    )>;
 
     /// Gets a market from the storage.
     fn market(
         market_id: &Self::MarketId,
-    ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>;
+    ) -> Result<
+        Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+        DispatchError,
+    >;
 
     /// Mutates a given market storage
     fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
     where
-        F: FnOnce(&mut Market<Self::AccountId, Self::BlockNumber, Self::Moment>) -> DispatchResult;
+        F: FnOnce(
+            &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+        ) -> DispatchResult;
 
     /// Pushes a new market into the storage, returning its related auto-incremented ID.
     fn push_market(
-        market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
     ) -> Result<Self::MarketId, DispatchError>;
 
     /// Removes a market from the storage.

@@ -68,6 +68,7 @@ fn simple_create_categorical_market(
 ) {
     assert_ok!(PredictionMarkets::create_market(
         Origin::signed(ALICE),
+        Asset::Ztg,
         BOB,
         MarketPeriod::Block(period),
         get_deadlines(),
@@ -86,6 +87,7 @@ fn simple_create_scalar_market(
 ) {
     assert_ok!(PredictionMarkets::create_market(
         Origin::signed(ALICE),
+        Asset::Ztg,
         BOB,
         MarketPeriod::Block(period),
         get_deadlines(),
@@ -148,6 +150,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..66),
             get_deadlines(),
@@ -160,6 +163,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(33..66),
             get_deadlines(),
@@ -172,6 +176,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..33),
             get_deadlines(),
@@ -201,6 +206,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 get_deadlines(),
@@ -226,6 +232,7 @@ fn create_market_fails_on_min_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -251,6 +258,7 @@ fn create_market_fails_on_min_oracle_duration() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -276,6 +284,7 @@ fn create_market_fails_on_max_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -301,6 +310,7 @@ fn create_market_fails_on_max_grace_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -326,6 +336,7 @@ fn create_market_fails_on_max_oracle_duration() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -636,6 +647,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(0..42),
             get_deadlines(),
@@ -672,6 +684,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..66),
             get_deadlines(),
@@ -684,6 +697,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(33..66),
             get_deadlines(),
@@ -696,6 +710,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..33),
             get_deadlines(),
@@ -847,6 +862,7 @@ fn it_does_not_create_market_with_too_few_categories() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(0..100),
                 get_deadlines(),
@@ -867,6 +883,7 @@ fn it_does_not_create_market_with_too_many_categories() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(0..100),
                 get_deadlines(),
@@ -1241,6 +1258,7 @@ fn on_market_open_successfully_auto_opens_market_pool_with_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(start..end),
             get_deadlines(),
@@ -1271,6 +1289,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -1308,6 +1327,7 @@ fn on_market_open_successfully_auto_opens_market_with_timestamps() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1341,6 +1361,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1386,6 +1407,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1398,6 +1420,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1429,6 +1452,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1441,6 +1465,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1479,6 +1504,7 @@ fn on_initialize_skips_the_genesis_block() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1555,6 +1581,7 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(3..3),
                 get_deadlines(),
@@ -1592,6 +1619,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 period,
                 get_deadlines(),
@@ -1614,6 +1642,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(0..end_block),
                 get_deadlines(),
@@ -1630,6 +1659,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Timestamp(0..end_time),
                 get_deadlines(),
@@ -1884,6 +1914,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -2244,6 +2275,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..2),
             get_deadlines(),
@@ -2322,6 +2354,7 @@ fn start_global_dispute_works() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..2),
             get_deadlines(),
@@ -2423,6 +2456,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..2),
             get_deadlines(),
@@ -2531,6 +2565,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             oracle,
             period,
             get_deadlines(),
@@ -2711,6 +2746,7 @@ fn only_creator_can_edit_market() {
         assert_noop!(
             PredictionMarkets::edit_market(
                 Origin::signed(BOB),
+                Asset::Ztg,
                 0,
                 CHARLIE,
                 MarketPeriod::Block(0..1),
@@ -2747,6 +2783,7 @@ fn edit_cycle_for_proposed_markets() {
         // After this edit its changed to ALICE
         assert_ok!(PredictionMarkets::edit_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             0,
             CHARLIE,
             MarketPeriod::Block(2..4),
@@ -2771,6 +2808,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         // Creates a permissionless market.
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -2809,6 +2847,7 @@ fn full_scalar_market_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -2972,6 +3011,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3007,6 +3047,7 @@ fn authorized_correctly_resolves_disputed_market() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3142,6 +3183,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let market_id = 0;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3199,6 +3241,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3235,6 +3278,7 @@ fn deploy_swap_pool_correctly_sets_weight_of_base_asset() {
         ];
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(0..42),
             get_deadlines(),
@@ -3260,6 +3304,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
         let category_count = 5;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3296,6 +3341,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
         let category_count = 5;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3333,6 +3379,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3377,6 +3424,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3420,6 +3468,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3461,6 +3510,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3503,6 +3553,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3551,6 +3602,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3597,6 +3649,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3654,6 +3707,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3706,6 +3760,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3762,6 +3817,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3813,6 +3869,7 @@ fn report_fails_on_market_state_proposed() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3834,6 +3891,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3855,6 +3913,7 @@ fn report_fails_on_market_state_collecting_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             get_deadlines(),
@@ -3876,6 +3935,7 @@ fn report_fails_on_market_state_insufficient_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             get_deadlines(),
@@ -3901,6 +3961,7 @@ fn report_fails_on_market_state_active() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3922,6 +3983,7 @@ fn report_fails_on_market_state_suspended() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3947,6 +4009,7 @@ fn report_fails_on_market_state_resolved() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3972,6 +4035,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3994,7 +4058,10 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
-fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResultWithPostInfo {
+fn deploy_swap_pool(
+    market: Market<u128, u64, u64, u128>,
+    market_id: u128,
+) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),

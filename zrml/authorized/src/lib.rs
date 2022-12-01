@@ -144,7 +144,7 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
         ) -> DispatchResult {
             Ok(())
         }
@@ -152,7 +152,7 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             let result = AuthorizedOutcomeReports::<T>::get(market_id);
             if result.is_some() {
@@ -173,7 +173,7 @@ mod pallet {
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+-> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>, MarketIdOf<T>>
 where
     T: crate::Config,
 {
@@ -182,6 +182,7 @@ where
     use zeitgeist_primitives::types::ScoringRule;
 
     zeitgeist_primitives::types::Market {
+        base_asset: Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
         creator: T::PalletId::get().into_account_truncating(),

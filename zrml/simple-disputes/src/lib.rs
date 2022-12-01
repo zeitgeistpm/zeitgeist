@@ -101,7 +101,7 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
         ) -> DispatchResult {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
@@ -112,7 +112,7 @@ mod pallet {
         fn on_resolution(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
