@@ -97,11 +97,6 @@ pub trait DisputeResolutionApi {
     ) -> Result<u64, DispatchError>;
 
     /// Add a future block resolution of a disputed market.
-    /// Fails in case of a storage overflow.
-    ///
-    /// # Returns
-    ///
-    /// Returns Ok if the market id was added succesfully.
     fn add_auto_resolve(
         market_id: &Self::MarketId,
         resolution: Self::BlockNumber,
