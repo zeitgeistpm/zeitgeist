@@ -28,7 +28,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorityReportPeriod, AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves,
+        ReportPeriod, AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves,
         MinimumPeriod, PmPalletId, BASE,
     },
     traits::DisputeResolutionApi,
@@ -90,7 +90,7 @@ impl DisputeResolutionApi for NoopResolution {
 }
 
 impl crate::Config for Runtime {
-    type AuthorityReportPeriod = AuthorityReportPeriod;
+    type ReportPeriod = ReportPeriod;
     type Event = ();
     type CorrectionPeriod = CorrectionPeriod;
     type DisputeResolution = NoopResolution;

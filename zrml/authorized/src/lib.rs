@@ -105,7 +105,7 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// The period in which the authority has to report.
         #[pallet::constant]
-        type AuthorityReportPeriod: Get<Self::BlockNumber>;
+        type ReportPeriod: Get<Self::BlockNumber>;
 
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -246,7 +246,7 @@ mod pallet {
                 let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
                 let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
                 let now = frame_system::Pallet::<T>::block_number();
-                let is_expired = report.at.saturating_add(T::AuthorityReportPeriod::get()) < now;
+                let is_expired = report.at.saturating_add(T::ReportPeriod::get()) < now;
                 Ok(is_unreported && is_expired)
             } else {
                 Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())

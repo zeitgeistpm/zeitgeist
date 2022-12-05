@@ -873,7 +873,7 @@ macro_rules! impl_config_traits {
         impl parachain_info::Config for Runtime {}
 
         impl zrml_authorized::Config for Runtime {
-            type AuthorityReportPeriod = AuthorityReportPeriod;
+            type ReportPeriod = ReportPeriod;
             type AuthorizedDisputeResolutionOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;

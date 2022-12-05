@@ -2340,7 +2340,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 3);
 
-        run_blocks(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get() + 1);
+        run_blocks(<Runtime as zrml_authorized::Config>::ReportPeriod::get() + 1);
         assert_ok!(PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), 0));
 
         let market_after = MarketCommons::market(&0).unwrap();
@@ -3229,14 +3229,14 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_blocks(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+        run_blocks(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
         assert_noop!(
             PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), market_id),
             Error::<Runtime>::DisputeMechanismNotFailed
         );
 
         run_blocks(1);
-        // AuthorityReportPeriod is now over
+        // ReportPeriod is now over
         assert_ok!(PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), market_id));
 
         let market_after = MarketCommons::market(&market_id).unwrap();

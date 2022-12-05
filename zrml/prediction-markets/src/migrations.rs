@@ -113,7 +113,7 @@ where
         let now = <frame_system::Pallet<T>>::block_number();
         for id in authorized_ids {
             let mut resolve_at: T::BlockNumber =
-                now.saturating_add(<T as zrml_authorized::Config>::AuthorityReportPeriod::get());
+                now.saturating_add(<T as zrml_authorized::Config>::ReportPeriod::get());
             let mut ids = crate::MarketIdsPerDisputeBlock::<T>::get(resolve_at);
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
@@ -192,7 +192,7 @@ mod tests_auto_resolution {
             );
 
             let resolve_at = now
-                .saturating_add(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+                .saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
 
             let full_ids: Vec<MarketId> = (MarketId::from(1u64)..=MarketId::from(64u64)).collect();
 
@@ -367,7 +367,7 @@ where
 
             if let Some(outcome) = old_value {
                 let resolve_at: T::BlockNumber = now
-                    .saturating_add(<T as zrml_authorized::Config>::AuthorityReportPeriod::get());
+                    .saturating_add(<T as zrml_authorized::Config>::ReportPeriod::get());
                 let new_value = AuthorityReport { resolve_at, outcome };
                 new_storage_map.push((key, new_value));
             }
@@ -437,7 +437,7 @@ mod tests_authorized {
 
             let now = <frame_system::Pallet<Runtime>>::block_number();
             let resolve_at: <Runtime as frame_system::Config>::BlockNumber = now
-                .saturating_add(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+                .saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
             let expected = Some(AuthorityReport { resolve_at, outcome });
 
             let actual = frame_support::migration::get_storage_value::<
@@ -458,7 +458,7 @@ mod tests_authorized {
             let outcome = OutcomeReport::Categorical(42u16);
             let now = <frame_system::Pallet<Runtime>>::block_number();
             let resolve_at: <Runtime as frame_system::Config>::BlockNumber = now
-                .saturating_add(<Runtime as zrml_authorized::Config>::AuthorityReportPeriod::get());
+                .saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
             let report = AuthorityReport { resolve_at, outcome };
             put_storage_value::<
                 Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,

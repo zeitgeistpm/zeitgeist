@@ -35,7 +35,7 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorityReportPeriod, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
+        ReportPeriod, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
         CorrectionPeriod, CourtCaseDuration, CourtPalletId, DisputeFactor, ExistentialDeposit,
         ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals,
         MaxAssets, MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
@@ -255,7 +255,7 @@ ord_parameter_types! {
 }
 
 impl zrml_authorized::Config for Runtime {
-    type AuthorityReportPeriod = AuthorityReportPeriod;
+    type ReportPeriod = ReportPeriod;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type CorrectionPeriod = CorrectionPeriod;

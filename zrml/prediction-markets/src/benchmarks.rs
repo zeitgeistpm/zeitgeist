@@ -872,9 +872,9 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
-        let authority_report_period = <T as zrml_authorized::Config>::AuthorityReportPeriod::get();
+        let authority_report_period = <T as zrml_authorized::Config>::ReportPeriod::get();
         let now = <frame_system::Pallet<T>>::block_number();
-        // authorized mdm fails after the AuthorityReportPeriod
+        // authorized mdm fails after the ReportPeriod
         <frame_system::Pallet<T>>::set_block_number(
             now + authority_report_period.saturated_into() + 1u64.saturated_into()
         );
@@ -913,9 +913,9 @@ benchmarks! {
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
-        let authority_report_period = <T as zrml_authorized::Config>::AuthorityReportPeriod::get();
+        let authority_report_period = <T as zrml_authorized::Config>::ReportPeriod::get();
         let now = <frame_system::Pallet<T>>::block_number();
-        // authorized mdm fails after the AuthorityReportPeriod
+        // authorized mdm fails after the ReportPeriod
         <frame_system::Pallet<T>>::set_block_number(
             now + authority_report_period.saturated_into() + 1u64.saturated_into()
         );
