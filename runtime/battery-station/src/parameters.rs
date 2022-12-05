@@ -58,7 +58,7 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Balance
-    pub const ExistentialDeposit: u128 = 5 * CENT;
+    pub const ExistentialDeposit: u128 = 5 * MILLI;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -313,7 +313,9 @@ parameter_types! {
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+    pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
+    /// Treasury account.
+    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.

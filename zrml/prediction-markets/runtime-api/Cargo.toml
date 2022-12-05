@@ -1,9 +1,6 @@
 [dependencies]
-parity-scale-codec = { default-features = false, features = [
-    "derive",
-    "max-encoded-len",
-], version = "3.0.0" }
-sp-api = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+sp-api = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../../primitives" }
 
 [features]
@@ -18,4 +15,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets-runtime-api"
-version = "0.3.6"
+version = "0.3.7"

@@ -177,7 +177,8 @@ where
         ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
     }
 
-    let spot_price_before = Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out)?;
+    let spot_price_before =
+        Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
     }
@@ -212,7 +213,8 @@ where
         }
     }
 
-    let spot_price_after = Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out)?;
+    let spot_price_after =
+        Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
 
     // Allow little tolerance
     match p.pool.scoring_rule {
