@@ -26,9 +26,13 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    BalanceOf, Config, Event, SubsidyProviders,
+    BalanceOf, Config, Event, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
+    ARBITRAGE_MAX_ITERATIONS,
 };
-use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use frame_support::{
+    assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin, traits::Hooks,
+    weights::Weight,
+};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
@@ -53,6 +57,8 @@ pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
 pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
 
 pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+
+pub const SENTINEL_AMOUNT: u128 = 123456789;
 
 const _1_2: u128 = BASE / 2;
 const _1_10: u128 = BASE / 10;
@@ -108,7 +114,7 @@ macro_rules! assert_approx {
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_A]; "start and end")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_E]; "successive at end")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_A, ASSET_E, ASSET_D]; "start and middle")]
-fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<<Runtime as Config>::MarketId>>) {
+fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<MarketIdOf<Runtime>>>) {
     ExtBuilder::default().build().execute_with(|| {
         assets.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, _10000);
@@ -180,7 +186,7 @@ fn allows_the_full_user_lifecycle() {
         let asset_b_bal = Currencies::free_balance(ASSET_B, &ALICE);
 
         // swap_exact_amount_in
-        let spot_price = Swaps::get_spot_price(&0, &ASSET_A, &ASSET_B).unwrap();
+        let spot_price = Swaps::get_spot_price(&0, &ASSET_A, &ASSET_B, true).unwrap();
         assert_eq!(spot_price, _1);
 
         let pool_account = Swaps::pool_account_id(&0);
@@ -683,25 +689,26 @@ fn most_operations_fail_if_pool_is_clean() {
     });
 }
 
-#[test_case(_3, _3, _100, _100, 0, 10_000_000_000)]
-#[test_case(_3, _3, _100, _150, 0, 6_666_666_667)]
-#[test_case(_3, _4, _100, _100, 0, 13_333_333_333)]
-#[test_case(_3, _4, _100, _150, 0, 8_888_888_889)]
-#[test_case(_3, _6, _125, _150, 0, 16_666_666_667)]
-#[test_case(_3, _6, _125, _100, 0, 25_000_000_000)]
-#[test_case(_3, _3, _100, _100, _1_10, 11_111_111_111)]
-#[test_case(_3, _3, _100, _150, _1_10, 7_407_407_408)]
-#[test_case(_3, _4, _100, _100, _1_10, 14_814_814_814)]
-#[test_case(_3, _4, _100, _150, _1_10, 9_876_543_210)]
-#[test_case(_3, _6, _125, _150, _1_10, 18_518_518_519)]
-#[test_case(_3, _6, _125, _100, _1_10, 27_777_777_778)]
+#[test_case(_3, _3, _100, _100, 0, 10_000_000_000, 10_000_000_000)]
+#[test_case(_3, _3, _100, _150, 0, 6_666_666_667, 6_666_666_667)]
+#[test_case(_3, _4, _100, _100, 0, 13_333_333_333, 13_333_333_333)]
+#[test_case(_3, _4, _100, _150, 0, 8_888_888_889, 8_888_888_889)]
+#[test_case(_3, _6, _125, _150, 0, 16_666_666_667, 16_666_666_667)]
+#[test_case(_3, _6, _125, _100, 0, 25_000_000_000, 25_000_000_000)]
+#[test_case(_3, _3, _100, _100, _1_10, 11_111_111_111, 10_000_000_000)]
+#[test_case(_3, _3, _100, _150, _1_10, 7_407_407_408, 6_666_666_667)]
+#[test_case(_3, _4, _100, _100, _1_10, 14_814_814_814, 13_333_333_333)]
+#[test_case(_3, _4, _100, _150, _1_10, 9_876_543_210, 8_888_888_889)]
+#[test_case(_3, _6, _125, _150, _1_10, 18_518_518_519, 16_666_666_667)]
+#[test_case(_3, _6, _125, _100, _1_10, 27_777_777_778, 25_000_000_000)]
 fn get_spot_price_returns_correct_results_cpmm(
     weight_in: u128,
     weight_out: u128,
     balance_in: BalanceOf<Runtime>,
     balance_out: BalanceOf<Runtime>,
     swap_fee: BalanceOf<Runtime>,
-    expected_spot_price: BalanceOf<Runtime>,
+    expected_spot_price_with_fees: BalanceOf<Runtime>,
+    expected_spot_price_without_fees: BalanceOf<Runtime>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
         // We always swap ASSET_A for ASSET_B, but we vary the weights, balances and swap fees.
@@ -728,8 +735,13 @@ fn get_spot_price_returns_correct_results_cpmm(
 
         let abs_tol = 100;
         assert_approx!(
-            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B).unwrap(),
-            expected_spot_price,
+            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B, true).unwrap(),
+            expected_spot_price_with_fees,
+            abs_tol,
+        );
+        assert_approx!(
+            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B, false).unwrap(),
+            expected_spot_price_without_fees,
             abs_tol,
         );
     });
@@ -741,23 +753,24 @@ fn get_spot_price_returns_correct_results_rikiddo() {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
         let pool_id = 0;
         assert_noop!(
-            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[0]),
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[0], true),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         subsidize_and_start_rikiddo_pool(pool_id, &ALICE, 0);
 
         // Asset out, base currency in. Should receive about 1/3 -> price about 3
         let price_base_in =
-            Swaps::get_spot_price(&pool_id, &ASSETS[0], ASSETS.last().unwrap()).unwrap();
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], ASSETS.last().unwrap(), true).unwrap();
         // Between 0.3 and 0.4
         assert!(price_base_in > 28 * BASE / 10 && price_base_in < 31 * BASE / 10);
         // Base currency in, asset out. Price about 3.
         let price_base_out =
-            Swaps::get_spot_price(&pool_id, ASSETS.last().unwrap(), &ASSETS[0]).unwrap();
+            Swaps::get_spot_price(&pool_id, ASSETS.last().unwrap(), &ASSETS[0], true).unwrap();
         // Between 2.9 and 3.1
         assert!(price_base_out > 3 * BASE / 10 && price_base_out < 4 * BASE / 10);
         // Asset in, asset out. Price about 1.
-        let price_asset_in_out = Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[1]).unwrap();
+        let price_asset_in_out =
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[1], true).unwrap();
         // Between 0.9 and 1.1
         assert!(price_asset_in_out > 9 * BASE / 10 && price_asset_in_out < 11 * BASE / 10);
     });
@@ -2672,7 +2685,6 @@ fn single_asset_operations_are_equivalent_to_swaps() {
             0,
         ));
         let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(pool_id), &ALICE);
-        println!("{}", pool_amount);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             Origin::signed(ALICE),
             pool_id,
@@ -3012,6 +3024,358 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
             ),
             crate::Error::<Runtime>::PoolDrain,
         );
+    });
+}
+
+#[test]
+fn trading_functions_cache_pool_ids() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _2,
+            u128::MAX,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _2,
+            0,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _1,
+            u128::MAX,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _1,
+            0,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::swap_exact_amount_in(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _1,
+            ASSET_B,
+            Some(0),
+            None,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::swap_exact_amount_out(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            Some(u128::MAX),
+            ASSET_B,
+            _1,
+            None,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+    });
+}
+
+#[test]
+fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        // Outcome weights sum to the weight of the base asset, and we create no imbalances, so
+        // total spot price is equal to 1.
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            ASSET_A,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+        // Force the pool into the cache.
+        crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        Swaps::on_idle(System::block_number(), Weight::max_value());
+        System::assert_has_event(Event::ArbitrageSkipped(pool_id).into());
+    });
+}
+
+#[test]
+fn on_idle_arbitrages_pools_with_mint_sell() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            base_asset,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw a certain amount of outcome tokens to push the total spot price above 1
+        // (ASSET_A is the base asset, all other assets are considered outcomes).
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        let amount_removed = _25;
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, amount_removed));
+
+        // Force arbitrage hook.
+        crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        Swaps::on_idle(System::block_number(), Weight::max_value());
+
+        let arbitrage_amount = 49_537_658_690;
+        assert_eq!(
+            Currencies::free_balance(base_asset, &pool_account_id),
+            balance - arbitrage_amount,
+        );
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance + arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance + arbitrage_amount);
+        assert_eq!(
+            Currencies::free_balance(ASSET_B, &pool_account_id),
+            balance + arbitrage_amount - amount_removed,
+        );
+        let market_id = 0;
+        let market_account_id = MarketCommons::market_account(market_id);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), arbitrage_amount);
+        System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
+    });
+}
+
+#[test]
+fn on_idle_arbitrages_pools_with_buy_burn() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            base_asset,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw a certain amount of base tokens to push the total spot price below 1 (ASSET_A
+        // is the base asset, all other assets are considered outcomes).
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        let amount_removed = _25;
+        assert_ok!(Currencies::withdraw(base_asset, &pool_account_id, amount_removed));
+
+        // Deposit funds into the prize pool to ensure that the transfers don't fail.
+        let market_id = 0;
+        let market_account_id = MarketCommons::market_account(market_id);
+        let arbitrage_amount = 125_007_629_394; // "Should" be 125_000_000_000.
+        assert_ok!(Currencies::deposit(
+            base_asset,
+            &market_account_id,
+            arbitrage_amount + SENTINEL_AMOUNT,
+        ));
+
+        // Force arbitrage hook.
+        crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        Swaps::on_idle(System::block_number(), Weight::max_value());
+
+        assert_eq!(
+            Currencies::free_balance(base_asset, &pool_account_id),
+            balance + arbitrage_amount - amount_removed,
+        );
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), SENTINEL_AMOUNT);
+        System::assert_has_event(Event::ArbitrageBuyBurn(pool_id, arbitrage_amount).into());
+    });
+}
+
+#[test]
+fn apply_to_cached_pools_only_drains_requested_pools() {
+    ExtBuilder::default().build().execute_with(|| {
+        let pool_count = 5;
+        for pool_id in 0..pool_count {
+            // Force the pool into the cache.
+            PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        }
+        let number_of_pools_to_retain: u32 = 3;
+        Swaps::apply_to_cached_pools(
+            pool_count.saturated_into::<u32>() - number_of_pools_to_retain,
+            |_| Ok(0),
+            Weight::max_value(),
+        );
+        assert_eq!(
+            PoolsCachedForArbitrage::<Runtime>::iter().count(),
+            number_of_pools_to_retain as usize,
+        );
+    });
+}
+
+#[test]
+fn execute_arbitrage_correctly_observes_min_balance_buy_burn() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Static requirement for this test is that base asset and outcome tokens have similar
+        // minimum balance.
+        assert!(Swaps::min_balance(ASSET_A) <= 3 * Swaps::min_balance(ASSET_B) / 2);
+        let min_balance = Swaps::min_balance(ASSET_A);
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            base_asset,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw most base tokens to push the total spot price below 1 and most of one of the
+        // outcome tokens to trigger an arbitrage that would cause minimum balances to be violated.
+        // The total spot price should be slightly above 1/3.
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        let amount_removed = balance - 3 * min_balance / 2;
+        assert_ok!(Currencies::withdraw(base_asset, &pool_account_id, amount_removed));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, amount_removed));
+
+        // Deposit funds into the prize pool to ensure that the transfers don't fail.
+        let market_id = 0;
+        let market_account_id = MarketCommons::market_account(market_id);
+        let arbitrage_amount = min_balance / 2;
+        assert_ok!(Currencies::deposit(
+            base_asset,
+            &market_account_id,
+            arbitrage_amount + SENTINEL_AMOUNT,
+        ));
+
+        assert_ok!(Swaps::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS));
+
+        assert_eq!(
+            Currencies::free_balance(base_asset, &pool_account_id),
+            balance + arbitrage_amount - amount_removed,
+        );
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), min_balance);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), SENTINEL_AMOUNT);
+        System::assert_has_event(Event::ArbitrageBuyBurn(pool_id, arbitrage_amount).into());
+    });
+}
+
+#[test]
+fn execute_arbitrage_observes_min_balances_mint_sell() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Static assumptions for this test are that minimum balances of all assets are similar.
+        assert!(Swaps::min_balance(ASSET_A) >= Swaps::min_balance(ASSET_B));
+        assert_eq!(Swaps::min_balance(ASSET_B), Swaps::min_balance(ASSET_C));
+        assert_eq!(Swaps::min_balance(ASSET_B), Swaps::min_balance(ASSET_D));
+        let min_balance = Swaps::min_balance(ASSET_A);
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            base_asset,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw a certain amount of outcome tokens to push the total spot price above 1
+        // (`ASSET_A` is the base asset, all other assets are considered outcomes). The exact choice
+        // of balance for `ASSET_A` ensures that after one iteration, we slightly overshoot the
+        // target (see below).
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            balance - 39 * min_balance / 30, // little less than 4 / 3
+        ));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, balance - min_balance));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, balance - min_balance));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, balance - min_balance));
+
+        // The arbitrage amount of mint-sell should always be so that min_balances are not
+        // violated (provided the pool starts in valid state), _except_ when the approximation
+        // overshoots the target. We simulate this by using exactly one iteration.
+        assert_ok!(Swaps::execute_arbitrage(pool_id, 1));
+
+        // Using only one iteration means that the arbitrage amount will be slightly more than
+        // 9 / 30 * min_balance, but that would result in a violation of the minimum balance of the
+        // base asset, so we instead arbitrage the maximum allowed amount:
+        let arbitrage_amount = 9 * min_balance / 30;
+        assert_eq!(Currencies::free_balance(base_asset, &pool_account_id), min_balance);
+        assert_eq!(
+            Currencies::free_balance(ASSET_B, &pool_account_id),
+            min_balance + arbitrage_amount,
+        );
+        assert_eq!(
+            Currencies::free_balance(ASSET_C, &pool_account_id),
+            min_balance + arbitrage_amount,
+        );
+        assert_eq!(
+            Currencies::free_balance(ASSET_D, &pool_account_id),
+            min_balance + arbitrage_amount,
+        );
+        let market_id = 0;
+        let market_account_id = MarketCommons::market_account(market_id);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), arbitrage_amount);
+        System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
     });
 }
 

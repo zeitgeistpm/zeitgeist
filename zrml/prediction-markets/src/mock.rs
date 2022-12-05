@@ -24,7 +24,7 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize},
+    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
 use sp_arithmetic::per_things::Percent;
@@ -225,6 +225,8 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type OnDust = ();
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -285,6 +287,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
@@ -331,7 +334,6 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
@@ -363,6 +365,7 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBondMaximum = ();
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SpendFunds = ();
+    type SpendOrigin = NeverEnsureOrigin<Balance>;
     type SpendPeriod = ();
     type WeightInfo = ();
 }

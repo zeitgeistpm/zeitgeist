@@ -26,7 +26,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
-        MinOutcomeVoteAmount, MinimumPeriod, RemoveKeysLimit, VotingOutcomeFee, BASE,
+        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, VotingOutcomeFee, BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
@@ -124,6 +124,7 @@ impl pallet_timestamp::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

@@ -28,14 +28,27 @@ use scale_info::TypeInfo;
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
 )]
 pub enum Asset<MI: MaxEncodedLen> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
     PoolShare(SerdeWrapper<PoolId>),
+    #[default]
     Ztg,
+    ForeignAsset(u32),
 }
 
 /// In a scalar market, users can either choose a `Long` position,

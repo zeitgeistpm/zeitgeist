@@ -43,4 +43,4 @@ else
 fi
 export EXECUTION="${EXECUTION:-wasm}"
 export ADDITIONAL="${ADDITIONAL:-}"
-export ADDITIONAL_FEATURES="${ADDITIONAL_FEATURES:-}"
+export ADDITIONAL_FEATURES="${ADDITIONAL_FEATURES:-with-global-disputes}"

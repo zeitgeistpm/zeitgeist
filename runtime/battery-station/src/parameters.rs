@@ -56,7 +56,7 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Balance
-    pub const ExistentialDeposit: u128 = 5 * CENT;
+    pub const ExistentialDeposit: u128 = 5 * MILLI;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -159,7 +159,7 @@ parameter_types! {
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
-    pub const MaxDisputes: u16 = 3;
+    pub const MaxDisputes: u16 = 6;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
@@ -311,7 +311,9 @@ parameter_types! {
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+    pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
+    /// Treasury account.
+    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.
