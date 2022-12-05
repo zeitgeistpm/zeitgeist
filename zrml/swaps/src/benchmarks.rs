@@ -29,9 +29,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
-use frame_benchmarking::{
-    account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
-};
+use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Get, weights::Weight};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
