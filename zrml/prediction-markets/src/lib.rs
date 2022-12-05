@@ -492,7 +492,6 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        // TODO update benchmarks
         #[pallet::weight(
             T::WeightInfo::resolve_failed_mdm_authorized_categorical(T::MaxDisputes::get())
                 .max(T::WeightInfo::resolve_failed_mdm_authorized_scalar(T::MaxDisputes::get()))
