@@ -83,23 +83,21 @@ mod pallet {
             let market = T::MarketCommonsAuthorized::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized => {
-                    let ids_len_1 = Self::remove_auto_resolve(&market_id);
-                    let now = frame_system::Pallet::<T>::block_number();
-                    let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-                    let ids_len_2 = T::DisputeResolution::add_auto_resolve(
-                        &market_id,
-                        correction_period_ends_at,
-                    )?;
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
 
-                    let report = AuthorityReport { resolve_at: correction_period_ends_at, outcome };
-                    AuthorizedOutcomeReports::<T>::insert(market_id, report);
+            let ids_len_1 = Self::remove_auto_resolve(&market_id);
+            let now = frame_system::Pallet::<T>::block_number();
+            let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
+            let ids_len_2 =
+                T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
 
-                    Ok(Some(T::WeightInfo::authorize_market_outcome(ids_len_1, ids_len_2)).into())
-                }
-                _ => Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into()),
-            }
+            let report = AuthorityReport { resolve_at: correction_period_ends_at, outcome };
+            AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
+            Ok(Some(T::WeightInfo::authorize_market_outcome(ids_len_1, ids_len_2)).into())
         }
     }
 
