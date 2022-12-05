@@ -609,6 +609,7 @@ mod pallet {
             match base_asset {
                 Asset::Ztg => valid_base_asset = true,
                 Asset::ForeignAsset(fa) => {
+                    #[cfg(feature = "parachain")]
                     if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
                         valid_base_asset = metadata.additional.allow_in_pool;
                     }
@@ -1346,6 +1347,7 @@ mod pallet {
             ReserveIdentifier = [u8; 8],
         >;
 
+        #[cfg(feature = "parachain")]
         type AssetRegistry: Inspect<
             AssetId = Asset<MarketIdOf<Self>>,
             Balance = BalanceOf<Self>,

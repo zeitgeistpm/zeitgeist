@@ -351,6 +351,7 @@ fn create_market_fails_on_max_oracle_duration() {
     });
 }
 
+#[cfg(feature = "parachain")]
 #[test]
 fn create_market_with_foreign_assets() {
     ExtBuilder::default().build().execute_with(|| {

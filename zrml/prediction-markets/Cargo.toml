@@ -18,7 +18,7 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
 
-orml-asset-registry = { branch = "polkadot-v0.9.26", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false }
+orml-asset-registry = { branch = "polkadot-v0.9.26", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, optional = true }
 orml-currencies = { branch = "polkadot-v0.9.26", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "polkadot-v0.9.26", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate", optional = true }
@@ -55,7 +55,9 @@ mock = [
     "zrml-rikiddo",
     "zrml-swaps",
     "xcm",
+    "orml-asset-registry",
 ]
+parachain = []
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",

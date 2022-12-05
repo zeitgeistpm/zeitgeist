@@ -142,6 +142,7 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -234,6 +235,7 @@ impl orml_tokens::Config for Runtime {
     type WeightInfo = ();
 }
 
+#[cfg(feature = "parachain")]
 crate::orml_asset_registry::impl_mock_registry! {
     MockRegistry,
     CurrencyId,
@@ -417,6 +419,7 @@ impl ExtBuilder {
         .unwrap();
         let mut custom_metadata = CustomMetadata::default();
         custom_metadata.allow_in_pool = true;
+        #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![
                 (

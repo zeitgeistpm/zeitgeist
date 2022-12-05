@@ -1013,6 +1013,7 @@ macro_rules! impl_config_traits {
             >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
+        #[cfg(feature = "parachain")]
             type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
