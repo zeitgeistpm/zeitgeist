@@ -25,7 +25,6 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec,
 };
-use parity_scale_codec::EncodeLike;
 use sp_runtime::traits::{One, Saturating};
 use zeitgeist_primitives::types::{AuthorityReport, MarketDisputeMechanism, OutcomeReport};
 use zrml_authorized::Pallet as AuthorizedPallet;
@@ -50,12 +49,6 @@ pub struct UpdateMarketIdsPerDisputeBlock<T>(PhantomData<T>);
 // Delete the auto resolution of authorized and court from `MarketIdsPerDisputeBlock`
 impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade
     for UpdateMarketIdsPerDisputeBlock<T>
-where
-    <T as zrml_market_commons::Config>::MarketId:
-        EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
-    <T as zrml_market_commons::Config>::MarketId: EncodeLike<
-        <<T as zrml_authorized::Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::MarketId,
-    >,
 {
     fn on_runtime_upgrade() -> Weight
     where
@@ -337,10 +330,6 @@ pub struct AddFieldToAuthorityReport<T>(PhantomData<T>);
 // Add resolve_at block number value field to `AuthorizedOutcomeReports` map.
 impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade
     for AddFieldToAuthorityReport<T>
-where
-    <T as zrml_market_commons::Config>::MarketId: EncodeLike<
-        <<T as zrml_authorized::Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::MarketId,
-    >,
 {
     fn on_runtime_upgrade() -> Weight
     where
@@ -366,8 +355,8 @@ where
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             if let Some(outcome) = old_value {
-                let resolve_at: T::BlockNumber = now
-                    .saturating_add(<T as zrml_authorized::Config>::ReportPeriod::get());
+                let resolve_at: T::BlockNumber =
+                    now.saturating_add(<T as zrml_authorized::Config>::ReportPeriod::get());
                 let new_value = AuthorityReport { resolve_at, outcome };
                 new_storage_map.push((key, new_value));
             }
