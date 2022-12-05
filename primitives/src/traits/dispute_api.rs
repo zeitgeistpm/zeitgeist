@@ -69,7 +69,7 @@ pub trait DisputeApi {
     ///
     /// # Returns
     ///
-    /// Returns true, when the dispute mechanism failed. Otherwise false.
+    /// Returns `true` if the dispute mechanism failed. Otherwise `false`.
     fn is_fail(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
@@ -86,7 +86,7 @@ pub trait DisputeResolutionApi {
     /// Resolve a market. Fails if `on_resolution` from zrml-prediction-markets fails.
     ///
     /// **Should only be called if the market dispute**
-    /// **mechanism is ready for the resolution (`DisputeApi::on_resolution`).**
+    /// **mechanism is ready for the resolution ([`DisputeApi::on_resolution`]).**
     ///
     /// # Returns
     ///

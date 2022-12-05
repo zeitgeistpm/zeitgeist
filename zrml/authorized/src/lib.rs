@@ -121,7 +121,6 @@ mod pallet {
             Moment = MomentOf<Self>,
         >;
 
-        /// Market commons
         type MarketCommonsAuthorized: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
