@@ -417,8 +417,7 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut t)
         .unwrap();
-        let mut custom_metadata = CustomMetadata::default();
-        custom_metadata.allow_in_pool = true;
+        let custom_metadata = CustomMetadata { allow_in_pool: true, ..Default::default() };
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![

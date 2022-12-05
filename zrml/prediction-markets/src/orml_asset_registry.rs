@@ -136,7 +136,7 @@ macro_rules! impl_mock_registry {
                 where
                     S: __private_Serializer,
                 {
-                    let mut state = serializer.serialize_struct("GenesisConfig", 1)?;
+                    let state = serializer.serialize_struct("GenesisConfig", 1)?;
                     state.end()
                 }
             }
@@ -144,7 +144,7 @@ macro_rules! impl_mock_registry {
             // NOTE: We need this dummy impl as `AssetMetadata` does NOT derive
             //       deserialize in std
             impl<'de> __private_Deserialize<'de> for GenesisConfig {
-                fn deserialize<D>(deserializer: D) -> Result<GenesisConfig, D::Error>
+                fn deserialize<D>(_deserializer: D) -> Result<GenesisConfig, D::Error>
                 where
                     D: __private_Deserializer<'de>,
                 {
@@ -153,7 +153,7 @@ macro_rules! impl_mock_registry {
             }
 
             mod __private {
-                use std::{cell::RefCell, thread::LocalKey, vec::Vec};
+                use std::{cell::RefCell, vec::Vec};
 
                 use super::*;
 
@@ -234,14 +234,14 @@ macro_rules! impl_mock_registry {
                     pub fn update_asset(
                         &mut self,
                         asset_id: $asset_id,
-                        decimals: Option<u32>,
-                        name: Option<Vec<u8>>,
-                        symbol: Option<Vec<u8>>,
-                        existential_deposit: Option<$balance>,
-                        location: Option<Option<__private_VersionedMultiLocation>>,
-                        additional: Option<$custom_metadata>,
+                        _decimals: Option<u32>,
+                        _name: Option<Vec<u8>>,
+                        _symbol: Option<Vec<u8>>,
+                        _existential_deposit: Option<$balance>,
+                        _location: Option<Option<__private_VersionedMultiLocation>>,
+                        _additional: Option<$custom_metadata>,
                     ) -> __private_DispatchResult {
-                        if let Some(meta) = self.get_meta(&asset_id) {
+                        if let Some(_meta) = self.get_meta(&asset_id) {
                             Ok(())
                         } else {
                             Err(__private_DispatchError::Other("Asset not registered"))

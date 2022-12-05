@@ -179,7 +179,7 @@ where
 {
     use frame_support::traits::Get;
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::ScoringRule;
+    use zeitgeist_primitives::types::{Asset, ScoringRule};
 
     zeitgeist_primitives::types::Market {
         base_asset: Asset::Ztg,

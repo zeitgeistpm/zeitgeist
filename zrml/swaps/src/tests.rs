@@ -3461,8 +3461,9 @@ fn subsidize_and_start_rikiddo_pool(
     assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
 }
 
-fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
+fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment, MarketId> {
     Market {
+        base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: 0,
         creator: ALICE,

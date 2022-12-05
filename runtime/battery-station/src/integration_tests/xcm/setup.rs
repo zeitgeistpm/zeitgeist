@@ -17,10 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    xcm_config::{
-        asset_registry::CustomMetadata,
-        config::{battery_station, general_key},
-    },
+    xcm_config::config::{battery_station, general_key},
     AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, Origin, Runtime, System,
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
@@ -29,7 +26,7 @@ use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
 };
-use zeitgeist_primitives::types::Asset;
+use zeitgeist_primitives::types::{Asset, CustomMetadata};
 
 pub(super) struct ExtBuilder {
     balances: Vec<(AccountId, CurrencyId, Balance)>,
