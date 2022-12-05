@@ -97,11 +97,19 @@ pub trait DisputeResolutionApi {
     ) -> Result<u64, DispatchError>;
 
     /// Add a future block resolution of a disputed market.
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of elements in the storage structure.
     fn add_auto_resolve(
         market_id: &Self::MarketId,
         resolution: Self::BlockNumber,
-    ) -> DispatchResult;
+    ) -> Result<u32, DispatchError>;
 
     /// Remove a future block resolution of a disputed market.
-    fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber);
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of elements in the storage structure.
+    fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber) -> u32;
 }

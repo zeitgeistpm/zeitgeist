@@ -2917,17 +2917,22 @@ mod pallet {
         fn add_auto_resolve(
             market_id: &Self::MarketId,
             resolution: Self::BlockNumber,
-        ) -> DispatchResult {
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(resolution, |ids| {
-                ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
-            Ok(())
+        ) -> Result<u32, DispatchError> {
+            let ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
+                resolution,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
+            Ok(ids_len)
         }
 
-        fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber) {
-            MarketIdsPerDisputeBlock::<T>::mutate(resolution, |ids| {
+        fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber) -> u32 {
+            MarketIdsPerDisputeBlock::<T>::mutate(resolution, |ids| -> u32 {
                 remove_item::<MarketIdOf<T>, _>(ids, market_id);
-            });
+                ids.len() as u32
+            })
         }
     }
 }

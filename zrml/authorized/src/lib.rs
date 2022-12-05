@@ -35,9 +35,9 @@ mod pallet {
     use crate::{weights::WeightInfoZeitgeist, AuthorizedPalletApi};
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::DispatchResult,
+        dispatch::{DispatchResult, DispatchResultWithPostInfo},
         ensure,
-        pallet_prelude::{EnsureOrigin, OptionQuery, StorageMap},
+        pallet_prelude::{ConstU32, EnsureOrigin, OptionQuery, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
@@ -64,32 +64,39 @@ mod pallet {
     pub(crate) type MomentOf<T> =
         <<T as Config>::MarketCommonsAuthorized as MarketCommonsPalletApi>::Moment;
 
+    pub type CacheSize = ConstU32<64>;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        // TODO update benchmark
         /// Overwrites already provided outcomes for the same market and account.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::authorize_market_outcome())]
+        #[pallet::weight(T::WeightInfo::authorize_market_outcome(
+            CacheSize::get(),
+            CacheSize::get()
+        ))]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::AuthorizedDisputeResolutionOrigin::ensure_origin(origin)?;
             let market = T::MarketCommonsAuthorized::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    Self::remove_auto_resolve(&market_id);
+                    let ids_len_1 = Self::remove_auto_resolve(&market_id);
                     let now = frame_system::Pallet::<T>::block_number();
                     let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-                    T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
+                    let ids_len_2 = T::DisputeResolution::add_auto_resolve(
+                        &market_id,
+                        correction_period_ends_at,
+                    )?;
 
                     let report = AuthorityReport { resolve_at: correction_period_ends_at, outcome };
                     AuthorizedOutcomeReports::<T>::insert(market_id, report);
 
-                    Ok(())
+                    Ok(Some(T::WeightInfo::authorize_market_outcome(ids_len_1, ids_len_2)).into())
                 }
                 _ => Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into()),
             }
@@ -169,9 +176,11 @@ mod pallet {
             AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at)
         }
 
-        fn remove_auto_resolve(market_id: &MarketIdOf<T>) {
+        fn remove_auto_resolve(market_id: &MarketIdOf<T>) -> u32 {
             if let Some(resolve_at) = Self::get_auto_resolve(market_id) {
-                T::DisputeResolution::remove_auto_resolve(market_id, resolve_at);
+                T::DisputeResolution::remove_auto_resolve(market_id, resolve_at)
+            } else {
+                0u32
             }
         }
     }
