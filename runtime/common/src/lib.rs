@@ -1019,6 +1019,7 @@ macro_rules! impl_config_traits {
             >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
+            type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type Swaps = Swaps;

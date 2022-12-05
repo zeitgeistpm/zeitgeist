@@ -24,6 +24,7 @@ extern crate alloc;
 mod benchmarks;
 pub mod migrations;
 pub mod mock;
+pub mod orml_asset_registry;
 mod tests;
 pub mod weights;
 
@@ -48,7 +49,7 @@ mod pallet {
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
+    use orml_traits::{asset_registry::Inspect, MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
         traits::{CheckedDiv, Saturating, Zero},
@@ -58,9 +59,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
-            MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
-            ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, CustomMetadata, Deadlines, Market, MarketCreation, MarketDispute,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -604,7 +605,18 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
 
-            ensure!(base_asset == Asset::Ztg, Error::<T>::InvalidBaseAsset);
+            let mut valid_base_asset = false;
+            match base_asset {
+                Asset::Ztg => valid_base_asset = true,
+                Asset::ForeignAsset(fa) => {
+                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
+                        valid_base_asset = metadata.additional.allow_in_pool;
+                    }
+                }
+                _ => {}
+            }
+
+            ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let market = Self::construct_market(
                 base_asset,
                 sender.clone(),
@@ -1332,6 +1344,12 @@ mod pallet {
             Self::AccountId,
             CurrencyId = Asset<MarketIdOf<Self>>,
             ReserveIdentifier = [u8; 8],
+        >;
+
+        type AssetRegistry: Inspect<
+            AssetId = Asset<MarketIdOf<Self>>,
+            Balance = BalanceOf<Self>,
+            CustomMetadata = CustomMetadata,
         >;
 
         /// See [`zrml_authorized::AuthorizedPalletApi`].

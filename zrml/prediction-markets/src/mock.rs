@@ -24,9 +24,10 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
+    traits::{Everything, GenesisBuild, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+use orml_asset_registry::AssetMetadata;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
@@ -47,7 +48,8 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, CustomMetadata, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper,
+        UncheckedExtrinsicTest,
     },
 };
 
@@ -140,6 +142,7 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
@@ -229,6 +232,13 @@ impl orml_tokens::Config for Runtime {
     type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+crate::orml_asset_registry::impl_mock_registry! {
+    MockRegistry,
+    CurrencyId,
+    Balance,
+    CustomMetadata
 }
 
 impl pallet_balances::Config for Runtime {
@@ -397,6 +407,44 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
+        orml_tokens::GenesisConfig::<Runtime> {
+            balances: (0..69)
+                .into_iter()
+                .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
+                .collect(),
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+        let mut custom_metadata = CustomMetadata::default();
+        custom_metadata.allow_in_pool = true;
+        orml_asset_registry_mock::GenesisConfig {
+            metadata: vec![
+                (
+                    CurrencyId::ForeignAsset(100),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "ACALA USD".as_bytes().to_vec(),
+                        symbol: "AUSD".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: custom_metadata,
+                    },
+                ),
+                (
+                    CurrencyId::ForeignAsset(420),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "FANCY_TOKEN".as_bytes().to_vec(),
+                        symbol: "FTK".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: CustomMetadata::default(),
+                    },
+                ),
+            ],
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
         t.into()
     }

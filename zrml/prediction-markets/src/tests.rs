@@ -352,6 +352,46 @@ fn create_market_fails_on_max_oracle_duration() {
 }
 
 #[test]
+fn create_market_with_foreign_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
+        };
+        // As per Mock asset_registry genesis ForeignAsset(420) has allow_in_pool set to false.
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                Asset::ForeignAsset(420),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidBaseAsset,
+        );
+        // As per Mock asset_registry genesis ForeignAsset(100) has allow_in_pool set to true.
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::ForeignAsset(100),
+            BOB,
+            MarketPeriod::Block(123..456),
+            deadlines,
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(2),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test]
 fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
