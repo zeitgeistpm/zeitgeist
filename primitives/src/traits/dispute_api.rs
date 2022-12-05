@@ -53,7 +53,7 @@ pub trait DisputeApi {
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 
     /// Query the future resolution block of a disputed market.
-    /// Fails if the market dispute mechanism does not belong to the actual dispute mechanism.
+    /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     ///
     /// # Returns
     ///
@@ -65,7 +65,7 @@ pub trait DisputeApi {
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 
     /// Query if the dispute mechanism failed for a dispute market.
-    /// Fails if the market dispute mechanism does not belong to the actual dispute mechanism.
+    /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     ///
     /// # Returns
     ///
