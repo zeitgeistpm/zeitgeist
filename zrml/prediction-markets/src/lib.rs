@@ -49,7 +49,13 @@ mod pallet {
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::{asset_registry::Inspect, MultiCurrency, NamedMultiReservableCurrency};
+
+    #[cfg(feature = "parachain")]
+    use orml_traits::asset_registry::Inspect;
+    #[cfg(feature = "parachain")]
+    use zeitgeist_primitives::types::CustomMetadata;
+
+    use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
         traits::{CheckedDiv, Saturating, Zero},
@@ -59,9 +65,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, CustomMetadata, Deadlines, Market, MarketCreation, MarketDispute,
-            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
+            ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -608,8 +614,8 @@ mod pallet {
             let mut valid_base_asset = false;
             match base_asset {
                 Asset::Ztg => valid_base_asset = true,
+                #[cfg(feature = "parachain")]
                 Asset::ForeignAsset(fa) => {
-                    #[cfg(feature = "parachain")]
                     if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
                         valid_base_asset = metadata.additional.allow_in_pool;
                     }
