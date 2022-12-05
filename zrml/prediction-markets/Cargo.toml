@@ -5,7 +5,7 @@ frame-system = { branch = "polkadot-v0.9.26", default-features = false, git = "h
 orml-traits = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-serde = { version = "1.0.119" }
+serde = { version = "1.0.137", default-features = false, optional = true }
 sp-arithmetic = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
@@ -70,6 +70,7 @@ std = [
     "orml-traits/std",
     "orml-asset-registry/std",
     "parity-scale-codec/std",
+    "serde/std",
     "sp-arithmetic/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
