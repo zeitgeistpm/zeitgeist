@@ -28,8 +28,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        ReportPeriod, AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves,
-        MinimumPeriod, PmPalletId, BASE,
+        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod,
+        PmPalletId, ReportPeriod, BASE,
     },
     traits::DisputeResolutionApi,
     types::{

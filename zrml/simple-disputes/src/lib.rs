@@ -33,6 +33,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         traits::{Currency, Get, Hooks, IsType},
         PalletId,
     };
@@ -137,9 +138,10 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
             Self::remove_auto_resolve(disputes, market_id, market);
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             // each dispute resets dispute_duration
@@ -154,12 +156,11 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
-            }
-            if market.status != MarketStatus::Disputed {
-                return Err(Error::<T>::InvalidMarketStatus.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             if let Some(last_dispute) = disputes.last() {
                 Ok(Some(last_dispute.outcome.clone()))
@@ -173,9 +174,10 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
             Ok(Self::get_auto_resolve(disputes, market))
         }
 
@@ -184,9 +186,10 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<bool, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
             // TODO when does simple disputes fail?
             Ok(false)
         }

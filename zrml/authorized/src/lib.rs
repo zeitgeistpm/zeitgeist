@@ -199,14 +199,14 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
-                if AuthorizedOutcomeReports::<T>::get(market_id).is_some() {
-                    return Err(Error::<T>::AuthorityAlreadyReported.into());
-                }
-                Ok(())
-            } else {
-                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            if AuthorizedOutcomeReports::<T>::get(market_id).is_some() {
+                return Err(Error::<T>::AuthorityAlreadyReported.into());
             }
+            Ok(())
         }
 
         fn on_resolution(
@@ -214,15 +214,15 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
-                let result = AuthorizedOutcomeReports::<T>::get(market_id);
-                if result.is_some() {
-                    AuthorizedOutcomeReports::<T>::remove(market_id);
-                }
-                Ok(result.map(|report| report.outcome))
-            } else {
-                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            let result = AuthorizedOutcomeReports::<T>::get(market_id);
+            if result.is_some() {
+                AuthorizedOutcomeReports::<T>::remove(market_id);
             }
+            Ok(result.map(|report| report.outcome))
         }
 
         fn get_auto_resolve(
@@ -230,11 +230,11 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
-            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
-                Ok(Self::get_auto_resolve(market_id))
-            } else {
-                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            Ok(Self::get_auto_resolve(market_id))
         }
 
         fn is_fail(
@@ -242,15 +242,15 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<bool, DispatchError> {
-            if let MarketDisputeMechanism::Authorized = market.dispute_mechanism {
-                let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
-                let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
-                let now = frame_system::Pallet::<T>::block_number();
-                let is_expired = report.at.saturating_add(T::ReportPeriod::get()) < now;
-                Ok(is_unreported && is_expired)
-            } else {
-                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            let now = frame_system::Pallet::<T>::block_number();
+            let is_expired = report.at.saturating_add(T::ReportPeriod::get()) < now;
+            Ok(is_unreported && is_expired)
         }
     }
 

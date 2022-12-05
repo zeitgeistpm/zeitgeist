@@ -50,6 +50,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
@@ -507,9 +508,10 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
             let necessary_jurors_num = Self::necessary_jurors_num(disputes);
             let mut rng = Self::rng();
@@ -531,9 +533,10 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
             let requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
                 .map(|(juror_id, max_allowed_block)| {
@@ -559,10 +562,10 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
-
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             Ok(None)
         }
 
@@ -571,9 +574,10 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<bool, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             // TODO when does court fail?
             Ok(false)
         }

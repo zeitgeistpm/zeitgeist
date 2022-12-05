@@ -191,8 +191,8 @@ mod tests_auto_resolution {
                 BoundedVec::try_from(vec![market_id]).unwrap(),
             );
 
-            let resolve_at = now
-                .saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
+            let resolve_at =
+                now.saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
 
             let full_ids: Vec<MarketId> = (MarketId::from(1u64)..=MarketId::from(64u64)).collect();
 
@@ -436,8 +436,8 @@ mod tests_authorized {
             AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
 
             let now = <frame_system::Pallet<Runtime>>::block_number();
-            let resolve_at: <Runtime as frame_system::Config>::BlockNumber = now
-                .saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
+            let resolve_at: <Runtime as frame_system::Config>::BlockNumber =
+                now.saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
             let expected = Some(AuthorityReport { resolve_at, outcome });
 
             let actual = frame_support::migration::get_storage_value::<
@@ -457,8 +457,8 @@ mod tests_authorized {
             let hash = crate::migrations::utility::key_to_hash::<Twox64Concat, MarketId>(0);
             let outcome = OutcomeReport::Categorical(42u16);
             let now = <frame_system::Pallet<Runtime>>::block_number();
-            let resolve_at: <Runtime as frame_system::Config>::BlockNumber = now
-                .saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
+            let resolve_at: <Runtime as frame_system::Config>::BlockNumber =
+                now.saturating_add(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
             let report = AuthorityReport { resolve_at, outcome };
             put_storage_value::<
                 Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
