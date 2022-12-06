@@ -19,7 +19,9 @@
 
 use crate::{self as zrml_authorized};
 use frame_support::{
-    construct_runtime, ord_parameter_types, pallet_prelude::{DispatchError, Weight}, traits::Everything,
+    construct_runtime, ord_parameter_types,
+    pallet_prelude::{DispatchError, Weight},
+    traits::Everything,
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{

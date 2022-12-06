@@ -61,8 +61,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     pub type CacheSize = ConstU32<64>;
 

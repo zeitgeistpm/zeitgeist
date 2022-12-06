@@ -18,7 +18,11 @@
 #![cfg(test)]
 
 use crate::{self as zrml_simple_disputes};
-use frame_support::{construct_runtime, pallet_prelude::{DispatchError, Weight}, traits::Everything};
+use frame_support::{
+    construct_runtime,
+    pallet_prelude::{DispatchError, Weight},
+    traits::Everything,
+};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},

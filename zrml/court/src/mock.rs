@@ -19,7 +19,11 @@
 
 use crate::{self as zrml_court};
 use frame_support::{
-    construct_runtime, pallet_prelude::{DispatchError, Weight}, parameter_types, traits::Everything, PalletId,
+    construct_runtime,
+    pallet_prelude::{DispatchError, Weight},
+    parameter_types,
+    traits::Everything,
+    PalletId,
 };
 use sp_runtime::{
     testing::Header,
