@@ -58,7 +58,9 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            ()
+            (
+                zrml_market_commons::migrations::UpdateMarketsForBaseAsset<Runtime>,
+            )
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -68,7 +70,9 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            ()
+            (
+                zrml_market_commons::migrations::UpdateMarketsForBaseAsset<Runtime>,
+            )
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

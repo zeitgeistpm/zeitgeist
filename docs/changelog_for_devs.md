@@ -1,3 +1,9 @@
+# v0.3.8
+
+- Create prediction markets with Ztg or registered foreign asset which has
+  `allow_in_pool` set to `true` in `AssetRegistry` metadata. Extrinsics related
+  to prediction market creation/editing now has `base_asset` parameter.
+
 # v0.3.7
 
 - Added on-chain arbitrage. See
@@ -11,6 +17,7 @@
   `tokens.Deposited` and `tokens.Transfer` events are also emitted.
 
 - Added new pallet: GlobalDisputes. Dispatchable calls are:
+
   - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for
     a constant fee. Errors if the voting outcome already exists or if the global
     dispute has not started or has already finished.
@@ -38,6 +45,7 @@
   Authorized MDM for resolving market.
 
 - Properly configured reserve asset transfers via XCM:
+
   - Added xTokens pallet to transfer tokens accross chains
   - Added AssetRegistry pallet to register foreign asset
   - Added UnknownTokens pallet to handle unknown foreign assets
@@ -62,7 +70,6 @@
 - `edit_market` extrinsic added, which enables creator of the market to edit
   market. It has same parameters as `create_market` except market_creation, on
   success it returns `MarketEdited` event.
-  
 - `get_spot_price()` RPC from Swaps support `with_fees` boolean parameter to
   include/exclude swap_fees in spot price, Currently this flag only works for
   CPMM.
