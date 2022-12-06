@@ -83,10 +83,10 @@ pub trait DisputeResolutionApi {
     type MarketId;
     type Moment;
 
-    /// Resolve a market. Fails if `on_resolution` from zrml-prediction-markets fails.
+    /// Resolve a market.
     ///
-    /// **Should only be called if the market dispute**
-    /// **mechanism is ready for the resolution ([`DisputeApi::on_resolution`]).**
+    /// **Should** only be called if the market dispute
+    /// mechanism is ready for the resolution ([`DisputeApi::on_resolution`]).
     ///
     /// # Returns
     ///
