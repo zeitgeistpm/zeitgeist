@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
-use frame_support::dispatch::DispatchResult;
+use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
 use sp_runtime::DispatchError;
 
 pub trait DisputeApi {
@@ -94,7 +94,7 @@ pub trait DisputeResolutionApi {
     fn resolve(
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<u64, DispatchError>;
+    ) -> Result<Weight, DispatchError>;
 
     /// Add a future block resolution of a disputed market.
     ///

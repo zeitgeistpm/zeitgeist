@@ -19,7 +19,7 @@
 
 use crate::{self as zrml_court};
 use frame_support::{
-    construct_runtime, pallet_prelude::DispatchError, parameter_types, traits::Everything, PalletId,
+    construct_runtime, pallet_prelude::{DispatchError, Weight}, parameter_types, traits::Everything, PalletId,
 };
 use sp_runtime::{
     testing::Header,
@@ -74,7 +74,7 @@ impl DisputeResolutionApi for NoopResolution {
     fn resolve(
         _market_id: &Self::MarketId,
         _market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<u64, DispatchError> {
+    ) -> Result<Weight, DispatchError> {
         Ok(0)
     }
 

@@ -2455,7 +2455,7 @@ mod pallet {
         pub fn on_resolution(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) -> Result<u64, DispatchError> {
+        ) -> Result<Weight, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),

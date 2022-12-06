@@ -18,7 +18,7 @@
 #![cfg(test)]
 
 use crate::{self as zrml_simple_disputes};
-use frame_support::{construct_runtime, pallet_prelude::DispatchError, traits::Everything};
+use frame_support::{construct_runtime, pallet_prelude::{DispatchError, Weight}, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -61,7 +61,7 @@ impl DisputeResolutionApi for NoopResolution {
     fn resolve(
         _market_id: &Self::MarketId,
         _market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<u64, DispatchError> {
+    ) -> Result<Weight, DispatchError> {
         Ok(0)
     }
 

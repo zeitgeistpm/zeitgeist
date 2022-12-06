@@ -19,7 +19,7 @@
 
 use crate::{self as zrml_authorized};
 use frame_support::{
-    construct_runtime, ord_parameter_types, pallet_prelude::DispatchError, traits::Everything,
+    construct_runtime, ord_parameter_types, pallet_prelude::{DispatchError, Weight}, traits::Everything,
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
@@ -73,7 +73,7 @@ impl DisputeResolutionApi for NoopResolution {
     fn resolve(
         _market_id: &Self::MarketId,
         _market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<u64, DispatchError> {
+    ) -> Result<Weight, DispatchError> {
         Ok(0)
     }
 
