@@ -922,7 +922,7 @@ macro_rules! impl_config_traits {
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
-            type MarketCommonsAuthorized = MarketCommons;
+            type MarketCommons = MarketCommons;
             type PalletId = AuthorizedPalletId;
             type ReportPeriod = ReportPeriod;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;

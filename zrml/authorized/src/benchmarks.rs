@@ -44,7 +44,7 @@ benchmarks! {
         let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
         let market_id = 0u32.into();
         let market = market_mock::<T>();
-        T::MarketCommonsAuthorized::push_market(market).unwrap();
+        T::MarketCommons::push_market(market).unwrap();
         let call = Call::<T>::authorize_market_outcome {
             market_id,
             outcome: OutcomeReport::Scalar(1),
@@ -55,14 +55,14 @@ benchmarks! {
         let resolve_at = now.saturating_add(T::CorrectionPeriod::get() - 1u32.into());
         let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(0) };
         for _ in 1..=m {
-            let id = T::MarketCommonsAuthorized::push_market(market_mock::<T>()).unwrap();
+            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
             T::DisputeResolution::add_auto_resolve(&id, resolve_at).unwrap();
         }
         AuthorizedOutcomeReports::<T>::insert(market_id, report);
 
         let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
         for _ in 1..=d {
-            let id = T::MarketCommonsAuthorized::push_market(market_mock::<T>()).unwrap();
+            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
             T::DisputeResolution::add_auto_resolve(&id, correction_period_ends_at).unwrap();
         }
     }: { call.dispatch_bypass_filter(origin)? }

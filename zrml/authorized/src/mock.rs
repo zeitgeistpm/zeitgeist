@@ -94,7 +94,7 @@ impl crate::Config for Runtime {
     type Event = ();
     type CorrectionPeriod = CorrectionPeriod;
     type DisputeResolution = NoopResolution;
-    type MarketCommonsAuthorized = MarketCommons;
+    type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
