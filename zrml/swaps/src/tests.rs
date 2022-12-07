@@ -186,7 +186,7 @@ fn allows_the_full_user_lifecycle() {
         let asset_b_bal = Currencies::free_balance(ASSET_B, &ALICE);
 
         // swap_exact_amount_in
-        let spot_price = Swaps::get_spot_price(&0, &ASSET_A, &ASSET_B).unwrap();
+        let spot_price = Swaps::get_spot_price(&0, &ASSET_A, &ASSET_B, true).unwrap();
         assert_eq!(spot_price, _1);
 
         let pool_account = Swaps::pool_account_id(&0);
@@ -689,25 +689,26 @@ fn most_operations_fail_if_pool_is_clean() {
     });
 }
 
-#[test_case(_3, _3, _100, _100, 0, 10_000_000_000)]
-#[test_case(_3, _3, _100, _150, 0, 6_666_666_667)]
-#[test_case(_3, _4, _100, _100, 0, 13_333_333_333)]
-#[test_case(_3, _4, _100, _150, 0, 8_888_888_889)]
-#[test_case(_3, _6, _125, _150, 0, 16_666_666_667)]
-#[test_case(_3, _6, _125, _100, 0, 25_000_000_000)]
-#[test_case(_3, _3, _100, _100, _1_10, 11_111_111_111)]
-#[test_case(_3, _3, _100, _150, _1_10, 7_407_407_408)]
-#[test_case(_3, _4, _100, _100, _1_10, 14_814_814_814)]
-#[test_case(_3, _4, _100, _150, _1_10, 9_876_543_210)]
-#[test_case(_3, _6, _125, _150, _1_10, 18_518_518_519)]
-#[test_case(_3, _6, _125, _100, _1_10, 27_777_777_778)]
+#[test_case(_3, _3, _100, _100, 0, 10_000_000_000, 10_000_000_000)]
+#[test_case(_3, _3, _100, _150, 0, 6_666_666_667, 6_666_666_667)]
+#[test_case(_3, _4, _100, _100, 0, 13_333_333_333, 13_333_333_333)]
+#[test_case(_3, _4, _100, _150, 0, 8_888_888_889, 8_888_888_889)]
+#[test_case(_3, _6, _125, _150, 0, 16_666_666_667, 16_666_666_667)]
+#[test_case(_3, _6, _125, _100, 0, 25_000_000_000, 25_000_000_000)]
+#[test_case(_3, _3, _100, _100, _1_10, 11_111_111_111, 10_000_000_000)]
+#[test_case(_3, _3, _100, _150, _1_10, 7_407_407_408, 6_666_666_667)]
+#[test_case(_3, _4, _100, _100, _1_10, 14_814_814_814, 13_333_333_333)]
+#[test_case(_3, _4, _100, _150, _1_10, 9_876_543_210, 8_888_888_889)]
+#[test_case(_3, _6, _125, _150, _1_10, 18_518_518_519, 16_666_666_667)]
+#[test_case(_3, _6, _125, _100, _1_10, 27_777_777_778, 25_000_000_000)]
 fn get_spot_price_returns_correct_results_cpmm(
     weight_in: u128,
     weight_out: u128,
     balance_in: BalanceOf<Runtime>,
     balance_out: BalanceOf<Runtime>,
     swap_fee: BalanceOf<Runtime>,
-    expected_spot_price: BalanceOf<Runtime>,
+    expected_spot_price_with_fees: BalanceOf<Runtime>,
+    expected_spot_price_without_fees: BalanceOf<Runtime>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
         // We always swap ASSET_A for ASSET_B, but we vary the weights, balances and swap fees.
@@ -734,8 +735,13 @@ fn get_spot_price_returns_correct_results_cpmm(
 
         let abs_tol = 100;
         assert_approx!(
-            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B).unwrap(),
-            expected_spot_price,
+            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B, true).unwrap(),
+            expected_spot_price_with_fees,
+            abs_tol,
+        );
+        assert_approx!(
+            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B, false).unwrap(),
+            expected_spot_price_without_fees,
             abs_tol,
         );
     });
@@ -747,23 +753,24 @@ fn get_spot_price_returns_correct_results_rikiddo() {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
         let pool_id = 0;
         assert_noop!(
-            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[0]),
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[0], true),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         subsidize_and_start_rikiddo_pool(pool_id, &ALICE, 0);
 
         // Asset out, base currency in. Should receive about 1/3 -> price about 3
         let price_base_in =
-            Swaps::get_spot_price(&pool_id, &ASSETS[0], ASSETS.last().unwrap()).unwrap();
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], ASSETS.last().unwrap(), true).unwrap();
         // Between 0.3 and 0.4
         assert!(price_base_in > 28 * BASE / 10 && price_base_in < 31 * BASE / 10);
         // Base currency in, asset out. Price about 3.
         let price_base_out =
-            Swaps::get_spot_price(&pool_id, ASSETS.last().unwrap(), &ASSETS[0]).unwrap();
+            Swaps::get_spot_price(&pool_id, ASSETS.last().unwrap(), &ASSETS[0], true).unwrap();
         // Between 2.9 and 3.1
         assert!(price_base_out > 3 * BASE / 10 && price_base_out < 4 * BASE / 10);
         // Asset in, asset out. Price about 1.
-        let price_asset_in_out = Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[1]).unwrap();
+        let price_asset_in_out =
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[1], true).unwrap();
         // Between 0.9 and 1.1
         assert!(price_asset_in_out > 9 * BASE / 10 && price_asset_in_out < 11 * BASE / 10);
     });

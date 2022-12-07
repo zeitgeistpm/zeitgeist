@@ -151,6 +151,8 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type OnDust = ();
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -236,8 +238,9 @@ sp_api::mock_impl_runtime_apis! {
             pool_id: &PoolId,
             asset_in: &Asset<MarketId>,
             asset_out: &Asset<MarketId>,
+            with_fees: bool,
         ) -> SerdeWrapper<Balance> {
-            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
+            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
         }
 
         fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {

@@ -1498,11 +1498,6 @@ mod pallet {
         #[pallet::constant]
         type MaxRejectReasonLen: Get<u32>;
 
-        //NOTE: DisputePeriod will be removed once relevant migrations are executed.
-        /// The number of blocks the dispute period remains open.
-        #[pallet::constant]
-        type DisputePeriod: Get<Self::BlockNumber>;
-
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
@@ -1521,11 +1516,6 @@ mod pallet {
         ///  in a timely manner.
         #[pallet::constant]
         type OracleBond: Get<BalanceOf<Self>>;
-
-        //NOTE: ReportingPeriod will be removed once relevant migrations are executed.
-        /// The number of blocks the reporting period remains open.
-        #[pallet::constant]
-        type ReportingPeriod: Get<Self::BlockNumber>;
 
         /// The origin that is allowed to request edits in pending advised markets.
         type RequestEditOrigin: EnsureOrigin<Self::Origin>;

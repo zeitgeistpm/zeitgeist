@@ -548,8 +548,8 @@ mod pallet {
                 Self::manage_tardy_jurors(&requested_jurors, |_| false)?
             };
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
-            Votes::<T>::remove_prefix(market_id, None);
-            RequestedJurors::<T>::remove_prefix(market_id, None);
+            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
             Ok(Some(first))
         }
     }

@@ -24,7 +24,7 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize},
+    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
 use sp_arithmetic::per_things::Percent;
@@ -73,8 +73,6 @@ ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
-    pub const DisputePeriod: BlockNumber = 10;
-    pub const ReportingPeriod: BlockNumber = 11;
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
@@ -146,7 +144,6 @@ impl crate::Config for Runtime {
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
@@ -170,7 +167,6 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ReportingPeriod = ReportingPeriod;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
@@ -225,6 +221,8 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type OnDust = ();
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -363,6 +361,7 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBondMaximum = ();
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SpendFunds = ();
+    type SpendOrigin = NeverEnsureOrigin<Balance>;
     type SpendPeriod = ();
     type WeightInfo = ();
 }
