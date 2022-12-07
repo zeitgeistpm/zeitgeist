@@ -58,10 +58,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
-                zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
-            )
+            (),
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -71,10 +68,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
-                zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
-            )
+            (),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -920,7 +914,7 @@ macro_rules! impl_config_traits {
         impl zrml_authorized::Config for Runtime {
             type Event = Event;
             type MarketCommons = MarketCommons;
-            type AuthorizedDisputeResolutionOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type PalletId = AuthorizedPalletId;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
@@ -985,7 +979,6 @@ macro_rules! impl_config_traits {
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
-            type DisputePeriod = DisputePeriod;
             type Event = Event;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
@@ -1012,7 +1005,6 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type ReportingPeriod = ReportingPeriod;
             type RequestEditOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
