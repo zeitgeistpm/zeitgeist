@@ -138,14 +138,14 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The authority already made its report.
-        AuthorityAlreadyReported,
         /// An unauthorized account attempts to submit a report.
         NotAuthorizedForThisMarket,
         /// The market unexpectedly has the incorrect dispute mechanism.
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
         MarketIsNotDisputed,
+        /// Only one dispute is allowed.
+        OnlyOneDisputeAllowed,
         /// The report does not match the market's type.
         OutcomeMismatch,
         /// The market should be reported at this point.
@@ -193,17 +193,15 @@ mod pallet {
         type Origin = T::Origin;
 
         fn on_dispute(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            market_id: &Self::MarketId,
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            if AuthorizedOutcomeReports::<T>::get(market_id).is_some() {
-                return Err(Error::<T>::AuthorityAlreadyReported.into());
-            }
+            ensure!(disputes.len() == 0usize, Error::<T>::OnlyOneDisputeAllowed);
             Ok(())
         }
 

@@ -2059,7 +2059,7 @@ fn dispute_fails_authority_reported_already() {
 
         assert_noop!(
             PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
-            AuthorizedError::<Runtime>::AuthorityAlreadyReported
+            AuthorizedError::<Runtime>::OnlyOneDisputeAllowed
         );
     });
 }
@@ -2313,32 +2313,17 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_0 = end + grace_period + 2;
-        run_to_block(dispute_at_0);
+        let dispute_at = end + grace_period + 2;
+        run_to_block(dispute_at);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
-        let dispute_at_1 = dispute_at_0 + 1;
-        run_to_block(dispute_at_1);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        let dispute_at_2 = dispute_at_1 + 1;
-        run_to_block(dispute_at_2);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
 
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
-        let eve_reserved = Balances::reserved_balance(&EVE);
         let disputes = crate::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 3);
+        assert_eq!(disputes.len(), 1);
 
         run_blocks(<Runtime as zrml_authorized::Config>::ReportPeriod::get() + 1);
         assert_ok!(PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), 0));
@@ -2354,13 +2339,9 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         // slashed amounts
         // ---------------------------
         // - Charlie's reserve: DisputeBond::get()
-        // - Eve's reserve: DisputeBond::get() + 2 * DisputeFactor::get()
-        //
-        // All goes to Dave (because Bob is - strictly speaking - not a disputor).
+        // The market defaults on the report provided by the oracle.
+        // Charlie disputed a different outcome than the oracle reported.
         assert_eq!(Balances::free_balance(&CHARLIE), 1_000 * BASE - charlie_reserved);
-        assert_eq!(Balances::free_balance(&EVE), 1_000 * BASE - eve_reserved);
-        let total_slashed = charlie_reserved + eve_reserved;
-        assert_eq!(Balances::free_balance(&DAVE), 1_000 * BASE + total_slashed);
 
         // The oracle report was accepted, so Alice is not slashed.
         assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
@@ -2497,16 +2478,15 @@ fn start_global_dispute_fails_on_wrong_mdm() {
         let dispute_at_0 = end + grace_period + 2;
         run_to_block(dispute_at_0);
 
-        for i in 1..=<Runtime as Config>::MaxDisputes::get() {
-            assert_ok!(PredictionMarkets::dispute(
-                Origin::signed(CHARLIE),
-                market_id,
-                OutcomeReport::Categorical(i.saturated_into())
-            ));
-            run_blocks(1);
-            let market = MarketCommons::market(&market_id).unwrap();
-            assert_eq!(market.status, MarketStatus::Disputed);
-        }
+        // only one dispute allowed for authorized mdm
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            market_id,
+            OutcomeReport::Categorical(1u32.saturated_into())
+        ));
+        run_blocks(1);
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
 
         #[cfg(feature = "with-global-disputes")]
         assert_noop!(
@@ -3078,28 +3058,20 @@ fn authorized_correctly_resolves_disputed_market() {
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_0 = grace_period + 1 + 1;
-        run_to_block(dispute_at_0);
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+
+        let dispute_at = grace_period + 1 + 1;
+        run_to_block(dispute_at);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
 
-        let dispute_at_1 = dispute_at_0 + 1;
-        run_to_block(dispute_at_1);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        let dispute_at_2 = dispute_at_1 + 1;
-        run_to_block(dispute_at_2);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
 
         // Fred authorizses an outcome, but fat-fingers it on the first try.
         assert_ok!(Authorized::authorize_market_outcome(
@@ -3120,38 +3092,30 @@ fn authorized_correctly_resolves_disputed_market() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        let dave_reserved = Balances::reserved_balance(&DAVE);
-        assert_eq!(dave_reserved, DisputeBond::get() + DisputeFactor::get());
-
-        let eve_reserved = Balances::reserved_balance(&EVE);
-        assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
-
         // check disputes length
         let disputes = crate::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 3);
+        assert_eq!(disputes.len(), 1);
 
-        // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_0 + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
+            dispute_at + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
         );
-        assert_eq!(market_ids_1.len(), 0);
+        assert_eq!(market_ids_1.len(), 1);
 
-        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_1 + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
-        );
-        assert_eq!(market_ids_2.len(), 0);
-
-        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_2 + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
-        );
-        assert_eq!(market_ids_3.len(), 1);
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
 
         run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get() - 1);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Disputed);
 
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+
         run_blocks(1);
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -3160,26 +3124,10 @@ fn authorized_correctly_resolves_disputed_market() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
-        // Make sure rewards are right:
-        //
-        // Slashed amounts:
-        //     - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
-        //     - Alice's oracle bond: OracleBond::get()
-        // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
-        //
-        // Charlie and Eve each receive half of the total slashed amount as bounty.
-        let dave_reserved = DisputeBond::get() + DisputeFactor::get();
-        let total_slashed = OracleBond::get() + dave_reserved;
-
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + total_slashed / 2);
+        assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
-        let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
-
-        let dave_balance = Balances::free_balance(&DAVE);
-        assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
 
         let alice_balance = Balances::free_balance(&ALICE);
         assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
