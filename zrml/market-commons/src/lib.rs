@@ -55,6 +55,12 @@ mod pallet {
 
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
+    type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+    >;
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
@@ -179,9 +185,7 @@ mod pallet {
             Ok(())
         }
 
-        pub fn market(
-            market_id: &T::MarketId,
-        ) -> Result<Market<T::AccountId, T::BlockNumber, MomentOf<T>>, DispatchError> {
+        pub fn market(market_id: &T::MarketId) -> Result<MarketOf<T>, DispatchError> {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
@@ -215,10 +219,7 @@ mod pallet {
             <Markets<T>>::iter()
         }
 
-        fn market(
-            market_id: &Self::MarketId,
-        ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>
-        {
+        fn market(market_id: &Self::MarketId) -> Result<MarketOf<T>, DispatchError> {
             Self::market(market_id)
         }
 

@@ -18,7 +18,6 @@
 #![cfg(test)]
 
 use crate::{
-    market_commons_pallet_api::MarketCommonsPalletApi,
     mock::{ExtBuilder, MarketCommons, Runtime},
     MarketCounter, Markets,
 };

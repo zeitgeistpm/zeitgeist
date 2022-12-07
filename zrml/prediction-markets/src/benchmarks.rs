@@ -43,7 +43,6 @@ use zeitgeist_primitives::{
         SubsidyUntil,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
 
