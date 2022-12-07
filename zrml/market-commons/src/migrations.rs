@@ -74,7 +74,11 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
         let mut total_weight = T::DbWeight::get().reads(1);
         let storage_version = utility::get_on_chain_storage_version_of_market_commons_pallet();
         if storage_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
-            log::info!("Skipping updates of markets; prediction-markets already up to date");
+            log::info!(
+                "Skipping updates of markets; market-commons storage version is {:?}, required {:?}",
+                storage_version,
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
+            );
             return total_weight;
         }
         log::info!("Starting updates of markets");
