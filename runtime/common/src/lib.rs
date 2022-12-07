@@ -989,7 +989,6 @@ macro_rules! impl_config_traits {
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
-            type DisputePeriod = DisputePeriod;
             type Event = Event;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
@@ -1016,7 +1015,6 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type ReportingPeriod = ReportingPeriod;
             type RequestEditOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
