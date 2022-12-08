@@ -835,7 +835,7 @@ benchmarks! {
         }
 
         // only one dispute allowed for authorized mdm
-        let dispute_outcome = OutcomeReport::Scalar(1u128.into());
+        let dispute_outcome = OutcomeReport::Scalar(1u128);
         let call = Call::<T>::dispute { market_id, outcome: dispute_outcome };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
@@ -897,7 +897,7 @@ benchmarks! {
         // authorize mdm allows only one dispute
         let outcome = OutcomeReport::Categorical(1u16);
         let disputor = account("disputor", 0, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0 as usize);
+        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
         T::AssetManager::deposit(
             Asset::Ztg,
             &disputor,
