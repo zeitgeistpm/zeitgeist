@@ -201,7 +201,7 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            ensure!(disputes.len() == 0usize, Error::<T>::OnlyOneDisputeAllowed);
+            ensure!(disputes.is_empty(), Error::<T>::OnlyOneDisputeAllowed);
             Ok(())
         }
 
