@@ -127,72 +127,6 @@ mod pallet {
             <MarketCounter<T>>::put(new_counter);
             Ok(id)
         }
-
-        pub fn mutate_market<F>(market_id: &T::MarketId, cb: F) -> DispatchResult
-        where
-            F: FnOnce(&mut Market<T::AccountId, T::BlockNumber, MomentOf<T>>) -> DispatchResult,
-        {
-            <Markets<T>>::try_mutate(market_id, |opt| {
-                if let Some(market) = opt {
-                    cb(market)?;
-                    return Ok(());
-                }
-                Err(Error::<T>::MarketDoesNotExist.into())
-            })
-        }
-
-        pub fn insert_market_pool(market_id: T::MarketId, pool_id: PoolId) -> DispatchResult {
-            ensure!(!<MarketPool<T>>::contains_key(market_id), Error::<T>::PoolAlreadyExists);
-            ensure!(<Markets<T>>::contains_key(market_id), Error::<T>::MarketDoesNotExist);
-            <MarketPool<T>>::insert(market_id, pool_id);
-            Ok(())
-        }
-
-        pub fn remove_market_pool(market_id: &T::MarketId) -> DispatchResult {
-            if !<MarketPool<T>>::contains_key(market_id) {
-                return Err(Error::<T>::MarketPoolDoesNotExist.into());
-            }
-            <MarketPool<T>>::remove(market_id);
-            Ok(())
-        }
-
-        pub fn now() -> MomentOf<T> {
-            T::Timestamp::now()
-        }
-
-        pub fn latest_market_id() -> Result<T::MarketId, DispatchError> {
-            match <MarketCounter<T>>::try_get() {
-                Ok(market_id) => {
-                    Ok(market_id.saturating_sub(1u8.into())) // Note: market_id > 0!
-                }
-                _ => Err(Error::<T>::NoMarketHasBeenCreated.into()),
-            }
-        }
-
-        pub fn push_market(
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<T::MarketId, DispatchError> {
-            let market_id = Self::next_market_id()?;
-            <Markets<T>>::insert(market_id, market);
-            Ok(market_id)
-        }
-
-        pub fn remove_market(market_id: &T::MarketId) -> DispatchResult {
-            if !<Markets<T>>::contains_key(market_id) {
-                return Err(Error::<T>::MarketDoesNotExist.into());
-            }
-            <Markets<T>>::remove(market_id);
-            Ok(())
-        }
-
-        pub fn market(market_id: &T::MarketId) -> Result<MarketOf<T>, DispatchError> {
-            <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
-        }
-
-        pub fn market_pool(market_id: &T::MarketId) -> Result<PoolId, DispatchError> {
-            <MarketPool<T>>::try_get(market_id)
-                .map_err(|_err| Error::<T>::MarketPoolDoesNotExist.into())
-        }
     }
 
     impl<T> MarketCommonsPalletApi for Pallet<T>
@@ -209,7 +143,12 @@ mod pallet {
         // Market
 
         fn latest_market_id() -> Result<Self::MarketId, DispatchError> {
-            Self::latest_market_id()
+            match <MarketCounter<T>>::try_get() {
+                Ok(market_id) => {
+                    Ok(market_id.saturating_sub(1u8.into())) // Note: market_id > 0!
+                }
+                _ => Err(Error::<T>::NoMarketHasBeenCreated.into()),
+            }
         }
 
         fn market_iter() -> PrefixIterator<(
@@ -220,7 +159,7 @@ mod pallet {
         }
 
         fn market(market_id: &Self::MarketId) -> Result<MarketOf<T>, DispatchError> {
-            Self::market(market_id)
+            <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
@@ -229,17 +168,29 @@ mod pallet {
                 &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
             ) -> DispatchResult,
         {
-            Self::mutate_market(market_id, cb)
+            <Markets<T>>::try_mutate(market_id, |opt| {
+                if let Some(market) = opt {
+                    cb(market)?;
+                    return Ok(());
+                }
+                Err(Error::<T>::MarketDoesNotExist.into())
+            })
         }
 
         fn push_market(
             market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> Result<Self::MarketId, DispatchError> {
-            Self::push_market(market)
+            let market_id = Self::next_market_id()?;
+            <Markets<T>>::insert(market_id, market);
+            Ok(market_id)
         }
 
         fn remove_market(market_id: &Self::MarketId) -> DispatchResult {
-            Self::remove_market(market_id)
+            if !<Markets<T>>::contains_key(market_id) {
+                return Err(Error::<T>::MarketDoesNotExist.into());
+            }
+            <Markets<T>>::remove(market_id);
+            Ok(())
         }
 
         // TODO(#837): Remove when on-chain arbitrage is removed!
@@ -252,21 +203,29 @@ mod pallet {
         // MarketPool
 
         fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) -> DispatchResult {
-            Self::insert_market_pool(market_id, pool_id)
+            ensure!(!<MarketPool<T>>::contains_key(market_id), Error::<T>::PoolAlreadyExists);
+            ensure!(<Markets<T>>::contains_key(market_id), Error::<T>::MarketDoesNotExist);
+            <MarketPool<T>>::insert(market_id, pool_id);
+            Ok(())
         }
 
         fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult {
-            Self::remove_market_pool(market_id)
+            if !<MarketPool<T>>::contains_key(market_id) {
+                return Err(Error::<T>::MarketPoolDoesNotExist.into());
+            }
+            <MarketPool<T>>::remove(market_id);
+            Ok(())
         }
 
         fn market_pool(market_id: &Self::MarketId) -> Result<PoolId, DispatchError> {
-            Self::market_pool(market_id)
+            <MarketPool<T>>::try_get(market_id)
+                .map_err(|_err| Error::<T>::MarketPoolDoesNotExist.into())
         }
 
         // Etc
 
         fn now() -> Self::Moment {
-            Self::now()
+            T::Timestamp::now()
         }
     }
 
