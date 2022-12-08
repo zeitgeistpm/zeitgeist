@@ -438,7 +438,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get()))]
+        #[pallet::weight(T::WeightInfo::dispute_authorized())]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -484,7 +484,7 @@ mod pallet {
                 MarketStatus::Disputed,
                 market_dispute,
             ));
-            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes))).into())
+            Ok((Some(T::WeightInfo::dispute_authorized())).into())
         }
 
         /// Resolve the market, when the dispute mechanism failed.
@@ -493,8 +493,8 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
         #[pallet::weight(
-            T::WeightInfo::resolve_failed_mdm_authorized_categorical(T::MaxDisputes::get())
-                .max(T::WeightInfo::resolve_failed_mdm_authorized_scalar(T::MaxDisputes::get()))
+            T::WeightInfo::resolve_failed_mdm_authorized_categorical()
+                .max(T::WeightInfo::resolve_failed_mdm_authorized_scalar())
         )]
         #[transactional]
         pub fn resolve_failed_mdm(
@@ -505,7 +505,6 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             let disputes = Disputes::<T>::get(market_id);
-            let disputes_len = disputes.len() as u32;
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             let is_fail = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
@@ -523,11 +522,9 @@ mod pallet {
             Self::deposit_event(Event::DisputeMechanismFailed(market_id));
 
             let weight = match market.market_type {
-                MarketType::Scalar(_) => {
-                    T::WeightInfo::resolve_failed_mdm_authorized_scalar(disputes_len)
-                }
+                MarketType::Scalar(_) => T::WeightInfo::resolve_failed_mdm_authorized_scalar(),
                 MarketType::Categorical(_) => {
-                    T::WeightInfo::resolve_failed_mdm_authorized_categorical(disputes_len)
+                    T::WeightInfo::resolve_failed_mdm_authorized_categorical()
                 }
             };
 
