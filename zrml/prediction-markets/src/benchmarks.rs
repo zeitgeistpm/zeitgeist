@@ -76,14 +76,15 @@ fn create_market_common_parameters<T: Config>(
 }
 
 // Create a market based on common parameters
-fn create_market_common<T: Config>(
+fn create_market_common<T: Config + pallet_timestamp::Config>(
     permission: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
     period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
     let range_start: MomentOf<T> = 100_000u64.saturated_into();
-    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
@@ -108,7 +109,7 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let range_start: MomentOf<T> = 100_000u64.saturated_into();
-    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
     let period = MarketPeriod::Timestamp(range_start..range_end);
     let (caller, market_id) =
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
@@ -350,7 +351,7 @@ benchmarks! {
         let c in 0..63;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -455,7 +456,7 @@ benchmarks! {
         )?;
 
         <T as pallet::Config>::MarketCommons::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
 
@@ -493,10 +494,11 @@ benchmarks! {
     }: {
         call.dispatch_bypass_filter(close_origin)?
     } verify {
+        // simple disputes resolves to the last dispute outcome
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
             MarketStatus::Resolved,
-            OutcomeReport::Scalar(u128::MAX),
+            OutcomeReport::Scalar(d.into()),
         ).into());
     }
 
@@ -512,7 +514,7 @@ benchmarks! {
             )?;
 
         <T as pallet::Config>::MarketCommons::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
 
@@ -546,7 +548,7 @@ benchmarks! {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
             MarketStatus::Resolved,
-            OutcomeReport::Categorical(0u16),
+            OutcomeReport::Categorical((d % 2).saturated_into::<u16>()),
         ).into());
     }
 
@@ -623,7 +625,7 @@ benchmarks! {
         let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         let scoring_rule = ScoringRule::CPMM;
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
         let (caller, oracle, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
@@ -673,7 +675,7 @@ benchmarks! {
         let o in 0..63;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
@@ -729,7 +731,7 @@ benchmarks! {
         // We need to ensure, that period range start is now,
         // because we would like to open the pool now
         let range_start: MomentOf<T> = <T as pallet::Config>::MarketCommons::now();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
@@ -813,8 +815,6 @@ benchmarks! {
     }
 
     dispute_authorized {
-        let d in 0..(T::MaxDisputes::get() - 1);
-
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
@@ -829,26 +829,19 @@ benchmarks! {
 
         let market = <T as pallet::Config>::MarketCommons::market(&market_id)?;
         if let MarketType::Scalar(range) = market.market_type {
-            assert!((d as u128) < *range.end());
+            assert!(1u128 < *range.end());
         } else {
             panic!("Must create scalar market");
         }
-        for i in 0..d {
-            let outcome = OutcomeReport::Scalar(i.into());
-            let disputor = account("disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
 
-        let dispute_outcome = OutcomeReport::Scalar((d + 1).into());
+        // only one dispute allowed for authorized mdm
+        let dispute_outcome = OutcomeReport::Scalar(1u128.into());
         let call = Call::<T>::dispute { market_id, outcome: dispute_outcome };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
 
     resolve_failed_mdm_authorized_scalar {
-        let d in 1..T::MaxDisputes::get();
-
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
@@ -863,16 +856,16 @@ benchmarks! {
 
         let market = <T as pallet::Config>::MarketCommons::market(&market_id)?;
         if let MarketType::Scalar(range) = market.market_type {
-            assert!((d as u128) < *range.end());
+            assert!(1u128 < *range.end());
         } else {
             panic!("Must create scalar market");
         }
-        for i in 1..=d {
-            let outcome = OutcomeReport::Scalar(i.into());
-            let disputor = account("disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
+
+        // authorize mdm allows only one dispute
+        let outcome = OutcomeReport::Scalar(1u128);
+        let disputor = account("disputor", 0, 0);
+        T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
 
         let authority_report_period = <T as zrml_authorized::Config>::ReportPeriod::get();
         let now = <frame_system::Pallet<T>>::block_number();
@@ -889,8 +882,6 @@ benchmarks! {
     }
 
     resolve_failed_mdm_authorized_categorical {
-        let d in 1..T::MaxDisputes::get();
-
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
             setup_reported_categorical_market_with_pool::<T>(
@@ -903,17 +894,16 @@ benchmarks! {
             Ok(())
         })?;
 
-        for i in 1..=d {
-            let outcome = OutcomeReport::Categorical((i % 2).saturated_into::<u16>());
-            let disputor = account("disputor", i, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(
-                Asset::Ztg,
-                &disputor,
-                dispute_bond,
-            )?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
+        // authorize mdm allows only one dispute
+        let outcome = OutcomeReport::Categorical(1u16);
+        let disputor = account("disputor", 0, 0);
+        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0 as usize);
+        T::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            dispute_bond,
+        )?;
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
 
         let authority_report_period = <T as zrml_authorized::Config>::ReportPeriod::get();
         let now = <frame_system::Pallet<T>>::block_number();
@@ -968,7 +958,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         <T as pallet::Config>::MarketCommons::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
 
@@ -1011,7 +1001,8 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
         <T as pallet::Config>::MarketCommons::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            // to allow multiple disputes use simple disputes
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
         let market = <T as pallet::Config>::MarketCommons::market(&market_id)?;
@@ -1078,7 +1069,7 @@ benchmarks! {
         let r in 0..<T as Config>::MaxRejectReasonLen::get();
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -1110,7 +1101,7 @@ benchmarks! {
 
         // ensure range.start is now to get the heaviest path
         let range_start: MomentOf<T> = <T as pallet::Config>::MarketCommons::now();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -1191,7 +1182,7 @@ benchmarks! {
 
         // ensure markets exist
         let start_block: T::BlockNumber = 100_000u64.saturated_into();
-        let end_block: T::BlockNumber = 1_000_000u64.saturated_into();
+        let end_block: T::BlockNumber = 100_000_000u64.saturated_into();
         for _ in 0..31 {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
@@ -1202,7 +1193,7 @@ benchmarks! {
         }
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         for _ in 31..64 {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
@@ -1253,7 +1244,7 @@ benchmarks! {
         let d in 1..31;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_000u64.saturated_into();
         // ensure markets exist
         for _ in 0..64 {
             let (_, market_id) = create_market_common::<T>(
