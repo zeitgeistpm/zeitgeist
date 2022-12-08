@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{CacheSize, Config, MarketIdOf, Pallet};
-use alloc::vec::Vec;
+use alloc::{string::ToString, vec::Vec};
 use frame_support::{
     dispatch::Weight,
     log,
@@ -25,6 +25,8 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec,
 };
+#[cfg(feature = "try-runtime")]
+use scale_info::prelude::format;
 use sp_runtime::traits::{One, Saturating};
 use zeitgeist_primitives::types::{AuthorityReport, MarketDisputeMechanism, OutcomeReport};
 use zrml_authorized::Pallet as AuthorizedPallet;
@@ -380,11 +382,45 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        let counter_key = "counter_key".to_string();
+        Self::set_temp_storage(0_u32, &counter_key);
+        for (key, value) in
+            storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
+        {
+            Self::set_temp_storage(value, &format!("{:?}", key.as_slice()));
+
+            let counter: u32 =
+                Self::get_temp_storage(&counter_key).expect("counter key storage not found");
+            Self::set_temp_storage(counter + 1_u32, &counter_key);
+        }
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        let mut markets_count = 0_u32;
+        let old_counter_key = "counter_key".to_string();
+        for (key, new_value) in storage_iter::<Option<AuthorityReport<T::BlockNumber>>>(
+            AUTHORIZED,
+            AUTHORIZED_OUTCOME_REPORTS,
+        ) {
+            if let Some(AuthorityReport { resolve_at: _, outcome }) = new_value {
+                let old_value: Option<OutcomeReport> =
+                    Self::get_temp_storage(&format!("{:?}", key.as_slice()))
+                        .expect("old value not found");
+
+                assert_eq!(old_value.unwrap(), outcome);
+
+                markets_count += 1_u32;
+            } else {
+                panic!("storage iter should only find present (Option::Some) values");
+            }
+        }
+        let old_markets_count: u32 =
+            Self::get_temp_storage(&old_counter_key).expect("old counter key storage not found");
+        assert_eq!(markets_count, old_markets_count);
         Ok(())
     }
 }
