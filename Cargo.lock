@@ -12636,7 +12636,6 @@ dependencies = [
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
- "tracing",
  "tracing-core",
  "try-runtime-cli",
  "zeitgeist-primitives",
