@@ -1,3 +1,5 @@
+-   [ ] Check if there are any TODOs which are not linked to an issue of the
+        zeitgeist repository like this: `TODO(#999)`.
 -   [ ] Does the PR link relevant issues and contain a detailed description?
 -   [ ] If the PR changes the business logic, does it add the corresponding
         labels?
