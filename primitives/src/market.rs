@@ -28,7 +28,7 @@ use sp_runtime::RuntimeDebug;
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BN, M> {
+pub struct Market<AI, BN, M, BL> {
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -51,14 +51,14 @@ pub struct Market<AI, BN, M> {
     /// The current status of the market.
     pub status: MarketStatus,
     /// The report of the market. Only `Some` if it has been reported.
-    pub report: Option<Report<AI, BN>>,
+    pub report: Option<Report<AI, BN, BL>>,
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
 }
 
-impl<AI, BN, M> Market<AI, BN, M> {
+impl<AI, BN, M, BL> Market<AI, BN, M, BL> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -84,7 +84,7 @@ impl<AI, BN, M> Market<AI, BN, M> {
     }
 }
 
-impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M>
+impl<AI, BN, M, BL> MaxEncodedLen for Market<AI, BN, M, BL>
 where
     AI: MaxEncodedLen,
     BN: MaxEncodedLen,
@@ -102,7 +102,7 @@ where
             .saturating_add(Deadlines::<BN>::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
             .saturating_add(MarketStatus::max_encoded_len())
-            .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
+            .saturating_add(<Option<Report<AI, BN, BL>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
     }
@@ -209,10 +209,11 @@ impl MaxEncodedLen for MarketType {
 }
 
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Report<AccountId, BlockNumber> {
+pub struct Report<AccountId, BlockNumber, Balance> {
     pub at: BlockNumber,
     pub by: AccountId,
     pub outcome: OutcomeReport,
+    pub outsider_bond: Option<Balance>,
 }
 
 /// Contains a market id and the market period.

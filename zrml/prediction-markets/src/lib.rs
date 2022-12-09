@@ -1085,7 +1085,12 @@ mod pallet {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
-            let market_report = Report { at: current_block, by: sender.clone(), outcome };
+            let mut market_report = Report {
+                at: current_block,
+                by: sender.clone(),
+                outcome,
+                outsider_bond: None,
+            };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
@@ -1132,15 +1137,29 @@ mod pallet {
                     }
                 }
 
+                let sender_is_oracle = sender == market.oracle;
+                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
+                let sender_is_outsider = !sender_is_oracle && !origin_has_permission;
+
                 if should_check_origin {
-                    let sender_is_oracle = sender == market.oracle;
-                    let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
                     ensure!(
                         sender_is_oracle || origin_has_permission,
                         Error::<T>::ReporterNotOracle
                     );
+                } else if sender_is_outsider {
+                    let outsider_bond = T::OutsiderBond::get();
+
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &sender,
+                        outsider_bond,
+                    )?;
+
+                    market_report.outsider_bond = Some(outsider_bond);
                 }
 
+                
                 market.report = Some(market_report.clone());
                 market.status = MarketStatus::Reported;
 
@@ -1444,6 +1463,9 @@ mod pallet {
         /// The maximum number of bytes allowed as edit reason.
         #[pallet::constant]
         type MaxEditReasonLen: Get<u32>;
+
+        #[pallet::constant]
+        type OutsiderBond: Get<BalanceOf<Self>>;
 
         /// The module identifier.
         #[pallet::constant]
