@@ -10,7 +10,7 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 # Benchmark
-num-traits = "0.2.15"
+num-traits = { version = "0.2.15", default-features = false, optional = true }
 
 
 [dev-dependencies]
@@ -27,6 +27,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "num-traits",
 ]
 std = [
     "frame-benchmarking?/std",
