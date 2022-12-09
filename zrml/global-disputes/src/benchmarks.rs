@@ -281,8 +281,6 @@ benchmarks! {
             }
             .into(),
         );
-        // println!("Account {:?}", reward_account);
-        // println!("Free Balance {:?}", T::Currency::free_balance(&reward_account));
         assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
     }
 
