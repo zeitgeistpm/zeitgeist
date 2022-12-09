@@ -34,6 +34,7 @@ use frame_support::{
     traits::{Currency, Get},
     BoundedVec,
 };
+use num_traits::ops::checked::CheckedRem;
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
@@ -260,6 +261,7 @@ benchmarks! {
             &reward_account,
             T::VotingOutcomeFee::get().saturating_mul(10u128.saturated_into()),
         );
+        let reward_before = T::Currency::free_balance(&reward_account);
 
         let caller: T::AccountId = whitelisted_caller();
 
@@ -281,7 +283,10 @@ benchmarks! {
             }
             .into(),
         );
-        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
+        assert_eq!(
+            T::Currency::free_balance(&reward_account),
+            reward_before.checked_rem(&o.into()).unwrap(),
+        );
     }
 
     reward_outcome_owner_no_funds {

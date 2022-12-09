@@ -9,6 +9,9 @@ sp-std = { branch = "polkadot-v0.9.26", default-features = false, git = "https:/
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
+# Benchmark
+num-traits = "0.2.15"
+
 
 [dev-dependencies]
 pallet-balances = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
