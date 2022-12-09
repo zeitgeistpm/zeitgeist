@@ -34,8 +34,8 @@ use frame_support::{
     traits::{Currency, Get},
     BoundedVec,
 };
-use num_traits::ops::checked::CheckedRem;
 use frame_system::RawOrigin;
+use num_traits::ops::checked::CheckedRem;
 use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
