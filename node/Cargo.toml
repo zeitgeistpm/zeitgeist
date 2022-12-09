@@ -99,7 +99,8 @@ hex-literal = { version = "0.3.4" }
 jsonrpsee = { version = "0.14.0", features = ["server"] }
 log = { optional = true, version = "0.4.17" }
 # TODO(#865): Remove in future Polkadot release
-tracing-core = "=0.1.30"
+tracing-core = "=0.1.26"
+tracing = "=0.1.34"
 
 # Zeitgeist
 
