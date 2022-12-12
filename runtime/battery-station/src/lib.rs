@@ -53,10 +53,13 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
-    xcm_config::XcmConfig,
+    xcm_config::{
+        asset_registry::{CustomAssetProcessor, CustomMetadata},
+        config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
+    },
 };
 
 use frame_support::construct_runtime;
@@ -75,6 +78,9 @@ use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 
 #[cfg(feature = "parachain")]
+#[cfg(test)]
+pub mod integration_tests;
+#[cfg(feature = "parachain")]
 pub mod parachain_params;
 pub mod parameters;
 #[cfg(feature = "parachain")]
@@ -84,10 +90,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 40,
+    spec_version: 41,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 17,
+    transaction_version: 18,
     state_version: 1,
 };
 

@@ -32,11 +32,11 @@ mod utils;
 
 mod arbitrage;
 mod benchmarks;
-mod check_arithm_rslt;
+pub mod check_arithm_rslt;
 mod consts;
 mod events;
-mod fixed;
-mod math;
+pub mod fixed;
+pub mod math;
 pub mod migrations;
 pub mod mock;
 mod root;
@@ -1382,6 +1382,7 @@ mod pallet {
             pool_id: &PoolId,
             asset_in: &Asset<MarketIdOf<T>>,
             asset_out: &Asset<MarketIdOf<T>>,
+            with_fees: bool,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pool = Self::pool_by_id(*pool_id)?;
             ensure!(pool.assets.binary_search(asset_in).is_ok(), Error::<T>::AssetNotInPool);
@@ -1393,7 +1394,12 @@ mod pallet {
                 let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
                 let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
-                let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
+
+                let swap_fee = if with_fees {
+                    pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?
+                } else {
+                    BalanceOf::<T>::zero()
+                };
 
                 return Ok(crate::math::calc_spot_price(
                     balance_in.saturated_into(),
@@ -1405,6 +1411,7 @@ mod pallet {
                 .saturated_into());
             }
 
+            // TODO(#880): For now rikiddo does not respect with_fees flag.
             // Price when using Rikiddo.
             ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::PoolIsNotActive);
             let mut balances = Vec::new();

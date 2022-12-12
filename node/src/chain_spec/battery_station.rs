@@ -121,7 +121,9 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
 
 generate_generic_genesis_function!(
     battery_station_runtime,
-    sudo: battery_station_runtime::SudoConfig { key: Some(root_key_staging_battery_station()) },
+    sudo: battery_station_runtime::SudoConfig {
+        key: Some(root_key_staging_battery_station()),
+    },
 );
 
 pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, String> {

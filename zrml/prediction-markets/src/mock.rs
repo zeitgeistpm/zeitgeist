@@ -73,8 +73,6 @@ ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
-    pub const DisputePeriod: BlockNumber = 10;
-    pub const ReportingPeriod: BlockNumber = 11;
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
@@ -146,7 +144,6 @@ impl crate::Config for Runtime {
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
@@ -170,7 +167,6 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ReportingPeriod = ReportingPeriod;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;

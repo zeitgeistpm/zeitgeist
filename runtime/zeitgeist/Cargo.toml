@@ -72,11 +72,7 @@ session-keys-primitives = { tag = "v0.27.2-a", default-features = false, git = "
 
 # Polkadot
 
-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-xcm-builder = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-xcm-executor = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 
 # Standalone
 
@@ -89,6 +85,19 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.29", default-features =
 cfg-if = { version = "1.0.0" }
 hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.17", default-features = false, optional = true }
+
+# XCM
+kusama-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+orml-asset-registry = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-unknown-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-xcm-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-xtokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+pallet-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+polkadot-runtime-parachains = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+xcm-builder = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+xcm-executor = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 
 # Zeitgeist
 
@@ -108,6 +117,7 @@ zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/ru
 
 [dev-dependencies]
 sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+xcm-emulator = { rev = "ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe", git = "https://github.com/shaunxw/xcm-simulator" }
 
 [features]
 default = ["std"]
@@ -131,12 +141,19 @@ parachain = [
     "pallet-author-slot-filter",
     "pallet-crowdloan-rewards",
     "pallet-parachain-staking",
+    "polkadot-parachain",
     "session-keys-primitives",
 
-    # Polkadot
+    # XCM
 
+    "kusama-runtime",
+    "polkadot-primitives",
+    "polkadot-runtime-parachains",
+    "orml-asset-registry",
+    "orml-unknown-tokens",
+    "orml-xcm-support",
+    "orml-xtokens",
     "pallet-xcm",
-    "polkadot-parachain",
     "xcm-builder",
     "xcm-executor",
     "xcm",
@@ -154,7 +171,10 @@ runtime-benchmarks = [
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
     "hex-literal",
+    "kusama-runtime?/runtime-benchmarks",
+    "orml-asset-registry?/runtime-benchmarks",
     "orml-tokens/runtime-benchmarks",
+    "orml-xtokens?/runtime-benchmarks",
     "orml-benchmarking",
     "pallet-author-inherent?/runtime-benchmarks",
     "pallet-author-mapping?/runtime-benchmarks",
@@ -259,10 +279,16 @@ std = [
     "pallet-parachain-staking?/std",
     "session-keys-primitives?/std",
 
-    # Polkadot
+    # XCM
 
+    "kusama-runtime?/std",
+    "polkadot-primitives?/std",
+    "polkadot-runtime-parachains?/std",
+    "orml-asset-registry?/std",
+    "orml-unknown-tokens?/std",
+    "orml-xcm-support?/std",
+    "orml-xtokens?/std",
     "pallet-xcm?/std",
-    "polkadot-parachain?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",
@@ -321,8 +347,11 @@ try-runtime = [
     "pallet-utility/try-runtime",
 
     # ORML runtime pallets
+    "orml-asset-registry?/try-runtime",
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
+    "orml-unknown-tokens?/try-runtime",
+    "orml-xtokens?/try-runtime",
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",
@@ -366,7 +395,7 @@ with-global-disputes = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.6"
+version = "0.3.7"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
