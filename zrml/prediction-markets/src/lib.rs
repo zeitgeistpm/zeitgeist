@@ -150,6 +150,16 @@ mod pallet {
                     slash_market_creator(T::ValidityBond::get());
                 }
                 slash_market_creator(T::OracleBond::get());
+                if let Some(market_report) = market.report {
+                    if let Some(outsider_bond) = market_report.outsider_bond {
+                        T::AssetManager::slash_reserved_named(
+                            &Self::reserve_id(),
+                            Asset::Ztg,
+                            &market_report.by,
+                            outsider_bond,
+                        );
+                    }
+                }
             }
 
             // NOTE: Currently we don't clean up outcome assets.
