@@ -124,7 +124,7 @@ mod pallet {
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let market_status = market.status;
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
@@ -636,7 +636,7 @@ mod pallet {
             }
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
@@ -912,7 +912,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
 
@@ -1189,7 +1189,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             ensure!(
                 T::AssetManager::free_balance(Asset::Ztg, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
@@ -1991,7 +1991,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             T::AssetManager::transfer(Asset::Ztg, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
@@ -2620,10 +2620,6 @@ mod pallet {
             T::PalletId::get().0
         }
 
-        fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account_truncating(market_id.saturated_into::<u128>())
-        }
-
         pub(crate) fn market_status_manager<F, MarketIdsPerBlock, MarketIdsPerTimeFrame>(
             block_number: T::BlockNumber,
             last_time_frame: TimeFrame,
@@ -2725,7 +2721,7 @@ mod pallet {
             } else {
                 return Ok(T::DbWeight::get().reads(1));
             };
-            let market_account = Self::market_account(*market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(*market_id);
             let weight = T::Swaps::clean_up_pool(
                 &market.market_type,
                 pool_id,
