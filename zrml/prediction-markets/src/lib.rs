@@ -85,6 +85,7 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
     >;
@@ -1085,12 +1086,8 @@ mod pallet {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
-            let mut market_report = Report {
-                at: current_block,
-                by: sender.clone(),
-                outcome,
-                outsider_bond: None,
-            };
+            let mut market_report =
+                Report { at: current_block, by: sender.clone(), outcome, outsider_bond: None };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
@@ -1159,7 +1156,6 @@ mod pallet {
                     market_report.outsider_bond = Some(outsider_bond);
                 }
 
-                
                 market.report = Some(market_report.clone());
                 market.status = MarketStatus::Reported;
 
@@ -1405,6 +1401,7 @@ mod pallet {
         /// Common market parameters
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
         >;
 
@@ -1635,7 +1632,11 @@ mod pallet {
         /// A pending market has been rejected as invalid with a reason. \[market_id, reject_reason\]
         MarketRejected(MarketIdOf<T>, RejectReason<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
-        MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
+        MarketReported(
+            MarketIdOf<T>,
+            MarketStatus,
+            Report<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+        ),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
@@ -2103,7 +2104,7 @@ mod pallet {
 
         fn ensure_can_not_dispute_the_same_outcome(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            report: &Report<T::AccountId, T::BlockNumber>,
+            report: &Report<T::AccountId, BalanceOf<T>, T::BlockNumber>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
@@ -2808,7 +2809,7 @@ mod pallet {
             market_type: MarketType,
             dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
-            report: Option<Report<T::AccountId, T::BlockNumber>>,
+            report: Option<Report<T::AccountId, BalanceOf<T>, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let MultiHash::Sha3_384(multihash) = metadata;

@@ -37,7 +37,7 @@ use zeitgeist_primitives::{
     },
 };
 
-const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
+const DEFAULT_MARKET: Market<u128, u128, u64, u64> = Market {
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,

@@ -1003,6 +1003,7 @@ macro_rules! impl_config_traits {
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
+            type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type RequestEditOrigin = EitherOfDiverse<

@@ -51,6 +51,7 @@ parameter_types! {
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
+    pub const OutsiderBond: Balance = 25 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
     pub const MinDisputeDuration: BlockNumber = 2;

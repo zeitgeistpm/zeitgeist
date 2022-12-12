@@ -71,6 +71,7 @@ mod pallet {
         /// To reference the market id type.
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
         >;
 

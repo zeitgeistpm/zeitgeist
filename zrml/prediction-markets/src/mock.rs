@@ -42,8 +42,8 @@ use zeitgeist_primitives::{
         MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
         MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
         MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
-        MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
-        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        MinWeight, MinimumPeriod, OutsiderBond, PmPalletId, SimpleDisputesPalletId, StakeWeight,
+        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -165,6 +165,7 @@ impl crate::Config for Runtime {
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
+    type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
