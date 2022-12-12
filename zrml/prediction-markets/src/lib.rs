@@ -51,7 +51,7 @@ mod pallet {
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
+        traits::{CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
