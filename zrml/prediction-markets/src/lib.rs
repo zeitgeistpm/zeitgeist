@@ -40,8 +40,8 @@ mod pallet {
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
-            OnUnbalanced, StorageVersion,
+            tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
+            NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional,
         weights::Pays,
@@ -2305,6 +2305,15 @@ mod pallet {
                         err
                     );
                 }
+
+                if let Some(outsider_bond) = report.outsider_bond {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &report.by,
+                        outsider_bond,
+                    );
+                }
             }
 
             Ok(report.outcome.clone())
@@ -2356,12 +2365,41 @@ mod pallet {
                     T::OracleBond::get(),
                 );
             } else {
-                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                    &Self::reserve_id(),
-                    &market.creator,
-                    T::OracleBond::get().saturated_into::<u128>().saturated_into(),
-                );
-                overall_imbalance.subsume(imbalance);
+                let mut outsider_rewarded = false;
+                if let Some(outsider_bond) = report.outsider_bond {
+                    if report.outcome == resolved_outcome {
+                        outsider_rewarded = true;
+                        let missing = <CurrencyOf<T>>::repatriate_reserved_named(
+                            &Self::reserve_id(),
+                            &market.creator,
+                            &report.by,
+                            T::OracleBond::get().saturated_into::<u128>().saturated_into(),
+                            BalanceStatus::Free,
+                        )?;
+                        debug_assert!(missing.is_zero(), "Could not deduct all of the value.");
+                        T::AssetManager::unreserve_named(
+                            &Self::reserve_id(),
+                            Asset::Ztg,
+                            &report.by,
+                            outsider_bond,
+                        );
+                    } else {
+                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                            &Self::reserve_id(),
+                            &report.by,
+                            outsider_bond.saturated_into::<u128>().saturated_into(),
+                        );
+                        overall_imbalance.subsume(imbalance);
+                    }
+                }
+                if !outsider_rewarded {
+                    let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                        &Self::reserve_id(),
+                        &market.creator,
+                        T::OracleBond::get().saturated_into::<u128>().saturated_into(),
+                    );
+                    overall_imbalance.subsume(imbalance);
+                }
             }
 
             for (i, dispute) in disputes.iter().enumerate() {
