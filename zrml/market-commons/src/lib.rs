@@ -20,13 +20,12 @@
 
 extern crate alloc;
 
-mod market_commons_pallet_api;
 pub mod migrations;
 mod mock;
 mod tests;
 
-pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use pallet::*;
+pub use zeitgeist_primitives::traits::MarketCommonsPalletApi;
 
 #[frame_support::pallet]
 mod pallet {
@@ -151,10 +150,7 @@ mod pallet {
             }
         }
 
-        fn market_iter() -> PrefixIterator<(
-            Self::MarketId,
-            Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        )> {
+        fn market_iter() -> PrefixIterator<(Self::MarketId, MarketOf<T>)> {
             <Markets<T>>::iter()
         }
 
@@ -164,9 +160,7 @@ mod pallet {
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
         where
-            F: FnOnce(
-                &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-            ) -> DispatchResult,
+            F: FnOnce(&mut MarketOf<T>) -> DispatchResult,
         {
             <Markets<T>>::try_mutate(market_id, |opt| {
                 if let Some(market) = opt {
@@ -177,9 +171,7 @@ mod pallet {
             })
         }
 
-        fn push_market(
-            market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<Self::MarketId, DispatchError> {
+        fn push_market(market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
             let market_id = Self::next_market_id()?;
             <Markets<T>>::insert(market_id, market);
             Ok(market_id)
@@ -231,12 +223,7 @@ mod pallet {
 
     /// Holds all markets
     #[pallet::storage]
-    pub type Markets<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::MarketId,
-        Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-    >;
+    pub type Markets<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, MarketOf<T>>;
 
     /// The number of markets that have been created (including removed markets) and the next
     /// identifier for a created market.
