@@ -487,17 +487,18 @@ mod pallet {
             Ok((Some(T::WeightInfo::dispute_authorized())).into())
         }
 
-        /// Resolve the market, when the dispute mechanism failed.
+        /// Resolve the market,
+        /// if the dispute mechanism was unable to come to a conclusion in a specified time.
         ///
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
         #[pallet::weight(
-            T::WeightInfo::resolve_failed_mdm_authorized_categorical()
-                .max(T::WeightInfo::resolve_failed_mdm_authorized_scalar())
+            T::WeightInfo::resolve_expired_mdm_authorized_categorical()
+                .max(T::WeightInfo::resolve_expired_mdm_authorized_scalar())
         )]
         #[transactional]
-        pub fn resolve_failed_mdm(
+        pub fn resolve_expired_mdm(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
@@ -506,25 +507,27 @@ mod pallet {
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             let disputes = Disputes::<T>::get(market_id);
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-            let is_fail = match market.dispute_mechanism {
+            let is_expired = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::is_fail(&disputes, &market_id, &market)?
+                    T::Authorized::is_expired(&disputes, &market_id, &market)?
                 }
-                MarketDisputeMechanism::Court => T::Court::is_fail(&disputes, &market_id, &market)?,
+                MarketDisputeMechanism::Court => {
+                    T::Court::is_expired(&disputes, &market_id, &market)?
+                }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::is_fail(&disputes, &market_id, &market)?
+                    T::SimpleDisputes::is_expired(&disputes, &market_id, &market)?
                 }
             };
-            ensure!(is_fail, Error::<T>::DisputeMechanismNotFailed);
+            ensure!(is_expired, Error::<T>::DisputeMechanismNotExpired);
 
             Self::on_resolution(&market_id, &market)?;
 
-            Self::deposit_event(Event::DisputeMechanismFailed(market_id));
+            Self::deposit_event(Event::DisputeMechanismExpired(market_id));
 
             let weight = match market.market_type {
-                MarketType::Scalar(_) => T::WeightInfo::resolve_failed_mdm_authorized_scalar(),
+                MarketType::Scalar(_) => T::WeightInfo::resolve_expired_mdm_authorized_scalar(),
                 MarketType::Categorical(_) => {
-                    T::WeightInfo::resolve_failed_mdm_authorized_categorical()
+                    T::WeightInfo::resolve_expired_mdm_authorized_categorical()
                 }
             };
 
@@ -1535,7 +1538,7 @@ mod pallet {
         /// registered on-chain.
         CannotDisputeSameOutcome,
         /// The market dispute mechanism has not failed.
-        DisputeMechanismNotFailed,
+        DisputeMechanismNotExpired,
         /// Only creator is able to edit the market.
         EditorNotCreator,
         /// EditReason's length greater than MaxEditReasonLen.
@@ -1636,8 +1639,8 @@ mod pallet {
         BadOnInitialize,
         /// A complete set of assets has been bought \[market_id, amount_per_asset, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// A market dispute mechansim failed \[market_id\]
-        DisputeMechanismFailed(MarketIdOf<T>),
+        /// A market dispute mechansim has expired \[market_id\]
+        DisputeMechanismExpired(MarketIdOf<T>),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, market_account, market\]

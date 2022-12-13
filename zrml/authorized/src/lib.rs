@@ -233,7 +233,7 @@ mod pallet {
             Ok(Self::get_auto_resolve(market_id))
         }
 
-        fn is_fail(
+        fn is_expired(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,

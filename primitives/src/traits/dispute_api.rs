@@ -64,13 +64,10 @@ pub trait DisputeApi {
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 
-    /// Query if the dispute mechanism failed for a dispute market.
+    /// Returns `true` if the market dispute mechanism
+    /// was unable to come to a conclusion within a specified time.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
-    ///
-    /// # Returns
-    ///
-    /// Returns `true` if the dispute mechanism failed. Otherwise `false`.
-    fn is_fail(
+    fn is_expired(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,

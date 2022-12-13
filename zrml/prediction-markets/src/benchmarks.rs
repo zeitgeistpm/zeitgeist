@@ -841,7 +841,7 @@ benchmarks! {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
 
-    resolve_failed_mdm_authorized_scalar {
+    resolve_expired_mdm_authorized_scalar {
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
@@ -874,14 +874,14 @@ benchmarks! {
             now + authority_report_period.saturated_into() + 1u64.saturated_into()
         );
 
-        let call = Call::<T>::resolve_failed_mdm { market_id };
+        let call = Call::<T>::resolve_expired_mdm { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        assert_last_event::<T>(Event::DisputeMechanismFailed::<T>(market_id).into());
+        assert_last_event::<T>(Event::DisputeMechanismExpired::<T>(market_id).into());
     }
 
-    resolve_failed_mdm_authorized_categorical {
+    resolve_expired_mdm_authorized_categorical {
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
             setup_reported_categorical_market_with_pool::<T>(
@@ -912,11 +912,11 @@ benchmarks! {
             now + authority_report_period.saturated_into() + 1u64.saturated_into()
         );
 
-        let call = Call::<T>::resolve_failed_mdm { market_id };
+        let call = Call::<T>::resolve_expired_mdm { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        assert_last_event::<T>(Event::DisputeMechanismFailed::<T>(market_id).into());
+        assert_last_event::<T>(Event::DisputeMechanismExpired::<T>(market_id).into());
     }
 
     handle_expired_advised_market {
