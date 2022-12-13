@@ -102,13 +102,19 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                 let oracle = Some(Bond {
                     who: old_market.creator.clone(),
                     value: T::OracleBond::get(),
-                    is_settled: old_market.status == MarketStatus::Resolved,
+                    is_settled: matches!(
+                        old_market.status,
+                        MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
+                    ),
                 });
                 let validity = if old_market.creation == MarketCreation::Permissionless {
                     Some(Bond {
                         who: old_market.creator.clone(),
                         value: T::ValidityBond::get(),
-                        is_settled: old_market.status == MarketStatus::Resolved,
+                        is_settled: matches!(
+                            old_market.status,
+                            MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
+                        ),
                     })
                 } else {
                     None
@@ -397,6 +403,25 @@ mod tests {
                         is_settled: true,
                     }),
                     validity: None,
+                },
+            ),
+            // Technically, the market below has the wrong scoring rule, but that's irrelevant to
+            // the test.
+            construct_markets(
+                MarketCreation::Permissionless,
+                MarketStatus::InsufficientSubsidy,
+                MarketBonds {
+                    advisory: None,
+                    oracle: Some(Bond {
+                        who: creator,
+                        value: <Runtime as Config>::OracleBond::get(),
+                        is_settled: true,
+                    }),
+                    validity: Some(Bond {
+                        who: creator,
+                        value: <Runtime as Config>::ValidityBond::get(),
+                        is_settled: true,
+                    }),
                 },
             ),
         ]
