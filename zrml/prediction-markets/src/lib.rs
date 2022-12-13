@@ -94,18 +94,18 @@ mod pallet {
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
 
     macro_rules! impl_slash_bond {
-        ($fn_name:ident, $bond:ident) => {
+        ($fn_name:ident, $bond_type:ident) => {
             fn $fn_name(
                 market_id: &MarketIdOf<T>,
                 market: &MarketOf<T>,
             ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
-                let bond = market.bonds.$bond.as_ref().ok_or(Error::<T>::MissingBond)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
                 // Trying to settle a bond multiple times is always a logic error, not a runtime
                 // error, so we log a warning instead of raising an error.
                 if bond.is_settled {
                     let warning = format!(
                         "Attempting to settle the {} bond of market {:?} multiple times",
-                        stringify!($bond),
+                        stringify!($bond_type),
                         market_id,
                     );
                     log::warn!("{}", warning);
@@ -122,14 +122,14 @@ mod pallet {
                 if excess != BalanceOf::<T>::zero() {
                     let warning = format!(
                         "Failed to settle the {} bond of market {:?}",
-                        stringify!($bond),
+                        stringify!($bond_type),
                         market_id,
                     );
                     log::warn!("{}", warning);
                     debug_assert!(false, "{}", warning);
                 }
                 T::MarketCommons::mutate_market(market_id, |m| {
-                    m.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })?;
                 Ok(imbalance)
@@ -138,21 +138,21 @@ mod pallet {
     }
 
     macro_rules! impl_unreserve_bond {
-        ($fn_name:ident, $bond:ident) => {
+        ($fn_name:ident, $bond_type:ident) => {
             fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
                 T::MarketCommons::mutate_market(market_id, |market| {
-                    let bond = market.bonds.$bond.as_ref().ok_or(Error::<T>::MissingBond)?;
+                    let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
                     if bond.is_settled {
                         let warning = format!(
                             "Attempting to settle the {} bond of market {:?} multiple times",
-                            stringify!($bond),
+                            stringify!($bond_type),
                             market_id,
                         );
                         log::warn!("{}", warning);
                         debug_assert!(false, "{}", warning);
                     }
                     CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
-                    market.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
+                    market.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })
             }
