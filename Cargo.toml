@@ -7,6 +7,7 @@ default-members = [
     "runtime/zeitgeist",
     "zrml/authorized",
     "zrml/court",
+    "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
     "zrml/orderbook-v1",
@@ -27,6 +28,7 @@ members = [
     "runtime/zeitgeist",
     "zrml/authorized",
     "zrml/court",
+    "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
     "zrml/orderbook-v1",
@@ -50,28 +52,26 @@ resolver = "2"
 # If it is not used, the Zeitgeist runtimes will contain duplicate crates from
 # different repositories which results in bigger WASM-blobs, binary and the inability
 # to compile with the "runtime-benchmarks" feature.
-pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "use-cumulus-from-parity" }
+pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "polkadot-v0.9.26" }
 
 [patch."https://github.com/purestake/moonbeam"]
 # Use dependencies from Paritytech
-moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
+moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
 # Fix author-mapping migration
-pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
-# Fix benchmark verification logic
-# See https://github.com/zeitgeistpm/moonbeam/commit/42fdf1a90294c49ddbf8d0204ef002b2914a886f
-pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
+pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
 # Use dependencies from Paritytech
-session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
+pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
+session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
 
 [patch."https://github.com/purestake/nimbus"]
 # Use dependencies from Paritytech
-nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
 # Use dependencies from Paritytech
-nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
 # Use dependencies from Paritytech
-pallet-author-inherent = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+pallet-author-inherent = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
 # Use dependencies from Paritytech
-pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/nimbus", branch = "polkadot-v0.9.26" }
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of

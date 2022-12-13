@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 extern crate alloc;
 
@@ -39,7 +39,7 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
+    traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -53,10 +53,13 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
-    xcm_config::XcmConfig,
+    xcm_config::{
+        asset_registry::{CustomAssetProcessor, CustomMetadata},
+        config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
+    },
 };
 
 use frame_support::construct_runtime;
@@ -75,6 +78,9 @@ use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 
 #[cfg(feature = "parachain")]
+#[cfg(test)]
+pub mod integration_tests;
+#[cfg(feature = "parachain")]
 pub mod parachain_params;
 pub mod parameters;
 #[cfg(feature = "parachain")]
@@ -84,23 +90,21 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 40,
+    spec_version: 41,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 17,
+    transaction_version: 18,
     state_version: 1,
 };
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
-// dispute mechanism.
+// Currently disables Court, Rikiddo and creation of markets using Court.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
         use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
 
@@ -112,12 +116,9 @@ impl Contains<Call> for IsCallable {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
-                        ..
-                    } => false,
+                    // Disable Court dispute resolution mechanism
+                    create_market { dispute_mechanism: Court, .. } => false,
+                    create_cpmm_market_and_deploy_assets { dispute_mechanism: Court, .. } => false,
                     _ => true,
                 }
             }
@@ -128,8 +129,14 @@ impl Contains<Call> for IsCallable {
 
 decl_common_types!();
 
+#[cfg(feature = "with-global-disputes")]
 create_runtime_with_additional_pallets!(
-    // Others
+    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
+create_runtime_with_additional_pallets!(
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
 

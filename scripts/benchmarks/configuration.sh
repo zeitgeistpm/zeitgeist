@@ -29,7 +29,7 @@ export ORML_PALLETS_RUNS="${ORML_PALLETS_RUNS:-20}"
 export ORML_PALLETS_STEPS="${ORML_PALLETS_STEPS:-50}"
 export ORML_WEIGHT_TEMPLATE="./misc/orml_weight_template.hbs"
 
-export ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_liquidity_mining zrml_prediction_markets zrml_swaps zrml_styx )
+export ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_global_disputes zrml_liquidity_mining zrml_prediction_markets zrml_swaps zrml_styx )
 export ZEITGEIST_PALLETS_RUNS="${ZEITGEIST_PALLETS_RUNS:-1000}"
 export ZEITGEIST_PALLETS_STEPS="${ZEITGEIST_PALLETS_STEPS:-10}"
 export ZEITGEIST_WEIGHT_TEMPLATE="./misc/weight_template.hbs"
@@ -43,3 +43,4 @@ else
 fi
 export EXECUTION="${EXECUTION:-wasm}"
 export ADDITIONAL="${ADDITIONAL:-}"
+export ADDITIONAL_FEATURES="${ADDITIONAL_FEATURES:-with-global-disputes}"

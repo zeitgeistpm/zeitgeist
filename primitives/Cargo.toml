@@ -1,15 +1,15 @@
 [dependencies]
 arbitrary = { default-features = false, optional = true, version = "1.0" }
-frame-support = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-currencies = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-tokens = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-traits = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+frame-support = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+orml-currencies = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-tokens = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-traits = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 serde = { default-features = false, features = ["derive"], optional = true, version = "1.0.137" }
-sp-core = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
 
 [dev-dependencies]
 test-case = "2.0.2"
@@ -28,9 +28,10 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
 ]
+with-global-disputes = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-primitives"
-version = "0.3.6"
+version = "0.3.7"

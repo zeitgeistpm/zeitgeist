@@ -39,6 +39,9 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
+#[cfg(feature = "with-global-disputes")]
+use frame_support::traits::LockIdentifier;
+
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -53,7 +56,7 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Balance
-    pub const ExistentialDeposit: u128 = 5 * CENT;
+    pub const ExistentialDeposit: u128 = 5 * MILLI;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -150,9 +153,6 @@ parameter_types! {
     pub const DisputeBond: Balance = 2_000 * BASE;
     /// `DisputeBond` is increased by this factor after every dispute.
     pub const DisputeFactor: Balance = 2 * BASE;
-    /// After reporting the outcome and after every dispute, the dispute period is extended
-    /// by `DisputePeriod`.
-    pub const DisputePeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
@@ -185,8 +185,6 @@ parameter_types! {
     pub const OracleBond: Balance = 200 * BASE;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
-    /// Timeframe during which the oracle can report the final outcome after the market closed.
-    pub const ReportingPeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
@@ -308,7 +306,9 @@ parameter_types! {
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
-    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+    pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
+    /// Treasury account.
+    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.
@@ -341,6 +341,27 @@ parameter_types! {
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
+}
+
+#[cfg(feature = "with-global-disputes")]
+parameter_types! {
+    // Global Disputes
+    /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
+    pub const GlobalDisputeLockId: LockIdentifier = GLOBAL_DISPUTES_LOCK_ID;
+    /// Pallet identifier
+    pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
+    /// The period for a global dispute to end.
+    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+    pub const MaxOwners: u32 = 10;
+    /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    /// The minimum required amount to vote on an outcome.
+    pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
+    /// The fee required to add a voting outcome.
+    pub const VotingOutcomeFee: Balance = 200 * BASE;
+    /// The remove limit for the Outcomes storage double map.
+    pub const RemoveKeysLimit: u32 = 250;
 }
 
 parameter_type_with_key! {

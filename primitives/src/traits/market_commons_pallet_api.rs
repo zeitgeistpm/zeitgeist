@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(clippy::type_complexity)]
+use crate::types::{Market, PoolId};
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -25,7 +26,6 @@ use frame_support::{
 };
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::traits::AtLeast32Bit;
-use zeitgeist_primitives::types::{Market, PoolId};
 
 /// Simple disputes - Pallet Api
 pub trait MarketCommonsPalletApi {
@@ -70,6 +70,9 @@ pub trait MarketCommonsPalletApi {
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;
+
+    /// Return the account id of a market's prize pool.
+    fn market_account(market_id: Self::MarketId) -> Self::AccountId;
 
     // MarketPool
 
