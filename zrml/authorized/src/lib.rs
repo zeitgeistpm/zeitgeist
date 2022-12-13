@@ -111,6 +111,7 @@ mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// The period, in which the authority can correct the outcome of a market.
+        /// This value must not be zero.
         #[pallet::constant]
         type CorrectionPeriod: Get<Self::BlockNumber>;
 
