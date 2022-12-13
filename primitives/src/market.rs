@@ -131,9 +131,9 @@ impl<AI, Balance, BN, M> Market<AI, Balance, BN, M> {
 impl<AI, Balance, BN, M> MaxEncodedLen for Market<AI, Balance, BN, M>
 where
     AI: MaxEncodedLen,
+    Balance: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
-    MarketBonds<AI, Balance>: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
