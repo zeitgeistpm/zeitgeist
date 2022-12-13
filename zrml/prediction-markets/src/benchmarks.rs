@@ -223,7 +223,7 @@ benchmarks! {
         where
             T: pallet_timestamp::Config + zrml_authorized::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
-                From<<<T as pallet::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+                From<<T as zrml_market_commons::Config>::MarketId>,
     }
 
     admin_destroy_disputed_market{
