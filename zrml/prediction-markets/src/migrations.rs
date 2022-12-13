@@ -141,7 +141,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
 
         for (key, new_market) in new_markets {
             put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
