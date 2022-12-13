@@ -100,7 +100,7 @@ pub trait DisputeResolutionApi {
     /// Returns the number of elements in the storage structure.
     fn add_auto_resolve(
         market_id: &Self::MarketId,
-        resolution: Self::BlockNumber,
+        resolve_at: Self::BlockNumber,
     ) -> Result<u32, DispatchError>;
 
     /// Remove a future block resolution of a disputed market.
@@ -108,5 +108,5 @@ pub trait DisputeResolutionApi {
     /// # Returns
     ///
     /// Returns the number of elements in the storage structure.
-    fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber) -> u32;
+    fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32;
 }
