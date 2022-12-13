@@ -671,15 +671,9 @@ mod pallet {
                     validity: None,
                 },
             };
-            T::AssetManager::reserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                &sender,
-                bonds.total_amount_bonded(&sender),
-            )?;
 
             let market = Self::construct_market(
-                sender,
+                sender.clone(),
                 0_u8,
                 oracle,
                 period,
@@ -691,7 +685,14 @@ mod pallet {
                 scoring_rule,
                 None,
                 None,
-                bonds,
+                bonds.clone(),
+            )?;
+
+            T::AssetManager::reserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &sender,
+                bonds.total_amount_bonded(&sender),
             )?;
 
             let market_id = T::MarketCommons::push_market(market.clone())?;
