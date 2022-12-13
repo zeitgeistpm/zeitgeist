@@ -32,7 +32,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::*;
-    use alloc::{vec, vec::Vec};
+    use alloc::{format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
@@ -103,11 +103,13 @@ mod pallet {
                 // Trying to settle a bond multiple times is always a logic error, not a runtime
                 // error, so we log a warning instead of raising an error.
                 if bond.is_settled {
-                    log::warn!(
+                    let warning = format!(
                         "Attempting to settle the {} bond of market {:?} multiple times",
                         stringify!($bond),
                         market_id,
                     );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
                     return Ok(NegativeImbalanceOf::<T>::zero());
                 }
                 let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
@@ -118,11 +120,13 @@ mod pallet {
                 // If there's excess, there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
                 if excess != BalanceOf::<T>::zero() {
-                    log::warn!(
+                    let warning = format!(
                         "Failed to settle the {} bond of market {:?}",
                         stringify!($bond),
                         market_id,
                     );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
                 }
                 T::MarketCommons::mutate_market(market_id, |m| {
                     m.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
@@ -139,11 +143,13 @@ mod pallet {
                 T::MarketCommons::mutate_market(market_id, |market| {
                     let bond = market.bonds.$bond.as_ref().ok_or(Error::<T>::MissingBond)?;
                     if bond.is_settled {
-                        log::warn!(
+                        let warning = format!(
                             "Attempting to settle the {} bond of market {:?} multiple times",
                             stringify!($bond),
                             market_id,
                         );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
                     }
                     CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                     market.bonds.$bond = Some(Bond { is_settled: true, ..bond.clone() });
@@ -1911,7 +1917,12 @@ mod pallet {
             // Trying to settle a bond multiple times is always a logic error, not a runtime error,
             // so we log a warning instead of raising an error.
             if advisory_bond.is_settled {
-                log::warn!("Attempting to settle a bond multiple times");
+                let warning = format!(
+                    "Attempting to settle the advisory bond of market {:?} multiple times",
+                    market_id,
+                );
+                log::warn!("{}", warning);
+                debug_assert!(false, "{}", warning);
                 return Ok(NegativeImbalanceOf::<T>::zero());
             }
             let value = advisory_bond.value;
@@ -1927,7 +1938,10 @@ mod pallet {
                 slash_amount,
             );
             if excess != BalanceOf::<T>::zero() {
-                log::warn!("Failed to settle oracle bond of market {:?}", market_id);
+                let warning =
+                    format!("Failed to settle the advisory bond of market {:?}", market_id);
+                log::warn!("{}", warning);
+                debug_assert!(false, "{}", warning);
             }
             CurrencyOf::<T>::unreserve_named(
                 &Self::reserve_id(),
