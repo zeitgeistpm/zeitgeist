@@ -50,7 +50,7 @@ impl RelayChainCli {
             .as_ref()
             .map(|x| x.path().join(chain_id.clone().unwrap_or_else(|| "polkadot".into())));
 
-        Self { base_path, chain_id, base: polkadot_cli::RunCmd::parse_from(relay_chain_args) }
+        Self { base_path, chain_id, base: clap::Parser::parse_from(relay_chain_args) }
     }
 }
 
@@ -218,43 +218,6 @@ impl sc_cli::SubstrateCli for RelayChainCli {
     fn support_url() -> String {
         crate::cli::SUPPORT_URL.into()
     }
-}
-
-/// Command for exporting the genesis state of the parachain
-#[derive(Debug, Parser)]
-pub struct ExportGenesisStateCommand {
-    /// Output file name or stdout if unspecified.
-    #[clap(parse(from_os_str))]
-    pub output: Option<PathBuf>,
-
-    /// Id of the parachain this state is for.
-    // Sync with crate::DEFAULT_PARACHAIN_ID
-    #[clap(long)]
-    pub parachain_id: u32,
-
-    /// Write output in binary. Default is to write in hex.
-    #[clap(short, long)]
-    pub raw: bool,
-
-    /// The name of the chain for that the genesis state should be exported.
-    #[clap(long)]
-    pub chain: Option<String>,
-}
-
-/// Command for exporting the genesis wasm file.
-#[derive(Debug, Parser)]
-pub struct ExportGenesisWasmCommand {
-    /// Output file name or stdout if unspecified.
-    #[clap(parse(from_os_str))]
-    pub output: Option<PathBuf>,
-
-    /// Write output in binary. Default is to write in hex.
-    #[clap(short, long)]
-    pub raw: bool,
-
-    /// The name of the chain for that the genesis wasm file should be exported.
-    #[clap(long)]
-    pub chain: Option<String>,
 }
 
 #[derive(Debug, Parser)]

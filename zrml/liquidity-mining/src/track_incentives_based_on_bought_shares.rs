@@ -69,7 +69,7 @@ where
             }
         }
 
-        <BlockBoughtShares<T>>::remove_all(None);
+        let _ = <BlockBoughtShares<T>>::clear(u32::max_value(), None);
         Some(market_incentives_len)
     }
 

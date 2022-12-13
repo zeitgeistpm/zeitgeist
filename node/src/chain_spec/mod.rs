@@ -105,9 +105,11 @@ macro_rules! generate_generic_genesis_function {
                 // Common genesis
                 advisory_committee: Default::default(),
                 advisory_committee_membership: $runtime::AdvisoryCommitteeMembershipConfig {
-                    members: vec![],
+                    members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
+                #[cfg(feature = "parachain")]
+                asset_registry: Default::default(),
                 #[cfg(not(feature = "parachain"))]
                 aura: $runtime::AuraConfig {
                     authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
@@ -130,7 +132,7 @@ macro_rules! generate_generic_genesis_function {
                 },
                 council: Default::default(),
                 council_membership: $runtime::CouncilMembershipConfig {
-                    members: vec![],
+                    members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
                 #[cfg(feature = "parachain")]
@@ -165,7 +167,7 @@ macro_rules! generate_generic_genesis_function {
                 system: $runtime::SystemConfig { code: wasm_binary.to_vec() },
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
-                    members: vec![],
+                    members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
                 treasury: Default::default(),

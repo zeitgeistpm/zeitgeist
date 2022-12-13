@@ -1,5 +1,15 @@
 # v0.3.7
 
+- Added on-chain arbitrage. See
+  [ZIP-1](https://hackmd.io/@1ypDLjlbQ_e2Gp_1EW7kkg/BksyTQc-o) for details. When
+  a pool is arbitraged, we emit one of the following events:
+  `ArbitrageMintSell(pool_id, amount)`, `ArbitrageBuyBurn(pool_id, amount)` or
+  `ArbitrageSkipped(pool_id)`. The latter can be safely ignored by the indexer.
+  The `amount` parameter signifies the amount of funds moved into or out of the
+  prize pool (mint-sell/buy-burn resp.) and the amount of full sets
+  minted/burned. Note that in addition to these events, the low-level
+  `tokens.Deposited` and `tokens.Transfer` events are also emitted.
+
 - Added new pallet: GlobalDisputes. Dispatchable calls are:
   - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for
     a constant fee. Errors if the voting outcome already exists or if the global
@@ -20,27 +30,42 @@
   - `OutcomesPartiallyCleaned` (outcomes storage item partially cleaned)
   - `OutcomesFullyCleaned` (outcomes storage item fully cleaned)
   - `VotedOnOutcome` (user voted on outcome)
+
 - Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence
   `MarketDisputeMechanism::Authorized` does not need account_id. To create
   market with Authorized MDM specifying account_id for Authorized MDM is not
   required, any user satisfying `AuthorizedDisputeResolutionOrigin` can use
   Authorized MDM for resolving market.
+
+- Properly configured reserve asset transfers via XCM:
+  - Added xTokens pallet to transfer tokens accross chains
+  - Added AssetRegistry pallet to register foreign asset
+  - Added UnknownTokens pallet to handle unknown foreign assets
+  - More information at https://github.com/zeitgeistpm/zeitgeist/pull/661#top
+
 - Transformed integer scalar markets to fixed point with ten digits after the
   decimal point. As soon as this update is deployed, the interpretation of the
   scalar values must be changed.
+
 - `reject_market` extrinsic now requires `reject_reason` parameter which is
   `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
   above parameter. `MarketRejected` event also contains `reject_reason` so that
   it can be cached for market creator.
+
 - `request_edit` extrinsic added, which enables a user satisfying
   `RequestEditOrigin` to request edit in market with `Proposed` state, when
   successful it emits `MarketRequestedEdit` event. `request_edit` requires
   `edit_reason` parameter which is `Vec<u8>`. The config constant
   `MaxEditReasonLen` defines maximum length of above parameter. The
   `MarketRequestedEdit` event also contains `edit_reason`.
+
 - `edit_market` extrinsic added, which enables creator of the market to edit
   market. It has same parameters as `create_market` except market_creation, on
   success it returns `MarketEdited` event.
+  
+- `get_spot_price()` RPC from Swaps support `with_fees` boolean parameter to
+  include/exclude swap_fees in spot price, Currently this flag only works for
+  CPMM.
 
 # v0.3.6
 

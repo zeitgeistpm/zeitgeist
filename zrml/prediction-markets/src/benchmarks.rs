@@ -99,7 +99,7 @@ fn create_market_common<T: Config>(
         scoring_rule,
     }
     .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    let market_id = T::MarketCommons::latest_market_id()?;
+    let market_id = <zrml_market_commons::Pallet<T>>::latest_market_id()?;
     Ok((caller, market_id))
 }
 
@@ -115,7 +115,7 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
     Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let market = T::MarketCommons::market(&market_id)?;
+    let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
         _ => {
@@ -158,7 +158,7 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     let close_origin = T::CloseOrigin::successful_origin();
     let resolve_origin = T::ResolveOrigin::successful_origin();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
-    let market = T::MarketCommons::market(&market_id)?;
+    let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
         _ => {
@@ -202,7 +202,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 
     Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let market = T::MarketCommons::market(&market_id)?;
+    let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
         _ => {
@@ -243,7 +243,7 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
 
-        let pool_id = <T as Config>::MarketCommons::market_pool(&market_id)?;
+        let pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id)?;
 
         for i in 1..=d {
             let outcome = OutcomeReport::Categorical((i % a).saturated_into());
@@ -253,7 +253,7 @@ benchmarks! {
             let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
         let (range_start, range_end) = match market.period {
             MarketPeriod::Timestamp(range) => (range.start, range.end),
@@ -307,9 +307,9 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
 
-        let pool_id = <T as Config>::MarketCommons::market_pool(&market_id)?;
+        let pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id)?;
 
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
         let (range_start, range_end) = match market.period {
             MarketPeriod::Timestamp(range) => (range.start, range.end),
@@ -389,7 +389,7 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
 
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
         let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
@@ -420,12 +420,12 @@ benchmarks! {
             categories.into(),
             OutcomeReport::Categorical(0u16),
         )?;
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
         let report_at = market.report.unwrap().at;
         let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
@@ -458,12 +458,12 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
 
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         if let MarketType::Scalar(range) = market.market_type {
             assert!((d as u128) < *range.end());
         } else {
@@ -522,7 +522,7 @@ benchmarks! {
                 OutcomeReport::Categorical(2)
             )?;
 
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
@@ -548,7 +548,7 @@ benchmarks! {
         )?;
 
         let last_dispute = disputes.last().unwrap();
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
@@ -657,7 +657,7 @@ benchmarks! {
             scoring_rule,
         }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-        let market_id = <T as Config>::MarketCommons::latest_market_id()?;
+        let market_id = <zrml_market_commons::Pallet::<T>>::latest_market_id()?;
 
         let approve_origin = T::ApproveOrigin::successful_origin();
         let edit_reason = vec![0_u8; 1024];
@@ -701,7 +701,7 @@ benchmarks! {
         )?;
 
         assert!(
-            Pallet::<T>::calculate_time_frame_of_moment(<T as Config>::MarketCommons::now())
+            Pallet::<T>::calculate_time_frame_of_moment(<zrml_market_commons::Pallet::<T>>::now())
                 < Pallet::<T>::calculate_time_frame_of_moment(range_start)
         );
 
@@ -747,7 +747,7 @@ benchmarks! {
 
         // We need to ensure, that period range start is now,
         // because we would like to open the pool now
-        let range_start: MomentOf<T> = <T as Config>::MarketCommons::now();
+        let range_start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
@@ -756,7 +756,7 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
 
-        let market = <T as Config>::MarketCommons::market(&market_id.saturated_into())?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id.saturated_into())?;
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
@@ -778,8 +778,7 @@ benchmarks! {
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        let market_pool_id =
-            <T as Config>::MarketCommons::market_pool(&market_id.saturated_into())?;
+        let market_pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id.saturated_into())?;
         let pool = T::Swaps::pool(market_pool_id)?;
         assert_eq!(pool.pool_status, PoolStatus::Active);
     }
@@ -841,12 +840,12 @@ benchmarks! {
             report_outcome,
         )?;
 
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         if let MarketType::Scalar(range) = market.market_type {
             assert!((d as u128) < *range.end());
         } else {
@@ -881,7 +880,7 @@ benchmarks! {
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
         )?;
-        let market = <T as Config>::MarketCommons::market(&market_id.saturated_into())?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id.saturated_into())?;
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
@@ -890,15 +889,15 @@ benchmarks! {
             categories.into(),
             OutcomeReport::Categorical(1u16),
         )?;
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
     }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         assert_eq!(market.status, MarketStatus::Resolved);
     }
 
@@ -912,7 +911,7 @@ benchmarks! {
                 categories.into(),
                 OutcomeReport::Categorical(1u16)
             )?;
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
@@ -932,11 +931,11 @@ benchmarks! {
             market_id.into(),
             OutcomeReport::Categorical(0),
         )?;
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
     }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         assert_eq!(market.status, MarketStatus::Resolved);
     }
 
@@ -946,11 +945,11 @@ benchmarks! {
             MarketType::Scalar(0u128..=u128::MAX),
             OutcomeReport::Scalar(u128::MAX),
         )?;
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
     }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         assert_eq!(market.status, MarketStatus::Resolved);
     }
 
@@ -962,11 +961,11 @@ benchmarks! {
             MarketType::Scalar(0u128..=u128::MAX),
             OutcomeReport::Scalar(u128::MAX),
         )?;
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         if let MarketType::Scalar(range) = market.market_type {
             assert!((d as u128) < *range.end());
         } else {
@@ -987,11 +986,11 @@ benchmarks! {
             market_id.into(),
             OutcomeReport::Scalar(0),
         )?;
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
     }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         assert_eq!(market.status, MarketStatus::Resolved);
     }
 
@@ -1068,7 +1067,7 @@ benchmarks! {
         let m in 0..63;
 
         // ensure range.start is now to get the heaviest path
-        let range_start: MomentOf<T> = <T as Config>::MarketCommons::now();
+        let range_start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
@@ -1077,7 +1076,7 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
 
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             // ensure sender is oracle to succeed extrinsic call
             market.oracle = caller.clone();
             Ok(())
@@ -1086,7 +1085,7 @@ benchmarks! {
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
         Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
-        let market = <T as Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         let end : u32 = match market.period {
             MarketPeriod::Timestamp(range) => {
                 range.end.saturated_into::<u32>()
@@ -1137,7 +1136,7 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
         )?;
         let mut market_clone = None;
-        <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.status = MarketStatus::CollectingSubsidy;
             market_clone = Some(market.clone());
             Ok(())
@@ -1224,7 +1223,7 @@ benchmarks! {
                 Some(MarketPeriod::Timestamp(range_start..range_end)),
             )?;
             // ensure market is reported
-            <T as Config>::MarketCommons::mutate_market(&market_id, |market| {
+            <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
                 market.status = MarketStatus::Reported;
                 Ok(())
             })?;
