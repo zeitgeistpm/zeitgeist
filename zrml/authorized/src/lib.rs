@@ -233,7 +233,7 @@ mod pallet {
         }
 
         fn is_expired(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<bool, DispatchError> {
@@ -241,10 +241,10 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
+            let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
             let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
-            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             let now = frame_system::Pallet::<T>::block_number();
-            let is_expired = report.at.saturating_add(T::ReportPeriod::get()) < now;
+            let is_expired = last_dispute.at.saturating_add(T::ReportPeriod::get()) < now;
             Ok(is_unreported && is_expired)
         }
     }
