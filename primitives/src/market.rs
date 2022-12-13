@@ -60,10 +60,14 @@ pub struct Market<AI, Balance, BN, M> {
     pub bonds: MarketBonds<AI, Balance>,
 }
 
+/// Tracks the status of a bond.
 #[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct Bond<AccountId, Balance> {
+    /// The account that reserved the bond.
     pub who: AccountId,
+    /// The amount reserved.
     pub value: Balance,
+    /// `true` if and only if the bond is unreserved and/or (partially) slashed.
     pub is_settled: bool,
 }
 
@@ -73,6 +77,7 @@ impl<AccountId, Balance> Bond<AccountId, Balance> {
     }
 }
 
+/// Tracks bonds associated with a prediction market.
 #[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct MarketBonds<AccountId, Balance> {
     pub advisory: Option<Bond<AccountId, Balance>>,
