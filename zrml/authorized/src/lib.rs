@@ -102,7 +102,8 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The period in which the authority has to report.
+        /// The period in which the authority has to report. This value must not be zero.
+        /// This value should be fairly large, so that the authority has enough time to report.
         #[pallet::constant]
         type ReportPeriod: Get<Self::BlockNumber>;
 
