@@ -162,9 +162,9 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
     fn post_upgrade() -> Result<(), &'static str> {
         let old_markets: BTreeMap<MarketIdOf<T>, MarketOf<T>> =
             Self::get_temp_storage("old_markets").unwrap();
-        let new_market_count = <T::MarketCommons as MarketCommonsPalletApi>::market_iter().count();
+        let new_market_count = <zrml_market_commons::Pallet<T>>::market_iter().count();
         assert_eq!(old_markets.len(), new_market_count);
-        for (market_id, new_market) in <T::MarketCommons as MarketCommonsPalletApi>::market_iter() {
+        for (market_id, new_market) in <zrml_market_commons::Pallet<T>>::market_iter() {
             let old_market = old_markets
                 .get(&market_id)
                 .expect(&format!("Market {:?} not found", market_id)[..]);
@@ -234,10 +234,7 @@ mod tests {
             RecordBonds::<Runtime>::on_runtime_upgrade();
             for (market_id, expected) in new_markets.iter().enumerate() {
                 let actual =
-                    <<Runtime as Config>::MarketCommons as MarketCommonsPalletApi>::market(
-                        &(market_id as u128),
-                    )
-                    .unwrap();
+                    <zrml_market_commons::Pallet<Runtime>>::market(&(market_id as u128)).unwrap();
                 assert_eq!(actual, *expected);
             }
         });
@@ -258,10 +255,7 @@ mod tests {
             RecordBonds::<Runtime>::on_runtime_upgrade();
             for (market_id, expected) in new_markets.iter().enumerate() {
                 let actual =
-                    <<Runtime as Config>::MarketCommons as MarketCommonsPalletApi>::market(
-                        &(market_id as u128),
-                    )
-                    .unwrap();
+                    <zrml_market_commons::Pallet<Runtime>>::market(&(market_id as u128)).unwrap();
                 assert_eq!(actual, *expected);
             }
         });

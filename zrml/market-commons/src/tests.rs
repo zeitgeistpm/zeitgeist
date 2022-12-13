@@ -18,15 +18,17 @@
 #![cfg(test)]
 
 use crate::{
-    market_commons_pallet_api::MarketCommonsPalletApi,
     mock::{ExtBuilder, MarketCommons, Runtime},
     MarketCounter, Markets,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError;
-use zeitgeist_primitives::types::{
-    AccountIdTest, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
-    MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment, ScoringRule,
+use zeitgeist_primitives::{
+    traits::MarketCommonsPalletApi,
+    types::{
+        AccountIdTest, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment, ScoringRule,
+    },
 };
 
 const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment> = Market {

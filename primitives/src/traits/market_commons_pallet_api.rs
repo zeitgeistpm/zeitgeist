@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(clippy::type_complexity)]
+use crate::types::{Market, PoolId};
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -25,7 +26,6 @@ use frame_support::{
 };
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::traits::AtLeast32Bit;
-use zeitgeist_primitives::types::{Market, PoolId};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
