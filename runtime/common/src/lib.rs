@@ -61,7 +61,7 @@ macro_rules! decl_common_types {
             (
                 zrml_prediction_markets::migrations::UpdateMarketIdsPerDisputeBlock<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            )
+            ),
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -74,7 +74,7 @@ macro_rules! decl_common_types {
             (
                 zrml_prediction_markets::migrations::UpdateMarketIdsPerDisputeBlock<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            )
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

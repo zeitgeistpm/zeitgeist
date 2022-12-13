@@ -71,7 +71,7 @@ mod pallet {
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::authorize_market_outcome(
             CacheSize::get(),
-            CacheSize::get()
+            CacheSize::get(),
         ))]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
@@ -138,8 +138,6 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// An unauthorized account attempts to submit a report.
-        NotAuthorizedForThisMarket,
         /// The market unexpectedly has the incorrect dispute mechanism.
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.

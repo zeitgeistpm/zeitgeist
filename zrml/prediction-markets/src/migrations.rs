@@ -60,7 +60,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
         let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
         if prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "prediction-markets version is {:?}, require {:?}",
+                "UpdateMarketIdsPerDisputeBlock: prediction-markets version is {:?}, require {:?}",
                 prediction_markets_version,
                 PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
             );
@@ -106,9 +106,9 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
         }
 
         let now = <frame_system::Pallet<T>>::block_number();
+        let mut resolve_at =
+            now.saturating_add(<T as zrml_authorized::Config>::ReportPeriod::get());
         for id in authorized_ids {
-            let mut resolve_at: T::BlockNumber =
-                now.saturating_add(<T as zrml_authorized::Config>::ReportPeriod::get());
             let mut ids = crate::MarketIdsPerDisputeBlock::<T>::get(resolve_at);
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
