@@ -168,10 +168,13 @@ mod pallet {
     where
         T: Config,
     {
+        /// Return the resolution block number for the given market.
         fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
             AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at)
         }
 
+        /// Return the number of elements from the vector implied by the `remove_auto_resolve` call.
+        /// This is especially useful to calculate a proper weight.
         fn remove_auto_resolve(market_id: &MarketIdOf<T>) -> u32 {
             if let Some(resolve_at) = Self::get_auto_resolve(market_id) {
                 T::DisputeResolution::remove_auto_resolve(market_id, resolve_at)
