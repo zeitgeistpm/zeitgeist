@@ -502,7 +502,7 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             let disputes = Disputes::<T>::get(market_id);
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms

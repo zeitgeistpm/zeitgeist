@@ -822,12 +822,12 @@ benchmarks! {
             report_outcome,
         )?;
 
-        <T as pallet::Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;
 
-        let market = <T as pallet::Config>::MarketCommons::market(&market_id)?;
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         if let MarketType::Scalar(range) = market.market_type {
             assert!(1u128 < *range.end());
         } else {
@@ -889,7 +889,7 @@ benchmarks! {
                 OutcomeReport::Categorical(0u16)
             )?;
 
-        <T as pallet::Config>::MarketCommons::mutate_market(&market_id, |market| {
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized;
             Ok(())
         })?;

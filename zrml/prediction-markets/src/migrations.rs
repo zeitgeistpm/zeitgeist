@@ -77,7 +77,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             bounded_vec.retain(|id| {
-                if let Ok(market) = <T as crate::Config>::MarketCommons::market(id) {
+                if let Ok(market) = <zrml_market_commons::Pallet<T>>::market(id) {
                     match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized => {
                             authorized_ids.push(*id);
