@@ -456,7 +456,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
 
@@ -514,7 +514,7 @@ benchmarks! {
             )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
 
@@ -958,7 +958,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
 
@@ -1002,7 +1002,7 @@ benchmarks! {
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             // to allow multiple disputes use simple disputes
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
