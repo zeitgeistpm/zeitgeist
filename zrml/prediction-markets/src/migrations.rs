@@ -15,15 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{CacheSize, Config, MarketIdOf, Pallet};
-use alloc::{string::ToString, vec::Vec};
+use crate::{Config, Pallet};
+#[cfg(feature = "try-runtime")]
+use alloc::string::ToString;
+use alloc::vec::Vec;
 use frame_support::{
     dispatch::Weight,
     log,
     migration::{put_storage_value, storage_iter},
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
-    BoundedVec,
 };
 #[cfg(feature = "try-runtime")]
 use scale_info::prelude::format;
@@ -32,17 +33,12 @@ use zeitgeist_primitives::types::{AuthorityReport, MarketDisputeMechanism, Outco
 use zrml_authorized::Pallet as AuthorizedPallet;
 use zrml_market_commons::MarketCommonsPalletApi;
 
-const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
-const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
-
-// TODO increase storage versions here, when last migration was executed
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 6;
 const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 7;
 
 const AUTHORIZED: &[u8] = b"Authorized";
 const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
 
-// TODO increase storage versions here, when last migration was executed
 const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 2;
 const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 3;
 
@@ -70,10 +66,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
 
         let mut new_storage_map = Vec::new();
         let mut authorized_ids = Vec::new();
-        for (key, mut bounded_vec) in storage_iter::<BoundedVec<MarketIdOf<T>, CacheSize>>(
-            PREDICTION_MARKETS,
-            MARKET_IDS_PER_DISPUTE_BLOCK,
-        ) {
+        for (key, mut bounded_vec) in crate::MarketIdsPerDisputeBlock::<T>::iter() {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             bounded_vec.retain(|id| {
@@ -96,12 +89,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
         }
 
         for (key, new_bounded_vec) in new_storage_map {
-            put_storage_value::<BoundedVec<MarketIdOf<T>, CacheSize>>(
-                PREDICTION_MARKETS,
-                MARKET_IDS_PER_DISPUTE_BLOCK,
-                &key,
-                new_bounded_vec,
-            );
+            crate::MarketIdsPerDisputeBlock::<T>::insert(key, new_bounded_vec);
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
 
@@ -148,6 +136,7 @@ mod tests_auto_resolution {
         mock::{ExtBuilder, Runtime},
         MomentOf,
     };
+    use frame_support::BoundedVec;
     use zeitgeist_primitives::types::{
         Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus,
         MarketType, OutcomeReport, Report, ScoringRule,
