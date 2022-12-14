@@ -180,8 +180,6 @@ parameter_types! {
     /// Maximum block period for an oracle_duration.
     /// The oracle_duration is a duration where the oracle has to submit its report.
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
-    /// The maximum market period.
-    pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 200 * BASE;

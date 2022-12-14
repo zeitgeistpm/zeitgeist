@@ -1438,9 +1438,6 @@ mod pallet {
         /// The maximum allowed duration of a market from creation to market close in moments.
         type MaxMarketLifetimeInMoments: Get<MomentOf<Self>>;
 
-        /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
-        type MaxMarketPeriod: Get<u64>;
-
         /// The maximum number of bytes allowed as edit reason.
         #[pallet::constant]
         type MaxEditReasonLen: Get<u32>;
@@ -2121,10 +2118,6 @@ mod pallet {
                     let now = <frame_system::Pallet<T>>::block_number();
                     ensure!(now < range.end, Error::<T>::InvalidMarketPeriod);
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
-                    ensure!(
-                        range.end <= T::MaxMarketPeriod::get().saturated_into(),
-                        Error::<T>::InvalidMarketPeriod
-                    );
                     let lifetime = range.end.saturating_sub(now); // Never saturates!
                     ensure!(
                         lifetime <= T::MaxMarketLifetimeInBlocks::get(),
@@ -2138,11 +2131,7 @@ mod pallet {
                     let end_frame = Self::calculate_time_frame_of_moment(range.end);
                     ensure!(now_frame < end_frame, Error::<T>::InvalidMarketPeriod);
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
-                    ensure!(
-                        range.end <= T::MaxMarketPeriod::get().saturated_into::<MomentOf<T>>(),
-                        Error::<T>::InvalidMarketPeriod
-                    );
-                    let lifetime = range.end.saturating_sub(now);
+                    let lifetime = range.end.saturating_sub(now); // Never saturates!
                     ensure!(
                         lifetime <= T::MaxMarketLifetimeInMoments::get(),
                         Error::<T>::MarketDurationTooLong,

@@ -1571,16 +1571,8 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
 
 #[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
 #[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
-#[test_case(
-    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "block end greater than max market period"
-)]
 #[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
 #[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
-#[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "timestamp end greater than max market period"
-)]
 #[test_case(
     MarketPeriod::Timestamp(0..(MILLISECS_PER_BLOCK - 1).into());
     "range shorter than block time"

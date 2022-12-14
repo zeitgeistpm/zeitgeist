@@ -39,7 +39,7 @@ use zeitgeist_primitives::{
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
         MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
-        MaxMarketLifetimeInBlocks, MaxMarketLifetimeInMoments, MaxMarketPeriod, MaxOracleDuration,
+        MaxMarketLifetimeInBlocks, MaxMarketLifetimeInMoments, MaxOracleDuration,
         MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight,
         MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration,
         MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
@@ -158,7 +158,6 @@ impl crate::Config for Runtime {
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
-    type MaxMarketPeriod = MaxMarketPeriod;
     type MaxMarketLifetimeInBlocks = MaxMarketLifetimeInBlocks;
     type MaxMarketLifetimeInMoments = MaxMarketLifetimeInMoments;
     type MinCategories = MinCategories;
