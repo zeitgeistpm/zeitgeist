@@ -80,6 +80,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
                         MarketDisputeMechanism::SimpleDisputes => true,
                     }
                 } else {
+                    log::warn!("UpdateMarketIdsPerDisputeBlock: Market id {:?} not found!", id);
                     // no market for id in MarketIdsPerDisputeBlock
                     false
                 }
