@@ -91,17 +91,17 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddFieldToAut
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-        let counter_key = "counter_key".to_string();
-        Self::set_temp_storage(0_u32, &counter_key);
+
+        let mut counter = 0_u32;
         for (key, value) in
             storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
         {
             Self::set_temp_storage(value, &format!("{:?}", key.as_slice()));
 
-            let counter: u32 =
-                Self::get_temp_storage(&counter_key).expect("counter key storage not found");
-            Self::set_temp_storage(counter + 1_u32, &counter_key);
+            counter = counter.saturating_add(1_u32);
         }
+        let counter_key = "counter_key".to_string();
+        Self::set_temp_storage(counter, &counter_key);
         Ok(())
     }
 
