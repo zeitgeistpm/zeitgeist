@@ -60,6 +60,8 @@ parameter_types! {
     pub const MaxOracleDuration: BlockNumber = 3;
     pub const MaxEditReasonLen: u32 = 1024;
     pub const MaxRejectReasonLen: u32 = 1024;
+    pub const MaxMarketDurationInBlocks: BlockNumber = 1_000_000;
+    pub const MaxMarketDurationInMoments: Moment = 1_000_000u64 * MILLISECS_PER_BLOCK as u64;
 }
 
 // Simple disputes parameters

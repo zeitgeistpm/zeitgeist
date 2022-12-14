@@ -1432,6 +1432,12 @@ mod pallet {
         #[pallet::constant]
         type MaxRejectReasonLen: Get<u32>;
 
+        /// The maximum allowed duration of a market in blocks.
+        type MaxMarketDurationInBlocks: Get<Self::BlockNumber>;
+
+        /// The maximum allowed duration of a market in moments (milliseconds).
+        type MaxMarketDurationInMoments: Get<MomentOf<Self>>;
+
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
@@ -1507,6 +1513,8 @@ mod pallet {
         NotEnoughBalance,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// The market duration is longer than allowed.
+        MarketDurationTooLong,
         /// Market edit request is already in progress.
         MarketEditRequestAlreadyInProgress,
         /// Market is not requested for edit.
@@ -2119,6 +2127,10 @@ mod pallet {
                         range.end <= T::MaxMarketPeriod::get().saturated_into(),
                         Error::<T>::InvalidMarketPeriod
                     );
+                    ensure!(
+                        range.end.saturating_sub(range.start) <= T::MaxMarketDurationInBlocks::get(),
+                        Error::<T>::MarketDurationTooLong,
+                    );
                 }
                 MarketPeriod::Timestamp(ref range) => {
                     // Ensure that the market lasts at least one time frame into the future.
@@ -2131,6 +2143,10 @@ mod pallet {
                     ensure!(
                         range.end <= T::MaxMarketPeriod::get().saturated_into::<MomentOf<T>>(),
                         Error::<T>::InvalidMarketPeriod
+                    );
+                    ensure!(
+                        range.end.saturating_sub(range.start) <= T::MaxMarketDurationInMoments::get(),
+                        Error::<T>::MarketDurationTooLong,
                     );
                 }
             };

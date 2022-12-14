@@ -158,6 +158,8 @@ parameter_types! {
     /// Maximum number of disputes.
     pub const MaxDisputes: u16 = 6;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
+    pub const MaxMarketDurationInBlocks: BlockNumber = MAX_MARKET_DURATION_IN_BLOCKS;
+    pub const MaxMarketDurationInMoments: Moment = MAX_MARKET_DURATION_IN_MOMENTS;
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
     /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.

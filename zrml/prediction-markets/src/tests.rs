@@ -3994,6 +3994,57 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
+#[test_case(
+    MarketPeriod::Block(999..999 + <Runtime as Config>::MaxMarketDurationInBlocks::get())
+)]
+#[test_case(
+    MarketPeriod::Timestamp(
+        999_999..999_999 + <Runtime as Config>::MaxMarketDurationInMoments::get(),
+    )
+)]
+fn create_market_succeeds_if_market_duration_is_maximal(period: MarketPeriod<BlockNumber, Moment>) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            period,
+            get_deadlines(),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test_case(
+    MarketPeriod::Block(999..999 + <Runtime as Config>::MaxMarketDurationInBlocks::get() + 1)
+)]
+#[test_case(
+    MarketPeriod::Timestamp(
+        999_999..999_999 + <Runtime as Config>::MaxMarketDurationInMoments::get() + 1,
+    )
+)]
+fn create_market_fails_if_market_duration_is_too_long(period: MarketPeriod<BlockNumber, Moment>) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                period,
+                get_deadlines(),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::MarketDurationTooLong,
+        );
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
