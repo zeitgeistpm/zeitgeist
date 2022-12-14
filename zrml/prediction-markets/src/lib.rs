@@ -1927,7 +1927,7 @@ mod pallet {
         /// This function **should** only be called if the bond is not yet settled, and calling it
         /// if the bond is settled is most likely a logic error. If the bond is already settled,
         /// storage is not changed, a warning is raised and a zero imbalance is returned.
-        pub fn slash_advisory_bond(
+        fn slash_advisory_bond(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             slash_all: bool,
