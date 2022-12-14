@@ -151,7 +151,6 @@ impl crate::Config for Runtime {
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
-    type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MinDisputeDuration = MinDisputeDuration;

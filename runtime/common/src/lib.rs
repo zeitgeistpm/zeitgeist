@@ -998,7 +998,6 @@ macro_rules! impl_config_traits {
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
-            type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
             type MinDisputeDuration = MinDisputeDuration;
