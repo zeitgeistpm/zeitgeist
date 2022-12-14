@@ -155,31 +155,35 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
-    /// Maximum number of disputes.
-    pub const MaxDisputes: u16 = 1;
-    /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
-    pub const MinCategories: u16 = 2;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
-    pub const MinSubsidyPeriod: Moment = 60_000;
-    // 2_678_400_000 = 31 days.
-    /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
-    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    pub const MaxMarketLifetimeInBlocks: BlockNumber = MAX_MARKET_LIFETIME_IN_BLOCKS;
-    pub const MaxMarketLifetimeInMoments: Moment = MAX_MARKET_LIFETIME_IN_MOMENTS;
-    /// The dispute_duration is time where users can dispute the outcome.
-    /// Minimum block period for a dispute.
-    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
     /// Maximum block period for a dispute.
     pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
+    /// Maximum number of disputes.
+    pub const MaxDisputes: u16 = 1;
+    /// Maximum string length for edit reason.
+    pub const MaxEditReasonLen: u32 = 1024;
     /// Maximum block period for a grace_period.
     /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
     pub const MaxGracePeriod: BlockNumber = MAX_GRACE_PERIOD;
-    /// Minimum block period for an oracle_duration.
-    pub const MinOracleDuration: BlockNumber = MIN_ORACLE_DURATION;
+    pub const MaxMarketLifetimeInBlocks: BlockNumber = MAX_MARKET_LIFETIME_IN_BLOCKS;
+    pub const MaxMarketLifetimeInMoments: Moment = MAX_MARKET_LIFETIME_IN_MOMENTS;
     /// Maximum block period for an oracle_duration.
     /// The oracle_duration is a duration where the oracle has to submit its report.
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
+    /// Maximum string length allowed for reject reason.
+    pub const MaxRejectReasonLen: u32 = 1024;
+    // 2_678_400_000 = 31 days.
+    /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
+    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
+    pub const MinCategories: u16 = 2;
+    /// The dispute_duration is time where users can dispute the outcome.
+    /// Minimum block period for a dispute.
+    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
+    /// Minimum block period for an oracle_duration.
+    pub const MinOracleDuration: BlockNumber = MIN_ORACLE_DURATION;
+    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
+    pub const MinSubsidyPeriod: Moment = 60_000;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 200 * BASE;
@@ -188,10 +192,6 @@ parameter_types! {
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
-    /// Maximum string length for edit reason.
-    pub const MaxEditReasonLen: u32 = 1024;
-    /// Maximum string length allowed for reject reason.
-    pub const MaxRejectReasonLen: u32 = 1024;
 
     // Preimage
     pub const PreimageMaxSize: u32 = 4096 * 1024;

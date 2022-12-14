@@ -43,24 +43,24 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
+    pub const MaxDisputeDuration: BlockNumber = 5;
     pub const MaxDisputes: u16 = 6;
-    pub const MinCategories: u16 = 2;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    pub const MinSubsidyPeriod: Moment = 60_000;
+    pub const MaxEditReasonLen: u32 = 1024;
+    pub const MaxGracePeriod: BlockNumber = 2;
+    pub const MaxMarketLifetimeInBlocks: BlockNumber = 1_000_000;
+    pub const MaxMarketLifetimeInMoments: Moment = 1_000_000u64 * MILLISECS_PER_BLOCK as u64;
+    pub const MaxOracleDuration: BlockNumber = 3;
+    pub const MaxRejectReasonLen: u32 = 1024;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    pub const MinCategories: u16 = 2;
+    pub const MinDisputeDuration: BlockNumber = 2;
+    pub const MinOracleDuration: BlockNumber = 2;
+    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    pub const MinSubsidyPeriod: Moment = 60_000;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
-    pub const MinDisputeDuration: BlockNumber = 2;
-    pub const MinOracleDuration: BlockNumber = 2;
-    pub const MaxDisputeDuration: BlockNumber = 5;
-    pub const MaxGracePeriod: BlockNumber = 2;
-    pub const MaxOracleDuration: BlockNumber = 3;
-    pub const MaxEditReasonLen: u32 = 1024;
-    pub const MaxRejectReasonLen: u32 = 1024;
-    pub const MaxMarketLifetimeInBlocks: BlockNumber = 1_000_000;
-    pub const MaxMarketLifetimeInMoments: Moment = 1_000_000u64 * MILLISECS_PER_BLOCK as u64;
 }
 
 // Simple disputes parameters
