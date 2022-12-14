@@ -165,6 +165,8 @@ parameter_types! {
     // 2_678_400_000 = 31 days.
     /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    pub const MaxMarketLifetimeInBlocks: BlockNumber = MAX_MARKET_LIFETIME_IN_BLOCKS;
+    pub const MaxMarketLifetimeInMoments: Moment = MAX_MARKET_LIFETIME_IN_MOMENTS;
     /// The dispute_duration is time where users can dispute the outcome.
     /// Minimum block period for a dispute.
     pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;

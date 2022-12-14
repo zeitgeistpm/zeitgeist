@@ -3994,20 +3994,21 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
-#[test_case(
-    MarketPeriod::Block(999..999 + <Runtime as Config>::MaxMarketDurationInBlocks::get())
-)]
-#[test_case(
-    MarketPeriod::Timestamp(
-        999_999..999_999 + <Runtime as Config>::MaxMarketDurationInMoments::get(),
-    )
-)]
-fn create_market_succeeds_if_market_duration_is_maximal(period: MarketPeriod<BlockNumber, Moment>) {
+#[test]
+fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
     ExtBuilder::default().build().execute_with(|| {
+        let now = 1;
+        frame_system::Pallet::<Runtime>::set_block_number(now);
+        let start = 5;
+        let end = now + <Runtime as Config>::MaxMarketLifetimeInBlocks::get();
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetimeInBlocks` is too small"
+        );
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
-            period,
+            MarketPeriod::Block(start..end),
             get_deadlines(),
             gen_metadata(0),
             MarketCreation::Permissionless,
@@ -4018,21 +4019,75 @@ fn create_market_succeeds_if_market_duration_is_maximal(period: MarketPeriod<Blo
     });
 }
 
-#[test_case(
-    MarketPeriod::Block(999..999 + <Runtime as Config>::MaxMarketDurationInBlocks::get() + 1)
-)]
-#[test_case(
-    MarketPeriod::Timestamp(
-        999_999..999_999 + <Runtime as Config>::MaxMarketDurationInMoments::get() + 1,
-    )
-)]
-fn create_market_fails_if_market_duration_is_too_long(period: MarketPeriod<BlockNumber, Moment>) {
+#[test]
+fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
     ExtBuilder::default().build().execute_with(|| {
+        let now = 12_001u64;
+        Timestamp::set_timestamp(now);
+        let start = 5 * MILLISECS_PER_BLOCK as u64;
+        let end = now + <Runtime as Config>::MaxMarketLifetimeInMoments::get();
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetimeInMoments` is too small"
+        );
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test]
+fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 1;
+        frame_system::Pallet::<Runtime>::set_block_number(now);
+        let start = 5;
+        let end = now + <Runtime as Config>::MaxMarketLifetimeInBlocks::get() + 1;
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetimeInBlocks` is too small"
+        );
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
-                period,
+                MarketPeriod::Block(start..end),
+                get_deadlines(),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::MarketDurationTooLong,
+        );
+    });
+}
+
+#[test]
+fn create_market_fails_if_market_duration_is_too_long_in_moments() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 12_001u64;
+        Timestamp::set_timestamp(now);
+        let start = 5 * MILLISECS_PER_BLOCK as u64;
+        let end = now + <Runtime as Config>::MaxMarketLifetimeInMoments::get() + 1;
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetimeInMoments` is too small"
+        );
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Timestamp(start..end),
                 get_deadlines(),
                 gen_metadata(0),
                 MarketCreation::Permissionless,

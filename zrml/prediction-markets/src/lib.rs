@@ -1432,11 +1432,11 @@ mod pallet {
         #[pallet::constant]
         type MaxRejectReasonLen: Get<u32>;
 
-        /// The maximum allowed duration of a market in blocks.
-        type MaxMarketDurationInBlocks: Get<Self::BlockNumber>;
+        /// The maximum allowed duration of a market from creation to market close in blocks.
+        type MaxMarketLifetimeInBlocks: Get<Self::BlockNumber>;
 
-        /// The maximum allowed duration of a market in moments (milliseconds).
-        type MaxMarketDurationInMoments: Get<MomentOf<Self>>;
+        /// The maximum allowed duration of a market from creation to market close in moments.
+        type MaxMarketLifetimeInMoments: Get<MomentOf<Self>>;
 
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
@@ -2118,25 +2118,23 @@ mod pallet {
             // frame in the future.
             match period {
                 MarketPeriod::Block(ref range) => {
-                    ensure!(
-                        <frame_system::Pallet<T>>::block_number() < range.end,
-                        Error::<T>::InvalidMarketPeriod
-                    );
+                    let now = <frame_system::Pallet<T>>::block_number();
+                    ensure!(now < range.end, Error::<T>::InvalidMarketPeriod);
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
                     ensure!(
                         range.end <= T::MaxMarketPeriod::get().saturated_into(),
                         Error::<T>::InvalidMarketPeriod
                     );
+                    let lifetime = range.end.saturating_sub(now); // Never saturates!
                     ensure!(
-                        range.end.saturating_sub(range.start) <= T::MaxMarketDurationInBlocks::get(),
+                        lifetime <= T::MaxMarketLifetimeInBlocks::get(),
                         Error::<T>::MarketDurationTooLong,
                     );
                 }
                 MarketPeriod::Timestamp(ref range) => {
                     // Ensure that the market lasts at least one time frame into the future.
-                    let now_frame = Self::calculate_time_frame_of_moment(
-                        <zrml_market_commons::Pallet<T>>::now(),
-                    );
+                    let now = <zrml_market_commons::Pallet<T>>::now();
+                    let now_frame = Self::calculate_time_frame_of_moment(now);
                     let end_frame = Self::calculate_time_frame_of_moment(range.end);
                     ensure!(now_frame < end_frame, Error::<T>::InvalidMarketPeriod);
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
@@ -2144,8 +2142,9 @@ mod pallet {
                         range.end <= T::MaxMarketPeriod::get().saturated_into::<MomentOf<T>>(),
                         Error::<T>::InvalidMarketPeriod
                     );
+                    let lifetime = range.end.saturating_sub(now);
                     ensure!(
-                        range.end.saturating_sub(range.start) <= T::MaxMarketDurationInMoments::get(),
+                        lifetime <= T::MaxMarketLifetimeInMoments::get(),
                         Error::<T>::MarketDurationTooLong,
                     );
                 }
