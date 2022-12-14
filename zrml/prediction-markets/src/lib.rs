@@ -2888,7 +2888,10 @@ mod pallet {
         }
     }
 
-    fn remove_auto_resolve<T: Config>(market_id: &MarketIdOf<T>, resolve_at: T::BlockNumber) -> u32 {
+    fn remove_auto_resolve<T: Config>(
+        market_id: &MarketIdOf<T>,
+        resolve_at: T::BlockNumber,
+    ) -> u32 {
         MarketIdsPerDisputeBlock::<T>::mutate(resolve_at, |ids| -> u32 {
             let ids_len = ids.len() as u32;
             remove_item::<MarketIdOf<T>, _>(ids, market_id);
