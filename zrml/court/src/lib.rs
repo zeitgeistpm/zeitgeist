@@ -569,7 +569,7 @@ mod pallet {
             Ok(None)
         }
 
-        fn is_expired(
+        fn has_failed(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,

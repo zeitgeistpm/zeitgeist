@@ -2326,7 +2326,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         assert_eq!(disputes.len(), 1);
 
         run_blocks(<Runtime as zrml_authorized::Config>::ReportPeriod::get() + 1);
-        assert_ok!(PredictionMarkets::resolve_expired_mdm(Origin::signed(FRED), 0));
+        assert_ok!(PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), 0));
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -3179,13 +3179,13 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
 
         run_blocks(<Runtime as zrml_authorized::Config>::ReportPeriod::get());
         assert_noop!(
-            PredictionMarkets::resolve_expired_mdm(Origin::signed(FRED), market_id),
-            Error::<Runtime>::DisputeMechanismNotExpired
+            PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), market_id),
+            Error::<Runtime>::DisputeMechanismHasNotFailed
         );
 
         run_blocks(1);
         // ReportPeriod is now over
-        assert_ok!(PredictionMarkets::resolve_expired_mdm(Origin::signed(FRED), market_id));
+        assert_ok!(PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), market_id));
 
         let market_after = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);

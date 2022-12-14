@@ -874,11 +874,11 @@ benchmarks! {
             now + authority_report_period.saturated_into() + 1u64.saturated_into()
         );
 
-        let call = Call::<T>::resolve_expired_mdm { market_id };
+        let call = Call::<T>::resolve_failed_mdm { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        assert_last_event::<T>(Event::DisputeMechanismExpired::<T>(market_id).into());
+        assert_last_event::<T>(Event::FailedDisputeMechanismResolved::<T>(market_id).into());
     }
 
     resolve_expired_mdm_authorized_categorical {
@@ -912,11 +912,11 @@ benchmarks! {
             now + authority_report_period.saturated_into() + 1u64.saturated_into()
         );
 
-        let call = Call::<T>::resolve_expired_mdm { market_id };
+        let call = Call::<T>::resolve_failed_mdm { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        assert_last_event::<T>(Event::DisputeMechanismExpired::<T>(market_id).into());
+        assert_last_event::<T>(Event::FailedDisputeMechanismResolved::<T>(market_id).into());
     }
 
     handle_expired_advised_market {
