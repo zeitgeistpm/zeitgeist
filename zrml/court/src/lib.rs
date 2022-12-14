@@ -578,7 +578,6 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            // TODO when does court fail?
             Ok(false)
         }
     }
