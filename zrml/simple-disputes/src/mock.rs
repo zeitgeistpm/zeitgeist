@@ -22,6 +22,7 @@ use frame_support::{
     construct_runtime,
     pallet_prelude::{DispatchError, Weight},
     traits::Everything,
+    BoundedVec,
 };
 use sp_runtime::{
     testing::Header,
@@ -33,8 +34,8 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId, Moment,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
+        MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -60,6 +61,7 @@ impl DisputeResolutionApi for NoopResolution {
     type AccountId = AccountIdTest;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
+    type MaxDisputes = u32;
     type Moment = Moment;
 
     fn resolve(
@@ -78,6 +80,12 @@ impl DisputeResolutionApi for NoopResolution {
 
     fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
         0u32
+    }
+
+    fn get_disputes(
+        _market_id: &Self::MarketId,
+    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
+        Default::default()
     }
 }
 

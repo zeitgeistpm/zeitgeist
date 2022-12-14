@@ -86,6 +86,9 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
+            let disputes = T::DisputeResolution::get_disputes(&market_id);
+            let not_expired = !Self::is_expired(disputes.as_slice(), &market_id)?;
+            ensure!(not_expired, Error::<T>::ReportPeriodExpired);
 
             let ids_len_1 = Self::remove_auto_resolve(&market_id);
             let now = frame_system::Pallet::<T>::block_number();
@@ -144,6 +147,8 @@ mod pallet {
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
         MarketIsNotDisputed,
+        /// The report period is expired.
+        ReportPeriodExpired,
         /// Only one dispute is allowed.
         OnlyOneDisputeAllowed,
         /// The report does not match the market's type.
@@ -181,6 +186,17 @@ mod pallet {
             } else {
                 0u32
             }
+        }
+
+        fn is_expired(
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            market_id: &MarketIdOf<T>,
+        ) -> Result<bool, DispatchError> {
+            let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
+            let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
+            let now = frame_system::Pallet::<T>::block_number();
+            let is_expired = last_dispute.at.saturating_add(T::ReportPeriod::get()) < now;
+            Ok(is_unreported && is_expired)
         }
     }
 
@@ -245,11 +261,7 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
-            let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
-            let now = frame_system::Pallet::<T>::block_number();
-            let is_expired = last_dispute.at.saturating_add(T::ReportPeriod::get()) < now;
-            Ok(is_unreported && is_expired)
+            Self::is_expired(disputes, market_id)
         }
     }
 

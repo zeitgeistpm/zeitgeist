@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
-use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
+use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight, BoundedVec};
 use sp_runtime::DispatchError;
 
 pub trait DisputeApi {
@@ -78,6 +78,7 @@ pub trait DisputeResolutionApi {
     type AccountId;
     type BlockNumber;
     type MarketId;
+    type MaxDisputes;
     type Moment;
 
     /// Resolve a market.
@@ -109,4 +110,9 @@ pub trait DisputeResolutionApi {
     ///
     /// Returns the number of elements in the storage structure.
     fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32;
+
+    /// Get the disputes of a market.
+    fn get_disputes(
+        market_id: &Self::MarketId,
+    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes>;
 }

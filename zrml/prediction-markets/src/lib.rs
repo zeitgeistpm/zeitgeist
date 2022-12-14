@@ -2906,6 +2906,7 @@ mod pallet {
         type AccountId = T::AccountId;
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
+        type MaxDisputes = T::MaxDisputes;
         type Moment = MomentOf<T>;
 
         fn resolve(
@@ -2931,6 +2932,13 @@ mod pallet {
 
         fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
             remove_auto_resolve::<T>(market_id, resolve_at)
+        }
+
+        fn get_disputes(
+            market_id: &Self::MarketId,
+        ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes>
+        {
+            Disputes::<T>::get(market_id)
         }
     }
 }
