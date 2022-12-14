@@ -149,6 +149,7 @@ mod pallet {
                         );
                         log::warn!("{}", warning);
                         debug_assert!(false, "{}", warning);
+                        return Ok(());
                     }
                     CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                     market.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
