@@ -170,6 +170,8 @@ mod tests_auto_resolution {
 
             Markets::<Runtime>::insert(market_id, market);
 
+            <frame_system::Pallet<Runtime>>::set_block_number(42u32.into());
+
             let now = <frame_system::Pallet<Runtime>>::block_number();
             crate::MarketIdsPerDisputeBlock::<Runtime>::insert(
                 now,
