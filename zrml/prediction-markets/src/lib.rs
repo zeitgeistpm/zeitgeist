@@ -92,8 +92,42 @@ mod pallet {
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
 
+    macro_rules! impl_unreserve_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by unreserving it.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
+            fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
+                    let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                    if bond.is_settled {
+                        let warning = format!(
+                            "Attempting to settle the {} bond of market {:?} multiple times",
+                            stringify!($bond_type),
+                            market_id,
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                        return Ok(());
+                    }
+                    CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                    market.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })
+            }
+        };
+    }
+
     macro_rules! impl_slash_bond {
         ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by slashing it and return the resulting imbalance.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and a zero imbalance is
+            /// returned.
             fn $fn_name(
                 market_id: &MarketIdOf<T>,
                 market: &MarketOf<T>,
@@ -132,29 +166,6 @@ mod pallet {
                     Ok(())
                 })?;
                 Ok(imbalance)
-            }
-        };
-    }
-
-    macro_rules! impl_unreserve_bond {
-        ($fn_name:ident, $bond_type:ident) => {
-            fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
-                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
-                    let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
-                    if bond.is_settled {
-                        let warning = format!(
-                            "Attempting to settle the {} bond of market {:?} multiple times",
-                            stringify!($bond_type),
-                            market_id,
-                        );
-                        log::warn!("{}", warning);
-                        debug_assert!(false, "{}", warning);
-                        return Ok(());
-                    }
-                    CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
-                    market.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
-                    Ok(())
-                })
             }
         };
     }
@@ -1907,7 +1918,16 @@ mod pallet {
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
     impl<T: Config> Pallet<T> {
-        fn slash_advisory_bond(
+        /// Settle the advisory bond by slashing and/or unreserving it and return the resulting
+        /// imbalance.
+        ///
+        /// If `slash_all` is `true`, then the entire bond is slashed. Otherwise, only
+        /// `T::AdvisoryBondSlashPercentage` is slashed and the remainder is unreserved.
+        ///
+        /// This function **should** only be called if the bond is not yet settled, and calling it
+        /// if the bond is settled is most likely a logic error. If the bond is already settled,
+        /// storage is not changed, a warning is raised and a zero imbalance is returned.
+        pub fn slash_advisory_bond(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             slash_all: bool,
@@ -1954,11 +1974,11 @@ mod pallet {
             Ok(imbalance)
         }
 
-        impl_slash_bond!(slash_oracle_bond, oracle);
-        impl_slash_bond!(slash_validity_bond, validity);
         impl_unreserve_bond!(unreserve_advisory_bond, advisory);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
         impl_unreserve_bond!(unreserve_validity_bond, validity);
+        impl_slash_bond!(slash_oracle_bond, oracle);
+        impl_slash_bond!(slash_validity_bond, validity);
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
