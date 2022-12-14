@@ -60,7 +60,7 @@ macro_rules! decl_common_types {
             AllPalletsWithSystem,
             (
                 zrml_prediction_markets::migrations::UpdateMarketIdsPerDisputeBlock<Runtime>,
-                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
+                zrml_authorized::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
 
@@ -73,7 +73,7 @@ macro_rules! decl_common_types {
             AllPalletsWithSystem,
             (
                 zrml_prediction_markets::migrations::UpdateMarketIdsPerDisputeBlock<Runtime>,
-                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
+                zrml_authorized::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
 
