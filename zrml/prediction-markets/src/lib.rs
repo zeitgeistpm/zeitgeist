@@ -2019,14 +2019,8 @@ mod pallet {
                         }
                     };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
-                        MarketIdsPerDisputeBlock::<T>::mutate(
-                            auto_resolve_block,
-                            |ids| -> (u32, u32) {
-                                let ids_len = ids.len() as u32;
-                                remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                                (ids_len, disputes.len() as u32)
-                            },
-                        )
+                        let ids_len = remove_auto_resolve::<T>(market_id, auto_resolve_block);
+                        (ids_len, disputes.len() as u32)
                     } else {
                         (0u32, disputes.len() as u32)
                     }
@@ -2894,6 +2888,14 @@ mod pallet {
         }
     }
 
+    fn remove_auto_resolve<T: Config>(market_id: &MarketIdOf<T>, resolve_at: T::BlockNumber) -> u32 {
+        MarketIdsPerDisputeBlock::<T>::mutate(resolve_at, |ids| -> u32 {
+            let ids_len = ids.len() as u32;
+            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+            ids_len
+        })
+    }
+
     impl<T> DisputeResolutionApi for Pallet<T>
     where
         T: Config,
@@ -2912,10 +2914,10 @@ mod pallet {
 
         fn add_auto_resolve(
             market_id: &Self::MarketId,
-            resolution: Self::BlockNumber,
+            resolve_at: Self::BlockNumber,
         ) -> Result<u32, DispatchError> {
             let ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
-                resolution,
+                resolve_at,
                 |ids| -> Result<u32, DispatchError> {
                     ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
                     Ok(ids.len() as u32)
@@ -2924,11 +2926,8 @@ mod pallet {
             Ok(ids_len)
         }
 
-        fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber) -> u32 {
-            MarketIdsPerDisputeBlock::<T>::mutate(resolution, |ids| -> u32 {
-                remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                ids.len() as u32
-            })
+        fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
+            remove_auto_resolve::<T>(market_id, resolve_at)
         }
     }
 }
