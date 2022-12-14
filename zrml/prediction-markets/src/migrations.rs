@@ -406,16 +406,20 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
             AUTHORIZED,
             AUTHORIZED_OUTCOME_REPORTS,
         ) {
+            let key_str = format!("{:?}", key.as_slice());
             if let Some(AuthorityReport { resolve_at: _, outcome }) = new_value {
-                let old_value: Option<OutcomeReport> =
-                    Self::get_temp_storage(&format!("{:?}", key.as_slice()))
-                        .expect("old value not found");
+                let old_value: Option<OutcomeReport> = Self::get_temp_storage(&key_str)
+                    .unwrap_or_else(|| panic!("old value not found for market id {:?}", key_str));
 
                 assert_eq!(old_value.unwrap(), outcome);
 
                 markets_count += 1_u32;
             } else {
-                panic!("storage iter should only find present (Option::Some) values");
+                panic!(
+                    "For market id {:?} storage iter should only find present (Option::Some) \
+                     values",
+                    key_str
+                );
             }
         }
         let old_markets_count: u32 =
