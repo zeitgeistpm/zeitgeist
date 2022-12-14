@@ -36,15 +36,15 @@ const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
 const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
 
 // TODO increase storage versions here, when last migration was executed
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 6;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 7;
 
 const AUTHORIZED: &[u8] = b"Authorized";
 const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
 
 // TODO increase storage versions here, when last migration was executed
-const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
-const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
+const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 2;
+const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 3;
 
 pub struct UpdateMarketIdsPerDisputeBlock<T>(PhantomData<T>);
 
