@@ -1,8 +1,25 @@
 #!/usr/bin/env bash
 
-# Fuzzing tests
+verbose=""
 
+for arg in "$@"; do
+    case $arg in
+    "--verbose" | "-v")
+        verbose="verbose"
+        ;;
+    *)
+        echo "Unknown option '$arg'"
+        usage
+        exit 1
+        ;;
+    esac
+done
 set -euxo pipefail
+# Fuzzing tests
+if [[ ${verbose} = "verbose" ]]; then
+    echo "Its verbose"
+    RUST_BACKTRACE=1
+fi
 
 # Using specific_run = (RUN * FUZZ_FACT) / BASE allows us to specify
 # a hardware- and fuzz target specific run count.
@@ -33,35 +50,35 @@ RIKIDDO_WITH_CALCULATED_FEE_FACT=1750
 RIKIDDO_PALLET_FACT=1000
 
 # --- Prediction Market Pallet fuzz tests ---
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
+cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
 
 # --- Swaps Pallet fuzz tests ---
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz create_pool -- -runs=$(($(($RUNS * $CREATE_POOL_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join -- -runs=$(($(($RUNS * $POOL_JOIN_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join_with_exact_pool_amount -- -runs=$(($(($RUNS * $POOL_JOIN_WITH_EXACT_POOL_AMOUNT_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join_with_exact_asset_amount -- -runs=$(($(($RUNS * $POOL_JOIN_WITH_EXACT_ASSET_AMOUNT_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz swap_exact_amount_in -- -runs=$(($(($RUNS * $SWAP_EXACT_AMOUNT_IN_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz swap_exact_amount_out -- -runs=$(($(($RUNS * $SWAP_EXACT_AMOUNT_OUT_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_asset_amount -- -runs=$(($(($RUNS * $POOL_EXIT_WITH_EXACT_ASSET_AMOUNT_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_pool_amount -- -runs=$(($(($RUNS * $POOL_EXIT_WITH_EXACT_POOL_AMOUNT_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RUNS * $POOL_EXIT_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz create_pool -- -runs=$(($(($RUNS * $CREATE_POOL_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join -- -runs=$(($(($RUNS * $POOL_JOIN_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join_with_exact_pool_amount -- -runs=$(($(($RUNS * $POOL_JOIN_WITH_EXACT_POOL_AMOUNT_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join_with_exact_asset_amount -- -runs=$(($(($RUNS * $POOL_JOIN_WITH_EXACT_ASSET_AMOUNT_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz swap_exact_amount_in -- -runs=$(($(($RUNS * $SWAP_EXACT_AMOUNT_IN_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz swap_exact_amount_out -- -runs=$(($(($RUNS * $SWAP_EXACT_AMOUNT_OUT_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_asset_amount -- -runs=$(($(($RUNS * $POOL_EXIT_WITH_EXACT_ASSET_AMOUNT_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_pool_amount -- -runs=$(($(($RUNS * $POOL_EXIT_WITH_EXACT_POOL_AMOUNT_FACT)) / $BASE))
+cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RUNS * $POOL_EXIT_FACT)) / $BASE))
 
 # --- Orderbook-v1 Pallet fuzz tests ---
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/orderbook-v1/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
+cargo fuzz run --fuzz-dir zrml/orderbook-v1/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
 
 # --- Rikiddo Pallet fuzz tests ---
 # Release is required here since it triggers debug assertions otherwise
 # Using the default RUNS multiplier, each fuzz test needs approx. 6-7 seconds
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fee_sigmoid -- -runs=$(($(($RUNS * $FEE_SIGMOID_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedi_to_fixedu_conversion -- -runs=$(($(($RUNS * $FIXEDI_TO_FIXEDU_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedu_to_fixedi_conversion -- -runs=$(($(($RUNS * $FIXEDU_TO_FIXEDI_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz balance_to_fixedu_conversion -- -runs=$(($(($RUNS * $BALANCE_TO_FIXEDU_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedu_to_balance_conversion -- -runs=$(($(($RUNS * $FIXEDU_TO_BALANCE_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_first_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_FIRST_STATE_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_second_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_SECOND_STATE_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_third_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_THIRD_STATE_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_estimate_ema -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_ESTIMATE_EMA_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_with_initial_fee -- -runs=$(($(($RUNS * $RIKIDDO_WITH_INITIAL_FEE_FACT)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_with_calculated_fee -- -runs=$(($(($RUNS * $RIKIDDO_WITH_CALCULATED_FEE_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fee_sigmoid -- -runs=$(($(($RUNS * $FEE_SIGMOID_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedi_to_fixedu_conversion -- -runs=$(($(($RUNS * $FIXEDI_TO_FIXEDU_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedu_to_fixedi_conversion -- -runs=$(($(($RUNS * $FIXEDU_TO_FIXEDI_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz balance_to_fixedu_conversion -- -runs=$(($(($RUNS * $BALANCE_TO_FIXEDU_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedu_to_balance_conversion -- -runs=$(($(($RUNS * $FIXEDU_TO_BALANCE_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_first_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_FIRST_STATE_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_second_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_SECOND_STATE_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_third_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_THIRD_STATE_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_estimate_ema -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_ESTIMATE_EMA_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_with_initial_fee -- -runs=$(($(($RUNS * $RIKIDDO_WITH_INITIAL_FEE_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_with_calculated_fee -- -runs=$(($(($RUNS * $RIKIDDO_WITH_CALCULATED_FEE_FACT)) / $BASE))
 # This actually needs approx. 107 seconds. Need to find a way to optimize fuzzing on-chain
-RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_pallet -- -runs=$(($(($RUNS * $RIKIDDO_PALLET_FACT)) / $BASE))
+cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_pallet -- -runs=$(($(($RUNS * $RIKIDDO_PALLET_FACT)) / $BASE))
