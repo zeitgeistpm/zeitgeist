@@ -28,7 +28,7 @@ pub fn native_per_second() -> Balance {
 }
 
 pub fn default_per_second(decimals: u32) -> Balance {
-    let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time() as u128);
+    let base_weight = ExtrinsicBaseWeight::get().ref_time() as u128;
     let default_per_second = (WEIGHT_PER_SECOND.ref_time() as u128) / base_weight;
     default_per_second * base_fee(decimals)
 }

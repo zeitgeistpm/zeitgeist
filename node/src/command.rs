@@ -22,7 +22,6 @@ use super::{
 };
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
-use std::sync::Arc;
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
@@ -183,7 +182,7 @@ pub fn run() -> sc_cli::Result<()> {
                 }
 
                 BenchmarkCmd::Extrinsic(_cmd) => {
-                    return Err("BenchmarkCmd Extrinsic is not yet supported".into());
+                    Err("BenchmarkCmd Extrinsic is not yet supported".into())
                 }
             }
         }

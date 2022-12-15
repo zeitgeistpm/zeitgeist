@@ -34,6 +34,7 @@ use zeitgeist_primitives::{
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
+    crate::BATTERY_STATION_PARACHAIN_ID,
     battery_station_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
@@ -137,7 +138,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
             generic_genesis(
                 additional_chain_spec_staging_battery_station(
                     #[cfg(feature = "parachain")]
-                    2050_u32.into(),
+                    BATTERY_STATION_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_battery_station(),
                 wasm,
@@ -151,7 +152,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
-            parachain_id: 2050_u32.into(),
+            parachain_id: BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

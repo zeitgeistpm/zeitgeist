@@ -119,7 +119,7 @@ zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/ru
 
 [dev-dependencies]
 sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-xcm-emulator = { rev = "ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe", git = "https://github.com/shaunxw/xcm-simulator" }
+xcm-emulator = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/xcm-simulator" }
 
 [features]
 default = ["std"]

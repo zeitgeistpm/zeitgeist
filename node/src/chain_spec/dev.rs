@@ -79,7 +79,7 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     nominations: vec![],
                     parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
-                    parachain_id: 2050_u32.into(),
+                    parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
@@ -113,7 +113,7 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo-dev".into(),
-            parachain_id: 2050_u32.into(),
+            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

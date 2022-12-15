@@ -45,6 +45,7 @@
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
+#![allow(clippy::unnecessary_cast)]
 
 use core::marker::PhantomData;
 use frame_support::{traits::Get, weights::Weight};

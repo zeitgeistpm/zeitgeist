@@ -74,7 +74,7 @@ use sp_runtime::{
 };
 
 #[cfg(feature = "parachain")]
-use nimbus_primitives::{CanAuthor, NimbusId};
+use nimbus_primitives::CanAuthor;
 use sp_version::RuntimeVersion;
 
 #[cfg(test)]
