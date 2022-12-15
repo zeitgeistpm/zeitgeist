@@ -53,6 +53,8 @@ mod pallet {
     use zeitgeist_primitives::types::OutcomeReport;
     use zrml_market_commons::MarketCommonsPalletApi;
 
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The currency implementation used to lock tokens for voting.
@@ -655,5 +657,36 @@ mod pallet {
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
             <Winners<T>>::get(market_id).is_some()
         }
+    }
+}
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>()
+-> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+where
+    T: crate::Config,
+{
+    use frame_support::traits::Get;
+    use sp_runtime::traits::AccountIdConversion;
+    use zeitgeist_primitives::types::ScoringRule;
+
+    zeitgeist_primitives::types::Market {
+        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: T::GlobalDisputesPalletId::get().into_account_truncating(),
+        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=u128::MAX),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes,
+        metadata: Default::default(),
+        oracle: T::GlobalDisputesPalletId::get().into_account_truncating(),
+        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        deadlines: zeitgeist_primitives::types::Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 1_u32.into(),
+        },
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
     }
 }

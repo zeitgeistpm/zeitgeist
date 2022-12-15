@@ -19,6 +19,7 @@
 
 use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
+    market_mock,
     mock::*,
     types::{OutcomeInfo, WinnerInfo},
     Error, Event, Locks, MarketIdOf, Outcomes, Winners,
@@ -34,6 +35,7 @@ use zeitgeist_primitives::{
     constants::mock::{GlobalDisputeLockId, MinOutcomeVoteAmount, VotingOutcomeFee, BASE},
     types::OutcomeReport,
 };
+use zrml_market_commons::Markets;
 
 const SETUP_AMOUNT: u128 = 100 * BASE;
 
@@ -71,7 +73,10 @@ fn check_outcome_sum(
 #[test]
 fn add_vote_outcome_works() {
     ExtBuilder::default().build().execute_with(|| {
+        // create market
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(0),
@@ -110,6 +115,8 @@ fn add_vote_outcome_works() {
 fn add_vote_outcome_fails_if_no_global_dispute_present() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
                 Origin::signed(ALICE),
@@ -125,6 +132,8 @@ fn add_vote_outcome_fails_if_no_global_dispute_present() {
 fn add_vote_outcome_fails_if_global_dispute_finished() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
         let mut winner_info = WinnerInfo::new(OutcomeReport::Scalar(0), 10 * BASE);
         winner_info.is_finished = true;
         <Winners<Runtime>>::insert(market_id, winner_info);
@@ -144,6 +153,8 @@ fn add_vote_outcome_fails_if_global_dispute_finished() {
 fn add_vote_outcome_fails_if_outcome_already_exists() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(0),
@@ -171,6 +182,8 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
 fn add_vote_outcome_fails_if_balance_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(0),

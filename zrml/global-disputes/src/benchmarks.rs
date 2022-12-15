@@ -25,8 +25,8 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi, types::*, BalanceOf, Call, Config,
-    Pallet as GlobalDisputes, *,
+    global_disputes_pallet_api::GlobalDisputesPalletApi, market_mock, types::*, BalanceOf, Call,
+    Config, Pallet as GlobalDisputes, *,
 };
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
@@ -38,6 +38,7 @@ use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
+use zrml_market_commons::MarketCommonsPalletApi;
 
 fn deposit<T>(caller: &T::AccountId)
 where
@@ -213,6 +214,8 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market).unwrap();
         let outcome = OutcomeReport::Scalar(20);
         <Winners<T>>::insert(market_id, winner_info);
         deposit::<T>(&caller);
