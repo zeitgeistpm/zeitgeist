@@ -7,6 +7,8 @@
   - [ ] Are the doc strings up to date?
   - [ ] Is the _Weight_ section in the documentation up to date?
   - [ ] Are the benchmarks up to date?
+  - [ ] Do the call filters need to be adjusted (forbidden scoring rules,
+        dispute mechanisms)?
 - [ ] Is the module `README.md` up to date?
 - [ ] Is [docs.zeitgeist.pm] up to date?
 - [ ] Is `docs/changelog_for_devs.md` up to date, specifically:
