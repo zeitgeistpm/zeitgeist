@@ -189,6 +189,8 @@ mod pallet {
         OutcomeAlreadyExists,
         /// The outcome specified is not present in the voting outcomes.
         OutcomeDoesNotExist,
+        /// Submitted outcome does not match market type.
+        OutcomeMismatch,
         /// The global dispute period is not over yet. The winner is not yet determined.
         UnfinishedGlobalDispute,
         /// The maximum number of votes for this account is reached.
@@ -220,6 +222,9 @@ mod pallet {
             outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
             let owner = ensure_signed(origin)?;
+
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
 
             let winner_info =
                 <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
