@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Fuzzing tests
+
 verbose=""
 
 for arg in "$@"; do
@@ -14,12 +16,15 @@ for arg in "$@"; do
         ;;
     esac
 done
+
 set -euxo pipefail
-# Fuzzing tests
+
 if [[ ${verbose} = "verbose" ]]; then
     echo "Its verbose"
     RUST_BACKTRACE=1
 fi
+
+# Fuzzing tests
 
 # Using specific_run = (RUN * FUZZ_FACT) / BASE allows us to specify
 # a hardware- and fuzz target specific run count.
