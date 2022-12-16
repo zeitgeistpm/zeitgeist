@@ -150,7 +150,6 @@ mod pallet {
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
         >;
 
@@ -499,7 +498,7 @@ mod pallet {
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
+            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
             if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
@@ -523,7 +522,7 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, MomentOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());

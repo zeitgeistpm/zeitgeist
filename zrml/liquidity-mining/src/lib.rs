@@ -104,7 +104,6 @@ mod pallet {
 
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = Self::MarketId,
         >;

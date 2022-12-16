@@ -25,11 +25,10 @@ use sp_runtime::RuntimeDebug;
 /// Types
 ///
 /// * `AI`: Account Id
-/// * `BL`: Balance
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BL, BN, M> {
+pub struct Market<AI, BN, M> {
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -52,14 +51,14 @@ pub struct Market<AI, BL, BN, M> {
     /// The current status of the market.
     pub status: MarketStatus,
     /// The report of the market. Only `Some` if it has been reported.
-    pub report: Option<Report<AI, BL, BN>>,
+    pub report: Option<Report<AI, BN>>,
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
 }
 
-impl<AI, BL, BN, M> Market<AI, BL, BN, M> {
+impl<AI, BN, M> Market<AI, BN, M> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -85,10 +84,9 @@ impl<AI, BL, BN, M> Market<AI, BL, BN, M> {
     }
 }
 
-impl<AI, BL, BN, M> MaxEncodedLen for Market<AI, BL, BN, M>
+impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M>
 where
     AI: MaxEncodedLen,
-    BL: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
 {
@@ -104,7 +102,7 @@ where
             .saturating_add(Deadlines::<BN>::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
             .saturating_add(MarketStatus::max_encoded_len())
-            .saturating_add(<Option<Report<AI, BL, BN>>>::max_encoded_len())
+            .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
     }
@@ -211,11 +209,10 @@ impl MaxEncodedLen for MarketType {
 }
 
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Report<AccountId, Balance, BlockNumber> {
+pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
     pub outcome: OutcomeReport,
-    pub outsider_bond: Option<Balance>,
 }
 
 /// Contains a market id and the market period.
@@ -235,7 +232,7 @@ pub struct SubsidyUntil<BN, MO, MI> {
 mod tests {
     use crate::market::*;
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32, u32>;
+    type Market = crate::market::Market<u32, u32, u32>;
 
     #[test_case(
         MarketType::Categorical(6),
