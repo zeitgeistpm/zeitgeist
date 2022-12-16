@@ -20,10 +20,10 @@
 extern crate alloc;
 
 use crate::{self as zrml_authorized};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use frame_support::{
     construct_runtime, ord_parameter_types,
-    pallet_prelude::{DispatchError, Weight},
+    pallet_prelude::{DispatchError, Get, Weight},
     traits::Everything,
     BoundedVec,
 };
@@ -40,7 +40,7 @@ use zeitgeist_primitives::{
     traits::DisputeResolutionApi,
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
-        MarketId, Moment, UncheckedExtrinsicTest,
+        MarketId, Moment, OutcomeReport, UncheckedExtrinsicTest,
     },
 };
 
@@ -69,14 +69,25 @@ ord_parameter_types! {
 
 pub static mut RESOLUTIONS: Vec<(MarketId, BlockNumber)> = Vec::new();
 
-// NoopResolution implements DisputeResolutionApi with no-ops.
-pub struct NoopResolution;
+pub static mut WITH_DISPUTE: bool = false;
 
-impl DisputeResolutionApi for NoopResolution {
+pub struct MaxDisputes;
+impl Get<u32> for MaxDisputes {
+    fn get() -> u32 {
+        64u32
+    }
+}
+
+type MaxDisputesTest = MaxDisputes;
+
+// MockResolution implements DisputeResolutionApi with no-ops.
+pub struct MockResolution;
+
+impl DisputeResolutionApi for MockResolution {
     type AccountId = AccountIdTest;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
-    type MaxDisputes = u32;
+    type MaxDisputes = MaxDisputesTest;
     type Moment = Moment;
 
     fn resolve(
@@ -102,6 +113,17 @@ impl DisputeResolutionApi for NoopResolution {
     fn get_disputes(
         _market_id: &Self::MarketId,
     ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
+        unsafe {
+            if WITH_DISPUTE {
+                return BoundedVec::try_from(vec![MarketDispute {
+                    at: 42u64,
+                    by: BOB,
+                    outcome: OutcomeReport::Scalar(42),
+                }])
+                .unwrap();
+            }
+        }
+
         Default::default()
     }
 }
@@ -110,7 +132,7 @@ impl crate::Config for Runtime {
     type ReportPeriod = ReportPeriod;
     type Event = ();
     type CorrectionPeriod = CorrectionPeriod;
-    type DisputeResolution = NoopResolution;
+    type DisputeResolution = MockResolution;
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type AuthorizedDisputeResolutionOrigin =
