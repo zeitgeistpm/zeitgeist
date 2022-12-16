@@ -17,7 +17,10 @@
 
 #![cfg(test)]
 
+extern crate alloc;
+
 use crate::{self as zrml_authorized};
+use alloc::vec::Vec;
 use frame_support::{
     construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
@@ -64,6 +67,8 @@ ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
 }
 
+pub static mut RESOLUTIONS: Vec<(MarketId, BlockNumber)> = Vec::new();
+
 // NoopResolution implements DisputeResolutionApi with no-ops.
 pub struct NoopResolution;
 
@@ -82,13 +87,15 @@ impl DisputeResolutionApi for NoopResolution {
     }
 
     fn add_auto_resolve(
-        _market_id: &Self::MarketId,
-        _resolve_at: Self::BlockNumber,
+        market_id: &Self::MarketId,
+        resolve_at: Self::BlockNumber,
     ) -> Result<u32, DispatchError> {
+        unsafe { RESOLUTIONS.push((*market_id, resolve_at)) };
         Ok(0u32)
     }
 
-    fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
+    fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
+        unsafe { RESOLUTIONS.retain(|(id, block)| !(id == market_id && block == &resolve_at)) };
         0u32
     }
 

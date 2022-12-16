@@ -19,7 +19,9 @@
 
 use crate::{
     market_mock,
-    mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB},
+    mock::{
+        Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB, RESOLUTIONS,
+    },
     AuthorizedOutcomeReports, Error,
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
@@ -44,6 +46,43 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
             AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
             AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at }
         );
+    });
+}
+
+#[test]
+fn authorize_market_outcome_resets_dispute_resolution() {
+    ExtBuilder::default().build().execute_with(|| {
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>());
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            0,
+            OutcomeReport::Scalar(1)
+        ));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at_0 = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at: resolve_at_0 }
+        );
+
+        unsafe {
+            assert_eq!(RESOLUTIONS, vec![(0, resolve_at_0)]);
+        }
+
+        frame_system::Pallet::<Runtime>::set_block_number(resolve_at_0 - 1);
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at_1 = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            0,
+            OutcomeReport::Scalar(2)
+        ));
+
+        // expect one tuple inside vector (reset happened)
+        unsafe {
+            assert_eq!(RESOLUTIONS, vec![(0, resolve_at_1)]);
+        }
     });
 }
 
