@@ -20,13 +20,12 @@
 
 extern crate alloc;
 
-mod market_commons_pallet_api;
 pub mod migrations;
 mod mock;
 mod tests;
 
-pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use pallet::*;
+pub use zeitgeist_primitives::traits::MarketCommonsPalletApi;
 
 #[frame_support::pallet]
 mod pallet {
@@ -56,6 +55,13 @@ mod pallet {
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
     pub type MarketIdOf<T> = <T as Config>::MarketId;
+
+    type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        MarketIdOf<T>,
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -117,7 +123,7 @@ mod pallet {
         // on the storage so next following calls will return yet another incremented number.
         //
         // Returns `Err` if `MarketId` addition overflows.
-        fn next_market_id() -> Result<T::MarketId, DispatchError> {
+        pub fn next_market_id() -> Result<T::MarketId, DispatchError> {
             let id = MarketCounter::<T>::get();
             let new_counter = id.checked_add(&1u8.into()).ok_or(ArithmeticError::Overflow)?;
             <MarketCounter<T>>::put(new_counter);
@@ -232,12 +238,7 @@ mod pallet {
 
     /// Holds all markets
     #[pallet::storage]
-    pub type Markets<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::MarketId,
-        Market<T::AccountId, T::BlockNumber, MomentOf<T>, T::MarketId>,
-    >;
+    pub type Markets<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, MarketOf<T>>;
 
     /// The number of markets that have been created (including removed markets) and the next
     /// identifier for a created market.

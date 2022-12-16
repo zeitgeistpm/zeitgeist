@@ -983,7 +983,6 @@ macro_rules! impl_config_traits {
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
-            type DisputePeriod = DisputePeriod;
             type Event = Event;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
@@ -993,7 +992,6 @@ macro_rules! impl_config_traits {
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
-            type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
             type MinDisputeDuration = MinDisputeDuration;
@@ -1010,7 +1008,6 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type ReportingPeriod = ReportingPeriod;
             type RequestEditOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
