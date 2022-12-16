@@ -35,7 +35,7 @@ use zeitgeist_primitives::{
     constants::mock::{GlobalDisputeLockId, MinOutcomeVoteAmount, VotingOutcomeFee, BASE},
     types::OutcomeReport,
 };
-use zrml_market_commons::Markets;
+use zrml_market_commons::{Error as MarketError, Markets};
 
 const SETUP_AMOUNT: u128 = 100 * BASE;
 
@@ -107,6 +107,53 @@ fn add_vote_outcome_works() {
         assert_eq!(
             Balances::free_balance(GlobalDisputes::reward_account(&market_id)),
             free_balance_reward_account + VotingOutcomeFee::get()
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_with_outcome_mismatch() {
+    ExtBuilder::default().build().execute_with(|| {
+        // create scalar market
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(0),
+            &ALICE,
+            10 * BASE,
+        )
+        .unwrap();
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                Origin::signed(ALICE),
+                market_id,
+                OutcomeReport::Categorical(0u16),
+            ),
+            Error::<Runtime>::OutcomeMismatch
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_with_non_existing_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        GlobalDisputes::push_voting_outcome(
+            &market_id,
+            OutcomeReport::Scalar(0),
+            &ALICE,
+            10 * BASE,
+        )
+        .unwrap();
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                Origin::signed(ALICE),
+                market_id,
+                OutcomeReport::Scalar(20),
+            ),
+            MarketError::<Runtime>::MarketDoesNotExist
         );
     });
 }
