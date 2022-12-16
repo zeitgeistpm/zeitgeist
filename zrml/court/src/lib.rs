@@ -65,7 +65,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        types::{Asset, Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -498,7 +498,12 @@ mod pallet {
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+            market: &Market<
+                Self::AccountId,
+                Self::BlockNumber,
+                Self::Moment,
+                Asset<Self::MarketId>,
+            >,
         ) -> DispatchResult {
             if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
@@ -522,7 +527,7 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, Asset<MarketIdOf<T>>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());

@@ -93,7 +93,7 @@ mod pallet {
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        MarketIdOf<T>,
+        Asset<MarketIdOf<T>>,
     >;
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;

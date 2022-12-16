@@ -15,7 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
+use crate::{
+    market::MarketDispute,
+    outcome_report::OutcomeReport,
+    types::{Asset, Market},
+};
 use frame_support::dispatch::DispatchResult;
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
@@ -35,7 +39,7 @@ pub trait DisputeApi {
     fn on_dispute(
         previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
     ) -> DispatchResult;
 
     /// Manage market resolution of a disputed market.
@@ -50,6 +54,6 @@ pub trait DisputeApi {
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 }

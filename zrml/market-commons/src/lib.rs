@@ -47,7 +47,7 @@ mod pallet {
         },
         ArithmeticError, DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::types::{Market, PoolId};
+    use zeitgeist_primitives::types::{Asset, Market, PoolId};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
@@ -56,11 +56,11 @@ mod pallet {
 
     pub type MarketIdOf<T> = <T as Config>::MarketId;
 
-    type MarketOf<T> = Market<
+    pub type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        MarketIdOf<T>,
+        Asset<MarketIdOf<T>>,
     >;
 
     #[pallet::call]
@@ -153,27 +153,17 @@ mod pallet {
             }
         }
 
-        fn market_iter() -> PrefixIterator<(
-            Self::MarketId,
-            Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
-        )> {
+        fn market_iter() -> PrefixIterator<(Self::MarketId, MarketOf<T>)> {
             <Markets<T>>::iter()
         }
 
-        fn market(
-            market_id: &Self::MarketId,
-        ) -> Result<
-            Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
-            DispatchError,
-        > {
+        fn market(market_id: &Self::MarketId) -> Result<MarketOf<T>, DispatchError> {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
         where
-            F: FnOnce(
-                &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
-            ) -> DispatchResult,
+            F: FnOnce(&mut MarketOf<T>) -> DispatchResult,
         {
             <Markets<T>>::try_mutate(market_id, |opt| {
                 if let Some(market) = opt {
@@ -184,9 +174,7 @@ mod pallet {
             })
         }
 
-        fn push_market(
-            market: Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
-        ) -> Result<Self::MarketId, DispatchError> {
+        fn push_market(market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
             let market_id = Self::next_market_id()?;
             <Markets<T>>::insert(market_id, market);
             Ok(market_id)

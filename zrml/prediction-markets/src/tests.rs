@@ -4116,7 +4116,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
 }
 
 fn deploy_swap_pool(
-    market: Market<u128, u64, u64, u128>,
+    market: Market<u128, u64, u64, Asset<u128>>,
     market_id: u128,
 ) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));

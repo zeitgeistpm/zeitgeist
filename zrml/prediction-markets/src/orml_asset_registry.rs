@@ -34,20 +34,11 @@ macro_rules! impl_mock_registry {
 
         mod orml_asset_registry_mock {
             use frame_support::{
-                dispatch::{
-                    DispatchError,
-                    DispatchResult,
-                },
+                dispatch::{DispatchError, DispatchResult},
                 traits::GenesisBuild,
             };
-            use orml_traits::asset_registry::{
-                AssetMetadata, Inspect,
-                Mutate,
-            };
-            use xcm::{
-                latest::prelude::MultiLocation,
-                VersionedMultiLocation,
-            };
+            use orml_traits::asset_registry::{AssetMetadata, Inspect, Mutate};
+            use xcm::{latest::prelude::MultiLocation, VersionedMultiLocation};
 
             use super::*;
 
@@ -92,9 +83,7 @@ macro_rules! impl_mock_registry {
                     if let Some(asset_id) = asset_id {
                         __private::STATE.with(|s| s.borrow_mut().insert_meta(&asset_id, metadata))
                     } else {
-                        Err(DispatchError::Other(
-                            "Mock can only register metadata with asset_id",
-                        ))
+                        Err(DispatchError::Other("Mock can only register metadata with asset_id"))
                     }
                 }
 
@@ -127,13 +116,8 @@ macro_rules! impl_mock_registry {
             }
 
             use serde::{
-                de::{
-                    Deserialize, Deserializer,
-                },
-                ser::{
-                    Serialize, SerializeStruct,
-                    Serializer,
-                },
+                de::{Deserialize, Deserializer},
+                ser::{Serialize, SerializeStruct, Serializer},
             };
 
             impl GenesisBuild<()> for GenesisConfig {
@@ -176,8 +160,7 @@ macro_rules! impl_mock_registry {
 
                 pub struct RegistryState {
                     pub location_to_asset: Vec<(MultiLocation, $asset_id)>,
-                    pub metadata:
-                        Vec<($asset_id, AssetMetadata<$balance, $custom_metadata>)>,
+                    pub metadata: Vec<($asset_id, AssetMetadata<$balance, $custom_metadata>)>,
                 }
 
                 impl RegistryState {
@@ -210,10 +193,7 @@ macro_rules! impl_mock_registry {
                         Ok(())
                     }
 
-                    pub fn get_location(
-                        &self,
-                        asset_id: &$asset_id,
-                    ) -> Option<MultiLocation> {
+                    pub fn get_location(&self, asset_id: &$asset_id) -> Option<MultiLocation> {
                         for (curr_id, meta) in &self.metadata {
                             if curr_id == asset_id {
                                 return meta

@@ -45,7 +45,9 @@ mod pallet {
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{
+            Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -144,7 +146,7 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
         ) -> DispatchResult {
             Ok(())
         }
@@ -152,7 +154,7 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Self::MarketId>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             let result = AuthorizedOutcomeReports::<T>::get(market_id);
             if result.is_some() {

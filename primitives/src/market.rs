@@ -30,11 +30,11 @@ use sp_runtime::RuntimeDebug;
 /// * `AI`: Account Id
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
-/// * `MI`: MarketId
+/// * `A`: Asset
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BN, M, MI: MaxEncodedLen> {
+pub struct Market<AI, BN, M, A> {
     /// Base asset of the market.
-    pub base_asset: Asset<MI>,
+    pub base_asset: A,
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -64,7 +64,7 @@ pub struct Market<AI, BN, M, MI: MaxEncodedLen> {
     pub dispute_mechanism: MarketDisputeMechanism,
 }
 
-impl<AI, BN, M, MI: MaxEncodedLen> Market<AI, BN, M, MI> {
+impl<AI, BN, M, A> Market<AI, BN, M, A> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -90,16 +90,16 @@ impl<AI, BN, M, MI: MaxEncodedLen> Market<AI, BN, M, MI> {
     }
 }
 
-impl<AI, BN, M, MI> MaxEncodedLen for Market<AI, BN, M, MI>
+impl<AI, BN, M, A> MaxEncodedLen for Market<AI, BN, M, A>
 where
     AI: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
-    MI: MaxEncodedLen,
+    A: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
-            .saturating_add(<Asset<MI>>::max_encoded_len())
+            .saturating_add(A::max_encoded_len())
             .saturating_add(MarketCreation::max_encoded_len())
             .saturating_add(u8::max_encoded_len())
             .saturating_add(AI::max_encoded_len())
@@ -240,7 +240,7 @@ pub struct SubsidyUntil<BN, MO, MI> {
 mod tests {
     use crate::market::*;
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32, u32>;
+    type Market = crate::market::Market<u32, u32, u32, Asset<u32>>;
 
     #[test_case(
         MarketType::Categorical(6),

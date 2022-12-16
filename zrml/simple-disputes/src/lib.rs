@@ -39,7 +39,9 @@ mod pallet {
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{
+            Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -101,7 +103,7 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, Asset<MarketIdOf<T>>>,
         ) -> DispatchResult {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
@@ -112,7 +114,7 @@ mod pallet {
         fn on_resolution(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, Asset<MarketIdOf<T>>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());

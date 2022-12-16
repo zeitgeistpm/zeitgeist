@@ -61,7 +61,7 @@ type MarketOf<T> = Market<
     <T as frame_system::Config>::AccountId,
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
-    MarketIdOf<T>,
+    Asset<MarketIdOf<T>>,
 >;
 
 pub struct UpdateMarketsForBaseAsset<T>(PhantomData<T>);
@@ -75,7 +75,8 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
         let storage_version = utility::get_on_chain_storage_version_of_market_commons_pallet();
         if storage_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "Skipping updates of markets; market-commons storage version is {:?}, required {:?}",
+                "Skipping updates of markets; market-commons storage version is {:?}, required \
+                 {:?}",
                 storage_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
