@@ -1,7 +1,7 @@
 # v0.3.8
 
 - Create prediction markets with Ztg or registered foreign asset which has
-  `allow_in_pool` set to `true` in `AssetRegistry` metadata. Extrinsics related
+  `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics related
   to prediction market creation/editing now has `base_asset` parameter.
 
 # v0.3.7

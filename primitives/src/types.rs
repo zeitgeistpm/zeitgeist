@@ -125,16 +125,16 @@ pub struct ResultWithWeightInfo<R> {
 #[derive(
     Clone,
     Copy,
+    Debug,
+    Decode,
     Default,
-    PartialOrd,
+    Encode,
+    Eq,
+    MaxEncodedLen,
     Ord,
     PartialEq,
-    Eq,
-    Debug,
-    Encode,
-    Decode,
+    PartialOrd,
     TypeInfo,
-    MaxEncodedLen,
 )]
 /// Custom XC asset metadata
 pub struct CustomMetadata {
@@ -142,22 +142,22 @@ pub struct CustomMetadata {
     pub xcm: XcmMetadata,
 
     /// Whether an asset can be used in pools.
-    pub allow_in_pool: bool,
+    pub allow_as_base_asset: bool,
 }
 
 #[derive(
     Clone,
     Copy,
+    Debug,
+    Decode,
     Default,
-    PartialOrd,
+    Encode,
+    Eq,
+    MaxEncodedLen,
     Ord,
     PartialEq,
-    Eq,
-    Debug,
-    Encode,
-    Decode,
+    PartialOrd,
     TypeInfo,
-    MaxEncodedLen,
 )]
 pub struct XcmMetadata {
     /// The factor used to determine the fee.

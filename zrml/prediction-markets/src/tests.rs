@@ -360,7 +360,7 @@ fn create_market_with_foreign_assets() {
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
             dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
         };
-        // As per Mock asset_registry genesis ForeignAsset(420) has allow_in_pool set to false.
+        // As per Mock asset_registry genesis ForeignAsset(420) has allow_as_base_asset set to false.
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
@@ -376,7 +376,23 @@ fn create_market_with_foreign_assets() {
             ),
             crate::Error::<Runtime>::InvalidBaseAsset,
         );
-        // As per Mock asset_registry genesis ForeignAsset(100) has allow_in_pool set to true.
+        // As per Mock asset_registry genesis ForeignAsset(50) is not registered in asset_registry.
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                Asset::ForeignAsset(50),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::UnregisteredForeignAsset,
+        );
+        // As per Mock asset_registry genesis ForeignAsset(100) has allow_as_base_asset set to true.
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             Asset::ForeignAsset(100),

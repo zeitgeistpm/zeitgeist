@@ -610,17 +610,18 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
 
-            let mut valid_base_asset = false;
-            match base_asset {
-                Asset::Ztg => valid_base_asset = true,
+            let valid_base_asset = match base_asset {
+                Asset::Ztg => Ok(true),
                 #[cfg(feature = "parachain")]
                 Asset::ForeignAsset(fa) => {
                     if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
-                        valid_base_asset = metadata.additional.allow_in_pool;
+                        Ok(metadata.additional.allow_as_base_asset)
+                    } else {
+                        Err(Error::<T>::UnregisteredForeignAsset)
                     }
                 }
-                _ => {}
-            }
+                _ => Ok(false),
+            }?;
 
             ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let market = Self::construct_market(
@@ -1589,6 +1590,8 @@ mod pallet {
         InvalidMarketStatus,
         /// The post dispatch should never be None.
         UnexpectedNoneInPostInfo,
+        /// A foreign asset in not registered in AssetRegistry.
+        UnregisteredForeignAsset,
         /// An amount was illegally specified as zero.
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)

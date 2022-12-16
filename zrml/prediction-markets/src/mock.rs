@@ -27,6 +27,7 @@ use frame_support::{
     traits::{Everything, GenesisBuild, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+#[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
@@ -404,6 +405,7 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
+        #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
                 .into_iter()
@@ -412,7 +414,8 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut t)
         .unwrap();
-        let custom_metadata = CustomMetadata { allow_in_pool: true, ..Default::default() };
+        #[cfg(feature = "parachain")]
+        let custom_metadata = CustomMetadata { allow_as_base_asset: true, ..Default::default() };
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![
@@ -442,7 +445,6 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut t)
         .unwrap();
-
         t.into()
     }
 }
