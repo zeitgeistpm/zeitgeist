@@ -30,7 +30,7 @@ use zeitgeist_primitives::{
     },
 };
 
-const DEFAULT_MARKET: Market<u128, u64, u64, u128> = Market {
+const DEFAULT_MARKET: Market<u128, u64, u64, Asset<u128>> = Market {
     base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: 0,

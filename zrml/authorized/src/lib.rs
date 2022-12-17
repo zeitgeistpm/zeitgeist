@@ -174,8 +174,12 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>, MarketIdOf<T>>
+pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<
+    T::AccountId,
+    T::BlockNumber,
+    MomentOf<T>,
+    zeitgeist_primitives::types::Asset<MarketIdOf<T>>,
+>
 where
     T: crate::Config,
 {

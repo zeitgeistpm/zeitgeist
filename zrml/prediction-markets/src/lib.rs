@@ -611,13 +611,13 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let valid_base_asset = match base_asset {
-                Asset::Ztg => Ok(true),
+                Asset::Ztg => Ok::<bool, Error<T>>(true),
                 #[cfg(feature = "parachain")]
                 Asset::ForeignAsset(fa) => {
                     if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
-                        Ok(metadata.additional.allow_as_base_asset)
+                        Ok::<bool, Error<T>>(metadata.additional.allow_as_base_asset)
                     } else {
-                        Err(Error::<T>::UnregisteredForeignAsset)
+                        Err::<bool, Error<T>>(Error::<T>::UnregisteredForeignAsset)
                     }
                 }
                 _ => Ok(false),

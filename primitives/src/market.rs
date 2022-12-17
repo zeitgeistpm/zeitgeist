@@ -15,10 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    pool::ScoringRule,
-    types::{Asset, OutcomeReport},
-};
+use crate::{pool::ScoringRule, types::OutcomeReport};
 use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -238,7 +235,7 @@ pub struct SubsidyUntil<BN, MO, MI> {
 
 #[cfg(test)]
 mod tests {
-    use crate::market::*;
+    use crate::{market::*, types::Asset};
     use test_case::test_case;
     type Market = crate::market::Market<u32, u32, u32, Asset<u32>>;
 

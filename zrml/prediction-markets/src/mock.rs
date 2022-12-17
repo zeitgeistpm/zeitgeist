@@ -24,7 +24,7 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, GenesisBuild, NeverEnsureOrigin, OnFinalize, OnInitialize},
+    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
 #[cfg(feature = "parachain")]
@@ -49,8 +49,7 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, CustomMetadata, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper,
-        UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -236,7 +235,7 @@ crate::orml_asset_registry::impl_mock_registry! {
     MockRegistry,
     CurrencyId,
     Balance,
-    CustomMetadata
+    zeitgeist_primitives::types::CustomMetadata
 }
 
 impl pallet_balances::Config for Runtime {
@@ -406,6 +405,8 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
         #[cfg(feature = "parachain")]
+        use frame_support::traits::GenesisBuild;
+        #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
                 .into_iter()
@@ -415,7 +416,10 @@ impl ExtBuilder {
         .assimilate_storage(&mut t)
         .unwrap();
         #[cfg(feature = "parachain")]
-        let custom_metadata = CustomMetadata { allow_as_base_asset: true, ..Default::default() };
+        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+            allow_as_base_asset: true,
+            ..Default::default()
+        };
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![
@@ -438,7 +442,7 @@ impl ExtBuilder {
                         symbol: "FTK".as_bytes().to_vec(),
                         existential_deposit: 0,
                         location: None,
-                        additional: CustomMetadata::default(),
+                        additional: zeitgeist_primitives::types::CustomMetadata::default(),
                     },
                 ),
             ],

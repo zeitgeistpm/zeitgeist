@@ -24,6 +24,13 @@ use frame_support::dispatch::DispatchResult;
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
 
+type MarketOf<T> = Market<
+    <T as DisputeApi>::AccountId,
+    <T as DisputeApi>::BlockNumber,
+    <T as DisputeApi>::Moment,
+    Asset<<T as DisputeApi>::MarketId>,
+>;
+
 pub trait DisputeApi {
     type AccountId;
     type Balance;
@@ -39,7 +46,7 @@ pub trait DisputeApi {
     fn on_dispute(
         previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
+        market: &MarketOf<Self>,
     ) -> DispatchResult;
 
     /// Manage market resolution of a disputed market.
@@ -54,6 +61,6 @@ pub trait DisputeApi {
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
+        market: &MarketOf<Self>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 }
