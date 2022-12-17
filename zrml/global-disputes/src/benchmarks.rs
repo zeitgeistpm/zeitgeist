@@ -283,6 +283,12 @@ benchmarks! {
             }
             .into(),
         );
+        #[cfg(not(test))]
+        assert_eq!(
+            T::Currency::free_balance(&reward_account),
+            0u128.saturated_into(),
+        );
+        #[cfg(test)]
         assert_eq!(
             T::Currency::free_balance(&reward_account),
             reward_before.checked_rem(&o.into()).unwrap(),
