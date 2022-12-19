@@ -504,9 +504,11 @@ mod pallet {
             ensure_signed(origin)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+
             let disputes = Disputes::<T>::get(market_id);
+
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-            let has_failed = match market.dispute_mechanism {
+            let _has_failed = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::has_failed(&disputes, &market_id, &market)?
                 }
@@ -517,7 +519,12 @@ mod pallet {
                     T::SimpleDisputes::has_failed(&disputes, &market_id, &market)?
                 }
             };
-            ensure!(has_failed, Error::<T>::DisputeMechanismHasNotFailed);
+
+            // TODO (#918): benchmarks only reach the end when a dispute mechanism has failed
+            #[cfg(feature = "runtime-benchmarks")]
+            let _has_failed = true;
+
+            ensure!(_has_failed, Error::<T>::DisputeMechanismHasNotFailed);
 
             Self::on_resolution(&market_id, &market)?;
 

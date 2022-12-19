@@ -277,8 +277,7 @@ mod pallet {
             let fallible_authority = true;
             if fallible_authority {
                 let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
-                let has_expired = Self::has_expired(last_dispute.at);
-                return Ok(has_expired);
+                return Ok(Self::has_expired(last_dispute.at));
             }
 
             Ok(false)
