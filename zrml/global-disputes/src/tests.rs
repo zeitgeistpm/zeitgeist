@@ -73,7 +73,6 @@ fn check_outcome_sum(
 #[test]
 fn add_vote_outcome_works() {
     ExtBuilder::default().build().execute_with(|| {
-        // create market
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
