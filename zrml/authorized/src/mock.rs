@@ -67,10 +67,6 @@ ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
 }
 
-pub static mut RESOLUTIONS: Vec<(MarketId, BlockNumber)> = Vec::new();
-
-pub static mut WITH_DISPUTE: bool = false;
-
 pub struct MaxDisputes;
 impl Get<u32> for MaxDisputes {
     fn get() -> u32 {
@@ -101,30 +97,32 @@ impl DisputeResolutionApi for MockResolution {
         market_id: &Self::MarketId,
         resolve_at: Self::BlockNumber,
     ) -> Result<u32, DispatchError> {
-        unsafe { RESOLUTIONS.push((*market_id, resolve_at)) };
-        Ok(0u32)
+        let ids_len = <crate::MarketIdsPerDisputeBlock<Runtime>>::try_mutate(
+            resolve_at,
+            |ids| -> Result<u32, DispatchError> {
+                ids.try_push(*market_id).map_err(|_| DispatchError::Other("Storage Overflow"))?;
+                Ok(ids.len() as u32)
+            },
+        )?;
+        Ok(ids_len)
     }
 
     fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
-        unsafe { RESOLUTIONS.retain(|(id, block)| !(id == market_id && block == &resolve_at)) };
-        0u32
+        <crate::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
+            ids.retain(|id| id != market_id);
+            ids.len() as u32
+        })
     }
 
     fn get_disputes(
         _market_id: &Self::MarketId,
     ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
-        unsafe {
-            if WITH_DISPUTE {
-                return BoundedVec::try_from(vec![MarketDispute {
-                    at: 42u64,
-                    by: BOB,
-                    outcome: OutcomeReport::Scalar(42),
-                }])
-                .unwrap();
-            }
-        }
-
-        Default::default()
+        BoundedVec::try_from(vec![MarketDispute {
+            at: 42u64,
+            by: BOB,
+            outcome: OutcomeReport::Scalar(42),
+        }])
+        .unwrap()
     }
 }
 

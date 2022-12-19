@@ -19,15 +19,12 @@
 
 use crate::{
     market_mock,
-    mock::{
-        Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB, RESOLUTIONS,
-        WITH_DISPUTE,
-    },
-    AuthorizedOutcomeReports, Error,
+    mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB},
+    AuthorizedOutcomeReports, Error, MarketIdsPerDisputeBlock,
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use zeitgeist_primitives::{
-    traits::DisputeApi,
+    traits::{DisputeApi, DisputeResolutionApi},
     types::{AuthorityReport, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
 };
 use zrml_market_commons::Markets;
@@ -54,10 +51,11 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 fn authorize_market_outcome_resets_dispute_resolution() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
+
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
-            OutcomeReport::Scalar(1)
+            OutcomeReport::Scalar(1),
         ));
         let now = frame_system::Pallet::<Runtime>::block_number();
         let resolve_at_0 = now + <Runtime as crate::Config>::CorrectionPeriod::get();
@@ -66,9 +64,7 @@ fn authorize_market_outcome_resets_dispute_resolution() {
             AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at: resolve_at_0 }
         );
 
-        unsafe {
-            assert_eq!(RESOLUTIONS, vec![(0, resolve_at_0)]);
-        }
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
 
         frame_system::Pallet::<Runtime>::set_block_number(resolve_at_0 - 1);
         let now = frame_system::Pallet::<Runtime>::block_number();
@@ -80,14 +76,8 @@ fn authorize_market_outcome_resets_dispute_resolution() {
             OutcomeReport::Scalar(2)
         ));
 
-        // expect one tuple inside vector (reset happened)
-        unsafe {
-            assert_eq!(RESOLUTIONS, vec![(0, resolve_at_1)]);
-        }
-
-        unsafe {
-            RESOLUTIONS.clear();
-        }
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![]);
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
     });
 }
 
@@ -265,7 +255,7 @@ fn get_auto_resolve_returns_none_without_market_storage() {
 }
 
 #[test]
-fn has_failed_works() {
+fn has_failed_works_without_report() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(42);
         let market = market_mock::<Runtime>();
@@ -280,20 +270,35 @@ fn has_failed_works() {
         frame_system::Pallet::<Runtime>::set_block_number(
             now + <Runtime as crate::Config>::ReportPeriod::get() + 1,
         );
-        assert!(Authorized::has_failed(&[last_dispute.clone()], &0, &market).unwrap());
 
-        // report
+        assert!(Authorized::has_failed(&[last_dispute], &0, &market).unwrap());
+    });
+}
+
+#[test]
+fn has_failed_works_with_report() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(42);
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(0, &market);
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let last_dispute = MarketDispute { at: now, by: BOB, outcome: OutcomeReport::Scalar(1) };
+
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(1)
         ));
 
+        frame_system::Pallet::<Runtime>::set_block_number(
+            now + <Runtime as crate::Config>::ReportPeriod::get() - 1,
+        );
+
         // reported and expired
         assert!(!Authorized::has_failed(&[last_dispute.clone()], &0, &market).unwrap());
 
         frame_system::Pallet::<Runtime>::set_block_number(
-            now + <Runtime as crate::Config>::ReportPeriod::get() - 1,
+            now + <Runtime as crate::Config>::ReportPeriod::get() + 1,
         );
 
         // reported and not expired
@@ -304,11 +309,6 @@ fn has_failed_works() {
 #[test]
 fn authorize_market_outcome_fails_with_report_period_expired() {
     ExtBuilder::default().build().execute_with(|| {
-        use zeitgeist_primitives::traits::DisputeResolutionApi;
-
-        unsafe {
-            WITH_DISPUTE = true;
-        }
         frame_system::Pallet::<Runtime>::set_block_number(42);
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
@@ -316,6 +316,7 @@ fn authorize_market_outcome_fails_with_report_period_expired() {
         let dispute_at = 42;
         let last_dispute =
             MarketDispute { at: dispute_at, by: BOB, outcome: OutcomeReport::Scalar(42) };
+        // get_disputes returns a sample dispute in the mock
         assert_eq!(
             <Runtime as crate::Config>::DisputeResolution::get_disputes(&0).pop().unwrap(),
             last_dispute
@@ -333,9 +334,5 @@ fn authorize_market_outcome_fails_with_report_period_expired() {
             ),
             Error::<Runtime>::ReportPeriodExpired
         );
-
-        unsafe {
-            WITH_DISPUTE = false;
-        }
     });
 }
