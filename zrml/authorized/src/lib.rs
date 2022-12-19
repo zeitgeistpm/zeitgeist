@@ -88,10 +88,19 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            let disputes = T::DisputeResolution::get_disputes(&market_id);
-            if let Some(dispute) = disputes.last() {
-                let not_expired = !Self::is_expired(&market_id, dispute.at);
-                ensure!(not_expired, Error::<T>::ReportPeriodExpired);
+
+            // TODO (#918): when we later allow a simple account id to be the authority, this expiration limit becomes useful
+            #[cfg(not(test))]
+            let fallible_authority = false;
+            #[cfg(test)]
+            let fallible_authority = true;
+
+            if fallible_authority {
+                let disputes = T::DisputeResolution::get_disputes(&market_id);
+                if let Some(dispute) = disputes.last() {
+                    let not_expired = !Self::has_expired(dispute.at);
+                    ensure!(not_expired, Error::<T>::ReportPeriodExpired);
+                }
             }
 
             let ids_len_1 = Self::remove_auto_resolve(&market_id);
@@ -109,6 +118,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// In case the authority is a simple account:
         /// The period in which the authority has to report. This value must not be zero.
         /// This value should be fairly large, so that the authority has enough time to report.
         #[pallet::constant]
@@ -192,11 +202,9 @@ mod pallet {
             }
         }
 
-        fn is_expired(market_id: &MarketIdOf<T>, start: T::BlockNumber) -> bool {
-            let is_unreported = !AuthorizedOutcomeReports::<T>::contains_key(market_id);
+        fn has_expired(start: T::BlockNumber) -> bool {
             let now = frame_system::Pallet::<T>::block_number();
-            let is_expired = start.saturating_add(T::ReportPeriod::get()) < now;
-            is_unreported && is_expired
+            start.saturating_add(T::ReportPeriod::get()) < now
         }
     }
 
@@ -254,7 +262,7 @@ mod pallet {
 
         fn has_failed(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            market_id: &Self::MarketId,
+            _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<bool, DispatchError> {
             ensure!(
@@ -262,8 +270,18 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
-            let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
-            Ok(Self::is_expired(market_id, last_dispute.at))
+            // TODO (#918): when we later allow a simple account id to be the authority, this expiration limit becomes useful
+            #[cfg(not(test))]
+            let fallible_authority = false;
+            #[cfg(test)]
+            let fallible_authority = true;
+            if fallible_authority {
+                let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
+                let has_expired = Self::has_expired(last_dispute.at);
+                return Ok(has_expired);
+            }
+
+            Ok(false)
         }
     }
 

@@ -2289,67 +2289,6 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
 }
 
 #[test]
-fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 2;
-        assert_ok!(PredictionMarkets::create_market(
-            Origin::signed(ALICE),
-            BOB,
-            MarketPeriod::Block(0..2),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
-            ScoringRule::CPMM,
-        ));
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
-
-        let market = MarketCommons::market(&0).unwrap();
-        let grace_period = market.deadlines.grace_period;
-        run_to_block(end + grace_period + 1);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        let dispute_at = end + grace_period + 2;
-        run_to_block(dispute_at);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-
-        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
-        let disputes = crate::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 1);
-
-        run_blocks(<Runtime as zrml_authorized::Config>::ReportPeriod::get() + 1);
-        assert_ok!(PredictionMarkets::resolve_failed_mdm(Origin::signed(FRED), 0));
-
-        let market_after = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 0);
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
-
-        // make sure rewards are right
-        //
-        // slashed amounts
-        // ---------------------------
-        // - Charlie's reserve: DisputeBond::get()
-        // The market defaults on the report provided by the oracle.
-        // Charlie disputed a different outcome than the oracle reported.
-        assert_eq!(Balances::free_balance(&CHARLIE), 1_000 * BASE - charlie_reserved);
-
-        // The oracle report was accepted, so Alice is not slashed.
-        assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
-        assert_eq!(Balances::free_balance(&BOB), 1_000 * BASE);
-    });
-}
-
-#[test]
 fn start_global_dispute_works() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
@@ -3139,8 +3078,11 @@ fn authorized_correctly_resolves_disputed_market() {
     });
 }
 
+/*
+TODO (#918): when we later allow a simple account id to be the authority, this expiration limit for the authority becomes useful
+
 #[test]
-fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
+fn on_resolution_defaults_to_oracle_report_in_case_of_failed_authorized_mdm() {
     ExtBuilder::default().build().execute_with(|| {
         assert!(Balances::free_balance(Treasury::account_id()).is_zero());
         let end = 2;
@@ -3166,6 +3108,8 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
             market_id,
             OutcomeReport::Categorical(1)
         ));
+        let dispute_at = end + grace_period + 2;
+        run_to_block(dispute_at);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             market_id,
@@ -3173,6 +3117,9 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         ));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
+
+        let disputes = crate::Disputes::<Runtime>::get(0);
+        assert_eq!(disputes.len(), 1);
 
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
@@ -3207,6 +3154,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         assert_eq!(Balances::free_balance(Treasury::account_id()), charlie_reserved);
     });
 }
+*/
 
 #[test]
 fn approve_market_correctly_unreserves_advisory_bond() {

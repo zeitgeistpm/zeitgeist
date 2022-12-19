@@ -263,10 +263,8 @@ fn has_failed_works_without_report() {
         let now = frame_system::Pallet::<Runtime>::block_number();
         let last_dispute = MarketDispute { at: now, by: BOB, outcome: OutcomeReport::Scalar(1) };
 
-        // not reported and not expired
         assert!(!Authorized::has_failed(&[last_dispute.clone()], &0, &market).unwrap());
 
-        // not reported and expired
         frame_system::Pallet::<Runtime>::set_block_number(
             now + <Runtime as crate::Config>::ReportPeriod::get() + 1,
         );
@@ -276,7 +274,7 @@ fn has_failed_works_without_report() {
 }
 
 #[test]
-fn has_failed_works_with_report() {
+fn has_failed_works_with_renewed_reports() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(42);
         let market = market_mock::<Runtime>();
@@ -284,6 +282,8 @@ fn has_failed_works_with_report() {
         let now = frame_system::Pallet::<Runtime>::block_number();
         let last_dispute = MarketDispute { at: now, by: BOB, outcome: OutcomeReport::Scalar(1) };
 
+        // assume `authorize_market_outcome` is renewed indefintiely
+        // by a fallible authority (one account id)
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
@@ -294,15 +294,13 @@ fn has_failed_works_with_report() {
             now + <Runtime as crate::Config>::ReportPeriod::get() - 1,
         );
 
-        // reported and expired
         assert!(!Authorized::has_failed(&[last_dispute.clone()], &0, &market).unwrap());
 
         frame_system::Pallet::<Runtime>::set_block_number(
             now + <Runtime as crate::Config>::ReportPeriod::get() + 1,
         );
 
-        // reported and not expired
-        assert!(!Authorized::has_failed(&[last_dispute], &0, &market).unwrap());
+        assert!(Authorized::has_failed(&[last_dispute], &0, &market).unwrap());
     });
 }
 
