@@ -12823,6 +12823,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "num-traits",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
