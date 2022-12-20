@@ -287,43 +287,6 @@ benchmarks! {
         assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
     }
 
-    reward_outcome_owner_no_funds {
-        let o in 1..T::MaxOwners::get();
-
-        let market_id: MarketIdOf<T> = 0u128.saturated_into();
-
-        let mut owners = Vec::new();
-        for i in 1..=o {
-            let owner = account("winners_owner", i, 0);
-            owners.push(owner);
-        }
-        let owners = BoundedVec::try_from(owners.clone()).unwrap();
-
-        let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(0),
-            is_finished: true,
-            outcome_info: OutcomeInfo {
-                outcome_sum: 42u128.saturated_into(),
-                owners,
-            },
-        };
-        <Winners<T>>::insert(market_id, winner_info);
-
-        let caller: T::AccountId = whitelisted_caller();
-
-        let outcome = OutcomeReport::Scalar(20);
-
-        let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
-        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
-
-        deposit::<T>(&caller);
-    }: {
-        <Pallet<T>>::reward_outcome_owner(RawOrigin::Signed(caller.clone()).into(), market_id)
-            .unwrap();
-    } verify {
-        assert_last_event::<T>(Event::OutcomeOwnersRewardedWithNoFunds::<T> { market_id }.into());
-    }
-
     purge_outcomes {
         // RemoveKeysLimit - 2 to ensure that we actually fully clean and return at the end
         let k in 1..(T::RemoveKeysLimit::get() - 2);

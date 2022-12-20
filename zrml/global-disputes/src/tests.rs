@@ -378,44 +378,6 @@ fn reward_outcome_owner_works_for_one_owner() {
 }
 
 #[test]
-fn reward_outcome_owner_works_for_no_reward_funds() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-
-        setup_vote_outcomes_with_hundred(&market_id);
-
-        let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(20),
-            is_finished: true,
-            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
-        };
-        <Winners<Runtime>>::insert(market_id, winner_info);
-
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
-
-        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
-
-        let free_balance_alice_before = Balances::free_balance(&ALICE);
-
-        let reward_account_free_balance =
-            Balances::free_balance(&GlobalDisputes::reward_account(&market_id));
-        // this case happens, when add_vote_outcome wasn't called
-        // so no loosers, who provided the VotingOutcomeFee
-        assert!(reward_account_free_balance.is_zero());
-
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id));
-
-        System::assert_last_event(
-            Event::<Runtime>::OutcomeOwnersRewardedWithNoFunds { market_id }.into(),
-        );
-
-        assert_eq!(Balances::free_balance(&ALICE), free_balance_alice_before);
-        assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
-        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_none());
-    });
-}
-
-#[test]
 fn vote_fails_if_amount_below_min_outcome_vote_amount() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
@@ -878,7 +840,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
 }
 
 #[test]
-fn reward_outcome_owner_cleans_outcome_info() {
+fn purge_outcomes_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
 
@@ -910,8 +872,6 @@ fn reward_outcome_owner_cleans_outcome_info() {
         assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
-
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(BOB), market_id,));
 
         assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
     });

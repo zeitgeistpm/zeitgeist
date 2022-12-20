@@ -158,8 +158,6 @@ mod pallet {
         },
         /// The winner of the global dispute system is determined.
         GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
-        /// No funds could be spent as reward to the outcome owner(s).
-        OutcomeOwnersRewardedWithNoFunds { market_id: MarketIdOf<T> },
         /// The outcome owner has been rewarded.
         OutcomeOwnersRewarded { market_id: MarketIdOf<T>, owners: Vec<AccountIdOf<T>> },
         /// The outcomes storage item is partially cleaned.
@@ -185,6 +183,8 @@ mod pallet {
         InsufficientAmount,
         /// The maximum amount of owners is reached.
         MaxOwnersReached,
+        /// The amount in the reward pot is zero.
+        NoFundsToReward,
         /// No global dispute present at the moment.
         NoGlobalDisputeStarted,
         /// The voting outcome has been already added.
@@ -325,11 +325,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of owners for the winning outcome.
         #[frame_support::transactional]
-        #[pallet::weight(
-            T::WeightInfo::reward_outcome_owner_no_funds(T::MaxOwners::get()).max(
-                T::WeightInfo::reward_outcome_owner_with_funds(T::MaxOwners::get()),
-            )
-        )]
+        #[pallet::weight(T::WeightInfo::reward_outcome_owner_with_funds(T::MaxOwners::get()))]
         pub fn reward_outcome_owner(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -347,13 +343,8 @@ mod pallet {
 
             let reward_account = Self::reward_account(&market_id);
             let reward_account_free_balance = T::Currency::free_balance(&reward_account);
+            ensure!(!reward_account_free_balance.is_zero(), Error::<T>::NoFundsToReward);
             let owners_len = winner_info.outcome_info.owners.len() as u32;
-
-            if reward_account_free_balance.is_zero() {
-                Self::deposit_event(Event::OutcomeOwnersRewardedWithNoFunds { market_id });
-                // return early case if there is no reward
-                return Ok((Some(T::WeightInfo::reward_outcome_owner_no_funds(owners_len))).into());
-            }
 
             let mut remainder = reward_account_free_balance;
             let owners_len_in_balance: BalanceOf<T> = <BalanceOf<T>>::from(owners_len);

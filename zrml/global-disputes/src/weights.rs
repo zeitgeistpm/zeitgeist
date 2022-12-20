@@ -50,7 +50,6 @@ pub trait WeightInfoZeitgeist {
     fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight;
     fn add_vote_outcome(w: u32) -> Weight;
     fn reward_outcome_owner_with_funds(o: u32) -> Weight;
-    fn reward_outcome_owner_no_funds(o: u32) -> Weight;
     fn purge_outcomes(k: u32, o: u32) -> Weight;
 }
 
@@ -117,15 +116,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(o as Weight)))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(o as Weight)))
-    }
-    // Storage: GlobalDisputes Outcomes (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:1 w:0)
-    // Storage: System Account (r:1 w:0)
-    fn reward_outcome_owner_no_funds(o: u32) -> Weight {
-        (39_929_000 as Weight)
-            // Standard Error: 3_000
-            .saturating_add((13_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
     }
     // Storage: GlobalDisputes Winners (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:3 w:2)
