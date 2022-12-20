@@ -284,16 +284,13 @@ benchmarks! {
             }
             .into(),
         );
-        #[cfg(not(test))]
-        assert_eq!(
-            T::Currency::free_balance(&reward_account),
-            0u128.saturated_into(),
-        );
-        #[cfg(test)]
-        assert_eq!(
-            T::Currency::free_balance(&reward_account),
-            reward_before.checked_rem(&o.into()).unwrap(),
-        );
+        let remainder = reward_before.checked_rem(&o.into()).unwrap();
+        let expected = if remainder < T::Currency::minimum_balance() {
+            0u8.into()
+        } else {
+            remainder
+        };
+        assert_eq!(T::Currency::free_balance(&reward_account), expected);
     }
 
     reward_outcome_owner_no_funds {
