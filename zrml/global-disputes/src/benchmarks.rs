@@ -35,7 +35,6 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::RawOrigin;
-#[cfg(test)]
 use num_traits::ops::checked::CheckedRem;
 use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
