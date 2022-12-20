@@ -37,18 +37,15 @@ for arg in "$@"; do
     esac
 done
 
-currentver="$(yarn --version | head -n1 | cut -d"." -f1)"
-requiredver=2
+# NOTE: For now we are not using yarn.
+# currentver="$(yarn --version | head -n1 | cut -d"." -f1)"
+# requiredver=2
 
-if [ $currentver -lt $requiredver ]; then 
-        echo "Atleast require 2.0 version of Yarn."
-        exit 1
-fi
+# if [ $currentver -lt $requiredver ]; then 
+#         echo "Atleast require 2.0 version of Yarn."
+#         exit 1
+# fi
 
+npx @acala-network/chopsticks@0.2.3 dev --endpoint=$endpoit --db=./temp_db.sqlite --port=8080 $override_wasm_from_path
 
-# TODO: why command below is not working and installed version works?
-# yarn dlx @acala-network/chopsticks dev --endpoint=$endpoit --db=./temp_db.sqlite --port=8080 $override_wasm_from_path
-
-cd ~/dev/chopsticks
-yarn start dev --endpoint=$endpoit --db=./temp_db.sqlite --port=8080 $override_wasm_from_path
 
