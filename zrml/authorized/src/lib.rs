@@ -24,6 +24,7 @@ mod authorized_pallet_api;
 mod benchmarks;
 pub mod migrations;
 mod mock;
+mod mock_storage;
 mod tests;
 pub mod weights;
 
@@ -41,8 +42,6 @@ mod pallet {
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
-    #[cfg(test)]
-    use frame_support::{pallet_prelude::ValueQuery, BoundedVec};
     use frame_system::pallet_prelude::OriginFor;
     use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
@@ -291,17 +290,6 @@ mod pallet {
     #[pallet::getter(fn outcomes)]
     pub type AuthorizedOutcomeReports<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, AuthorityReport<T::BlockNumber>, OptionQuery>;
-
-    /// Only used for testing the dispute resolution API to prediction-markets
-    #[cfg(test)]
-    #[pallet::storage]
-    pub type MarketIdsPerDisputeBlock<T: Config> = StorageMap<
-        _,
-        Twox64Concat,
-        T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, CacheSize>,
-        ValueQuery,
-    >;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]

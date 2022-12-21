@@ -20,7 +20,8 @@
 use crate::{
     market_mock,
     mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB},
-    AuthorizedOutcomeReports, Error, MarketIdsPerDisputeBlock,
+    mock_storage::pallet as mock_storage,
+    AuthorizedOutcomeReports, Error,
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use zeitgeist_primitives::{
@@ -64,7 +65,7 @@ fn authorize_market_outcome_resets_dispute_resolution() {
             AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at: resolve_at_0 }
         );
 
-        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
+        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
 
         frame_system::Pallet::<Runtime>::set_block_number(resolve_at_0 - 1);
         let now = frame_system::Pallet::<Runtime>::block_number();
@@ -76,8 +77,8 @@ fn authorize_market_outcome_resets_dispute_resolution() {
             OutcomeReport::Scalar(2)
         ));
 
-        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![]);
-        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
+        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![]);
+        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
     });
 }
 

@@ -19,7 +19,7 @@
 
 extern crate alloc;
 
-use crate::{self as zrml_authorized};
+use crate::{self as zrml_authorized, mock_storage::pallet as mock_storage};
 use alloc::{vec, vec::Vec};
 use frame_support::{
     construct_runtime, ord_parameter_types,
@@ -60,6 +60,8 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        // Just a mock storage for testing.
+        MockStorage: mock_storage::{Storage},
     }
 );
 
@@ -97,7 +99,7 @@ impl DisputeResolutionApi for MockResolution {
         market_id: &Self::MarketId,
         resolve_at: Self::BlockNumber,
     ) -> Result<u32, DispatchError> {
-        let ids_len = <crate::MarketIdsPerDisputeBlock<Runtime>>::try_mutate(
+        let ids_len = <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::try_mutate(
             resolve_at,
             |ids| -> Result<u32, DispatchError> {
                 ids.try_push(*market_id).map_err(|_| DispatchError::Other("Storage Overflow"))?;
@@ -108,7 +110,7 @@ impl DisputeResolutionApi for MockResolution {
     }
 
     fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
-        <crate::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
+        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
             ids.retain(|id| id != market_id);
             ids.len() as u32
         })
@@ -136,6 +138,10 @@ impl crate::Config for Runtime {
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
+}
+
+impl mock_storage::Config for Runtime {
+    type MarketCommons = MarketCommons;
 }
 
 impl frame_system::Config for Runtime {
