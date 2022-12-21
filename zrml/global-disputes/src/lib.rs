@@ -47,7 +47,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
-        DispatchResult,
+        DispatchError, DispatchResult,
     };
     use sp_std::{vec, vec::Vec};
     use zeitgeist_primitives::types::OutcomeReport;
@@ -109,7 +109,7 @@ mod pallet {
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
     pub type OutcomeInfoOf<T> = OutcomeInfo<BalanceOf<T>, OwnerInfoOf<T>>;
-    pub type WinnerInfoOf<T> = WinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
+    pub type GDInfoOf<T> = GDInfo<BalanceOf<T>, OwnerInfoOf<T>>;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type LockInfoOf<T> =
@@ -139,10 +139,11 @@ mod pallet {
     >;
 
     /// Maps the market id to all information
-    /// about the winner outcome and if the global dispute is finished.
+    /// about the global dispute.
+    // TODO what storage migration after changing the name?
     #[pallet::storage]
-    pub type Winners<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
+    pub type GlobalDisputesInfo<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, GDInfoOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -179,6 +180,8 @@ mod pallet {
         AmountTooLow,
         /// The global dispute period is already over and the winner is determined.
         GlobalDisputeAlreadyFinished,
+        /// The global dispute status is invalid for this operation.
+        InvalidGlobalDisputeStatus,
         /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
         /// The maximum amount of owners is reached.
@@ -228,9 +231,9 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
 
-            let winner_info =
-                <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
-            ensure!(!winner_info.is_finished, Error::<T>::GlobalDisputeAlreadyFinished);
+            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
+                .ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(gd_info.status == GDStatus::Active, Error::<T>::InvalidGlobalDisputeStatus);
 
             ensure!(
                 !<Outcomes<T>>::contains_key(market_id, &outcome),
@@ -257,6 +260,47 @@ mod pallet {
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
 
+        /// Return the voting outcome fees in case the global dispute was destroyed.
+        ///
+        /// # Arguments
+        ///
+        /// - `market_id`: The id of the market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`,
+        /// where `n` is the number of all existing outcomes for a global dispute.
+        #[frame_support::transactional]
+        #[pallet::weight(5000)]
+        pub fn refund_vote_fees(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
+                .ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(gd_info.status == GDStatus::Destroyed, Error::<T>::UnfinishedGlobalDispute);
+
+            let mut owners_len = 0u32;
+            let mut removed_keys_amount = 0u32;
+            for (_, outcome_info) in
+                <Outcomes<T>>::drain_prefix(market_id).take(T::RemoveKeysLimit::get() as usize)
+            {
+                owners_len = owners_len.max(outcome_info.owners.len() as u32);
+                removed_keys_amount = removed_keys_amount.saturating_add(1u32);
+            }
+
+            if <Outcomes<T>>::iter_prefix(market_id).next().is_none() {
+                Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
+            } else {
+                Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
+            }
+
+            // weight for max owners, because we don't know
+            Ok((Some(T::WeightInfo::purge_outcomes(removed_keys_amount, owners_len))).into())
+        }
+
         /// Purge all outcomes to allow the winning outcome owner(s) to get their reward.
         /// Fails if the global dispute is not concluded yet.
         ///
@@ -279,12 +323,12 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let mut winner_info =
-                <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
-            ensure!(winner_info.is_finished, Error::<T>::UnfinishedGlobalDispute);
+            let mut gd_info = <GlobalDisputesInfo<T>>::get(market_id)
+                .ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(gd_info.status == GDStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let winning_outcome: Option<OutcomeInfoOf<T>> =
-                <Outcomes<T>>::get(market_id, &winner_info.outcome);
+                <Outcomes<T>>::get(market_id, &gd_info.outcome);
             let mut owners_len = 0u32;
             // move the winning outcome info to Winners before it gets drained
             if let Some(outcome_info) = winning_outcome {
@@ -292,8 +336,8 @@ mod pallet {
                 // storage write is needed here in case,
                 // that the first call of reward_outcome_owner doesn't reward the owners
                 // this can happen if there are more than RemoveKeysLimit keys to remove
-                winner_info.outcome_info = outcome_info;
-                <Winners<T>>::insert(market_id, winner_info);
+                gd_info.outcome_info = outcome_info;
+                <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
             }
 
             let mut removed_keys_amount = 0u32;
@@ -337,21 +381,21 @@ mod pallet {
                 <Error<T>>::OutcomesNotFullyCleaned
             );
 
-            let winner_info =
-                <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
-            ensure!(winner_info.is_finished, Error::<T>::UnfinishedGlobalDispute);
+            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
+                .ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(gd_info.status == GDStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let reward_account = Self::reward_account(&market_id);
             let reward_account_free_balance = T::Currency::free_balance(&reward_account);
             ensure!(!reward_account_free_balance.is_zero(), Error::<T>::NoFundsToReward);
-            let owners_len = winner_info.outcome_info.owners.len() as u32;
+            let owners_len = gd_info.outcome_info.owners.len() as u32;
 
             let mut remainder = reward_account_free_balance;
             let owners_len_in_balance: BalanceOf<T> = <BalanceOf<T>>::from(owners_len);
             if let Some(reward_per_each) =
                 reward_account_free_balance.checked_div(&owners_len_in_balance)
             {
-                for winner in winner_info.outcome_info.owners.iter() {
+                for winner in gd_info.outcome_info.owners.iter() {
                     // *Should* always be equal to `reward_per_each`
                     let reward = remainder.min(reward_per_each);
                     remainder = remainder.saturating_sub(reward);
@@ -378,7 +422,7 @@ mod pallet {
 
             Self::deposit_event(Event::OutcomeOwnersRewarded {
                 market_id,
-                owners: winner_info.outcome_info.owners.to_vec(),
+                owners: gd_info.outcome_info.owners.to_vec(),
             });
 
             Ok((Some(T::WeightInfo::reward_outcome_owner_with_funds(owners_len))).into())
@@ -413,9 +457,9 @@ mod pallet {
             ensure!(amount <= voter_free_balance, Error::<T>::InsufficientAmount);
             ensure!(amount >= T::MinOutcomeVoteAmount::get(), Error::<T>::AmountTooLow);
 
-            let winner_info =
-                <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
-            ensure!(!winner_info.is_finished, Error::<T>::GlobalDisputeAlreadyFinished);
+            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
+                .ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(gd_info.status == GDStatus::Active, Error::<T>::InvalidGlobalDisputeStatus);
 
             let mut outcome_info =
                 <Outcomes<T>>::get(market_id, &outcome).ok_or(Error::<T>::OutcomeDoesNotExist)?;
@@ -472,7 +516,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into())
         }
 
-        /// Return all locked native tokens in a global dispute.
+        /// Return all locked native tokens from a finished or destroyed global dispute.
         /// Fails if the global dispute is not concluded yet.
         ///
         /// # Arguments
@@ -505,13 +549,13 @@ mod pallet {
             let mut lock_info = <Locks<T>>::get(&voter);
             let vote_lock_counter = lock_info.len() as u32;
             // Inside retain we follow these rules:
-            // 1. Remove all locks from resolved (/ finished) global disputes.
+            // 1. Remove all locks from resolved (/ finished / destroyed) global disputes.
             // 2. Then find the maximum lock from all unresolved global disputes.
             lock_info.retain(|&(market_id, locked_balance)| {
                 // weight component MaxOwners comes from querying the winner information
-                match <Winners<T>>::get(market_id) {
-                    Some(winner_info) => {
-                        if winner_info.is_finished {
+                match <GlobalDisputesInfo<T>>::get(market_id) {
+                    Some(gd_info) => {
+                        if matches!(gd_info.status, GDStatus::Finished | GDStatus::Destroyed) {
                             false
                         } else {
                             lock_needed = lock_needed.max(locked_balance);
@@ -564,14 +608,14 @@ mod pallet {
         }
 
         fn update_winner(market_id: &MarketIdOf<T>, outcome: &OutcomeReport, amount: BalanceOf<T>) {
-            <Winners<T>>::mutate(market_id, |highest: &mut Option<WinnerInfoOf<T>>| {
+            <GlobalDisputesInfo<T>>::mutate(market_id, |highest: &mut Option<GDInfoOf<T>>| {
                 *highest = Some(highest.clone().map_or(
-                    WinnerInfo::new(outcome.clone(), amount),
-                    |prev_winner_info| {
-                        if amount >= prev_winner_info.outcome_info.outcome_sum {
-                            WinnerInfo::new(outcome.clone(), amount)
+                    GDInfo::new(outcome.clone(), amount),
+                    |prev_gd_info| {
+                        if amount >= prev_gd_info.outcome_info.outcome_sum {
+                            GDInfo::new(outcome.clone(), amount)
                         } else {
-                            prev_winner_info
+                            prev_gd_info
                         }
                     },
                 ));
@@ -589,8 +633,8 @@ mod pallet {
             owner: &T::AccountId,
             initial_vote_balance: BalanceOf<T>,
         ) -> DispatchResult {
-            match <Winners<T>>::get(market_id) {
-                Some(winner_info) if winner_info.is_finished => {
+            match <GlobalDisputesInfo<T>>::get(market_id) {
+                Some(gd_info) if gd_info.status == GDStatus::Finished => {
                     return Err(Error::<T>::GlobalDisputeAlreadyFinished.into());
                 }
                 _ => (),
@@ -631,11 +675,11 @@ mod pallet {
         }
 
         fn determine_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
-            match <Winners<T>>::get(market_id) {
-                Some(mut winner_info) => {
-                    winner_info.is_finished = true;
-                    let winner_outcome = winner_info.outcome.clone();
-                    <Winners<T>>::insert(market_id, winner_info);
+            match <GlobalDisputesInfo<T>>::get(market_id) {
+                Some(mut gd_info) => {
+                    gd_info.status = GDStatus::Finished;
+                    let winner_outcome = gd_info.outcome.clone();
+                    <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
                     Self::deposit_event(Event::GlobalDisputeWinnerDetermined {
                         market_id: *market_id,
                     });
@@ -646,7 +690,16 @@ mod pallet {
         }
 
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
-            <Winners<T>>::get(market_id).is_some()
+            <GlobalDisputesInfo<T>>::get(market_id).is_some()
+        }
+
+        fn destroy_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {
+            <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| {
+                let mut raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+                raw_gd_info.status = GDStatus::Destroyed;
+                *gd_info = Some(raw_gd_info.clone());
+                Ok(())
+            })
         }
     }
 }

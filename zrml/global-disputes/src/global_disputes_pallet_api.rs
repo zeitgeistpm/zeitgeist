@@ -18,7 +18,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use sp_runtime::DispatchResult;
+use sp_runtime::{DispatchError, DispatchResult};
 use zeitgeist_primitives::types::OutcomeReport;
 
 /// The trait to initiate and resolve the global disputes.
@@ -81,4 +81,10 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     fn is_not_started(market_id: &MarketId) -> bool {
         !Self::is_started(market_id)
     }
+
+    /// Destroy a global dispute and allow to return all funds of the participants.
+    ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    fn destroy_global_dispute(market_id: &MarketId) -> Result<(), DispatchError>;
 }

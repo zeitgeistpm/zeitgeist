@@ -11,20 +11,30 @@ pub struct OutcomeInfo<Balance, OwnerInfo> {
     pub owners: OwnerInfo,
 }
 
-/// The information about the current highest winning outcome.
+/// The general information about the global dispute.
 #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct WinnerInfo<Balance, OwnerInfo> {
+pub struct GDInfo<Balance, OwnerInfo> {
     /// The outcome, which is in the lead.
     pub outcome: OutcomeReport,
     /// The information about the winning outcome.
     pub outcome_info: OutcomeInfo<Balance, OwnerInfo>,
-    /// Check, if the global dispute is finished.
-    pub is_finished: bool,
+    /// The current status of the global dispute.
+    pub status: GDStatus,
 }
 
-impl<Balance: Saturating, OwnerInfo: Default> WinnerInfo<Balance, OwnerInfo> {
+impl<Balance: Saturating, OwnerInfo: Default> GDInfo<Balance, OwnerInfo> {
     pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
-        WinnerInfo { outcome, is_finished: false, outcome_info }
+        GDInfo { outcome, status: GDStatus::Active, outcome_info }
     }
+}
+
+#[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
+pub enum GDStatus {
+    /// The global dispute is in progress.
+    Active,
+    /// The global dispute is finished.
+    Finished,
+    /// The global dispute was triggered to get destroyed.
+    Destroyed,
 }
