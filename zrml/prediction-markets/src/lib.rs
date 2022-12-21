@@ -1274,7 +1274,7 @@ mod pallet {
         /// The outcomes of the disputes and the report outcome
         /// are added to the global dispute voting outcomes.
         /// The bond of each dispute is the initial vote amount.
-        #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get()))]
+        #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get(), CacheSize::get()))]
         #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
@@ -1328,13 +1328,9 @@ mod pallet {
                 // TODO(#372): Allow court with global disputes.
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
-                if let Some(auto_resolve_block) =
-                    T::SimpleDisputes::get_auto_resolve(&disputes, &market_id, &market)?
-                {
-                    MarketIdsPerDisputeBlock::<T>::mutate(auto_resolve_block, |ids| {
-                        remove_item::<MarketIdOf<T>, _>(ids, &market_id);
-                    });
-                }
+
+                // ignore first of tuple because we always have max disputes
+                let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
 
                 let now = <frame_system::Pallet<T>>::block_number();
                 let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
@@ -1348,7 +1344,7 @@ mod pallet {
 
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into())
+                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len, ids_len_2)).into())
             }
 
             #[cfg(not(feature = "with-global-disputes"))]

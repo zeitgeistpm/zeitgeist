@@ -770,6 +770,7 @@ benchmarks! {
 
     start_global_dispute {
         let m in 1..CacheSize::get();
+        let n in 1..CacheSize::get();
 
         // no benchmarking component for max disputes here,
         // because MaxDisputes is enforced for the extrinsic
@@ -779,11 +780,16 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
 
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+            Ok(())
+        })?;
+
         // first element is the market id from above
-        let mut market_ids = BoundedVec::try_from(vec![market_id]).unwrap();
+        let mut market_ids_1: BoundedVec<MarketIdOf<T>, CacheSize> = Default::default();
         assert_eq!(market_id, 0u128.saturated_into());
         for i in 1..m {
-            market_ids.try_push(i.saturated_into()).unwrap();
+            market_ids_1.try_push(i.saturated_into()).unwrap();
         }
 
         let max_dispute_len = T::MaxDisputes::get();
@@ -800,11 +806,28 @@ benchmarks! {
             .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
         }
 
+        let market = <zrml_market_commons::Pallet<T>>::market(&market_id.saturated_into()).unwrap();
+        let disputes = Disputes::<T>::get(market_id);
+        let last_dispute = disputes.last().unwrap();
+        let dispute_duration_ends_at_block = last_dispute.at + market.deadlines.dispute_duration;
+        let mut market_ids_2: BoundedVec<MarketIdOf<T>, CacheSize> = BoundedVec::try_from(
+            vec![market_id],
+        ).unwrap();
+        for i in 1..n {
+            market_ids_2.try_push(i.saturated_into()).unwrap();
+        }
+        MarketIdsPerDisputeBlock::<T>::insert(dispute_duration_ends_at_block, market_ids_2);
+
         let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
         <frame_system::Pallet<T>>::set_block_number(current_block);
-        // the complexity depends on MarketIdsPerDisputeBlock at the current block
-        // this is because a variable number of market ids need to be decoded from the storage
-        MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
+
+        #[cfg(feature = "with-global-disputes")]
+        {
+            let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
+            // the complexity depends on MarketIdsPerDisputeBlock at the current block
+            // this is because a variable number of market ids need to be decoded from the storage
+            MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);
+        }
 
         let call = Call::<T>::start_global_dispute { market_id };
     }: {
