@@ -11,6 +11,9 @@ sp-std = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git =
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
+# Benchmark
+num-traits = { version = "0.2.15", default-features = false, optional = true }
+
 
 [dev-dependencies]
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
@@ -26,6 +29,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "num-traits",
 ]
 std = [
     "frame-benchmarking?/std",

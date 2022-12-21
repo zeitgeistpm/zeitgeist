@@ -12895,6 +12895,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-try-runtime",
+ "num-traits",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
