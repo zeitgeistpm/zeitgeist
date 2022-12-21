@@ -141,7 +141,7 @@ pub struct CustomMetadata {
     /// XCM-related metadata.
     pub xcm: XcmMetadata,
 
-    /// Whether an asset can be used in pools.
+    /// Whether an asset can be used as base_asset in pools.
     pub allow_as_base_asset: bool,
 }
 

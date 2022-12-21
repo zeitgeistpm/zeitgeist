@@ -116,20 +116,59 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        use alloc::string::ToString;
+        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        use scale_info::prelude::format;
+        let legacy_markets_count_key = "legacy_markets_count_key".to_string();
+        Self::set_temp_storage(0_u32, &legacy_markets_count_key);
+        for (market_id, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS)
+        {
+            Self::set_temp_storage(legacy_market, &format!("{:?}", market_id.as_slice()));
+            let legacy_markets_count: u32 = Self::get_temp_storage(&legacy_markets_count_key)
+                .expect("legacy_markets_count_key storage not found");
+            Self::set_temp_storage(legacy_markets_count + 1_u32, &legacy_markets_count_key);
+        }
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        for (market_id, market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
+        use alloc::string::ToString;
+        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        use scale_info::prelude::format;
+        let mut markets_count = 0_u32;
+        let legacy_markets_count_key = "legacy_markets_count_key".to_string();
+        for (market_id, updated_market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             assert_eq!(
-                market.base_asset,
+                updated_market.base_asset,
                 Asset::Ztg,
                 "found unexpected base_asset in market. market_id: {:?}, base_asset: {:?}",
                 market_id,
-                market.base_asset
+                updated_market.base_asset
             );
+            let legacy_market: LegacyMarketOf<T> =
+                Self::get_temp_storage(&format!("{:?}", market_id.as_slice()))
+                    .expect("legacy market not found");
+            assert_eq!(updated_market.creator, legacy_market.creator);
+            assert_eq!(updated_market.creation, legacy_market.creation);
+            assert_eq!(updated_market.creator_fee, legacy_market.creator_fee);
+            assert_eq!(updated_market.oracle, legacy_market.oracle);
+            assert_eq!(updated_market.metadata, legacy_market.metadata);
+            if let MarketType::Categorical(_) = legacy_market.market_type {
+                assert_eq!(updated_market.market_type, legacy_market.market_type);
+                assert_eq!(updated_market.report, legacy_market.report);
+                assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
+            };
+            assert_eq!(updated_market.period, legacy_market.period);
+            assert_eq!(updated_market.deadlines, legacy_market.deadlines);
+            assert_eq!(updated_market.scoring_rule, legacy_market.scoring_rule);
+            assert_eq!(updated_market.status, legacy_market.status);
+            assert_eq!(updated_market.dispute_mechanism, legacy_market.dispute_mechanism);
+            markets_count += 1_u32;
         }
+        let legacy_markets_count: u32 = Self::get_temp_storage(&legacy_markets_count_key)
+            .expect("temp_market_counts_key storage not found");
+        assert_eq!(markets_count, legacy_markets_count);
         Ok(())
     }
 }
