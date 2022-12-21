@@ -40,14 +40,17 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_identity (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInfo<T> {
     // Storage: Identity Registrars (r:1 w:1)
-    fn add_registrar(r: u32, ) -> Weight {
+    fn add_registrar(r: u32) -> Weight {
         Weight::from_ref_time(17_093_000 as u64)
             // Standard Error: 5_000
             .saturating_add(Weight::from_ref_time(398_000 as u64).saturating_mul(r as u64))
@@ -55,7 +58,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn set_identity(r: u32, x: u32, ) -> Weight {
+    fn set_identity(r: u32, x: u32) -> Weight {
         Weight::from_ref_time(32_442_000 as u64)
             // Standard Error: 18_000
             .saturating_add(Weight::from_ref_time(320_000 as u64).saturating_mul(r as u64))
@@ -67,7 +70,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SubsOf (r:1 w:1)
     // Storage: Identity SuperOf (r:1 w:1)
-    fn set_subs_new(s: u32, ) -> Weight {
+    fn set_subs_new(s: u32) -> Weight {
         Weight::from_ref_time(28_549_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(2_678_000 as u64).saturating_mul(s as u64))
@@ -79,7 +82,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SubsOf (r:1 w:1)
     // Storage: Identity SuperOf (r:0 w:1)
-    fn set_subs_old(p: u32, ) -> Weight {
+    fn set_subs_old(p: u32) -> Weight {
         Weight::from_ref_time(27_563_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(1_247_000 as u64).saturating_mul(p as u64))
@@ -90,7 +93,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity SubsOf (r:1 w:1)
     // Storage: Identity IdentityOf (r:1 w:1)
     // Storage: Identity SuperOf (r:0 w:64)
-    fn clear_identity(r: u32, s: u32, x: u32, ) -> Weight {
+    fn clear_identity(r: u32, s: u32, x: u32) -> Weight {
         Weight::from_ref_time(36_090_000 as u64)
             // Standard Error: 36_000
             .saturating_add(Weight::from_ref_time(217_000 as u64).saturating_mul(r as u64))
@@ -104,7 +107,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity Registrars (r:1 w:0)
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn request_judgement(r: u32, x: u32, ) -> Weight {
+    fn request_judgement(r: u32, x: u32) -> Weight {
         Weight::from_ref_time(35_271_000 as u64)
             // Standard Error: 11_000
             .saturating_add(Weight::from_ref_time(222_000 as u64).saturating_mul(r as u64))
@@ -114,7 +117,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn cancel_request(r: u32, x: u32, ) -> Weight {
+    fn cancel_request(r: u32, x: u32) -> Weight {
         Weight::from_ref_time(34_094_000 as u64)
             // Standard Error: 34_000
             .saturating_add(Weight::from_ref_time(108_000 as u64).saturating_mul(r as u64))
@@ -124,7 +127,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Identity Registrars (r:1 w:1)
-    fn set_fee(r: u32, ) -> Weight {
+    fn set_fee(r: u32) -> Weight {
         Weight::from_ref_time(9_359_000 as u64)
             // Standard Error: 2_000
             .saturating_add(Weight::from_ref_time(242_000 as u64).saturating_mul(r as u64))
@@ -132,7 +135,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Identity Registrars (r:1 w:1)
-    fn set_account_id(r: u32, ) -> Weight {
+    fn set_account_id(r: u32) -> Weight {
         Weight::from_ref_time(9_511_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(232_000 as u64).saturating_mul(r as u64))
@@ -140,7 +143,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Identity Registrars (r:1 w:1)
-    fn set_fields(r: u32, ) -> Weight {
+    fn set_fields(r: u32) -> Weight {
         Weight::from_ref_time(10_276_000 as u64)
             // Standard Error: 25_000
             .saturating_add(Weight::from_ref_time(212_000 as u64).saturating_mul(r as u64))
@@ -149,7 +152,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity Registrars (r:1 w:0)
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn provide_judgement(r: u32, x: u32, ) -> Weight {
+    fn provide_judgement(r: u32, x: u32) -> Weight {
         Weight::from_ref_time(25_757_000 as u64)
             // Standard Error: 6_000
             .saturating_add(Weight::from_ref_time(210_000 as u64).saturating_mul(r as u64))
@@ -162,7 +165,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:1)
     // Storage: System Account (r:2 w:2)
     // Storage: Identity SuperOf (r:0 w:64)
-    fn kill_identity(r: u32, s: u32, x: u32, ) -> Weight {
+    fn kill_identity(r: u32, s: u32, x: u32) -> Weight {
         Weight::from_ref_time(46_291_000 as u64)
             // Standard Error: 25_000
             .saturating_add(Weight::from_ref_time(178_000 as u64).saturating_mul(r as u64))
@@ -177,7 +180,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SuperOf (r:1 w:1)
     // Storage: Identity SubsOf (r:1 w:1)
-    fn add_sub(s: u32, ) -> Weight {
+    fn add_sub(s: u32) -> Weight {
         Weight::from_ref_time(37_128_000 as u64)
             // Standard Error: 1_000
             .saturating_add(Weight::from_ref_time(125_000 as u64).saturating_mul(s as u64))
@@ -186,7 +189,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SuperOf (r:1 w:1)
-    fn rename_sub(s: u32, ) -> Weight {
+    fn rename_sub(s: u32) -> Weight {
         Weight::from_ref_time(15_591_000 as u64)
             // Standard Error: 1_000
             .saturating_add(Weight::from_ref_time(76_000 as u64).saturating_mul(s as u64))
@@ -196,7 +199,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SuperOf (r:1 w:1)
     // Storage: Identity SubsOf (r:1 w:1)
-    fn remove_sub(s: u32, ) -> Weight {
+    fn remove_sub(s: u32) -> Weight {
         Weight::from_ref_time(38_391_000 as u64)
             // Standard Error: 1_000
             .saturating_add(Weight::from_ref_time(116_000 as u64).saturating_mul(s as u64))
@@ -205,7 +208,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity SuperOf (r:1 w:1)
     // Storage: Identity SubsOf (r:1 w:1)
-    fn quit_sub(s: u32, ) -> Weight {
+    fn quit_sub(s: u32) -> Weight {
         Weight::from_ref_time(27_623_000 as u64)
             // Standard Error: 2_000
             .saturating_add(Weight::from_ref_time(124_000 as u64).saturating_mul(s as u64))

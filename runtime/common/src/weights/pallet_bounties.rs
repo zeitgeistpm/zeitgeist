@@ -40,8 +40,11 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_bounties (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -49,7 +52,7 @@ impl<T: frame_system::Config> pallet_bounties::weights::WeightInfo for WeightInf
     // Storage: Bounties BountyCount (r:1 w:1)
     // Storage: Bounties BountyDescriptions (r:0 w:1)
     // Storage: Bounties Bounties (r:0 w:1)
-    fn propose_bounty(d: u32, ) -> Weight {
+    fn propose_bounty(d: u32) -> Weight {
         Weight::from_ref_time(30_314_000 as u64)
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(1_000 as u64).saturating_mul(d as u64))
@@ -121,7 +124,7 @@ impl<T: frame_system::Config> pallet_bounties::weights::WeightInfo for WeightInf
     // Storage: Bounties BountyApprovals (r:1 w:1)
     // Storage: Bounties Bounties (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn spend_funds(b: u32, ) -> Weight {
+    fn spend_funds(b: u32) -> Weight {
         Weight::from_ref_time(0 as u64)
             // Standard Error: 38_000
             .saturating_add(Weight::from_ref_time(30_626_000 as u64).saturating_mul(b as u64))

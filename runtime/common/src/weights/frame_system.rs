@@ -40,16 +40,19 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for frame_system (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T> {
-    fn remark(_b: u32, ) -> Weight {
+    fn remark(_b: u32) -> Weight {
         Weight::from_ref_time(0 as u64)
     }
-    fn remark_with_event(b: u32, ) -> Weight {
+    fn remark_with_event(b: u32) -> Weight {
         Weight::from_ref_time(0 as u64)
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(2_000 as u64).saturating_mul(b as u64))
@@ -62,21 +65,21 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     // Storage: Skipped Metadata (r:0 w:0)
-    fn set_storage(i: u32, ) -> Weight {
+    fn set_storage(i: u32) -> Weight {
         Weight::from_ref_time(0 as u64)
             // Standard Error: 2_000
             .saturating_add(Weight::from_ref_time(699_000 as u64).saturating_mul(i as u64))
             .saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(i as u64)))
     }
     // Storage: Skipped Metadata (r:0 w:0)
-    fn kill_storage(i: u32, ) -> Weight {
+    fn kill_storage(i: u32) -> Weight {
         Weight::from_ref_time(0 as u64)
             // Standard Error: 2_000
             .saturating_add(Weight::from_ref_time(644_000 as u64).saturating_mul(i as u64))
             .saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(i as u64)))
     }
     // Storage: Skipped Metadata (r:0 w:0)
-    fn kill_prefix(p: u32, ) -> Weight {
+    fn kill_prefix(p: u32) -> Weight {
         Weight::from_ref_time(0 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(1_365_000 as u64).saturating_mul(p as u64))

@@ -40,8 +40,11 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_membership (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -50,7 +53,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Proposals (r:1 w:0)
     // Storage: AdvisoryCommittee Members (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn add_member(m: u32, ) -> Weight {
+    fn add_member(m: u32) -> Weight {
         Weight::from_ref_time(22_413_000 as u64)
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(33_000 as u64).saturating_mul(m as u64))
@@ -62,7 +65,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommitteeMembership Prime (r:1 w:0)
     // Storage: AdvisoryCommittee Members (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn remove_member(m: u32, ) -> Weight {
+    fn remove_member(m: u32) -> Weight {
         Weight::from_ref_time(25_237_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(30_000 as u64).saturating_mul(m as u64))
@@ -74,7 +77,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommitteeMembership Prime (r:1 w:0)
     // Storage: AdvisoryCommittee Members (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn swap_member(m: u32, ) -> Weight {
+    fn swap_member(m: u32) -> Weight {
         Weight::from_ref_time(25_943_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(29_000 as u64).saturating_mul(m as u64))
@@ -86,7 +89,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommitteeMembership Prime (r:1 w:0)
     // Storage: AdvisoryCommittee Members (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn reset_member(m: u32, ) -> Weight {
+    fn reset_member(m: u32) -> Weight {
         Weight::from_ref_time(25_315_000 as u64)
             // Standard Error: 2_000
             .saturating_add(Weight::from_ref_time(132_000 as u64).saturating_mul(m as u64))
@@ -98,7 +101,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommitteeMembership Prime (r:1 w:1)
     // Storage: AdvisoryCommittee Members (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn change_key(m: u32, ) -> Weight {
+    fn change_key(m: u32) -> Weight {
         Weight::from_ref_time(25_496_000 as u64)
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(43_000 as u64).saturating_mul(m as u64))
@@ -108,7 +111,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommitteeMembership Members (r:1 w:0)
     // Storage: AdvisoryCommitteeMembership Prime (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn set_prime(m: u32, ) -> Weight {
+    fn set_prime(m: u32) -> Weight {
         Weight::from_ref_time(9_730_000 as u64)
             // Standard Error: 1_000
             .saturating_add(Weight::from_ref_time(9_000 as u64).saturating_mul(m as u64))
@@ -117,7 +120,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     }
     // Storage: AdvisoryCommitteeMembership Prime (r:0 w:1)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn clear_prime(m: u32, ) -> Weight {
+    fn clear_prime(m: u32) -> Weight {
         Weight::from_ref_time(5_496_000 as u64)
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(1_000 as u64).saturating_mul(m as u64))

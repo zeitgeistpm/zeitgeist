@@ -40,15 +40,18 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_vesting (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo<T> {
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vest_locked(l: u32, s: u32, ) -> Weight {
+    fn vest_locked(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(38_004_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(51_000 as u64).saturating_mul(l as u64))
@@ -59,7 +62,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     }
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vest_unlocked(l: u32, s: u32, ) -> Weight {
+    fn vest_unlocked(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(36_836_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(51_000 as u64).saturating_mul(l as u64))
@@ -71,7 +74,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn vest_other_locked(_l: u32, s: u32, ) -> Weight {
+    fn vest_other_locked(_l: u32, s: u32) -> Weight {
         Weight::from_ref_time(40_254_000 as u64)
             // Standard Error: 11_000
             .saturating_add(Weight::from_ref_time(67_000 as u64).saturating_mul(s as u64))
@@ -81,7 +84,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn vest_other_unlocked(l: u32, s: u32, ) -> Weight {
+    fn vest_other_unlocked(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(35_698_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(60_000 as u64).saturating_mul(l as u64))
@@ -93,7 +96,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vested_transfer(l: u32, s: u32, ) -> Weight {
+    fn vested_transfer(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(53_460_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(48_000 as u64).saturating_mul(l as u64))
@@ -105,7 +108,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: System Account (r:2 w:2)
     // Storage: Balances Locks (r:1 w:1)
-    fn force_vested_transfer(l: u32, s: u32, ) -> Weight {
+    fn force_vested_transfer(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(53_837_000 as u64)
             // Standard Error: 5_000
             .saturating_add(Weight::from_ref_time(35_000 as u64).saturating_mul(l as u64))
@@ -116,7 +119,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     }
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn not_unlocking_merge_schedules(l: u32, s: u32, ) -> Weight {
+    fn not_unlocking_merge_schedules(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(38_887_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(41_000 as u64).saturating_mul(l as u64))
@@ -127,7 +130,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     }
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn unlocking_merge_schedules(l: u32, s: u32, ) -> Weight {
+    fn unlocking_merge_schedules(l: u32, s: u32) -> Weight {
         Weight::from_ref_time(38_969_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(47_000 as u64).saturating_mul(l as u64))

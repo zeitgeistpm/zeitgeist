@@ -40,8 +40,11 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_treasury (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -64,7 +67,7 @@ impl<T: frame_system::Config> pallet_treasury::weights::WeightInfo for WeightInf
     }
     // Storage: Treasury Proposals (r:1 w:0)
     // Storage: Treasury Approvals (r:1 w:1)
-    fn approve_proposal(p: u32, ) -> Weight {
+    fn approve_proposal(p: u32) -> Weight {
         Weight::from_ref_time(13_431_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(127_000 as u64).saturating_mul(p as u64))
@@ -81,7 +84,7 @@ impl<T: frame_system::Config> pallet_treasury::weights::WeightInfo for WeightInf
     // Storage: Treasury Approvals (r:1 w:1)
     // Storage: Bounties BountyApprovals (r:1 w:1)
     // Storage: Treasury Proposals (r:2 w:2)
-    fn on_initialize_proposals(p: u32, ) -> Weight {
+    fn on_initialize_proposals(p: u32) -> Weight {
         Weight::from_ref_time(38_551_000 as u64)
             // Standard Error: 18_000
             .saturating_add(Weight::from_ref_time(29_086_000 as u64).saturating_mul(p as u64))

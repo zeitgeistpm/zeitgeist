@@ -40,8 +40,11 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_scheduler (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -50,7 +53,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:1)
     // Storage: Scheduler Lookup (r:0 w:1)
-    fn on_initialize_periodic_named_resolved(s: u32, ) -> Weight {
+    fn on_initialize_periodic_named_resolved(s: u32) -> Weight {
         Weight::from_ref_time(14_460_000 as u64)
             // Standard Error: 9_000
             .saturating_add(Weight::from_ref_time(19_269_000 as u64).saturating_mul(s as u64))
@@ -63,7 +66,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:1)
     // Storage: Scheduler Lookup (r:0 w:1)
-    fn on_initialize_named_resolved(s: u32, ) -> Weight {
+    fn on_initialize_named_resolved(s: u32) -> Weight {
         Weight::from_ref_time(14_144_000 as u64)
             // Standard Error: 11_000
             .saturating_add(Weight::from_ref_time(15_530_000 as u64).saturating_mul(s as u64))
@@ -75,7 +78,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     // Storage: Scheduler Agenda (r:2 w:2)
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:1)
-    fn on_initialize_periodic_resolved(s: u32, ) -> Weight {
+    fn on_initialize_periodic_resolved(s: u32) -> Weight {
         Weight::from_ref_time(13_870_000 as u64)
             // Standard Error: 14_000
             .saturating_add(Weight::from_ref_time(16_271_000 as u64).saturating_mul(s as u64))
@@ -87,7 +90,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     // Storage: Scheduler Agenda (r:1 w:1)
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:1)
-    fn on_initialize_resolved(s: u32, ) -> Weight {
+    fn on_initialize_resolved(s: u32) -> Weight {
         Weight::from_ref_time(18_537_000 as u64)
             // Standard Error: 19_000
             .saturating_add(Weight::from_ref_time(14_220_000 as u64).saturating_mul(s as u64))
@@ -99,7 +102,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     // Storage: Scheduler Agenda (r:2 w:2)
     // Storage: Preimage PreimageFor (r:1 w:0)
     // Storage: Scheduler Lookup (r:0 w:1)
-    fn on_initialize_named_aborted(s: u32, ) -> Weight {
+    fn on_initialize_named_aborted(s: u32) -> Weight {
         Weight::from_ref_time(5_968_000 as u64)
             // Standard Error: 6_000
             .saturating_add(Weight::from_ref_time(5_398_000 as u64).saturating_mul(s as u64))
@@ -110,7 +113,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     }
     // Storage: Scheduler Agenda (r:2 w:2)
     // Storage: Preimage PreimageFor (r:1 w:0)
-    fn on_initialize_aborted(s: u32, ) -> Weight {
+    fn on_initialize_aborted(s: u32) -> Weight {
         Weight::from_ref_time(9_794_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(2_463_000 as u64).saturating_mul(s as u64))
@@ -120,7 +123,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     }
     // Storage: Scheduler Agenda (r:2 w:2)
     // Storage: Scheduler Lookup (r:0 w:1)
-    fn on_initialize_periodic_named(s: u32, ) -> Weight {
+    fn on_initialize_periodic_named(s: u32) -> Weight {
         Weight::from_ref_time(15_321_000 as u64)
             // Standard Error: 7_000
             .saturating_add(Weight::from_ref_time(9_480_000 as u64).saturating_mul(s as u64))
@@ -130,7 +133,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
             .saturating_add(T::DbWeight::get().writes((2 as u64).saturating_mul(s as u64)))
     }
     // Storage: Scheduler Agenda (r:2 w:2)
-    fn on_initialize_periodic(s: u32, ) -> Weight {
+    fn on_initialize_periodic(s: u32) -> Weight {
         Weight::from_ref_time(14_887_000 as u64)
             // Standard Error: 5_000
             .saturating_add(Weight::from_ref_time(6_616_000 as u64).saturating_mul(s as u64))
@@ -141,7 +144,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     }
     // Storage: Scheduler Agenda (r:1 w:1)
     // Storage: Scheduler Lookup (r:0 w:1)
-    fn on_initialize_named(s: u32, ) -> Weight {
+    fn on_initialize_named(s: u32) -> Weight {
         Weight::from_ref_time(14_835_000 as u64)
             // Standard Error: 4_000
             .saturating_add(Weight::from_ref_time(5_876_000 as u64).saturating_mul(s as u64))
@@ -150,7 +153,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
             .saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(s as u64)))
     }
     // Storage: Scheduler Agenda (r:1 w:1)
-    fn on_initialize(s: u32, ) -> Weight {
+    fn on_initialize(s: u32) -> Weight {
         Weight::from_ref_time(15_215_000 as u64)
             // Standard Error: 8_000
             .saturating_add(Weight::from_ref_time(4_743_000 as u64).saturating_mul(s as u64))
@@ -158,7 +161,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     // Storage: Scheduler Agenda (r:1 w:1)
-    fn schedule(s: u32, ) -> Weight {
+    fn schedule(s: u32) -> Weight {
         Weight::from_ref_time(19_272_000 as u64)
             // Standard Error: 5_000
             .saturating_add(Weight::from_ref_time(88_000 as u64).saturating_mul(s as u64))
@@ -167,7 +170,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     }
     // Storage: Scheduler Agenda (r:1 w:1)
     // Storage: Scheduler Lookup (r:0 w:1)
-    fn cancel(s: u32, ) -> Weight {
+    fn cancel(s: u32) -> Weight {
         Weight::from_ref_time(19_365_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(508_000 as u64).saturating_mul(s as u64))
@@ -176,7 +179,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     }
     // Storage: Scheduler Lookup (r:1 w:1)
     // Storage: Scheduler Agenda (r:1 w:1)
-    fn schedule_named(s: u32, ) -> Weight {
+    fn schedule_named(s: u32) -> Weight {
         Weight::from_ref_time(22_905_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(152_000 as u64).saturating_mul(s as u64))
@@ -185,7 +188,7 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
     }
     // Storage: Scheduler Lookup (r:1 w:1)
     // Storage: Scheduler Agenda (r:1 w:1)
-    fn cancel_named(s: u32, ) -> Weight {
+    fn cancel_named(s: u32) -> Weight {
         Weight::from_ref_time(22_433_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(550_000 as u64).saturating_mul(s as u64))

@@ -40,13 +40,16 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_utility (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
-    fn batch(c: u32, ) -> Weight {
+    fn batch(c: u32) -> Weight {
         Weight::from_ref_time(9_405_000 as u64)
             // Standard Error: 3_000
             .saturating_add(Weight::from_ref_time(3_915_000 as u64).saturating_mul(c as u64))
@@ -54,7 +57,7 @@ impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo
     fn as_derivative() -> Weight {
         Weight::from_ref_time(6_322_000 as u64)
     }
-    fn batch_all(c: u32, ) -> Weight {
+    fn batch_all(c: u32) -> Weight {
         Weight::from_ref_time(37_710_000 as u64)
             // Standard Error: 10_000
             .saturating_add(Weight::from_ref_time(3_993_000 as u64).saturating_mul(c as u64))
@@ -62,7 +65,7 @@ impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo
     fn dispatch_as() -> Weight {
         Weight::from_ref_time(14_008_000 as u64)
     }
-    fn force_batch(c: u32, ) -> Weight {
+    fn force_batch(c: u32) -> Weight {
         Weight::from_ref_time(16_729_000 as u64)
             // Standard Error: 1_000
             .saturating_add(Weight::from_ref_time(3_895_000 as u64).saturating_mul(c as u64))
