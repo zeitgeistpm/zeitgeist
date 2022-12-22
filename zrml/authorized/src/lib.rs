@@ -88,14 +88,6 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
-            // TODO (#918): when we later allow a simple account id to be the authority, this expiration limit becomes useful
-            #[cfg(not(test))]
-            let fallible_authority = false;
-            #[cfg(test)]
-            let fallible_authority = true;
-
-            if fallible_authority {}
-
             let ids_len_1 = Self::remove_auto_resolve(&market_id);
             let now = frame_system::Pallet::<T>::block_number();
             let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
