@@ -100,20 +100,21 @@ mod pallet {
             /// it if the bond is settled is most likely a logic error. If the bond is already
             /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
             fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
-                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
-                    let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
-                    if bond.is_settled {
-                        let warning = format!(
-                            "Attempting to settle the {} bond of market {:?} multiple times",
-                            stringify!($bond_type),
-                            market_id,
-                        );
-                        log::warn!("{}", warning);
-                        debug_assert!(false, "{}", warning);
-                        return Ok(());
-                    }
-                    CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
-                    market.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(());
+                }
+                CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })
             }
@@ -130,8 +131,8 @@ mod pallet {
             /// returned.
             fn $fn_name(
                 market_id: &MarketIdOf<T>,
-                market: &MarketOf<T>,
             ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
                 let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
                 // Trying to settle a bond multiple times is always a logic error, not a runtime
                 // error, so we log a warning instead of raising an error.
@@ -210,19 +211,19 @@ mod pallet {
             // details.
             match &market.bonds.advisory {
                 Some(bond) if !bond.is_settled => {
-                    Self::slash_advisory_bond(&market_id, &market, true)?;
+                    Self::slash_advisory_bond(&market_id, true)?;
                 }
                 _ => (),
             };
             match &market.bonds.oracle {
                 Some(bond) if !bond.is_settled => {
-                    Self::slash_oracle_bond(&market_id, &market)?;
+                    Self::slash_oracle_bond(&market_id)?;
                 }
                 _ => (),
             };
             match &market.bonds.validity {
                 Some(bond) if !bond.is_settled => {
-                    Self::slash_validity_bond(&market_id, &market)?;
+                    Self::slash_validity_bond(&market_id)?;
                 }
                 _ => (),
             };
@@ -1929,9 +1930,9 @@ mod pallet {
         /// storage is not changed, a warning is raised and a zero imbalance is returned.
         fn slash_advisory_bond(
             market_id: &MarketIdOf<T>,
-            market: &MarketOf<T>,
             slash_all: bool,
         ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
             let advisory_bond = market.bonds.advisory.as_ref().ok_or(Error::<T>::MissingBond)?;
             // Trying to settle a bond multiple times is always a logic error, not a runtime error,
             // so we log a warning instead of raising an error.
@@ -2155,7 +2156,7 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             Self::unreserve_oracle_bond(market_id)?;
-            let imbalance = Self::slash_advisory_bond(market_id, &market, false)?;
+            let imbalance = Self::slash_advisory_bond(market_id, false)?;
             T::Slash::on_unbalanced(imbalance);
             <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
@@ -2382,7 +2383,7 @@ mod pallet {
             if report.by == market.oracle {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let negative_imbalance = Self::slash_oracle_bond(market_id, market)?;
+                let negative_imbalance = Self::slash_oracle_bond(market_id)?;
 
                 // deposit only to the real reporter what actually was slashed
                 if let Err(err) =
@@ -2439,7 +2440,7 @@ mod pallet {
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let imbalance = Self::slash_oracle_bond(market_id, market)?;
+                let imbalance = Self::slash_oracle_bond(market_id)?;
                 overall_imbalance.subsume(imbalance);
             }
 
