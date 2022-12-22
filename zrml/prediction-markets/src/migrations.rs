@@ -152,15 +152,20 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        let old_markets =
-            storage_iter::<OldMarketOf<T>>(MARKET_COMMONS, MARKETS).collect::<BTreeMap<_, _>>();
+        use frame_support::{migration::storage_key_iter, pallet_prelude::Blake2_128Concat};
+
+        let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
+            MARKET_COMMONS,
+            MARKETS,
+        )
+        .collect::<BTreeMap<_, _>>();
         Self::set_temp_storage(old_markets, "old_markets");
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        let old_markets: BTreeMap<MarketIdOf<T>, MarketOf<T>> =
+        let old_markets: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
             Self::get_temp_storage("old_markets").unwrap();
         let new_market_count = <zrml_market_commons::Pallet<T>>::market_iter().count();
         assert_eq!(old_markets.len(), new_market_count);

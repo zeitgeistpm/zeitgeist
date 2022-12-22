@@ -38,6 +38,7 @@ type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::Moment,
 >;
 
+/// Abstraction over storage operations for markets
 pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber: AtLeast32Bit;
