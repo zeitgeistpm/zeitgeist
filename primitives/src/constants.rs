@@ -77,7 +77,9 @@ pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
 // Prediction Markets
+/// The maximum allowed market life time, measured in blocks.
 pub const MAX_MARKET_LIFETIME_IN_BLOCKS: BlockNumber = 365 * BLOCKS_PER_DAY;
+/// The maximum allowed market life time, measured in milliseconds.
 pub const MAX_MARKET_LIFETIME_IN_MOMENTS: Moment =
     (MAX_MARKET_LIFETIME_IN_BLOCKS as u64) * (MILLISECS_PER_BLOCK as u64);
 /// Max. categories in a prediction market.
