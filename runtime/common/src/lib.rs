@@ -922,7 +922,6 @@ macro_rules! impl_config_traits {
             type Event = Event;
             type MarketCommons = MarketCommons;
             type PalletId = AuthorizedPalletId;
-            type ReportPeriod = ReportPeriod;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 

@@ -25,8 +25,8 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use zeitgeist_primitives::{
-    traits::{DisputeApi, DisputeResolutionApi},
-    types::{AuthorityReport, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+    traits::DisputeApi,
+    types::{AuthorityReport, MarketDisputeMechanism, MarketStatus, OutcomeReport},
 };
 use zrml_market_commons::Markets;
 
@@ -252,86 +252,5 @@ fn get_auto_resolve_returns_none_without_market_storage() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>();
         assert_eq!(Authorized::get_auto_resolve(&[], &0, &market).unwrap(), None,);
-    });
-}
-
-#[test]
-fn has_failed_works_without_report() {
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(42);
-        let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(0, &market);
-        let now = frame_system::Pallet::<Runtime>::block_number();
-        let last_dispute = MarketDispute { at: now, by: BOB, outcome: OutcomeReport::Scalar(1) };
-
-        assert!(!Authorized::has_failed(&[last_dispute.clone()], &0, &market).unwrap());
-
-        frame_system::Pallet::<Runtime>::set_block_number(
-            now + <Runtime as crate::Config>::ReportPeriod::get() + 1,
-        );
-
-        assert!(Authorized::has_failed(&[last_dispute], &0, &market).unwrap());
-    });
-}
-
-#[test]
-fn has_failed_works_with_renewed_reports() {
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(42);
-        let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(0, &market);
-        let now = frame_system::Pallet::<Runtime>::block_number();
-        let last_dispute = MarketDispute { at: now, by: BOB, outcome: OutcomeReport::Scalar(1) };
-
-        // assume `authorize_market_outcome` is renewed indefintiely
-        // by a fallible authority (one account id)
-        assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
-            0,
-            OutcomeReport::Scalar(1)
-        ));
-
-        frame_system::Pallet::<Runtime>::set_block_number(
-            now + <Runtime as crate::Config>::ReportPeriod::get() - 1,
-        );
-
-        assert!(!Authorized::has_failed(&[last_dispute.clone()], &0, &market).unwrap());
-
-        frame_system::Pallet::<Runtime>::set_block_number(
-            now + <Runtime as crate::Config>::ReportPeriod::get() + 1,
-        );
-
-        assert!(Authorized::has_failed(&[last_dispute], &0, &market).unwrap());
-    });
-}
-
-#[test]
-fn authorize_market_outcome_fails_with_report_period_expired() {
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(42);
-        let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(0, &market);
-
-        let dispute_at = 42;
-        let last_dispute =
-            MarketDispute { at: dispute_at, by: BOB, outcome: OutcomeReport::Scalar(42) };
-        // get_disputes returns a sample dispute in the mock
-        assert_eq!(
-            <Runtime as crate::Config>::DisputeResolution::get_disputes(&0).pop().unwrap(),
-            last_dispute
-        );
-
-        frame_system::Pallet::<Runtime>::set_block_number(
-            dispute_at + <Runtime as crate::Config>::ReportPeriod::get() + 1,
-        );
-
-        assert_noop!(
-            Authorized::authorize_market_outcome(
-                Origin::signed(AuthorizedDisputeResolutionUser::get()),
-                0,
-                OutcomeReport::Scalar(1)
-            ),
-            Error::<Runtime>::ReportPeriodExpired
-        );
     });
 }

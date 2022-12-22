@@ -35,7 +35,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod,
-        PmPalletId, ReportPeriod, BASE,
+        PmPalletId, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -129,7 +129,6 @@ impl DisputeResolutionApi for MockResolution {
 }
 
 impl crate::Config for Runtime {
-    type ReportPeriod = ReportPeriod;
     type Event = ();
     type CorrectionPeriod = CorrectionPeriod;
     type DisputeResolution = MockResolution;

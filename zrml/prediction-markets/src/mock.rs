@@ -42,9 +42,8 @@ use zeitgeist_primitives::{
         MaxInRatio, MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
         MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
         MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, ReportPeriod,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -253,7 +252,6 @@ ord_parameter_types! {
 }
 
 impl zrml_authorized::Config for Runtime {
-    type ReportPeriod = ReportPeriod;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type CorrectionPeriod = CorrectionPeriod;

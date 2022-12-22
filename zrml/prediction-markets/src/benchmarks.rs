@@ -890,13 +890,6 @@ benchmarks! {
         T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
         Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
 
-        let authority_report_period = <T as zrml_authorized::Config>::ReportPeriod::get();
-        let now = <frame_system::Pallet<T>>::block_number();
-        // authorized mdm fails after the ReportPeriod
-        <frame_system::Pallet<T>>::set_block_number(
-            now + authority_report_period.saturated_into() + 1u64.saturated_into()
-        );
-
         let call = Call::<T>::resolve_failed_mdm { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
@@ -927,13 +920,6 @@ benchmarks! {
             dispute_bond,
         )?;
         Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-
-        let authority_report_period = <T as zrml_authorized::Config>::ReportPeriod::get();
-        let now = <frame_system::Pallet<T>>::block_number();
-        // authorized mdm fails after the ReportPeriod
-        <frame_system::Pallet<T>>::set_block_number(
-            now + authority_report_period.saturated_into() + 1u64.saturated_into()
-        );
 
         let call = Call::<T>::resolve_failed_mdm { market_id };
     }: {
