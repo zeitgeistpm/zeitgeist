@@ -317,7 +317,7 @@ benchmarks! {
             let pool_id: PoolId = i.into();
             PoolsCachedForArbitrage::<T>::insert(pool_id, ());
         }
-        let noop = |_: PoolId| -> Result<Weight, DispatchError> { Ok(Weight::from_ref_time(0)) };
+        let noop = |_: PoolId| -> Result<Weight, DispatchError> { Ok(Weight::zero()) };
     }: {
         Pallet::<T>::apply_to_cached_pools(a, noop, Weight::MAX)
     }

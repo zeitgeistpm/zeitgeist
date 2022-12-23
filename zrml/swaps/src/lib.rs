@@ -1615,7 +1615,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut extra_weight = Weight::from_ref_time(0);
+            let mut extra_weight = Weight::zero();
             let mut total_assets = 0;
 
             Self::mutate_pool(pool_id, |pool| {
@@ -2210,7 +2210,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut weight = Weight::from_ref_time(0);
+            let mut weight = Weight::zero();
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Clean;

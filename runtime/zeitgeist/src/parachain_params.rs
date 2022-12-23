@@ -48,10 +48,9 @@ parameter_types! {
     // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
-    // Have to change "Any" to "Kusama" for mainnet once we have separate runtimes
-    pub const RelayNetwork: NetworkId = NetworkId::Any;
-    pub const ReservedDmpWeight: Weight = Weight::from_ref_time(MAXIMUM_BLOCK_WEIGHT.ref_time() / 4);
-    pub const ReservedXcmpWeight: Weight = Weight::from_ref_time(MAXIMUM_BLOCK_WEIGHT.ref_time() / 4);
+    pub const RelayNetwork: NetworkId = NetworkId::Kusama;
+    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
     pub UnitWeightCost: u64 = 200_000_000;
 

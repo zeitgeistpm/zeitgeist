@@ -12645,7 +12645,6 @@ dependencies = [
  "cumulus-relay-chain-rpc-interface",
  "frame-benchmarking",
  "frame-benchmarking-cli",
- "frame-support",
  "hex-literal",
  "jsonrpsee",
  "log",
