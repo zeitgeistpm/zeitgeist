@@ -35,7 +35,7 @@ on which the market finally resolves.
 
 #### Private Pallet API
 
-- `push_voting_outcome` - Start a global dispute, add an initial voting outcome
+- `push_vote_outcome` - Start a global dispute, add an initial voting outcome
   and vote on it.
 - `determine_voting_winner` - Determine the canonical voting outcome based on
   total locked tokens.

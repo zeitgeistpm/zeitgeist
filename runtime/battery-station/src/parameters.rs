@@ -352,7 +352,7 @@ parameter_types! {
     pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
     /// The period for a global dispute to end.
     pub const GlobalDisputePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
-    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+    /// The maximum number of owners for a voting outcome for private API calls of `push_vote_outcome`.
     pub const MaxOwners: u32 = 10;
     /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
     pub const MaxGlobalDisputeVotes: u32 = 50;

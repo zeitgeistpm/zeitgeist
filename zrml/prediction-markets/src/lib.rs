@@ -1263,7 +1263,7 @@ mod pallet {
 
                 // add report outcome to voting choices
                 if let Some(report) = market.report {
-                    T::GlobalDisputes::push_voting_outcome(
+                    T::GlobalDisputes::push_vote_outcome(
                         &market_id,
                         report.outcome,
                         &report.by,
@@ -1273,7 +1273,7 @@ mod pallet {
 
                 for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
                     let dispute_bond = default_dispute_bond::<T>(index);
-                    T::GlobalDisputes::push_voting_outcome(
+                    T::GlobalDisputes::push_vote_outcome(
                         &market_id,
                         outcome.clone(),
                         by,

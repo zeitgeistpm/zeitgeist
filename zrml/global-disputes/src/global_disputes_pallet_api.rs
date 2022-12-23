@@ -35,7 +35,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     ///
     /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
     /// returned, this means that the dispute could not be resolved.
-    fn push_voting_outcome(
+    fn push_vote_outcome(
         market_id: &MarketId,
         outcome: OutcomeReport,
         owner: &AccountId,
