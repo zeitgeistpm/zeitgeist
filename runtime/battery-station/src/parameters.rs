@@ -146,6 +146,7 @@ parameter_types! {
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 25 * CENT;
+    /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
@@ -164,7 +165,9 @@ parameter_types! {
     /// Maximum block period for a grace_period.
     /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
     pub const MaxGracePeriod: BlockNumber = MAX_GRACE_PERIOD;
+    /// The maximum allowed duration of a market from creation to market close in blocks.
     pub const MaxMarketLifetimeInBlocks: BlockNumber = MAX_MARKET_LIFETIME_IN_BLOCKS;
+    /// The maximum allowed duration of a market from creation to market close in moments.
     pub const MaxMarketLifetimeInMoments: Moment = MAX_MARKET_LIFETIME_IN_MOMENTS;
     /// Maximum block period for a oracle_duration.
     /// The oracle_duration is a duration where the oracle has to submit its report.
