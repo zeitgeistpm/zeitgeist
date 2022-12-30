@@ -1210,8 +1210,6 @@ benchmarks! {
         let r in 1..31;
         let d in 1..31;
 
-        // let _ = Err("you fail")?;
-
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         // ensure markets exist
