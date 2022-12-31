@@ -24,11 +24,12 @@ use sp_runtime::RuntimeDebug;
 
 /// Types
 ///
-/// * `AI`: Account Id
-/// * `BN`: Block Number
-/// * `M`: Moment (Time moment)
+/// * `AI`: Account id
+/// * `BA`: Balance type for bonds
+/// * `BN`: Block number
+/// * `M`: Moment (time moment)
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, Balance, BN, M> {
+pub struct Market<AI, BA, BN, M> {
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -57,54 +58,52 @@ pub struct Market<AI, Balance, BN, M> {
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
     /// The bonds reserved for this market.
-    pub bonds: MarketBonds<AI, Balance>,
+    pub bonds: MarketBonds<AI, BA>,
 }
 
 /// Tracks the status of a bond.
 #[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Bond<AccountId, Balance> {
+pub struct Bond<AI, BA> {
     /// The account that reserved the bond.
-    pub who: AccountId,
+    pub who: AI,
     /// The amount reserved.
-    pub value: Balance,
+    pub value: BA,
     /// `true` if and only if the bond is unreserved and/or (partially) slashed.
     pub is_settled: bool,
 }
 
-impl<AccountId, Balance> Bond<AccountId, Balance> {
-    pub fn new(who: AccountId, value: Balance) -> Bond<AccountId, Balance> {
+impl<AI, BA> Bond<AI, BA> {
+    pub fn new(who: AI, value: BA) -> Bond<AI, BA> {
         Bond { who, value, is_settled: false }
     }
 }
 
 /// Tracks bonds associated with a prediction market.
 #[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct MarketBonds<AccountId, Balance> {
-    pub creation: Option<Bond<AccountId, Balance>>,
-    pub oracle: Option<Bond<AccountId, Balance>>,
+pub struct MarketBonds<AI, BA> {
+    pub creation: Option<Bond<AI, BA>>,
+    pub oracle: Option<Bond<AI, BA>>,
 }
 
-impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
-    MarketBonds<AccountId, Balance>
-{
+impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
     /// Return the combined value of the open bonds for `who`.
-    pub fn total_amount_bonded(&self, who: &AccountId) -> Balance {
-        let value_or_default = |bond: &Option<Bond<AccountId, Balance>>| match bond {
+    pub fn total_amount_bonded(&self, who: &AI) -> BA {
+        let value_or_default = |bond: &Option<Bond<AI, BA>>| match bond {
             Some(bond) if bond.who == *who => bond.value,
-            _ => Balance::zero(),
+            _ => BA::zero(),
         };
         value_or_default(&self.creation).saturating_add(value_or_default(&self.oracle))
     }
 }
 
 // Used primarily for testing purposes.
-impl<AccountId, Balance> Default for MarketBonds<AccountId, Balance> {
+impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
         MarketBonds { creation: None, oracle: None }
     }
 }
 
-impl<AI, Balance, BN, M> Market<AI, Balance, BN, M> {
+impl<AI, BA, BN, M> Market<AI, BA, BN, M> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -130,10 +129,10 @@ impl<AI, Balance, BN, M> Market<AI, Balance, BN, M> {
     }
 }
 
-impl<AI, Balance, BN, M> MaxEncodedLen for Market<AI, Balance, BN, M>
+impl<AI, BA, BN, M> MaxEncodedLen for Market<AI, BA, BN, M>
 where
     AI: MaxEncodedLen,
-    Balance: MaxEncodedLen,
+    BA: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
 {
@@ -152,7 +151,7 @@ where
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
-            .saturating_add(<MarketBonds<AI, Balance>>::max_encoded_len())
+            .saturating_add(<MarketBonds<AI, BA>>::max_encoded_len())
     }
 }
 
