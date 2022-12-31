@@ -80,9 +80,8 @@ impl<AccountId, Balance> Bond<AccountId, Balance> {
 /// Tracks bonds associated with a prediction market.
 #[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct MarketBonds<AccountId, Balance> {
-    pub advisory: Option<Bond<AccountId, Balance>>,
+    pub creation: Option<Bond<AccountId, Balance>>,
     pub oracle: Option<Bond<AccountId, Balance>>,
-    pub validity: Option<Bond<AccountId, Balance>>,
 }
 
 impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
@@ -94,16 +93,14 @@ impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
             Some(bond) if bond.who == *who => bond.value,
             _ => Balance::zero(),
         };
-        value_or_default(&self.advisory)
-            .saturating_add(value_or_default(&self.oracle))
-            .saturating_add(value_or_default(&self.validity))
+        value_or_default(&self.creation).saturating_add(value_or_default(&self.oracle))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AccountId, Balance> Default for MarketBonds<AccountId, Balance> {
     fn default() -> Self {
-        MarketBonds { advisory: None, oracle: None, validity: None }
+        MarketBonds { creation: None, oracle: None }
     }
 }
 

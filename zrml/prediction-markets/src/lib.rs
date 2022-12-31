@@ -123,7 +123,11 @@ mod pallet {
 
     macro_rules! impl_slash_bond {
         ($fn_name:ident, $bond_type:ident) => {
-            /// Settle the $bond_type bond by slashing it and return the resulting imbalance.
+            /// Settle the $bond_type bond by slashing and/or unreserving it and return the
+            /// resulting imbalance.
+            ///
+            /// If `slash_percentage` is not specified, then the entire bond is slashed. Otherwise,
+            /// only the specified percentage is slashed and the remainder is unreserved.
             ///
             /// This function **should** only be called if the bond is not yet settled, and calling
             /// it if the bond is settled is most likely a logic error. If the bond is already
@@ -131,6 +135,7 @@ mod pallet {
             /// returned.
             fn $fn_name(
                 market_id: &MarketIdOf<T>,
+                slash_percentage: Option<Percent>,
             ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
                 let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
                 let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
@@ -146,10 +151,17 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(NegativeImbalanceOf::<T>::zero());
                 }
+                let value = bond.value;
+                let (slash_amount, unreserve_amount) = if let Some(percentage) = slash_percentage {
+                    let slash_amount = percentage.mul_floor(value);
+                    (slash_amount, value.saturating_sub(slash_amount))
+                } else {
+                    (value, BalanceOf::<T>::zero())
+                };
                 let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
                     &Self::reserve_id(),
                     &bond.who,
-                    bond.value,
+                    slash_amount,
                 );
                 // If there's excess, there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
@@ -161,6 +173,13 @@ mod pallet {
                     );
                     log::warn!("{}", warning);
                     debug_assert!(false, "{}", warning);
+                }
+                if unreserve_amount != BalanceOf::<T>::zero() {
+                    CurrencyOf::<T>::unreserve_named(
+                        &Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                    );
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
@@ -209,24 +228,16 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            match &market.bonds.advisory {
-                Some(bond) if !bond.is_settled => {
-                    Self::slash_advisory_bond(&market_id, true)?;
+            if let Some(bond) = market.bonds.creation {
+                if !bond.is_settled {
+                    Self::slash_creation_bond(&market_id, None)?;
                 }
-                _ => (),
-            };
-            match &market.bonds.oracle {
-                Some(bond) if !bond.is_settled => {
-                    Self::slash_oracle_bond(&market_id)?;
+            }
+            if let Some(bond) = market.bonds.oracle {
+                if !bond.is_settled {
+                    Self::slash_oracle_bond(&market_id, None)?;
                 }
-                _ => (),
-            };
-            match &market.bonds.validity {
-                Some(bond) if !bond.is_settled => {
-                    Self::slash_validity_bond(&market_id)?;
-                }
-                _ => (),
-            };
+            }
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
@@ -434,7 +445,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Self::unreserve_advisory_bond(&market_id)?;
+            Self::unreserve_creation_bond(&market_id)?;
 
             Self::deposit_event(Event::MarketApproved(market_id, status));
             // The ApproveOrigin should not pay fees for providing this service
@@ -678,15 +689,13 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let bonds = match creation {
-                MarketCreation::Permissionless => MarketBonds {
-                    advisory: None,
-                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
-                    validity: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
-                },
                 MarketCreation::Advised => MarketBonds {
-                    advisory: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
+                    creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
-                    validity: None,
+                },
+                MarketCreation::Permissionless => MarketBonds {
+                    creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
                 },
             };
 
@@ -1919,67 +1928,10 @@ mod pallet {
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
     impl<T: Config> Pallet<T> {
-        /// Settle the advisory bond by slashing and/or unreserving it and return the resulting
-        /// imbalance.
-        ///
-        /// If `slash_all` is `true`, then the entire bond is slashed. Otherwise, only
-        /// `T::AdvisoryBondSlashPercentage` is slashed and the remainder is unreserved.
-        ///
-        /// This function **should** only be called if the bond is not yet settled, and calling it
-        /// if the bond is settled is most likely a logic error. If the bond is already settled,
-        /// storage is not changed, a warning is raised and a zero imbalance is returned.
-        fn slash_advisory_bond(
-            market_id: &MarketIdOf<T>,
-            slash_all: bool,
-        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
-            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
-            let advisory_bond = market.bonds.advisory.as_ref().ok_or(Error::<T>::MissingBond)?;
-            // Trying to settle a bond multiple times is always a logic error, not a runtime error,
-            // so we log a warning instead of raising an error.
-            if advisory_bond.is_settled {
-                let warning = format!(
-                    "Attempting to settle the advisory bond of market {:?} multiple times",
-                    market_id,
-                );
-                log::warn!("{}", warning);
-                debug_assert!(false, "{}", warning);
-                return Ok(NegativeImbalanceOf::<T>::zero());
-            }
-            let value = advisory_bond.value;
-            let (slash_amount, unreserve_amount) = if slash_all {
-                (value, BalanceOf::<T>::zero())
-            } else {
-                let slash_amount = T::AdvisoryBondSlashPercentage::get().mul_floor(value);
-                (slash_amount, value.saturating_sub(slash_amount))
-            };
-            let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
-                &Self::reserve_id(),
-                &advisory_bond.who,
-                slash_amount,
-            );
-            if excess != BalanceOf::<T>::zero() {
-                let warning =
-                    format!("Failed to settle the advisory bond of market {:?}", market_id);
-                log::warn!("{}", warning);
-                debug_assert!(false, "{}", warning);
-            }
-            CurrencyOf::<T>::unreserve_named(
-                &Self::reserve_id(),
-                &advisory_bond.who,
-                unreserve_amount,
-            );
-            <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
-                m.bonds.advisory = Some(Bond { is_settled: true, ..advisory_bond.clone() });
-                Ok(())
-            })?;
-            Ok(imbalance)
-        }
-
-        impl_unreserve_bond!(unreserve_advisory_bond, advisory);
+        impl_unreserve_bond!(unreserve_creation_bond, creation);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
-        impl_unreserve_bond!(unreserve_validity_bond, validity);
+        impl_slash_bond!(slash_creation_bond, creation);
         impl_slash_bond!(slash_oracle_bond, oracle);
-        impl_slash_bond!(slash_validity_bond, validity);
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -2156,7 +2108,8 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             Self::unreserve_oracle_bond(market_id)?;
-            let imbalance = Self::slash_advisory_bond(market_id, false)?;
+            let imbalance =
+                Self::slash_creation_bond(market_id, Some(T::AdvisoryBondSlashPercentage::get()))?;
             T::Slash::on_unbalanced(imbalance);
             <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
@@ -2170,7 +2123,7 @@ mod pallet {
             market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            Self::unreserve_advisory_bond(market_id)?;
+            Self::unreserve_creation_bond(market_id)?;
             Self::unreserve_oracle_bond(market_id)?;
             <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
@@ -2383,7 +2336,7 @@ mod pallet {
             if report.by == market.oracle {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let negative_imbalance = Self::slash_oracle_bond(market_id)?;
+                let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
 
                 // deposit only to the real reporter what actually was slashed
                 if let Err(err) =
@@ -2440,7 +2393,7 @@ mod pallet {
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let imbalance = Self::slash_oracle_bond(market_id)?;
+                let imbalance = Self::slash_oracle_bond(market_id, None)?;
                 overall_imbalance.subsume(imbalance);
             }
 
@@ -2487,7 +2440,7 @@ mod pallet {
             market: &MarketOf<T>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                Self::unreserve_validity_bond(market_id)?;
+                Self::unreserve_creation_bond(market_id)?;
             }
 
             let mut total_weight = 0;
@@ -2606,7 +2559,7 @@ mod pallet {
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            Self::unreserve_validity_bond(&subsidy_info.market_id)?;
+                                            Self::unreserve_creation_bond(&subsidy_info.market_id)?;
                                         }
                                         // AdvisoryBond was already returned when the market
                                         // was approved. Approval is inevitable to reach this.

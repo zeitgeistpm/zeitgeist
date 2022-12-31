@@ -2095,8 +2095,8 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
         assert_eq!(share_c_bal, 0);
 
+        assert!(market.bonds.creation.unwrap().is_settled);
         assert!(market.bonds.oracle.unwrap().is_settled);
-        assert!(market.bonds.validity.unwrap().is_settled);
     });
 }
 
@@ -2216,8 +2216,8 @@ fn it_resolves_a_disputed_market() {
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
 
+        assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
-        assert!(market_after.bonds.validity.unwrap().is_settled);
     });
 }
 
@@ -2320,8 +2320,8 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
         assert_eq!(Balances::free_balance(&BOB), 1_000 * BASE);
 
+        assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
-        assert!(market_after.bonds.validity.unwrap().is_settled);
     });
 }
 
@@ -3141,8 +3141,8 @@ fn authorized_correctly_resolves_disputed_market() {
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
 
+        assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
-        assert!(market_after.bonds.validity.unwrap().is_settled);
     });
 }
 
@@ -3204,8 +3204,8 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
         assert_eq!(Balances::free_balance(Treasury::account_id()), charlie_reserved);
 
+        assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
-        assert!(market_after.bonds.validity.unwrap().is_settled);
     });
 }
 
@@ -3239,7 +3239,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();
-        assert!(market.bonds.advisory.unwrap().is_settled);
+        assert!(market.bonds.creation.unwrap().is_settled);
     });
 }
 
@@ -4017,9 +4017,8 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     ScoringRule::CPMM,
     MarketStatus::Proposed,
     MarketBonds {
-        advisory: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
+        creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
-        validity: None,
     }
 )]
 #[test_case(
@@ -4027,9 +4026,8 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     ScoringRule::CPMM,
     MarketStatus::Active,
     MarketBonds {
-        advisory: None,
+        creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
-        validity: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
     }
 )]
 fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amount(

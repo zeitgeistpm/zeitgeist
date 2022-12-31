@@ -90,15 +90,21 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
         let new_markets = storage_iter::<OldMarketOf<T>>(MARKET_COMMONS, MARKETS)
             .map(|(key, old_market)| {
                 total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-                let advisory = if old_market.creation == MarketCreation::Advised {
-                    Some(Bond {
+                let creation = Some(match old_market.creation {
+                    MarketCreation::Advised => Bond {
                         who: old_market.creator.clone(),
                         value: T::AdvisoryBond::get(),
                         is_settled: old_market.status != MarketStatus::Proposed,
-                    })
-                } else {
-                    None
-                };
+                    },
+                    MarketCreation::Permissionless => Bond {
+                        who: old_market.creator.clone(),
+                        value: T::ValidityBond::get(),
+                        is_settled: matches!(
+                            old_market.status,
+                            MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
+                        ),
+                    },
+                });
                 let oracle = Some(Bond {
                     who: old_market.creator.clone(),
                     value: T::OracleBond::get(),
@@ -107,18 +113,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                         MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
                     ),
                 });
-                let validity = if old_market.creation == MarketCreation::Permissionless {
-                    Some(Bond {
-                        who: old_market.creator.clone(),
-                        value: T::ValidityBond::get(),
-                        is_settled: matches!(
-                            old_market.status,
-                            MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
-                        ),
-                    })
-                } else {
-                    None
-                };
                 let new_market = Market {
                     creator: old_market.creator,
                     creation: old_market.creation,
@@ -133,7 +127,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                     resolved_outcome: old_market.resolved_outcome,
                     dispute_mechanism: old_market.dispute_mechanism,
                     deadlines: old_market.deadlines,
-                    bonds: MarketBonds { advisory, oracle, validity },
+                    bonds: MarketBonds { creation, oracle },
                 };
                 (key, new_market)
             })
@@ -187,16 +181,11 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
             assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
             assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
             assert_eq!(new_market.bonds.oracle.unwrap().value, T::OracleBond::get());
-            match new_market.creation {
-                MarketCreation::Advised => {
-                    assert_eq!(new_market.bonds.advisory.unwrap().value, T::AdvisoryBond::get());
-                    assert_eq!(new_market.bonds.validity, None);
-                }
-                MarketCreation::Permissionless => {
-                    assert_eq!(new_market.bonds.advisory, None);
-                    assert_eq!(new_market.bonds.validity.unwrap().value, T::ValidityBond::get());
-                }
+            let expected_creation_bond = match new_market.creation {
+                MarketCreation::Advised => T::AdvisoryBond::get(),
+                MarketCreation::Permissionless => T::ValidityBond::get(),
             };
+            assert_eq!(new_market.bonds.creation.unwrap().value, expected_creation_bond);
         }
         Ok(())
     }
@@ -323,15 +312,14 @@ mod tests {
                 MarketCreation::Permissionless,
                 MarketStatus::Disputed,
                 MarketBonds {
-                    advisory: None,
+                    creation: Some(Bond {
+                        who: creator,
+                        value: <Runtime as Config>::ValidityBond::get(),
+                        is_settled: false,
+                    }),
                     oracle: Some(Bond {
                         who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: false,
-                    }),
-                    validity: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::ValidityBond::get(),
                         is_settled: false,
                     }),
                 },
@@ -340,15 +328,14 @@ mod tests {
                 MarketCreation::Permissionless,
                 MarketStatus::Resolved,
                 MarketBonds {
-                    advisory: None,
+                    creation: Some(Bond {
+                        who: creator,
+                        value: <Runtime as Config>::ValidityBond::get(),
+                        is_settled: true,
+                    }),
                     oracle: Some(Bond {
                         who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: true,
-                    }),
-                    validity: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::ValidityBond::get(),
                         is_settled: true,
                     }),
                 },
@@ -357,7 +344,7 @@ mod tests {
                 MarketCreation::Advised,
                 MarketStatus::Proposed,
                 MarketBonds {
-                    advisory: Some(Bond {
+                    creation: Some(Bond {
                         who: creator,
                         value: <Runtime as Config>::AdvisoryBond::get(),
                         is_settled: false,
@@ -367,14 +354,13 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
-                    validity: None,
                 },
             ),
             construct_markets(
                 MarketCreation::Advised,
                 MarketStatus::Active,
                 MarketBonds {
-                    advisory: Some(Bond {
+                    creation: Some(Bond {
                         who: creator,
                         value: <Runtime as Config>::AdvisoryBond::get(),
                         is_settled: true,
@@ -384,14 +370,13 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
-                    validity: None,
                 },
             ),
             construct_markets(
                 MarketCreation::Advised,
                 MarketStatus::Resolved,
                 MarketBonds {
-                    advisory: Some(Bond {
+                    creation: Some(Bond {
                         who: creator,
                         value: <Runtime as Config>::AdvisoryBond::get(),
                         is_settled: true,
@@ -401,7 +386,6 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: true,
                     }),
-                    validity: None,
                 },
             ),
             // Technically, the market below has the wrong scoring rule, but that's irrelevant to
@@ -410,15 +394,14 @@ mod tests {
                 MarketCreation::Permissionless,
                 MarketStatus::InsufficientSubsidy,
                 MarketBonds {
-                    advisory: None,
+                    creation: Some(Bond {
+                        who: creator,
+                        value: <Runtime as Config>::ValidityBond::get(),
+                        is_settled: true,
+                    }),
                     oracle: Some(Bond {
                         who: creator,
                         value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: true,
-                    }),
-                    validity: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::ValidityBond::get(),
                         is_settled: true,
                     }),
                 },
