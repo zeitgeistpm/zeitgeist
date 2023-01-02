@@ -37,6 +37,7 @@ use frame_support::{
 use frame_system::pallet_prelude::BlockNumberFor;
 #[cfg(feature = "try-runtime")]
 use scale_info::prelude::format;
+use sp_runtime::traits::Zero;
 use zeitgeist_primitives::types::{AuthorityReport, MarketDisputeMechanism, OutcomeReport};
 use zrml_authorized::Pallet as AuthorizedPallet;
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -89,21 +90,42 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
             <T as zrml_market_commons::Config>::MarketId,
             AuthorityReport<BlockNumberFor<T>>,
         )> = Vec::new();
+
         for (market_id, old_value) in storage_key_iter::<
             <T as zrml_market_commons::Config>::MarketId,
-            Option<OutcomeReport>,
+            OutcomeReport,
             Twox64Concat,
         >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
         {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
-            if let Some(outcome) = old_value {
-                let resolve_at: BlockNumberFor<T> = *authorized_resolutions.get(&market_id).expect(
-                    "For every market id in authorized_resolutions, there needs to be an \
-                     authorized outcome report!",
-                );
+            let resolve_at: Option<BlockNumberFor<T>> =
+                authorized_resolutions.get(&market_id).cloned();
 
-                new_storage_map.push((market_id, AuthorityReport { resolve_at, outcome }));
+            match resolve_at {
+                Some(block) => {
+                    new_storage_map.push((
+                        market_id,
+                        AuthorityReport { resolve_at: block, outcome: old_value },
+                    ));
+                }
+                None => {
+                    log::warn!(
+                        "AddFieldToAuthorityReport: Market was not found in \
+                         MarketIdsPerDisputeBlock; market id: {:?}",
+                        market_id
+                    );
+                    // example case market id 432
+                    // https://github.com/zeitgeistpm/zeitgeist/pull/701 market id 432 is invalid, because of zero-division error in the past
+                    // we have to handle manually here, because MarketIdsPerDisputeBlock does not contain 432
+                    new_storage_map.push((
+                        market_id,
+                        AuthorityReport {
+                            resolve_at: <BlockNumberFor<T>>::zero(),
+                            outcome: old_value,
+                        },
+                    ));
+                }
             }
         }
 
@@ -112,11 +134,11 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
                 Twox64Concat,
                 <T as zrml_market_commons::Config>::MarketId,
             >(market_id);
-            put_storage_value::<Option<AuthorityReport<T::BlockNumber>>>(
+            put_storage_value::<AuthorityReport<T::BlockNumber>>(
                 AUTHORIZED,
                 AUTHORIZED_OUTCOME_REPORTS,
                 &hash,
-                Some(new_value),
+                new_value,
             );
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
@@ -132,9 +154,7 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 
         let mut counter = 0_u32;
-        for (key, value) in
-            storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
-        {
+        for (key, value) in storage_iter::<OutcomeReport>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
             Self::set_temp_storage(value, &format!("{:?}", key.as_slice()));
 
             counter = counter.saturating_add(1_u32);
@@ -149,25 +169,18 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
         let mut markets_count = 0_u32;
         let old_counter_key = "counter_key".to_string();
-        for (key, new_value) in storage_iter::<Option<AuthorityReport<T::BlockNumber>>>(
-            AUTHORIZED,
-            AUTHORIZED_OUTCOME_REPORTS,
-        ) {
+        for (key, new_value) in
+            storage_iter::<AuthorityReport<T::BlockNumber>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
+        {
             let key_str = format!("{:?}", key.as_slice());
-            if let Some(AuthorityReport { resolve_at: _, outcome }) = new_value {
-                let old_value: Option<OutcomeReport> = Self::get_temp_storage(&key_str)
-                    .unwrap_or_else(|| panic!("old value not found for market id {:?}", key_str));
 
-                assert_eq!(old_value.unwrap(), outcome);
+            let AuthorityReport { resolve_at: _, outcome } = new_value;
+            let old_value: OutcomeReport = Self::get_temp_storage(&key_str)
+                .unwrap_or_else(|| panic!("old value not found for market id {:?}", key_str));
 
-                markets_count += 1_u32;
-            } else {
-                panic!(
-                    "For market id {:?} storage iter should only find present (Option::Some) \
-                     values",
-                    key_str
-                );
-            }
+            assert_eq!(old_value, outcome);
+
+            markets_count += 1_u32;
         }
         let old_markets_count: u32 =
             Self::get_temp_storage(&old_counter_key).expect("old counter key storage not found");
@@ -206,11 +219,11 @@ mod tests_authorized {
 
             let hash = crate::migrations::utility::key_to_hash::<Twox64Concat, MarketId>(0);
             let outcome = OutcomeReport::Categorical(42u16);
-            put_storage_value::<Option<OutcomeReport>>(
+            put_storage_value::<OutcomeReport>(
                 AUTHORIZED,
                 AUTHORIZED_OUTCOME_REPORTS,
                 &hash,
-                Some(outcome.clone()),
+                outcome.clone(),
             );
 
             let resolve_at = 42_000;
@@ -224,10 +237,10 @@ mod tests_authorized {
 
             AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
 
-            let expected = Some(AuthorityReport { resolve_at, outcome });
+            let expected = AuthorityReport { resolve_at, outcome };
 
             let actual = frame_support::migration::get_storage_value::<
-                Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
+                AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>,
             >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash)
             .unwrap();
             assert_eq!(expected, actual);
@@ -244,17 +257,20 @@ mod tests_authorized {
             let outcome = OutcomeReport::Categorical(42u16);
 
             let report = AuthorityReport { resolve_at: 42, outcome };
-            put_storage_value::<
-                Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
-            >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash, Some(report.clone()));
+            put_storage_value::<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>(
+                AUTHORIZED,
+                AUTHORIZED_OUTCOME_REPORTS,
+                &hash,
+                report.clone(),
+            );
 
             AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
 
             let actual = frame_support::migration::get_storage_value::<
-                Option<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>,
+                AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>,
             >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash)
             .unwrap();
-            assert_eq!(Some(report), actual);
+            assert_eq!(report, actual);
         });
     }
 
