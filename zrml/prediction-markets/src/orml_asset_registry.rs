@@ -1,4 +1,5 @@
 // Copyright 2022 Forecasting Technologies Ltd.
+// Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
 //
@@ -14,18 +15,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
-//
-// Copyright 2021 Centrifuge Foundation (centrifuge.io).
-//
-//
-// Centrifuge is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version (see http://www.gnu.org/licenses).
-// Centrifuge is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
 
 #[macro_export]
 macro_rules! impl_mock_registry {
@@ -59,7 +48,7 @@ macro_rules! impl_mock_registry {
                     __private::STATE.with(|s| s.borrow().get_meta(asset_id))
                 }
 
-                fn metadata_by_location(
+                fn metadata_by_lmcation(
                     location: &MultiLocation,
                 ) -> Option<AssetMetadata<Self::Balance, Self::CustomMetadata>> {
                     __private::STATE.with(|s| s.borrow().get_meta_from_location(location))

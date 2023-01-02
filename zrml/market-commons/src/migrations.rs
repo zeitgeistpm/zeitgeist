@@ -121,14 +121,13 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
         use scale_info::prelude::format;
         let legacy_markets_count_key = "legacy_markets_count_key".to_string();
-        Self::set_temp_storage(0_u32, &legacy_markets_count_key);
+        let mut market_count = 0_u32;
         for (market_id, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS)
         {
             Self::set_temp_storage(legacy_market, &format!("{:?}", market_id.as_slice()));
-            let legacy_markets_count: u32 = Self::get_temp_storage(&legacy_markets_count_key)
-                .expect("legacy_markets_count_key storage not found");
-            Self::set_temp_storage(legacy_markets_count + 1_u32, &legacy_markets_count_key);
+            market_count += 1_u32;
         }
+        Self::set_temp_storage(market_count, &legacy_markets_count_key);
         Ok(())
     }
 
@@ -149,17 +148,15 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
             );
             let legacy_market: LegacyMarketOf<T> =
                 Self::get_temp_storage(&format!("{:?}", market_id.as_slice()))
-                    .expect("legacy market not found");
+                    .expect(&format!("legacy market not found for market_id {:?}", market_id));
             assert_eq!(updated_market.creator, legacy_market.creator);
             assert_eq!(updated_market.creation, legacy_market.creation);
             assert_eq!(updated_market.creator_fee, legacy_market.creator_fee);
             assert_eq!(updated_market.oracle, legacy_market.oracle);
             assert_eq!(updated_market.metadata, legacy_market.metadata);
-            if let MarketType::Categorical(_) = legacy_market.market_type {
-                assert_eq!(updated_market.market_type, legacy_market.market_type);
-                assert_eq!(updated_market.report, legacy_market.report);
-                assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
-            };
+            assert_eq!(updated_market.market_type, legacy_market.market_type);
+            assert_eq!(updated_market.report, legacy_market.report);
+            assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
             assert_eq!(updated_market.period, legacy_market.period);
             assert_eq!(updated_market.deadlines, legacy_market.deadlines);
             assert_eq!(updated_market.scoring_rule, legacy_market.scoring_rule);
@@ -243,10 +240,34 @@ mod tests {
     };
 
     #[test]
-    fn test_on_runtime_upgrade_on_untouched_chain() {
+    fn test_on_runtime_upgrade_on_empty_chain() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
             UpdateMarketsForBaseAsset::<Runtime>::on_runtime_upgrade();
+        });
+    }
+
+    #[test]
+    fn test_on_runtime_upgrade_with_storate_version_not_equal_to_required() {
+        ExtBuilder::default().build().execute_with(|| {
+        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION + 1).put::<Pallet<Runtime>>();
+            let (_legacy_markets, expected_markets) = create_test_data_for_market_update();
+            populate_test_data::<Blake2_128Concat, MarketId, MarketOf<Runtime>>(
+                MARKET_COMMONS,
+                MARKETS,
+                expected_markets.clone(),
+            );
+            UpdateMarketsForBaseAsset::<Runtime>::on_runtime_upgrade();
+            // verify no change in storage version
+            assert_eq!(
+                utility::get_on_chain_storage_version_of_market_commons_pallet(),
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION + 1
+            );
+            // verify that nothing changed in storage
+            for (market_id, market_expected) in expected_markets.iter().enumerate() {
+                let market_actual = MarketCommons::market(&(market_id as u128)).unwrap();
+                assert_eq!(market_actual, *market_expected);
+            }
         });
     }
 

@@ -51,15 +51,6 @@ pub enum Asset<MI: MaxEncodedLen> {
     ForeignAsset(u32),
 }
 
-impl<MI: MaxEncodedLen> Asset<MI> {
-    pub fn asset_id(&self) -> Option<u32> {
-        match self {
-            Asset::Ztg => Some(0),
-            _ => None,
-        }
-    }
-}
-
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
 /// or a `Short` position meaning that they think the outcome will be closer

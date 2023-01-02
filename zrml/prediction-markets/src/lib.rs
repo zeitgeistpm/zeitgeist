@@ -610,20 +610,6 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
 
-            let valid_base_asset = match base_asset {
-                Asset::Ztg => Ok::<bool, Error<T>>(true),
-                #[cfg(feature = "parachain")]
-                Asset::ForeignAsset(fa) => {
-                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
-                        Ok::<bool, Error<T>>(metadata.additional.allow_as_base_asset)
-                    } else {
-                        Err::<bool, Error<T>>(Error::<T>::UnregisteredForeignAsset)
-                    }
-                }
-                _ => Ok(false),
-            }?;
-
-            ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let market = Self::construct_market(
                 base_asset,
                 sender.clone(),
@@ -645,7 +631,7 @@ mod pallet {
                     let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
-                        base_asset,
+                        Asset::Ztg,
                         &sender,
                         required_bond,
                     )?;
@@ -2836,6 +2822,20 @@ mod pallet {
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
         ) -> Result<MarketOf<T>, DispatchError> {
+            let valid_base_asset = match base_asset {
+                Asset::Ztg => true,
+                #[cfg(feature = "parachain")]
+                Asset::ForeignAsset(fa) => {
+                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
+                        metadata.additional.allow_as_base_asset
+                    } else {
+                        return Err(Error::<T>::UnregisteredForeignAsset.into());
+                    }
+                }
+                _ => false,
+            };
+
+            ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
             Self::ensure_market_period_is_valid(&period)?;
