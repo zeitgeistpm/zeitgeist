@@ -250,7 +250,8 @@ mod tests {
     #[test]
     fn test_on_runtime_upgrade_with_storate_version_not_equal_to_required() {
         ExtBuilder::default().build().execute_with(|| {
-        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION + 1).put::<Pallet<Runtime>>();
+            StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION + 1)
+                .put::<Pallet<Runtime>>();
             let (_legacy_markets, expected_markets) = create_test_data_for_market_update();
             populate_test_data::<Blake2_128Concat, MarketId, MarketOf<Runtime>>(
                 MARKET_COMMONS,
