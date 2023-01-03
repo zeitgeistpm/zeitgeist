@@ -20,6 +20,7 @@
 
 mod benchmarks;
 mod global_disputes_pallet_api;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod types;
@@ -40,7 +41,7 @@ mod pallet {
         sp_runtime::traits::StaticLookup,
         traits::{
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
-            WithdrawReasons,
+            StorageVersion, WithdrawReasons,
         },
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
@@ -54,6 +55,9 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -111,12 +115,16 @@ mod pallet {
     pub type OutcomeInfoOf<T> = OutcomeInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
     pub type GDInfoOf<T> = GDInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-    type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
+    pub(crate) type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
     type RewardInfoOf<T> = RewardInfo<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>>;
 
+    // TODO: to remove after the storage migration
+    pub type WinnerInfoOf<T> = OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
+
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     /// All highest lock information (vote id, outcome index and locked balance)
@@ -141,10 +149,14 @@ mod pallet {
 
     /// Maps the market id to all information
     /// about the global dispute.
-    // TODO what storage migration after changing the name?
     #[pallet::storage]
     pub type GlobalDisputesInfo<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, GDInfoOf<T>, OptionQuery>;
+
+    // TODO: to remove after the storage migration
+    #[pallet::storage]
+    pub type Winners<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]

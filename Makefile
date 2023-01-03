@@ -34,6 +34,21 @@ try-runtime-upgrade-battery-station:
 try-runtime-upgrade-zeitgeist:
 	@$(MAKE) TRYRUNTIME_CHAIN="zeitgeist_staging" TRYRUNTIME_URL="wss://zeitgeist-rpc.dwellir.com:443" -- --try-runtime
 
+--try-runtime-with-global-disputes:
+	RUST_LOG=runtime=trace,try-runtime::cli=trace,executor=trace \
+		cargo run \
+		--bin=zeitgeist \
+		--features=parachain,try-runtime,with-global-disputes \
+		try-runtime \
+		--execution=Native \
+		--chain=${TRYRUNTIME_CHAIN} \
+		on-runtime-upgrade \
+		live \
+		--uri=${TRYRUNTIME_URL}
+
+try-runtime-upgrade-battery-station-with-global-disputes:
+	@$(MAKE) TRYRUNTIME_CHAIN="battery_station_staging" TRYRUNTIME_URL="wss://bsr.zeitgeist.pm:443" -- --try-runtime-with-global-disputes
+
 build:
 	SKIP_WASM_BUILD= cargo build
 

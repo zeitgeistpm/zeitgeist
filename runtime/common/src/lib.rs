@@ -51,7 +51,27 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        #[cfg(feature = "parachain")]
+        #[cfg(all(feature = "parachain", feature = "with-global-disputes"))]
+        pub type Executive = frame_executive::Executive<
+            Runtime,
+            Block,
+            frame_system::ChainContext<Runtime>,
+            Runtime,
+            AllPalletsWithSystem,
+            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
+        >;
+
+        #[cfg(all(not(feature = "parachain"), feature = "with-global-disputes"))]
+        pub type Executive = frame_executive::Executive<
+            Runtime,
+            Block,
+            frame_system::ChainContext<Runtime>,
+            Runtime,
+            AllPalletsWithSystem,
+            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
+        >;
+
+        #[cfg(all(not(feature = "parachain"), not(feature = "with-global-disputes")))]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
@@ -61,7 +81,7 @@ macro_rules! decl_common_types {
             (),
         >;
 
-        #[cfg(not(feature = "parachain"))]
+        #[cfg(all(not(feature = "parachain"), not(feature = "with-global-disputes")))]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
