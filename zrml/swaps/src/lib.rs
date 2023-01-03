@@ -1250,17 +1250,18 @@ mod pallet {
             // the number of pools. This shouldn't ever happen, but if it does, we ensure that
             // `pool_count` is zero (this isn't really a runtime error).
             let pool_count = weight
-                .saturating_sub(overhead)
+                .ref_time()
+                .saturating_sub(overhead.ref_time())
                 .checked_div(extra_weight_per_pool.ref_time())
                 .unwrap_or_else(|| {
                     log::warn!("Unexpected zero division when calculating arbitrage weight");
-                    Weight::zero()
+                    0_u64
                 });
-            if pool_count == Weight::zero() {
+            if pool_count == 0_u64 {
                 return weight;
             }
             Self::apply_to_cached_pools(
-                pool_count.ref_time().saturated_into(),
+                pool_count.saturated_into(),
                 |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
                 extra_weight_per_pool,
             )
