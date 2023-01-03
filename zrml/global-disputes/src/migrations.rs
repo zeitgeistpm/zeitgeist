@@ -60,7 +60,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
         }
         log::info!("ModifyGlobalDisputesStructures: Starting...");
 
-        for (market_id, winner_info) in crate::Winners::<T>::iter() {
+        for (market_id, winner_info) in crate::Winners::<T>::drain() {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             let owners = winner_info.outcome_info.owners;
@@ -180,6 +180,9 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
         let old_markets_count: u32 =
             Self::get_temp_storage(&old_counter_key).expect("old counter key storage not found");
         assert_eq!(markets_count, old_markets_count);
+
+        // empty Winners storage map
+        assert!(crate::Winners::<T>::iter().next().is_none());
         Ok(())
     }
 }
@@ -244,6 +247,8 @@ mod tests {
 
             let actual = crate::GlobalDisputesInfo::<Runtime>::get(market_id).unwrap();
             assert_eq!(expected, actual);
+
+            assert!(crate::Winners::<Runtime>::iter().next().is_none());
         });
     }
 
@@ -278,6 +283,8 @@ mod tests {
 
             let actual = crate::GlobalDisputesInfo::<Runtime>::get(market_id).unwrap();
             assert_eq!(expected, actual);
+
+            assert!(crate::Winners::<Runtime>::iter().next().is_none());
         });
     }
 
