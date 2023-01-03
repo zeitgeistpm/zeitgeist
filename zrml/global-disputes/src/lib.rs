@@ -715,7 +715,9 @@ mod pallet {
             initial_vote_balance: BalanceOf<T>,
         ) -> DispatchResult {
             match <GlobalDisputesInfo<T>>::get(market_id) {
-                Some(gd_info) if gd_info.status == GDStatus::Finished => {
+                Some(gd_info)
+                    if matches!(gd_info.status, GDStatus::Finished | GDStatus::Destroyed) =>
+                {
                     return Err(Error::<T>::GlobalDisputeAlreadyFinished.into());
                 }
                 _ => (),
@@ -782,6 +784,13 @@ mod pallet {
 
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
             <GlobalDisputesInfo<T>>::get(market_id).is_some()
+        }
+
+        fn is_active(market_id: &MarketIdOf<T>) -> bool {
+            if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
+                return gd_info.status == GDStatus::Active;
+            }
+            false
         }
 
         fn destroy_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {

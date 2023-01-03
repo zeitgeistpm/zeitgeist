@@ -74,6 +74,12 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// - `market_id` - The id of the market.
     fn is_started(market_id: &MarketId) -> bool;
 
+    /// Check if global dispute is active.
+    /// 
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    fn is_active(market_id: &MarketId) -> bool;
+
     /// Check if a global dispute has not already been started.
     ///
     /// # Arguments

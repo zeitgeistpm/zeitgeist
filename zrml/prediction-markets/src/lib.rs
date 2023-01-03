@@ -150,6 +150,11 @@ mod pallet {
                 slash_market_creator(T::OracleBond::get());
             }
 
+            #[cfg(feature = "with-global-disputes")]
+            if T::GlobalDisputes::is_active(&market_id) {
+                T::GlobalDisputes::destroy_global_dispute(&market_id)?;
+            }
+
             // NOTE: Currently we don't clean up outcome assets.
             // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::AssetManager::slash(
