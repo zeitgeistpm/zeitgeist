@@ -71,7 +71,7 @@ macro_rules! decl_common_types {
             zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
         >;
 
-        #[cfg(all(not(feature = "parachain"), not(feature = "with-global-disputes")))]
+        #[cfg(all(feature = "parachain", not(feature = "with-global-disputes")))]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
