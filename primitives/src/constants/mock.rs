@@ -43,13 +43,13 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
-    pub const MaxDisputeDuration: BlockNumber = 5;
+    pub const MaxDisputeDuration: BlockNumber = 50;
     pub const MaxDisputes: u16 = 6;
     pub const MaxEditReasonLen: u32 = 1024;
-    pub const MaxGracePeriod: BlockNumber = 2;
+    pub const MaxGracePeriod: BlockNumber = 20;
     pub const MaxMarketLifetimeInBlocks: BlockNumber = 1_000_000;
     pub const MaxMarketLifetimeInMoments: Moment = 1_000_000u64 * MILLISECS_PER_BLOCK as u64;
-    pub const MaxOracleDuration: BlockNumber = 3;
+    pub const MaxOracleDuration: BlockNumber = 30;
     pub const MaxRejectReasonLen: u32 = 1024;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;

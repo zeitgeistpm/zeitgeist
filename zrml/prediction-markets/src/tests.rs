@@ -36,9 +36,9 @@ use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
-        Asset, BlockNumber, Deadlines, Market, MarketCreation, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus,
-        ScalarPosition, ScoringRule,
+        AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
+        MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment,
+        MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -2064,8 +2064,8 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         run_blocks(market.deadlines.dispute_duration);
 
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Resolved);
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Resolved);
 
         // Check balance of winning outcome asset.
         let share_b = Asset::CategoricalOutcome(0, 1);
@@ -2086,6 +2086,9 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_eq!(share_c_total, 0);
         let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
         assert_eq!(share_c_bal, 0);
+
+        assert!(market.bonds.creation.unwrap().is_settled);
+        assert!(market.bonds.oracle.unwrap().is_settled);
     });
 }
 
@@ -2204,6 +2207,9 @@ fn it_resolves_a_disputed_market() {
         // for her designated reporter
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
+
+        assert!(market_after.bonds.creation.unwrap().is_settled);
+        assert!(market_after.bonds.oracle.unwrap().is_settled);
     });
 }
 
@@ -2305,6 +2311,9 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         // The oracle report was accepted, so Alice is not slashed.
         assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
         assert_eq!(Balances::free_balance(&BOB), 1_000 * BASE);
+
+        assert!(market_after.bonds.creation.unwrap().is_settled);
+        assert!(market_after.bonds.oracle.unwrap().is_settled);
     });
 }
 
@@ -3123,6 +3132,9 @@ fn authorized_correctly_resolves_disputed_market() {
         // for her designated reporter
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
+
+        assert!(market_after.bonds.creation.unwrap().is_settled);
+        assert!(market_after.bonds.oracle.unwrap().is_settled);
     });
 }
 
@@ -3183,6 +3195,9 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_balance = Balances::free_balance(&CHARLIE);
         assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
         assert_eq!(Balances::free_balance(Treasury::account_id()), charlie_reserved);
+
+        assert!(market_after.bonds.creation.unwrap().is_settled);
+        assert!(market_after.bonds.oracle.unwrap().is_settled);
     });
 }
 
@@ -3200,6 +3215,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
+        let market_id = 0;
         // Reserve a sentinel amount to check that we don't unreserve too much.
         assert_ok!(Balances::reserve_named(
             &PredictionMarkets::reserve_id(),
@@ -3211,9 +3227,11 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             Balances::reserved_balance(&ALICE),
             SENTINEL_AMOUNT + AdvisoryBond::get() + OracleBond::get()
         );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), market_id));
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert!(market.bonds.creation.unwrap().is_settled);
     });
 }
 
@@ -3986,7 +4004,6 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
-#[test]
 fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let now = 1;
@@ -4092,7 +4109,76 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
     });
 }
 
-fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResultWithPostInfo {
+#[test_case(
+    MarketCreation::Advised,
+    ScoringRule::CPMM,
+    MarketStatus::Proposed,
+    MarketBonds {
+        creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
+        oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+    }
+)]
+#[test_case(
+    MarketCreation::Permissionless,
+    ScoringRule::CPMM,
+    MarketStatus::Active,
+    MarketBonds {
+        creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
+        oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+    }
+)]
+fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amount(
+    creation: MarketCreation,
+    scoring_rule: ScoringRule,
+    status: MarketStatus,
+    bonds: MarketBonds<AccountIdTest, Balance>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator = ALICE;
+        let oracle = BOB;
+        let period = MarketPeriod::Block(1..2);
+        let deadlines = Deadlines {
+            grace_period: 1,
+            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+        };
+        let metadata = gen_metadata(0x99);
+        let MultiHash::Sha3_384(multihash) = metadata;
+        let market_type = MarketType::Categorical(7);
+        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(creator),
+            oracle,
+            period.clone(),
+            deadlines,
+            metadata,
+            creation.clone(),
+            market_type.clone(),
+            dispute_mechanism.clone(),
+            scoring_rule,
+        ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.creator, creator);
+        assert_eq!(market.creation, creation);
+        assert_eq!(market.creator_fee, 0);
+        assert_eq!(market.oracle, oracle);
+        assert_eq!(market.metadata, multihash);
+        assert_eq!(market.market_type, market_type);
+        assert_eq!(market.period, period);
+        assert_eq!(market.deadlines, deadlines);
+        assert_eq!(market.scoring_rule, scoring_rule);
+        assert_eq!(market.status, status);
+        assert_eq!(market.report, None);
+        assert_eq!(market.resolved_outcome, None);
+        assert_eq!(market.dispute_mechanism, dispute_mechanism);
+        assert_eq!(market.bonds, bonds);
+    });
+}
+
+fn deploy_swap_pool(
+    market: Market<AccountIdTest, Balance, BlockNumber, Moment>,
+    market_id: u128,
+) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
