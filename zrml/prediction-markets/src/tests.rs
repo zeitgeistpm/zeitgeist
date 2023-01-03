@@ -4004,6 +4004,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
+#[test]
 fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let now = 1;
