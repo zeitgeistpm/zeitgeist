@@ -15,19 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 #![allow(unused_imports)]
-use crate::{Config, MarketIdOf, MomentOf};
+use crate::{Config, MarketIdOf, MomentOf, Pallet};
 use frame_support::{
     log,
-    migration::{put_storage_value, storage_iter},
+    migration::{put_storage_value, storage_iter, storage_key_iter},
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade},
+    Blake2_128Concat,
 };
 extern crate alloc;
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
-use zeitgeist_primitives::types::{
-    Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, OutcomeReport, Report, ScoringRule,
+use zeitgeist_primitives::{
+    traits::MarketCommonsPalletApi,
+    types::{
+        Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
+    },
 };
 
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 4;
@@ -122,9 +126,13 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
         use scale_info::prelude::format;
         let legacy_markets_count_key = "legacy_markets_count_key".to_string();
         let mut market_count = 0_u32;
-        for (market_id, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS)
+        for (market_id, legacy_market) in storage_key_iter::<
+            <T as Config>::MarketId,
+            LegacyMarketOf<T>,
+            Blake2_128Concat,
+        >(MARKET_COMMONS, MARKETS)
         {
-            Self::set_temp_storage(legacy_market, &format!("{:?}", market_id.as_slice()));
+            Self::set_temp_storage(legacy_market, &format!("{:?}", market_id));
             market_count += 1_u32;
         }
         Self::set_temp_storage(market_count, &legacy_markets_count_key);
@@ -138,7 +146,8 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
         use scale_info::prelude::format;
         let mut markets_count = 0_u32;
         let legacy_markets_count_key = "legacy_markets_count_key".to_string();
-        for (market_id, updated_market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
+        for (market_id, updated_market) in <Pallet<T>>::market_iter() {
+            // for (market_id, updated_market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             assert_eq!(
                 updated_market.base_asset,
                 Asset::Ztg,
@@ -147,8 +156,9 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForBaseAsset<T> {
                 updated_market.base_asset
             );
             let legacy_market: LegacyMarketOf<T> =
-                Self::get_temp_storage(&format!("{:?}", market_id.as_slice()))
-                    .expect(&format!("legacy market not found for market_id {:?}", market_id));
+                Self::get_temp_storage(&format!("{:?}", market_id)).unwrap_or_else(|| {
+                    panic!("legacy market not found for market_id {:?}", market_id)
+                });
             assert_eq!(updated_market.creator, legacy_market.creator);
             assert_eq!(updated_market.creation, legacy_market.creation);
             assert_eq!(updated_market.creator_fee, legacy_market.creator_fee);

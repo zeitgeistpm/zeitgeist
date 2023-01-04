@@ -48,7 +48,7 @@ macro_rules! impl_mock_registry {
                     __private::STATE.with(|s| s.borrow().get_meta(asset_id))
                 }
 
-                fn metadata_by_lmcation(
+                fn metadata_by_location(
                     location: &MultiLocation,
                 ) -> Option<AssetMetadata<Self::Balance, Self::CustomMetadata>> {
                     __private::STATE.with(|s| s.borrow().get_meta_from_location(location))
