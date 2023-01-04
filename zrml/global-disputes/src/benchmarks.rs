@@ -35,6 +35,7 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::RawOrigin;
+use num_traits::ops::checked::CheckedRem;
 use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
@@ -270,6 +271,7 @@ benchmarks! {
             &reward_account,
             T::VotingOutcomeFee::get().saturating_mul(10u128.saturated_into()),
         );
+        let reward_before = T::Currency::free_balance(&reward_account);
 
         let caller: T::AccountId = whitelisted_caller();
 
@@ -291,7 +293,13 @@ benchmarks! {
             }
             .into(),
         );
-        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
+        let remainder = reward_before.checked_rem(&o.into()).unwrap();
+        let expected = if remainder < T::Currency::minimum_balance() {
+            0u8.into()
+        } else {
+            remainder
+        };
+        assert_eq!(T::Currency::free_balance(&reward_account), expected);
     }
 
     purge_outcomes {

@@ -78,7 +78,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (),
+            zrml_prediction_markets::migrations::RecordBonds<Runtime>,
         >;
 
         #[cfg(all(not(feature = "parachain"), not(feature = "with-global-disputes")))]
@@ -88,7 +88,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (),
+            zrml_prediction_markets::migrations::RecordBonds<Runtime>,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

@@ -22,7 +22,7 @@ use crate::{
         Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
         CHARLIE, INITIAL_BALANCE,
     },
-    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes,
+    Error, Juror, JurorStatus, Jurors, MarketOf, RequestedJurors, Votes,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -32,12 +32,12 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::DisputeApi,
     types::{
-        Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, ScoringRule,
+        Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, OutcomeReport, ScoringRule,
     },
 };
 
-const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
+const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,
@@ -51,6 +51,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     resolved_outcome: None,
     status: MarketStatus::Closed,
     scoring_rule: ScoringRule::CPMM,
+    bonds: MarketBonds { creation: None, oracle: None },
 };
 const DEFAULT_SET_OF_JURORS: &[(u128, Juror)] = &[
     (7, Juror { status: JurorStatus::Ok }),
