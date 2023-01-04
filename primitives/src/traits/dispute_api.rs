@@ -70,7 +70,7 @@ pub trait DisputeApi {
     fn get_auto_resolve(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 
     /// Returns `true` if the market dispute mechanism
@@ -79,12 +79,20 @@ pub trait DisputeApi {
     fn has_failed(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &MarketOfDisputeApi<Self>,
     ) -> Result<bool, DispatchError>;
 }
 
+type MarketOfDisputeResolutionApi<T> = Market<
+    <T as DisputeResolutionApi>::AccountId,
+    <T as DisputeResolutionApi>::Balance,
+    <T as DisputeResolutionApi>::BlockNumber,
+    <T as DisputeResolutionApi>::Moment,
+>;
+
 pub trait DisputeResolutionApi {
     type AccountId;
+    type Balance;
     type BlockNumber;
     type MarketId;
     type MaxDisputes;
@@ -100,7 +108,7 @@ pub trait DisputeResolutionApi {
     /// Returns the consumed weight.
     fn resolve(
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        market: &MarketOfDisputeResolutionApi<Self>,
     ) -> Result<Weight, DispatchError>;
 
     /// Add a future block resolution of a disputed market.

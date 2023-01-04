@@ -107,7 +107,7 @@ mod pallet {
     {
         fn get_auto_resolve(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Option<T::BlockNumber> {
             disputes.last().map(|last_dispute| {
                 last_dispute.at.saturating_add(market.deadlines.dispute_duration)
@@ -117,7 +117,7 @@ mod pallet {
         fn remove_auto_resolve(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
             market_id: &MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) {
             if let Some(dispute_duration_ends_at_block) = Self::get_auto_resolve(disputes, market) {
                 T::DisputeResolution::remove_auto_resolve(
@@ -142,7 +142,7 @@ mod pallet {
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
@@ -178,7 +178,7 @@ mod pallet {
         fn get_auto_resolve(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
@@ -190,7 +190,7 @@ mod pallet {
         fn has_failed(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,

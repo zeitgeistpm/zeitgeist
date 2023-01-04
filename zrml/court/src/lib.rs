@@ -566,7 +566,7 @@ mod pallet {
         fn get_auto_resolve(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
@@ -578,7 +578,7 @@ mod pallet {
         fn has_failed(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,

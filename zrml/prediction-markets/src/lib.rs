@@ -2946,6 +2946,7 @@ mod pallet {
         T: Config,
     {
         type AccountId = T::AccountId;
+        type Balance = BalanceOf<T>;
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type MaxDisputes = T::MaxDisputes;
@@ -2953,7 +2954,7 @@ mod pallet {
 
         fn resolve(
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
         ) -> Result<u64, DispatchError> {
             Self::on_resolution(market_id, market)
         }

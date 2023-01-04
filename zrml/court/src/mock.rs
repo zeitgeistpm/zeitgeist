@@ -71,6 +71,7 @@ pub struct NoopResolution;
 
 impl DisputeResolutionApi for NoopResolution {
     type AccountId = AccountIdTest;
+    type Balance = Balance;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
     type MaxDisputes = u32;
@@ -78,7 +79,7 @@ impl DisputeResolutionApi for NoopResolution {
 
     fn resolve(
         _market_id: &Self::MarketId,
-        _market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        _market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
     ) -> Result<Weight, DispatchError> {
         Ok(0)
     }

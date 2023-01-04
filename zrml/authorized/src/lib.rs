@@ -65,7 +65,7 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     pub type CacheSize = ConstU32<64>;
-    type MarketOf<T> = Market<
+    pub(crate) type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
@@ -229,7 +229,7 @@ mod pallet {
         fn get_auto_resolve(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
@@ -241,7 +241,7 @@ mod pallet {
         fn has_failed(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,

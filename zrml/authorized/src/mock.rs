@@ -83,6 +83,7 @@ pub struct MockResolution;
 
 impl DisputeResolutionApi for MockResolution {
     type AccountId = AccountIdTest;
+    type Balance = Balance;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
     type MaxDisputes = MaxDisputesTest;
@@ -90,7 +91,7 @@ impl DisputeResolutionApi for MockResolution {
 
     fn resolve(
         _market_id: &Self::MarketId,
-        _market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        _market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
     ) -> Result<Weight, DispatchError> {
         Ok(0)
     }

@@ -19,10 +19,8 @@
 use crate::MarketIdOf;
 use crate::{Config, MarketOf, MomentOf};
 #[cfg(feature = "try-runtime")]
-use alloc::collections::BTreeMap;
-#[cfg(feature = "try-runtime")]
 use alloc::format;
-use alloc::vec::Vec;
+use alloc::{collections::BTreeMap, vec::Vec};
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 use frame_support::{
@@ -39,9 +37,7 @@ use zeitgeist_primitives::types::{
     Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
     MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
-#[cfg(feature = "try-runtime")]
-use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_market_commons::Pallet as MarketCommonsPallet;
+use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
@@ -146,7 +142,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        use frame_support::{migration::storage_key_iter, pallet_prelude::Blake2_128Concat};
+        use frame_support::pallet_prelude::Blake2_128Concat;
 
         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
             MARKET_COMMONS,
@@ -424,32 +420,13 @@ mod tests {
     }
 }
 
-// We use these utilities to prevent having to make the swaps pallet a dependency of
-// prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
-// https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
-// and previous migrations.
-
-use crate::Config;
 #[cfg(feature = "try-runtime")]
 use alloc::string::ToString;
-use alloc::{collections::BTreeMap, vec::Vec};
-#[cfg(feature = "try-runtime")]
-use frame_support::migration::storage_iter;
-use frame_support::{
-    dispatch::Weight,
-    log,
-    migration::{put_storage_value, storage_key_iter},
-    pallet_prelude::PhantomData,
-    traits::{Get, OnRuntimeUpgrade, StorageVersion},
-    Twox64Concat,
-};
+use frame_support::{migration::storage_key_iter, Twox64Concat};
 use frame_system::pallet_prelude::BlockNumberFor;
-#[cfg(feature = "try-runtime")]
-use scale_info::prelude::format;
 use sp_runtime::traits::Zero;
-use zeitgeist_primitives::types::{AuthorityReport, MarketDisputeMechanism, OutcomeReport};
+use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::Pallet as AuthorizedPallet;
-use zrml_market_commons::MarketCommonsPalletApi;
 
 const AUTHORIZED: &[u8] = b"Authorized";
 const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
@@ -560,8 +537,6 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-
         let mut counter = 0_u32;
         for (key, value) in storage_iter::<OutcomeReport>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
             Self::set_temp_storage(value, &format!("{:?}", key.as_slice()));
@@ -575,7 +550,6 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
         let mut markets_count = 0_u32;
         let old_counter_key = "counter_key".to_string();
         for (key, new_value) in
@@ -687,7 +661,7 @@ mod tests_authorized {
         StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
     }
 
-    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u64, u64> {
+    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u128, u64, u64> {
         zeitgeist_primitives::types::Market {
             creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
             creator_fee: 0,
@@ -706,9 +680,15 @@ mod tests_authorized {
             resolved_outcome: None,
             scoring_rule: zeitgeist_primitives::types::ScoringRule::CPMM,
             status: zeitgeist_primitives::types::MarketStatus::Disputed,
+            bonds: Default::default(),
         }
     }
 }
+
+// We use these utilities to prevent having to make the swaps pallet a dependency of
+// prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
+// https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
+// and previous migrations.
 
 mod utility {
     use crate::{BalanceOf, Config, MarketIdOf};
