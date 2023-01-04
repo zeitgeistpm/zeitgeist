@@ -261,8 +261,6 @@ mod pallet {
 
             let voting_outcome_fee = T::VotingOutcomeFee::get();
 
-            // Self::push_vote_outcome(&market_id, outcome.clone(), &owner, voting_outcome_fee)?;
-
             let reward_account = Self::reward_account(&market_id);
 
             T::Currency::transfer(
