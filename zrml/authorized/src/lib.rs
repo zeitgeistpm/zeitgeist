@@ -65,6 +65,12 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     pub type CacheSize = ConstU32<64>;
+    type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -194,7 +200,7 @@ mod pallet {
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            market: &MarketOf<T>,
         ) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
@@ -207,7 +213,7 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
@@ -257,13 +263,13 @@ mod pallet {
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+-> zeitgeist_primitives::types::Market<T::AccountId, BalanceOf<T>, T::BlockNumber, MomentOf<T>>
 where
     T: crate::Config,
 {
     use frame_support::traits::Get;
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::ScoringRule;
+    use zeitgeist_primitives::types::{MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
@@ -283,5 +289,6 @@ where
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
     }
 }
