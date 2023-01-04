@@ -61,7 +61,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    type MarketOf<T> = Market<
+    pub(crate) type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
@@ -181,13 +181,7 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<
-    T::AccountId,
-    BalanceOf<T>,
-    T::BlockNumber,
-    MomentOf<T>,
-    zeitgeist_primitives::types::Asset<MarketIdOf<T>>,
->
+pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
 {
