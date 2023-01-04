@@ -2051,12 +2051,6 @@ fn dispute_fails_authority_reported_already() {
             OutcomeReport::Categorical(0)
         ));
 
-        assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-
         assert_noop!(
             PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             AuthorizedError::<Runtime>::OnlyOneDisputeAllowed
