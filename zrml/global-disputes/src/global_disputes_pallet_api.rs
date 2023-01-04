@@ -68,25 +68,32 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// Returns the winning outcome.
     fn determine_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
-    /// Check if global dispute started.
+    /// Check if global dispute already exists.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    fn is_started(market_id: &MarketId) -> bool;
+    fn does_exist(market_id: &MarketId) -> bool;
 
-    /// Check if global dispute is active.
+    /// Check if global dispute is active or initialized. But not finished.
+    /// This call is useful to check if a global dispute is ready for a destruction.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    fn is_active(market_id: &MarketId) -> bool;
+    fn is_unfinished(market_id: &MarketId) -> bool;
 
-    /// Check if a global dispute has not already been started.
+    /// Check if a global dispute does not exist.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    fn is_not_started(market_id: &MarketId) -> bool {
-        !Self::is_started(market_id)
+    fn does_not_exist(market_id: &MarketId) -> bool {
+        !Self::does_exist(market_id)
     }
+
+    /// Start a global dispute.
+    ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    fn start_global_dispute(market_id: &MarketId) -> Result<(), DispatchError>;
 
     /// Destroy a global dispute and allow to return all funds of the participants.
     ///

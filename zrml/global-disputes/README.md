@@ -32,11 +32,21 @@ on which the market finally resolves.
   get their reward. Fails if the global dispute is not concluded yet.
 - `reward_outcome_owner` - Reward the collected fees to the owner(s) of a voting
   outcome. Fails if not all outcomes are already purged.
+- `refund_vote_fees` - Return all vote funds and fees, when a global dispute was
+  destroyed.
 
 #### Private Pallet API
 
-- `push_vote_outcome` - Start a global dispute, add an initial voting outcome
-  and vote on it.
+- `push_vote_outcome` - Add an initial voting outcome and vote on it with
+  `initial_vote_balance`.
+- `get_voting_outcome_info` - Get the information (`outcome_sum`, `owners`) of a
+  voting outcome.
 - `determine_voting_winner` - Determine the canonical voting outcome based on
   total locked tokens.
-- `is_started` - Check if the global dispute started already.
+- `does_exist` - Check if the global dispute does already exist.
+- `is_active` - Check if the global dispute is active to get votes
+  (`vote_on_outcome`) and allow the addition of new vote outcomes with
+  `add_vote_outcome`.
+- `start_global_dispute` - Start a global dispute.
+- `destroy_global_dispute` - Allow the users to get their voting funds and fee
+  payments back.

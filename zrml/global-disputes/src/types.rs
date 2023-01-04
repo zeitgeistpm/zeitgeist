@@ -48,12 +48,19 @@ pub struct GDInfo<AccountId, Balance, Owners> {
 impl<AccountId, Balance: Saturating, Owners: Default> GDInfo<AccountId, Balance, Owners> {
     pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession: None };
-        GDInfo { winner_outcome: outcome, status: GDStatus::Active, outcome_info }
+        GDInfo { winner_outcome: outcome, status: GDStatus::Initialized, outcome_info }
+    }
+
+    pub fn update_winner(&mut self, outcome: OutcomeReport, vote_sum: Balance) {
+        self.winner_outcome = outcome;
+        self.outcome_info.outcome_sum = vote_sum;
     }
 }
 
 #[derive(TypeInfo, Debug, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum GDStatus {
+    /// The global dispute is initialized.
+    Initialized,
     /// The global dispute is in progress.
     Active,
     /// The global dispute is finished.

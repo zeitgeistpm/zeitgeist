@@ -2415,12 +2415,12 @@ fn start_global_dispute_works() {
                 now + <Runtime as Config>::GlobalDisputePeriod::get(),
             );
             assert_eq!(market_ids, vec![market_id]);
-            assert!(GlobalDisputes::is_started(&market_id));
+            assert!(GlobalDisputes::is_unfinished(&market_id));
             System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
 
             assert_noop!(
                 PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
-                Error::<Runtime>::GlobalDisputeAlreadyStarted
+                Error::<Runtime>::GlobalDisputeExistsAlready
             );
         }
     });

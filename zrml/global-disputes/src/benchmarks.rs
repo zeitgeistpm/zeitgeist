@@ -65,6 +65,11 @@ benchmarks! {
         // ensure that we get the worst case
         // to actually insert the new item at the end of the binary search
         let market_id: MarketIdOf<T> = v.into();
+        let market = market_mock::<T>();
+        for i in 0..=v {
+            T::MarketCommons::push_market(market.clone()).unwrap();
+        }
+
         let outcome = OutcomeReport::Scalar(0);
         let amount: BalanceOf<T> = T::MinOutcomeVoteAmount::get().saturated_into();
         deposit::<T>(&caller);
@@ -203,14 +208,15 @@ benchmarks! {
         // this happens in the case, that Outcomes is not none at the query time.
         let w in 1..T::MaxOwners::get();
 
-        let mut owners = Vec::new();
+        let mut owners: Vec<AccountIdOf<T>> = Vec::new();
         for i in 1..=w {
-            let owner = account("winners_owner", i, 0);
+            let owner: AccountIdOf<T> = account("winners_owner", i, 0);
             owners.push(owner);
         }
-        let owners = BoundedVec::try_from(owners).unwrap();
-        let possession = Some(Possession::Shared { owners });
-        let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), possession };
+        let owners: BoundedVec<AccountIdOf<T>, T::MaxOwners> = BoundedVec::try_from(owners)
+        .unwrap();
+
+        let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), possession: None };
         let gd_info = GDInfo {
             winner_outcome: OutcomeReport::Scalar(0),
             status: GDStatus::Active,
@@ -309,6 +315,8 @@ benchmarks! {
         let o in 1..T::MaxOwners::get();
 
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market).unwrap();
 
         for i in 1..=k {
             let owner = account("outcomes_owner", i, 0);
@@ -342,6 +350,61 @@ benchmarks! {
             possession,
         };
         let gd_info = GDInfo {winner_outcome, status: GDStatus::Finished, outcome_info};
+        <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
+
+        let caller: T::AccountId = whitelisted_caller();
+
+        let outcome = OutcomeReport::Scalar(20);
+
+        deposit::<T>(&caller);
+    }: _(RawOrigin::Signed(caller.clone()), market_id)
+    verify {
+        assert!(<Outcomes<T>>::iter_prefix(market_id).next().is_none());
+        assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> { market_id }.into());
+    }
+
+    refund_vote_fees {
+        // RemoveKeysLimit - 2 to ensure that we actually fully clean and return at the end
+        let k in 1..(T::RemoveKeysLimit::get() - 2);
+
+        let o in 1..T::MaxOwners::get();
+
+        let market_id: MarketIdOf<T> = 0u128.saturated_into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market).unwrap();
+
+        for i in 1..=k {
+            let owner = account("outcomes_owner", i, 0);
+            GlobalDisputes::<T>::push_vote_outcome(
+                &market_id,
+                OutcomeReport::Scalar(i.into()),
+                &owner,
+                1_000_000_000u128.saturated_into(),
+            )
+            .unwrap();
+        }
+
+        let mut owners = Vec::new();
+        for i in 1..=o {
+            let owner = account("winners_owner", i, 0);
+            owners.push(owner);
+        }
+        let owners = BoundedVec::try_from(owners.clone()).unwrap();
+        let winner_outcome = OutcomeReport::Scalar(0);
+
+        let possession = Some(Possession::Shared { owners });
+        let outcome_info = OutcomeInfo {
+            outcome_sum: 42u128.saturated_into(),
+            possession,
+        };
+        <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
+
+        let possession = Some(Possession::Shared { owners: Default::default() });
+        let outcome_info = OutcomeInfo {
+            outcome_sum: 42u128.saturated_into(),
+            possession,
+        };
+        let gd_info = GDInfo {winner_outcome, status: GDStatus::Destroyed, outcome_info};
         <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
 
         let caller: T::AccountId = whitelisted_caller();

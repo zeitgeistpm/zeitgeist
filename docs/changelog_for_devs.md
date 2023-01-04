@@ -5,6 +5,9 @@
   which has three fields: `who` (the account that reserved the bond), `value`
   (the amount reserved), `is_settled` (a flag which determines if the bond was
   already unreserved and/or (partially) slashed).
+- Added new dispatchable function:
+  - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
+    was destroyed.
 
 # v0.3.7
 

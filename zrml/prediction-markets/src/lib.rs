@@ -244,7 +244,7 @@ mod pallet {
             }
 
             #[cfg(feature = "with-global-disputes")]
-            if T::GlobalDisputes::is_active(&market_id) {
+            if T::GlobalDisputes::is_unfinished(&market_id) {
                 T::GlobalDisputes::destroy_global_dispute(&market_id)?;
             }
 
@@ -1350,8 +1350,8 @@ mod pallet {
                 );
 
                 ensure!(
-                    T::GlobalDisputes::is_not_started(&market_id),
-                    Error::<T>::GlobalDisputeAlreadyStarted
+                    T::GlobalDisputes::does_not_exist(&market_id),
+                    Error::<T>::GlobalDisputeExistsAlready
                 );
 
                 // add report outcome to voting choices
@@ -1373,6 +1373,8 @@ mod pallet {
                         dispute_bond,
                     )?;
                 }
+
+                T::GlobalDisputes::start_global_dispute(&market_id)?;
 
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
@@ -1670,7 +1672,7 @@ mod pallet {
         /// The weights length has to be equal to the assets length.
         WeightsLenMustEqualAssetsLen,
         /// The start of the global dispute for this market happened already.
-        GlobalDisputeAlreadyStarted,
+        GlobalDisputeExistsAlready,
     }
 
     #[pallet::event]
