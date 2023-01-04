@@ -256,7 +256,7 @@ mod pallet {
             T::AssetManager::slash(
                 Asset::Ztg,
                 &market_account,
-                T::AssetManager::free_balance(Asset::Ztg, &market_account),
+                T::AssetManager::free_balance(market.base_asset, &market_account),
             );
             let mut category_count = 0u32;
             if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(&market_id) {
@@ -924,8 +924,7 @@ mod pallet {
             // this could stall the chain, because a malicious user puts a large vector in
             ensure!(weights.len() == assets.len(), Error::<T>::WeightsLenMustEqualAssetsLen);
 
-            let base_asset = Asset::Ztg;
-            assets.push(base_asset);
+            assets.push(market.base_asset);
 
             let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
             weights.push(base_asset_weight);
@@ -933,7 +932,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 sender,
                 assets,
-                base_asset,
+                market.base_asset,
                 market_id,
                 ScoringRule::CPMM,
                 Some(swap_fee),
@@ -1033,7 +1032,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(Asset::Ztg, &market_account)
+                        T::AssetManager::free_balance(market.base_asset, &market_account)
                             >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -1087,7 +1086,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(Asset::Ztg, &market_account)
+                        T::AssetManager::free_balance(market.base_asset, &market_account)
                             >= long_payout.saturating_add(short_payout),
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -1104,10 +1103,16 @@ mod pallet {
                 T::AssetManager::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                let remaining_bal = T::AssetManager::free_balance(Asset::Ztg, &market_account);
+                let remaining_bal =
+                    T::AssetManager::free_balance(market.base_asset, &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
-                T::AssetManager::transfer(Asset::Ztg, &market_account, &sender, actual_payout)?;
+                T::AssetManager::transfer(
+                    market.base_asset,
+                    &market_account,
+                    &sender,
+                    actual_payout,
+                )?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != <BalanceOf<T>>::zero() {
@@ -1293,7 +1298,7 @@ mod pallet {
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             ensure!(
-                T::AssetManager::free_balance(Asset::Ztg, &market_account) >= amount,
+                T::AssetManager::free_balance(market.base_asset, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
@@ -1314,7 +1319,7 @@ mod pallet {
                 T::AssetManager::slash(*asset, &sender, amount);
             }
 
-            T::AssetManager::transfer(Asset::Ztg, &market_account, &sender, amount)?;
+            T::AssetManager::transfer(market.base_asset, &market_account, &sender, amount)?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
@@ -2103,17 +2108,16 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
-                T::AssetManager::free_balance(Asset::Ztg, &who) >= amount,
+                T::AssetManager::free_balance(market.base_asset, &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
-
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
-            T::AssetManager::transfer(Asset::Ztg, &who, &market_account, amount)?;
+            T::AssetManager::transfer(market.base_asset, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
@@ -2805,14 +2809,13 @@ mod pallet {
             );
 
             let mut assets = Self::outcome_assets(market_id, market);
-            let base_asset = Asset::Ztg;
-            assets.push(base_asset);
+            assets.push(market.base_asset);
             let total_assets = assets.len();
 
             let pool_id = T::Swaps::create_pool(
                 market.creator.clone(),
                 assets,
-                base_asset,
+                market.base_asset,
                 market_id,
                 market.scoring_rule,
                 None,
