@@ -31,8 +31,8 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
-    Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, ScoringRule,
+    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -220,6 +220,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             resolved_outcome: None,
             status: MarketStatus::Closed,
             scoring_rule: ScoringRule::CPMM,
+            bonds: MarketBonds::default(),
         },
     );
 }

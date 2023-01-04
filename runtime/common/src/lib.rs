@@ -59,7 +59,8 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_market_commons::migrations::UpdateMarketsForBaseAsset<Runtime>,
+                // zrml_market_commons::migrations::UpdateMarketsForBaseAsset<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
             )
         >;
 
@@ -71,7 +72,8 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_market_commons::migrations::UpdateMarketsForBaseAsset<Runtime>,
+                // zrml_market_commons::migrations::UpdateMarketsForBaseAsset<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
             )
         >;
 

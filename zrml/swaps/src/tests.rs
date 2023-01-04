@@ -42,7 +42,7 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, BlockNumber, Deadlines, Market, MarketCreation,
+        AccountIdTest, Asset, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
         MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
         OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
@@ -3461,7 +3461,9 @@ fn subsidize_and_start_rikiddo_pool(
     assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
 }
 
-fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment, Asset<MarketId>> {
+fn mock_market(
+    categories: u16,
+) -> Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> {
     Market {
         base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
@@ -3472,10 +3474,11 @@ fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment, As
         metadata: vec![0; 50],
         oracle: ALICE,
         period: MarketPeriod::Block(0..1),
-        deadlines: Deadlines { grace_period: 1, oracle_duration: 1, dispute_duration: 1 },
+        deadlines: Deadlines::default(),
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
         status: MarketStatus::Active,
+        bonds: MarketBonds::default(),
     }
 }

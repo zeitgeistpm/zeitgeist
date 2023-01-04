@@ -52,6 +52,13 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -103,7 +110,7 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, Asset<MarketIdOf<T>>>,
+            market: &MarketOf<T>,
         ) -> DispatchResult {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
@@ -114,7 +121,7 @@ mod pallet {
         fn on_resolution(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>, Asset<MarketIdOf<T>>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());

@@ -61,6 +61,13 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -146,7 +153,7 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
+            _: &MarketOf<T>,
         ) -> DispatchResult {
             Ok(())
         }
@@ -154,7 +161,7 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
+            _: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             let result = AuthorizedOutcomeReports::<T>::get(market_id);
             if result.is_some() {
@@ -176,6 +183,7 @@ mod pallet {
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<
     T::AccountId,
+    BalanceOf<T>,
     T::BlockNumber,
     MomentOf<T>,
     zeitgeist_primitives::types::Asset<MarketIdOf<T>>,
@@ -185,7 +193,7 @@ where
 {
     use frame_support::traits::Get;
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::{Asset, ScoringRule};
+    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
         base_asset: Asset::Ztg,
@@ -206,5 +214,6 @@ where
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
     }
 }

@@ -1,5 +1,10 @@
 # v0.3.8
 
+- Added the `bonds` field to the `Market` struct, which tracks the status of the
+  advisory, oracle and validity bonds. Each of its members has type `Bond`,
+  which has three fields: `who` (the account that reserved the bond), `value`
+  (the amount reserved), `is_settled` (a flag which determines if the bond was
+  already unreserved and/or (partially) slashed).
 - Create prediction markets with Ztg or registered foreign asset which has
   `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics related
   to prediction market creation/editing now has `base_asset` parameter.

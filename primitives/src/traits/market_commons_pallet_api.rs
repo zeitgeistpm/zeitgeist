@@ -21,13 +21,25 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     storage::PrefixIterator,
-    traits::NamedReservableCurrency,
+    traits::{Currency, NamedReservableCurrency},
     Parameter,
 };
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::traits::AtLeast32Bit;
 
-/// Simple disputes - Pallet Api
+// Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
+// doesn't support type aliases in traits.
+type MarketOf<T> = Market<
+    <T as MarketCommonsPalletApi>::AccountId,
+    <<T as MarketCommonsPalletApi>::Currency as Currency<
+        <T as MarketCommonsPalletApi>::AccountId,
+    >>::Balance,
+    <T as MarketCommonsPalletApi>::BlockNumber,
+    <T as MarketCommonsPalletApi>::Moment,
+    Asset<<T as MarketCommonsPalletApi>::MarketId>,
+>;
+
+/// Abstraction over storage operations for markets
 pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber: AtLeast32Bit;
@@ -50,30 +62,18 @@ pub trait MarketCommonsPalletApi {
 
     /// Return an iterator over the key-value pairs of markets. Altering market storage during
     /// iteration results in undefined behavior.
-    fn market_iter() -> PrefixIterator<(
-        Self::MarketId,
-        Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
-    )>;
+    fn market_iter() -> PrefixIterator<(Self::MarketId, MarketOf<Self>)>;
 
     /// Gets a market from the storage.
-    fn market(
-        market_id: &Self::MarketId,
-    ) -> Result<
-        Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
-        DispatchError,
-    >;
+    fn market(market_id: &Self::MarketId) -> Result<MarketOf<Self>, DispatchError>;
 
     /// Mutates a given market storage
     fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
     where
-        F: FnOnce(
-            &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
-        ) -> DispatchResult;
+        F: FnOnce(&mut MarketOf<Self>) -> DispatchResult;
 
     /// Pushes a new market into the storage, returning its related auto-incremented ID.
-    fn push_market(
-        market: Market<Self::AccountId, Self::BlockNumber, Self::Moment, Asset<Self::MarketId>>,
-    ) -> Result<Self::MarketId, DispatchError>;
+    fn push_market(market: MarketOf<Self>) -> Result<Self::MarketId, DispatchError>;
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;
