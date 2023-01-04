@@ -521,6 +521,7 @@ mod pallet {
             };
 
             // TODO (#918): benchmarks only reach the end when a dispute mechanism has failed
+            #[cfg(feature = "runtime-benchmarks")]
             let _has_failed = true;
 
             ensure!(_has_failed, Error::<T>::DisputeMechanismHasNotFailed);
