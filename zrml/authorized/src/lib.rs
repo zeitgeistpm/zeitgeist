@@ -76,10 +76,11 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         /// Overwrites already provided outcomes for the same market and account.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::authorize_market_outcome(
-            CacheSize::get(),
-            CacheSize::get(),
-        ))]
+        #[pallet::weight(
+            T::WeightInfo::authorize_market_outcome_first_report(CacheSize::get()).max(
+                T::WeightInfo::authorize_market_outcome_existing_report(),
+            )
+        )]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
@@ -94,16 +95,27 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
-            let ids_len_1 = Self::remove_auto_resolve(&market_id);
-            let now = frame_system::Pallet::<T>::block_number();
-            let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-            let ids_len_2 =
-                T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
+            let mut ids_len: Option<u32> = None;
+            let report = match AuthorizedOutcomeReports::<T>::get(market_id) {
+                Some(report) => AuthorityReport { resolve_at: report.resolve_at, outcome },
+                None => {
+                    let now = frame_system::Pallet::<T>::block_number();
+                    let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
+                    ids_len = Some(T::DisputeResolution::add_auto_resolve(
+                        &market_id,
+                        correction_period_ends_at,
+                    )?);
+                    AuthorityReport { resolve_at: correction_period_ends_at, outcome }
+                }
+            };
 
-            let report = AuthorityReport { resolve_at: correction_period_ends_at, outcome };
             AuthorizedOutcomeReports::<T>::insert(market_id, report);
 
-            Ok(Some(T::WeightInfo::authorize_market_outcome(ids_len_1, ids_len_2)).into())
+            if let Some(len) = ids_len {
+                Ok(Some(T::WeightInfo::authorize_market_outcome_first_report(len)).into())
+            } else {
+                Ok(Some(T::WeightInfo::authorize_market_outcome_existing_report()).into())
+            }
         }
     }
 
@@ -173,16 +185,6 @@ mod pallet {
         /// Return the resolution block number for the given market.
         fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
             AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at)
-        }
-
-        /// Return the number of elements from the vector implied by the `remove_auto_resolve` call.
-        /// This is especially useful to calculate a proper weight.
-        fn remove_auto_resolve(market_id: &MarketIdOf<T>) -> u32 {
-            if let Some(resolve_at) = Self::get_auto_resolve(market_id) {
-                T::DisputeResolution::remove_auto_resolve(market_id, resolve_at)
-            } else {
-                0u32
-            }
         }
     }
 

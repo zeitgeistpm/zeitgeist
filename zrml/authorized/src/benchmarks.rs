@@ -37,9 +37,8 @@ use zeitgeist_primitives::{
 use zrml_market_commons::MarketCommonsPalletApi;
 
 benchmarks! {
-    authorize_market_outcome {
+    authorize_market_outcome_first_report {
         let m in 1..63;
-        let d in 1..63;
 
         let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
         let market_id = 0u32.into();
@@ -50,22 +49,44 @@ benchmarks! {
             outcome: OutcomeReport::Scalar(1),
         };
 
+        frame_system::Pallet::<T>::set_block_number(42u32.into());
         let now = frame_system::Pallet::<T>::block_number();
-
-        let resolve_at = now.saturating_add(T::CorrectionPeriod::get() - 1u32.into());
-        let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(0) };
-        for _ in 1..=m {
-            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
-            T::DisputeResolution::add_auto_resolve(&id, resolve_at).unwrap();
-        }
-        AuthorizedOutcomeReports::<T>::insert(market_id, report);
-
         let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-        for _ in 1..=d {
+        for _ in 1..=m {
             let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
             T::DisputeResolution::add_auto_resolve(&id, correction_period_ends_at).unwrap();
         }
-    }: { call.dispatch_bypass_filter(origin)? }
+    }: {
+        call.dispatch_bypass_filter(origin)?
+    } verify {
+        let report = AuthorityReport {
+            resolve_at: correction_period_ends_at,
+            outcome: OutcomeReport::Scalar(1)
+        };
+        assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
+    }
+
+    authorize_market_outcome_existing_report {
+        let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market).unwrap();
+        let call = Call::<T>::authorize_market_outcome {
+            market_id,
+            outcome: OutcomeReport::Scalar(1),
+        };
+
+        frame_system::Pallet::<T>::set_block_number(42u32.into());
+        let now = frame_system::Pallet::<T>::block_number();
+        let resolve_at = now.saturating_add(T::CorrectionPeriod::get() - 1u32.into());
+        let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(0) };
+        AuthorizedOutcomeReports::<T>::insert(market_id, report);
+    }: {
+        call.dispatch_bypass_filter(origin)?
+    } verify {
+        let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(1) };
+        assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
+    }
 }
 
 impl_benchmark_test_suite!(

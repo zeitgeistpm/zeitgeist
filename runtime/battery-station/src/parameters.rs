@@ -51,7 +51,7 @@ pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 parameter_types! {
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
-    pub const CorrectionPeriod: BlockNumber = 3 * BLOCKS_PER_HOUR;
+    pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
 
     // Authority
     pub const MaxAuthorities: u32 = 32;

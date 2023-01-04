@@ -49,7 +49,7 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 }
 
 #[test]
-fn authorize_market_outcome_resets_dispute_resolution() {
+fn authorize_market_outcome_does_not_reset_dispute_resolution() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
 
@@ -67,18 +67,18 @@ fn authorize_market_outcome_resets_dispute_resolution() {
 
         assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
 
-        frame_system::Pallet::<Runtime>::set_block_number(resolve_at_0 - 1);
-        let now = frame_system::Pallet::<Runtime>::block_number();
-        let resolve_at_1 = now + <Runtime as crate::Config>::CorrectionPeriod::get();
-
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(2)
         ));
 
-        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![]);
-        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            AuthorityReport { outcome: OutcomeReport::Scalar(2), resolve_at: resolve_at_0 }
+        );
+
+        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
     });
 }
 
