@@ -365,11 +365,33 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    // Well, not every asset is a currency ¯\_(ツ)_/¯
+    // Existential deposits used by orml-tokens.
+    // Only native ZTG and foreign assets should have an existential deposit.
+    // Winning outcome tokens are redeemed completely by the user, losing outcome tokens
+    // are cleaned up automatically.
+    // PoolShares are also completely redeemed by the user.
+    // Explicit match arms are used to ensure new asset types are respected.
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
+            Asset::CategoricalOutcome(_,_) => 0,
+            Asset::CombinatorialOutcome => 0,
+            Asset::PoolShare(_)  => 0,
+            Asset::ScalarOutcome(_,_)  => 0,
+            #[cfg(feature = "parachain")]
+            Asset::ForeignAsset(id) => {
+                let maybe_metadata = <
+                    orml_asset_registry::Pallet<super::Runtime> as orml_traits::asset_registry::Inspect
+                >::metadata(&Asset::ForeignAsset(*id));
+
+                if let Some(metadata) = maybe_metadata {
+                    return metadata.existential_deposit;
+                }
+
+                0
+            }
+            #[cfg(not(feature = "parachain"))]
+            Asset::ForeignAsset(_) => 0,
             Asset::Ztg => ExistentialDeposit::get(),
-            _ => 0
         }
     };
 }
