@@ -2413,7 +2413,11 @@ mod pallet {
                     );
                 }
 
-                Self::unreserve_outsider_bond(market_id)?;
+                if let Some(bond) = &market.bonds.outsider {
+                    if !bond.is_settled {
+                        Self::unreserve_outsider_bond(market_id)?;
+                    }
+                }
             }
 
             Ok(report.outcome.clone())
@@ -2461,6 +2465,32 @@ mod pallet {
             let report_by_oracle = report.by == market.oracle;
             let is_correct = report.outcome == resolved_outcome;
 
+            // TODO: this wrapper (if let Some and !settled) can be removed
+            // TODO: if there are only markets with outsiders, who all reserved OutsiderBond
+            let outsider_bond_pending = || -> bool {
+                if let Some(bond) = &market.bonds.outsider {
+                    if !bond.is_settled {
+                        return true;
+                    }
+                }
+                false
+            };
+
+            let unreserve_outsider = || -> DispatchResult {
+                if outsider_bond_pending() {
+                    Self::unreserve_outsider_bond(market_id)?;
+                }
+                Ok(())
+            };
+
+            let slash_outsider = || -> Result<NegativeImbalanceOf<T>, DispatchError> {
+                if outsider_bond_pending() {
+                    let imbalance = Self::slash_outsider_bond(market_id, None)?;
+                    return Ok(imbalance);
+                }
+                Ok(NegativeImbalanceOf::<T>::zero())
+            };
+
             if report_by_oracle {
                 if is_correct {
                     Self::unreserve_oracle_bond(market_id)?;
@@ -2474,11 +2504,12 @@ mod pallet {
                     // reward outsider reporter with oracle bond
                     let missing = Self::repatriate_oracle_bond(market_id, &report.by)?;
                     debug_assert!(missing.is_zero(), "Could not deduct all of the value.");
-                    Self::unreserve_outsider_bond(market_id)?;
+                    unreserve_outsider()?;
                 } else {
-                    let imb_oracle = Self::slash_oracle_bond(market_id, None)?;
-                    let imb_outsider = Self::slash_outsider_bond(market_id, None)?;
-                    overall_imbalance.subsume(imb_oracle.merge(imb_outsider));
+                    let oracle_imbalance = Self::slash_oracle_bond(market_id, None)?;
+                    let outsider_imbalance = slash_outsider()?;
+                    overall_imbalance.subsume(oracle_imbalance);
+                    overall_imbalance.subsume(outsider_imbalance);
                 }
             }
 

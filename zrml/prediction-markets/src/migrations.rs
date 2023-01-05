@@ -17,7 +17,7 @@
 
 #[cfg(feature = "try-runtime")]
 use crate::MarketIdOf;
-use crate::{Config, MarketOf, MomentOf};
+use crate::{BalanceOf, Config, MomentOf};
 #[cfg(feature = "try-runtime")]
 use alloc::collections::BTreeMap;
 #[cfg(feature = "try-runtime")]
@@ -28,13 +28,13 @@ use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 use frame_support::{
     dispatch::Weight,
     log,
-    migration::{put_storage_value, storage_iter},
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     RuntimeDebug,
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::types::{
     Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
     MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -43,13 +43,22 @@ use zeitgeist_primitives::types::{
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_market_commons::Pallet as MarketCommonsPallet;
 
+#[cfg(any(feature = "try-runtime", test))]
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
+#[cfg(any(feature = "try-runtime", test))]
 const MARKETS: &[u8] = b"Markets";
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 4;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 5;
+
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 5;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 6;
+
+#[derive(Clone, Decode, Encode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct OldMarketBonds<AI, BA> {
+    pub creation: Option<Bond<AI, BA>>,
+    pub oracle: Option<Bond<AI, BA>>,
+}
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OldMarket<AI, BN, M> {
+pub struct OldMarket<AI, BA, BN, M> {
     pub creator: AI,
     pub creation: MarketCreation,
     pub creator_fee: u8,
@@ -63,84 +72,66 @@ pub struct OldMarket<AI, BN, M> {
     pub report: Option<Report<AI, BN>>,
     pub resolved_outcome: Option<OutcomeReport>,
     pub dispute_mechanism: MarketDisputeMechanism,
+    pub bonds: OldMarketBonds<AI, BA>,
 }
 
 type OldMarketOf<T> = OldMarket<
     <T as frame_system::Config>::AccountId,
+    BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
 >;
 
-pub struct RecordBonds<T>(PhantomData<T>);
+pub struct AddOutsiderBond<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T> {
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBond<T> {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "RecordBonds: market-commons version is {:?}, but {:?} is required",
+                "AddOutsiderBond: market-commons version is {:?}, but {:?} is required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("RecordBonds: Starting...");
+        log::info!("AddOutsiderBond: Starting...");
 
-        let new_markets = storage_iter::<OldMarketOf<T>>(MARKET_COMMONS, MARKETS)
-            .map(|(key, old_market)| {
-                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-                let creation = Some(match old_market.creation {
-                    MarketCreation::Advised => Bond {
-                        who: old_market.creator.clone(),
-                        value: T::AdvisoryBond::get(),
-                        is_settled: old_market.status != MarketStatus::Proposed,
-                    },
-                    MarketCreation::Permissionless => Bond {
-                        who: old_market.creator.clone(),
-                        value: T::ValidityBond::get(),
-                        is_settled: matches!(
-                            old_market.status,
-                            MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
-                        ),
-                    },
-                });
-                let oracle = Some(Bond {
-                    who: old_market.creator.clone(),
-                    value: T::OracleBond::get(),
-                    is_settled: matches!(
-                        old_market.status,
-                        MarketStatus::Resolved | MarketStatus::InsufficientSubsidy,
-                    ),
-                });
-                let new_market = Market {
-                    creator: old_market.creator,
-                    creation: old_market.creation,
-                    creator_fee: old_market.creator_fee,
-                    oracle: old_market.oracle,
-                    metadata: old_market.metadata,
-                    market_type: old_market.market_type,
-                    period: old_market.period,
-                    scoring_rule: old_market.scoring_rule,
-                    status: old_market.status,
-                    report: old_market.report,
-                    resolved_outcome: old_market.resolved_outcome,
-                    dispute_mechanism: old_market.dispute_mechanism,
-                    deadlines: old_market.deadlines,
-                    bonds: MarketBonds { creation, oracle, outsider: None },
-                };
-                (key, new_market)
-            })
-            .collect::<Vec<_>>();
+        let mut translated = 0u64;
+        zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(|_key, old_market| {
+            translated.saturating_inc();
 
-        for (key, new_market) in new_markets {
-            put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        }
+            let new_market = Market {
+                creator: old_market.creator,
+                creation: old_market.creation,
+                creator_fee: old_market.creator_fee,
+                oracle: old_market.oracle,
+                metadata: old_market.metadata,
+                market_type: old_market.market_type,
+                period: old_market.period,
+                scoring_rule: old_market.scoring_rule,
+                status: old_market.status,
+                report: old_market.report,
+                resolved_outcome: old_market.resolved_outcome,
+                dispute_mechanism: old_market.dispute_mechanism,
+                deadlines: old_market.deadlines,
+                bonds: MarketBonds {
+                    creation: old_market.bonds.creation,
+                    oracle: old_market.bonds.oracle,
+                    outsider: None,
+                },
+            };
+
+            Some(new_market)
+        });
+        log::info!("AddOutsiderBond: Upgraded {} markets.", translated);
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads_writes(translated + 1, translated + 1));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("RecordBonds: Done!");
+        log::info!("AddOutsiderBond: Done!");
         total_weight
     }
 
@@ -180,12 +171,10 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
             assert_eq!(new_market.report, old_market.report);
             assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
             assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
-            assert_eq!(new_market.bonds.oracle.unwrap().value, T::OracleBond::get());
-            let expected_creation_bond = match new_market.creation {
-                MarketCreation::Advised => T::AdvisoryBond::get(),
-                MarketCreation::Permissionless => T::ValidityBond::get(),
-            };
-            assert_eq!(new_market.bonds.creation.unwrap().value, expected_creation_bond);
+            assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
+            assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
+            // new field
+            assert_eq!(new_market.bonds.outsider, None);
         }
         Ok(())
     }
@@ -196,16 +185,18 @@ mod tests {
     use super::*;
     use crate::{
         mock::{ExtBuilder, Runtime},
-        MarketIdOf,
+        MarketIdOf, MarketOf,
     };
-    use frame_support::{dispatch::fmt::Debug, Blake2_128Concat, StorageHasher};
+    use frame_support::{
+        dispatch::fmt::Debug, migration::put_storage_value, Blake2_128Concat, StorageHasher,
+    };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            RecordBonds::<Runtime>::on_runtime_upgrade();
+            AddOutsiderBond::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -217,20 +208,15 @@ mod tests {
     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
             // Don't set up chain to signal that storage is already up to date.
-            let test_vector = construct_test_vector();
-            let new_markets =
-                test_vector.into_iter().map(|(_, new_market)| new_market).collect::<Vec<_>>();
+            let (_, new_markets) = construct_old_new_tuple();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, MarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
                 new_markets.clone(),
             );
-            RecordBonds::<Runtime>::on_runtime_upgrade();
-            for (market_id, expected) in new_markets.iter().enumerate() {
-                let actual =
-                    <zrml_market_commons::Pallet<Runtime>>::market(&(market_id as u128)).unwrap();
-                assert_eq!(actual, *expected);
-            }
+            AddOutsiderBond::<Runtime>::on_runtime_upgrade();
+            let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
+            assert_eq!(actual, new_markets[0]);
         });
     }
 
@@ -238,20 +224,15 @@ mod tests {
     fn on_runtime_upgrade_correctly_updates_markets() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            let test_vector = construct_test_vector();
-            let (old_markets, new_markets): (_, Vec<MarketOf<Runtime>>) =
-                test_vector.into_iter().unzip();
+            let (old_markets, new_markets) = construct_old_new_tuple();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, OldMarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
                 old_markets,
             );
-            RecordBonds::<Runtime>::on_runtime_upgrade();
-            for (market_id, expected) in new_markets.iter().enumerate() {
-                let actual =
-                    <zrml_market_commons::Pallet<Runtime>>::market(&(market_id as u128)).unwrap();
-                assert_eq!(actual, *expected);
-            }
+            AddOutsiderBond::<Runtime>::on_runtime_upgrade();
+            let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
+            assert_eq!(actual, new_markets[0]);
         });
     }
 
@@ -260,159 +241,63 @@ mod tests {
             .put::<MarketCommonsPallet<Runtime>>();
     }
 
-    fn construct_test_vector() -> Vec<(OldMarketOf<Runtime>, MarketOf<Runtime>)> {
+    fn construct_old_new_tuple() -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
         let creator = 999;
-        let construct_markets = |creation: MarketCreation, status, bonds| {
-            let creator_fee = 1;
-            let oracle = 2;
-            let metadata = vec![3, 4, 5];
-            let market_type = MarketType::Categorical(6);
-            let period = MarketPeriod::Block(7..8);
-            let scoring_rule = ScoringRule::CPMM;
-            let report = None;
-            let resolved_outcome = None;
-            let dispute_mechanism = MarketDisputeMechanism::Authorized;
-            let deadlines = Deadlines::default();
-
-            let old_market = OldMarket {
-                creator,
-                creation: creation.clone(),
-                creator_fee,
-                oracle,
-                metadata: metadata.clone(),
-                market_type: market_type.clone(),
-                period: period.clone(),
-                scoring_rule,
-                status,
-                report: report.clone(),
-                resolved_outcome: resolved_outcome.clone(),
-                dispute_mechanism: dispute_mechanism.clone(),
-                deadlines,
-            };
-            let new_market = Market {
-                creator,
-                creation,
-                creator_fee,
-                oracle,
-                metadata,
-                market_type,
-                period,
-                scoring_rule,
-                status,
-                report,
-                resolved_outcome,
-                dispute_mechanism,
-                deadlines,
-                bonds,
-            };
-            (old_market, new_market)
+        let creator_fee = 1;
+        let oracle = 2;
+        let metadata = vec![3, 4, 5];
+        let market_type = MarketType::Categorical(6);
+        let period = MarketPeriod::Block(7..8);
+        let scoring_rule = ScoringRule::CPMM;
+        let status = MarketStatus::Disputed;
+        let creation = MarketCreation::Permissionless;
+        let report = None;
+        let resolved_outcome = None;
+        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let deadlines = Deadlines::default();
+        let old_bonds = OldMarketBonds {
+            creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
+            oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
         };
-        vec![
-            construct_markets(
-                MarketCreation::Permissionless,
-                MarketStatus::Disputed,
-                MarketBonds {
-                    creation: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::ValidityBond::get(),
-                        is_settled: false,
-                    }),
-                    oracle: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: false,
-                    }),
-                    outsider: None,
-                },
-            ),
-            construct_markets(
-                MarketCreation::Permissionless,
-                MarketStatus::Resolved,
-                MarketBonds {
-                    creation: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::ValidityBond::get(),
-                        is_settled: true,
-                    }),
-                    oracle: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: true,
-                    }),
-                    outsider: None,
-                },
-            ),
-            construct_markets(
-                MarketCreation::Advised,
-                MarketStatus::Proposed,
-                MarketBonds {
-                    creation: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::AdvisoryBond::get(),
-                        is_settled: false,
-                    }),
-                    oracle: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: false,
-                    }),
-                    outsider: None,
-                },
-            ),
-            construct_markets(
-                MarketCreation::Advised,
-                MarketStatus::Active,
-                MarketBonds {
-                    creation: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::AdvisoryBond::get(),
-                        is_settled: true,
-                    }),
-                    oracle: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: false,
-                    }),
-                    outsider: None,
-                },
-            ),
-            construct_markets(
-                MarketCreation::Advised,
-                MarketStatus::Resolved,
-                MarketBonds {
-                    creation: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::AdvisoryBond::get(),
-                        is_settled: true,
-                    }),
-                    oracle: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: true,
-                    }),
-                    outsider: None,
-                },
-            ),
-            // Technically, the market below has the wrong scoring rule, but that's irrelevant to
-            // the test.
-            construct_markets(
-                MarketCreation::Permissionless,
-                MarketStatus::InsufficientSubsidy,
-                MarketBonds {
-                    creation: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::ValidityBond::get(),
-                        is_settled: true,
-                    }),
-                    oracle: Some(Bond {
-                        who: creator,
-                        value: <Runtime as Config>::OracleBond::get(),
-                        is_settled: true,
-                    }),
-                    outsider: None,
-                },
-            ),
-        ]
+        let new_bonds = MarketBonds {
+            creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
+            oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
+            outsider: None,
+        };
+
+        let old_market = OldMarket {
+            creator,
+            creation: creation.clone(),
+            creator_fee,
+            oracle,
+            metadata: metadata.clone(),
+            market_type: market_type.clone(),
+            period: period.clone(),
+            scoring_rule,
+            status,
+            report: report.clone(),
+            resolved_outcome: resolved_outcome.clone(),
+            dispute_mechanism: dispute_mechanism.clone(),
+            deadlines,
+            bonds: old_bonds,
+        };
+        let new_market = Market {
+            creator,
+            creation,
+            creator_fee,
+            oracle,
+            metadata,
+            market_type,
+            period,
+            scoring_rule,
+            status,
+            report,
+            resolved_outcome,
+            dispute_mechanism,
+            deadlines,
+            bonds: new_bonds,
+        };
+        (vec![old_market], vec![new_market])
     }
 
     #[allow(unused)]
