@@ -23,7 +23,7 @@ use crate::{self as zrml_authorized, mock_storage::pallet as mock_storage};
 use alloc::{vec, vec::Vec};
 use frame_support::{
     construct_runtime, ord_parameter_types,
-    pallet_prelude::{DispatchError, Get, Weight},
+    pallet_prelude::{DispatchError, Weight},
     traits::Everything,
     BoundedVec,
 };
@@ -67,16 +67,8 @@ construct_runtime!(
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+    pub const MaxDisputes: u32 = 64;
 }
-
-pub struct MaxDisputes;
-impl Get<u32> for MaxDisputes {
-    fn get() -> u32 {
-        64u32
-    }
-}
-
-type MaxDisputesTest = MaxDisputes;
 
 // MockResolution implements DisputeResolutionApi with no-ops.
 pub struct MockResolution;
@@ -86,7 +78,7 @@ impl DisputeResolutionApi for MockResolution {
     type Balance = Balance;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
-    type MaxDisputes = MaxDisputesTest;
+    type MaxDisputes = MaxDisputes;
     type Moment = Moment;
 
     fn resolve(
