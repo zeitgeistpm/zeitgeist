@@ -79,6 +79,10 @@ impl DisputeResolutionApi for NoopResolution {
         Ok(0u32)
     }
 
+    fn auto_resolve_exists(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> bool {
+        false
+    }
+
     fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
         0u32
     }

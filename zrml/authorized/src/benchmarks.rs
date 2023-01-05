@@ -67,6 +67,8 @@ benchmarks! {
     }
 
     authorize_market_outcome_existing_report {
+        let m in 1..63;
+
         let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
         let market_id = 0u32.into();
         let market = market_mock::<T>();
@@ -79,6 +81,12 @@ benchmarks! {
         frame_system::Pallet::<T>::set_block_number(42u32.into());
         let now = frame_system::Pallet::<T>::block_number();
         let resolve_at = now.saturating_add(T::CorrectionPeriod::get() - 1u32.into());
+
+        for _ in 1..=m {
+            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
+            T::DisputeResolution::add_auto_resolve(&id, resolve_at).unwrap();
+        }
+
         let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(0) };
         AuthorizedOutcomeReports::<T>::insert(market_id, report);
     }: {

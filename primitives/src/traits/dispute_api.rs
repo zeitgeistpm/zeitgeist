@@ -121,6 +121,13 @@ pub trait DisputeResolutionApi {
         resolve_at: Self::BlockNumber,
     ) -> Result<u32, DispatchError>;
 
+    /// Check if a future block resolution of a disputed market exists.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the future block resolution exists, otherwise `false`.
+    fn auto_resolve_exists(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> bool;
+
     /// Remove a future block resolution of a disputed market.
     ///
     /// # Returns

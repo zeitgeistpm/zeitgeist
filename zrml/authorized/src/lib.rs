@@ -78,7 +78,7 @@ mod pallet {
         #[frame_support::transactional]
         #[pallet::weight(
             T::WeightInfo::authorize_market_outcome_first_report(CacheSize::get()).max(
-                T::WeightInfo::authorize_market_outcome_existing_report(),
+                T::WeightInfo::authorize_market_outcome_existing_report(CacheSize::get()),
             )
         )]
         pub fn authorize_market_outcome(
@@ -95,26 +95,42 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
-            let mut ids_len: Option<u32> = None;
-            let report = match AuthorizedOutcomeReports::<T>::get(market_id) {
-                Some(report) => AuthorityReport { resolve_at: report.resolve_at, outcome },
+            let now = frame_system::Pallet::<T>::block_number();
+
+            let add_resolve_at = |resolve_at| -> Result<u32, DispatchError> {
+                let ids_len = T::DisputeResolution::add_auto_resolve(&market_id, resolve_at)?;
+                Ok(ids_len)
+            };
+
+            let report_opt = AuthorizedOutcomeReports::<T>::get(market_id);
+            let (report, ids_len) = match &report_opt {
+                Some(report) => {
+                    let mut resolve_at = report.resolve_at;
+                    let exists = T::DisputeResolution::auto_resolve_exists(&market_id, resolve_at);
+                    let mut ids_len = 0u32;
+                    if resolve_at < now {
+                        // resolve_at is in the past, but should have already been resolved
+                        resolve_at = now.saturating_add(T::CorrectionPeriod::get());
+                        ids_len = add_resolve_at(resolve_at)?;
+                    } else if !exists {
+                        ids_len = add_resolve_at(resolve_at)?;
+                    }
+
+                    (AuthorityReport { resolve_at, outcome }, ids_len)
+                }
                 None => {
-                    let now = frame_system::Pallet::<T>::block_number();
-                    let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-                    ids_len = Some(T::DisputeResolution::add_auto_resolve(
-                        &market_id,
-                        correction_period_ends_at,
-                    )?);
-                    AuthorityReport { resolve_at: correction_period_ends_at, outcome }
+                    let resolve_at = now.saturating_add(T::CorrectionPeriod::get());
+                    let ids_len = add_resolve_at(resolve_at)?;
+                    (AuthorityReport { resolve_at, outcome }, ids_len)
                 }
             };
 
             AuthorizedOutcomeReports::<T>::insert(market_id, report);
 
-            if let Some(len) = ids_len {
-                Ok(Some(T::WeightInfo::authorize_market_outcome_first_report(len)).into())
+            if report_opt.is_none() {
+                Ok(Some(T::WeightInfo::authorize_market_outcome_first_report(ids_len)).into())
             } else {
-                Ok(Some(T::WeightInfo::authorize_market_outcome_existing_report()).into())
+                Ok(Some(T::WeightInfo::authorize_market_outcome_existing_report(ids_len)).into())
             }
         }
     }

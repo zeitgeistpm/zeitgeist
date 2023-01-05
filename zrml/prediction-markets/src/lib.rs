@@ -2919,6 +2919,10 @@ mod pallet {
             Ok(ids_len)
         }
 
+        fn auto_resolve_exists(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> bool {
+            <MarketIdsPerDisputeBlock<T>>::get(resolve_at).contains(market_id)
+        }
+
         fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
             remove_auto_resolve::<T>(market_id, resolve_at)
         }
