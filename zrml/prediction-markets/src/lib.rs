@@ -575,60 +575,6 @@ mod pallet {
             Ok((Some(T::WeightInfo::dispute_authorized())).into())
         }
 
-        /// Resolve the market,
-        /// if the dispute mechanism was unable to come to a conclusion in a specified time.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(
-            T::WeightInfo::resolve_expired_mdm_authorized_categorical()
-                .max(T::WeightInfo::resolve_expired_mdm_authorized_scalar())
-        )]
-        #[transactional]
-        pub fn resolve_failed_mdm(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_signed(origin)?;
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
-
-            let disputes = Disputes::<T>::get(market_id);
-
-            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-            let _has_failed = match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized => {
-                    T::Authorized::has_failed(&disputes, &market_id, &market)?
-                }
-                MarketDisputeMechanism::Court => {
-                    T::Court::has_failed(&disputes, &market_id, &market)?
-                }
-                MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::has_failed(&disputes, &market_id, &market)?
-                }
-            };
-
-            // TODO (#918): benchmarks only reach the end when a dispute mechanism has failed
-            #[cfg(feature = "runtime-benchmarks")]
-            let _has_failed = true;
-
-            ensure!(_has_failed, Error::<T>::DisputeMechanismHasNotFailed);
-
-            Self::on_resolution(&market_id, &market)?;
-
-            Self::deposit_event(Event::FailedDisputeMechanismResolved(market_id));
-
-            let weight = match market.market_type {
-                MarketType::Scalar(_) => T::WeightInfo::resolve_expired_mdm_authorized_scalar(),
-                MarketType::Categorical(_) => {
-                    T::WeightInfo::resolve_expired_mdm_authorized_categorical()
-                }
-            };
-
-            Ok((Some(weight)).into())
-        }
-
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
         /// liquidity.
         ///

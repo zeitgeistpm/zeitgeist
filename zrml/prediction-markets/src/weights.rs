@@ -61,8 +61,6 @@ pub trait WeightInfoZeitgeist {
     fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight;
     fn start_global_dispute(m: u32, n: u32) -> Weight;
     fn dispute_authorized() -> Weight;
-    fn resolve_expired_mdm_authorized_scalar() -> Weight;
-    fn resolve_expired_mdm_authorized_categorical() -> Weight;
     fn handle_expired_advised_market() -> Weight;
     fn internal_resolve_categorical_reported() -> Weight;
     fn internal_resolve_categorical_disputed(d: u32) -> Weight;
@@ -308,29 +306,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         (47_000_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
-    }
-    // Storage: MarketCommons Markets (r:1 w:1)
-    // Storage: PredictionMarkets Disputes (r:1 w:1)
-    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
-    // Storage: Balances Reserves (r:2 w:2)
-    // Storage: System Account (r:2 w:2)
-    // Storage: MarketCommons MarketPool (r:1 w:0)
-    fn resolve_expired_mdm_authorized_scalar() -> Weight {
-        (105_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(8 as Weight))
-            .saturating_add(T::DbWeight::get().writes(6 as Weight))
-    }
-    // Storage: MarketCommons Markets (r:1 w:1)
-    // Storage: PredictionMarkets Disputes (r:1 w:1)
-    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
-    // Storage: Balances Reserves (r:2 w:2)
-    // Storage: System Account (r:2 w:2)
-    // Storage: MarketCommons MarketPool (r:1 w:0)
-    // Storage: Swaps Pools (r:1 w:1)
-    fn resolve_expired_mdm_authorized_categorical() -> Weight {
-        (135_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(9 as Weight))
-            .saturating_add(T::DbWeight::get().writes(7 as Weight))
     }
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)

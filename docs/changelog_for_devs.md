@@ -10,9 +10,7 @@
   call `authorize_market_outcome` again after the first call to it (fat-finger
   protection). The authority report now includes its resolution block number.
   This is the time of the first call to `authorize_market_outcome` plus the
-  `CorrectionPeriod`. Added new dispatchable call:
-  - `resolve_failed_mdm` - In case an MDM can fail, this extrinsic handles the
-    resolution of the market.
+  `CorrectionPeriod`.
 
 # v0.3.7
 
