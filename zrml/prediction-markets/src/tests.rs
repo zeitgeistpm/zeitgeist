@@ -19,7 +19,7 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    default_dispute_bond, mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    default_dispute_bond, mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
     MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
     MarketIdsPerReportBlock,
 };
@@ -433,7 +433,8 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
-        let market = MarketCommons::market(&0).unwrap();
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         assert_ne!(grace_period, 0);
         run_to_block(grace_period + 1);
@@ -466,7 +467,7 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
 
         let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
         let balance_free_before_dave = Balances::free_balance(&DAVE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), market_id));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
             SENTINEL_AMOUNT,
@@ -483,6 +484,7 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
             Balances::free_balance(DAVE),
             balance_free_before_dave + default_dispute_bond::<Runtime>(1),
         );
+        assert!(Disputes::<Runtime>::get(market_id).is_empty());
     });
 }
 
