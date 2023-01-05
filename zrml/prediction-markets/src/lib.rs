@@ -254,7 +254,7 @@ mod pallet {
             // NOTE: Currently we don't clean up outcome assets.
             // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::AssetManager::slash(
-                Asset::Ztg,
+                market.base_asset,
                 &market_account,
                 T::AssetManager::free_balance(market.base_asset, &market_account),
             );
