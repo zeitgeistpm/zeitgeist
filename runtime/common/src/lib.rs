@@ -58,7 +58,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (),
+            zrml_prediction_markets::migrations::RecordBonds<Runtime>,
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -68,7 +68,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (),
+            zrml_prediction_markets::migrations::RecordBonds<Runtime>,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -988,7 +988,6 @@ macro_rules! impl_config_traits {
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
-            type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
             type MinDisputeDuration = MinDisputeDuration;

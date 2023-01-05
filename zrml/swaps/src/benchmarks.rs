@@ -43,8 +43,8 @@ use zeitgeist_primitives::{
     constants::{BASE, CENT},
     traits::Swaps as _,
     types::{
-        Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+        MarketPeriod, MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -193,6 +193,7 @@ benchmarks! {
                 resolved_outcome: None,
                 scoring_rule: ScoringRule::CPMM,
                 status: MarketStatus::Active,
+                bonds: MarketBonds::default(),
             }
         )?;
         let pool_id: PoolId = 0;
@@ -232,6 +233,7 @@ benchmarks! {
                 resolved_outcome: None,
                 scoring_rule: ScoringRule::CPMM,
                 status: MarketStatus::Active,
+                bonds: MarketBonds::default(),
             }
         )?;
         let pool_id: PoolId = 0;
@@ -421,7 +423,7 @@ benchmarks! {
     execute_arbitrage_buy_burn {
         let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
         let asset_count = a as usize;
-        let iteration_count = ARBITRAGE_MAX_ITERATIONS as usize;
+        let iteration_count = ARBITRAGE_MAX_ITERATIONS;
 
         let caller: T::AccountId = whitelisted_caller();
         let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
