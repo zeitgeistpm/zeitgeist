@@ -3458,11 +3458,15 @@ fn report_reserves_outsider_report_bond_and_unreserved_by_on_resolution() {
         let grace_period = end + market.deadlines.grace_period;
         let report_at = grace_period + market.deadlines.oracle_duration + 1;
         run_to_block(report_at);
+
+        assert!(market.bonds.outsider.is_none());
         assert_ok!(PredictionMarkets::report(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.bonds.outsider, Some(Bond::new(CHARLIE, OutsiderBond::get())));
         assert_eq!(Balances::reserved_balance(&CHARLIE), SENTINEL_AMOUNT + OutsiderBond::get());
         assert_eq!(Balances::free_balance(&CHARLIE), charlie_balance_before - OutsiderBond::get());
         let charlie_balance_before = Balances::free_balance(&CHARLIE);
@@ -4196,6 +4200,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        outsider: None,
     }
 )]
 #[test_case(
@@ -4205,6 +4210,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        outsider: None,
     }
 )]
 fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amount(

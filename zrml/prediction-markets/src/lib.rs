@@ -190,6 +190,45 @@ mod pallet {
         };
     }
 
+    macro_rules! impl_repatriate_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by repatriating it to free balance of beneficiary.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
+            fn $fn_name(
+                market_id: &MarketIdOf<T>,
+                beneficiary: &T::AccountId,
+            ) -> Result<BalanceOf<T>, DispatchError> {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(Zero::zero());
+                }
+                let missing = <CurrencyOf<T>>::repatriate_reserved_named(
+                    &Self::reserve_id(),
+                    &bond.who,
+                    beneficiary,
+                    bond.value,
+                    BalanceStatus::Free,
+                )?;
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })?;
+                Ok(missing)
+            }
+        };
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Destroy a market, including its outcome assets, market account and pool account.
@@ -238,21 +277,11 @@ mod pallet {
                     Self::slash_oracle_bond(&market_id, None)?;
                 }
             }
-
-            // TODO slash outsider bond
-            /*
-                if let Some(market_report) = market.report {
-                    // TODO (or resolve origin / advisory committee): Should query bond storage and look if settled
-                    if market_report.by != market.creator {
-                        T::AssetManager::slash_reserved_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market_report.by,
-                            T::OutsiderBond::get(),
-                        );
-                    }
+            if let Some(bond) = market.bonds.outsider {
+                if !bond.is_settled {
+                    Self::slash_outsider_bond(&market_id, None)?;
                 }
-            */
+            }
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
@@ -707,10 +736,12 @@ mod pallet {
                 MarketCreation::Advised => MarketBonds {
                     creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    ..Default::default()
                 },
                 MarketCreation::Permissionless => MarketBonds {
                     creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    ..Default::default()
                 },
             };
 
@@ -1246,6 +1277,8 @@ mod pallet {
                     );
                 } else if sender_is_outsider {
                     let outsider_bond = T::OutsiderBond::get();
+
+                    market.bonds.outsider = Some(Bond::new(sender.clone(), outsider_bond));
 
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
@@ -1959,8 +1992,11 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         impl_unreserve_bond!(unreserve_creation_bond, creation);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
+        impl_unreserve_bond!(unreserve_outsider_bond, outsider);
         impl_slash_bond!(slash_creation_bond, creation);
         impl_slash_bond!(slash_oracle_bond, oracle);
+        impl_slash_bond!(slash_outsider_bond, outsider);
+        impl_repatriate_bond!(repatriate_oracle_bond, oracle);
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -2377,12 +2413,7 @@ mod pallet {
                     );
                 }
 
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &report.by,
-                    T::OutsiderBond::get(),
-                );
+                Self::unreserve_outsider_bond(market_id)?;
             }
 
             Ok(report.outcome.clone())
@@ -2426,41 +2457,28 @@ mod pallet {
             // If the oracle reported right, return the OracleBond, otherwise slash it to
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
-            if report.by == market.oracle && report.outcome == resolved_outcome {
-                Self::unreserve_oracle_bond(market_id)?;
-            } else {
-                let mut outsider_rewarded = false;
-                // TODO (or resolve origin / advisory committee): Should query bond storage and look if settled
-                if report.by != market.oracle {
-                    if report.outcome == resolved_outcome {
-                        outsider_rewarded = true;
-                        // TODO: use oracle bond out of storage
-                        let missing = <CurrencyOf<T>>::repatriate_reserved_named(
-                            &Self::reserve_id(),
-                            &market.creator,
-                            &report.by,
-                            T::OracleBond::get().saturated_into::<u128>().saturated_into(),
-                            BalanceStatus::Free,
-                        )?;
-                        debug_assert!(missing.is_zero(), "Could not deduct all of the value.");
-                        T::AssetManager::unreserve_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &report.by,
-                            T::OutsiderBond::get(),
-                        );
-                    } else {
-                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                            &Self::reserve_id(),
-                            &report.by,
-                            T::OutsiderBond::get(),
-                        );
-                        overall_imbalance.subsume(imbalance);
-                    }
+
+            let report_by_oracle = report.by == market.oracle;
+            let is_correct = report.outcome == resolved_outcome;
+
+            if report_by_oracle {
+                if is_correct {
+                    Self::unreserve_oracle_bond(market_id)?;
+                } else {
+                    let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
+                    overall_imbalance.subsume(negative_imbalance);
                 }
-                if !outsider_rewarded {
-                    let imbalance = Self::slash_oracle_bond(market_id, None)?;
-                    overall_imbalance.subsume(imbalance);
+            } else {
+                // outsider report
+                if is_correct {
+                    // reward outsider reporter with oracle bond
+                    let missing = Self::repatriate_oracle_bond(market_id, &report.by)?;
+                    debug_assert!(missing.is_zero(), "Could not deduct all of the value.");
+                    Self::unreserve_outsider_bond(market_id)?;
+                } else {
+                    let imb_oracle = Self::slash_oracle_bond(market_id, None)?;
+                    let imb_outsider = Self::slash_outsider_bond(market_id, None)?;
+                    overall_imbalance.subsume(imb_oracle.merge(imb_outsider));
                 }
             }
 
