@@ -32,48 +32,163 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::*;
-    use alloc::{vec, vec::Vec};
+    use alloc::{format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
+        traits::{
+            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
+            OnUnbalanced, StorageVersion,
+        },
         transactional,
         weights::Pays,
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
-    use sp_arithmetic::per_things::Perbill;
+    use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
+        traits::{CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
-            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
+    #[cfg(feature = "with-global-disputes")]
+    use zrml_global_disputes::GlobalDisputesPalletApi;
+
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+    pub(crate) type CurrencyOf<T> = <T as zrml_market_commons::Config>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type TimeFrame = u64;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MarketIdOf<T> = <T as zrml_market_commons::Config>::MarketId;
+    pub(crate) type MomentOf<T> =
+        <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+    >;
     pub type CacheSize = ConstU32<64>;
+    pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
+    pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
+
+    macro_rules! impl_unreserve_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by unreserving it.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
+            fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(());
+                }
+                CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })
+            }
+        };
+    }
+
+    macro_rules! impl_slash_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by slashing and/or unreserving it and return the
+            /// resulting imbalance.
+            ///
+            /// If `slash_percentage` is not specified, then the entire bond is slashed. Otherwise,
+            /// only the specified percentage is slashed and the remainder is unreserved.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and a zero imbalance is
+            /// returned.
+            fn $fn_name(
+                market_id: &MarketIdOf<T>,
+                slash_percentage: Option<Percent>,
+            ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                // Trying to settle a bond multiple times is always a logic error, not a runtime
+                // error, so we log a warning instead of raising an error.
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(NegativeImbalanceOf::<T>::zero());
+                }
+                let value = bond.value;
+                let (slash_amount, unreserve_amount) = if let Some(percentage) = slash_percentage {
+                    let slash_amount = percentage.mul_floor(value);
+                    (slash_amount, value.saturating_sub(slash_amount))
+                } else {
+                    (value, BalanceOf::<T>::zero())
+                };
+                let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
+                    &Self::reserve_id(),
+                    &bond.who,
+                    slash_amount,
+                );
+                // If there's excess, there's nothing we can do, so we don't count this as error
+                // and log a warning instead.
+                if excess != BalanceOf::<T>::zero() {
+                    let warning = format!(
+                        "Failed to settle the {} bond of market {:?}",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                }
+                if unreserve_amount != BalanceOf::<T>::zero() {
+                    CurrencyOf::<T>::unreserve_named(
+                        &Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                    );
+                }
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })?;
+                Ok(imbalance)
+            }
+        };
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -83,14 +198,20 @@ mod pallet {
         /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight((
             T::WeightInfo::admin_destroy_reported_market(
-                900,
-                900,
-                T::MaxCategories::get().into()
-            ).max(T::WeightInfo::admin_destroy_disputed_market(
-                900,
-                900,
-                T::MaxCategories::get().into()
-            )), Pays::No))]
+                T::MaxCategories::get().into(),
+                CacheSize::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+            )
+            .max(T::WeightInfo::admin_destroy_disputed_market(
+                T::MaxCategories::get().into(),
+                T::MaxDisputes::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+            )),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
@@ -99,70 +220,48 @@ mod pallet {
             // TODO(#618): Not implemented for Rikiddo!
             T::DestroyOrigin::ensure_origin(origin)?;
 
-            let mut total_accounts = 0usize;
-            let mut share_accounts = 0usize;
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let market_status = market.status;
-            let outcome_assets = Self::outcome_assets(market_id, &market);
-            let outcome_assets_amount = outcome_assets.len();
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            let slash_market_creator = |amount| {
-                T::AssetManager::slash_reserved_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    amount,
-                );
-            };
-            if market_status == MarketStatus::Proposed {
-                slash_market_creator(T::AdvisoryBond::get());
-            }
-            if market_status != MarketStatus::Resolved
-                && market_status != MarketStatus::InsufficientSubsidy
-            {
-                if market.creation == MarketCreation::Permissionless {
-                    slash_market_creator(T::ValidityBond::get());
+            if let Some(bond) = market.bonds.creation {
+                if !bond.is_settled {
+                    Self::slash_creation_bond(&market_id, None)?;
                 }
-                slash_market_creator(T::OracleBond::get());
+            }
+            if let Some(bond) = market.bonds.oracle {
+                if !bond.is_settled {
+                    Self::slash_oracle_bond(&market_id, None)?;
+                }
             }
 
-            // Delete market's outcome assets, clear market and delete pool if necessary.
-            let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
-                if let Ok((total_accounts, accounts)) =
-                    T::AssetManager::accounts_by_currency_id(asset)
-                {
-                    share_accounts = share_accounts.saturating_add(accounts.len());
-                    let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                    Some(total_accounts)
-                } else {
-                    // native currency case
-                    None
-                }
-            };
-            for asset in outcome_assets.into_iter() {
-                if let Some(total) = destroy_asset(asset) {
-                    total_accounts = total;
-                }
+            if market_status == MarketStatus::Proposed {
+                MarketIdsForEdit::<T>::remove(market_id);
             }
+
+            // NOTE: Currently we don't clean up outcome assets.
+            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::AssetManager::slash(
                 Asset::Ztg,
                 &market_account,
                 T::AssetManager::free_balance(Asset::Ztg, &market_account),
             );
-            if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
-                T::Swaps::destroy_pool(pool_id)?;
-                T::MarketCommons::remove_market_pool(&market_id)?;
+            let mut category_count = 0u32;
+            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(&market_id) {
+                let pool = T::Swaps::pool(pool_id)?;
+                category_count = pool.assets.len().saturated_into();
+                let _ = T::Swaps::destroy_pool(pool_id)?;
+                <zrml_market_commons::Pallet<T>>::remove_market_pool(&market_id)?;
             }
 
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
-            Self::clear_auto_resolve(&market_id)?;
-            T::MarketCommons::remove_market(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            <zrml_market_commons::Pallet<T>>::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
             Self::deposit_event(Event::MarketDestroyed(market_id));
@@ -172,9 +271,10 @@ mod pallet {
             if market_status == MarketStatus::Reported {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_reported_market(
-                        total_accounts.saturated_into(),
-                        share_accounts.saturated_into(),
-                        outcome_assets_amount.saturated_into(),
+                        category_count,
+                        open_ids_len,
+                        close_ids_len,
+                        ids_len,
                     )),
                     Pays::No,
                 )
@@ -182,9 +282,11 @@ mod pallet {
             } else if market_status == MarketStatus::Disputed {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_disputed_market(
-                        total_accounts.saturated_into(),
-                        share_accounts.saturated_into(),
-                        outcome_assets_amount.saturated_into(),
+                        category_count,
+                        disputes_len,
+                        open_ids_len,
+                        close_ids_len,
+                        ids_len,
                     )),
                     Pays::No,
                 )
@@ -195,12 +297,23 @@ mod pallet {
         }
 
         /// Allows the `CloseOrigin` to immediately move an open market to closed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
         //
         // ***** IMPORTANT *****
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(), Pays::No))]
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_closed(
+                CacheSize::get(), CacheSize::get()), Pays::No
+            )
+        )]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -208,25 +321,43 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             // TODO(#638): Handle Rikiddo markets!
             T::CloseOrigin::ensure_origin(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
             // The CloseOrigin should not pay fees for providing this service
-            Ok((None, Pays::No).into())
+            Ok((
+                Some(T::WeightInfo::admin_move_market_to_closed(open_ids_len, close_ids_len)),
+                Pays::No,
+            )
+                .into())
         }
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
-        ////
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
-            .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
-                4_200,
-                4_200,
-                T::MaxCategories::get().into()
-            ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
-        ), Pays::No))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids
+        /// per dispute / report block, m is the number of disputes.
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_resolved_scalar_reported(CacheSize::get())
+            .max(
+                T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
+            ).max(
+                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
+                    CacheSize::get(),
+                    T::MaxDisputes::get()
+                )
+            ).max(
+                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
+                    CacheSize::get(),
+                    T::MaxDisputes::get()
+                )
+            ),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
@@ -234,14 +365,40 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::ResolveOrigin::ensure_origin(origin)?;
 
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            Self::clear_auto_resolve(&market_id)?;
-            let market = T::MarketCommons::market(&market_id)?;
-            let weight = Self::on_resolution(&market_id, &market)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let _ = Self::on_resolution(&market_id, &market)?;
+            let weight = match market.market_type {
+                MarketType::Scalar(_) => match market.status {
+                    MarketStatus::Reported => {
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len)
+                    }
+                    MarketStatus::Disputed => {
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
+                            ids_len,
+                            disputes_len,
+                        )
+                    }
+                    _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+                },
+                MarketType::Categorical(_) => match market.status {
+                    MarketStatus::Reported => {
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len)
+                    }
+                    MarketStatus::Disputed => {
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
+                            ids_len,
+                            disputes_len,
+                        )
+                    }
+                    _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+                },
+            };
             Ok((Some(weight), Pays::No).into())
         }
 
@@ -253,18 +410,26 @@ mod pallet {
         ///
         /// NOTE: Can only be called by the `ApproveOrigin`.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
         #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
             let mut status = MarketStatus::Active;
 
-            T::MarketCommons::mutate_market(&market_id, |m| {
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+                ensure!(
+                    !MarketIdsForEdit::<T>::contains_key(market_id),
+                    Error::<T>::MarketEditRequestAlreadyInProgress
+                );
 
                 match m.scoring_rule {
                     ScoringRule::CPMM => {
@@ -277,19 +442,55 @@ mod pallet {
                     }
                 }
 
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &m.creator,
-                    T::AdvisoryBond::get(),
-                );
                 Ok(())
             })?;
+
+            Self::unreserve_creation_bond(&market_id)?;
 
             Self::deposit_event(Event::MarketApproved(market_id, status));
             // The ApproveOrigin should not pay fees for providing this service
             Ok((Some(T::WeightInfo::approve_market().saturating_add(extra_weight)), Pays::No)
                 .into())
+        }
+
+        /// Request an edit to a proposed market.
+        ///
+        /// Can only be called by the `RequestEditOrigin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market to edit.
+        /// * `edit_reason`: An short record of what needs to be changed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(edit_reason.len())`
+        #[pallet::weight((
+            T::WeightInfo::request_edit(edit_reason.len() as u32),
+            Pays::No,
+        ))]
+        #[transactional]
+        pub fn request_edit(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            edit_reason: Vec<u8>,
+        ) -> DispatchResult {
+            T::RequestEditOrigin::ensure_origin(origin)?;
+            let edit_reason: EditReason<T> = edit_reason
+                .try_into()
+                .map_err(|_| Error::<T>::EditReasonLengthExceedsMaxEditReasonLen)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+            MarketIdsForEdit::<T>::try_mutate(market_id, |reason| {
+                if reason.is_some() {
+                    Err(Error::<T>::MarketEditRequestAlreadyInProgress)
+                } else {
+                    *reason = Some(edit_reason.clone());
+                    Ok(())
+                }
+            })?;
+            Self::deposit_event(Event::MarketRequestedEdit(market_id, edit_reason));
+            Ok(())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -300,13 +501,16 @@ mod pallet {
         /// the five outcome tokens.
         ///
         /// NOTE: This is the only way to create new shares of outcome tokens.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of outcome assets in the market.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
-        // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
+        // The worst-case scenario is assumed
+        // and the correct weight is calculated at the end of this function.
         // This also occurs in numerous other functions.
-        #[pallet::weight(
-            T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-        )]
+        #[pallet::weight(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))]
         #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
@@ -317,7 +521,15 @@ mod pallet {
             Self::do_buy_complete_set(sender, market_id, amount)
         }
 
-        #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get()))]
+        /// Dispute on a market that has been reported or already disputed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
+        #[pallet::weight(T::WeightInfo::dispute_authorized(
+            T::MaxDisputes::get(),
+            CacheSize::get()
+        ))]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -327,7 +539,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let disputes = Disputes::<T>::get(market_id);
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
                 matches!(market.status, MarketStatus::Reported | MarketStatus::Disputed),
                 Error::<T>::InvalidMarketStatus
@@ -341,7 +553,7 @@ mod pallet {
                 default_dispute_bond::<T>(disputes.len()),
             )?;
             match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized(_) => {
+                MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => {
@@ -357,19 +569,20 @@ mod pallet {
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
+            // each dispute resets dispute_duration
+            let dispute_duration_ends_at_block =
+                curr_block_num.saturating_add(market.deadlines.dispute_duration);
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(dispute_duration_ends_at_block, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
+
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
                 MarketStatus::Disputed,
                 market_dispute,
             ));
-            Self::calculate_actual_weight(
-                T::WeightInfo::dispute,
-                num_disputes,
-                T::MaxDisputes::get(),
-            )
+            // TODO(#782): add court benchmark
+            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -385,26 +598,39 @@ mod pallet {
         /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// - create_market: `O(n)`, where `n` is the number of market ids,
+        /// which close at the same time as the specified market.
+        /// - buy_complete_set: `O(n)`, where `n` is the number of outcome assets
+        /// for the categorical market.
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
+        /// where n is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
+        /// where `n` is the number of outcome assets for the categorical market
+        /// and `m` is the number of market ids,
+        /// which open at the same time as the specified market.
         #[pallet::weight(
-            T::WeightInfo::create_market()
+            T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                T::MaxCategories::get().into(),
+            .saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+                .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                )
             ))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in().
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
@@ -415,6 +641,7 @@ mod pallet {
                 origin.clone(),
                 oracle,
                 period,
+                deadlines,
                 metadata,
                 MarketCreation::Permissionless,
                 market_type.clone(),
@@ -422,14 +649,10 @@ mod pallet {
                 ScoringRule::CPMM,
             )?
             .actual_weight
-            .unwrap_or_else(T::WeightInfo::create_market);
+            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
 
             // Deploy the swap pool and populate it.
-            let asset_count = match market_type {
-                MarketType::Categorical(value) => value,
-                MarketType::Scalar(_) => 2,
-            };
-            let market_id = T::MarketCommons::latest_market_id()?;
+            let market_id = <zrml_market_commons::Pallet<T>>::latest_market_id()?;
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
                 origin,
                 market_id,
@@ -438,120 +661,151 @@ mod pallet {
                 weights.clone(),
             )?
             .actual_weight
-            .unwrap_or_else(|| {
-                T::WeightInfo::buy_complete_set(asset_count.into())
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(asset_count.into()))
-                    .saturating_add(5_000_000_000.saturating_mul(asset_count.into()))
-                    .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            });
+            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
 
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_market())]
+        /// Creates a market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::weight(T::WeightInfo::create_market(CacheSize::get()))]
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
-            Self::ensure_market_period_is_valid(&period)?;
 
-            match market_type {
-                MarketType::Categorical(categories) => {
-                    ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-                    ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
-                }
-                MarketType::Scalar(ref outcome_range) => {
-                    ensure!(
-                        outcome_range.start() < outcome_range.end(),
-                        <Error<T>>::InvalidOutcomeRange
-                    );
-                }
-            }
-            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(&period)?;
-            }
-
-            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
-            // for a compiler error. Link an issue for this!
-            #[allow(irrefutable_let_patterns)]
-            let multihash =
-                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
-            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
-
-            let status: MarketStatus = match creation {
-                MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        required_bond,
-                    )?;
-
-                    match scoring_rule {
-                        ScoringRule::CPMM => MarketStatus::Active,
-                        ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
-                    }
-                }
-                MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        required_bond,
-                    )?;
-                    MarketStatus::Proposed
-                }
+            let bonds = match creation {
+                MarketCreation::Advised => MarketBonds {
+                    creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                },
+                MarketCreation::Permissionless => MarketBonds {
+                    creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                },
             };
 
-            let market = Market {
-                creation,
-                creator_fee: 0,
-                creator: sender,
+            let market = Self::construct_market(
+                sender.clone(),
+                0_u8,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                creation.clone(),
                 market_type,
                 dispute_mechanism,
-                metadata: Vec::from(multihash),
-                oracle,
-                period: period.clone(),
-                report: None,
-                resolved_outcome: None,
-                status,
                 scoring_rule,
-            };
-            let market_id = T::MarketCommons::push_market(market.clone())?;
-            let market_account = Self::market_account(market_id);
+                None,
+                None,
+                bonds.clone(),
+            )?;
+
+            T::AssetManager::reserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &sender,
+                bonds.total_amount_bonded(&sender),
+            )?;
+
+            let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            match period {
-                MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                    })?;
-                }
-                MarketPeriod::Timestamp(range) => {
-                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                        Self::calculate_time_frame_of_moment(range.end),
-                        |ids| ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow),
-                    )?;
-                }
-            }
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
-            Ok(Some(T::WeightInfo::create_market().saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
+        }
+
+        /// Edit a proposed market for which request is made.
+        ///
+        /// Edit can only be made by the creator of the market.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market to edit.
+        /// * `oracle`: Oracle to edit market.
+        /// * `period`: MarketPeriod to edit market.
+        /// * `deadlines`: Deadlines to edit market.
+        /// * `metadata`: MultiHash metadata to edit market.
+        /// * `market_type`: MarketType to edit market.
+        /// * `dispute_mechanism`: MarketDisputeMechanism to edit market.
+        /// * `scoring_rule`: ScoringRule to edit market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of markets
+        /// which end at the same time as the market before the edit.
+        #[pallet::weight(T::WeightInfo::edit_market(CacheSize::get()))]
+        #[transactional]
+        pub fn edit_market(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            market_type: MarketType,
+            dispute_mechanism: MarketDisputeMechanism,
+            scoring_rule: ScoringRule,
+        ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                MarketIdsForEdit::<T>::contains_key(market_id),
+                Error::<T>::MarketEditNotRequested
+            );
+            let old_market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            ensure!(old_market.creator == sender, Error::<T>::EditorNotCreator);
+            ensure!(old_market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
+
+            Self::clear_auto_close(&market_id)?;
+            let edited_market = Self::construct_market(
+                old_market.creator,
+                old_market.creator_fee,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                old_market.creation,
+                market_type,
+                dispute_mechanism,
+                scoring_rule,
+                old_market.report,
+                old_market.resolved_outcome,
+                old_market.bonds,
+            )?;
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                *market = edited_market.clone();
+                Ok(())
+            })?;
+
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
+
+            MarketIdsForEdit::<T>::remove(market_id);
+            Self::deposit_event(Event::MarketEdited(market_id, edited_market));
+
+            Ok(Some(T::WeightInfo::edit_market(ids_amount)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
@@ -564,16 +818,27 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// - buy_complete_set: `O(n)`,
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
+        /// where `n` is the number of outcome assets for the categorical market,
+        /// and `m` is the number of market ids,
+        /// which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                T::MaxCategories::get().into(),
-            ))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in()
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+            .max(
+                T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                ))
+            )
         )]
         #[transactional]
         pub fn deploy_swap_pool_and_additional_liquidity(
@@ -586,13 +851,12 @@ mod pallet {
             ensure_signed(origin.clone())?;
             let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
                 .actual_weight
-                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
-            let weights_len = weights.len();
-            Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?;
-            Ok(Some(weight_bcs.saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                weights_len.saturated_into(),
-            )))
-            .into())
+                .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
+            let weight_deploy =
+                Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?
+                    .actual_weight
+                    .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
+            Ok(Some(weight_bcs.saturating_add(weight_deploy)).into())
         }
 
         /// Deploy a pool with specified liquidity for a market.
@@ -607,8 +871,23 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
+        /// where `n` is the number of outcome assets for the categorical market,
+        /// and `m` is the number of market ids,
+        /// which open at the same time as the specified market.
         #[pallet::weight(
-            T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
+            T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+            .max(
+                T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                )
+            )
         )]
         #[transactional]
         pub fn deploy_swap_pool_for_market(
@@ -617,16 +896,23 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             mut weights: Vec<u128>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
             let mut assets = Self::outcome_assets(market_id, &market);
+            let weights_len = weights.len() as u32;
+            // although this extrinsic is transactional and this check is inside Swaps::create_pool
+            // the iteration over weights happens still before the check in Swaps::create_pool
+            // this could stall the chain, because a malicious user puts a large vector in
+            ensure!(weights.len() == assets.len(), Error::<T>::WeightsLenMustEqualAssetsLen);
+
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
+
             let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
             weights.push(base_asset_weight);
 
@@ -642,39 +928,67 @@ mod pallet {
             )?;
 
             // Open the pool now or cache it for later
-            match market.period {
+            let ids_len: Option<u32> = match market.period {
                 MarketPeriod::Block(ref range) => {
                     let current_block = <frame_system::Pallet<T>>::block_number();
                     let open_block = range.start;
                     if current_block < open_block {
-                        MarketIdsPerOpenBlock::<T>::try_mutate(open_block, |ids| {
-                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                        })?;
+                        let ids_len = MarketIdsPerOpenBlock::<T>::try_mutate(
+                            open_block,
+                            |ids| -> Result<u32, DispatchError> {
+                                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                                Ok(ids.len() as u32)
+                            },
+                        )?;
+                        Some(ids_len)
                     } else {
                         T::Swaps::open_pool(pool_id)?;
+                        None
                     }
                 }
                 MarketPeriod::Timestamp(ref range) => {
-                    let current_time_frame =
-                        Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+                    let current_time_frame = Self::calculate_time_frame_of_moment(
+                        <zrml_market_commons::Pallet<T>>::now(),
+                    );
                     let open_time_frame = Self::calculate_time_frame_of_moment(range.start);
                     if current_time_frame < open_time_frame {
-                        MarketIdsPerOpenTimeFrame::<T>::try_mutate(open_time_frame, |ids| {
-                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                        })?;
+                        let ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                            open_time_frame,
+                            |ids| -> Result<u32, DispatchError> {
+                                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                                Ok(ids.len() as u32)
+                            },
+                        )?;
+                        Some(ids_len)
                     } else {
                         T::Swaps::open_pool(pool_id)?;
+                        None
                     }
                 }
             };
 
             // This errors if a pool already exists!
-            T::MarketCommons::insert_market_pool(market_id, pool_id)?;
-            Ok(())
+            <zrml_market_commons::Pallet<T>>::insert_market_pool(market_id, pool_id)?;
+            match ids_len {
+                Some(market_ids_len) => {
+                    Ok(Some(T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                        weights_len,
+                        market_ids_len,
+                    ))
+                    .into())
+                }
+                None => {
+                    Ok(Some(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len))
+                        .into())
+                }
+            }
         }
 
         /// Redeems the winning shares of a prediction market.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
             .max(T::WeightInfo::redeem_shares_scalar())
         )]
@@ -685,8 +999,8 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let market = T::MarketCommons::market(&market_id)?;
-            let market_account = Self::market_account(market_id);
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
 
@@ -804,36 +1118,64 @@ mod pallet {
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
-        #[pallet::weight((T::WeightInfo::reject_market(), Pays::No))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`,
+        /// where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::weight((
+            T::WeightInfo::reject_market(
+                CacheSize::get(),
+                CacheSize::get(),
+                reject_reason.len() as u32,
+            ),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            reject_reason: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             T::RejectOrigin::ensure_origin(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
-            Self::do_reject_market(&market_id, market)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
+            let reject_reason: RejectReason<T> = reject_reason
+                .try_into()
+                .map_err(|_| Error::<T>::RejectReasonLengthExceedsMaxRejectReasonLen)?;
+            let reject_reason_len = reject_reason.len() as u32;
+            Self::do_reject_market(&market_id, market, reject_reason)?;
             // The RejectOrigin should not pay fees for providing this service
-            Ok((None, Pays::No).into())
+            Ok((
+                Some(T::WeightInfo::reject_market(close_ids_len, open_ids_len, reject_reason_len)),
+                Pays::No,
+            )
+                .into())
         }
 
         /// Reports the outcome of a market.
         ///
-        #[pallet::weight(T::WeightInfo::report())]
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of market ids,
+        /// which reported at the same time as the specified market.
+        #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
         #[transactional]
         pub fn report(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
             let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
-            T::MarketCommons::mutate_market(&market_id, |market| {
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
                 Self::ensure_market_is_closed(market)?;
                 ensure!(
@@ -842,21 +1184,37 @@ mod pallet {
                 );
 
                 let mut should_check_origin = false;
+                //NOTE: Saturating operation in following block may saturate to u32::MAX value
+                //      but that will be the case after thousands of years time. So it is fine.
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        if current_block
-                            <= range.end.saturating_add(T::ReportingPeriod::get().into())
-                        {
+                        let grace_period_end =
+                            range.end.saturating_add(market.deadlines.grace_period);
+                        ensure!(
+                            grace_period_end <= current_block,
+                            Error::<T>::NotAllowedToReportYet
+                        );
+                        let oracle_duration_end =
+                            grace_period_end.saturating_add(market.deadlines.oracle_duration);
+                        if current_block <= oracle_duration_end {
                             should_check_origin = true;
                         }
                     }
                     MarketPeriod::Timestamp(ref range) => {
-                        let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
-                        let reporting_period_in_ms =
-                            rp_moment.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        if T::MarketCommons::now()
-                            <= range.end.saturating_add(reporting_period_in_ms)
-                        {
+                        let grace_period_in_moments: MomentOf<T> =
+                            market.deadlines.grace_period.saturated_into::<u32>().into();
+                        let grace_period_in_ms =
+                            grace_period_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let grace_period_end = range.end.saturating_add(grace_period_in_ms);
+                        let now = <zrml_market_commons::Pallet<T>>::now();
+                        ensure!(grace_period_end <= now, Error::<T>::NotAllowedToReportYet);
+                        let oracle_duration_in_moments: MomentOf<T> =
+                            market.deadlines.oracle_duration.saturated_into::<u32>().into();
+                        let oracle_duration_in_ms =
+                            oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let oracle_duration_end =
+                            grace_period_end.saturating_add(oracle_duration_in_ms);
+                        if now <= oracle_duration_end {
                             should_check_origin = true;
                         }
                     }
@@ -877,21 +1235,32 @@ mod pallet {
                 Ok(())
             })?;
 
-            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let block_after_dispute_duration =
+                current_block.saturating_add(market.deadlines.dispute_duration);
+            let ids_len = MarketIdsPerReportBlock::<T>::try_mutate(
+                block_after_dispute_duration,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
 
             Self::deposit_event(Event::MarketReported(
                 market_id,
                 MarketStatus::Reported,
                 market_report,
             ));
-            Ok(())
+            Ok(Some(T::WeightInfo::report(ids_len)).into())
         }
 
         /// Sells a complete set of outcomes shares for a market.
         ///
         /// Each complete set is sold for one unit of the market's base asset.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of assets for a categorical market.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
@@ -904,11 +1273,11 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             ensure!(
                 T::AssetManager::free_balance(Asset::Ztg, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
@@ -935,17 +1304,105 @@ mod pallet {
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
-            let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(T::WeightInfo::sell_complete_set, assets_len, max_cats)
+            Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
+        }
+
+        /// When the `MaxDisputes` amount of disputes is reached,
+        /// this allows to start a global dispute.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The identifier of the market.
+        ///
+        /// NOTE:
+        /// The outcomes of the disputes and the report outcome
+        /// are added to the global dispute voting outcomes.
+        /// The bond of each dispute is the initial vote amount.
+        #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get()))]
+        #[transactional]
+        pub fn start_global_dispute(
+            origin: OriginFor<T>,
+            #[allow(dead_code, unused)]
+            #[pallet::compact]
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            #[cfg(feature = "with-global-disputes")]
+            {
+                let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+                ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+
+                ensure!(
+                    market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                    Error::<T>::InvalidDisputeMechanism
+                );
+
+                let disputes = <Disputes<T>>::get(market_id);
+                ensure!(
+                    disputes.len() == T::MaxDisputes::get() as usize,
+                    Error::<T>::MaxDisputesNeeded
+                );
+
+                ensure!(
+                    T::GlobalDisputes::is_not_started(&market_id),
+                    Error::<T>::GlobalDisputeAlreadyStarted
+                );
+
+                // add report outcome to voting choices
+                if let Some(report) = market.report {
+                    T::GlobalDisputes::push_voting_outcome(
+                        &market_id,
+                        report.outcome,
+                        &report.by,
+                        <BalanceOf<T>>::zero(),
+                    )?;
+                }
+
+                for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
+                    let dispute_bond = default_dispute_bond::<T>(index);
+                    T::GlobalDisputes::push_voting_outcome(
+                        &market_id,
+                        outcome.clone(),
+                        by,
+                        dispute_bond,
+                    )?;
+                }
+
+                // ensure, that global disputes controls the resolution now
+                // it does not end after the dispute period now, but after the global dispute end
+                Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+
+                let now = <frame_system::Pallet<T>>::block_number();
+                let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
+                let market_ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
+                    global_dispute_end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?;
+
+                Self::deposit_event(Event::GlobalDisputeStarted(market_id));
+
+                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into())
+            }
+
+            #[cfg(not(feature = "with-global-disputes"))]
+            Err(Error::<T>::GlobalDisputesDisabled.into())
         }
     }
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + zrml_market_commons::Config {
         /// The base amount of currency that must be bonded for a market approved by the
         ///  advisory committee.
         #[pallet::constant]
         type AdvisoryBond: Get<BalanceOf<Self>>;
+
+        /// The percentage of the advisory bond that gets slashed when a market is rejected.
+        #[pallet::constant]
+        type AdvisoryBondSlashPercentage: Get<Percent>;
 
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::Origin>;
@@ -953,6 +1410,7 @@ mod pallet {
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
             Self::AccountId,
+            Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
             CurrencyId = Asset<MarketIdOf<Self>>,
             ReserveIdentifier = [u8; 8],
         >;
@@ -992,24 +1450,26 @@ mod pallet {
         #[pallet::constant]
         type DisputeFactor: Get<BalanceOf<Self>>;
 
-        /// The number of blocks the dispute period remains open.
-        #[pallet::constant]
-        type DisputePeriod: Get<Self::BlockNumber>;
-
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// See [`GlobalDisputesPalletApi`].
+        #[cfg(feature = "with-global-disputes")]
+        type GlobalDisputes: GlobalDisputesPalletApi<
+            MarketIdOf<Self>,
+            Self::AccountId,
+            BalanceOf<Self>,
+        >;
+
+        /// The number of blocks the global dispute period remains open.
+        #[cfg(feature = "with-global-disputes")]
+        type GlobalDisputePeriod: Get<Self::BlockNumber>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
-        >;
-
-        /// Common market parameters
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
         >;
 
         /// The maximum number of categories available for categorical markets.
@@ -1032,8 +1492,41 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
 
+        /// The minimum number of blocks allowed to be specified as dispute_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinDisputeDuration: Get<Self::BlockNumber>;
+
+        /// The minimum number of blocks allowed to be specified as oracle_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinOracleDuration: Get<Self::BlockNumber>;
+
+        /// The maximum number of blocks allowed to be specified as grace_period
+        /// in create_market.
+        #[pallet::constant]
+        type MaxGracePeriod: Get<Self::BlockNumber>;
+
+        /// The maximum number of blocks allowed to be specified as oracle_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MaxOracleDuration: Get<Self::BlockNumber>;
+
+        /// The maximum number of blocks allowed to be specified as dispute_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MaxDisputeDuration: Get<Self::BlockNumber>;
+
+        /// The maximum length of reject reason string.
+        #[pallet::constant]
+        type MaxRejectReasonLen: Get<u32>;
+
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
+
+        /// The maximum number of bytes allowed as edit reason.
+        #[pallet::constant]
+        type MaxEditReasonLen: Get<u32>;
 
         /// The module identifier.
         #[pallet::constant]
@@ -1047,9 +1540,8 @@ mod pallet {
         #[pallet::constant]
         type OracleBond: Get<BalanceOf<Self>>;
 
-        /// The number of blocks the reporting period remains open.
-        #[pallet::constant]
-        type ReportingPeriod: Get<u32>;
+        /// The origin that is allowed to request edits in pending advised markets.
+        type RequestEditOrigin: EnsureOrigin<Self::Origin>;
 
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
@@ -1063,6 +1555,9 @@ mod pallet {
             Moment = MomentOf<Self>,
             Origin = Self::Origin,
         >;
+
+        /// Handler for slashed funds.
+        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
@@ -1081,6 +1576,12 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
+        /// Only creator is able to edit the market.
+        EditorNotCreator,
+        /// EditReason's length greater than MaxEditReasonLen.
+        EditReasonLengthExceedsMaxEditReasonLen,
+        /// The global dispute resolution system is disabled.
+        GlobalDisputesDisabled,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
@@ -1095,6 +1596,10 @@ mod pallet {
         NotEnoughBalance,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// Market edit request is already in progress.
+        MarketEditRequestAlreadyInProgress,
+        /// Market is not requested for edit.
+        MarketEditNotRequested,
         /// Market was expected to be active.
         MarketIsNotActive,
         /// Market was expected to be closed.
@@ -1105,6 +1610,8 @@ mod pallet {
         MarketIsNotProposed,
         /// A reported market was expected.
         MarketIsNotReported,
+        /// A disputed market was expected.
+        MarketIsNotDisputed,
         /// A resolved market was expected.
         MarketIsNotResolved,
         /// The point in time when the market becomes active is too soon.
@@ -1113,26 +1620,52 @@ mod pallet {
         MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// The maximum number of disputes is needed for this operation.
+        MaxDisputesNeeded,
+        /// Tried to settle missing bond.
+        MissingBond,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
         /// Submitted outcome does not match market type.
         OutcomeMismatch,
+        /// RejectReason's length greater than MaxRejectReasonLen.
+        RejectReasonLengthExceedsMaxRejectReasonLen,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
         /// It was tried to append an item to storage beyond the boundaries.
         StorageOverflow,
         /// Too many categories for a categorical market.
         TooManyCategories,
-        /// Catch-all error for invalid market status
+        /// The action requires another market dispute mechanism.
+        InvalidDisputeMechanism,
+        /// Catch-all error for invalid market status.
         InvalidMarketStatus,
+        /// The post dispatch should never be None.
+        UnexpectedNoneInPostInfo,
         /// An amount was illegally specified as zero.
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
+        /// Can not report before market.deadlines.grace_period is ended.
+        NotAllowedToReportYet,
+        /// Specified dispute_duration is smaller than MinDisputeDuration.
+        DisputeDurationSmallerThanMinDisputeDuration,
+        /// Specified oracle_duration is smaller than MinOracleDuration.
+        OracleDurationSmallerThanMinOracleDuration,
+        /// Specified dispute_duration is greater than MaxDisputeDuration.
+        DisputeDurationGreaterThanMaxDisputeDuration,
+        /// Specified grace_period is greater than MaxGracePeriod.
+        GracePeriodGreaterThanMaxGracePeriod,
+        /// Specified oracle_duration is greater than MaxOracleDuration.
+        OracleDurationGreaterThanMaxOracleDuration,
+        /// The weights length has to be equal to the assets length.
+        WeightsLenMustEqualAssetsLen,
+        /// The start of the global dispute for this market happened already.
+        GlobalDisputeAlreadyStarted,
     }
 
     #[pallet::event]
@@ -1147,17 +1680,14 @@ mod pallet {
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
-        /// A market has been created \[market_id, market_account, creator\]
-        MarketCreated(
-            MarketIdOf<T>,
-            T::AccountId,
-            Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ),
+        /// A market has been created \[market_id, market_account, market\]
+        MarketCreated(MarketIdOf<T>, T::AccountId, MarketOf<T>),
         /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
-        /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
+        /// A market was discarded after failing to gather enough subsidy.
+        /// \[market_id, new_market_status\]
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
@@ -1165,15 +1695,20 @@ mod pallet {
         MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
-        /// A pending market has been rejected as invalid. \[market_id\]
-        MarketRejected(MarketIdOf<T>),
+        /// A pending market has been rejected as invalid with a reason. \[market_id, reject_reason\]
+        MarketRejected(MarketIdOf<T>, RejectReason<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
+        /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
+        MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
+        /// A proposed market has been edited by the market creator \[market_id\]
+        MarketEdited(MarketIdOf<T>, MarketOf<T>),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
+        /// An amount of winning outcomes have been redeemed
+        /// \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
             MarketIdOf<T>,
             Asset<MarketIdOf<T>>,
@@ -1181,13 +1716,23 @@ mod pallet {
             BalanceOf<T>,
             <T as frame_system::Config>::AccountId,
         ),
+        /// The global dispute was started. \[market_id\]
+        GlobalDisputeStarted(MarketIdOf<T>),
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let mut total_weight: Weight =
-                Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+            let mut total_weight: Weight = 0u64;
+
+            // TODO(#808): Use weight when Rikiddo is ready
+            let _ = Self::process_subsidy_collecting_markets(
+                now,
+                <zrml_market_commons::Pallet<T>>::now(),
+            );
+            total_weight = total_weight
+                .saturating_add(T::WeightInfo::process_subsidy_collecting_markets_dummy());
 
             // If we are at genesis or the first block the timestamp is be undefined. No
             // market needs to be opened or closed on blocks #0 or #1, so we skip the
@@ -1202,7 +1747,8 @@ mod pallet {
             // `on_initialize` is called, so calling `now()` during `on_initialize` gives us
             // the timestamp of the previous block.
             let current_time_frame =
-                Self::calculate_time_frame_of_moment(T::MarketCommons::now()).saturating_add(1);
+                Self::calculate_time_frame_of_moment(<zrml_market_commons::Pallet<T>>::now())
+                    .saturating_add(1);
 
             // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
             // check all time frames since epoch.
@@ -1225,6 +1771,10 @@ mod pallet {
                     },
                 );
 
+                total_weight = total_weight.saturating_add(open.unwrap_or_else(|_| {
+                    T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get())
+                }));
+
                 let close = Self::market_status_manager::<
                     _,
                     MarketIdsPerCloseBlock<T>,
@@ -1240,13 +1790,34 @@ mod pallet {
                     },
                 );
 
+                if let Ok(weight) = close {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight = total_weight.saturating_add(
+                        T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get()),
+                    );
+                }
+
                 let resolve = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
                 });
 
+                if let Ok(weight) = resolve {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight =
+                        total_weight.saturating_add(T::WeightInfo::market_resolution_manager(
+                            CacheSize::get(),
+                            CacheSize::get(),
+                        ));
+                }
+
                 LastTimeFrame::<T>::set(Some(current_time_frame));
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
                 match open.and(close).and(resolve) {
                     Err(err) => {
@@ -1258,7 +1829,7 @@ mod pallet {
                 }
             });
 
-            total_weight
+            total_weight.saturating_add(T::WeightInfo::on_initialize_resolve_overhead())
         }
     }
 
@@ -1350,10 +1921,21 @@ mod pallet {
         ValueQuery,
     >;
 
+    /// Contains market_ids for which advisor has requested edit.
+    /// Value for given market_id represents the reason for the edit.
+    #[pallet::storage]
+    pub type MarketIdsForEdit<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
+
     impl<T: Config> Pallet<T> {
+        impl_unreserve_bond!(unreserve_creation_bond, creation);
+        impl_unreserve_bond!(unreserve_oracle_bond, oracle);
+        impl_slash_bond!(slash_creation_bond, creation);
+        impl_slash_bond!(slash_oracle_bond, oracle);
+
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Vec<Asset<MarketIdOf<T>>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
@@ -1372,84 +1954,122 @@ mod pallet {
             }
         }
 
-        pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
+        fn insert_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+
+            match market.period {
+                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
+                    range.end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                ),
+                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    Self::calculate_time_frame_of_moment(range.end),
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                ),
+            }
         }
 
         // Manually remove market from cache for auto close.
-        fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(market_id)?;
+        fn clear_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
 
             // No-op if market isn't cached for auto close according to its state.
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                _ => return Ok(()),
+                _ => return Ok(0u32),
             };
 
-            match market.period {
+            let close_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::mutate(range.end, |ids| {
+                    MarketIdsPerCloseBlock::<T>::mutate(range.end, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.end);
-                    MarketIdsPerCloseTimeFrame::<T>::mutate(time_frame, |ids| {
+                    MarketIdsPerCloseTimeFrame::<T>::mutate(time_frame, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
             };
-            Ok(())
+            Ok(close_ids_len)
         }
 
         // Manually remove market from cache for auto open.
-        fn clear_auto_open(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(market_id)?;
+        fn clear_auto_open(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
 
             // No-op if market isn't cached for auto open according to its state.
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                _ => return Ok(()),
+                _ => return Ok(0u32),
             };
 
-            match market.period {
+            let open_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerOpenBlock::<T>::mutate(range.start, |ids| {
+                    MarketIdsPerOpenBlock::<T>::mutate(range.start, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.start);
-                    MarketIdsPerOpenTimeFrame::<T>::mutate(time_frame, |ids| {
+                    MarketIdsPerOpenTimeFrame::<T>::mutate(time_frame, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
             };
-            Ok(())
+            Ok(open_ids_len)
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(market_id)?;
-            if market.status == MarketStatus::Reported {
-                let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| {
-                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                });
-            }
-            if market.status == MarketStatus::Disputed {
-                let disputes = Disputes::<T>::get(market_id);
-                if let Some(last_dispute) = disputes.last() {
-                    let at = last_dispute.at;
-                    let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(at);
-                    remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
-                    MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| {
-                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+            let (ids_len, disputes_len) = match market.status {
+                MarketStatus::Reported => {
+                    let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
+                    let dispute_duration_ends_at_block =
+                        report.at.saturating_add(market.deadlines.dispute_duration);
+                    MarketIdsPerReportBlock::<T>::mutate(
+                        dispute_duration_ends_at_block,
+                        |ids| -> (u32, u32) {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            (ids_len, 0u32)
+                        },
+                    )
                 }
-            }
+                MarketStatus::Disputed => {
+                    let disputes = Disputes::<T>::get(market_id);
+                    let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
+                    let dispute_duration_ends_at_block =
+                        last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+                    MarketIdsPerDisputeBlock::<T>::mutate(
+                        dispute_duration_ends_at_block,
+                        |ids| -> (u32, u32) {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            (ids_len, disputes.len() as u32)
+                        },
+                    )
+                }
+                _ => (0u32, 0u32),
+            };
 
-            Ok(())
+            Ok((ids_len, disputes_len))
         }
 
         pub(crate) fn do_buy_complete_set(
@@ -1463,11 +2083,11 @@ mod pallet {
                 Error::<T>::NotEnoughBalance
             );
 
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = Self::market_account(market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             T::AssetManager::transfer(Asset::Ztg, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
@@ -1478,53 +2098,35 @@ mod pallet {
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
 
             let assets_len: u32 = assets.len().saturated_into();
-            let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(T::WeightInfo::buy_complete_set, assets_len, max_cats)
+            Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
         }
 
         pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<Weight, DispatchError> {
+            market: MarketOf<T>,
+            reject_reason: RejectReason<T>,
+        ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            let creator = &market.creator;
-            T::AssetManager::slash_reserved_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::AdvisoryBond::get(),
-            );
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::OracleBond::get(),
-            );
-            T::MarketCommons::remove_market(market_id)?;
-            Self::deposit_event(Event::MarketRejected(*market_id));
+            Self::unreserve_oracle_bond(market_id)?;
+            let imbalance =
+                Self::slash_creation_bond(market_id, Some(T::AdvisoryBondSlashPercentage::get()))?;
+            T::Slash::on_unbalanced(imbalance);
+            <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
+            MarketIdsForEdit::<T>::remove(market_id);
+            Self::deposit_event(Event::MarketRejected(*market_id, reject_reason));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
-            Ok(T::WeightInfo::do_reject_market())
+            Ok(())
         }
 
         pub(crate) fn handle_expired_advised_market(
             market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            let creator = &market.creator;
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::AdvisoryBond::get(),
-            );
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::OracleBond::get(),
-            );
-            T::MarketCommons::remove_market(market_id)?;
+            Self::unreserve_creation_bond(market_id)?;
+            Self::unreserve_oracle_bond(market_id)?;
+            <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
+            MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
             Ok(T::WeightInfo::handle_expired_advised_market())
         }
@@ -1533,42 +2135,12 @@ mod pallet {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
         }
 
-        fn calculate_actual_weight<F>(
-            func: F,
-            weight_parameter: u32,
-            max_weight_parameter: u32,
-        ) -> DispatchResultWithPostInfo
-        where
-            F: Fn(u32) -> Weight,
-        {
-            if weight_parameter == max_weight_parameter {
-                Ok(None.into())
-            } else {
-                Ok(Some(func(weight_parameter)).into())
-            }
-        }
-
-        fn calculate_internal_resolve_weight(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            total_accounts: u32,
-            total_asset_accounts: u32,
-            total_categories: u32,
-            total_disputes: u32,
-        ) -> Weight {
+        fn calculate_internal_resolve_weight(market: &MarketOf<T>, total_disputes: u32) -> Weight {
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market.status {
-                    T::WeightInfo::internal_resolve_categorical_reported(
-                        total_accounts,
-                        total_asset_accounts,
-                        total_categories,
-                    )
+                    T::WeightInfo::internal_resolve_categorical_reported()
                 } else {
-                    T::WeightInfo::internal_resolve_categorical_disputed(
-                        total_accounts,
-                        total_asset_accounts,
-                        total_categories,
-                        total_disputes,
-                    )
+                    T::WeightInfo::internal_resolve_categorical_disputed(total_disputes)
                 }
             } else if let MarketStatus::Reported = market.status {
                 T::WeightInfo::internal_resolve_scalar_reported()
@@ -1587,6 +2159,7 @@ mod pallet {
             } else {
                 ensure!(&report.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             }
+
             Ok(())
         }
 
@@ -1596,9 +2169,7 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_market_is_active(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> DispatchResult {
+        fn ensure_market_is_active(market: &MarketOf<T>) -> DispatchResult {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             Ok(())
         }
@@ -1623,12 +2194,14 @@ mod pallet {
                 }
                 MarketPeriod::Timestamp(ref range) => {
                     // Ensure that the market lasts at least one time frame into the future.
-                    let now_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+                    let now_frame = Self::calculate_time_frame_of_moment(
+                        <zrml_market_commons::Pallet<T>>::now(),
+                    );
                     let end_frame = Self::calculate_time_frame_of_moment(range.end);
                     ensure!(now_frame < end_frame, Error::<T>::InvalidMarketPeriod);
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
                     ensure!(
-                        range.end <= T::MaxMarketPeriod::get().saturated_into(),
+                        range.end <= T::MaxMarketPeriod::get().saturated_into::<MomentOf<T>>(),
                         Error::<T>::InvalidMarketPeriod
                     );
                 }
@@ -1636,10 +2209,53 @@ mod pallet {
             Ok(())
         }
 
-        // Check that the market has reached the end of its period.
-        fn ensure_market_is_closed(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        fn ensure_market_deadlines_are_valid(
+            deadlines: &Deadlines<T::BlockNumber>,
         ) -> DispatchResult {
+            ensure!(
+                deadlines.oracle_duration >= T::MinOracleDuration::get(),
+                Error::<T>::OracleDurationSmallerThanMinOracleDuration
+            );
+            ensure!(
+                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
+            );
+            ensure!(
+                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
+            );
+            ensure!(
+                deadlines.grace_period <= T::MaxGracePeriod::get(),
+                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
+            );
+            ensure!(
+                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
+                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
+            );
+            Ok(())
+        }
+
+        fn ensure_market_type_is_valid(market_type: &MarketType) -> DispatchResult {
+            match market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(
+                        *categories >= T::MinCategories::get(),
+                        <Error<T>>::NotEnoughCategories
+                    );
+                    ensure!(*categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+                }
+                MarketType::Scalar(ref outcome_range) => {
+                    ensure!(
+                        outcome_range.start() < outcome_range.end(),
+                        <Error<T>>::InvalidOutcomeRange
+                    );
+                }
+            }
+            Ok(())
+        }
+
+        // Check that the market has reached the end of its period.
+        fn ensure_market_is_closed(market: &MarketOf<T>) -> DispatchResult {
             ensure!(market.status == MarketStatus::Closed, Error::<T>::MarketIsNotClosed);
             Ok(())
         }
@@ -1655,9 +2271,10 @@ mod pallet {
                         .saturated_into();
                     interval_blocks.saturating_mul(MILLISECS_PER_BLOCK.into())
                 }
-                MarketPeriod::Timestamp(range) => {
-                    range.start.saturating_sub(T::MarketCommons::now()).saturated_into()
-                }
+                MarketPeriod::Timestamp(range) => range
+                    .start
+                    .saturating_sub(<zrml_market_commons::Pallet<T>>::now())
+                    .saturated_into(),
             };
 
             ensure!(
@@ -1671,57 +2288,11 @@ mod pallet {
             Ok(())
         }
 
-        // If a market is categorical, destroys all non-winning assets.
-        fn manage_resolved_categorical_market(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            market_id: &MarketIdOf<T>,
-            outcome_report: &OutcomeReport,
-        ) -> Result<[usize; 3], DispatchError> {
-            let mut total_accounts: usize = 0;
-            let mut total_asset_accounts: usize = 0;
-            let mut total_categories: usize = 0;
-
-            if let MarketType::Categorical(_) = market.market_type {
-                if let OutcomeReport::Categorical(winning_asset_idx) = *outcome_report {
-                    let assets = Self::outcome_assets(*market_id, market);
-                    total_categories = assets.len().saturated_into();
-
-                    let mut assets_iter = assets.iter().cloned();
-                    let mut manage_asset = |asset: Asset<_>, winning_asset_idx| {
-                        if let Asset::CategoricalOutcome(_, idx) = asset {
-                            if idx == winning_asset_idx {
-                                return 0;
-                            }
-                            let (total_accounts, accounts) =
-                                T::AssetManager::accounts_by_currency_id(asset)
-                                    .unwrap_or((0usize, vec![]));
-                            total_asset_accounts =
-                                total_asset_accounts.saturating_add(accounts.len());
-
-                            let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                            total_accounts
-                        } else {
-                            0
-                        }
-                    };
-
-                    if let Some(first_asset) = assets_iter.next() {
-                        total_accounts = manage_asset(first_asset, winning_asset_idx);
-                    }
-                    for asset in assets_iter {
-                        let _ = manage_asset(asset, winning_asset_idx);
-                    }
-                }
-            }
-
-            Ok([total_accounts, total_asset_accounts, total_categories])
-        }
-
         pub(crate) fn open_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
             // Is no-op if market has no pool. This should never happen, but it's safer to not
             // error in this case.
             let mut total_weight = T::DbWeight::get().reads(1); // (For the `market_pool` read)
-            if let Ok(pool_id) = T::MarketCommons::market_pool(market_id) {
+            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(market_id) {
                 let open_pool_weight = T::Swaps::open_pool(pool_id)?;
                 total_weight = total_weight.saturating_add(open_pool_weight);
             }
@@ -1729,13 +2300,13 @@ mod pallet {
         }
 
         pub(crate) fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
-            T::MarketCommons::mutate_market(market_id, |market| {
+            <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
             let mut total_weight = T::DbWeight::get().reads_writes(1, 1);
-            if let Ok(pool_id) = T::MarketCommons::market_pool(market_id) {
+            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(market_id) {
                 let close_pool_weight = T::Swaps::close_pool(pool_id)?;
                 total_weight = total_weight.saturating_add(close_pool_weight);
             };
@@ -1747,7 +2318,7 @@ mod pallet {
         /// Handle market state transitions at the end of its active phase.
         fn on_market_close(
             market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             match market.status {
                 MarketStatus::Active => Self::close_market(market_id),
@@ -1756,168 +2327,139 @@ mod pallet {
             }
         }
 
-        fn on_resolution(
+        fn resolve_reported_market(
             market_id: &MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
+        ) -> Result<OutcomeReport, DispatchError> {
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            // the oracle bond gets returned if the reporter was the oracle
+            if report.by == market.oracle {
+                Self::unreserve_oracle_bond(market_id)?;
+            } else {
+                let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
+
+                // deposit only to the real reporter what actually was slashed
+                if let Err(err) =
+                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance.peek())
+                {
+                    log::warn!(
+                        "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
+                        err
+                    );
+                }
+            }
+
+            Ok(report.outcome.clone())
+        }
+
+        fn resolve_disputed_market(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<OutcomeReport, DispatchError> {
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            let disputes = Disputes::<T>::get(market_id);
+
+            let mut resolved_outcome_option = None;
+
+            #[cfg(feature = "with-global-disputes")]
+            if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
+                resolved_outcome_option = Some(o);
+            }
+
+            // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
+            // the oracle's report.
+            if resolved_outcome_option.is_none() {
+                resolved_outcome_option = match market.dispute_mechanism {
+                    MarketDisputeMechanism::Authorized => {
+                        T::Authorized::on_resolution(&disputes, market_id, market)?
+                    }
+                    MarketDisputeMechanism::Court => {
+                        T::Court::on_resolution(&disputes, market_id, market)?
+                    }
+                    MarketDisputeMechanism::SimpleDisputes => {
+                        T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                    }
+                };
+            }
+
+            let resolved_outcome =
+                resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
+
+            let mut correct_reporters: Vec<T::AccountId> = Vec::new();
+
+            // If the oracle reported right, return the OracleBond, otherwise slash it to
+            // pay the correct reporters.
+            let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
+            if report.by == market.oracle && report.outcome == resolved_outcome {
+                Self::unreserve_oracle_bond(market_id)?;
+            } else {
+                let imbalance = Self::slash_oracle_bond(market_id, None)?;
+                overall_imbalance.subsume(imbalance);
+            }
+
+            for (i, dispute) in disputes.iter().enumerate() {
+                let actual_bond = default_dispute_bond::<T>(i);
+                if dispute.outcome == resolved_outcome {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &dispute.by,
+                        actual_bond,
+                    );
+
+                    correct_reporters.push(dispute.by.clone());
+                } else {
+                    let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                        &Self::reserve_id(),
+                        &dispute.by,
+                        actual_bond.saturated_into::<u128>().saturated_into(),
+                    );
+                    overall_imbalance.subsume(imbalance);
+                }
+            }
+
+            // Fold all the imbalances into one and reward the correct reporters. The
+            // number of correct reporters might be zero if the market defaults to the
+            // report after abandoned dispute. In that case, the rewards remain slashed.
+            if let Some(reward_per_each) =
+                overall_imbalance.peek().checked_div(&correct_reporters.len().saturated_into())
+            {
+                for correct_reporter in &correct_reporters {
+                    let (actual_reward, leftover) = overall_imbalance.split(reward_per_each);
+                    overall_imbalance = leftover;
+                    CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
+                }
+            }
+            T::Slash::on_unbalanced(overall_imbalance);
+
+            Ok(resolved_outcome)
+        }
+
+        pub fn on_resolution(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::ValidityBond::get(),
-                );
+                Self::unreserve_creation_bond(market_id)?;
             }
 
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
-            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
-
             let resolved_outcome = match market.status {
-                MarketStatus::Reported => {
-                    // the oracle bond gets returned if the reporter was the oracle
-                    if report.by == market.oracle {
-                        T::AssetManager::unreserve_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-                    } else {
-                        let excess = T::AssetManager::slash_reserved_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-                        // deposit only to the real reporter what actually was slashed
-                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
-
-                        if let Err(err) =
-                            T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
-                        {
-                            log::warn!(
-                                "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
-                                err
-                            );
-                        }
-                    }
-
-                    report.outcome.clone()
-                }
-                MarketStatus::Disputed => {
-                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
-                    // the oracle's report.
-                    let resolved_outcome_option = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => {
-                            T::Authorized::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::Court => {
-                            T::Court::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
-                        }
-                    };
-                    let resolved_outcome =
-                        resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
-
-                    let mut correct_reporters: Vec<T::AccountId> = Vec::new();
-
-                    let mut overall_imbalance = BalanceOf::<T>::zero();
-
-                    // If the oracle reported right, return the OracleBond, otherwise slash it to
-                    // pay the correct reporters.
-                    if report.outcome == resolved_outcome {
-                        T::AssetManager::unreserve_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-                    } else {
-                        let excess = T::AssetManager::slash_reserved_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market.creator,
-                            T::OracleBond::get(),
-                        );
-
-                        // negative_imbalance is the actual slash value (excess should be zero)
-                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
-                        overall_imbalance = overall_imbalance.saturating_add(negative_imbalance);
-                    }
-
-                    for (i, dispute) in disputes.iter().enumerate() {
-                        let actual_bond = default_dispute_bond::<T>(i);
-                        if dispute.outcome == resolved_outcome {
-                            T::AssetManager::unreserve_named(
-                                &Self::reserve_id(),
-                                Asset::Ztg,
-                                &dispute.by,
-                                actual_bond,
-                            );
-
-                            correct_reporters.push(dispute.by.clone());
-                        } else {
-                            let excess = T::AssetManager::slash_reserved_named(
-                                &Self::reserve_id(),
-                                Asset::Ztg,
-                                &dispute.by,
-                                actual_bond,
-                            );
-
-                            // negative_imbalance is the actual slash value (excess should be zero)
-                            let negative_imbalance = actual_bond.saturating_sub(excess);
-                            overall_imbalance =
-                                overall_imbalance.saturating_add(negative_imbalance);
-                        }
-                    }
-
-                    // Fold all the imbalances into one and reward the correct reporters. The
-                    // number of correct reporters might be zero if the market defaults to the
-                    // report after abandoned dispute. In that case, the rewards remain slashed.
-                    if let Some(reward_per_each) =
-                        overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
-                    {
-                        for correct_reporter in &correct_reporters {
-                            let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
-                            overall_imbalance = overall_imbalance.saturating_sub(reward);
-
-                            if let Err(err) =
-                                T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
-                            {
-                                log::warn!(
-                                    "[PredictionMarkets] Cannot deposit to the correct reporter. \
-                                     error: {:?}",
-                                    err
-                                );
-                            }
-                        }
-                    }
-
-                    resolved_outcome
-                }
+                MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
+                MarketStatus::Disputed => Self::resolve_disputed_market(market_id, market)?,
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(clean_up_weight);
+            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
+            // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
-            let mut total_accounts = 0u32;
-            let mut total_asset_accounts = 0u32;
-            let mut total_categories = 0u32;
-
-            if let Ok([local_total_accounts, local_total_asset_accounts, local_total_categories]) =
-                Self::manage_resolved_categorical_market(market, market_id, &resolved_outcome)
-            {
-                total_accounts = local_total_accounts.saturated_into();
-                total_asset_accounts = local_total_asset_accounts.saturated_into();
-                total_categories = local_total_categories.saturated_into();
-            }
-
-            T::MarketCommons::mutate_market(market_id, |m| {
+            // NOTE: Currently we don't clean up outcome assets.
+            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
+            <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
@@ -1930,9 +2472,6 @@ mod pallet {
             ));
             Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
-                total_accounts,
-                total_asset_accounts,
-                total_categories,
                 disputes.len().saturated_into(),
             )))
         }
@@ -1957,7 +2496,8 @@ mod pallet {
                 };
 
                 if market_ready {
-                    let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
+                    let pool_id =
+                        <zrml_market_commons::Pallet<T>>::market_pool(&subsidy_info.market_id);
                     total_weight.saturating_add(one_read);
 
                     if let Ok(pool_id) = pool_id {
@@ -1968,11 +2508,13 @@ mod pallet {
 
                             if result.result {
                                 // Sufficient subsidy, activate market.
-                                let mutate_result =
-                                    T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
+                                let mutate_result = <zrml_market_commons::Pallet<T>>::mutate_market(
+                                    &subsidy_info.market_id,
+                                    |m| {
                                         m.status = MarketStatus::Active;
                                         Ok(())
-                                    });
+                                    },
+                                );
 
                                 total_weight =
                                     total_weight.saturating_add(one_read).saturating_add(one_write);
@@ -2010,36 +2552,25 @@ mod pallet {
                                     total_weight = total_weight.saturating_add(weight);
                                 }
 
-                                let market_result =
-                                    T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
+                                let market_result = <zrml_market_commons::Pallet<T>>::mutate_market(
+                                    &subsidy_info.market_id,
+                                    |m| {
                                         m.status = MarketStatus::InsufficientSubsidy;
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            let required_bond = T::ValidityBond::get()
-                                                .saturating_add(T::OracleBond::get());
-                                            T::AssetManager::unreserve_named(
-                                                &Self::reserve_id(),
-                                                Asset::Ztg,
-                                                &m.creator,
-                                                required_bond,
-                                            );
-                                        } else if m.creation == MarketCreation::Advised {
-                                            // AdvisoryBond was already returned when the market
-                                            // was approved. Approval is inevitable to reach this.
-                                            T::AssetManager::unreserve_named(
-                                                &Self::reserve_id(),
-                                                Asset::Ztg,
-                                                &m.creator,
-                                                T::OracleBond::get(),
-                                            );
+                                            Self::unreserve_creation_bond(&subsidy_info.market_id)?;
                                         }
+                                        // AdvisoryBond was already returned when the market
+                                        // was approved. Approval is inevitable to reach this.
+                                        Self::unreserve_oracle_bond(&subsidy_info.market_id)?;
 
                                         total_weight = total_weight
                                             .saturating_add(dbweight.reads(2))
                                             .saturating_add(dbweight.writes(2));
                                         Ok(())
-                                    });
+                                    },
+                                );
 
                                 if let Err(err) = market_result {
                                     log::error!(
@@ -2054,8 +2585,9 @@ mod pallet {
 
                                 // `remove_market_pool` can only error due to missing pool, but
                                 // above we ensured that the pool exists.
-                                let _ =
-                                    T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
+                                let _ = <zrml_market_commons::Pallet<T>>::remove_market_pool(
+                                    &subsidy_info.market_id,
+                                );
                                 total_weight =
                                     total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(
@@ -2109,8 +2641,10 @@ mod pallet {
             market_id: &MarketIdOf<T>,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
-                let at = last_dispute.at;
-                MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let dispute_duration_ends_at_block =
+                    last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+                MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -2128,12 +2662,9 @@ mod pallet {
             last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
             mut mutation: F,
-        ) -> DispatchResult
+        ) -> Result<Weight, DispatchError>
         where
-            F: FnMut(
-                &MarketIdOf<T>,
-                Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
+            F: FnMut(&MarketIdOf<T>, MarketOf<T>) -> DispatchResult,
             MarketIdsPerBlock: frame_support::StorageMap<
                 T::BlockNumber,
                 BoundedVec<MarketIdOf<T>, CacheSize>,
@@ -2145,63 +2676,69 @@ mod pallet {
                 Query = BoundedVec<MarketIdOf<T>, CacheSize>,
             >,
         {
-            for market_id in MarketIdsPerBlock::get(block_number).iter() {
-                let market = T::MarketCommons::market(market_id)?;
+            let market_ids_per_block = MarketIdsPerBlock::get(block_number);
+            for market_id in market_ids_per_block.iter() {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
                 mutation(market_id, market)?;
             }
             MarketIdsPerBlock::remove(block_number);
 
+            let mut time_frame_ids_len = 0u32;
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerTimeFrame::get(time_frame).iter() {
-                    let market = T::MarketCommons::market(market_id)?;
+                let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
+                time_frame_ids_len =
+                    time_frame_ids_len.saturating_add(market_ids_per_time_frame.len() as u32);
+                for market_id in market_ids_per_time_frame.iter() {
+                    let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
                     mutation(market_id, market)?;
                 }
                 MarketIdsPerTimeFrame::remove(time_frame);
             }
 
-            Ok(())
+            Ok(T::WeightInfo::market_status_manager(
+                market_ids_per_block.len() as u32,
+                time_frame_ids_len,
+            ))
         }
 
-        fn resolution_manager<F>(now: T::BlockNumber, mut cb: F) -> DispatchResult
+        pub(crate) fn resolution_manager<F>(
+            now: T::BlockNumber,
+            mut cb: F,
+        ) -> Result<Weight, DispatchError>
         where
-            F: FnMut(
-                &MarketIdOf<T>,
-                &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
+            F: FnMut(&MarketIdOf<T>, &MarketOf<T>) -> DispatchResult,
         {
-            let dispute_period = T::DisputePeriod::get();
-            if now <= dispute_period {
-                return Ok(());
-            }
-
-            let block = now.saturating_sub(dispute_period);
-
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(block).iter() {
-                let market = T::MarketCommons::market(id)?;
+            let market_ids_per_report_block = MarketIdsPerReportBlock::<T>::get(now);
+            for id in market_ids_per_report_block.iter() {
+                let market = <zrml_market_commons::Pallet<T>>::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
                 }
             }
-            MarketIdsPerReportBlock::<T>::remove(block);
+            MarketIdsPerReportBlock::<T>::remove(now);
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(block).iter() {
-                let market = T::MarketCommons::market(id)?;
+            let market_ids_per_dispute_block = MarketIdsPerDisputeBlock::<T>::get(now);
+            for id in market_ids_per_dispute_block.iter() {
+                let market = <zrml_market_commons::Pallet<T>>::market(id)?;
                 cb(id, &market)?;
             }
-            MarketIdsPerDisputeBlock::<T>::remove(block);
+            MarketIdsPerDisputeBlock::<T>::remove(now);
 
-            Ok(())
+            Ok(T::WeightInfo::market_resolution_manager(
+                market_ids_per_report_block.len() as u32,
+                market_ids_per_dispute_block.len() as u32,
+            ))
         }
 
         // If the market is already disputed, does nothing.
         fn set_market_as_disputed(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             market_id: &MarketIdOf<T>,
         ) -> DispatchResult {
             if market.status != MarketStatus::Disputed {
-                T::MarketCommons::mutate_market(market_id, |m| {
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.status = MarketStatus::Disputed;
                     Ok(())
                 })?;
@@ -2212,16 +2749,16 @@ mod pallet {
         // If a market has a pool that is `Active`, then changes from `Active` to `Clean`. If
         // the market does not exist or the market does not have a pool, does nothing.
         fn clean_up_pool(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
         ) -> Result<Weight, DispatchError> {
-            let pool_id = if let Ok(el) = T::MarketCommons::market_pool(market_id) {
+            let pool_id = if let Ok(el) = <zrml_market_commons::Pallet<T>>::market_pool(market_id) {
                 el
             } else {
                 return Ok(T::DbWeight::get().reads(1));
             };
-            let market_account = Self::market_account(*market_id);
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(*market_id);
             let weight = T::Swaps::clean_up_pool(
                 &market.market_type,
                 pool_id,
@@ -2234,7 +2771,7 @@ mod pallet {
         // Creates a pool for the market and registers the market in the list of markets
         // currently collecting subsidy.
         pub(crate) fn start_subsidy(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             market_id: MarketIdOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(
@@ -2259,7 +2796,7 @@ mod pallet {
             )?;
 
             // This errors if a pool already exists!
-            T::MarketCommons::insert_market_pool(market_id, pool_id)?;
+            <zrml_market_commons::Pallet<T>>::insert_market_pool(market_id, pool_id)?;
             <MarketsCollectingSubsidy<T>>::try_mutate(|markets| {
                 markets
                     .try_push(SubsidyUntil { market_id, period: market.period.clone() })
@@ -2271,7 +2808,7 @@ mod pallet {
 
         fn validate_dispute(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
             num_disputes: u32,
             outcome_report: &OutcomeReport,
         ) -> DispatchResult {
@@ -2281,10 +2818,59 @@ mod pallet {
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
         }
+
+        fn construct_market(
+            creator: T::AccountId,
+            creator_fee: u8,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            creation: MarketCreation,
+            market_type: MarketType,
+            dispute_mechanism: MarketDisputeMechanism,
+            scoring_rule: ScoringRule,
+            report: Option<Report<T::AccountId, T::BlockNumber>>,
+            resolved_outcome: Option<OutcomeReport>,
+            bonds: MarketBonds<T::AccountId, BalanceOf<T>>,
+        ) -> Result<MarketOf<T>, DispatchError> {
+            let MultiHash::Sha3_384(multihash) = metadata;
+            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
+            Self::ensure_market_period_is_valid(&period)?;
+            Self::ensure_market_deadlines_are_valid(&deadlines)?;
+            Self::ensure_market_type_is_valid(&market_type)?;
+
+            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                Self::ensure_market_start_is_in_time(&period)?;
+            }
+            let status: MarketStatus = match creation {
+                MarketCreation::Permissionless => match scoring_rule {
+                    ScoringRule::CPMM => MarketStatus::Active,
+                    ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
+                },
+                MarketCreation::Advised => MarketStatus::Proposed,
+            };
+            Ok(Market {
+                creation,
+                creator_fee,
+                creator,
+                market_type,
+                dispute_mechanism,
+                metadata: Vec::from(multihash),
+                oracle,
+                period,
+                deadlines,
+                report,
+                resolved_outcome,
+                status,
+                scoring_rule,
+                bonds,
+            })
+        }
     }
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
+    pub(crate) fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {

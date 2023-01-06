@@ -1,4 +1,5 @@
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2017-2020 Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
 //
@@ -55,16 +56,10 @@ type RunCmd = cumulus_client_cli::RunCmd;
 #[cfg(not(feature = "parachain"))]
 type RunCmd = sc_cli::RunCmd;
 
-pub fn load_spec(
-    id: &str,
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+pub fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         #[cfg(feature = "with-battery-station-runtime")]
-        "" | "dev" => Box::new(crate::chain_spec::dev_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+        "" | "dev" => Box::new(crate::chain_spec::dev_config()?),
         "battery_station" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/bs_parachain.json")[..],
@@ -72,10 +67,7 @@ pub fn load_spec(
             &include_bytes!("../res/bs.json")[..],
         )?),
         #[cfg(feature = "with-battery-station-runtime")]
-        "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+        "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config()?),
         #[cfg(not(feature = "with-battery-station-runtime"))]
         "battery_station_staging" => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
@@ -85,10 +77,7 @@ pub fn load_spec(
             &include_bytes!("../res/zeitgeist.json")[..],
         )?),
         #[cfg(feature = "with-zeitgeist-runtime")]
-        "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+        "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config()?),
         #[cfg(not(feature = "with-zeitgeist-runtime"))]
         "zeitgeist_staging" => panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE),
         path => {
@@ -133,6 +122,9 @@ pub enum Subcommand {
     /// Build a chain specification.
     BuildSpec(sc_cli::BuildSpecCmd),
 
+    /// Db meta columns information.
+    ChainInfo(sc_cli::ChainInfoCmd),
+
     /// Validate blocks.
     CheckBlock(sc_cli::CheckBlockCmd),
 
@@ -145,13 +137,11 @@ pub enum Subcommand {
 
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
-    #[clap(name = "export-genesis-state")]
-    ExportGenesisState(cli_parachain::ExportGenesisStateCommand),
+    ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
 
     /// Export the genesis wasm of the parachain.
     #[cfg(feature = "parachain")]
-    #[clap(name = "export-genesis-wasm")]
-    ExportGenesisWasm(cli_parachain::ExportGenesisWasmCommand),
+    ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
 
     /// Export the state of a given block into a chain spec.
     ExportState(sc_cli::ExportStateCmd),
@@ -196,6 +186,16 @@ pub struct Cli {
     #[clap(subcommand)]
     pub subcommand: Option<Subcommand>,
 
+    /// Disable automatic hardware benchmarks.
+    ///
+    /// By default these benchmarks are automatically ran at startup and measure
+    /// the CPU speed, the memory bandwidth and the disk speed.
+    ///
+    /// The results are then printed out in the logs, and also sent as part of
+    /// telemetry, if telemetry is enabled.
+    #[clap(long)]
+    pub no_hardware_benchmarks: bool,
+
     /// Relaychain arguments
     #[cfg(feature = "parachain")]
     #[clap(raw = true)]
@@ -229,16 +229,7 @@ impl SubstrateCli for Cli {
     }
 
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-        load_spec(
-            id,
-            #[cfg(feature = "parachain")]
-            match id {
-                "battery_station_staging" => {
-                    self.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
-                }
-                _ => self.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
-            },
-        )
+        load_spec(id)
     }
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -441,6 +432,10 @@ impl sc_client_api::BlockBackend<Block> for Client {
         hash: &<Block as BlockT>::Hash,
     ) -> sp_blockchain::Result<bool> {
         match_client!(self, has_indexed_transaction(hash))
+    }
+
+    fn requires_full_sync(&self) -> bool {
+        match_client!(self, requires_full_sync())
     }
 }
 

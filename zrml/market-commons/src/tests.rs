@@ -18,30 +18,34 @@
 #![cfg(test)]
 
 use crate::{
-    market_commons_pallet_api::MarketCommonsPalletApi,
     mock::{ExtBuilder, MarketCommons, Runtime},
     MarketCounter, Markets,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError;
-use zeitgeist_primitives::types::{
-    AccountIdTest, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-    MarketStatus, MarketType, Moment, ScoringRule,
+use zeitgeist_primitives::{
+    traits::MarketCommonsPalletApi,
+    types::{
+        AccountIdTest, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment, ScoringRule,
+    },
 };
 
-const MARKET_DUMMY: Market<AccountIdTest, BlockNumber, Moment> = Market {
+const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment> = Market {
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    dispute_mechanism: MarketDisputeMechanism::Authorized(0),
+    dispute_mechanism: MarketDisputeMechanism::Authorized,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
+    deadlines: Deadlines { grace_period: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
+    bonds: MarketBonds { creation: None, oracle: None },
 };
 
 #[test]
@@ -331,7 +335,7 @@ fn market_counter_interacts_correctly_with_push_market_and_remove_market() {
 
 fn market_mock(
     id: AccountIdTest,
-) -> zeitgeist_primitives::types::Market<AccountIdTest, BlockNumber, Moment> {
+) -> zeitgeist_primitives::types::Market<AccountIdTest, Balance, BlockNumber, Moment> {
     let mut market = MARKET_DUMMY;
     market.oracle = id;
     market

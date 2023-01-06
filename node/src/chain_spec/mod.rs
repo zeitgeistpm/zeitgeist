@@ -28,7 +28,7 @@ pub use additional_chain_spec::AdditionalChainSpec;
 pub use battery_station::battery_station_staging_config;
 #[cfg(feature = "with-battery-station-runtime")]
 pub use dev::dev_config;
-use jsonrpc_core::serde_json::{Map, Value};
+use sc_service::Properties;
 use sc_telemetry::TelemetryEndpoints;
 #[cfg(feature = "with-battery-station-runtime")]
 use sp_core::{Pair, Public};
@@ -52,7 +52,7 @@ use {
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         // Common
-        pub(crate) const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
+        pub(crate) const DEFAULT_COLLATOR_INFLATION_INFO: pallet_parachain_staking::InflationInfo<Balance> = {
             let hours_per_year = 8766;
             let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
             let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
@@ -63,18 +63,18 @@ cfg_if::cfg_if! {
             let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
             let round_inflation = Perbill::from_parts(round_inflation_parts as _);
 
-            parachain_staking::InflationInfo {
-                annual: parachain_staking::Range {
+            pallet_parachain_staking::InflationInfo {
+                annual: pallet_parachain_staking::Range {
                     ideal: annual_inflation,
                     max: annual_inflation,
                     min: annual_inflation,
                 },
-                expect: parachain_staking::Range {
+                expect: pallet_parachain_staking::Range {
                     ideal: expected_annual_amount,
                     max: expected_annual_amount,
                     min: expected_annual_amount,
                 },
-                round: parachain_staking::Range {
+                round: pallet_parachain_staking::Range {
                     ideal: round_inflation,
                     min: round_inflation,
                     max: round_inflation,
@@ -105,9 +105,11 @@ macro_rules! generate_generic_genesis_function {
                 // Common genesis
                 advisory_committee: Default::default(),
                 advisory_committee_membership: $runtime::AdvisoryCommitteeMembershipConfig {
-                    members: vec![],
+                    members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
+                #[cfg(feature = "parachain")]
+                asset_registry: Default::default(),
                 #[cfg(not(feature = "parachain"))]
                 aura: $runtime::AuraConfig {
                     authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
@@ -130,7 +132,7 @@ macro_rules! generate_generic_genesis_function {
                 },
                 council: Default::default(),
                 council_membership: $runtime::CouncilMembershipConfig {
-                    members: vec![],
+                    members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
                 #[cfg(feature = "parachain")]
@@ -165,7 +167,7 @@ macro_rules! generate_generic_genesis_function {
                 system: $runtime::SystemConfig { code: wasm_binary.to_vec() },
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
-                    members: vec![],
+                    members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
                 treasury: Default::default(),
@@ -185,6 +187,7 @@ pub(crate) use generate_generic_genesis_function;
 #[cfg(feature = "with-battery-station-runtime")]
 type AccountPublic = <Signature as Verify>::Signer;
 #[cfg(feature = "with-battery-station-runtime")]
+#[inline]
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
@@ -226,8 +229,8 @@ impl Extensions {
     }
 }
 
-fn token_properties(token_symbol: &str, ss58_prefix: u8) -> Map<String, Value> {
-    let mut properties = Map::new();
+fn token_properties(token_symbol: &str, ss58_prefix: u8) -> Properties {
+    let mut properties = Properties::new();
     properties.insert("ss58Format".into(), ss58_prefix.into());
     properties.insert("tokenSymbol".into(), token_symbol.into());
     properties.insert("tokenDecimals".into(), BalanceFractionalDecimals::get().into());
