@@ -765,6 +765,11 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
 #[test]
 fn admin_destroy_market_correctly_cleans_up_accounts() {
     let test = |base_asset: Asset<MarketId>| {
+        let alice_ztg_before_market_creation = AssetManager::free_balance(Asset::Ztg, &ALICE);
+        let alice_base_asset_before_market_creation =
+            AssetManager::free_balance(base_asset, &ALICE);
+        let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
+        let min_liquidity = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             base_asset,
@@ -774,8 +779,8 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
             gen_metadata(50),
             MarketType::Categorical(3),
             MarketDisputeMechanism::SimpleDisputes,
-            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
-            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            swap_fee,
+            min_liquidity,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 3],
         ));
         // Buy some outcome tokens for Alice so that we can check that they get destroyed.
@@ -784,7 +789,6 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         let pool_id = 0;
         let pool_account = Swaps::pool_account_id(&pool_id);
         let market_account = MarketCommons::market_account(market_id);
-        let alice_base_asset_before = AssetManager::free_balance(base_asset, &ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
@@ -794,7 +798,29 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
         assert_eq!(AssetManager::free_balance(base_asset, &market_account), 0);
-        assert_eq!(AssetManager::free_balance(base_asset, &ALICE), alice_base_asset_before);
+        // premissionless market so using ValidityBond
+        let creation_bond = <Runtime as Config>::ValidityBond::get();
+        let oracle_bond = <Runtime as Config>::OracleBond::get();
+        // substract min_liquidity twice, one for buy_complete_set() in
+        // create_cpmm_market_and_deploy_assets() and one in swaps::create_pool()
+        // then again substract BASE as buy_complete_set() on line 786
+        let expected_base_asset_value =
+            alice_base_asset_before_market_creation - min_liquidity - min_liquidity - BASE;
+        if base_asset == Asset::Ztg {
+            let alice_base_asset_balance = AssetManager::free_balance(base_asset, &ALICE);
+            assert_eq!(
+                alice_base_asset_balance,
+                expected_base_asset_value - creation_bond - oracle_bond
+            );
+        } else {
+            let alice_base_asset_balance = AssetManager::free_balance(base_asset, &ALICE);
+            assert_eq!(alice_base_asset_balance, expected_base_asset_value);
+            let alice_ztg_balance = AssetManager::free_balance(Asset::Ztg, &ALICE);
+            assert_eq!(
+                alice_ztg_balance,
+                alice_ztg_before_market_creation - creation_bond - oracle_bond
+            );
+        }
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -3278,6 +3304,8 @@ fn edit_market_with_foreign_asset() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.base_asset, Asset::ForeignAsset(100));
     });
 }
 
