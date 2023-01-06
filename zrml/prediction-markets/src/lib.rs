@@ -1522,10 +1522,7 @@ mod pallet {
         type MaxRejectReasonLen: Get<u32>;
 
         /// The maximum allowed duration of a market from creation to market close in blocks.
-        type MaxMarketLifetimeInBlocks: Get<Self::BlockNumber>;
-
-        /// The maximum allowed duration of a market from creation to market close in moments.
-        type MaxMarketLifetimeInMoments: Get<MomentOf<Self>>;
+        type MaxMarketLifetime: Get<Self::BlockNumber>;
 
         /// The maximum number of bytes allowed as edit reason.
         #[pallet::constant]
@@ -2192,7 +2189,7 @@ mod pallet {
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
                     let lifetime = range.end.saturating_sub(now); // Never saturates!
                     ensure!(
-                        lifetime <= T::MaxMarketLifetimeInBlocks::get(),
+                        lifetime <= T::MaxMarketLifetime::get(),
                         Error::<T>::MarketDurationTooLong,
                     );
                 }
@@ -2203,11 +2200,13 @@ mod pallet {
                     let end_frame = Self::calculate_time_frame_of_moment(range.end);
                     ensure!(now_frame < end_frame, Error::<T>::InvalidMarketPeriod);
                     ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
-                    let lifetime = range.end.saturating_sub(now); // Never saturates!
-                    ensure!(
-                        lifetime <= T::MaxMarketLifetimeInMoments::get(),
-                        Error::<T>::MarketDurationTooLong,
-                    );
+                    // Verify that the number of frames that the market is open doesn't exceed the
+                    // maximum allowed lifetime in blocks.
+                    let lifetime = end_frame.saturating_sub(now_frame); // Never saturates!
+                    // If this conversion saturates, we're dealing with a market with excessive
+                    // lifetime:
+                    let lifetime_max: TimeFrame = T::MaxMarketLifetime::get().saturated_into();
+                    ensure!(lifetime <= lifetime_max, Error::<T>::MarketDurationTooLong);
                 }
             };
             Ok(())

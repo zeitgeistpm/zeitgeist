@@ -990,8 +990,7 @@ macro_rules! impl_config_traits {
             // type LiquidityMining = LiquidityMining;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
-            type MaxMarketLifetimeInBlocks = MaxMarketLifetimeInBlocks;
-            type MaxMarketLifetimeInMoments = MaxMarketLifetimeInMoments;
+            type MaxMarketLifetime = MaxMarketLifetime;
             type MinDisputeDuration = MinDisputeDuration;
             type MaxDisputeDuration = MaxDisputeDuration;
             type MaxGracePeriod = MaxGracePeriod;

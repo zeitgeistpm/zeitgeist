@@ -4010,10 +4010,10 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
         let now = 1;
         frame_system::Pallet::<Runtime>::set_block_number(now);
         let start = 5;
-        let end = now + <Runtime as Config>::MaxMarketLifetimeInBlocks::get();
+        let end = now + <Runtime as Config>::MaxMarketLifetime::get();
         assert!(
             end > start,
-            "Test failed due to misconfiguration: `MaxMarketLifetimeInBlocks` is too small"
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
         );
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4035,10 +4035,11 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
         let now = 12_001u64;
         Timestamp::set_timestamp(now);
         let start = 5 * MILLISECS_PER_BLOCK as u64;
-        let end = now + <Runtime as Config>::MaxMarketLifetimeInMoments::get();
+        let end =
+            now + <Runtime as Config>::MaxMarketLifetime::get() * (MILLISECS_PER_BLOCK as u64);
         assert!(
             end > start,
-            "Test failed due to misconfiguration: `MaxMarketLifetimeInMoments` is too small"
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
         );
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4060,10 +4061,10 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
         let now = 1;
         frame_system::Pallet::<Runtime>::set_block_number(now);
         let start = 5;
-        let end = now + <Runtime as Config>::MaxMarketLifetimeInBlocks::get() + 1;
+        let end = now + <Runtime as Config>::MaxMarketLifetime::get() + 1;
         assert!(
             end > start,
-            "Test failed due to misconfiguration: `MaxMarketLifetimeInBlocks` is too small"
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
         );
         assert_noop!(
             PredictionMarkets::create_market(
@@ -4088,10 +4089,11 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
         let now = 12_001u64;
         Timestamp::set_timestamp(now);
         let start = 5 * MILLISECS_PER_BLOCK as u64;
-        let end = now + <Runtime as Config>::MaxMarketLifetimeInMoments::get() + 1;
+        let end = now
+            + (<Runtime as Config>::MaxMarketLifetime::get() + 1) * (MILLISECS_PER_BLOCK as u64);
         assert!(
             end > start,
-            "Test failed due to misconfiguration: `MaxMarketLifetimeInMoments` is too small"
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
         );
         assert_noop!(
             PredictionMarkets::create_market(

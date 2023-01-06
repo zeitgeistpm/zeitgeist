@@ -166,9 +166,7 @@ parameter_types! {
     /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
     pub const MaxGracePeriod: BlockNumber = MAX_GRACE_PERIOD;
     /// The maximum allowed duration of a market from creation to market close in blocks.
-    pub const MaxMarketLifetimeInBlocks: BlockNumber = MAX_MARKET_LIFETIME_IN_BLOCKS;
-    /// The maximum allowed duration of a market from creation to market close in moments.
-    pub const MaxMarketLifetimeInMoments: Moment = MAX_MARKET_LIFETIME_IN_MOMENTS;
+    pub const MaxMarketLifetime: BlockNumber = MAX_MARKET_LIFETIME;
     /// Maximum block period for an oracle_duration.
     /// The oracle_duration is a duration where the oracle has to submit its report.
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
