@@ -86,4 +86,4 @@ with-global-disputes = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.3.7"
+version = "0.3.8"
