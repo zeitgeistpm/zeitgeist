@@ -424,7 +424,7 @@ mod tests {
 use alloc::string::ToString;
 use frame_support::{migration::storage_key_iter, Twox64Concat};
 use frame_system::pallet_prelude::BlockNumberFor;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::Pallet as AuthorizedPallet;
 
@@ -477,6 +477,9 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
             AuthorityReport<BlockNumberFor<T>>,
         )> = Vec::new();
 
+        let now = frame_system::Pallet::<T>::block_number();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
         for (market_id, old_value) in storage_key_iter::<
             <T as zrml_market_commons::Config>::MarketId,
             OutcomeReport,
@@ -489,13 +492,13 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
                 authorized_resolutions.get(&market_id).cloned();
 
             match resolve_at {
-                Some(block) => {
+                Some(block) if now <= block => {
                     new_storage_map.push((
                         market_id,
                         AuthorityReport { resolve_at: block, outcome: old_value },
                     ));
                 }
-                None => {
+                _ => {
                     log::warn!(
                         "AddFieldToAuthorityReport: Market was not found in \
                          MarketIdsPerDisputeBlock; market id: {:?}",
@@ -504,13 +507,23 @@ impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntim
                     // example case market id 432
                     // https://github.com/zeitgeistpm/zeitgeist/pull/701 market id 432 is invalid, because of zero-division error in the past
                     // we have to handle manually here, because MarketIdsPerDisputeBlock does not contain 432
-                    new_storage_map.push((
-                        market_id,
-                        AuthorityReport {
-                            resolve_at: <BlockNumberFor<T>>::zero(),
-                            outcome: old_value,
-                        },
-                    ));
+                    let mut resolve_at = now.saturating_add(T::CorrectionPeriod::get());
+                    total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+                    let mut bounded_vec = <crate::MarketIdsPerDisputeBlock<T>>::get(resolve_at);
+                    while bounded_vec.is_full() {
+                        // roll the dice until we find a block that is not full
+                        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+                        resolve_at = resolve_at.saturating_add(1u32.into());
+                        bounded_vec = <crate::MarketIdsPerDisputeBlock<T>>::get(resolve_at);
+                    }
+                    // is not full, so we can push
+                    bounded_vec.force_push(market_id);
+                    <crate::MarketIdsPerDisputeBlock<T>>::insert(resolve_at, bounded_vec);
+                    total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+
+                    new_storage_map
+                        .push((market_id, AuthorityReport { resolve_at, outcome: old_value }));
                 }
             }
         }
