@@ -237,11 +237,8 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            let result = AuthorizedOutcomeReports::<T>::get(market_id);
-            if result.is_some() {
-                AuthorizedOutcomeReports::<T>::remove(market_id);
-            }
-            Ok(result.map(|report| report.outcome))
+            let report = AuthorizedOutcomeReports::<T>::take(market_id);
+            Ok(report.map(|r| r.outcome))
         }
 
         fn get_auto_resolve(
