@@ -467,7 +467,7 @@ benchmarks! {
 
         let outcome = OutcomeReport::Scalar(0);
         let disputor = account("disputor", 1, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0 as usize);
+        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
         T::AssetManager::deposit(
             Asset::Ztg,
             &disputor,
@@ -521,7 +521,7 @@ benchmarks! {
 
         let outcome = OutcomeReport::Categorical(0u16);
         let disputor = account("disputor", 1, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0 as usize);
+        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
         T::AssetManager::deposit(
             Asset::Ztg,
             &disputor,
@@ -905,9 +905,8 @@ benchmarks! {
             Ok(())
         })?;
 
-        let origin = caller.clone();
         Pallet::<T>::dispute(
-            RawOrigin::Signed(origin).into(),
+            RawOrigin::Signed(caller).into(),
             market_id,
             OutcomeReport::Categorical(0),
         )?;
@@ -951,9 +950,8 @@ benchmarks! {
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
-        let origin = caller.clone();
         Pallet::<T>::dispute(
-            RawOrigin::Signed(origin).into(),
+            RawOrigin::Signed(caller).into(),
             market_id,
             OutcomeReport::Scalar(1)
         )?;
