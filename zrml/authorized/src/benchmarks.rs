@@ -24,7 +24,7 @@
 #[cfg(test)]
 use crate::Pallet as Authorized;
 use crate::{market_mock, AuthorizedOutcomeReports, Call, Config, Pallet};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::benchmarks;
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{EnsureOrigin, Get},
@@ -95,10 +95,10 @@ benchmarks! {
         let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(1) };
         assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
     }
-}
 
-impl_benchmark_test_suite!(
-    Authorized,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+    impl_benchmark_test_suite!(
+        Authorized,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

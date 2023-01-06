@@ -26,7 +26,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
 use alloc::vec::Vec;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{EnsureOrigin, Get},
@@ -1238,10 +1238,10 @@ benchmarks! {
     }: {
         let _ = <Pallet<T>>::process_subsidy_collecting_markets(current_block, current_time);
     }
-}
 
-impl_benchmark_test_suite!(
-    PredictionMarket,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+    impl_benchmark_test_suite!(
+        PredictionMarket,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}
