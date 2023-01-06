@@ -3,7 +3,8 @@ name: Try Runtime on New Tags
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - '*'
+      # - 'v[0-9]+.[0-9]+.[0-9]+'
 jobs:
   try_runtime:
     name: Test Try Runtime
@@ -19,4 +20,4 @@ jobs:
       - name: Install rust toolchain
         run: rustup show
 
-      - run: ./scripts/runtime-upgrade/test_runtime_upgrade.sh ${{ github.event.inputs.block }}
+      - run: make try-runtime-upgrade-battery-station 
