@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(all(feature = "mock", feature = "parachain"))]
+
 #[macro_export]
 macro_rules! impl_mock_registry {
     ($name:ident, $asset_id:ty, $balance:ty, $custom_metadata:ty) => {
@@ -147,6 +149,7 @@ macro_rules! impl_mock_registry {
 
                 use super::*;
 
+                // TODO(#936): This will not be required post polkadot v0.9.29 upgrade.
                 pub struct RegistryState {
                     pub location_to_asset: Vec<(MultiLocation, $asset_id)>,
                     pub metadata: Vec<($asset_id, AssetMetadata<$balance, $custom_metadata>)>,

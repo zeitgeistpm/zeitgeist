@@ -7,7 +7,7 @@
   already unreserved and/or (partially) slashed).
 - Create prediction markets with Ztg or registered foreign asset which has
   `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics related
-  to prediction market creation/editing now has `base_asset` parameter.
+  to prediction market creation/editing now have `base_asset` parameter.
 
 # v0.3.7
 

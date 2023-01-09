@@ -70,7 +70,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "orml-traits/std",
-    "orml-asset-registry/std",
+    "orml-asset-registry?/std",
     "parity-scale-codec/std",
     "serde/std",
     "sp-arithmetic/std",

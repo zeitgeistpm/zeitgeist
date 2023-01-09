@@ -51,9 +51,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
     #[cfg(feature = "parachain")]
-    use orml_traits::asset_registry::Inspect;
-    #[cfg(feature = "parachain")]
-    use zeitgeist_primitives::types::CustomMetadata;
+    use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
@@ -1612,8 +1610,6 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
-        /// Provided base_asset is not allowed to be used as base_asset.
-        InvalidBaseAsset,
         /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
@@ -1672,8 +1668,6 @@ mod pallet {
         InvalidMarketStatus,
         /// The post dispatch should never be None.
         UnexpectedNoneInPostInfo,
-        /// A foreign asset in not registered in AssetRegistry.
-        UnregisteredForeignAsset,
         /// An amount was illegally specified as zero.
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
@@ -1696,6 +1690,10 @@ mod pallet {
         WeightsLenMustEqualAssetsLen,
         /// The start of the global dispute for this market happened already.
         GlobalDisputeAlreadyStarted,
+        /// Provided base_asset is not allowed to be used as base_asset.
+        InvalidBaseAsset,
+        /// A foreign asset in not registered in AssetRegistry.
+        UnregisteredForeignAsset,
     }
 
     #[pallet::event]
