@@ -1519,7 +1519,8 @@ fn reject_market_clears_auto_close_blocks() {
 
 #[test]
 fn on_market_close_auto_rejects_expired_advised_market() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -1534,7 +1535,7 @@ fn on_market_close_auto_rejects_expired_advised_market() {
 
         let end = 33;
         simple_create_categorical_market(
-            Asset::Ztg,
+            base_asset,
             MarketCreation::Advised,
             0..end,
             ScoringRule::CPMM,
@@ -1553,12 +1554,19 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
         System::assert_has_event(Event::MarketExpired(market_id).into());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -1573,7 +1581,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
 
         let end = 33;
         simple_create_categorical_market(
-            Asset::Ztg,
+            base_asset,
             MarketCreation::Advised,
             0..end,
             ScoringRule::CPMM,
@@ -1601,6 +1609,13 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
         System::assert_has_event(Event::MarketExpired(market_id).into());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
