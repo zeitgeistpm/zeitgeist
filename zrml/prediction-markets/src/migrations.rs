@@ -30,7 +30,7 @@ use frame_support::{
     log,
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
-    RuntimeDebug,
+    Blake2_128Concat, RuntimeDebug,
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
@@ -80,6 +80,14 @@ type OldMarketOf<T> = OldMarket<
     BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
+>;
+
+#[frame_support::storage_alias]
+pub(crate) type Markets<T: Config> = StorageMap<
+    MarketCommonsPallet<T>,
+    Blake2_128Concat,
+    <T as zrml_market_commons::Config>::MarketId,
+    OldMarketOf<T>,
 >;
 
 pub struct AddOutsiderBond<T>(PhantomData<T>);
@@ -137,7 +145,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        use frame_support::{migration::storage_key_iter, pallet_prelude::Blake2_128Concat};
+        use frame_support::{migration::storage_key_iter};
 
         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
             MARKET_COMMONS,
@@ -145,6 +153,21 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
         )
         .collect::<BTreeMap<_, _>>();
         Self::set_temp_storage(old_markets, "old_markets");
+
+        let markets = Markets::<T>::iter_keys().count() as u32;
+        let decodable_markets = Markets::<T>::iter_values().count() as u32;
+        if markets != decodable_markets {
+            // This is not necessarily an error, but can happen when there are Calls
+            // in an Agenda that are not valid anymore with the new runtime.
+            log::error!(
+                "Can only decode {} of {} markets - others will be dropped",
+                decodable_markets,
+                markets
+            );
+        } else {
+            log::info!("Markets: {}, Decodable Markets: {}", markets, decodable_markets);
+        }
+
         Ok(())
     }
 
@@ -176,6 +199,8 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
             // new field
             assert_eq!(new_market.bonds.outsider, None);
         }
+        log::info!("AddOutsiderBond: Market Counter post-upgrade is {}!", new_market_count);
+        assert!(new_market_count > 0);
         Ok(())
     }
 }
