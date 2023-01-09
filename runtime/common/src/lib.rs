@@ -58,7 +58,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (),
+            pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -616,7 +616,7 @@ macro_rules! impl_config_traits {
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
-            type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>; // weights::pallet_balances::WeightInfo<Runtime>;
+            type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
         }
 
         impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {
@@ -898,7 +898,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
             type MinVestedTransfer = MinVestedTransfer;
-            type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>; // weights::pallet_vesting::WeightInfo<Runtime>;
+            type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 
             // `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
             // highest number of schedules that encodes less than 2^10.
@@ -1309,6 +1309,23 @@ macro_rules! create_runtime_api {
                     len: u32,
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
+                }
+            }
+
+            impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, Call>
+            for Runtime
+            {
+                fn query_call_info(
+                    call: Call,
+                    len: u32,
+                ) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> {
+                    TransactionPayment::query_call_info(call, len)
+                }
+                fn query_call_fee_details(
+                    call: Call,
+                    len: u32,
+                ) -> pallet_transaction_payment::FeeDetails<Balance> {
+                    TransactionPayment::query_call_fee_details(call, len)
                 }
             }
 
