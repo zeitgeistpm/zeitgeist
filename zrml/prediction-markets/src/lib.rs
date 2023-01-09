@@ -534,24 +534,13 @@ mod pallet {
         pub fn dispute(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let disputes = Disputes::<T>::get(market_id);
+            
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(
-                matches!(market.status, MarketStatus::Reported | MarketStatus::Disputed),
-                Error::<T>::InvalidMarketStatus
-            );
-            let num_disputes: u32 = disputes.len().saturated_into();
-            Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
-            T::AssetManager::reserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                &who,
-                default_dispute_bond::<T>(disputes.len()),
-            )?;
+            ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
+
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
@@ -563,12 +552,10 @@ mod pallet {
                     T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
                 }
             }
+            
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
-            let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
-            <Disputes<T>>::try_mutate(market_id, |disputes| {
-                disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
+
             // each dispute resets dispute_duration
             let dispute_duration_ends_at_block =
                 curr_block_num.saturating_add(market.deadlines.dispute_duration);
@@ -579,7 +566,6 @@ mod pallet {
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
                 MarketStatus::Disputed,
-                market_dispute,
             ));
             // TODO(#782): add court benchmark
             Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
@@ -1441,15 +1427,6 @@ mod pallet {
         /// The origin that is allowed to destroy markets.
         type DestroyOrigin: EnsureOrigin<Self::Origin>;
 
-        /// The base amount of currency that must be bonded in order to create a dispute.
-        #[pallet::constant]
-        type DisputeBond: Get<BalanceOf<Self>>;
-
-        /// The additional amount of currency that must be bonded when creating a subsequent
-        /// dispute.
-        #[pallet::constant]
-        type DisputeFactor: Get<BalanceOf<Self>>;
-
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -1692,7 +1669,7 @@ mod pallet {
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
-        MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
+        MarketDisputed(MarketIdOf<T>, MarketStatus),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid with a reason. \[market_id, reject_reason\]
@@ -1836,17 +1813,6 @@ mod pallet {
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
-
-    /// For each market, this holds the dispute information for each dispute that's
-    /// been issued.
-    #[pallet::storage]
-    pub type Disputes<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
-        ValueQuery,
-    >;
 
     #[pallet::storage]
     pub type MarketIdsPerOpenBlock<T: Config> = StorageMap<
@@ -2147,26 +2113,6 @@ mod pallet {
             } else {
                 T::WeightInfo::internal_resolve_scalar_disputed(total_disputes)
             }
-        }
-
-        fn ensure_can_not_dispute_the_same_outcome(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            report: &Report<T::AccountId, T::BlockNumber>,
-            outcome: &OutcomeReport,
-        ) -> DispatchResult {
-            if let Some(last_dispute) = disputes.last() {
-                ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
-            } else {
-                ensure!(&report.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
-            }
-
-            Ok(())
-        }
-
-        #[inline]
-        fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
-            ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
-            Ok(())
         }
 
         fn ensure_market_is_active(market: &MarketOf<T>) -> DispatchResult {
@@ -2804,19 +2750,6 @@ mod pallet {
             })?;
 
             Ok(T::WeightInfo::start_subsidy(total_assets.saturated_into()))
-        }
-
-        fn validate_dispute(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market: &MarketOf<T>,
-            num_disputes: u32,
-            outcome_report: &OutcomeReport,
-        ) -> DispatchResult {
-            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
-            ensure!(market.matches_outcome_report(outcome_report), Error::<T>::OutcomeMismatch);
-            Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome_report)?;
-            Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
-            Ok(())
         }
 
         fn construct_market(
