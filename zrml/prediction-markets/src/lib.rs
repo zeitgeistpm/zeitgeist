@@ -346,15 +346,9 @@ mod pallet {
             .max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
             ).max(
-                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                    CacheSize::get(),
-                    T::MaxDisputes::get()
-                )
+                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(CacheSize::get())
             ).max(
-                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                    CacheSize::get(),
-                    T::MaxDisputes::get()
-                )
+                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(CacheSize::get())
             ),
             Pays::No,
         ))]
@@ -370,7 +364,7 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, _) = Self::clear_auto_resolve(&market_id)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             let _ = Self::on_resolution(&market_id, &market)?;
             let weight = match market.market_type {
@@ -379,10 +373,7 @@ mod pallet {
                         T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len)
                     }
                     MarketStatus::Disputed => {
-                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                            ids_len,
-                            disputes_len,
-                        )
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(ids_len)
                     }
                     _ => return Err(Error::<T>::InvalidMarketStatus.into()),
                 },
@@ -391,10 +382,7 @@ mod pallet {
                         T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len)
                     }
                     MarketStatus::Disputed => {
-                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                            ids_len,
-                            disputes_len,
-                        )
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(ids_len)
                     }
                     _ => return Err(Error::<T>::InvalidMarketStatus.into()),
                 },
@@ -2139,17 +2127,17 @@ mod pallet {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
         }
 
-        fn calculate_internal_resolve_weight(market: &MarketOf<T>, total_disputes: u32) -> Weight {
+        fn calculate_internal_resolve_weight(market: &MarketOf<T>) -> Weight {
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market.status {
                     T::WeightInfo::internal_resolve_categorical_reported()
                 } else {
-                    T::WeightInfo::internal_resolve_categorical_disputed(total_disputes)
+                    T::WeightInfo::internal_resolve_categorical_disputed()
                 }
             } else if let MarketStatus::Reported = market.status {
                 T::WeightInfo::internal_resolve_scalar_reported()
             } else {
-                T::WeightInfo::internal_resolve_scalar_disputed(total_disputes)
+                T::WeightInfo::internal_resolve_scalar_disputed()
             }
         }
 
@@ -2450,7 +2438,6 @@ mod pallet {
             }
 
             let mut total_weight = 0;
-            let disputes = Disputes::<T>::get(market_id);
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
@@ -2476,10 +2463,7 @@ mod pallet {
                 MarketStatus::Resolved,
                 resolved_outcome,
             ));
-            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
-                market,
-                disputes.len().saturated_into(),
-            )))
+            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(market)))
         }
 
         pub(crate) fn process_subsidy_collecting_markets(
