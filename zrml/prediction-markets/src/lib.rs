@@ -253,6 +253,40 @@ mod pallet {
         };
     }
 
+    macro_rules! impl_is_bond_pending {
+        ($fn_name:ident, $bond_type:ident) => {
+            fn $fn_name(
+                market_id: &MarketIdOf<T>,
+                market: &MarketOf<T>,
+                with_warning: bool,
+            ) -> bool {
+                if let Some(bond) = &market.bonds.$bond_type {
+                    if !bond.is_settled {
+                        return true;
+                    } else if with_warning {
+                        let warning = format!(
+                            "[PredictionMarkets] The {} bond is already settled for market {:?}.",
+                            stringify!($bond_type),
+                            market_id,
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                    }
+                } else if with_warning {
+                    let warning = format!(
+                        "[PredictionMarkets] The {} bond is not present for market {:?}.",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                }
+
+                false
+            }
+        };
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Destroy a market, including its outcome assets, market account and pool account.
@@ -291,21 +325,7 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            if let Some(bond) = market.bonds.creation {
-                if !bond.is_settled {
-                    Self::slash_creation_bond(&market_id, None)?;
-                }
-            }
-            if let Some(bond) = market.bonds.oracle {
-                if !bond.is_settled {
-                    Self::slash_oracle_bond(&market_id, None)?;
-                }
-            }
-            if let Some(bond) = market.bonds.outsider {
-                if !bond.is_settled {
-                    Self::slash_outsider_bond(&market_id, None)?;
-                }
-            }
+            Self::slash_pending_bonds(&market_id, &market)?;
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
@@ -2021,6 +2041,22 @@ mod pallet {
         impl_slash_bond!(slash_oracle_bond, oracle);
         impl_slash_bond!(slash_outsider_bond, outsider);
         impl_repatriate_bond!(repatriate_oracle_bond, oracle);
+        impl_is_bond_pending!(is_creation_bond_pending, creation);
+        impl_is_bond_pending!(is_oracle_bond_pending, oracle);
+        impl_is_bond_pending!(is_outsider_bond_pending, outsider);
+
+        fn slash_pending_bonds(market_id: &MarketIdOf<T>, market: &MarketOf<T>) -> DispatchResult {
+            if Self::is_creation_bond_pending(market_id, market, false) {
+                Self::slash_creation_bond(market_id, None)?;
+            }
+            if Self::is_oracle_bond_pending(market_id, market, false) {
+                Self::slash_oracle_bond(market_id, None)?;
+            }
+            if Self::is_outsider_bond_pending(market_id, market, false) {
+                Self::slash_outsider_bond(market_id, None)?;
+            }
+            Ok(())
+        }
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -2489,24 +2525,15 @@ mod pallet {
             let report_by_oracle = report.by == market.oracle;
             let is_correct = report.outcome == resolved_outcome;
 
-            let outsider_bond_pending = || -> bool {
-                if let Some(bond) = &market.bonds.outsider {
-                    if !bond.is_settled {
-                        return true;
-                    }
-                }
-                false
-            };
-
             let unreserve_outsider = || -> DispatchResult {
-                if outsider_bond_pending() {
+                if Self::is_outsider_bond_pending(market_id, market, true) {
                     Self::unreserve_outsider_bond(market_id)?;
                 }
                 Ok(())
             };
 
             let slash_outsider = || -> Result<NegativeImbalanceOf<T>, DispatchError> {
-                if outsider_bond_pending() {
+                if Self::is_outsider_bond_pending(market_id, market, true) {
                     let imbalance = Self::slash_outsider_bond(market_id, None)?;
                     return Ok(imbalance);
                 }
