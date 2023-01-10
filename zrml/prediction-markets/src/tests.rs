@@ -3438,7 +3438,7 @@ fn report_reserves_outsider_report_bond_and_unreserved_by_on_resolution() {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
-            MarketPeriod::Block(0..100),
+            MarketPeriod::Block(0..end),
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
@@ -3478,6 +3478,8 @@ fn report_reserves_outsider_report_bond_and_unreserved_by_on_resolution() {
             Balances::free_balance(&CHARLIE),
             charlie_balance_before + OracleBond::get() + OutsiderBond::get()
         );
+        let market = MarketCommons::market(&0).unwrap();
+        assert!(market.bonds.outsider.unwrap().is_settled);
     });
 }
 
@@ -3489,7 +3491,7 @@ fn disputed_market_results_in_rewarding_outsider() {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
-            MarketPeriod::Block(0..100),
+            MarketPeriod::Block(0..end),
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
@@ -3555,7 +3557,7 @@ fn outsider_reports_wrong_outcome() {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
-            MarketPeriod::Block(0..100),
+            MarketPeriod::Block(0..end),
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,

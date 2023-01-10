@@ -157,8 +157,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
         let markets = Markets::<T>::iter_keys().count() as u32;
         let decodable_markets = Markets::<T>::iter_values().count() as u32;
         if markets != decodable_markets {
-            // This is not necessarily an error, but can happen when there are Calls
-            // in an Agenda that are not valid anymore with the new runtime.
             log::error!(
                 "Can only decode {} of {} markets - others will be dropped",
                 decodable_markets,
