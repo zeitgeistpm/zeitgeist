@@ -79,9 +79,6 @@ std = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
-    "frame-system/try-runtime",
-    "frame-executive/try-runtime",
-    "frame-try-runtime",
 ]
 with-global-disputes = [
     "zrml-global-disputes",

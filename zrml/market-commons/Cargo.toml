@@ -27,9 +27,6 @@ std = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
-    "frame-try-runtime",
-    "frame-executive/try-runtime",
-    "frame-system/try-runtime",
 ]
 
 [package]
