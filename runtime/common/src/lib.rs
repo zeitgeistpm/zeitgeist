@@ -58,7 +58,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+            (
+                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
+            ),
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -68,7 +71,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+            (
+                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -912,15 +918,18 @@ macro_rules! impl_config_traits {
         impl parachain_info::Config for Runtime {}
 
         impl zrml_authorized::Config for Runtime {
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrHalfAdvisoryCommittee;
+            type CorrectionPeriod = CorrectionPeriod;
+            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type MarketCommons = MarketCommons;
-            type AuthorizedDisputeResolutionOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type PalletId = AuthorizedPalletId;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_court::Config for Runtime {
             type CourtCaseDuration = CourtCaseDuration;
+            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type MarketCommons = MarketCommons;
             type PalletId = CourtPalletId;
@@ -1033,6 +1042,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_simple_disputes::Config for Runtime {
+            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type MarketCommons = MarketCommons;
             type PalletId = SimpleDisputesPalletId;
