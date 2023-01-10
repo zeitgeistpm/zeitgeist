@@ -838,7 +838,7 @@ macro_rules! impl_config_traits {
             #[cfg(feature = "parachain")]
             type OnTimestampSet = ();
             #[cfg(not(feature = "parachain"))]
-            type OnTimestampSet = ();
+            type OnTimestampSet = Aura;
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
         }
 
