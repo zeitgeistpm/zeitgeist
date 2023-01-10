@@ -197,10 +197,7 @@ mod pallet {
             /// This function **should** only be called if the bond is not yet settled, and calling
             /// it if the bond is settled is most likely a logic error. If the bond is already
             /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
-            fn $fn_name(
-                market_id: &MarketIdOf<T>,
-                beneficiary: &T::AccountId,
-            ) -> Result<BalanceOf<T>, DispatchError> {
+            fn $fn_name(market_id: &MarketIdOf<T>, beneficiary: &T::AccountId) -> DispatchResult {
                 let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
                 let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
                 if bond.is_settled {
@@ -211,20 +208,47 @@ mod pallet {
                     );
                     log::warn!("{}", warning);
                     debug_assert!(false, "{}", warning);
-                    return Ok(Zero::zero());
+                    return Ok(());
                 }
-                let missing = <CurrencyOf<T>>::repatriate_reserved_named(
+                let res = <CurrencyOf<T>>::repatriate_reserved_named(
                     &Self::reserve_id(),
                     &bond.who,
                     beneficiary,
                     bond.value,
                     BalanceStatus::Free,
-                )?;
+                );
+                // If there's an error or missing balance,
+                // there's nothing we can do, so we don't count this as error
+                // and log a warning instead.
+                match res {
+                    Ok(missing) if missing != <BalanceOf<T>>::zero() => {
+                        let warning = format!(
+                            "Failed to repatriate all of the {} bond of market {:?} (missing \
+                             balance {:?}).",
+                            stringify!($bond_type),
+                            market_id,
+                            missing,
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                    }
+                    Ok(_) => (),
+                    Err(_err) => {
+                        let warning = format!(
+                            "Failed to settle the {} bond of market {:?} (error: {}).",
+                            stringify!($bond_type),
+                            market_id,
+                            stringify!(_err),
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                    }
+                }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
                 })?;
-                Ok(missing)
+                Ok(())
             }
         };
     }
@@ -2502,8 +2526,7 @@ mod pallet {
                 // outsider report
                 if is_correct {
                     // reward outsider reporter with oracle bond
-                    let missing = Self::repatriate_oracle_bond(market_id, &report.by)?;
-                    debug_assert!(missing.is_zero(), "Could not deduct all of the value.");
+                    Self::repatriate_oracle_bond(market_id, &report.by)?;
                     unreserve_outsider()?;
                 } else {
                     let oracle_imbalance = Self::slash_oracle_bond(market_id, None)?;
