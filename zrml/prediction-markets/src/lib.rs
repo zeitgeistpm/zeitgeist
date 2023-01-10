@@ -2489,8 +2489,6 @@ mod pallet {
             let report_by_oracle = report.by == market.oracle;
             let is_correct = report.outcome == resolved_outcome;
 
-            // TODO: this wrapper (if let Some and !settled) can be removed
-            // TODO: if there are only markets with outsiders, who all reserved OutsiderBond
             let outsider_bond_pending = || -> bool {
                 if let Some(bond) = &market.bonds.outsider {
                     if !bond.is_settled {
