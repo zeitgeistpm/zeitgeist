@@ -185,7 +185,7 @@ parameter_types! {
     pub const OracleBond: Balance = 200 * BASE;
     /// (Slashable) A bond for an outcome reporter, who is not the oracle.
     /// Slashed in case the final outcome does not match the outcome by the outsider.
-    pub const OutsiderBond: Balance = 100 * BASE;
+    pub const OutsiderBond: Balance = 2 * OracleBond::get();
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
