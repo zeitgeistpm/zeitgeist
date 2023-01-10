@@ -16,6 +16,7 @@
         functions) mentioned here?
   - [ ] Are all new events explained so they can easily be integrated into the
         indexer?
+  - [ ] Are breaking changes marked as such?
   - [ ] Is the file formatted with `prettier -w docs/changelog_for_devs.md`?
 - Sanity tests:
   - [ ] The local node produces blocks.
@@ -30,6 +31,8 @@
         `runtime/common/src/lib.rs`, `decl_runtime_apis!`) correctly formatted?
   - [ ] Are all `*.toml` files formatted with `taplo`?
   - [ ] Are all copyright notices up to date?
+  - [ ] Are enums sorted alphabetically, except for enums used in storage (to
+        prevent migrations) or errors and events?
 - [ ] If an action is required by the Frontend Team, add an issue to
       zeitgeistpm/ui.
 - [ ] If the PR adds a new pallet, is the pallet added to the benchmark
