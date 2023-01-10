@@ -26,7 +26,7 @@ use crate::{
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{AuthorityReport, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+    types::{AuthorityReport, MarketDisputeMechanism, MarketStatus, OutcomeReport, MarketDispute},
 };
 use zrml_market_commons::Markets;
 
@@ -152,6 +152,21 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
         assert_noop!(
             Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
             DispatchError::BadOrigin,
+        );
+    });
+}
+
+#[test]
+fn on_dispute_fails_if_disputes_is_not_empty() {
+    ExtBuilder::default().build().execute_with(|| {
+        let dispute = MarketDispute {
+            by: crate::mock::ALICE,
+            at: 0,
+            outcome: OutcomeReport::Scalar(1),
+        };
+        assert_noop!(
+            Authorized::on_dispute(&[dispute], &0, &market_mock::<Runtime>()),
+            Error::<Runtime>::OnlyOneDisputeAllowed
         );
     });
 }
