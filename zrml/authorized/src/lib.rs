@@ -160,8 +160,6 @@ mod pallet {
         OnlyOneDisputeAllowed,
         /// The report does not match the market's type.
         OutcomeMismatch,
-        /// The market should be reported at this point.
-        MarketIsNotReported,
     }
 
     #[pallet::event]
