@@ -2461,22 +2461,11 @@ mod pallet {
             if report.by == market.oracle {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
+                // reward outsider reporter with oracle bond
+                Self::repatriate_oracle_bond(market_id, &report.by)?;
 
-                // deposit only to the real reporter what actually was slashed
-                if let Err(err) =
-                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance.peek())
-                {
-                    log::warn!(
-                        "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
-                        err
-                    );
-                }
-
-                if let Some(bond) = &market.bonds.outsider {
-                    if !bond.is_settled {
-                        Self::unreserve_outsider_bond(market_id)?;
-                    }
+                if Self::is_outsider_bond_pending(market_id, market, true) {
+                    Self::unreserve_outsider_bond(market_id)?;
                 }
             }
 
