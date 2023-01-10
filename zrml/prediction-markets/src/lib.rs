@@ -1557,8 +1557,6 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
-        /// The market dispute mechanism has not failed.
-        DisputeMechanismHasNotFailed,
         /// Only creator is able to edit the market.
         EditorNotCreator,
         /// EditReason's length greater than MaxEditReasonLen.
