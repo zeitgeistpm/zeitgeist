@@ -1659,8 +1659,6 @@ mod pallet {
         BadOnInitialize,
         /// A complete set of assets has been bought \[market_id, amount_per_asset, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// A failed market dispute mechansim finally resolved \[market_id\]
-        FailedDisputeMechanismResolved(MarketIdOf<T>),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, market_account, market\]
