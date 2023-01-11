@@ -35,15 +35,16 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
-        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
-        MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
-        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
-        MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
-        MinWeight, MinimumPeriod, OutsiderBond, PmPalletId, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK, CorrectionPeriod,
+        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
+        CourtCaseDuration, CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
+        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets,
+        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod,
+        MaxInRatio, MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
+        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutsiderBond, PmPalletId,
+        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,

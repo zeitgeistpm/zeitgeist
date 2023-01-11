@@ -17,7 +17,7 @@
 
 #[cfg(feature = "try-runtime")]
 use crate::MarketIdOf;
-use crate::{BalanceOf, MarketOf, Config, MomentOf};
+use crate::{BalanceOf, Config, MomentOf};
 #[cfg(feature = "try-runtime")]
 use alloc::format;
 use alloc::{collections::BTreeMap, vec::Vec};
@@ -28,7 +28,7 @@ use frame_support::{
     log,
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
-    Blake2_128Concat, RuntimeDebug,
+    RuntimeDebug,
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
@@ -81,7 +81,7 @@ type OldMarketOf<T> = OldMarket<
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> = StorageMap<
     MarketCommonsPallet<T>,
-    Blake2_128Concat,
+    frame_support::Blake2_128Concat,
     <T as zrml_market_commons::Config>::MarketId,
     OldMarketOf<T>,
 >;
@@ -336,9 +336,10 @@ mod tests {
 
 #[cfg(feature = "try-runtime")]
 use alloc::string::ToString;
-use frame_support::{migration::storage_key_iter, Twox64Concat};
+#[cfg(feature = "try-runtime")]
+use frame_support::migration::storage_iter;
+use frame_support::{migration::{storage_key_iter, put_storage_value}, Twox64Concat};
 use frame_system::pallet_prelude::BlockNumberFor;
-use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::Pallet as AuthorizedPallet;
 
