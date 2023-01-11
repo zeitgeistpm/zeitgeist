@@ -16,19 +16,25 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
+    benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
     cli::{Cli, Subcommand},
-    command_helper::{inherent_benchmark_data, RemarksExtrinsicBuilder},
     service::{new_chain_ops, new_full, IdentifyVariant},
 };
-use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
+use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
+use sp_keyring::Sr25519Keyring;
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
-    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
+    battery_station_runtime::{
+        ExistentialDeposit as BatteryStationED, RuntimeApi as BatteryStationRuntimeApi,
+    },
 };
 #[cfg(feature = "with-zeitgeist-runtime")]
-use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
+use {
+    super::service::ZeitgeistExecutor,
+    zeitgeist_runtime::{ExistentialDeposit as ZeitgeistED, RuntimeApi as ZeitgeistRuntimeApi},
+};
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend,
@@ -181,8 +187,63 @@ pub fn run() -> sc_cli::Result<()> {
                     }
                 }
 
-                BenchmarkCmd::Extrinsic(_cmd) => {
-                    Err("BenchmarkCmd Extrinsic is not yet supported".into())
+                BenchmarkCmd::Extrinsic(cmd) => {
+                    if cfg!(feature = "parachain") {
+                        return Err("Extrinsic is only supported in standalone chain".into());
+                    }
+                    match chain_spec {
+                        #[cfg(feature = "with-zeitgeist-runtime")]
+                        spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                zeitgeist_runtime::RuntimeApi,
+                                ZeitgeistExecutor,
+                            >(&config)?;
+                            // Register the *Remark* and *TKA* builders.
+                            let ext_factory = ExtrinsicFactory(vec![
+                                Box::new(RemarksExtrinsicBuilder::new(params.client.clone(), true)),
+                                Box::new(TransferKeepAliveBuilder::new(
+                                    params.client.clone(),
+                                    Sr25519Keyring::Alice.to_account_id(),
+                                    ZeitgeistED::get(),
+                                    true,
+                                )),
+                            ]);
+                            cmd.run(
+                                params.client,
+                                inherent_benchmark_data()?,
+                                Vec::new(),
+                                &ext_factory,
+                            )
+                        }),
+                        #[cfg(feature = "with-battery-station-runtime")]
+                        _ => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                battery_station_runtime::RuntimeApi,
+                                BatteryStationExecutor,
+                            >(&config)?;
+                            // Register the *Remark* and *TKA* builders.
+                            let ext_factory = ExtrinsicFactory(vec![
+                                Box::new(RemarksExtrinsicBuilder::new(
+                                    params.client.clone(),
+                                    false,
+                                )),
+                                Box::new(TransferKeepAliveBuilder::new(
+                                    params.client.clone(),
+                                    Sr25519Keyring::Alice.to_account_id(),
+                                    BatteryStationED::get(),
+                                    false,
+                                )),
+                            ]);
+                            cmd.run(
+                                params.client,
+                                inherent_benchmark_data()?,
+                                Vec::new(),
+                                &ext_factory,
+                            )
+                        }),
+                        #[cfg(not(feature = "with-battery-station-runtime"))]
+                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                    }
                 }
             }
         }

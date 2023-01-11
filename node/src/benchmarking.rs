@@ -25,7 +25,7 @@ use sp_inherents::{InherentData, InherentDataProvider};
 use sp_keyring::Sr25519Keyring;
 use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
 use std::{sync::Arc, time::Duration};
-use zeitgeist_primitives::types::Signature;
+use zeitgeist_primitives::types::{AccountId, Balance, Signature};
 
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
@@ -74,6 +74,76 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
                 self.client.as_ref(),
                 acc,
                 battery_station_runtime::SystemCall::remark { remark: vec![] }.into(),
+                nonce,
+            )
+            .into());
+        }
+
+        Err(crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE)
+    }
+}
+
+/// Generates `Balances::TransferKeepAlive` extrinsics for the benchmarks.
+///
+/// Note: Should only be used for benchmarking.
+pub struct TransferKeepAliveBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
+    client: Arc<FullClient<RuntimeApi, Executor>>,
+    dest: AccountId,
+    value: Balance,
+    is_zeitgeist: bool,
+}
+
+impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
+    TransferKeepAliveBuilder<RuntimeApi, Executor>
+{
+    /// Creates a new [`Self`] from the given client.
+    pub fn new(
+        client: Arc<FullClient<RuntimeApi, Executor>>,
+        dest: AccountId,
+        value: Balance,
+        is_zeitgeist: bool,
+    ) -> Self {
+        Self { client, dest, value, is_zeitgeist }
+    }
+}
+
+impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
+    frame_benchmarking_cli::ExtrinsicBuilder for TransferKeepAliveBuilder<RuntimeApi, Executor>
+{
+    fn pallet(&self) -> &str {
+        "balances"
+    }
+
+    fn extrinsic(&self) -> &str {
+        "transfer_keep_alive"
+    }
+
+    fn build(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
+        let acc = Sr25519Keyring::Bob.pair();
+        #[cfg(feature = "with-zeitgeist-runtime")]
+        if self.is_zeitgeist {
+            return Ok(create_benchmark_extrinsic_zeitgeist(
+                self.client.as_ref(),
+                acc,
+                zeitgeist_runtime::BalancesCall::transfer_keep_alive {
+                    dest: self.dest.clone().into(),
+                    value: self.value,
+                }
+                .into(),
+                nonce,
+            )
+            .into());
+        }
+        #[cfg(feature = "with-battery-station-runtime")]
+        if !self.is_zeitgeist {
+            return Ok(create_benchmark_extrinsic_battery_station(
+                self.client.as_ref(),
+                acc,
+                battery_station_runtime::BalancesCall::transfer_keep_alive {
+                    dest: self.dest.clone().into(),
+                    value: self.value,
+                }
+                .into(),
                 nonce,
             )
             .into());
