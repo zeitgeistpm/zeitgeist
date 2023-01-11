@@ -43,7 +43,7 @@ use zeitgeist_primitives::{
         MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
         MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
         MinWeight, MinimumPeriod, OutsiderBond, PmPalletId, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK, CorrectionPeriod,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -253,16 +253,19 @@ ord_parameter_types! {
 }
 
 impl zrml_authorized::Config for Runtime {
-    type Event = Event;
-    type MarketCommons = MarketCommons;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
+    type CorrectionPeriod = CorrectionPeriod;
+    type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
@@ -304,6 +307,7 @@ impl zrml_rikiddo::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
 }

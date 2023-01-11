@@ -20,12 +20,13 @@
 use crate::{
     market_mock,
     mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB},
+    mock_storage::pallet as mock_storage,
     AuthorizedOutcomeReports, Error,
 };
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{MarketDisputeMechanism, MarketStatus, OutcomeReport},
+    types::{AuthorityReport, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
 };
 use zrml_market_commons::Markets;
 
@@ -38,7 +39,46 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
             0,
             OutcomeReport::Scalar(1)
         ));
-        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(1));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at }
+        );
+    });
+}
+
+#[test]
+fn authorize_market_outcome_does_not_reset_dispute_resolution() {
+    ExtBuilder::default().build().execute_with(|| {
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>());
+
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            0,
+            OutcomeReport::Scalar(1),
+        ));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at_0 = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at: resolve_at_0 }
+        );
+
+        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
+
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            0,
+            OutcomeReport::Scalar(2)
+        ));
+
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            AuthorityReport { outcome: OutcomeReport::Scalar(2), resolve_at: resolve_at_0 }
+        );
+
+        assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
     });
 }
 
@@ -117,6 +157,18 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
 }
 
 #[test]
+fn on_dispute_fails_if_disputes_is_not_empty() {
+    ExtBuilder::default().build().execute_with(|| {
+        let dispute =
+            MarketDispute { by: crate::mock::ALICE, at: 0, outcome: OutcomeReport::Scalar(1) };
+        assert_noop!(
+            Authorized::on_dispute(&[dispute], &0, &market_mock::<Runtime>()),
+            Error::<Runtime>::OnlyOneDisputeAllowed
+        );
+    });
+}
+
+#[test]
 fn on_resolution_fails_if_no_report_was_submitted() {
     ExtBuilder::default().build().execute_with(|| {
         let report = Authorized::on_resolution(&[], &0, &market_mock::<Runtime>()).unwrap();
@@ -177,13 +229,40 @@ fn authorized_market_outcome_can_handle_multiple_markets() {
             1,
             OutcomeReport::Scalar(456)
         ));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
         assert_eq!(
             AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
-            OutcomeReport::Scalar(123)
+            AuthorityReport { outcome: OutcomeReport::Scalar(123), resolve_at }
         );
         assert_eq!(
             AuthorizedOutcomeReports::<Runtime>::get(1).unwrap(),
-            OutcomeReport::Scalar(456)
+            AuthorityReport { outcome: OutcomeReport::Scalar(456), resolve_at }
         );
+    });
+}
+
+#[test]
+fn get_auto_resolve_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(42);
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(0, &market);
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            0,
+            OutcomeReport::Scalar(1)
+        ));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        assert_eq!(Authorized::get_auto_resolve(&[], &0, &market).unwrap(), Some(resolve_at),);
+    });
+}
+
+#[test]
+fn get_auto_resolve_returns_none_without_market_storage() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market = market_mock::<Runtime>();
+        assert_eq!(Authorized::get_auto_resolve(&[], &0, &market).unwrap(), None,);
     });
 }
