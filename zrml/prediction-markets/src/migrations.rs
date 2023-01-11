@@ -338,7 +338,10 @@ mod tests {
 use alloc::string::ToString;
 #[cfg(feature = "try-runtime")]
 use frame_support::migration::storage_iter;
-use frame_support::{migration::{storage_key_iter, put_storage_value}, Twox64Concat};
+use frame_support::{
+    migration::{put_storage_value, storage_key_iter},
+    Twox64Concat,
+};
 use frame_system::pallet_prelude::BlockNumberFor;
 use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::Pallet as AuthorizedPallet;
