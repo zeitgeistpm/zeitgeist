@@ -1297,36 +1297,33 @@ mod pallet {
                     Error::<T>::InvalidDisputeMechanism
                 );
 
-                let disputes = <Disputes<T>>::get(market_id);
-                ensure!(
-                    disputes.len() == T::MaxDisputes::get() as usize,
-                    Error::<T>::MaxDisputesNeeded
-                );
-
                 ensure!(
                     T::GlobalDisputes::is_not_started(&market_id),
                     Error::<T>::GlobalDisputeAlreadyStarted
                 );
 
-                // add report outcome to voting choices
-                if let Some(report) = &market.report {
-                    T::GlobalDisputes::push_voting_outcome(
-                        &market_id,
-                        report.outcome.clone(),
-                        &report.by,
-                        <BalanceOf<T>>::zero(),
-                    )?;
-                }
+                let has_failed = match market.dispute_mechanism {
+                    MarketDisputeMechanism::Authorized => {
+                        T::Authorized::has_failed(market_id, &market)?
+                    }
+                    MarketDisputeMechanism::Court => T::Court::has_failed(market_id, &market)?,
+                    MarketDisputeMechanism::SimpleDisputes => {
+                        T::SimpleDisputes::has_failed(market_id, &market)?
+                    }
+                };
+                ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-                for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
-                    let dispute_bond = default_dispute_bond::<T>(index);
-                    T::GlobalDisputes::push_voting_outcome(
-                        &market_id,
-                        outcome.clone(),
-                        by,
-                        dispute_bond,
-                    )?;
-                }
+                match market.dispute_mechanism {
+                    MarketDisputeMechanism::Authorized => {
+                        T::Authorized::on_global_dispute(market_id, &market)?
+                    }
+                    MarketDisputeMechanism::Court => {
+                        T::Court::on_global_dispute(market_id, &market)?
+                    }
+                    MarketDisputeMechanism::SimpleDisputes => {
+                        T::SimpleDisputes::on_global_dispute(market_id, &market)?
+                    }
+                };
 
                 // TODO(#372): Allow court with global disputes.
                 // ensure, that global disputes controls the resolution now
@@ -1573,8 +1570,8 @@ mod pallet {
         MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
-        /// The maximum number of disputes is needed for this operation.
-        MaxDisputesNeeded,
+        /// The market dispute mechanism has not failed.
+        MarketDisputeMechanismNotFailed,
         /// Tried to settle missing bond.
         MissingBond,
         /// The number of categories for a categorical market is too low.
@@ -1980,7 +1977,7 @@ mod pallet {
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
-            let (ids_len, disputes_len) = match market.status {
+            let ids_len = match market.status {
                 MarketStatus::Reported => {
                     let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
                     let dispute_duration_ends_at_block =
@@ -1995,7 +1992,6 @@ mod pallet {
                     )
                 }
                 MarketStatus::Disputed => {
-                    let disputes = Disputes::<T>::get(market_id);
                     // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
                     let auto_resolve_block_opt = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized => {
@@ -2010,15 +2006,15 @@ mod pallet {
                     };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
                         let ids_len = remove_auto_resolve::<T>(market_id, auto_resolve_block);
-                        (ids_len, disputes.len() as u32)
+                        (ids_len, 0u32)
                     } else {
-                        (0u32, disputes.len() as u32)
+                        (0u32, 0u32)
                     }
                 }
                 _ => (0u32, 0u32),
             };
 
-            Ok((ids_len, disputes_len))
+            Ok((ids_len, 1u32))
         }
 
         pub(crate) fn do_buy_complete_set(
@@ -2319,7 +2315,7 @@ mod pallet {
             } else {
                 let imbalance = Self::slash_oracle_bond(market_id, None)?;
                 // TODO what should be done with the OracleBond imbalance?
-                overall_imbalance.subsume(imbalance);
+                // overall_imbalance.subsume(imbalance);
             }
 
             Ok(resolved_outcome)
@@ -2353,7 +2349,7 @@ mod pallet {
                 m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
             })?;
-            Disputes::<T>::remove(market_id);
+
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
                 MarketStatus::Resolved,
@@ -2725,16 +2721,6 @@ mod pallet {
                 bonds,
             })
         }
-    }
-
-    // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub(crate) fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
-    where
-        T: Config,
-    {
-        T::DisputeBond::get().saturating_add(
-            T::DisputeFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
-        )
     }
 
     fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {

@@ -46,10 +46,7 @@ mod pallet {
     use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{
-            AuthorityReport, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
-            OutcomeReport,
-        },
+        types::{AuthorityReport, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -156,8 +153,6 @@ mod pallet {
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
         MarketIsNotDisputed,
-        /// Only one dispute is allowed.
-        OnlyOneDisputeAllowed,
         /// The report does not match the market's type.
         OutcomeMismatch,
     }
@@ -195,21 +190,15 @@ mod pallet {
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
-        fn on_dispute(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> DispatchResult {
+        fn on_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            ensure!(disputes.is_empty(), Error::<T>::OnlyOneDisputeAllowed);
             Ok(())
         }
 
         fn on_resolution(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
@@ -222,7 +211,6 @@ mod pallet {
         }
 
         fn get_auto_resolve(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
@@ -233,17 +221,22 @@ mod pallet {
             Ok(Self::get_auto_resolve(market_id))
         }
 
-        fn has_failed(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> Result<bool, DispatchError> {
+        fn has_failed(_: &Self::MarketId, market: &MarketOf<T>) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
             Ok(false)
+        }
+
+        fn on_global_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+
+            Ok(())
         }
     }
 

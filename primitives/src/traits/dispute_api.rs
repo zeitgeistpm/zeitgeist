@@ -74,6 +74,13 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<bool, DispatchError>;
+
+    /// Called, when a global dispute is started.
+    /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
+    fn on_global_dispute(
+        market_id: &Self::MarketId,
+        market: &MarketOfDisputeApi<Self>,
+    ) -> DispatchResult;
 }
 
 type MarketOfDisputeResolutionApi<T> = Market<

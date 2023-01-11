@@ -8,6 +8,7 @@ sp-runtime = { branch = "polkadot-v0.9.26", default-features = false, git = "htt
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 orml-traits = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+zrml-global-disputes = { default-features = false, path = "../global-disputes", optional = true }
 
 [dev-dependencies]
 pallet-balances = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
@@ -33,6 +34,9 @@ std = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
+]
+with-global-disputes = [
+    "zrml-global-disputes",
 ]
 
 [package]

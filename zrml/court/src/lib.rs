@@ -509,17 +509,14 @@ mod pallet {
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
-        fn on_dispute(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            market_id: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> DispatchResult {
+        fn on_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            let necessary_jurors_num = Self::necessary_jurors_num(disputes);
+            // TODO &[] was disputes list before: how to handle it now without disputes from pm?
+            let necessary_jurors_num = Self::necessary_jurors_num(&[]);
             let mut rng = Self::rng();
             let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
@@ -535,7 +532,6 @@ mod pallet {
         // voted outcome (winner of the losing majority) are placed as tardy instead of
         // being slashed.
         fn on_resolution(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
@@ -564,7 +560,6 @@ mod pallet {
         }
 
         fn get_auto_resolve(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
@@ -575,16 +570,20 @@ mod pallet {
             Ok(None)
         }
 
-        fn has_failed(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> Result<bool, DispatchError> {
+        fn has_failed(_: &Self::MarketId, market: &MarketOf<T>) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
             Ok(false)
+        }
+
+        fn on_global_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            Ok(())
         }
     }
 
