@@ -521,7 +521,7 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            
+
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
@@ -529,22 +529,18 @@ mod pallet {
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::on_dispute(&disputes, &market_id, &market)?
+                    T::Authorized::on_dispute(&market_id, &market)?
                 }
-                MarketDisputeMechanism::Court => {
-                    T::Court::on_dispute(&disputes, &market_id, &market)?
-                }
+                MarketDisputeMechanism::Court => T::Court::on_dispute(&market_id, &market)?,
                 MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
+                    T::SimpleDisputes::on_dispute(&market_id, &market)?
                 }
             }
 
             Self::set_market_as_disputed(&market, &market_id)?;
-            let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
-            Self::deposit_event(Event::MarketDisputed(
-                market_id,
-                MarketStatus::Disputed,
-            ));
+
+            Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
+
             Ok((Some(T::WeightInfo::dispute_authorized())).into())
         }
 
@@ -2003,13 +1999,13 @@ mod pallet {
                     // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
                     let auto_resolve_block_opt = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized => {
-                            T::Authorized::get_auto_resolve(&disputes, market_id, &market)?
+                            T::Authorized::get_auto_resolve(market_id, &market)?
                         }
                         MarketDisputeMechanism::Court => {
-                            T::Court::get_auto_resolve(&disputes, market_id, &market)?
+                            T::Court::get_auto_resolve(market_id, &market)?
                         }
                         MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::get_auto_resolve(&disputes, market_id, &market)?
+                            T::SimpleDisputes::get_auto_resolve(market_id, &market)?
                         }
                     };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
@@ -2290,8 +2286,6 @@ mod pallet {
             market: &MarketOf<T>,
         ) -> Result<OutcomeReport, DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
-            let disputes = Disputes::<T>::get(market_id);
-
             let mut resolved_outcome_option = None;
 
             #[cfg(feature = "with-global-disputes")]
@@ -2306,13 +2300,11 @@ mod pallet {
             if resolved_outcome_option.is_none() {
                 resolved_outcome_option = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        T::Authorized::on_resolution(&disputes, market_id, market)?
+                        T::Authorized::on_resolution(market_id, market)?
                     }
-                    MarketDisputeMechanism::Court => {
-                        T::Court::on_resolution(&disputes, market_id, market)?
-                    }
+                    MarketDisputeMechanism::Court => T::Court::on_resolution(market_id, market)?,
                     MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                        T::SimpleDisputes::on_resolution(market_id, market)?
                     }
                 };
             }
@@ -2320,52 +2312,15 @@ mod pallet {
             let resolved_outcome =
                 resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
-            let mut correct_reporters: Vec<T::AccountId> = Vec::new();
-
             // If the oracle reported right, return the OracleBond, otherwise slash it to
             // pay the correct reporters.
-            let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
                 let imbalance = Self::slash_oracle_bond(market_id, None)?;
+                // TODO what should be done with the OracleBond imbalance?
                 overall_imbalance.subsume(imbalance);
             }
-
-            for (i, dispute) in disputes.iter().enumerate() {
-                let actual_bond = default_dispute_bond::<T>(i);
-                if dispute.outcome == resolved_outcome {
-                    T::AssetManager::unreserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &dispute.by,
-                        actual_bond,
-                    );
-
-                    correct_reporters.push(dispute.by.clone());
-                } else {
-                    let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                        &Self::reserve_id(),
-                        &dispute.by,
-                        actual_bond.saturated_into::<u128>().saturated_into(),
-                    );
-                    overall_imbalance.subsume(imbalance);
-                }
-            }
-
-            // Fold all the imbalances into one and reward the correct reporters. The
-            // number of correct reporters might be zero if the market defaults to the
-            // report after abandoned dispute. In that case, the rewards remain slashed.
-            if let Some(reward_per_each) =
-                overall_imbalance.peek().checked_div(&correct_reporters.len().saturated_into())
-            {
-                for correct_reporter in &correct_reporters {
-                    let (actual_reward, leftover) = overall_imbalance.split(reward_per_each);
-                    overall_imbalance = leftover;
-                    CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
-                }
-            }
-            T::Slash::on_unbalanced(overall_imbalance);
 
             Ok(resolved_outcome)
         }

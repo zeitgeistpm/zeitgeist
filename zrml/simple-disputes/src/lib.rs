@@ -31,25 +31,27 @@ pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 mod pallet {
     use crate::SimpleDisputesPalletApi;
     use core::marker::PhantomData;
-    use frame_system::pallet_prelude::*;
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        traits::{Currency, Get, Hooks, IsType},
-        PalletId,
         pallet_prelude::*,
-        transactional,
+        traits::{Currency, Get, Hooks, Imbalance, IsType, NamedReservableCurrency, OnUnbalanced},
+        transactional, PalletId,
     };
-    use sp_runtime::{traits::Saturating, DispatchError};
-    use zeitgeist_primitives::{
-        traits::{DisputeApi, DisputeResolutionApi},
-        types::{Report, Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
-    };
-    use sp_runtime::traits::Saturating;
-    use sp_runtime::SaturatedConversion;
-    use zeitgeist_primitives::traits::ZeitgeistAssetManager;
-    use zrml_market_commons::MarketCommonsPalletApi;
+    use frame_system::pallet_prelude::*;
     use orml_traits::currency::NamedMultiReservableCurrency;
+    use sp_runtime::{
+        traits::{CheckedDiv, Saturating},
+        DispatchError, SaturatedConversion,
+    };
+    use zeitgeist_primitives::{
+        traits::{DisputeApi, DisputeResolutionApi, ZeitgeistAssetManager},
+        types::{
+            Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+            Report,
+        },
+    };
+    use zrml_market_commons::MarketCommonsPalletApi;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -96,12 +98,17 @@ mod pallet {
 
         #[pallet::constant]
         type PredictionMarketsPalletId: Get<PalletId>;
+
+        /// Handler for slashed funds.
+        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
 
     type BalanceOf<T> =
-    <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -130,9 +137,13 @@ mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {
-            OutcomeReserved { market_id: MarketIdOf<T>, dispute: MarketDispute<T::AccountId, T::BlockNumber> },
-        }
+        T: Config,
+    {
+        OutcomeReserved {
+            market_id: MarketIdOf<T>,
+            dispute: MarketDispute<T::AccountId, T::BlockNumber>,
+        },
+    }
 
     #[pallet::error]
     pub enum Error<T> {
@@ -166,10 +177,7 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
-            ensure!(
-                market.status == MarketStatus::Disputed,
-                Error::<T>::InvalidMarketStatus
-            );
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
@@ -192,10 +200,13 @@ mod pallet {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
-            Self::deposit_event(Event::OutcomeReserved {
-                market_id,
-                dispute: market_dispute,
-            });
+            // each dispute resets dispute_duration
+            Self::remove_auto_resolve(disputes.as_slice(), &market_id, &market);
+            let dispute_duration_ends_at_block =
+                now.saturating_add(market.deadlines.dispute_duration);
+            T::DisputeResolution::add_auto_resolve(&market_id, dispute_duration_ends_at_block)?;
+
+            Self::deposit_event(Event::OutcomeReserved { market_id, dispute: market_dispute });
 
             Ok((Some(5000)).into())
         }
@@ -261,27 +272,16 @@ mod pallet {
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
-        fn on_dispute(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            market_id: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> DispatchResult {
+        fn on_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
-            Self::remove_auto_resolve(disputes, market_id, market);
-            let curr_block_num = <frame_system::Pallet<T>>::block_number();
-            // each dispute resets dispute_duration
-            let dispute_duration_ends_at_block =
-                curr_block_num.saturating_add(market.deadlines.dispute_duration);
-            T::DisputeResolution::add_auto_resolve(market_id, dispute_duration_ends_at_block)?;
             Ok(())
         }
 
         fn on_resolution(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
+            market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
             ensure!(
@@ -290,30 +290,72 @@ mod pallet {
             );
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
-            if let Some(last_dispute) = disputes.last() {
-                Ok(Some(last_dispute.outcome.clone()))
-            } else {
-                Err(Error::<T>::InvalidMarketStatus.into())
+            let disputes = Disputes::<T>::get(market_id);
+
+            let last_dispute = match disputes.last() {
+                Some(l) => l,
+                // if there are no disputes, then the market is resolved with the default report
+                None => return Ok(None),
+            };
+
+            let resolved_outcome = last_dispute.outcome.clone();
+
+            let mut correct_reporters: Vec<T::AccountId> = Vec::new();
+
+            let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
+
+            for (i, dispute) in disputes.iter().enumerate() {
+                let actual_bond = default_dispute_bond::<T>(i);
+                if dispute.outcome == resolved_outcome {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &dispute.by,
+                        actual_bond,
+                    );
+
+                    correct_reporters.push(dispute.by.clone());
+                } else {
+                    let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                        &Self::reserve_id(),
+                        &dispute.by,
+                        actual_bond.saturated_into::<u128>().saturated_into(),
+                    );
+                    overall_imbalance.subsume(imbalance);
+                }
             }
+
+            // Fold all the imbalances into one and reward the correct reporters. The
+            // number of correct reporters might be zero if the market defaults to the
+            // report after abandoned dispute. In that case, the rewards remain slashed.
+            if let Some(reward_per_each) =
+                overall_imbalance.peek().checked_div(&correct_reporters.len().saturated_into())
+            {
+                for correct_reporter in &correct_reporters {
+                    let (actual_reward, leftover) = overall_imbalance.split(reward_per_each);
+                    overall_imbalance = leftover;
+                    CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
+                }
+            }
+
+            T::Slash::on_unbalanced(overall_imbalance);
+
+            Ok(Some(resolved_outcome))
         }
 
         fn get_auto_resolve(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
+            market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<Self::BlockNumber>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
-            Ok(Self::get_auto_resolve(disputes, market))
+            let disputes = Disputes::<T>::get(market_id);
+            Ok(Self::get_auto_resolve(disputes.as_slice(), market))
         }
 
-        fn has_failed(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> Result<bool, DispatchError> {
+        fn has_failed(_: &Self::MarketId, market: &MarketOf<T>) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism

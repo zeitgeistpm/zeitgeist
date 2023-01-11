@@ -40,11 +40,7 @@ pub trait DisputeApi {
     ///
     /// Further interaction with the dispute API (if necessary) **should** happen through an
     /// associated pallet. **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
-    fn on_dispute(
-        previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-        market_id: &Self::MarketId,
-        market: &MarketOfDisputeApi<Self>,
-    ) -> DispatchResult;
+    fn on_dispute(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 
     /// Manage market resolution of a disputed market.
     ///
@@ -56,7 +52,6 @@ pub trait DisputeApi {
     /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
     /// returned, this means that the dispute could not be resolved.
     fn on_resolution(
-        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
@@ -68,7 +63,6 @@ pub trait DisputeApi {
     ///
     /// Returns the future resolution block if available, otherwise `None`.
     fn get_auto_resolve(
-        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
@@ -77,7 +71,6 @@ pub trait DisputeApi {
     /// was unable to come to a conclusion.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     fn has_failed(
-        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<bool, DispatchError>;
