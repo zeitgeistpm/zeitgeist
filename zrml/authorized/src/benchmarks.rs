@@ -23,19 +23,77 @@
 
 #[cfg(test)]
 use crate::Pallet as Authorized;
-use crate::{market_mock, Call, Config, Pallet};
+use crate::{market_mock, AuthorizedOutcomeReports, Call, Config, Pallet};
 use frame_benchmarking::benchmarks;
-use frame_support::{dispatch::UnfilteredDispatchable, traits::EnsureOrigin};
-use zeitgeist_primitives::types::OutcomeReport;
+use frame_support::{
+    dispatch::UnfilteredDispatchable,
+    traits::{EnsureOrigin, Get},
+};
+use sp_runtime::traits::Saturating;
+use zeitgeist_primitives::{
+    traits::DisputeResolutionApi,
+    types::{AuthorityReport, OutcomeReport},
+};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 benchmarks! {
-    authorize_market_outcome {
+    authorize_market_outcome_first_report {
+        let m in 1..63;
+
         let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let market_id = 0u32.into();
         let market = market_mock::<T>();
         T::MarketCommons::push_market(market).unwrap();
-        let call = Call::<T>::authorize_market_outcome { market_id: 0_u32.into(), outcome: OutcomeReport::Scalar(1) };
-    }: { call.dispatch_bypass_filter(origin)? }
+
+        frame_system::Pallet::<T>::set_block_number(42u32.into());
+        let now = frame_system::Pallet::<T>::block_number();
+        let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
+        for _ in 1..=m {
+            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
+            T::DisputeResolution::add_auto_resolve(&id, correction_period_ends_at).unwrap();
+        }
+
+        let call = Call::<T>::authorize_market_outcome {
+            market_id,
+            outcome: OutcomeReport::Scalar(1),
+        };
+    }: {
+        call.dispatch_bypass_filter(origin)?
+    } verify {
+        let report = AuthorityReport {
+            resolve_at: correction_period_ends_at,
+            outcome: OutcomeReport::Scalar(1)
+        };
+        assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
+    }
+
+    authorize_market_outcome_existing_report {
+        let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market).unwrap();
+
+        frame_system::Pallet::<T>::set_block_number(42u32.into());
+
+        let now = frame_system::Pallet::<T>::block_number();
+        let resolve_at = now.saturating_add(T::CorrectionPeriod::get());
+
+        let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(0) };
+        AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
+        let now = frame_system::Pallet::<T>::block_number();
+        frame_system::Pallet::<T>::set_block_number(now + 42u32.into());
+
+        let call = Call::<T>::authorize_market_outcome {
+            market_id,
+            outcome: OutcomeReport::Scalar(1),
+        };
+    }: {
+        call.dispatch_bypass_filter(origin)?
+    } verify {
+        let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(1) };
+        assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
+    }
 
     impl_benchmark_test_suite!(
         Authorized,

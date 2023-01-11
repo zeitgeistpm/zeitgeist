@@ -34,14 +34,15 @@ mod pallet {
     use frame_system::pallet_prelude::*;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         traits::{Currency, Get, Hooks, IsType},
         PalletId,
         pallet_prelude::*,
         transactional,
     };
-    use sp_runtime::DispatchError;
+    use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
-        traits::DisputeApi,
+        traits::{DisputeApi, DisputeResolutionApi},
         types::{Report, Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use sp_runtime::traits::Saturating;
@@ -66,6 +67,13 @@ mod pallet {
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
         type DisputeBond: Get<BalanceOf<Self>>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// The additional amount of currency that must be bonded when creating a subsequent
         /// dispute.
@@ -218,6 +226,28 @@ mod pallet {
             ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
             Ok(())
         }
+
+        fn get_auto_resolve(
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            market: &MarketOf<T>,
+        ) -> Option<T::BlockNumber> {
+            disputes.last().map(|last_dispute| {
+                last_dispute.at.saturating_add(market.deadlines.dispute_duration)
+            })
+        }
+
+        fn remove_auto_resolve(
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) {
+            if let Some(dispute_duration_ends_at_block) = Self::get_auto_resolve(disputes, market) {
+                T::DisputeResolution::remove_auto_resolve(
+                    market_id,
+                    dispute_duration_ends_at_block,
+                );
+            }
+        }
     }
 
     impl<T> DisputeApi for Pallet<T>
@@ -232,13 +262,20 @@ mod pallet {
         type Origin = T::Origin;
 
         fn on_dispute(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> DispatchResult {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
+            Self::remove_auto_resolve(disputes, market_id, market);
+            let curr_block_num = <frame_system::Pallet<T>>::block_number();
+            // each dispute resets dispute_duration
+            let dispute_duration_ends_at_block =
+                curr_block_num.saturating_add(market.deadlines.dispute_duration);
+            T::DisputeResolution::add_auto_resolve(market_id, dispute_duration_ends_at_block)?;
             Ok(())
         }
 
@@ -247,18 +284,42 @@ mod pallet {
             _: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
-            }
-            if market.status != MarketStatus::Disputed {
-                return Err(Error::<T>::InvalidMarketStatus.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             if let Some(last_dispute) = disputes.last() {
                 Ok(Some(last_dispute.outcome.clone()))
             } else {
                 Err(Error::<T>::InvalidMarketStatus.into())
             }
+        }
+
+        fn get_auto_resolve(
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
+            Ok(Self::get_auto_resolve(disputes, market))
+        }
+
+        fn has_failed(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<bool, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
+            // TODO when does simple disputes fail?
+            Ok(false)
         }
     }
 
