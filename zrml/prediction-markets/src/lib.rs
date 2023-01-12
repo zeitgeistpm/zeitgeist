@@ -326,6 +326,7 @@ mod pallet {
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
+            Self::set_market_end(&market_id)?;
             // The CloseOrigin should not pay fees for providing this service
             Ok((
                 Some(T::WeightInfo::admin_move_market_to_closed(open_ids_len, close_ids_len)),
@@ -2301,6 +2302,25 @@ mod pallet {
             Self::deposit_event(Event::MarketClosed(*market_id));
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             Ok(total_weight)
+        }
+
+        pub(crate) fn set_market_end(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
+            <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
+                market.period = match market.period {
+                    MarketPeriod::Block(ref range) => {
+                        let current_block = <frame_system::Pallet<T>>::block_number();
+                        MarketPeriod::Block(range.start..current_block)
+                    }
+                    MarketPeriod::Timestamp(ref range) => {
+                        let current_time_frame = Self::calculate_time_frame_of_moment(
+                            <zrml_market_commons::Pallet<T>>::now(),
+                        );
+                        MarketPeriod::Timestamp(range.start..current_time_frame)
+                    }
+                };
+                Ok(())
+            })?;
+            Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
         /// Handle market state transitions at the end of its active phase.
