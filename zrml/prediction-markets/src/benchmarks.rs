@@ -1080,7 +1080,8 @@ benchmarks! {
         let range_end: MomentOf<T> = ((2_u64 + 1_00_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
         // We need to ensure, that period range start is now,
         // because we would like to open the pool now, so set timestamp to range_start
-        // zeitgeist_utils::set_block_number_timestamp::<T>(Default::default(), range_start.saturated_into());
+        let block = frame_system::Pallet::<T>::block_number();
+        zeitgeist_utils::set_block_number_timestamp::<T>(block, range_start.saturated_into());
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -1110,9 +1111,8 @@ benchmarks! {
         };
         let grace_period: u32 =
             (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-        let report_at = frame_system::Pallet::<T>::block_number();
-        zeitgeist_utils::set_block_number_timestamp::<T>(report_at, (end + grace_period).into());
-        let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
+        zeitgeist_utils::set_block_number_timestamp::<T>(block, (end + grace_period).into());
+        let resolves_at = block.saturating_add(market.deadlines.dispute_duration);
         for i in 0..m {
             MarketIdsPerReportBlock::<T>::try_mutate(resolves_at, |ids| {
                 ids.try_push(i.into())
