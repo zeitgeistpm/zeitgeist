@@ -32,7 +32,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::*;
-    use alloc::{vec, vec::Vec};
+    use alloc::{format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
@@ -56,11 +56,11 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
-        traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
+        traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
-            MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
-            ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -70,7 +70,7 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -84,12 +84,111 @@ mod pallet {
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
     pub type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
     >;
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
+
+    macro_rules! impl_unreserve_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by unreserving it.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
+            fn $fn_name(market_id: &MarketIdOf<T>) -> DispatchResult {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(());
+                }
+                CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })
+            }
+        };
+    }
+
+    macro_rules! impl_slash_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by slashing and/or unreserving it and return the
+            /// resulting imbalance.
+            ///
+            /// If `slash_percentage` is not specified, then the entire bond is slashed. Otherwise,
+            /// only the specified percentage is slashed and the remainder is unreserved.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and a zero imbalance is
+            /// returned.
+            fn $fn_name(
+                market_id: &MarketIdOf<T>,
+                slash_percentage: Option<Percent>,
+            ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                // Trying to settle a bond multiple times is always a logic error, not a runtime
+                // error, so we log a warning instead of raising an error.
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(NegativeImbalanceOf::<T>::zero());
+                }
+                let value = bond.value;
+                let (slash_amount, unreserve_amount) = if let Some(percentage) = slash_percentage {
+                    let slash_amount = percentage.mul_floor(value);
+                    (slash_amount, value.saturating_sub(slash_amount))
+                } else {
+                    (value, BalanceOf::<T>::zero())
+                };
+                let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
+                    &Self::reserve_id(),
+                    &bond.who,
+                    slash_amount,
+                );
+                // If there's excess, there's nothing we can do, so we don't count this as error
+                // and log a warning instead.
+                if excess != BalanceOf::<T>::zero() {
+                    let warning = format!(
+                        "Failed to settle the {} bond of market {:?}",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                }
+                if unreserve_amount != BalanceOf::<T>::zero() {
+                    CurrencyOf::<T>::unreserve_named(
+                        &Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                    );
+                }
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })?;
+                Ok(imbalance)
+            }
+        };
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -129,25 +228,19 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            let slash_market_creator = |amount| {
-                T::AssetManager::slash_reserved_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    amount,
-                );
-            };
-            if market_status == MarketStatus::Proposed {
-                slash_market_creator(T::AdvisoryBond::get());
-                MarketIdsForEdit::<T>::remove(market_id);
-            }
-            if market_status != MarketStatus::Resolved
-                && market_status != MarketStatus::InsufficientSubsidy
-            {
-                if market.creation == MarketCreation::Permissionless {
-                    slash_market_creator(T::ValidityBond::get());
+            if let Some(bond) = market.bonds.creation {
+                if !bond.is_settled {
+                    Self::slash_creation_bond(&market_id, None)?;
                 }
-                slash_market_creator(T::OracleBond::get());
+            }
+            if let Some(bond) = market.bonds.oracle {
+                if !bond.is_settled {
+                    Self::slash_oracle_bond(&market_id, None)?;
+                }
+            }
+
+            if market_status == MarketStatus::Proposed {
+                MarketIdsForEdit::<T>::remove(market_id);
             }
 
             // NOTE: Currently we don't clean up outcome assets.
@@ -253,15 +346,9 @@ mod pallet {
             .max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
             ).max(
-                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                    CacheSize::get(),
-                    T::MaxDisputes::get()
-                )
+                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(CacheSize::get())
             ).max(
-                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                    CacheSize::get(),
-                    T::MaxDisputes::get()
-                )
+                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(CacheSize::get())
             ),
             Pays::No,
         ))]
@@ -277,7 +364,7 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, _) = Self::clear_auto_resolve(&market_id)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             let _ = Self::on_resolution(&market_id, &market)?;
             let weight = match market.market_type {
@@ -286,10 +373,7 @@ mod pallet {
                         T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len)
                     }
                     MarketStatus::Disputed => {
-                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                            ids_len,
-                            disputes_len,
-                        )
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(ids_len)
                     }
                     _ => return Err(Error::<T>::InvalidMarketStatus.into()),
                 },
@@ -298,10 +382,7 @@ mod pallet {
                         T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len)
                     }
                     MarketStatus::Disputed => {
-                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                            ids_len,
-                            disputes_len,
-                        )
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(ids_len)
                     }
                     _ => return Err(Error::<T>::InvalidMarketStatus.into()),
                 },
@@ -349,14 +430,10 @@ mod pallet {
                     }
                 }
 
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &m.creator,
-                    T::AdvisoryBond::get(),
-                );
                 Ok(())
             })?;
+
+            Self::unreserve_creation_bond(&market_id)?;
 
             Self::deposit_event(Event::MarketApproved(market_id, status));
             // The ApproveOrigin should not pay fees for providing this service
@@ -437,10 +514,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized(
-            T::MaxDisputes::get(),
-            CacheSize::get()
-        ))]
+        #[pallet::weight(T::WeightInfo::dispute_authorized())]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -463,6 +537,7 @@ mod pallet {
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
             )?;
+            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
@@ -474,26 +549,18 @@ mod pallet {
                     T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
                 }
             }
-            Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
-            // each dispute resets dispute_duration
-            let dispute_duration_ends_at_block =
-                curr_block_num.saturating_add(market.deadlines.dispute_duration);
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(dispute_duration_ends_at_block, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
-
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
                 MarketStatus::Disputed,
                 market_dispute,
             ));
-            // TODO(#782): add court benchmark
-            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
+            Ok((Some(T::WeightInfo::dispute_authorized())).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -599,6 +666,17 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
 
+            let bonds = match creation {
+                MarketCreation::Advised => MarketBonds {
+                    creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                },
+                MarketCreation::Permissionless => MarketBonds {
+                    creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
+                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                },
+            };
+
             let market = Self::construct_market(
                 sender.clone(),
                 0_u8,
@@ -612,28 +690,15 @@ mod pallet {
                 scoring_rule,
                 None,
                 None,
+                bonds.clone(),
             )?;
 
-            match creation {
-                MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        required_bond,
-                    )?;
-                }
-                MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        required_bond,
-                    )?;
-                }
-            }
+            T::AssetManager::reserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &sender,
+                bonds.total_amount_bonded(&sender),
+            )?;
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
@@ -706,6 +771,7 @@ mod pallet {
                 scoring_rule,
                 old_market.report,
                 old_market.resolved_outcome,
+                old_market.bonds,
             )?;
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
                 *market = edited_market.clone();
@@ -1231,7 +1297,7 @@ mod pallet {
         /// The outcomes of the disputes and the report outcome
         /// are added to the global dispute voting outcomes.
         /// The bond of each dispute is the initial vote amount.
-        #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get()))]
+        #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get(), CacheSize::get()))]
         #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
@@ -1263,10 +1329,10 @@ mod pallet {
                 );
 
                 // add report outcome to voting choices
-                if let Some(report) = market.report {
+                if let Some(report) = &market.report {
                     T::GlobalDisputes::push_voting_outcome(
                         &market_id,
-                        report.outcome,
+                        report.outcome.clone(),
                         &report.by,
                         <BalanceOf<T>>::zero(),
                     )?;
@@ -1282,9 +1348,12 @@ mod pallet {
                     )?;
                 }
 
+                // TODO(#372): Allow court with global disputes.
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
-                Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+
+                // ignore first of tuple because we always have max disputes
+                let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
 
                 let now = <frame_system::Pallet<T>>::block_number();
                 let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
@@ -1298,7 +1367,7 @@ mod pallet {
 
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len)).into())
+                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len, ids_len_2)).into())
             }
 
             #[cfg(not(feature = "with-global-disputes"))]
@@ -1323,6 +1392,7 @@ mod pallet {
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
             Self::AccountId,
+            Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
             CurrencyId = Asset<MarketIdOf<Self>>,
             ReserveIdentifier = [u8; 8],
         >;
@@ -1534,6 +1604,8 @@ mod pallet {
         MaxDisputesReached,
         /// The maximum number of disputes is needed for this operation.
         MaxDisputesNeeded,
+        /// Tried to settle missing bond.
+        MissingBond,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
@@ -1838,6 +1910,11 @@ mod pallet {
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
     impl<T: Config> Pallet<T> {
+        impl_unreserve_bond!(unreserve_creation_bond, creation);
+        impl_unreserve_bond!(unreserve_oracle_bond, oracle);
+        impl_slash_bond!(slash_creation_bond, creation);
+        impl_slash_bond!(slash_oracle_bond, oracle);
+
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -1959,17 +2036,24 @@ mod pallet {
                 }
                 MarketStatus::Disputed => {
                     let disputes = Disputes::<T>::get(market_id);
-                    let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
-                    let dispute_duration_ends_at_block =
-                        last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                    MarketIdsPerDisputeBlock::<T>::mutate(
-                        dispute_duration_ends_at_block,
-                        |ids| -> (u32, u32) {
-                            let ids_len = ids.len() as u32;
-                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                            (ids_len, disputes.len() as u32)
-                        },
-                    )
+                    // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
+                    let auto_resolve_block_opt = match market.dispute_mechanism {
+                        MarketDisputeMechanism::Authorized => {
+                            T::Authorized::get_auto_resolve(&disputes, market_id, &market)?
+                        }
+                        MarketDisputeMechanism::Court => {
+                            T::Court::get_auto_resolve(&disputes, market_id, &market)?
+                        }
+                        MarketDisputeMechanism::SimpleDisputes => {
+                            T::SimpleDisputes::get_auto_resolve(&disputes, market_id, &market)?
+                        }
+                    };
+                    if let Some(auto_resolve_block) = auto_resolve_block_opt {
+                        let ids_len = remove_auto_resolve::<T>(market_id, auto_resolve_block);
+                        (ids_len, disputes.len() as u32)
+                    } else {
+                        (0u32, disputes.len() as u32)
+                    }
                 }
                 _ => (0u32, 0u32),
             };
@@ -2012,23 +2096,10 @@ mod pallet {
             reject_reason: RejectReason<T>,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            let creator = &market.creator;
-            let advisory_bond_slash_amount =
-                T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
-            let advisory_bond_unreserve_amount =
-                T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
-            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                &Self::reserve_id(),
-                creator,
-                advisory_bond_slash_amount.saturated_into::<u128>().saturated_into(),
-            );
+            Self::unreserve_oracle_bond(market_id)?;
+            let imbalance =
+                Self::slash_creation_bond(market_id, Some(T::AdvisoryBondSlashPercentage::get()))?;
             T::Slash::on_unbalanced(imbalance);
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
-            );
             <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketRejected(*market_id, reject_reason));
@@ -2041,19 +2112,8 @@ mod pallet {
             market: MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            let creator = &market.creator;
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::AdvisoryBond::get(),
-            );
-            T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                creator,
-                T::OracleBond::get(),
-            );
+            Self::unreserve_creation_bond(market_id)?;
+            Self::unreserve_oracle_bond(market_id)?;
             <zrml_market_commons::Pallet<T>>::remove_market(market_id)?;
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
@@ -2064,17 +2124,17 @@ mod pallet {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
         }
 
-        fn calculate_internal_resolve_weight(market: &MarketOf<T>, total_disputes: u32) -> Weight {
+        fn calculate_internal_resolve_weight(market: &MarketOf<T>) -> Weight {
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market.status {
                     T::WeightInfo::internal_resolve_categorical_reported()
                 } else {
-                    T::WeightInfo::internal_resolve_categorical_disputed(total_disputes)
+                    T::WeightInfo::internal_resolve_categorical_disputed()
                 }
             } else if let MarketStatus::Reported = market.status {
                 T::WeightInfo::internal_resolve_scalar_reported()
             } else {
-                T::WeightInfo::internal_resolve_scalar_disputed(total_disputes)
+                T::WeightInfo::internal_resolve_scalar_disputed()
             }
         }
 
@@ -2256,28 +2316,20 @@ mod pallet {
             }
         }
 
-        fn resolve_reported_market(market: &MarketOf<T>) -> Result<OutcomeReport, DispatchError> {
+        fn resolve_reported_market(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<OutcomeReport, DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             // the oracle bond gets returned if the reporter was the oracle
             if report.by == market.oracle {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
+                Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let excess = T::AssetManager::slash_reserved_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
-                // deposit only to the real reporter what actually was slashed
-                let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
+                let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
 
+                // deposit only to the real reporter what actually was slashed
                 if let Err(err) =
-                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
+                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance.peek())
                 {
                     log::warn!(
                         "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
@@ -2302,6 +2354,8 @@ mod pallet {
             if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
                 resolved_outcome_option = Some(o);
             }
+
+            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
 
             // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
             // the oracle's report.
@@ -2328,18 +2382,9 @@ mod pallet {
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
             if report.by == market.oracle && report.outcome == resolved_outcome {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
+                Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                    &Self::reserve_id(),
-                    &market.creator,
-                    T::OracleBond::get().saturated_into::<u128>().saturated_into(),
-                );
+                let imbalance = Self::slash_oracle_bond(market_id, None)?;
                 overall_imbalance.subsume(imbalance);
             }
 
@@ -2386,19 +2431,13 @@ mod pallet {
             market: &MarketOf<T>,
         ) -> Result<Weight, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                T::AssetManager::unreserve_named(
-                    &Self::reserve_id(),
-                    Asset::Ztg,
-                    &market.creator,
-                    T::ValidityBond::get(),
-                );
+                Self::unreserve_creation_bond(market_id)?;
             }
 
             let mut total_weight = Weight::zero();
-            let disputes = Disputes::<T>::get(market_id);
 
             let resolved_outcome = match market.status {
-                MarketStatus::Reported => Self::resolve_reported_market(market)?,
+                MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
                 MarketStatus::Disputed => Self::resolve_disputed_market(market_id, market)?,
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
@@ -2421,10 +2460,7 @@ mod pallet {
                 MarketStatus::Resolved,
                 resolved_outcome,
             ));
-            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
-                market,
-                disputes.len().saturated_into(),
-            )))
+            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(market)))
         }
 
         pub(crate) fn process_subsidy_collecting_markets(
@@ -2510,24 +2546,11 @@ mod pallet {
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            let required_bond = T::ValidityBond::get()
-                                                .saturating_add(T::OracleBond::get());
-                                            T::AssetManager::unreserve_named(
-                                                &Self::reserve_id(),
-                                                Asset::Ztg,
-                                                &m.creator,
-                                                required_bond,
-                                            );
-                                        } else if m.creation == MarketCreation::Advised {
-                                            // AdvisoryBond was already returned when the market
-                                            // was approved. Approval is inevitable to reach this.
-                                            T::AssetManager::unreserve_named(
-                                                &Self::reserve_id(),
-                                                Asset::Ztg,
-                                                &m.creator,
-                                                T::OracleBond::get(),
-                                            );
+                                            Self::unreserve_creation_bond(&subsidy_info.market_id)?;
                                         }
+                                        // AdvisoryBond was already returned when the market
+                                        // was approved. Approval is inevitable to reach this.
+                                        Self::unreserve_oracle_bond(&subsidy_info.market_id)?;
 
                                         total_weight = total_weight
                                             .saturating_add(dbweight.reads(2))
@@ -2598,21 +2621,6 @@ mod pallet {
             );
 
             weight_basis.saturating_add(total_weight)
-        }
-
-        fn remove_last_dispute_from_market_ids_per_dispute_block(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market_id: &MarketIdOf<T>,
-        ) -> DispatchResult {
-            if let Some(last_dispute) = disputes.last() {
-                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
-                let dispute_duration_ends_at_block =
-                    last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
-                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                });
-            }
-            Ok(())
         }
 
         /// The reserve ID of the prediction-markets pallet.
@@ -2796,6 +2804,7 @@ mod pallet {
             scoring_rule: ScoringRule,
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
+            bonds: MarketBonds<T::AccountId, BalanceOf<T>>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
@@ -2827,6 +2836,7 @@ mod pallet {
                 resolved_outcome,
                 status,
                 scoring_rule,
+                bonds,
             })
         }
     }
@@ -2844,6 +2854,65 @@ mod pallet {
     fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
+        }
+    }
+
+    fn remove_auto_resolve<T: Config>(
+        market_id: &MarketIdOf<T>,
+        resolve_at: T::BlockNumber,
+    ) -> u32 {
+        MarketIdsPerDisputeBlock::<T>::mutate(resolve_at, |ids| -> u32 {
+            let ids_len = ids.len() as u32;
+            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+            ids_len
+        })
+    }
+
+    impl<T> DisputeResolutionApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type Balance = BalanceOf<T>;
+        type BlockNumber = T::BlockNumber;
+        type MarketId = MarketIdOf<T>;
+        type MaxDisputes = T::MaxDisputes;
+        type Moment = MomentOf<T>;
+
+        fn resolve(
+            market_id: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
+        ) -> Result<u64, DispatchError> {
+            Self::on_resolution(market_id, market)
+        }
+
+        fn add_auto_resolve(
+            market_id: &Self::MarketId,
+            resolve_at: Self::BlockNumber,
+        ) -> Result<u32, DispatchError> {
+            let ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
+                resolve_at,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
+            Ok(ids_len)
+        }
+
+        fn auto_resolve_exists(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> bool {
+            <MarketIdsPerDisputeBlock<T>>::get(resolve_at).contains(market_id)
+        }
+
+        fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
+            remove_auto_resolve::<T>(market_id, resolve_at)
+        }
+
+        fn get_disputes(
+            market_id: &Self::MarketId,
+        ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes>
+        {
+            Disputes::<T>::get(market_id)
         }
     }
 }

@@ -1,3 +1,17 @@
+# v0.3.8
+
+- Added the `bonds` field to the `Market` struct, which tracks the status of the
+  advisory, oracle and validity bonds. Each of its members has type `Bond`,
+  which has three fields: `who` (the account that reserved the bond), `value`
+  (the amount reserved), `is_settled` (a flag which determines if the bond was
+  already unreserved and/or (partially) slashed).
+- The market dispute mechanisms are now able to control their resolution. The
+  `CorrectionPeriod` parameter determines how long the authorized pallet can
+  call `authorize_market_outcome` again after the first call to it (fat-finger
+  protection). The authority report now includes its resolution block number.
+  This is the time of the first call to `authorize_market_outcome` plus the
+  `CorrectionPeriod`.
+
 # v0.3.7
 
 - Added on-chain arbitrage. See
@@ -11,6 +25,7 @@
   `tokens.Deposited` and `tokens.Transfer` events are also emitted.
 
 - Added new pallet: GlobalDisputes. Dispatchable calls are:
+
   - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for
     a constant fee. Errors if the voting outcome already exists or if the global
     dispute has not started or has already finished.
@@ -38,6 +53,7 @@
   Authorized MDM for resolving market.
 
 - Properly configured reserve asset transfers via XCM:
+
   - Added xTokens pallet to transfer tokens accross chains
   - Added AssetRegistry pallet to register foreign asset
   - Added UnknownTokens pallet to handle unknown foreign assets
@@ -62,7 +78,6 @@
 - `edit_market` extrinsic added, which enables creator of the market to edit
   market. It has same parameters as `create_market` except market_creation, on
   success it returns `MarketEdited` event.
-  
 - `get_spot_price()` RPC from Swaps support `with_fees` boolean parameter to
   include/exclude swap_fees in spot price, Currently this flag only works for
   CPMM.

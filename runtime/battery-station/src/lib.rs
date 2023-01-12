@@ -107,7 +107,9 @@ impl Contains<Call> for IsCallable {
         use zeitgeist_primitives::types::{
             MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
-        use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
+        use zrml_prediction_markets::Call::{
+            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+        };
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
@@ -117,9 +119,11 @@ impl Contains<Call> for IsCallable {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable Court dispute resolution mechanism
                     create_market { dispute_mechanism: Court, .. } => false,
                     create_cpmm_market_and_deploy_assets { dispute_mechanism: Court, .. } => false,
+                    edit_market { dispute_mechanism: Court, .. } => false,
                     _ => true,
                 }
             }

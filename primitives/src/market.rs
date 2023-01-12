@@ -24,11 +24,12 @@ use sp_runtime::RuntimeDebug;
 
 /// Types
 ///
-/// * `AI`: Account Id
-/// * `BN`: Block Number
-/// * `M`: Moment (Time moment)
+/// * `AI`: Account id
+/// * `BA`: Balance type for bonds
+/// * `BN`: Block number
+/// * `M`: Moment (time moment)
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BN, M> {
+pub struct Market<AI, BA, BN, M> {
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -56,9 +57,53 @@ pub struct Market<AI, BN, M> {
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
     pub dispute_mechanism: MarketDisputeMechanism,
+    /// The bonds reserved for this market.
+    pub bonds: MarketBonds<AI, BA>,
 }
 
-impl<AI, BN, M> Market<AI, BN, M> {
+/// Tracks the status of a bond.
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct Bond<AI, BA> {
+    /// The account that reserved the bond.
+    pub who: AI,
+    /// The amount reserved.
+    pub value: BA,
+    /// `true` if and only if the bond is unreserved and/or (partially) slashed.
+    pub is_settled: bool,
+}
+
+impl<AI, BA> Bond<AI, BA> {
+    pub fn new(who: AI, value: BA) -> Bond<AI, BA> {
+        Bond { who, value, is_settled: false }
+    }
+}
+
+/// Tracks bonds associated with a prediction market.
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct MarketBonds<AI, BA> {
+    pub creation: Option<Bond<AI, BA>>,
+    pub oracle: Option<Bond<AI, BA>>,
+}
+
+impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
+    /// Return the combined value of the open bonds for `who`.
+    pub fn total_amount_bonded(&self, who: &AI) -> BA {
+        let value_or_default = |bond: &Option<Bond<AI, BA>>| match bond {
+            Some(bond) if bond.who == *who => bond.value,
+            _ => BA::zero(),
+        };
+        value_or_default(&self.creation).saturating_add(value_or_default(&self.oracle))
+    }
+}
+
+// Used primarily for testing purposes.
+impl<AI, BA> Default for MarketBonds<AI, BA> {
+    fn default() -> Self {
+        MarketBonds { creation: None, oracle: None }
+    }
+}
+
+impl<AI, BA, BN, M> Market<AI, BA, BN, M> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -84,9 +129,10 @@ impl<AI, BN, M> Market<AI, BN, M> {
     }
 }
 
-impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M>
+impl<AI, BA, BN, M> MaxEncodedLen for Market<AI, BA, BN, M>
 where
     AI: MaxEncodedLen,
+    BA: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
 {
@@ -105,6 +151,7 @@ where
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
+            .saturating_add(<MarketBonds<AI, BA>>::max_encoded_len())
     }
 }
 
@@ -160,7 +207,9 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
 }
 
 /// Defines deadlines for market.
-#[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(
+    Clone, Copy, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo,
+)]
 pub struct Deadlines<BN> {
     pub grace_period: BN,
     pub oracle_duration: BN,
@@ -215,6 +264,12 @@ pub struct Report<AccountId, BlockNumber> {
     pub outcome: OutcomeReport,
 }
 
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct AuthorityReport<BlockNumber> {
+    pub resolve_at: BlockNumber,
+    pub outcome: OutcomeReport,
+}
+
 /// Contains a market id and the market period.
 ///
 /// * `BN`: Block Number
@@ -232,7 +287,7 @@ pub struct SubsidyUntil<BN, MO, MI> {
 mod tests {
     use crate::market::*;
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32>;
+    type Market = crate::market::Market<u32, u32, u32, u32>;
 
     #[test_case(
         MarketType::Categorical(6),
@@ -305,9 +360,11 @@ mod tests {
             report: None,
             resolved_outcome: None,
             dispute_mechanism: MarketDisputeMechanism::Authorized,
+            bonds: MarketBonds::default(),
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }
+
     #[test]
     fn max_encoded_len_market_type() {
         // `MarketType::Scalar` is the largest enum variant.
@@ -315,6 +372,7 @@ mod tests {
         let len = parity_scale_codec::Encode::encode(&market_type).len();
         assert_eq!(MarketType::max_encoded_len(), len);
     }
+
     #[test]
     fn max_encoded_len_market_period() {
         let market_period: MarketPeriod<u32, u32> = MarketPeriod::Block(Default::default());

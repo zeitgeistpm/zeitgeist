@@ -11,6 +11,7 @@ use orml_traits::parameter_type_with_key;
 // Authorized
 parameter_types! {
     pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
+    pub const CorrectionPeriod: BlockNumber = 4;
 }
 
 // Court
@@ -55,9 +56,9 @@ parameter_types! {
     pub const ValidityBond: Balance = 50 * CENT;
     pub const MinDisputeDuration: BlockNumber = 2;
     pub const MinOracleDuration: BlockNumber = 2;
-    pub const MaxDisputeDuration: BlockNumber = 5;
-    pub const MaxGracePeriod: BlockNumber = 2;
-    pub const MaxOracleDuration: BlockNumber = 3;
+    pub const MaxDisputeDuration: BlockNumber = 50;
+    pub const MaxGracePeriod: BlockNumber = 20;
+    pub const MaxOracleDuration: BlockNumber = 30;
     pub const MaxEditReasonLen: u32 = 1024;
     pub const MaxRejectReasonLen: u32 = 1024;
 }
