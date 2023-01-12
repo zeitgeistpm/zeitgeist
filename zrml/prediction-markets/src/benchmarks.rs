@@ -77,16 +77,23 @@ fn create_market_common_parameters<T: Config>(
 }
 
 // Create a market based on common parameters
-fn create_market_common<T: Config + pallet_timestamp::Config>(
+fn create_market_common<T: Config + pallet_timestamp::Config + pallet_aura::Config>(
     permission: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
     period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
-    let range_start: MomentOf<T> = 100_000u64.saturated_into();
-    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let start :u32 = 2 * MILLISECS_PER_BLOCK; 
+    let range_start: MomentOf<T> = start.saturated_into();
+    let range_end: MomentOf<T> = (start + 10 * MILLISECS_PER_BLOCK).saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
+    // let (range_start, _range_end) = match period {
+    //         MarketPeriod::Timestamp(ref range) => (range.start, range.end),
+    //             _ => {
+    //                 panic!("MarketPeriod is block_number based");
+    //             }
+    // };
+    // zeitgeist_utils::set_block_number_timestamp::<T>(Default::default(), range_start.saturated_into());
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {
@@ -104,16 +111,14 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     Ok((caller, market_id))
 }
 
-fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
+fn create_close_and_report_market<T: Config + pallet_timestamp::Config + pallet_aura::Config>(
     permission: MarketCreation,
     options: MarketType,
     outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let range_start: MomentOf<T> = 100_000u64.saturated_into();
-    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
-    let period = MarketPeriod::Timestamp(range_start..range_end);
+    <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
     let (caller, market_id) =
-        create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
+        create_market_common::<T>(permission, options, ScoringRule::CPMM, None)?;
     Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
@@ -125,16 +130,18 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     };
     let grace_period: u32 =
         (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
+    let block = frame_system::Pallet::<T>::block_number();
+    zeitgeist_utils::set_block_number_timestamp::<T>(block, (end + grace_period).into());
     Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
 }
 
 // Setup a categorical market for fn `internal_resolve`
-fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
+fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config + pallet_aura::Config>(
     market_type: MarketType,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         market_type.clone(),
@@ -168,7 +175,8 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     };
     let grace_period: u32 =
         (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
+    let block = frame_system::Pallet::<T>::block_number();
+    zeitgeist_utils::set_block_number_timestamp::<T>(block, (end + grace_period).into());
     Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Call::<T>::admin_move_market_to_resolved { market_id }
@@ -176,10 +184,11 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     Ok((caller, market_id))
 }
 
-fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Config>(
+fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Config + pallet_aura::Config>(
     categories: u32,
     report_outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories.saturated_into()),
@@ -212,7 +221,8 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
     };
     let grace_period: u32 =
         (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
+    let block = frame_system::Pallet::<T>::block_number();
+    zeitgeist_utils::set_block_number_timestamp::<T>(block, (end + grace_period).into());
     Call::<T>::report { market_id, outcome: report_outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
@@ -222,7 +232,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 benchmarks! {
     where_clause {
         where
-            T: pallet_timestamp::Config + zrml_authorized::Config,
+            T: pallet_timestamp::Config + pallet_aura::Config + zrml_authorized::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }
@@ -354,14 +364,19 @@ benchmarks! {
         let o in 0..63;
         let c in 0..63;
 
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM,
-            Some(MarketPeriod::Timestamp(range_start..range_end)),
+            None,
         )?;
+        let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+        let (range_start, range_end) = match market.period {
+            MarketPeriod::Timestamp(range) => (range.start, range.end),
+                _ => {
+                    panic!("MarketPeriod is block_number based");
+                }
+        };
 
         for i in 0..o {
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
@@ -681,15 +696,27 @@ benchmarks! {
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let o in 0..63;
-
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        
+        let start = 2 * MILLISECS_PER_BLOCK;
+        <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
+        let block = frame_system::Pallet::<T>::block_number();
+        zeitgeist_utils::set_block_number_timestamp::<T>(block, start.saturated_into());
+        let range_start: MomentOf<T> = ((2_u64 + 100_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_end: MomentOf<T> = ((2_u64 + 100_000_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let period = MarketPeriod::Timestamp(range_start..range_end);
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM,
-            Some(MarketPeriod::Timestamp(range_start..range_end)),
+            Some(period),
         )?;
+        let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+        let (range_start, range_end) = match market.period {
+            MarketPeriod::Timestamp(range) => (range.start, range.end),
+                _ => {
+                    panic!("MarketPeriod is block_number based");
+                }
+        };
 
         assert!(
             Pallet::<T>::calculate_time_frame_of_moment(<zrml_market_commons::Pallet::<T>>::now())
@@ -736,10 +763,13 @@ benchmarks! {
     deploy_swap_pool_for_market_open_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
+        <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
+        let block = frame_system::Pallet::<T>::block_number();
+        let range_start: MomentOf<T> = (2_u64 * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_end: MomentOf<T> = ((2_u64 + 1_000_000u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
         // We need to ensure, that period range start is now,
-        // because we would like to open the pool now
-        let range_start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        // because we would like to open the pool now, so set timestamp to range_start
+        zeitgeist_utils::set_block_number_timestamp::<T>(block, range_start.saturated_into());
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
@@ -1042,9 +1072,13 @@ benchmarks! {
     report {
         let m in 0..63;
 
+        <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
         // ensure range.start is now to get the heaviest path
-        let range_start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_start: MomentOf<T> = ((2_u64 + 1_0_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_end: MomentOf<T> = ((2_u64 + 1_00_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        // We need to ensure, that period range start is now,
+        // because we would like to open the pool now, so set timestamp to range_start
+        // zeitgeist_utils::set_block_number_timestamp::<T>(Default::default(), range_start.saturated_into());
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -1074,8 +1108,8 @@ benchmarks! {
         };
         let grace_period: u32 =
             (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-        pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
         let report_at = frame_system::Pallet::<T>::block_number();
+        zeitgeist_utils::set_block_number_timestamp::<T>(report_at, (end + grace_period).into());
         let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..m {
             MarketIdsPerReportBlock::<T>::try_mutate(resolves_at, |ids| {

@@ -58,14 +58,11 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-<<<<<<< HEAD
-            pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
-=======
             (
+                pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
                 zrml_prediction_markets::migrations::RecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
->>>>>>> main
         >;
 
         #[cfg(not(feature = "parachain"))]

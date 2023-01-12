@@ -2882,7 +2882,7 @@ mod pallet {
         fn resolve(
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
-        ) -> Result<u64, DispatchError> {
+        ) -> Result<Weight, DispatchError> {
             Self::on_resolution(market_id, market)
         }
 

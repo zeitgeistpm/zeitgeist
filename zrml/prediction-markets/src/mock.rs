@@ -117,6 +117,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
+        Aura: pallet_aura::{Pallet, Storage, Config<T>},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
@@ -201,6 +202,16 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
+}
+
+parameter_types! {
+    pub const MaxAuthorities: u32 = 32;
+}
+
+impl pallet_aura::Config for Runtime {
+    type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
+    type DisabledValidators = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 impl orml_currencies::Config for Runtime {

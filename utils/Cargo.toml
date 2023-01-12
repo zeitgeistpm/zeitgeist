@@ -1,0 +1,32 @@
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+codec = { package = 'parity-scale-codec', version = '3.0.0', features = ['derive'], default-features = false }
+frame-support = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+frame-system = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+pallet-aura = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+pallet-timestamp = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+sp-consensus-aura = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+sp-runtime = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+sp-std = { git = "https://github.com/zeitgeistpm/substrate", default-features = false, branch = "moonbeam-polkadot-v0.9.29" }
+
+[features]
+default = ['std']
+std = [
+  'frame-support/std',
+  'frame-system/std',
+  'sp-consensus-aura/std',
+  'sp-runtime/std',
+  'sp-std/std',
+  'pallet-timestamp/std',
+  'pallet-aura/std',
+]
+
+runtime-benchmarks = []
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021"
+name = "zeitgeist-utils"
+version = "0.3.7"
