@@ -264,6 +264,12 @@ pub struct Report<AccountId, BlockNumber> {
     pub outcome: OutcomeReport,
 }
 
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct AuthorityReport<BlockNumber> {
+    pub resolve_at: BlockNumber,
+    pub outcome: OutcomeReport,
+}
+
 /// Contains a market id and the market period.
 ///
 /// * `BN`: Block Number
