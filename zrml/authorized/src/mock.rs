@@ -112,17 +112,6 @@ impl DisputeResolutionApi for MockResolution {
             ids.len() as u32
         })
     }
-
-    fn get_disputes(
-        _market_id: &Self::MarketId,
-    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
-        BoundedVec::try_from(vec![MarketDispute {
-            at: 42u64,
-            by: BOB,
-            outcome: OutcomeReport::Scalar(42),
-        }])
-        .unwrap()
-    }
 }
 
 impl crate::Config for Runtime {

@@ -19,9 +19,9 @@
 
 use crate::{
     mock::{ExtBuilder, Runtime, SimpleDisputes},
-    Error, MarketOf,
+    Error, MarketOf, Disputes,
 };
-use frame_support::assert_noop;
+use frame_support::{assert_noop, BoundedVec};
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
@@ -53,7 +53,7 @@ fn on_dispute_denies_non_simple_disputes_markets() {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
-            SimpleDisputes::on_dispute(&[], &0, &market),
+            SimpleDisputes::on_dispute(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
         );
     });
@@ -65,7 +65,7 @@ fn on_resolution_denies_non_simple_disputes_markets() {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
-            SimpleDisputes::on_resolution(&[], &0, &market),
+            SimpleDisputes::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
         );
     });
@@ -76,12 +76,13 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
     ExtBuilder.build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
-        let disputes = [
+        let disputes = BoundedVec::try_from([
             MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
             MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
-        ];
+        ].to_vec()).unwrap();
+        Disputes::<Runtime>::insert(&0, &disputes);
         assert_eq!(
-            &SimpleDisputes::on_resolution(&disputes, &0, &market).unwrap().unwrap(),
+            &SimpleDisputes::on_resolution(&0, &market).unwrap().unwrap(),
             &disputes.last().unwrap().outcome
         )
     });

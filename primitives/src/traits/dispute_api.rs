@@ -81,6 +81,10 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> DispatchResult;
+
+    /// Called, when a market is destroyed.
+    /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
+    fn clear(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 }
 
 type MarketOfDisputeResolutionApi<T> = Market<
@@ -134,9 +138,4 @@ pub trait DisputeResolutionApi {
     ///
     /// Returns the number of elements in the storage structure.
     fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32;
-
-    /// Get the disputes of a market.
-    fn get_disputes(
-        market_id: &Self::MarketId,
-    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes>;
 }

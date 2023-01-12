@@ -30,7 +30,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, DisputeFactor, DisputeBond, MaxDisputes,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -47,8 +47,10 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
     }
@@ -86,19 +88,20 @@ impl DisputeResolutionApi for NoopResolution {
     fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
         0u32
     }
-
-    fn get_disputes(
-        _market_id: &Self::MarketId,
-    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
-        Default::default()
-    }
 }
 
 impl crate::Config for Runtime {
+    type AssetManager = AssetManager;
     type Event = ();
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
     type DisputeResolution = NoopResolution;
     type MarketCommons = MarketCommons;
+    type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
+    type PredictionMarketsPalletId = PmPalletId;
+    type Slash = Treasury;
+    type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
@@ -140,6 +143,29 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl orml_currencies::Config for Runtime {
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
+    type WeightInfo = ();
+}
+
+impl orml_tokens::Config for Runtime {
+    type Amount = Amount;
+    type Balance = Balance;
+    type CurrencyId = CurrencyId;
+    type DustRemovalWhitelist = Everything;
+    type Event = Event;
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = ();
+    type MaxReserves = MaxReserves;
+    type OnDust = ();
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
+    type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
+}
+
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
@@ -151,6 +177,25 @@ impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
     type Moment = Moment;
     type OnTimestampSet = ();
+    type WeightInfo = ();
+}
+
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Burn = ();
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ();
+    type ProposalBondMinimum = ();
+    type ProposalBondMaximum = ();
+    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type SpendFunds = ();
+    type SpendOrigin = NeverEnsureOrigin<Balance>;
+    type SpendPeriod = ();
     type WeightInfo = ();
 }
 

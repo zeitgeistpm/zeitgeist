@@ -142,8 +142,6 @@ impl crate::Config for Runtime {
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
     type Event = Event;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
@@ -305,10 +303,17 @@ impl zrml_rikiddo::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
+    type AssetManager = AssetManager;
     type Event = Event;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
+    type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
+    type PredictionMarketsPalletId = PmPalletId;
+    type Slash = Treasury;
+    type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
 #[cfg(feature = "with-global-disputes")]

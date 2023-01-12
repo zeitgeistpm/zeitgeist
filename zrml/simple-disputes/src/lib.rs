@@ -416,6 +416,15 @@ mod pallet {
             }
             Ok(())
         }
+
+        fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
+            Disputes::<T>::remove(market_id);
+            Ok(())
+        }
     }
 
     impl<T> SimpleDisputesPalletApi for Pallet<T> where T: Config {}

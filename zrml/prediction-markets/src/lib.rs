@@ -261,8 +261,8 @@ mod pallet {
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
             let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            Self::clear_dispute_mechanism(&market_id)?;
             <zrml_market_commons::Pallet<T>>::remove_market(&market_id)?;
-            Disputes::<T>::remove(market_id);
 
             Self::deposit_event(Event::MarketDestroyed(market_id));
 
@@ -1787,6 +1787,17 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
+    /// For each market, this holds the dispute information for each dispute that's
+    /// been issued.
+    #[pallet::storage]
+    pub type Disputes<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        ValueQuery,
+    >;
+
     #[pallet::storage]
     pub type MarketIdsPerOpenBlock<T: Config> = StorageMap<
         _,
@@ -2014,7 +2025,19 @@ mod pallet {
                 _ => (0u32, 0u32),
             };
 
-            Ok((ids_len, 1u32))
+            Ok((ids_len, 0u32))
+        }
+
+        fn clear_dispute_mechanism(market_id: &MarketIdOf<T>) -> DispatchResult {
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+            match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => T::Authorized::clear(market_id, &market)?,
+                MarketDisputeMechanism::Court => T::Court::clear(market_id, &market)?,
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::clear(market_id, &market)?
+                }
+            };
+            Ok(())
         }
 
         pub(crate) fn do_buy_complete_set(
@@ -2778,13 +2801,6 @@ mod pallet {
 
         fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
             remove_auto_resolve::<T>(market_id, resolve_at)
-        }
-
-        fn get_disputes(
-            market_id: &Self::MarketId,
-        ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes>
-        {
-            Disputes::<T>::get(market_id)
         }
     }
 }

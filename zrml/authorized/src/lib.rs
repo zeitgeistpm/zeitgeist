@@ -238,6 +238,16 @@ mod pallet {
 
             Ok(())
         }
+
+        fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+
+            AuthorizedOutcomeReports::<T>::remove(market_id);
+            Ok(())
+        }
     }
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}

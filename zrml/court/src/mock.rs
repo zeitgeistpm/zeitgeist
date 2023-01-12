@@ -98,12 +98,6 @@ impl DisputeResolutionApi for NoopResolution {
     fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
         0u32
     }
-
-    fn get_disputes(
-        _market_id: &Self::MarketId,
-    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
-        Default::default()
-    }
 }
 
 impl crate::Config for Runtime {

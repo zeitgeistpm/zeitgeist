@@ -585,6 +585,16 @@ mod pallet {
             );
             Ok(())
         }
+
+        fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
+            Ok(())
+        }
     }
 
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}
