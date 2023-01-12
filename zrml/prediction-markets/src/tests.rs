@@ -104,7 +104,11 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end() {
         run_blocks(7);
         let now = frame_system::Pallet::<Runtime>::block_number();
         let end = 42;
-        simple_create_categorical_market(MarketCreation::Permissionless, now..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            MarketCreation::Permissionless,
+            now..end,
+            ScoringRule::CPMM,
+        );
         run_blocks(3);
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
