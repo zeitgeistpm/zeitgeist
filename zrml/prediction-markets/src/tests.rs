@@ -99,14 +99,20 @@ fn simple_create_scalar_market(
 }
 
 #[test]
-fn admin_move_market_to_closed_successfully_closes_market() {
+fn admin_move_market_to_closed_successfully_closes_market_and_sets_end() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
+        run_blocks(7);
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let end = 42;
+        simple_create_categorical_market(MarketCreation::Permissionless, now..end, ScoringRule::CPMM);
+        run_blocks(3);
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
+        let new_end = now + 3;
+        assert_eq!(market.period, MarketPeriod::Block(now..new_end));
+        assert_ne!(new_end, end);
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
