@@ -261,6 +261,18 @@ mod pallet {
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
             let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            // `Disputes` is emtpy unless the market is disputed, so this is just a defensive
+            // check.
+            if market.status == MarketStatus::Disputed {
+                for (index, dispute) in Disputes::<T>::take(market_id).iter().enumerate() {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &dispute.by,
+                        default_dispute_bond::<T>(index),
+                    );
+                }
+            }
             <zrml_market_commons::Pallet<T>>::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
