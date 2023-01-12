@@ -1,0 +1,65 @@
+- hosts: zeitgeist
+  gather_facts: no
+  become: true 
+  environment: 
+    RELEASE_VERSION: "{{ lookup('env', 'RELEASE_VERSION') }}"
+
+  tasks:
+    - name: Get Zeitgeist services
+      no_log: true
+      shell: ls -a /etc/systemd/system/zeitgeist* | xargs -n 1 basename
+      register: zeitgeist_files
+
+    - name: Stop Zeitgeist services  
+      no_log: true
+      systemd: 
+        name: "{{ item }}"
+        state: stopped
+      with_items: "{{ zeitgeist_files.stdout_lines }}"
+
+    - name: Check if Mount Dir Exists
+      no_log: true
+      stat:
+        path: /mnt/
+      register: mnt
+
+    - name: Create Backup from Previous Zeitgeist Client in Mount Dir
+      no_log: true
+      shell: |
+        cd /mnt/*/services/zeitgeist/bin
+        PREV_VERSION=$(./zeitgeist --version | grep -Eo '([0-9]{1,}\.)+[0-9]{1,}' | tr -d '.')
+        mv zeitgeist zeitgeist_$PREV_VERSION.bak
+      when: mnt.stat.exists and mnt.stat.isdir
+        
+    - name: Create Backup from Previous Zeitgeist Client
+      no_log: true
+      shell: |
+        cd /services/zeitgeist/bin
+        PREV_VERSION=$(./zeitgeist --version | grep -Eo '([0-9]{1,}\.)+[0-9]{1,}' | tr -d '.')
+        mv zeitgeist zeitgeist_$PREV_VERSION.bak
+      when: not mnt.stat.exists and mnt.stat.isdir
+
+    - name: Download Zeitgeist Client to Mount Dir 
+      no_log: true
+      shell: |
+        cd /mnt/*/services/zeitgeist/bin
+        wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
+        chmod 0755 zeitgeist
+        # chown zeitgeist:zeitgeist zeitgeist
+      when: mnt.stat.exists and mnt.stat.isdir
+
+    - name: Download Zeitgeist Client
+      no_log: true
+      shell: |
+        cd /services/zeitgeist/bin
+        wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
+        chmod 0755 zeitgeist
+        # chown zeitgeist:zeitgeist zeitgeist
+      when: not mnt.stat.exists and mnt.stat.isdir
+    
+    - name: Start Zeitgeist Services
+      no_log: true
+      systemd:
+        name: "{{ item }}"
+        state: started
+      with_items: "{{ zeitgeist_files.stdout_lines }}"
