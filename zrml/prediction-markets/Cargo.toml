@@ -9,8 +9,8 @@ parity-scale-codec = { default-features = false, features = ["derive", "max-enco
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-zeitgeist-utils = { default-features = false, path = "../../utils" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zeitgeist-utils = { default-features = false, path = "../../utils" }
 zrml-authorized = { default-features = false, path = "../authorized" }
 zrml-court = { default-features = false, path = "../court" }
 zrml-global-disputes = { default-features = false, path = "../global-disputes", optional = true }
@@ -23,10 +23,10 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+pallet-aura = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
-pallet-aura = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
 pallet-treasury = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
 sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.29", default-features = true, git = "https://github.com/zeitgeistpm/substrate", optional = true }
@@ -46,6 +46,7 @@ default = ["std"]
 mock = [
     "orml-currencies",
     "orml-tokens",
+    "pallet-aura",
     "pallet-balances",
     "pallet-randomness-collective-flip",
     "pallet-timestamp/std",

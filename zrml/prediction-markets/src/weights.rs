@@ -193,7 +193,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: System Account (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:0)
     // Storage: Swaps Pools (r:1 w:1)
-    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32) -> Weight {
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32) -> Weight {
         Weight::from_ref_time(93_329_000)
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(7_000).saturating_mul(r.into()))

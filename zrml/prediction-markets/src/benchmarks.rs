@@ -83,7 +83,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config + pallet_aura::Conf
     scoring_rule: ScoringRule,
     period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let start :u32 = 2 * MILLISECS_PER_BLOCK; 
+    let start: u32 = 2 * MILLISECS_PER_BLOCK;
     let range_start: MomentOf<T> = start.saturated_into();
     let range_end: MomentOf<T> = (start + 10 * MILLISECS_PER_BLOCK).saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
@@ -184,7 +184,9 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config + pallet_aura
     Ok((caller, market_id))
 }
 
-fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Config + pallet_aura::Config>(
+fn setup_reported_categorical_market_with_pool<
+    T: Config + pallet_timestamp::Config + pallet_aura::Config,
+>(
     categories: u32,
     report_outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
@@ -696,7 +698,7 @@ benchmarks! {
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let o in 0..63;
-        
+
         let start = 2 * MILLISECS_PER_BLOCK;
         <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
         let block = frame_system::Pallet::<T>::block_number();

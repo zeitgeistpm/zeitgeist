@@ -58,7 +58,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     fn authorize_market_outcome_first_report(m: u32) -> Weight {
         Weight::from_ref_time(31_031_000)
             // Standard Error: 0
-            .saturating_add(Weight::from_ref_time(85_000)).saturating_mul(m.into())
+            .saturating_add(Weight::from_ref_time(85_000))
+            .saturating_mul(m.into())
             .saturating_add(T::DbWeight::get().reads(3_u64))
             .saturating_add(T::DbWeight::get().writes(2_u64))
     }

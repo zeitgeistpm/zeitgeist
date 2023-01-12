@@ -15,13 +15,13 @@ sp-std = { git = "https://github.com/zeitgeistpm/substrate", default-features = 
 [features]
 default = ['std']
 std = [
-  'frame-support/std',
-  'frame-system/std',
-  'sp-consensus-aura/std',
-  'sp-runtime/std',
-  'sp-std/std',
-  'pallet-timestamp/std',
-  'pallet-aura/std',
+    'frame-support/std',
+    'frame-system/std',
+    'sp-consensus-aura/std',
+    'sp-runtime/std',
+    'sp-std/std',
+    'pallet-timestamp/std',
+    'pallet-aura/std',
 ]
 
 runtime-benchmarks = []

@@ -81,7 +81,7 @@ impl DisputeResolutionApi for NoopResolution {
         _market_id: &Self::MarketId,
         _market: &Market<Self::AccountId, Self::Balance, Self::BlockNumber, Self::Moment>,
     ) -> Result<Weight, DispatchError> {
-        Ok(0)
+        Ok(Weight::zero())
     }
 
     fn add_auto_resolve(
