@@ -1,0 +1,27 @@
+name: Deploy
+on:
+  # Triggers this Action on push or pull request events on the "main" branch and when manually requested from the "Actions" tab
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    tags: ['*']
+  
+jobs:
+  auto-update-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Checkout repository
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+
+      - name: Run Ansible playbook
+        env:
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+        uses: dawidd6/action-ansible-playbook@v2.6.1
+        with:
+          playbook: scripts/ansible/client-auto-update.yml 
+          directory: ./
+          key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }} 
+          inventory: ${{ secrets.ANSIBLE_INVENTORY }} 
+          
