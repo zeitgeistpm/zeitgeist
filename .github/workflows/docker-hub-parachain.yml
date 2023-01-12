@@ -1,18 +1,20 @@
 name: Publish features parachain to Docker Hub
 
 on:
-  push:
-    tags:
-    - '*'
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    tags: [ '*' ]
 
 jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Checkout repository
-        uses: actions/checkout@v2
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
       - name: Docker meta
         id: meta
@@ -23,7 +25,7 @@ jobs:
           images: |
             zeitgeistpm/zeitgeist-node-parachain
           tags: |
-            type=sha
+            type=ref
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -38,7 +40,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3.2.0
         with:
           build-args: |
             PROFILE=production
@@ -46,4 +48,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-            
+
+      - name: Update image version of the existing network spec
+        uses: "OnFinality-io/action-onf-release@v1"
+        with:
+          onf-access-key: ${{ secrets.ONF_ACCESS_KEY }}
+          onf-secret-key: ${{ secrets.ONF_SECRET_KEY }}
+          onf-workspace-id: ${{ secrets.ONF_WORKSPACE_ID }}
+          onf-network-key: ${{ secrets.ONF_NETWORK_KEY }}
+          onf-sub-command: image
+          onf-action: add
+          image-version: ${{ steps.vars.outputs.tag }}
