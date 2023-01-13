@@ -422,7 +422,18 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
-            Disputes::<T>::remove(market_id);
+            // `Disputes` is emtpy unless the market is disputed, so this is just a defensive
+            // check.
+            if market.status == MarketStatus::Disputed {
+                for (index, dispute) in Disputes::<T>::take(market_id).iter().enumerate() {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &dispute.by,
+                        default_dispute_bond::<T>(index),
+                    );
+                }
+            }
             Ok(())
         }
     }
