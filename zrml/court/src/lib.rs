@@ -50,6 +50,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
@@ -64,7 +65,7 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        traits::DisputeApi,
+        traits::{DisputeApi, DisputeResolutionApi},
         types::{Asset, Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -150,6 +151,13 @@ mod pallet {
         /// Block duration to cast a vote on an outcome.
         #[pallet::constant]
         type CourtCaseDuration: Get<Self::BlockNumber>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -507,9 +515,10 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> DispatchResult {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
             let necessary_jurors_num = Self::necessary_jurors_num(disputes);
             let mut rng = Self::rng();
@@ -531,9 +540,10 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
             let requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
                 .map(|(juror_id, max_allowed_block)| {
@@ -552,6 +562,30 @@ mod pallet {
             let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
             let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
             Ok(Some(first))
+        }
+
+        fn get_auto_resolve(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            Ok(None)
+        }
+
+        fn has_failed(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<bool, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            Ok(false)
         }
     }
 

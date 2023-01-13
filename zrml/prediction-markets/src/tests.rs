@@ -19,8 +19,9 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
-    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    default_dispute_bond, mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
+    MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -41,6 +42,7 @@ use zeitgeist_primitives::{
         Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
     },
 };
+use zrml_authorized::Error as AuthorizedError;
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_swaps::Pools;
 
@@ -545,6 +547,71 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        assert_ne!(grace_period, 0);
+        run_to_block(grace_period + 1);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(grace_period + 2);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        let set_up_account = |account| {
+            assert_ok!(AssetManager::deposit(Asset::Ztg, account, SENTINEL_AMOUNT));
+            assert_ok!(Balances::reserve_named(
+                &PredictionMarkets::reserve_id(),
+                account,
+                SENTINEL_AMOUNT,
+            ));
+        };
+        set_up_account(&CHARLIE);
+        set_up_account(&DAVE);
+
+        let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
+        let balance_free_before_dave = Balances::free_balance(&DAVE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), market_id));
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &DAVE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::free_balance(CHARLIE),
+            balance_free_before_charlie + default_dispute_bond::<Runtime>(0)
+        );
+        assert_eq!(
+            Balances::free_balance(DAVE),
+            balance_free_before_dave + default_dispute_bond::<Runtime>(1),
+        );
+        assert!(Disputes::<Runtime>::get(market_id).is_empty());
     });
 }
 
@@ -2542,6 +2609,50 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 }
 
 #[test]
+fn dispute_fails_authority_reported_already() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+
+        assert_noop!(
+            PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            AuthorizedError::<Runtime>::OnlyOneDisputeAllowed
+        );
+    });
+}
+
+#[test]
 fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
@@ -3022,16 +3133,15 @@ fn start_global_dispute_fails_on_wrong_mdm() {
         let dispute_at_0 = end + grace_period + 2;
         run_to_block(dispute_at_0);
 
-        for i in 1..=<Runtime as Config>::MaxDisputes::get() {
-            assert_ok!(PredictionMarkets::dispute(
-                Origin::signed(CHARLIE),
-                market_id,
-                OutcomeReport::Categorical(i.saturated_into())
-            ));
-            run_blocks(1);
-            let market = MarketCommons::market(&market_id).unwrap();
-            assert_eq!(market.status, MarketStatus::Disputed);
-        }
+        // only one dispute allowed for authorized mdm
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            market_id,
+            OutcomeReport::Categorical(1u32.saturated_into())
+        ));
+        run_blocks(1);
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
 
         #[cfg(feature = "with-global-disputes")]
         assert_noop!(
@@ -3776,13 +3886,20 @@ fn authorized_correctly_resolves_disputed_market() {
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_0 = grace_period + 1 + 1;
-        run_to_block(dispute_at_0);
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+
+        let dispute_at = grace_period + 1 + 1;
+        run_to_block(dispute_at);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
 
         // Fred authorizses an outcome, but fat-fingers it on the first try.
         assert_ok!(Authorized::authorize_market_outcome(
@@ -3796,21 +3913,6 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        let dispute_at_1 = dispute_at_0 + 1;
-        run_to_block(dispute_at_1);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        let dispute_at_2 = dispute_at_1 + 1;
-        run_to_block(dispute_at_2);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
@@ -3818,33 +3920,30 @@ fn authorized_correctly_resolves_disputed_market() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        let dave_reserved = Balances::reserved_balance(&DAVE);
-        assert_eq!(dave_reserved, DisputeBond::get() + DisputeFactor::get());
-
-        let eve_reserved = Balances::reserved_balance(&EVE);
-        assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
-
         // check disputes length
         let disputes = crate::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 3);
+        assert_eq!(disputes.len(), 1);
 
-        // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_0 + market.deadlines.dispute_duration,
+            dispute_at + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
         );
-        assert_eq!(market_ids_1.len(), 0);
+        assert_eq!(market_ids_1.len(), 1);
 
-        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_1 + market.deadlines.dispute_duration,
-        );
-        assert_eq!(market_ids_2.len(), 0);
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
 
-        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_2 + market.deadlines.dispute_duration,
-        );
-        assert_eq!(market_ids_3.len(), 1);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get() - 1);
 
-        run_blocks(market.deadlines.dispute_duration);
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Disputed);
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+
+        run_blocks(1);
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -3853,26 +3952,10 @@ fn authorized_correctly_resolves_disputed_market() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
-        // Make sure rewards are right:
-        //
-        // Slashed amounts:
-        //     - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
-        //     - Alice's oracle bond: OracleBond::get()
-        // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
-        //
-        // Charlie and Eve each receive half of the total slashed amount as bounty.
-        let dave_reserved = DisputeBond::get() + DisputeFactor::get();
-        let total_slashed = OracleBond::get() + dave_reserved;
-
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + total_slashed / 2);
+        assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
-        let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
-
-        let dave_balance = Balances::free_balance(&DAVE);
-        assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
 
         let alice_balance = Balances::free_balance(&ALICE);
         assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());

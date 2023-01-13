@@ -19,10 +19,8 @@
 use crate::MarketIdOf;
 use crate::{Config, MarketOf, MomentOf};
 #[cfg(feature = "try-runtime")]
-use alloc::collections::BTreeMap;
-#[cfg(feature = "try-runtime")]
 use alloc::format;
-use alloc::vec::Vec;
+use alloc::{collections::BTreeMap, vec::Vec};
 #[cfg(feature = "try-runtime")]
 use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 use frame_support::{
@@ -39,9 +37,7 @@ use zeitgeist_primitives::types::{
     Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
-#[cfg(feature = "try-runtime")]
-use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_market_commons::Pallet as MarketCommonsPallet;
+use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
@@ -150,7 +146,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        use frame_support::{migration::storage_key_iter, pallet_prelude::Blake2_128Concat};
+        use frame_support::pallet_prelude::Blake2_128Concat;
 
         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
             MARKET_COMMONS,
@@ -441,10 +437,291 @@ mod tests {
     }
 }
 
+#[cfg(feature = "try-runtime")]
+use alloc::string::ToString;
+use frame_support::{migration::storage_key_iter, Twox64Concat};
+use frame_system::pallet_prelude::BlockNumberFor;
+use sp_runtime::traits::Saturating;
+use zeitgeist_primitives::types::AuthorityReport;
+use zrml_authorized::Pallet as AuthorizedPallet;
+
+const AUTHORIZED: &[u8] = b"Authorized";
+const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
+
+const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 2;
+const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 3;
+
+pub struct AddFieldToAuthorityReport<T>(PhantomData<T>);
+
+// Add resolve_at block number value field to `AuthorizedOutcomeReports` map.
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade
+    for AddFieldToAuthorityReport<T>
+{
+    fn on_runtime_upgrade() -> Weight
+    where
+        T: Config,
+    {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
+        if authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "AddFieldToAuthorityReport: authorized version is {:?}, require {:?};",
+                authorized_version,
+                AUTHORIZED_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("AddFieldToAuthorityReport: Starting...");
+
+        let mut authorized_resolutions =
+            BTreeMap::<<T as zrml_market_commons::Config>::MarketId, BlockNumberFor<T>>::new();
+        for (resolve_at, bounded_vec) in crate::MarketIdsPerDisputeBlock::<T>::iter() {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+            for id in bounded_vec.into_inner().iter() {
+                if let Ok(market) = <zrml_market_commons::Pallet<T>>::market(id) {
+                    if market.dispute_mechanism == MarketDisputeMechanism::Authorized {
+                        authorized_resolutions.insert(*id, resolve_at);
+                    }
+                } else {
+                    log::warn!("AddFieldToAuthorityReport: Could not find market with id {:?}", id);
+                }
+            }
+        }
+
+        let mut new_storage_map: Vec<(
+            <T as zrml_market_commons::Config>::MarketId,
+            AuthorityReport<BlockNumberFor<T>>,
+        )> = Vec::new();
+
+        let now = frame_system::Pallet::<T>::block_number();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+        for (market_id, old_value) in storage_key_iter::<
+            <T as zrml_market_commons::Config>::MarketId,
+            OutcomeReport,
+            Twox64Concat,
+        >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
+        {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+            let resolve_at: Option<BlockNumberFor<T>> =
+                authorized_resolutions.get(&market_id).cloned();
+
+            match resolve_at {
+                Some(block) if now <= block => {
+                    new_storage_map.push((
+                        market_id,
+                        AuthorityReport { resolve_at: block, outcome: old_value },
+                    ));
+                }
+                _ => {
+                    log::warn!(
+                        "AddFieldToAuthorityReport: Market was not found in \
+                         MarketIdsPerDisputeBlock; market id: {:?}",
+                        market_id
+                    );
+                    // example case market id 432
+                    // https://github.com/zeitgeistpm/zeitgeist/pull/701 market id 432 is invalid, because of zero-division error in the past
+                    // we have to handle manually here, because MarketIdsPerDisputeBlock does not contain 432
+                    let mut resolve_at = now.saturating_add(T::CorrectionPeriod::get());
+                    total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+                    let mut bounded_vec = <crate::MarketIdsPerDisputeBlock<T>>::get(resolve_at);
+                    while bounded_vec.is_full() {
+                        // roll the dice until we find a block that is not full
+                        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+                        resolve_at = resolve_at.saturating_add(1u32.into());
+                        bounded_vec = <crate::MarketIdsPerDisputeBlock<T>>::get(resolve_at);
+                    }
+                    // is not full, so we can push
+                    bounded_vec.force_push(market_id);
+                    <crate::MarketIdsPerDisputeBlock<T>>::insert(resolve_at, bounded_vec);
+                    total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+
+                    new_storage_map
+                        .push((market_id, AuthorityReport { resolve_at, outcome: old_value }));
+                }
+            }
+        }
+
+        for (market_id, new_value) in new_storage_map {
+            let hash = utility::key_to_hash::<
+                Twox64Concat,
+                <T as zrml_market_commons::Config>::MarketId,
+            >(market_id);
+            put_storage_value::<AuthorityReport<T::BlockNumber>>(
+                AUTHORIZED,
+                AUTHORIZED_OUTCOME_REPORTS,
+                &hash,
+                new_value,
+            );
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        }
+
+        StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("AddFieldToAuthorityReport: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        let mut counter = 0_u32;
+        for (key, value) in storage_iter::<OutcomeReport>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
+            Self::set_temp_storage(value, &format!("{:?}", key.as_slice()));
+
+            counter = counter.saturating_add(1_u32);
+        }
+        let counter_key = "counter_key".to_string();
+        Self::set_temp_storage(counter, &counter_key);
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        let mut markets_count = 0_u32;
+        let old_counter_key = "counter_key".to_string();
+        for (key, new_value) in
+            storage_iter::<AuthorityReport<T::BlockNumber>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
+        {
+            let key_str = format!("{:?}", key.as_slice());
+
+            let AuthorityReport { resolve_at: _, outcome } = new_value;
+            let old_value: OutcomeReport = Self::get_temp_storage(&key_str)
+                .unwrap_or_else(|| panic!("old value not found for market id {:?}", key_str));
+
+            assert_eq!(old_value, outcome);
+
+            markets_count += 1_u32;
+        }
+        let old_markets_count: u32 =
+            Self::get_temp_storage(&old_counter_key).expect("old counter key storage not found");
+        assert_eq!(markets_count, old_markets_count);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests_authorized {
+    use super::*;
+    use crate::{
+        mock::{ExtBuilder, MarketCommons, Runtime, ALICE, BOB},
+        CacheSize, MarketIdOf,
+    };
+    use frame_support::{BoundedVec, Twox64Concat};
+    use zeitgeist_primitives::types::{MarketId, OutcomeReport};
+    use zrml_market_commons::MarketCommonsPalletApi;
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_versions() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+            AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
+            let authorized_version = StorageVersion::get::<AuthorizedPallet<Runtime>>();
+            assert_eq!(authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION);
+        });
+    }
+
+    #[test]
+    fn on_runtime_sets_new_struct_with_resolve_at() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            <frame_system::Pallet<Runtime>>::set_block_number(10_000);
+
+            let hash = crate::migrations::utility::key_to_hash::<Twox64Concat, MarketId>(0);
+            let outcome = OutcomeReport::Categorical(42u16);
+            put_storage_value::<OutcomeReport>(
+                AUTHORIZED,
+                AUTHORIZED_OUTCOME_REPORTS,
+                &hash,
+                outcome.clone(),
+            );
+
+            let resolve_at = 42_000;
+
+            let sample_market = get_sample_market();
+            let market_id: MarketId = MarketCommons::push_market(sample_market).unwrap();
+            let bounded_vec =
+                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![market_id])
+                    .expect("BoundedVec should be created");
+            crate::MarketIdsPerDisputeBlock::<Runtime>::insert(resolve_at, bounded_vec);
+
+            AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
+
+            let expected = AuthorityReport { resolve_at, outcome };
+
+            let actual = frame_support::migration::get_storage_value::<
+                AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>,
+            >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash)
+            .unwrap();
+            assert_eq!(expected, actual);
+        });
+    }
+
+    #[test]
+    fn on_runtime_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            // storage migration already executed (storage version is incremented already)
+            StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
+
+            let hash = crate::migrations::utility::key_to_hash::<Twox64Concat, MarketId>(0);
+            let outcome = OutcomeReport::Categorical(42u16);
+
+            let report = AuthorityReport { resolve_at: 42, outcome };
+            put_storage_value::<AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>>(
+                AUTHORIZED,
+                AUTHORIZED_OUTCOME_REPORTS,
+                &hash,
+                report.clone(),
+            );
+
+            AddFieldToAuthorityReport::<Runtime>::on_runtime_upgrade();
+
+            let actual = frame_support::migration::get_storage_value::<
+                AuthorityReport<<Runtime as frame_system::Config>::BlockNumber>,
+            >(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS, &hash)
+            .unwrap();
+            assert_eq!(report, actual);
+        });
+    }
+
+    fn set_up_chain() {
+        StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
+    }
+
+    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u128, u64, u64, Asset<u128>>
+    {
+        zeitgeist_primitives::types::Market {
+            base_asset: Asset::Ztg,
+            creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+            creator_fee: 0,
+            creator: ALICE,
+            market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+            dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,
+            metadata: Default::default(),
+            oracle: BOB,
+            period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+            deadlines: zeitgeist_primitives::types::Deadlines {
+                grace_period: 1_u32.into(),
+                oracle_duration: 1_u32.into(),
+                dispute_duration: 1_u32.into(),
+            },
+            report: None,
+            resolved_outcome: None,
+            scoring_rule: zeitgeist_primitives::types::ScoringRule::CPMM,
+            status: zeitgeist_primitives::types::MarketStatus::Disputed,
+            bonds: Default::default(),
+        }
+    }
+}
+
 // We use these utilities to prevent having to make the swaps pallet a dependency of
 // prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
 // https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
 // and previous migrations.
+
 mod utility {
     use crate::{BalanceOf, Config, MarketIdOf};
     use alloc::vec::Vec;
