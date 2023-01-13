@@ -1045,6 +1045,8 @@ macro_rules! impl_config_traits {
             type DisputeFactor = DisputeFactor;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
+            #[cfg(feature = "with-global-disputes")]
+            type GlobalDisputes = GlobalDisputes;
             type MarketCommons = MarketCommons;
             type MaxDisputes = MaxDisputes;
             type PalletId = SimpleDisputesPalletId;

@@ -443,7 +443,7 @@ mod pallet {
     impl<T> SimpleDisputesPalletApi for Pallet<T> where T: Config {}
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub(crate) fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
+    pub fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {

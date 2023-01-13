@@ -276,7 +276,7 @@ benchmarks! {
         AuthorizedPallet::<T>::authorize_market_outcome(
             T::AuthorizedDisputeResolutionOrigin::successful_origin(),
             market_id.into(),
-            OutcomeReport::Scalar(0),
+            OutcomeReport::Categorical(0u16),
         )?;
 
         let now = <frame_system::Pallet<T>>::block_number();
