@@ -43,18 +43,26 @@
       no_log: true
       shell: |
         cd /mnt/*/services/zeitgeist/bin
-        wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
+        if [[ -v RELEASE_VERSION ]]; then
+          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
+        else
+          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/v0.3.6/zeitgeist_parachain
+        fi 
         chmod 0755 zeitgeist
-        # chown zeitgeist:zeitgeist zeitgeist
+        chown zeitgeist:zeitgeist zeitgeist
       when: mnt.stat.exists and mnt.stat.isdir
 
     - name: Download Zeitgeist Client
       no_log: true
       shell: |
         cd /services/zeitgeist/bin
-        wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
+        if [[ -v RELEASE_VERSION ]]; then
+          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
+        else
+          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/v0.3.6/zeitgeist_parachain
+        fi
         chmod 0755 zeitgeist
-        # chown zeitgeist:zeitgeist zeitgeist
+        chown zeitgeist:zeitgeist zeitgeist
       when: not mnt.stat.exists and mnt.stat.isdir
     
     - name: Start Zeitgeist Services
