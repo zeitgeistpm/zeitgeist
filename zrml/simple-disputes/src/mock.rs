@@ -22,23 +22,38 @@ use frame_support::{
     construct_runtime,
     pallet_prelude::{DispatchError, Weight},
     traits::Everything,
-    BoundedVec,
 };
+use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use frame_support::ord_parameter_types;
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, DisputeFactor, DisputeBond, MaxDisputes,
+        BlockHashCount, DisputeBond, DisputeFactor, MaxDisputes, MaxReserves, MinimumPeriod,
+        PmPalletId, SimpleDisputesPalletId, GetNativeCurrencyId, MaxApprovals, TreasuryPalletId,
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
-        MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market,
+        MarketId, Moment, UncheckedExtrinsicTest, BasicCurrencyAdapter,
     },
 };
 
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
+pub const EVE: AccountIdTest = 4;
+pub const FRED: AccountIdTest = 5;
+pub const SUDO: AccountIdTest = 69;
+
+ord_parameter_types! {
+    pub const Sudo: AccountIdTest = SUDO;
+}
+
+#[cfg(feature = "with-global-disputes")]
 construct_runtime!(
     pub enum Runtime
     where
@@ -50,9 +65,30 @@ construct_runtime!(
         AssetManager: orml_currencies::{Call, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
-        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
+        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
+    }
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
+construct_runtime!(
+    pub enum Runtime
+    where
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
+    {
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
@@ -96,12 +132,29 @@ impl crate::Config for Runtime {
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputeResolution = NoopResolution;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputes = GlobalDisputes;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
     type PredictionMarketsPalletId = PmPalletId;
     type Slash = Treasury;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
+}
+
+#[cfg(feature = "with-global-disputes")]
+impl zrml_global_disputes::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type Currency = Balances;
+    type GlobalDisputeLockId = GlobalDisputeLockId;
+    type GlobalDisputesPalletId = GlobalDisputesPalletId;
+    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+    type MaxOwners = MaxOwners;
+    type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
+    type RemoveKeysLimit = RemoveKeysLimit;
+    type VotingOutcomeFee = VotingOutcomeFee;
+    type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {

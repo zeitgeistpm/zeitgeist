@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
-use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight, BoundedVec};
+use crate::{outcome_report::OutcomeReport, types::Market};
+use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
 use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support

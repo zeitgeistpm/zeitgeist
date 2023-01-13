@@ -39,10 +39,11 @@ mod pallet {
         traits::{Currency, Get, Hooks, Imbalance, IsType, NamedReservableCurrency, OnUnbalanced},
         transactional, BoundedVec, PalletId,
     };
+    use alloc::vec::Vec;
     use frame_system::pallet_prelude::*;
     use orml_traits::currency::NamedMultiReservableCurrency;
     use sp_runtime::{
-        traits::{CheckedDiv, Saturating},
+        traits::{CheckedDiv, Saturating, Zero},
         DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -196,7 +197,7 @@ mod pallet {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
             let now = <frame_system::Pallet<T>>::block_number();
-            let disputes = Disputes::<T>::get(&market_id);
+            let disputes = Disputes::<T>::get(market_id);
             let num_disputes: u32 = disputes.len().saturated_into();
 
             Self::ensure_can_not_dispute_the_same_outcome(&disputes, report, &outcome)?;

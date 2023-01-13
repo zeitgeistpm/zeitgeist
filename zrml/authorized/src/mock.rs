@@ -25,7 +25,6 @@ use frame_support::{
     construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
     traits::Everything,
-    BoundedVec,
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
@@ -39,8 +38,8 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
-        MarketId, Moment, OutcomeReport, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market,
+        MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 

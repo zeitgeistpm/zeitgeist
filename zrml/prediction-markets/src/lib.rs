@@ -51,7 +51,7 @@ mod pallet {
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
-        traits::{CheckedDiv, Saturating, Zero},
+        traits::{Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -1304,24 +1304,24 @@ mod pallet {
 
                 let has_failed = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        T::Authorized::has_failed(market_id, &market)?
+                        T::Authorized::has_failed(&market_id, &market)?
                     }
-                    MarketDisputeMechanism::Court => T::Court::has_failed(market_id, &market)?,
+                    MarketDisputeMechanism::Court => T::Court::has_failed(&market_id, &market)?,
                     MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::has_failed(market_id, &market)?
+                        T::SimpleDisputes::has_failed(&market_id, &market)?
                     }
                 };
                 ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
                 match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        T::Authorized::on_global_dispute(market_id, &market)?
+                        T::Authorized::on_global_dispute(&market_id, &market)?
                     }
                     MarketDisputeMechanism::Court => {
-                        T::Court::on_global_dispute(market_id, &market)?
+                        T::Court::on_global_dispute(&market_id, &market)?
                     }
                     MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::on_global_dispute(market_id, &market)?
+                        T::SimpleDisputes::on_global_dispute(&market_id, &market)?
                     }
                 };
 
@@ -1988,7 +1988,7 @@ mod pallet {
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
-            let ids_len = match market.status {
+            let (ids_len, mdm_len) = match market.status {
                 MarketStatus::Reported => {
                     let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
                     let dispute_duration_ends_at_block =
@@ -2025,7 +2025,7 @@ mod pallet {
                 _ => (0u32, 0u32),
             };
 
-            Ok((ids_len, 0u32))
+            Ok((ids_len, mdm_len))
         }
 
         fn clear_dispute_mechanism(market_id: &MarketIdOf<T>) -> DispatchResult {

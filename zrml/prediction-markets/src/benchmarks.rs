@@ -222,7 +222,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 benchmarks! {
     where_clause {
         where
-            T: pallet_timestamp::Config + zrml_authorized::Config,
+            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_simple_disputes::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }
@@ -246,13 +246,8 @@ benchmarks! {
 
         let pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id)?;
 
-        for i in 1..=d {
-            let outcome = OutcomeReport::Categorical((i % a).saturated_into());
-            let disputor = account("disputor", i, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
-            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
+        let disputor = account("disputor", 1, 0);
+        let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
@@ -467,24 +462,16 @@ benchmarks! {
 
         let outcome = OutcomeReport::Scalar(0);
         let disputor = account("disputor", 1, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
-        T::AssetManager::deposit(
-            Asset::Ztg,
-            &disputor,
-            dispute_bond,
-        )?;
-        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        let disputes = Disputes::<T>::get(market_id);
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
+
+        let now = <frame_system::Pallet<T>>::block_number();
         AuthorizedPallet::<T>::authorize_market_outcome(
             T::AuthorizedDisputeResolutionOrigin::successful_origin(),
             market_id.into(),
             OutcomeReport::Scalar(0),
         )?;
 
-        let last_dispute = disputes.last().unwrap();
-        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        let resolves_at = now.saturating_add(<T as zrml_authorized::Config>::CorrectionPeriod::get());
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
                 resolves_at,
@@ -519,17 +506,9 @@ benchmarks! {
             Ok(())
         })?;
 
-        let outcome = OutcomeReport::Categorical(0u16);
         let disputor = account("disputor", 1, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
-        T::AssetManager::deposit(
-            Asset::Ztg,
-            &disputor,
-            dispute_bond,
-        )?;
-        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
-        let disputes = Disputes::<T>::get(market_id);
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
@@ -538,9 +517,9 @@ benchmarks! {
             OutcomeReport::Categorical(0),
         )?;
 
-        let last_dispute = disputes.last().unwrap();
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
-        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        let now = <frame_system::Pallet<T>>::block_number();
+        let resolves_at = now.saturating_add(<T as zrml_authorized::Config>::CorrectionPeriod::get());
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
                 resolves_at,
@@ -798,22 +777,27 @@ benchmarks! {
             market_ids_1.try_push(i.saturated_into()).unwrap();
         }
 
-        let max_dispute_len = T::MaxDisputes::get();
+        let disputor: T::AccountId = account("Disputor", 1, 0);
+        let _ = Call::<T>::dispute {
+            market_id,
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+
+        let max_dispute_len = <T as zrml_simple_disputes::Config>::MaxDisputes::get();
         for i in 0..max_dispute_len {
             // ensure that the MarketIdsPerDisputeBlock does not interfere
             // with the start_global_dispute execution block
             <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
-            let disputor: T::AccountId = account("Disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            let _ = Call::<T>::dispute {
+            let reserver: T::AccountId = account("Reserver", i, 0); 
+            T::AssetManager::deposit(Asset::Ztg, &reserver, (u128::MAX).saturated_into())?;
+            let _ = zrml_simple_disputes::Call::<T>::reserve_outcome {
                 market_id,
-                outcome: OutcomeReport::Scalar(i.into()),
-            }
-            .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+                outcome: OutcomeReport::Scalar(i.saturated_into()),
+            }.dispatch_bypass_filter(RawOrigin::Signed(reserver.clone()).into())?;
         }
 
         let market = <zrml_market_commons::Pallet<T>>::market(&market_id.saturated_into()).unwrap();
-        let disputes = Disputes::<T>::get(market_id);
+        let disputes = zrml_simple_disputes::Disputes::<T>::get(market_id);
         let last_dispute = disputes.last().unwrap();
         let dispute_duration_ends_at_block = last_dispute.at + market.deadlines.dispute_duration;
         let mut market_ids_2: BoundedVec<MarketIdOf<T>, CacheSize> = BoundedVec::try_from(
@@ -858,9 +842,7 @@ benchmarks! {
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
-        // only one dispute allowed for authorized mdm
-        let dispute_outcome = OutcomeReport::Scalar(1u128);
-        let call = Call::<T>::dispute { market_id, outcome: dispute_outcome };
+        let call = Call::<T>::dispute { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
@@ -908,10 +890,8 @@ benchmarks! {
         Pallet::<T>::dispute(
             RawOrigin::Signed(caller).into(),
             market_id,
-            OutcomeReport::Categorical(0),
         )?;
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+
         AuthorizedPallet::<T>::authorize_market_outcome(
             T::AuthorizedDisputeResolutionOrigin::successful_origin(),
             market_id.into(),
@@ -953,10 +933,8 @@ benchmarks! {
         Pallet::<T>::dispute(
             RawOrigin::Signed(caller).into(),
             market_id,
-            OutcomeReport::Scalar(1)
         )?;
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+
         AuthorizedPallet::<T>::authorize_market_outcome(
             T::AuthorizedDisputeResolutionOrigin::successful_origin(),
             market_id.into(),

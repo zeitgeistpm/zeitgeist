@@ -19,7 +19,7 @@
 
 use crate::{
     mock::{ExtBuilder, Runtime, SimpleDisputes},
-    Error, MarketOf, Disputes,
+    Disputes, Error, MarketOf,
 };
 use frame_support::{assert_noop, BoundedVec};
 use zeitgeist_primitives::{
@@ -76,10 +76,14 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
     ExtBuilder.build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
-        let disputes = BoundedVec::try_from([
-            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
-            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
-        ].to_vec()).unwrap();
+        let disputes = BoundedVec::try_from(
+            [
+                MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
+                MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            ]
+            .to_vec(),
+        )
+        .unwrap();
         Disputes::<Runtime>::insert(&0, &disputes);
         assert_eq!(
             &SimpleDisputes::on_resolution(&0, &market).unwrap().unwrap(),

@@ -308,6 +308,8 @@ impl zrml_simple_disputes::Config for Runtime {
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputes = GlobalDisputes;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
