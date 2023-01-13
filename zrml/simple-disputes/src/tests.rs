@@ -84,7 +84,7 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
             .to_vec(),
         )
         .unwrap();
-        Disputes::<Runtime>::insert(&0, &disputes);
+        Disputes::<Runtime>::insert(0, &disputes);
         assert_eq!(
             &SimpleDisputes::on_resolution(&0, &market).unwrap().unwrap(),
             &disputes.last().unwrap().outcome

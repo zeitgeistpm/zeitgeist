@@ -74,7 +74,6 @@ fuzz_target!(|data: Data| {
         let _ = PredictionMarkets::dispute(
             Origin::signed(data.report_origin.into()),
             dispute_market_id,
-            outcome(data.report_outcome),
         );
 
         let _ = PredictionMarkets::on_initialize(5);

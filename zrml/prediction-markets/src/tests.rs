@@ -19,7 +19,7 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    default_dispute_bond, mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
     MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
     MarketIdsPerReportBlock,
 };

@@ -19,34 +19,34 @@
 
 use crate::{self as zrml_simple_disputes};
 use frame_support::{
-    construct_runtime,
+    construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
-    traits::Everything,
+    traits::{Everything, NeverEnsureOrigin},
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use frame_support::ord_parameter_types;
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, DisputeBond, DisputeFactor, MaxDisputes, MaxReserves, MinimumPeriod,
-        PmPalletId, SimpleDisputesPalletId, GetNativeCurrencyId, MaxApprovals, TreasuryPalletId,
+        BlockHashCount, DisputeBond, DisputeFactor, ExistentialDeposits, GetNativeCurrencyId,
+        MaxApprovals, MaxDisputes, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        TreasuryPalletId,
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market,
-        MarketId, Moment, UncheckedExtrinsicTest, BasicCurrencyAdapter,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, Market, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
-pub const ALICE: AccountIdTest = 0;
-pub const BOB: AccountIdTest = 1;
-pub const CHARLIE: AccountIdTest = 2;
-pub const DAVE: AccountIdTest = 3;
-pub const EVE: AccountIdTest = 4;
-pub const FRED: AccountIdTest = 5;
+#[cfg(feature = "with-global-disputes")]
+use zeitgeist_primitives::constants::mock::{
+    GlobalDisputeLockId, GlobalDisputesPalletId, MaxGlobalDisputeVotes, MaxOwners,
+    MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
+};
+
 pub const SUDO: AccountIdTest = 69;
 
 ord_parameter_types! {
@@ -144,7 +144,7 @@ impl crate::Config for Runtime {
 
 #[cfg(feature = "with-global-disputes")]
 impl zrml_global_disputes::Config for Runtime {
-    type Event = Event;
+    type Event = ();
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -208,7 +208,7 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = Event;
+    type Event = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -238,7 +238,7 @@ impl pallet_treasury::Config for Runtime {
     type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
-    type Event = Event;
+    type Event = ();
     type MaxApprovals = MaxApprovals;
     type OnSlash = ();
     type PalletId = TreasuryPalletId;

@@ -520,9 +520,8 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+            ensure_signed(origin)?;
 
-            let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
 
@@ -2336,7 +2335,7 @@ mod pallet {
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let imbalance = Self::slash_oracle_bond(market_id, None)?;
+                let _imbalance = Self::slash_oracle_bond(market_id, None)?;
                 // TODO what should be done with the OracleBond imbalance?
                 // overall_imbalance.subsume(imbalance);
             }

@@ -23,7 +23,7 @@ use frame_support::{
     pallet_prelude::{DispatchError, Weight},
     parameter_types,
     traits::Everything,
-    BoundedVec, PalletId,
+    PalletId,
 };
 use sp_runtime::{
     testing::Header,
@@ -36,8 +36,8 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
-        MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId, Moment,
+        UncheckedExtrinsicTest,
     },
 };
 

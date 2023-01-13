@@ -986,8 +986,6 @@ macro_rules! impl_config_traits {
             type Court = Court;
             type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
-            type DisputeBond = DisputeBond;
-            type DisputeFactor = DisputeFactor;
             type Event = Event;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
@@ -1042,10 +1040,17 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_simple_disputes::Config for Runtime {
+            type AssetManager = AssetManager;
+            type DisputeBond = DisputeBond;
+            type DisputeFactor = DisputeFactor;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type MarketCommons = MarketCommons;
+            type MaxDisputes = MaxDisputes;
             type PalletId = SimpleDisputesPalletId;
+            type PredictionMarketsPalletId = PmPalletId;
+            type Slash = Treasury;
+            type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "with-global-disputes")]

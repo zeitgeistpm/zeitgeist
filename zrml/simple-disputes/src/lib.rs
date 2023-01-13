@@ -31,6 +31,7 @@ pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, SimpleDisputesPalletApi};
+    use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
@@ -39,11 +40,12 @@ mod pallet {
         traits::{Currency, Get, Hooks, Imbalance, IsType, NamedReservableCurrency, OnUnbalanced},
         transactional, BoundedVec, PalletId,
     };
-    use alloc::vec::Vec;
     use frame_system::pallet_prelude::*;
     use orml_traits::currency::NamedMultiReservableCurrency;
+    #[cfg(feature = "with-global-disputes")]
+    use sp_runtime::traits::Zero;
     use sp_runtime::{
-        traits::{CheckedDiv, Saturating, Zero},
+        traits::{CheckedDiv, Saturating},
         DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -124,8 +126,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type NegativeImbalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,

@@ -458,16 +458,19 @@ mod tests {
         );
         assert_ne!(
             <Runtime as Config>::AdvisoryBond::get(),
-            <Runtime as Config>::DisputeBond::get()
+            <Runtime as zrml_simple_disputes::Config>::DisputeBond::get()
         );
         assert_ne!(
             <Runtime as Config>::OracleBond::get(),
             <Runtime as Config>::ValidityBond::get()
         );
-        assert_ne!(<Runtime as Config>::OracleBond::get(), <Runtime as Config>::DisputeBond::get());
+        assert_ne!(
+            <Runtime as Config>::OracleBond::get(),
+            <Runtime as zrml_simple_disputes::Config>::DisputeBond::get()
+        );
         assert_ne!(
             <Runtime as Config>::ValidityBond::get(),
-            <Runtime as Config>::DisputeBond::get()
+            <Runtime as zrml_simple_disputes::Config>::DisputeBond::get()
         );
     }
 }
