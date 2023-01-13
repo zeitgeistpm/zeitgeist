@@ -77,7 +77,7 @@ fn create_market_common_parameters<T: Config>(
 }
 
 // Create a market based on common parameters
-fn create_market_common<T: Config + pallet_timestamp::Config + pallet_aura::Config>(
+fn create_market_common<T: Config + pallet_timestamp::Config>(
     permission: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
@@ -87,13 +87,6 @@ fn create_market_common<T: Config + pallet_timestamp::Config + pallet_aura::Conf
     let range_start: MomentOf<T> = start.saturated_into();
     let range_end: MomentOf<T> = (start + 10 * MILLISECS_PER_BLOCK).saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
-    // let (range_start, _range_end) = match period {
-    //         MarketPeriod::Timestamp(ref range) => (range.start, range.end),
-    //             _ => {
-    //                 panic!("MarketPeriod is block_number based");
-    //             }
-    // };
-    // zeitgeist_utils::set_block_number_timestamp::<T>(Default::default(), range_start.saturated_into());
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {

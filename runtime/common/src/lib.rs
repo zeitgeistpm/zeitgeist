@@ -1197,6 +1197,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_court, Court);
                     #[cfg(feature = "with-global-disputes")]
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
+                    #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
@@ -1275,6 +1276,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_court, Court);
                     #[cfg(feature = "with-global-disputes")]
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
+                    #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);
