@@ -103,10 +103,7 @@ mod pallet {
             // TODO take a bond from the caller
             ensure_signed(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(
-                market.status == MarketStatus::Disputed,
-                Error::<T>::MarketIsNotDisputed
-            );
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
@@ -427,7 +424,9 @@ mod pallet {
         //
         // Result is capped to `usize::MAX` or in other words, capped to a very, very, very
         // high number of jurors.
-        fn necessary_jurors_num(disputes: &[MarketDispute<T::AccountId, T::BlockNumber>]) -> usize {
+        fn necessary_jurors_num(
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
+        ) -> usize {
             let len = disputes.len();
             INITIAL_JURORS_NUM.saturating_add(SUBSEQUENT_JURORS_FACTOR.saturating_mul(len))
         }
@@ -545,7 +544,7 @@ mod pallet {
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
-        fn on_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn on_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism

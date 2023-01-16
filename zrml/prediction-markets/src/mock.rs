@@ -36,13 +36,13 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
-        CourtCaseDuration, CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
-        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets,
-        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod,
-        MaxInRatio, MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
-        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        CourtCaseDuration, CourtPalletId, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
+        MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
+        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
+        MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor, PmPalletId, SimpleDisputesPalletId,
         StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
@@ -142,6 +142,7 @@ impl crate::Config for Runtime {
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type DisputeBond = DisputeBond;
     type Event = Event;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
@@ -305,8 +306,8 @@ impl zrml_rikiddo::Config for Runtime {
 impl zrml_simple_disputes::Config for Runtime {
     type AssetManager = AssetManager;
     type Event = Event;
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
+    type OutcomeBond = OutcomeBond;
+    type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
@@ -458,7 +459,7 @@ mod tests {
         );
         assert_ne!(
             <Runtime as Config>::AdvisoryBond::get(),
-            <Runtime as zrml_simple_disputes::Config>::DisputeBond::get()
+            <Runtime as Config>::DisputeBond::get()
         );
         assert_ne!(
             <Runtime as Config>::OracleBond::get(),
@@ -466,11 +467,11 @@ mod tests {
         );
         assert_ne!(
             <Runtime as Config>::OracleBond::get(),
-            <Runtime as zrml_simple_disputes::Config>::DisputeBond::get()
+            <Runtime as Config>::DisputeBond::get()
         );
         assert_ne!(
             <Runtime as Config>::ValidityBond::get(),
-            <Runtime as zrml_simple_disputes::Config>::DisputeBond::get()
+            <Runtime as Config>::DisputeBond::get()
         );
     }
 }

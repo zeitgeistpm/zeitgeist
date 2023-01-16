@@ -58,9 +58,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
-            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, MultiHash, OldMarketDispute, OutcomeReport,
+            Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -520,7 +520,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
@@ -536,7 +536,15 @@ mod pallet {
                 }
             }
 
-            Self::set_market_as_disputed(&market, &market_id)?;
+            let dispute_bond = T::DisputeBond::get();
+
+            T::AssetManager::reserve_named(&Self::reserve_id(), Asset::Ztg, &who, dispute_bond)?;
+
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
+                m.status = MarketStatus::Disputed;
+                m.bonds.dispute = Some(Bond::new(who.clone(), dispute_bond));
+                Ok(())
+            })?;
 
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
 
@@ -650,10 +658,12 @@ mod pallet {
                 MarketCreation::Advised => MarketBonds {
                     creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    ..Default::default()
                 },
                 MarketCreation::Permissionless => MarketBonds {
                     creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    ..Default::default()
                 },
             };
 
@@ -1399,6 +1409,10 @@ mod pallet {
         /// The origin that is allowed to destroy markets.
         type DestroyOrigin: EnsureOrigin<Self::Origin>;
 
+        /// The base amount of currency that must be bonded in order to create a dispute.
+        #[pallet::constant]
+        type DisputeBond: Get<BalanceOf<Self>>;
+
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -1793,7 +1807,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        BoundedVec<OldMarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
         ValueQuery,
     >;
 
@@ -1879,8 +1893,10 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         impl_unreserve_bond!(unreserve_creation_bond, creation);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
+        impl_unreserve_bond!(unreserve_dispute_bond, dispute);
         impl_slash_bond!(slash_creation_bond, creation);
         impl_slash_bond!(slash_oracle_bond, oracle);
+        impl_slash_bond!(slash_dispute_bond, dispute);
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -2340,6 +2356,15 @@ mod pallet {
                 // overall_imbalance.subsume(imbalance);
             }
 
+            if report.outcome != resolved_outcome {
+                // If the report outcome was wrong, the dispute was justified
+                Self::unreserve_dispute_bond(market_id)?;
+            } else {
+                // TODO what should be done with the DisputeBond imbalance?
+                let _imbalance = Self::slash_dispute_bond(market_id, None)?;
+                // overall_imbalance.subsume(imbalance);
+            }
+
             Ok(resolved_outcome)
         }
 
@@ -2619,20 +2644,6 @@ mod pallet {
                 market_ids_per_report_block.len() as u32,
                 market_ids_per_dispute_block.len() as u32,
             ))
-        }
-
-        // If the market is already disputed, does nothing.
-        fn set_market_as_disputed(
-            market: &MarketOf<T>,
-            market_id: &MarketIdOf<T>,
-        ) -> DispatchResult {
-            if market.status != MarketStatus::Disputed {
-                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
-                    m.status = MarketStatus::Disputed;
-                    Ok(())
-                })?;
-            }
-            Ok(())
         }
 
         // If a market has a pool that is `Active`, then changes from `Active` to `Clean`. If

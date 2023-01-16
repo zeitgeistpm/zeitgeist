@@ -23,6 +23,7 @@ use crate::{
 };
 use frame_support::{assert_noop, BoundedVec};
 use zeitgeist_primitives::{
+    constants::mock::{OutcomeBond, OutcomeFactor},
     traits::DisputeApi,
     types::{
         Deadlines, Market, MarketBonds, MarketCreation, MarketDispute, MarketDisputeMechanism,
@@ -44,7 +45,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
-    bonds: MarketBonds { creation: None, oracle: None },
+    bonds: MarketBonds { creation: None, oracle: None, dispute: None },
 };
 
 #[test]
@@ -78,8 +79,18 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
         market.status = MarketStatus::Disputed;
         let disputes = BoundedVec::try_from(
             [
-                MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
-                MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+                MarketDispute {
+                    at: 0,
+                    by: 0,
+                    outcome: OutcomeReport::Scalar(0),
+                    bond: OutcomeBond::get(),
+                },
+                MarketDispute {
+                    at: 0,
+                    by: 0,
+                    outcome: OutcomeReport::Scalar(20),
+                    bond: OutcomeFactor::get() * OutcomeBond::get(),
+                },
             ]
             .to_vec(),
         )

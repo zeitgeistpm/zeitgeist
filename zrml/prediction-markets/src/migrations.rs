@@ -123,7 +123,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                     resolved_outcome: old_market.resolved_outcome,
                     dispute_mechanism: old_market.dispute_mechanism,
                     deadlines: old_market.deadlines,
-                    bonds: MarketBonds { creation, oracle },
+                    bonds: MarketBonds { creation, oracle, dispute: None },
                 };
                 (key, new_market)
             })
@@ -318,6 +318,7 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
+                    dispute: None,
                 },
             ),
             construct_markets(
@@ -334,6 +335,7 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: true,
                     }),
+                    dispute: None,
                 },
             ),
             construct_markets(
@@ -350,6 +352,7 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
+                    dispute: None,
                 },
             ),
             construct_markets(
@@ -366,6 +369,7 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: false,
                     }),
+                    dispute: None,
                 },
             ),
             construct_markets(
@@ -382,6 +386,7 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: true,
                     }),
+                    dispute: None,
                 },
             ),
             // Technically, the market below has the wrong scoring rule, but that's irrelevant to
@@ -400,6 +405,7 @@ mod tests {
                         value: <Runtime as Config>::OracleBond::get(),
                         is_settled: true,
                     }),
+                    dispute: None,
                 },
             ),
         ]

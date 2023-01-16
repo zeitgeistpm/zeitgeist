@@ -40,8 +40,7 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const DisputeBond: Balance = 5 * BASE;
-    pub const DisputeFactor: Balance = 2 * BASE;
+    pub const DisputeBond: Balance = 20 * BASE;
     pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
@@ -66,6 +65,8 @@ parameter_types! {
 // Simple disputes parameters
 parameter_types! {
     pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
+    pub const OutcomeBond: Balance = 5 * BASE;
+    pub const OutcomeFactor: Balance = 2 * BASE;
 }
 
 // Swaps parameters

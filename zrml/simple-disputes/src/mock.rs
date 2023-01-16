@@ -30,7 +30,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, DisputeBond, DisputeFactor, ExistentialDeposits, GetNativeCurrencyId,
+        BlockHashCount, OutcomeBond, OutcomeFactor, ExistentialDeposits, GetNativeCurrencyId,
         MaxApprovals, MaxDisputes, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
         TreasuryPalletId,
     },
@@ -129,8 +129,8 @@ impl DisputeResolutionApi for NoopResolution {
 impl crate::Config for Runtime {
     type AssetManager = AssetManager;
     type Event = ();
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
+    type OutcomeBond = OutcomeBond;
+    type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = NoopResolution;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;

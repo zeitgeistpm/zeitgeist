@@ -74,7 +74,7 @@ mod pallet {
 
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
-        type DisputeBond: Get<BalanceOf<Self>>;
+        type OutcomeBond: Get<BalanceOf<Self>>;
 
         type DisputeResolution: DisputeResolutionApi<
             AccountId = Self::AccountId,
@@ -86,7 +86,7 @@ mod pallet {
         /// The additional amount of currency that must be bonded when creating a subsequent
         /// dispute.
         #[pallet::constant]
-        type DisputeFactor: Get<BalanceOf<Self>>;
+        type OutcomeFactor: Get<BalanceOf<Self>>;
 
         /// See [`GlobalDisputesPalletApi`].
         #[cfg(feature = "with-global-disputes")]
@@ -145,7 +145,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>, T::MaxDisputes>,
         ValueQuery,
     >;
 
@@ -157,7 +157,7 @@ mod pallet {
     {
         OutcomeReserved {
             market_id: MarketIdOf<T>,
-            dispute: MarketDispute<T::AccountId, T::BlockNumber>,
+            dispute: MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>,
         },
     }
 
@@ -204,14 +204,11 @@ mod pallet {
             Self::ensure_can_not_dispute_the_same_outcome(&disputes, report, &outcome)?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
 
-            T::AssetManager::reserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                &who,
-                default_dispute_bond::<T>(disputes.len()),
-            )?;
+            let bond = default_outcome_bond::<T>(disputes.len());
 
-            let market_dispute = MarketDispute { at: now, by: who, outcome };
+            T::AssetManager::reserve_named(&Self::reserve_id(), Asset::Ztg, &who, bond)?;
+
+            let market_dispute = MarketDispute { at: now, by: who, outcome, bond };
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
@@ -235,7 +232,7 @@ mod pallet {
         }
 
         fn ensure_can_not_dispute_the_same_outcome(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
             report: &Report<T::AccountId, T::BlockNumber>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
@@ -255,7 +252,7 @@ mod pallet {
         }
 
         fn get_auto_resolve(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
             market: &MarketOf<T>,
         ) -> Option<T::BlockNumber> {
             disputes.last().map(|last_dispute| {
@@ -264,7 +261,7 @@ mod pallet {
         }
 
         fn remove_auto_resolve(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
         ) {
@@ -320,14 +317,13 @@ mod pallet {
 
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
-            for (i, dispute) in disputes.iter().enumerate() {
-                let actual_bond = default_dispute_bond::<T>(i);
+            for dispute in disputes.iter() {
                 if dispute.outcome == resolved_outcome {
                     T::AssetManager::unreserve_named(
                         &Self::reserve_id(),
                         Asset::Ztg,
                         &dispute.by,
-                        actual_bond,
+                        dispute.bond.saturated_into::<u128>().saturated_into(),
                     );
 
                     correct_reporters.push(dispute.by.clone());
@@ -335,7 +331,7 @@ mod pallet {
                     let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                         &Self::reserve_id(),
                         &dispute.by,
-                        actual_bond.saturated_into::<u128>().saturated_into(),
+                        dispute.bond.saturated_into::<u128>().saturated_into(),
                     );
                     overall_imbalance.subsume(imbalance);
                 }
@@ -406,14 +402,8 @@ mod pallet {
                     )?;
                 }
 
-                for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
-                    let dispute_bond = default_dispute_bond::<T>(index);
-                    T::GlobalDisputes::push_voting_outcome(
-                        market_id,
-                        outcome.clone(),
-                        by,
-                        dispute_bond,
-                    )?;
+                for MarketDispute { at: _, by, outcome, bond } in disputes.iter() {
+                    T::GlobalDisputes::push_voting_outcome(market_id, outcome.clone(), by, bond)?;
                 }
             }
             Ok(())
@@ -427,12 +417,12 @@ mod pallet {
             // `Disputes` is emtpy unless the market is disputed, so this is just a defensive
             // check.
             if market.status == MarketStatus::Disputed {
-                for (index, dispute) in Disputes::<T>::take(market_id).iter().enumerate() {
+                for dispute in Disputes::<T>::take(market_id).iter() {
                     T::AssetManager::unreserve_named(
                         &Self::reserve_id(),
                         Asset::Ztg,
                         &dispute.by,
-                        default_dispute_bond::<T>(index),
+                        dispute.bond.saturated_into::<u128>().saturated_into(),
                     );
                 }
             }
@@ -443,12 +433,12 @@ mod pallet {
     impl<T> SimpleDisputesPalletApi for Pallet<T> where T: Config {}
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
+    pub fn default_outcome_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {
-        T::DisputeBond::get().saturating_add(
-            T::DisputeFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
+        T::OutcomeBond::get().saturating_add(
+            T::OutcomeFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
         )
     }
 }

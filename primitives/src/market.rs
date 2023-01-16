@@ -83,6 +83,7 @@ impl<AI, BA> Bond<AI, BA> {
 pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
+    pub dispute: Option<Bond<AI, BA>>,
 }
 
 impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
@@ -92,14 +93,16 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
             Some(bond) if bond.who == *who => bond.value,
             _ => BA::zero(),
         };
-        value_or_default(&self.creation).saturating_add(value_or_default(&self.oracle))
+        value_or_default(&self.creation)
+            .saturating_add(value_or_default(&self.oracle))
+            .saturating_add(value_or_default(&self.dispute))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None }
+        MarketBonds { creation: None, oracle: None, dispute: None }
     }
 }
 
@@ -166,11 +169,20 @@ pub enum MarketCreation {
     Advised,
 }
 
+// TODO to remove, when Disputes storage item is removed
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct MarketDispute<AccountId, BlockNumber> {
+pub struct OldMarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
     pub outcome: OutcomeReport,
+}
+
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct MarketDispute<AccountId, BlockNumber, Balance> {
+    pub at: BlockNumber,
+    pub by: AccountId,
+    pub outcome: OutcomeReport,
+    pub bond: Balance,
 }
 
 /// How a market should resolve disputes

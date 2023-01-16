@@ -34,7 +34,7 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{AccountIdConversion, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
+    constants::mock::{OutcomeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
@@ -3941,6 +3941,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        dispute: None,
     }
 )]
 #[test_case(
@@ -3950,6 +3951,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        dispute: None,
     }
 )]
 fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amount(
