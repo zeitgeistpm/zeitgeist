@@ -96,15 +96,20 @@ mod pallet {
 
             let report_opt = AuthorizedOutcomeReports::<T>::get(market_id);
             let (report, ids_len) = match &report_opt {
-                Some(report) => (AuthorityReport { resolve_at: report.resolve_at, outcome }, 0u32),
+                Some(report) => (
+                    AuthorityReport { resolve_at: report.resolve_at, outcome: outcome.clone() },
+                    0u32,
+                ),
                 None => {
                     let resolve_at = now.saturating_add(T::CorrectionPeriod::get());
                     let ids_len = T::DisputeResolution::add_auto_resolve(&market_id, resolve_at)?;
-                    (AuthorityReport { resolve_at, outcome }, ids_len)
+                    (AuthorityReport { resolve_at, outcome: outcome.clone() }, ids_len)
                 }
             };
 
             AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
+            Self::deposit_event(Event::AuthorityReported { market_id, outcome });
 
             if report_opt.is_none() {
                 Ok(Some(T::WeightInfo::authorize_market_outcome_first_report(ids_len)).into())
@@ -158,9 +163,14 @@ mod pallet {
     }
 
     #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {}
+        T: Config,
+    {
+        /// The Authority reported.
+        AuthorityReported { market_id: MarketIdOf<T>, outcome: OutcomeReport },
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}

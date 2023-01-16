@@ -19,8 +19,8 @@
 
 use crate::{
     mock::{
-        Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
-        CHARLIE, INITIAL_BALANCE,
+        Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
+        System, ALICE, BOB, CHARLIE, INITIAL_BALANCE,
     },
     Error, Juror, JurorStatus, Jurors, MarketOf, RequestedJurors, Votes,
 };
@@ -36,6 +36,7 @@ use zeitgeist_primitives::{
         MarketStatus, MarketType, OutcomeReport, ScoringRule,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 
 const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     creation: MarketCreation::Permissionless,
@@ -49,7 +50,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     deadlines: Deadlines { grace_period: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
-    status: MarketStatus::Closed,
+    status: MarketStatus::Disputed,
     scoring_rule: ScoringRule::CPMM,
     bonds: MarketBonds { creation: None, oracle: None },
 };
@@ -149,12 +150,13 @@ fn on_resolution_denies_non_court_markets() {
 }
 
 #[test]
-fn on_dispute_stores_jurors_that_should_vote() {
+fn appeal_stores_jurors_that_should_vote() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
         let _ = Court::join_court(Origin::signed(ALICE));
         let _ = Court::join_court(Origin::signed(BOB));
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         assert_noop!(
             Court::join_court(Origin::signed(ALICE)),
             Error::<Runtime>::JurorAlreadyExists
@@ -171,7 +173,8 @@ fn on_resolution_awards_winners_and_slashes_losers() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
@@ -192,7 +195,8 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
@@ -208,7 +212,8 @@ fn on_resolution_sets_late_jurors_as_tardy() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().status, JurorStatus::Ok);
         assert_eq!(Jurors::<Runtime>::get(BOB).unwrap().status, JurorStatus::Tardy);
@@ -222,7 +227,8 @@ fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tard
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
@@ -239,7 +245,8 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::set_stored_juror_as_tardy(&BOB).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         let join_court_stake = 40000000000;
         let slash = join_court_stake / 5;
@@ -256,7 +263,8 @@ fn on_resolution_removes_requested_jurors_and_votes() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
+        MarketCommons::push_market(DEFAULT_MARKET.clone()).unwrap();
+        Court::appeal(Origin::signed(ALICE), 0).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();

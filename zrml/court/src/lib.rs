@@ -66,7 +66,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -98,6 +98,36 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(1_000_000_000_000)]
+        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            // TODO take a bond from the caller
+            ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(
+                market.status == MarketStatus::Disputed,
+                Error::<T>::MarketIsNotDisputed
+            );
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+
+            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            // TODO &[] was disputes list before: how to handle it now without disputes from pm?
+            let necessary_jurors_num = Self::necessary_jurors_num(&[]);
+            let mut rng = Self::rng();
+            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
+            let curr_block_num = <frame_system::Pallet<T>>::block_number();
+            let block_limit = curr_block_num.saturating_add(T::CourtCaseDuration::get());
+            for (ai, _) in random_jurors {
+                RequestedJurors::<T>::insert(market_id, ai, block_limit);
+            }
+
+            Self::deposit_event(Event::MarketAppealed { market_id });
+
+            Ok(())
+        }
+
         // MARK(non-transactional): `remove_juror_from_all_courts_of_all_markets` is infallible.
         #[pallet::weight(T::WeightInfo::exit_court())]
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
@@ -198,6 +228,8 @@ mod pallet {
         NoVotes,
         /// Forbids voting of unknown accounts
         OnlyJurorsCanVote,
+        /// The market is not in a state where it can be disputed.
+        MarketIsNotDisputed,
     }
 
     #[pallet::event]
@@ -208,6 +240,10 @@ mod pallet {
     {
         ExitedJuror(T::AccountId, Juror),
         JoinedJuror(T::AccountId, Juror),
+        /// A market has been appealed.
+        MarketAppealed {
+            market_id: MarketIdOf<T>,
+        },
     }
 
     #[pallet::hooks]
@@ -514,16 +550,7 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            // TODO &[] was disputes list before: how to handle it now without disputes from pm?
-            let necessary_jurors_num = Self::necessary_jurors_num(&[]);
-            let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            let curr_block_num = <frame_system::Pallet<T>>::block_number();
-            let block_limit = curr_block_num.saturating_add(T::CourtCaseDuration::get());
-            for (ai, _) in random_jurors {
-                RequestedJurors::<T>::insert(market_id, ai, block_limit);
-            }
+
             Ok(())
         }
 
