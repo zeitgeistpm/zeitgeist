@@ -57,6 +57,8 @@ mod pallet {
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -195,6 +197,7 @@ mod pallet {
     {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
+        type NegativeImbalance = NegativeImbalanceOf<T>;
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
@@ -208,7 +211,7 @@ mod pallet {
             Ok(())
         }
 
-        fn on_resolution(
+        fn get_resolution_outcome(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
@@ -218,6 +221,20 @@ mod pallet {
             );
             let report = AuthorizedOutcomeReports::<T>::take(market_id);
             Ok(report.map(|r| r.outcome))
+        }
+
+        fn maybe_pay(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+            _: &OutcomeReport,
+            overall_imbalance: NegativeImbalanceOf<T>,
+        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            // all funds to treasury
+            Ok(overall_imbalance)
         }
 
         fn get_auto_resolve(

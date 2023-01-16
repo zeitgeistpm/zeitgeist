@@ -1052,7 +1052,6 @@ macro_rules! impl_config_traits {
             type MaxDisputes = MaxDisputes;
             type PalletId = SimpleDisputesPalletId;
             type PredictionMarketsPalletId = PmPalletId;
-            type Slash = Treasury;
             type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
         }
 

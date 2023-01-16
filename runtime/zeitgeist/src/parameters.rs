@@ -151,7 +151,7 @@ parameter_types! {
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Unreserved in case the dispute was justified otherwise slashed.
     /// This is when the resolved outcome is different to the default (reported) outcome.
-    pub const DisputeBond: Balance = 5_000 * BASE;
+    pub const DisputeBond: Balance = 2_000 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.

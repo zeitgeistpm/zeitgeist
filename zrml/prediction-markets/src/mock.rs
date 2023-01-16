@@ -315,7 +315,6 @@ impl zrml_simple_disputes::Config for Runtime {
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
     type PredictionMarketsPalletId = PmPalletId;
-    type Slash = Treasury;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
@@ -465,10 +464,7 @@ mod tests {
             <Runtime as Config>::OracleBond::get(),
             <Runtime as Config>::ValidityBond::get()
         );
-        assert_ne!(
-            <Runtime as Config>::OracleBond::get(),
-            <Runtime as Config>::DisputeBond::get()
-        );
+        assert_ne!(<Runtime as Config>::OracleBond::get(), <Runtime as Config>::DisputeBond::get());
         assert_ne!(
             <Runtime as Config>::ValidityBond::get(),
             <Runtime as Config>::DisputeBond::get()

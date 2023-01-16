@@ -19,9 +19,8 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
-    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
-    MarketIdsPerReportBlock,
+    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
+    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -34,7 +33,7 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{AccountIdConversion, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{OutcomeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
+    constants::mock::{OutcomeBond, OutcomeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
@@ -475,13 +474,15 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
         );
         assert_eq!(
             Balances::free_balance(CHARLIE),
-            balance_free_before_charlie + zrml_simple_disputes::default_dispute_bond::<Runtime>(0)
+            balance_free_before_charlie
+                + DisputeBond::get()
+                + zrml_simple_disputes::default_outcome_bond::<Runtime>(0)
         );
         assert_eq!(
             Balances::free_balance(DAVE),
-            balance_free_before_dave + zrml_simple_disputes::default_dispute_bond::<Runtime>(1),
+            balance_free_before_dave + zrml_simple_disputes::default_outcome_bond::<Runtime>(1),
         );
-        assert!(Disputes::<Runtime>::get(market_id).is_empty());
+        assert!(zrml_simple_disputes::Disputes::<Runtime>::get(market_id).is_empty());
     });
 }
 
@@ -2214,6 +2215,12 @@ fn it_resolves_a_disputed_market() {
 
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
 
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+
+        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        assert_eq!(charlie_reserved, DisputeBond::get());
+
         let dispute_at_0 = report_at + 1;
         run_to_block(dispute_at_0);
 
@@ -2246,13 +2253,13 @@ fn it_resolves_a_disputed_market() {
 
         // check everyone's deposits
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
-        assert_eq!(charlie_reserved, DisputeBond::get());
+        assert_eq!(charlie_reserved, DisputeBond::get() + OutcomeBond::get());
 
         let dave_reserved = Balances::reserved_balance(&DAVE);
-        assert_eq!(dave_reserved, DisputeBond::get() + DisputeFactor::get());
+        assert_eq!(dave_reserved, OutcomeBond::get() + OutcomeFactor::get());
 
         let eve_reserved = Balances::reserved_balance(&EVE);
-        assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
+        assert_eq!(eve_reserved, OutcomeBond::get() + 2 * OutcomeFactor::get());
 
         // check disputes length
         let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(0);
@@ -2286,12 +2293,12 @@ fn it_resolves_a_disputed_market() {
         // Make sure rewards are right:
         //
         // Slashed amounts:
-        //     - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
+        //     - Dave's reserve: OutcomeBond::get() + OutcomeFactor::get()
         //     - Alice's oracle bond: OracleBond::get()
-        // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
+        // Total: OracleBond::get() + OutcomeBond::get() + OutcomeFactor::get()
         //
         // Charlie and Eve each receive half of the total slashed amount as bounty.
-        let dave_reserved = DisputeBond::get() + DisputeFactor::get();
+        let dave_reserved = OutcomeBond::get() + OutcomeFactor::get();
         let total_slashed = OracleBond::get() + dave_reserved;
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
@@ -2314,6 +2321,7 @@ fn it_resolves_a_disputed_market() {
 
         assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
+        assert!(market_after.bonds.dispute.unwrap().is_settled);
     });
 }
 
@@ -3075,10 +3083,6 @@ fn authorized_correctly_resolves_disputed_market() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        // check disputes length
-        let disputes = crate::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 1);
-
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
             dispute_at + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
         );
@@ -3102,7 +3106,7 @@ fn authorized_correctly_resolves_disputed_market() {
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(0);
+        let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 0);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));

@@ -31,6 +31,7 @@ type MarketOfDisputeApi<T> = Market<
 pub trait DisputeApi {
     type AccountId;
     type Balance;
+    type NegativeImbalance;
     type BlockNumber;
     type MarketId;
     type Moment;
@@ -51,10 +52,22 @@ pub trait DisputeApi {
     ///
     /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
     /// returned, this means that the dispute could not be resolved.
-    fn on_resolution(
+    fn get_resolution_outcome(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
+
+    /// Allow the flow of funds to the market dispute mechanism.
+    /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
+    ///
+    /// # Returns
+    /// Returns the negative imbalance which is meant to be used for the treasury.
+    fn maybe_pay(
+        market_id: &Self::MarketId,
+        market: &MarketOfDisputeApi<Self>,
+        resolved_outcome: &OutcomeReport,
+        overall_imbalance: Self::NegativeImbalance,
+    ) -> Result<Self::NegativeImbalance, DispatchError>;
 
     /// Query the future resolution block of a disputed market.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.

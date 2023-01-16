@@ -30,8 +30,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, OutcomeBond, OutcomeFactor, ExistentialDeposits, GetNativeCurrencyId,
-        MaxApprovals, MaxDisputes, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxApprovals, MaxDisputes,
+        MaxReserves, MinimumPeriod, OutcomeBond, OutcomeFactor, PmPalletId, SimpleDisputesPalletId,
         TreasuryPalletId,
     },
     traits::DisputeResolutionApi,
@@ -138,7 +138,6 @@ impl crate::Config for Runtime {
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
     type PredictionMarketsPalletId = PmPalletId;
-    type Slash = Treasury;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 

@@ -238,6 +238,11 @@ mod pallet {
                     Self::slash_oracle_bond(&market_id, None)?;
                 }
             }
+            if let Some(bond) = market.bonds.dispute {
+                if !bond.is_settled {
+                    Self::unreserve_dispute_bond(&market_id)?;
+                }
+            }
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
@@ -1387,6 +1392,7 @@ mod pallet {
         type Authorized: zrml_authorized::AuthorizedPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
+            NegativeImbalance = NegativeImbalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Moment = MomentOf<Self>,
@@ -1400,6 +1406,7 @@ mod pallet {
         type Court: zrml_court::CourtPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
+            NegativeImbalance = NegativeImbalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Moment = MomentOf<Self>,
@@ -1513,6 +1520,7 @@ mod pallet {
         type SimpleDisputes: DisputeApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
+            NegativeImbalance = NegativeImbalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Moment = MomentOf<Self>,
@@ -2334,11 +2342,13 @@ mod pallet {
             if resolved_outcome_option.is_none() {
                 resolved_outcome_option = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        T::Authorized::on_resolution(market_id, market)?
+                        T::Authorized::get_resolution_outcome(market_id, market)?
                     }
-                    MarketDisputeMechanism::Court => T::Court::on_resolution(market_id, market)?,
+                    MarketDisputeMechanism::Court => {
+                        T::Court::get_resolution_outcome(market_id, market)?
+                    }
                     MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::on_resolution(market_id, market)?
+                        T::SimpleDisputes::get_resolution_outcome(market_id, market)?
                     }
                 };
             }
@@ -2346,24 +2356,57 @@ mod pallet {
             let resolved_outcome =
                 resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
+            let mut overall_imbalance = <NegativeImbalanceOf<T>>::zero();
+
             // If the oracle reported right, return the OracleBond, otherwise slash it to
             // pay the correct reporters.
             if report.by == market.oracle && report.outcome == resolved_outcome {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let _imbalance = Self::slash_oracle_bond(market_id, None)?;
-                // TODO what should be done with the OracleBond imbalance?
-                // overall_imbalance.subsume(imbalance);
+                let imb = Self::slash_oracle_bond(market_id, None)?;
+                overall_imbalance.subsume(imb);
             }
 
-            if report.outcome != resolved_outcome {
-                // If the report outcome was wrong, the dispute was justified
-                Self::unreserve_dispute_bond(market_id)?;
-            } else {
-                // TODO what should be done with the DisputeBond imbalance?
-                let _imbalance = Self::slash_dispute_bond(market_id, None)?;
-                // overall_imbalance.subsume(imbalance);
+            let mut correct_disputor = None;
+            if let Some(bond) = market.bonds.dispute.clone() {
+                if !bond.is_settled {
+                    if report.outcome != resolved_outcome {
+                        // If the report outcome was wrong, the dispute was justified
+                        Self::unreserve_dispute_bond(market_id)?;
+                        correct_disputor = Some(bond.who);
+                    } else {
+                        let imb = Self::slash_dispute_bond(market_id, None)?;
+                        overall_imbalance.subsume(imb);
+                    }
+                }
             }
+
+            let mut imbalance_left = <NegativeImbalanceOf<T>>::zero();
+            if let Some(disputor) = correct_disputor {
+                CurrencyOf::<T>::resolve_creating(&disputor, overall_imbalance);
+            } else {
+                imbalance_left = overall_imbalance;
+            }
+
+            let remainder = match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => T::Authorized::maybe_pay(
+                    market_id,
+                    market,
+                    &resolved_outcome,
+                    imbalance_left,
+                )?,
+                MarketDisputeMechanism::Court => {
+                    T::Court::maybe_pay(market_id, market, &resolved_outcome, imbalance_left)?
+                }
+                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::maybe_pay(
+                    market_id,
+                    market,
+                    &resolved_outcome,
+                    imbalance_left,
+                )?,
+            };
+
+            T::Slash::on_unbalanced(remainder);
 
             Ok(resolved_outcome)
         }
