@@ -2389,12 +2389,9 @@ mod pallet {
             }
 
             let remainder = match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized => T::Authorized::maybe_pay(
-                    market_id,
-                    market,
-                    &resolved_outcome,
-                    imbalance_left,
-                )?,
+                MarketDisputeMechanism::Authorized => {
+                    T::Authorized::maybe_pay(market_id, market, &resolved_outcome, imbalance_left)?
+                }
                 MarketDisputeMechanism::Court => {
                     T::Court::maybe_pay(market_id, market, &resolved_outcome, imbalance_left)?
                 }

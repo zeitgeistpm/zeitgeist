@@ -2295,14 +2295,16 @@ fn it_resolves_a_disputed_market() {
         // Slashed amounts:
         //     - Dave's reserve: OutcomeBond::get() + OutcomeFactor::get()
         //     - Alice's oracle bond: OracleBond::get()
-        // Total: OracleBond::get() + OutcomeBond::get() + OutcomeFactor::get()
+        // simple-disputes reward: OutcomeBond::get() + OutcomeFactor::get()
+        // Charlie gets OracleBond, because the dispute was justified.
+        // A dispute is justified if the oracle's report is different to the final outcome.
         //
-        // Charlie and Eve each receive half of the total slashed amount as bounty.
+        // Charlie and Eve each receive half of the simple-disputes reward as bounty.
         let dave_reserved = OutcomeBond::get() + OutcomeFactor::get();
-        let total_slashed = OracleBond::get() + dave_reserved;
+        let total_slashed = dave_reserved;
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + total_slashed / 2);
+        assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get() + total_slashed / 2);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
@@ -2415,7 +2417,7 @@ fn start_global_dispute_works() {
             );
             for i in 1..=<Runtime as Config>::MaxDisputes::get() {
                 let dispute_bond =
-                    zrml_simple_disputes::default_dispute_bond::<Runtime>((i - 1).into());
+                    zrml_simple_disputes::default_outcome_bond::<Runtime>((i - 1).into());
                 assert_eq!(
                     GlobalDisputes::get_voting_outcome_info(
                         &market_id,

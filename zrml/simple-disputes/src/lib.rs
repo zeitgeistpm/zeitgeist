@@ -117,7 +117,7 @@ mod pallet {
         type WeightInfo: WeightInfoZeitgeist;
     }
 
-    type BalanceOf<T> =
+    pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
@@ -390,21 +390,18 @@ mod pallet {
             Ok(disputes.len() == T::MaxDisputes::get() as usize)
         }
 
-        fn on_global_dispute(
-            #[allow(dead_code, unused)] market_id: &Self::MarketId,
-            market: &MarketOf<T>,
-        ) -> DispatchResult {
+        fn on_global_dispute(_market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
             #[cfg(feature = "with-global-disputes")]
             {
-                let disputes = <Disputes<T>>::get(market_id);
+                let disputes = <Disputes<T>>::get(_market_id);
                 // add report outcome to voting choices
                 if let Some(report) = &market.report {
                     T::GlobalDisputes::push_voting_outcome(
-                        market_id,
+                        _market_id,
                         report.outcome.clone(),
                         &report.by,
                         <BalanceOf<T>>::zero(),
@@ -412,7 +409,7 @@ mod pallet {
                 }
 
                 for MarketDispute { at: _, by, outcome, bond } in disputes.iter() {
-                    T::GlobalDisputes::push_voting_outcome(market_id, outcome.clone(), by, bond)?;
+                    T::GlobalDisputes::push_voting_outcome(_market_id, outcome.clone(), by, *bond)?;
                 }
             }
             Ok(())
