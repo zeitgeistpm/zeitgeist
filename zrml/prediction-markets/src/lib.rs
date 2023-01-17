@@ -1591,8 +1591,6 @@ mod pallet {
         MarketStartTooSoon,
         /// The point in time when the market becomes active is too late.
         MarketStartTooLate,
-        /// The maximum number of disputes has been reached.
-        MaxDisputesReached,
         /// The market dispute mechanism has not failed.
         MarketDisputeMechanismNotFailed,
         /// Tried to settle missing bond.

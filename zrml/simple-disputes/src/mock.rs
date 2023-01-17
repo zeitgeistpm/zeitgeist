@@ -137,7 +137,6 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
-    type PredictionMarketsPalletId = PmPalletId;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 

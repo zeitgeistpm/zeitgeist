@@ -430,7 +430,7 @@ mod tests {
 use alloc::string::ToString;
 use frame_support::{migration::storage_key_iter, Twox64Concat};
 use frame_system::pallet_prelude::BlockNumberFor;
-use sp_runtime::traits::Saturating;
+use sp_runtime::{traits::Saturating, SaturatedConversion};
 use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::Pallet as AuthorizedPallet;
 
@@ -701,6 +701,207 @@ mod tests_authorized {
             status: zeitgeist_primitives::types::MarketStatus::Disputed,
             bonds: Default::default(),
         }
+    }
+}
+
+use frame_support::dispatch::EncodeLike;
+use zeitgeist_primitives::types::{MarketDispute, OldMarketDispute};
+
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 7;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 8;
+
+#[cfg(feature = "try-runtime")]
+type OldDisputesOf<T> = frame_support::BoundedVec<
+    OldMarketDispute<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+    >,
+    <T as crate::Config>::MaxDisputes,
+>;
+
+pub struct MoveDataToSimpleDisputes<T>(PhantomData<T>);
+
+impl<T: Config + zrml_simple_disputes::Config + zrml_market_commons::Config> OnRuntimeUpgrade
+    for MoveDataToSimpleDisputes<T>
+where
+    <T as zrml_market_commons::Config>::MarketId: EncodeLike<
+        <<T as zrml_simple_disputes::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+    >,
+{
+    fn on_runtime_upgrade() -> Weight {
+        use orml_traits::NamedMultiReservableCurrency;
+        use zeitgeist_primitives::types::Asset;
+
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let pm_version = StorageVersion::get::<crate::Pallet<T>>();
+        if pm_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "MoveDataToSimpleDisputes: market-commons version is {:?}, but {:?} is required",
+                pm_version,
+                PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("MoveDataToSimpleDisputes: Starting...");
+
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+        for (market_id, old_disputes) in crate::Disputes::<T>::drain() {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            if let Ok(mut market) = <zrml_market_commons::Pallet<T>>::market(&market_id) {
+                match market.dispute_mechanism {
+                    MarketDisputeMechanism::Authorized => {
+                        if let Some(first_dispute) = old_disputes.first() {
+                            let OldMarketDispute { at: _, by, outcome: _ } = first_dispute;
+                            market.bonds.dispute =
+                                Some(Bond::new(by.clone(), T::DisputeBond::get()));
+                            zrml_market_commons::Markets::<T>::insert(market_id, market);
+                        } else {
+                            log::warn!(
+                                "MoveDataToSimpleDisputes: Could not find first dispute for \
+                                 market id {:?}",
+                                market_id
+                            );
+                        }
+                        // for authorized use the first dispute as actual dispute caller
+                        continue;
+                    }
+                    // for simple-disputes ignore who called the dispute the first time
+                    // and just use the below code to fill Disputes inside simple-disputes
+                    MarketDisputeMechanism::SimpleDisputes => (),
+                    // ignore / delete all disputes for court markets
+                    MarketDisputeMechanism::Court => continue,
+                }
+            } else {
+                log::warn!(
+                    "MoveDataToSimpleDisputes: Could not find market with market id {:?}",
+                    market_id
+                );
+            }
+            let mut new_disputes = zrml_simple_disputes::Disputes::<T>::get(market_id);
+            for (i, old_dispute) in old_disputes.iter().enumerate() {
+                let bond = zrml_simple_disputes::default_outcome_bond::<T>(i);
+                let new_dispute = MarketDispute {
+                    at: old_dispute.at,
+                    by: old_dispute.by.clone(),
+                    outcome: old_dispute.outcome.clone(),
+                    bond,
+                };
+                new_disputes.try_push(new_dispute).expect("Failed to push to bounded vector!");
+
+                // switch to new reserve identifier for simple disputes
+                let sd_pallet_id = zeitgeist_primitives::constants::SD_PALLET_ID;
+                let sd_reserve_id = sd_pallet_id.0;
+                let pm_pallet_id = zeitgeist_primitives::constants::PM_PALLET_ID;
+                let pm_reserve_id = pm_pallet_id.0;
+                <T as Config>::AssetManager::unreserve_named(
+                    &pm_reserve_id,
+                    Asset::Ztg,
+                    &old_dispute.by,
+                    bond.saturated_into::<u128>().saturated_into(),
+                );
+                <T as Config>::AssetManager::reserve_named(
+                    &sd_reserve_id,
+                    Asset::Ztg,
+                    &old_dispute.by,
+                    bond.saturated_into::<u128>().saturated_into(),
+                )
+                .expect("Failed to reserve ZTG for dispute bond");
+            }
+
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            zrml_simple_disputes::Disputes::<T>::insert(market_id, new_disputes);
+        }
+
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<crate::Pallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("MoveDataToSimpleDisputes: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        log::info!("MoveDataToSimpleDisputes: Start pre_upgrade!");
+
+        let old_disputes = crate::Disputes::<T>::iter().collect::<BTreeMap<_, _>>();
+        Self::set_temp_storage(old_disputes, "old_disputes");
+
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        let old_disputes: BTreeMap<MarketIdOf<T>, OldDisputesOf<T>> =
+            Self::get_temp_storage("old_disputes").unwrap();
+
+        log::info!("MoveDataToSimpleDisputes: (post_upgrade) Start first try-runtime part!");
+
+        for (market_id, o) in old_disputes.iter() {
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)
+                .expect(&format!("Market for market id {:?} not found", market_id)[..]);
+            match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    let first_dispute = old_disputes
+                        .first()
+                        .expect(&format!("First dispute for market {:?} not found", market_id)[..]);
+                    let disputor = first_dispute.by.clone();
+                    let bond = T::DisputeBond::get();
+                    assert_eq!(
+                        market.bonds.dispute,
+                        Some(Bond { who: disputor, value: bond, is_settled: false }),
+                    );
+
+                    let simple_disputes_count =
+                        zrml_simple_disputes::Disputes::<T>::get(market_id).iter().count();
+                    assert_eq!(simple_disputes_count, 0);
+                    continue;
+                }
+                MarketDisputeMechanism::SimpleDisputes => {
+                    let new_count =
+                        zrml_simple_disputes::Disputes::<T>::get(market_id).iter().count();
+                    let old_count = o.iter().count();
+                    assert_eq!(new_count, old_count);
+                }
+                MarketDisputeMechanism::Court => {
+                    panic!("Court should not be contained at all.")
+                }
+            }
+        }
+
+        log::info!("MoveDataToSimpleDisputes: (post_upgrade) Start second try-runtime part!");
+
+        assert!(crate::Disputes::<T>::iter().count() == 0);
+
+        for (market_id, new_disputes) in zrml_simple_disputes::Disputes::<T>::iter() {
+            let old_disputes = old_disputes
+                .get(&market_id)
+                .expect(&format!("Disputes for market {:?} not found", market_id)[..]);
+
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)
+                .expect(&format!("Market for market id {:?} not found", market_id)[..]);
+            match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    panic!("Authorized should not be contained in simple disputes.");
+                }
+                MarketDisputeMechanism::SimpleDisputes => (),
+                MarketDisputeMechanism::Court => {
+                    panic!("Court should not be contained in simple disputes.");
+                }
+            }
+
+            for (i, new_dispute) in new_disputes.iter().enumerate() {
+                let old_dispute =
+                    old_disputes.get(i).expect(&format!("Dispute at index {} not found", i)[..]);
+                assert_eq!(new_dispute.at, old_dispute.at);
+                assert_eq!(new_dispute.by, old_dispute.by);
+                assert_eq!(new_dispute.outcome, old_dispute.outcome);
+                assert_eq!(new_dispute.bond, zrml_simple_disputes::default_outcome_bond::<T>(i));
+            }
+        }
+
+        Ok(())
     }
 }
 
