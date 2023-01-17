@@ -839,8 +839,11 @@ where
         log::info!("MoveDataToSimpleDisputes: (post_upgrade) Start first try-runtime part!");
 
         for (market_id, o) in old_disputes.iter() {
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)
+            let market = <T as zrml_simple_disputes::Config>::MarketCommons::market(market_id)
                 .expect(&format!("Market for market id {:?} not found", market_id)[..]);
+
+            let disputes = zrml_simple_disputes::Disputes::<T>::get(market_id);
+
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     let first_dispute = old_disputes
@@ -853,14 +856,12 @@ where
                         Some(Bond { who: disputor, value: bond, is_settled: false }),
                     );
 
-                    let simple_disputes_count =
-                        zrml_simple_disputes::Disputes::<T>::get(market_id).iter().count();
+                    let simple_disputes_count = disputes.iter().count();
                     assert_eq!(simple_disputes_count, 0);
                     continue;
                 }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    let new_count =
-                        zrml_simple_disputes::Disputes::<T>::get(market_id).iter().count();
+                    let new_count = disputes.iter().count();
                     let old_count = o.iter().count();
                     assert_eq!(new_count, old_count);
                 }
@@ -876,10 +877,10 @@ where
 
         for (market_id, new_disputes) in zrml_simple_disputes::Disputes::<T>::iter() {
             let old_disputes = old_disputes
-                .get(&market_id)
+                .get(&market_id.saturated_into::<u128>().saturated_into())
                 .expect(&format!("Disputes for market {:?} not found", market_id)[..]);
 
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)
+            let market = <T as zrml_simple_disputes::Config>::MarketCommons::market(&market_id)
                 .expect(&format!("Market for market id {:?} not found", market_id)[..]);
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
