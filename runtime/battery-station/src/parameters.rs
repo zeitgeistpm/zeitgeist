@@ -368,15 +368,15 @@ parameter_type_with_key! {
     // Existential deposits used by orml-tokens.
     // Only native ZTG and foreign assets should have an existential deposit.
     // Winning outcome tokens are redeemed completely by the user, losing outcome tokens
-    // are cleaned up automatically.
-    // PoolShares are also completely redeemed by the user.
+    // are cleaned up automatically. In case of scalar outcomes, the market account can have dust.
+    // Unless LPs use `pool_exit_with_exact_asset_amount`, there can be some dust pool shares remaining.
     // Explicit match arms are used to ensure new asset types are respected.
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
-            Asset::CategoricalOutcome(_,_) => 0,
-            Asset::CombinatorialOutcome => 0,
-            Asset::PoolShare(_)  => 0,
-            Asset::ScalarOutcome(_,_)  => 0,
+            Asset::CategoricalOutcome(_,_) => 1,
+            Asset::CombinatorialOutcome => 1,
+            Asset::PoolShare(_)  => 1,
+            Asset::ScalarOutcome(_,_)  => 1,
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
@@ -387,10 +387,10 @@ parameter_type_with_key! {
                     return metadata.existential_deposit;
                 }
 
-                0
+                1
             }
             #[cfg(not(feature = "parachain"))]
-            Asset::ForeignAsset(_) => 0,
+            Asset::ForeignAsset(_) => 1,
             Asset::Ztg => ExistentialDeposit::get(),
         }
     };
