@@ -12840,21 +12840,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zeitgeist-utils"
-version = "0.3.7"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-aura",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-consensus-aura",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "zeroize"
 version = "1.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13020,7 +13005,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-aura",
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
@@ -13029,13 +13013,11 @@ dependencies = [
  "scale-info",
  "sp-api",
  "sp-arithmetic",
- "sp-consensus-aura",
  "sp-io",
  "sp-runtime",
  "substrate-fixed",
  "test-case",
  "zeitgeist-primitives",
- "zeitgeist-utils",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",

@@ -162,6 +162,8 @@ parameter_types! {
     pub const MaxDisputes: u16 = 6;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
+    /// The maximum allowed duration of a market from creation to market close in blocks.
+    pub const MaxMarketLifetime: BlockNumber = MAX_MARKET_LIFETIME;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
     /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
     pub const MinSubsidyPeriod: Moment = 60_000;
@@ -181,8 +183,6 @@ parameter_types! {
     /// Maximum block period for a oracle_duration.
     /// The oracle_duration is a duration where the oracle has to submit its report.
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
-    /// The maximum market period.
-    pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 50 * CENT;

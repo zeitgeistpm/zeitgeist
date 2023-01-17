@@ -19,8 +19,9 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
-    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    default_dispute_bond, mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
+    MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -425,6 +426,66 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        assert_ne!(grace_period, 0);
+        run_to_block(grace_period + 1);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(grace_period + 2);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        let set_up_account = |account| {
+            assert_ok!(AssetManager::deposit(Asset::Ztg, account, SENTINEL_AMOUNT));
+            assert_ok!(Balances::reserve_named(
+                &PredictionMarkets::reserve_id(),
+                account,
+                SENTINEL_AMOUNT,
+            ));
+        };
+        set_up_account(&CHARLIE);
+        set_up_account(&DAVE);
+
+        let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
+        let balance_free_before_dave = Balances::free_balance(&DAVE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), market_id));
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &DAVE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::free_balance(CHARLIE),
+            balance_free_before_charlie + default_dispute_bond::<Runtime>(0)
+        );
+        assert_eq!(
+            Balances::free_balance(DAVE),
+            balance_free_before_dave + default_dispute_bond::<Runtime>(1),
+        );
+        assert!(Disputes::<Runtime>::get(market_id).is_empty());
     });
 }
 
@@ -1572,16 +1633,8 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
 
 #[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
 #[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
-#[test_case(
-    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "block end greater than max market period"
-)]
 #[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
 #[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
-#[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "timestamp end greater than max market period"
-)]
 #[test_case(
     MarketPeriod::Timestamp(0..(MILLISECS_PER_BLOCK - 1).into());
     "range shorter than block time"
@@ -3880,6 +3933,114 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle,
+        );
+    });
+}
+
+#[test]
+fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 1;
+        frame_system::Pallet::<Runtime>::set_block_number(now);
+        let start = 5;
+        let end = now + <Runtime as Config>::MaxMarketLifetime::get();
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(start..end),
+            get_deadlines(),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test]
+fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 12_001u64;
+        Timestamp::set_timestamp(now);
+        let start = 5 * MILLISECS_PER_BLOCK as u64;
+        let end =
+            now + <Runtime as Config>::MaxMarketLifetime::get() * (MILLISECS_PER_BLOCK as u64);
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test]
+fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 1;
+        frame_system::Pallet::<Runtime>::set_block_number(now);
+        let start = 5;
+        let end = now + <Runtime as Config>::MaxMarketLifetime::get() + 1;
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(start..end),
+                get_deadlines(),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::MarketDurationTooLong,
+        );
+    });
+}
+
+#[test]
+fn create_market_fails_if_market_duration_is_too_long_in_moments() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 12_001u64;
+        Timestamp::set_timestamp(now);
+        let start = 5 * MILLISECS_PER_BLOCK as u64;
+        let end = now
+            + (<Runtime as Config>::MaxMarketLifetime::get() + 1) * (MILLISECS_PER_BLOCK as u64);
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Timestamp(start..end),
+                get_deadlines(),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::MarketDurationTooLong,
         );
     });
 }
