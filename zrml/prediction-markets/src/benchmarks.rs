@@ -250,6 +250,11 @@ benchmarks! {
         let pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id)?;
 
         let disputor = account("disputor", 1, 0);
+        <T as pallet::Config>::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            u128::MAX.saturated_into(),
+        ).unwrap();
         let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
@@ -470,6 +475,11 @@ benchmarks! {
 
         let outcome = OutcomeReport::Scalar(0);
         let disputor = account("disputor", 1, 0);
+        <T as pallet::Config>::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            u128::MAX.saturated_into(),
+        ).unwrap();
         Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
         let now = <frame_system::Pallet<T>>::block_number();
@@ -515,6 +525,11 @@ benchmarks! {
         })?;
 
         let disputor = account("disputor", 1, 0);
+        <T as pallet::Config>::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            u128::MAX.saturated_into(),
+        ).unwrap();
         Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
         // Authorize the outcome with the highest number of correct reporters to maximize the
@@ -786,6 +801,11 @@ benchmarks! {
         }
 
         let disputor: T::AccountId = account("Disputor", 1, 0);
+        <T as pallet::Config>::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            u128::MAX.saturated_into(),
+        ).unwrap();
         let _ = Call::<T>::dispute {
             market_id,
         }
