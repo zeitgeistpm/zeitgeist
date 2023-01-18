@@ -227,7 +227,7 @@ benchmarks! {
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }
 
-    admin_destroy_disputed_market{
+    admin_destroy_disputed_market {
         // The number of assets.
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         // The number of market ids per open time frame.
@@ -265,16 +265,18 @@ benchmarks! {
         };
 
         for i in 0..o {
+            // shift of 1 to avoid collisions with first market id 0
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 1).into()),
             ).unwrap();
         }
 
         for i in 0..c {
+            // shift of 65 to avoid collisions with `o`
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 65).into()),
             ).unwrap();
         }
 
@@ -287,9 +289,10 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
         let resolves_at = now.saturating_add(<T as zrml_authorized::Config>::CorrectionPeriod::get());
         for i in 0..r {
+            // shift of 129 to avoid collisions with `o` and `c`
             MarketIdsPerDisputeBlock::<T>::try_mutate(
                 resolves_at,
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 129).into()),
             ).unwrap();
         }
 
@@ -326,25 +329,28 @@ benchmarks! {
         };
 
         for i in 0..o {
+            // shift of 1 to avoid collisions with first market id 0
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 1).into()),
             ).unwrap();
         }
 
         for i in 0..c {
+            // shift of 65 to avoid collisions with `o`
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 65).into()),
             ).unwrap();
         }
 
         let report_at = market.report.unwrap().at;
         let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
+            // shift of 129 to avoid collisions with `o` and `c`
             MarketIdsPerReportBlock::<T>::try_mutate(
                 resolves_at,
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 129).into()),
             ).unwrap();
         }
 

@@ -74,7 +74,6 @@ impl DisputeResolutionApi for NoopResolution {
     type Balance = Balance;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
-    type MaxDisputes = u32;
     type Moment = Moment;
 
     fn resolve(

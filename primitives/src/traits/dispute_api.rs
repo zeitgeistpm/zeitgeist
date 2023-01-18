@@ -112,7 +112,6 @@ pub trait DisputeResolutionApi {
     type Balance;
     type BlockNumber;
     type MarketId;
-    type MaxDisputes;
     type Moment;
 
     /// Resolve a market.

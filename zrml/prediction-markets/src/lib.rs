@@ -205,7 +205,6 @@ mod pallet {
             )
             .max(T::WeightInfo::admin_destroy_disputed_market(
                 T::MaxCategories::get().into(),
-                T::MaxDisputes::get(),
                 CacheSize::get(),
                 CacheSize::get(),
                 CacheSize::get(),
@@ -265,7 +264,7 @@ mod pallet {
 
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, _) = Self::clear_auto_resolve(&market_id)?;
             Self::clear_dispute_mechanism(&market_id)?;
             <zrml_market_commons::Pallet<T>>::remove_market(&market_id)?;
 
@@ -288,7 +287,6 @@ mod pallet {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_disputed_market(
                         category_count,
-                        disputes_len,
                         open_ids_len,
                         close_ids_len,
                         ids_len,
@@ -2822,7 +2820,6 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
-        type MaxDisputes = T::MaxDisputes;
         type Moment = MomentOf<T>;
 
         fn resolve(

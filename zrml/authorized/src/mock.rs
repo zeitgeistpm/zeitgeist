@@ -66,7 +66,6 @@ construct_runtime!(
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
-    pub const MaxDisputes: u32 = 64;
 }
 
 // MockResolution implements DisputeResolutionApi with no-ops.
@@ -77,7 +76,6 @@ impl DisputeResolutionApi for MockResolution {
     type Balance = Balance;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
-    type MaxDisputes = MaxDisputes;
     type Moment = Moment;
 
     fn resolve(
