@@ -839,14 +839,15 @@ where
         log::info!("MoveDataToSimpleDisputes: (post_upgrade) Start first try-runtime part!");
 
         for (market_id, o) in old_disputes.iter() {
-            let market = <T as zrml_simple_disputes::Config>::MarketCommons::market(market_id)
+            let market = <zrml_market_commons::Pallet<T>>::market(market_id)
                 .expect(&format!("Market for market id {:?} not found", market_id)[..]);
 
-            let disputes = zrml_simple_disputes::Disputes::<T>::get(market_id);
+            // market id is a reference, but we need the raw value to encode with the where clause
+            let disputes = zrml_simple_disputes::Disputes::<T>::get(*market_id);
 
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    let first_dispute = old_disputes
+                    let first_dispute = o
                         .first()
                         .expect(&format!("First dispute for market {:?} not found", market_id)[..]);
                     let disputor = first_dispute.by.clone();
