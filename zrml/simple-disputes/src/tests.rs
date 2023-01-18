@@ -50,7 +50,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
 
 #[test]
 fn on_dispute_denies_non_simple_disputes_markets() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
@@ -62,7 +62,7 @@ fn on_dispute_denies_non_simple_disputes_markets() {
 
 #[test]
 fn get_resolution_outcome_denies_non_simple_disputes_markets() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
@@ -74,7 +74,7 @@ fn get_resolution_outcome_denies_non_simple_disputes_markets() {
 
 #[test]
 fn get_resolution_outcome_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outcome() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
         let disputes = BoundedVec::try_from(
@@ -102,3 +102,5 @@ fn get_resolution_outcome_sets_the_last_dispute_of_disputed_markets_as_the_canon
         )
     });
 }
+
+// TODO test `reserve_outcome` functionality and API functionality

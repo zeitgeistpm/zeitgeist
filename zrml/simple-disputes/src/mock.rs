@@ -21,18 +21,16 @@ use crate::{self as zrml_simple_disputes};
 use frame_support::{
     construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
-    traits::{Everything, NeverEnsureOrigin},
+    traits::Everything,
 };
-use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxApprovals, MaxDisputes,
-        MaxReserves, MinimumPeriod, OutcomeBond, OutcomeFactor, PmPalletId, SimpleDisputesPalletId,
-        TreasuryPalletId,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxDisputes, MaxReserves,
+        MinimumPeriod, OutcomeBond, OutcomeFactor, PmPalletId, SimpleDisputesPalletId, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -47,7 +45,15 @@ use zeitgeist_primitives::constants::mock::{
     MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
 };
 
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
+pub const EVE: AccountIdTest = 4;
+pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
+
+pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
@@ -69,7 +75,6 @@ construct_runtime!(
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
@@ -88,7 +93,6 @@ construct_runtime!(
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
@@ -230,29 +234,34 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl pallet_treasury::Config for Runtime {
-    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type Burn = ();
-    type BurnDestination = ();
-    type Currency = Balances;
-    type Event = ();
-    type MaxApprovals = MaxApprovals;
-    type OnSlash = ();
-    type PalletId = TreasuryPalletId;
-    type ProposalBond = ();
-    type ProposalBondMinimum = ();
-    type ProposalBondMaximum = ();
-    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type SpendFunds = ();
-    type SpendOrigin = NeverEnsureOrigin<Balance>;
-    type SpendPeriod = ();
-    type WeightInfo = ();
+pub struct ExtBuilder {
+    balances: Vec<(AccountIdTest, Balance)>,
 }
 
-pub struct ExtBuilder;
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            balances: vec![
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
+                (DAVE, INITIAL_BALANCE),
+                (EVE, INITIAL_BALANCE),
+                (FRED, INITIAL_BALANCE),
+                (SUDO, INITIAL_BALANCE),
+            ],
+        }
+    }
+}
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into()
+        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+        pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
+            .assimilate_storage(&mut t)
+            .unwrap();
+
+        t.into()
     }
 }
