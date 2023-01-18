@@ -753,10 +753,17 @@ where
             if let Ok(mut market) = <zrml_market_commons::Pallet<T>>::market(&market_id) {
                 match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
+                        // TODO Move this part of the migration (market mutation)
+                        // TODO into the OutsiderBond migration (needs to run before this migration)
+                        // TODO because it needs to iterate over all Disputes of the pm pallet
+                        // TODO in this current migration we drain all Disputes of the pm pallet
                         if let Some(first_dispute) = old_disputes.first() {
                             let OldMarketDispute { at: _, by, outcome: _ } = first_dispute;
                             market.bonds.dispute =
                                 Some(Bond::new(by.clone(), T::DisputeBond::get()));
+
+                            total_weight =
+                                total_weight.saturating_add(T::DbWeight::get().writes(1));
                             zrml_market_commons::Markets::<T>::insert(market_id, market);
                         } else {
                             log::warn!(
@@ -780,6 +787,8 @@ where
                     market_id
                 );
             }
+
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let mut new_disputes = zrml_simple_disputes::Disputes::<T>::get(market_id);
             for (i, old_dispute) in old_disputes.iter().enumerate() {
                 let bond = zrml_simple_disputes::default_outcome_bond::<T>(i);
@@ -789,26 +798,62 @@ where
                     outcome: old_dispute.outcome.clone(),
                     bond,
                 };
-                new_disputes.try_push(new_dispute).expect("Failed to push to bounded vector!");
+                let res = new_disputes.try_push(new_dispute);
+                if res.is_err() {
+                    log::error!(
+                        "MoveDataToSimpleDisputes: Could not push dispute for market id {:?}",
+                        market_id
+                    );
+                }
 
                 // switch to new reserve identifier for simple disputes
                 let sd_pallet_id = zeitgeist_primitives::constants::SD_PALLET_ID;
                 let sd_reserve_id = sd_pallet_id.0;
                 let pm_pallet_id = zeitgeist_primitives::constants::PM_PALLET_ID;
                 let pm_reserve_id = pm_pallet_id.0;
+
+                // charge weight defensivly for unreserve_named
+                // https://github.com/open-web3-stack/open-runtime-module-library/blob/24f0a8b6e04e1078f70d0437fb816337cdf4f64c/tokens/src/lib.rs#L1516-L1547
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(4, 3));
+                let reserved_balance = <T as Config>::AssetManager::reserved_balance_named(
+                    &pm_reserve_id,
+                    Asset::Ztg,
+                    &old_dispute.by,
+                );
+                if reserved_balance < bond.saturated_into::<u128>().saturated_into() {
+                    log::error!(
+                        "MoveDataToSimpleDisputes: Could not unreserve {:?} for {:?} because \
+                         reserved balance is only {:?}. Market id: {:?}",
+                        bond,
+                        old_dispute.by,
+                        reserved_balance,
+                        market_id,
+                    );
+                }
                 <T as Config>::AssetManager::unreserve_named(
                     &pm_reserve_id,
                     Asset::Ztg,
                     &old_dispute.by,
                     bond.saturated_into::<u128>().saturated_into(),
                 );
-                <T as Config>::AssetManager::reserve_named(
+
+                // charge weight defensivly for reserve_named
+                // https://github.com/open-web3-stack/open-runtime-module-library/blob/24f0a8b6e04e1078f70d0437fb816337cdf4f64c/tokens/src/lib.rs#L1486-L1499
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(3, 3));
+                let res = <T as Config>::AssetManager::reserve_named(
                     &sd_reserve_id,
                     Asset::Ztg,
                     &old_dispute.by,
                     bond.saturated_into::<u128>().saturated_into(),
-                )
-                .expect("Failed to reserve ZTG for dispute bond");
+                );
+                if res.is_err() {
+                    log::error!(
+                        "MoveDataToSimpleDisputes: Could not reserve bond for dispute caller {:?} \
+                         and market id {:?}",
+                        old_dispute.by,
+                        market_id
+                    );
+                }
             }
 
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -903,6 +948,7 @@ where
             }
         }
 
+        log::info!("MoveDataToSimpleDisputes: Done! (post_upgrade)");
         Ok(())
     }
 }
