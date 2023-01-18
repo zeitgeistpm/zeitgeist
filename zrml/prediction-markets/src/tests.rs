@@ -421,6 +421,8 @@ fn create_market_with_foreign_assets() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.base_asset, Asset::ForeignAsset(100));
     });
 }
 
@@ -950,7 +952,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         let oracle_bond = <Runtime as Config>::OracleBond::get();
         // substract min_liquidity twice, one for buy_complete_set() in
         // create_cpmm_market_and_deploy_assets() and one in swaps::create_pool()
-        // then again substract BASE as buy_complete_set() on line 786
+        // then again substract BASE as buy_complete_set() above
         let expected_base_asset_value =
             alice_base_asset_before_market_creation - min_liquidity - min_liquidity - BASE;
         if base_asset == Asset::Ztg {
@@ -1994,20 +1996,11 @@ fn it_allows_to_buy_a_complete_set() {
         }
 
         let market_account = MarketCommons::market_account(0);
-        if base_asset == Asset::Ztg {
-            // check native balance
-            let bal = Balances::free_balance(&BOB);
-            assert_eq!(bal, 1_000 * BASE - CENT);
+        let bal = AssetManager::free_balance(base_asset, &BOB);
+        assert_eq!(bal, 1_000 * BASE - CENT);
 
-            let market_bal = Balances::free_balance(market_account);
-            assert_eq!(market_bal, CENT);
-        } else {
-            let bal = Tokens::free_balance(base_asset, &BOB);
-            assert_eq!(bal, 1_000 * BASE - CENT);
-
-            let market_bal = Tokens::free_balance(base_asset, &market_account);
-            assert_eq!(market_bal, CENT);
-        }
+        let market_bal = AssetManager::free_balance(base_asset, &market_account);
+        assert_eq!(market_bal, CENT);
         System::assert_last_event(Event::BoughtCompleteSet(0, CENT, BOB).into());
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -3794,7 +3787,7 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(0)
         ));
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
+        let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
         assert_eq!(charlie_balance, 1_000 * BASE - CENT);
 
         let dispute_at = grace_period + 1 + 1;
@@ -3805,8 +3798,15 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         // Fred authorizses an outcome, but fat-fingers it on the first try.
         assert_ok!(Authorized::authorize_market_outcome(
@@ -3836,21 +3836,42 @@ fn authorized_correctly_resolves_disputed_market() {
         );
         assert_eq!(market_ids_1.len(), 1);
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get() - 1);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Disputed);
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         run_blocks(1);
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -3859,17 +3880,24 @@ fn authorized_correctly_resolves_disputed_market() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
-        let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE);
+        }
+        let charlie_reserved_2 = AssetManager::reserved_balance(Asset::Ztg, &CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
 
-        let alice_balance = Balances::free_balance(&ALICE);
+        let alice_balance = AssetManager::free_balance(Asset::Ztg, &ALICE);
         assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
-        let bob_balance = Balances::free_balance(&BOB);
+        let bob_balance = AssetManager::free_balance(Asset::Ztg, &BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
 
         assert!(market_after.bonds.creation.unwrap().is_settled);
