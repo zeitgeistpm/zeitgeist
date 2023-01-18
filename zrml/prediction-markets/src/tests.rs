@@ -4830,6 +4830,7 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
         );
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(start..end),
             get_deadlines(),
@@ -4856,6 +4857,7 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
         );
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -4882,6 +4884,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(start..end),
                 get_deadlines(),
@@ -4911,6 +4914,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Timestamp(start..end),
                 get_deadlines(),
