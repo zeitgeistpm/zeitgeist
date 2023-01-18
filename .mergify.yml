@@ -1,19 +1,21 @@
-queue_rules:
- - name: default
-   conditions: []
-
 pull_request_rules:
-  - name: Use merge queue
+  - name: Auto merge
     conditions:
       - base=main
+      - "#approved-reviews-by>=2"
+      - "#changes-requested-reviews-by=0"
+      - check-success=format
+      - check-success=tests
+      - check-success=fuzz
+      - check-success=benchmark
       - label=s:accepted
     actions:
       label:
         remove:
           - s:in-progress
           - s:review-needed
-      queue:
-        name: default
+      merge:
+        method: squash
   - name: ask to resolve conflict
     conditions:
       - conflict
