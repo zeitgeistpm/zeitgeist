@@ -47,6 +47,7 @@ mock = [
     "pallet-randomness-collective-flip",
     "pallet-timestamp/std",
     "pallet-treasury",
+    "serde",
     "sp-api",
     "sp-io",
     "substrate-fixed",
