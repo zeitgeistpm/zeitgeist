@@ -708,9 +708,9 @@ benchmarks! {
         let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
         let (range_start, range_end) = match market.period {
             MarketPeriod::Timestamp(range) => (range.start, range.end),
-                _ => {
-                    panic!("MarketPeriod is block_number based");
-                }
+            _ => {
+                panic!("MarketPeriod is block_number based");
+            }
         };
 
         assert!(

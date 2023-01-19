@@ -1498,7 +1498,8 @@ macro_rules! create_runtime_api {
 
                 fn execute_block(block: Block, state_root_check: bool, try_state: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
                     log::info!(
-                        "try-runtime: executing block {:?} / root checks: {:?} / try-state-select: {:?}",
+                        "try-runtime: executing block #{} {:?} / root checks: {:?} / try-state-select: {:?}",
+                        block.header.number,
                         block.header.hash(),
                         state_root_check,
                         try_state,
