@@ -60,7 +60,7 @@ macro_rules! decl_common_types {
             AllPalletsWithSystem,
             (
                 pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
-                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
@@ -73,7 +73,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
@@ -1017,6 +1017,8 @@ macro_rules! impl_config_traits {
             >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
+            #[cfg(feature = "parachain")]
+            type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type Swaps = Swaps;
@@ -1498,7 +1500,8 @@ macro_rules! create_runtime_api {
 
                 fn execute_block(block: Block, state_root_check: bool, try_state: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
                     log::info!(
-                        "try-runtime: executing block {:?} / root checks: {:?} / try-state-select: {:?}",
+                        "try-runtime: executing block #{} {:?} / root checks: {:?} / try-state-select: {:?}",
+                        block.header.number,
                         block.header.hash(),
                         state_root_check,
                         try_state,

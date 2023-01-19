@@ -11,6 +11,9 @@
   protection). The authority report now includes its resolution block number.
   This is the time of the first call to `authorize_market_outcome` plus the
   `CorrectionPeriod`.
+- Create prediction markets with Ztg or registered foreign asset which has
+  `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics related
+  to prediction market creation/editing now have `base_asset` parameter.
 
 # v0.3.7
 

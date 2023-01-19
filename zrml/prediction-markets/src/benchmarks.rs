@@ -90,6 +90,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {
+        base_asset: Asset::Ztg,
         oracle,
         period,
         deadlines,
@@ -616,6 +617,7 @@ benchmarks! {
         }
     }: _(
             RawOrigin::Signed(caller),
+            Asset::Ztg,
             oracle,
             period,
             deadlines,
@@ -632,12 +634,13 @@ benchmarks! {
         let market_type = MarketType::Categorical(T::MaxCategories::get());
         let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         let scoring_rule = ScoringRule::CPMM;
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_start: MomentOf<T> = 10_000_u64.saturated_into();
+        let range_end: MomentOf<T> = 100_000_u64.saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
         let (caller, oracle, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
         Call::<T>::create_market {
+            base_asset: Asset::Ztg,
             oracle: oracle.clone(),
             period: period.clone(),
             deadlines,
@@ -668,6 +671,7 @@ benchmarks! {
         };
     }: _(
             RawOrigin::Signed(caller),
+            Asset::Ztg,
             market_id,
             oracle,
             period,
@@ -682,14 +686,34 @@ benchmarks! {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let o in 0..63;
 
+<<<<<<< HEAD
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+=======
+        let start = 2 * MILLISECS_PER_BLOCK;
+        <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
+        let block = frame_system::Pallet::<T>::block_number();
+        zeitgeist_utils::set_block_number_timestamp::<T>(block, start.saturated_into());
+        let range_start: MomentOf<T> = ((2_u64 + 10_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_end: MomentOf<T> = ((2_u64 + 100_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let period = MarketPeriod::Timestamp(range_start..range_end);
+>>>>>>> upgrade_0929
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
+<<<<<<< HEAD
+=======
+        let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+        let (range_start, range_end) = match market.period {
+            MarketPeriod::Timestamp(range) => (range.start, range.end),
+            _ => {
+                panic!("MarketPeriod is block_number based");
+            }
+        };
+>>>>>>> upgrade_0929
 
         assert!(
             Pallet::<T>::calculate_time_frame_of_moment(<zrml_market_commons::Pallet::<T>>::now())
@@ -736,6 +760,13 @@ benchmarks! {
     deploy_swap_pool_for_market_open_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
+<<<<<<< HEAD
+=======
+        <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
+        let block = frame_system::Pallet::<T>::block_number();
+        let range_start: MomentOf<T> = (2_u64 * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_end: MomentOf<T> = ((2_u64 + 10_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+>>>>>>> upgrade_0929
         // We need to ensure, that period range start is now,
         // because we would like to open the pool now
         let range_start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
@@ -1011,8 +1042,8 @@ benchmarks! {
         let o in 0..63;
         let r in 0..<T as Config>::MaxRejectReasonLen::get();
 
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_start: MomentOf<T> = 100_000_u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000_u64.saturated_into();
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -1124,8 +1155,8 @@ benchmarks! {
         let f in 1..31;
 
         // ensure markets exist
-        let start_block: T::BlockNumber = 100_000u64.saturated_into();
-        let end_block: T::BlockNumber = 1_000_000u64.saturated_into();
+        let start_block: T::BlockNumber = 100_000_u64.saturated_into();
+        let end_block: T::BlockNumber = 1_000_000_u64.saturated_into();
         for _ in 0..31 {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
@@ -1135,8 +1166,8 @@ benchmarks! {
             ).unwrap();
         }
 
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_start: MomentOf<T> = 100_000_u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000_u64.saturated_into();
         for _ in 31..64 {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
@@ -1186,8 +1217,8 @@ benchmarks! {
         let r in 1..31;
         let d in 1..31;
 
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let range_start: MomentOf<T> = 100_000_u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000_u64.saturated_into();
         // ensure markets exist
         for _ in 0..64 {
             let (_, market_id) = create_market_common::<T>(

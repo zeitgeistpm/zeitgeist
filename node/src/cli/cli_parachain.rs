@@ -60,7 +60,7 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
     }
 
     fn base_path(&self) -> sc_cli::Result<Option<BasePath>> {
-        self.shared_params().base_path().or_else(|_| Ok(self.base_path.clone().map(Into::into)))
+        Ok(self.shared_params().base_path()?.or_else(|| self.base_path.clone().map(Into::into)))
     }
 
     fn chain_id(&self, is_dev: bool) -> sc_cli::Result<String> {
