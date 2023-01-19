@@ -1,3 +1,9 @@
+# v0.3.9
+
+- Added new dispatchable function:
+  - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
+    was destroyed.
+
 # v0.3.8
 
 - Added the `bonds` field to the `Market` struct, which tracks the status of the
@@ -5,9 +11,15 @@
   which has three fields: `who` (the account that reserved the bond), `value`
   (the amount reserved), `is_settled` (a flag which determines if the bond was
   already unreserved and/or (partially) slashed).
-- Added new dispatchable function:
-  - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
-    was destroyed.
+- The market dispute mechanisms are now able to control their resolution. The
+  `CorrectionPeriod` parameter determines how long the authorized pallet can
+  call `authorize_market_outcome` again after the first call to it (fat-finger
+  protection). The authority report now includes its resolution block number.
+  This is the time of the first call to `authorize_market_outcome` plus the
+  `CorrectionPeriod`.
+- Create prediction markets with Ztg or registered foreign asset which has
+  `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics related
+  to prediction market creation/editing now have `base_asset` parameter.
 
 # v0.3.7
 

@@ -29,9 +29,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
-use frame_benchmarking::{
-    account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
-};
+use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Get, weights::Weight};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -176,6 +174,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = T::MarketCommons::push_market(
             Market {
+                base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
                 creator: caller.clone(),
@@ -216,6 +215,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = T::MarketCommons::push_market(
             Market {
+                base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
                 creator: caller.clone(),
@@ -904,6 +904,10 @@ benchmarks! {
             pool_id,
         ).into());
     }
-}
 
-impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
+    impl_benchmark_test_suite!(
+        Swaps,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

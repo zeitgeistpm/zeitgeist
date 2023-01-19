@@ -27,18 +27,20 @@ jobs:
       - uses: actions-rs/install@v0.1
         with:
           crate: taplo-cli
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
 
       - name: Format
         run: ./scripts/tests/format.sh --check
 
-  tests:
-    name: Tests
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
     strategy:
       matrix:
         scripts: [
           "clippy",
-          "misc",
           "parachain",
           "standalone"
         ]
@@ -52,7 +54,7 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Tests
+      - name: Checks
         run: ./scripts/tests/${{ matrix.scripts }}.sh
   benchmark:
     name: Quick check benchmarks
@@ -63,8 +65,46 @@ jobs:
 
       - name: Install rust toolchain
         run: rustup show
-
+      
       - run: ./scripts/benchmarks/quick_check.sh
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          default: true
+          override: true
+          profile: minimal
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: grcov
+          use-tool-cache: true
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Tests
+        run: ./scripts/tests/misc.sh -Cinstrument-coverage
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          files: ${{ runner.temp }}/zeitgeist-test-coverage.lcov
+          fail_ci_if_error: true
+          flags: tests
+          verbose: true
+          name: unit-tests
+
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest
@@ -79,5 +119,8 @@ jobs:
         with:
           crate: cargo-fuzz
           use-tool-cache: true
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
 
       - run: ./scripts/tests/fuzz.sh

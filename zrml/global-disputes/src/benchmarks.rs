@@ -28,7 +28,7 @@ use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi, market_mock, types::*, BalanceOf, Call,
     Config, Pallet as GlobalDisputes, *,
 };
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     sp_runtime::traits::StaticLookup,
     traits::{Currency, Get},
@@ -417,10 +417,10 @@ benchmarks! {
         assert!(<Outcomes<T>>::iter_prefix(market_id).next().is_none());
         assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> { market_id }.into());
     }
-}
 
-impl_benchmark_test_suite!(
-    GlobalDisputes,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+    impl_benchmark_test_suite!(
+        GlobalDisputes,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

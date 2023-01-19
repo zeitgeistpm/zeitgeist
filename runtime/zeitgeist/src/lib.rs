@@ -57,7 +57,7 @@ use {
     frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::{
-        asset_registry::{CustomAssetProcessor, CustomMetadata},
+        asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
     },
 };
@@ -89,10 +89,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 41,
+    spec_version: 42,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 18,
+    transaction_version: 19,
     state_version: 1,
 };
 
@@ -117,7 +117,9 @@ impl Contains<Call> for IsCallable {
             MarketDisputeMechanism::{Court, SimpleDisputes},
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
-        use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
+        use zrml_prediction_markets::Call::{
+            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+        };
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
@@ -149,8 +151,10 @@ impl Contains<Call> for IsCallable {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                    edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                     create_cpmm_market_and_deploy_assets {
                         dispute_mechanism: Court | SimpleDisputes,
                         ..
