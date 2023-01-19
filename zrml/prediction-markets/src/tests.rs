@@ -4166,18 +4166,27 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         );
         let market = MarketCommons::market(&0).unwrap();
         assert!(market.bonds.outsider.unwrap().is_settled);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn outsider_reports_wrong_outcome() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
 
         let end = 100;
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),

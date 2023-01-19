@@ -54,7 +54,8 @@ pub struct OldMarketBonds<AI, BA> {
 }
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OldMarket<AI, BA, BN, M> {
+pub struct OldMarket<AI, BA, BN, M, A> {
+    pub base_asset: A,
     pub creator: AI,
     pub creation: MarketCreation,
     pub creator_fee: u8,
@@ -76,6 +77,7 @@ type OldMarketOf<T> = OldMarket<
     BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
+    Asset<<T as zrml_market_commons::Config>::MarketId>,
 >;
 
 #[frame_support::storage_alias]
@@ -107,6 +109,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
             translated.saturating_inc();
 
             let new_market = Market {
+                base_asset: old_market.base_asset,
                 creator: old_market.creator,
                 creation: old_market.creation,
                 creator_fee: old_market.creator_fee,
@@ -268,6 +271,7 @@ mod tests {
     }
 
     fn construct_old_new_tuple() -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
+        let base_asset = Asset::Ztg;
         let creator = 999;
         let creator_fee = 1;
         let oracle = 2;
@@ -292,6 +296,7 @@ mod tests {
         };
 
         let old_market = OldMarket {
+            base_asset,
             creator,
             creation: creation.clone(),
             creator_fee,
@@ -308,6 +313,7 @@ mod tests {
             bonds: old_bonds,
         };
         let new_market = Market {
+            base_asset,
             creator,
             creation,
             creator_fee,
