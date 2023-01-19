@@ -618,66 +618,6 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
 }
 
 #[test]
-fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
-        let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-        let grace_period = end + market.deadlines.grace_period;
-        assert_ne!(grace_period, 0);
-        run_to_block(grace_period + 1);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        run_to_block(grace_period + 2);
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        let set_up_account = |account| {
-            assert_ok!(AssetManager::deposit(Asset::Ztg, account, SENTINEL_AMOUNT));
-            assert_ok!(Balances::reserve_named(
-                &PredictionMarkets::reserve_id(),
-                account,
-                SENTINEL_AMOUNT,
-            ));
-        };
-        set_up_account(&CHARLIE);
-        set_up_account(&DAVE);
-
-        let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
-        let balance_free_before_dave = Balances::free_balance(&DAVE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), market_id));
-        assert_eq!(
-            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
-            SENTINEL_AMOUNT,
-        );
-        assert_eq!(
-            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &DAVE),
-            SENTINEL_AMOUNT,
-        );
-        assert_eq!(
-            Balances::free_balance(CHARLIE),
-            balance_free_before_charlie + default_dispute_bond::<Runtime>(0)
-        );
-        assert_eq!(
-            Balances::free_balance(DAVE),
-            balance_free_before_dave + default_dispute_bond::<Runtime>(1),
-        );
-        assert!(Disputes::<Runtime>::get(market_id).is_empty());
-    });
-}
-
-#[test]
 fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
