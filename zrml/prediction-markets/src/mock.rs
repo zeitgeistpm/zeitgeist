@@ -27,6 +27,8 @@ use frame_support::{
     traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+#[cfg(feature = "parachain")]
+use orml_asset_registry::AssetMetadata;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
@@ -140,6 +142,8 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    #[cfg(feature = "parachain")]
+    type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
@@ -236,6 +240,14 @@ impl orml_tokens::Config for Runtime {
     type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
+crate::orml_asset_registry::impl_mock_registry! {
+    MockRegistry,
+    CurrencyId,
+    Balance,
+    zeitgeist_primitives::types::CustomMetadata
 }
 
 impl pallet_balances::Config for Runtime {
@@ -408,7 +420,51 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
-
+        #[cfg(feature = "parachain")]
+        use frame_support::traits::GenesisBuild;
+        #[cfg(feature = "parachain")]
+        orml_tokens::GenesisConfig::<Runtime> {
+            balances: (0..69)
+                .into_iter()
+                .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
+                .collect(),
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+        #[cfg(feature = "parachain")]
+        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+            allow_as_base_asset: true,
+            ..Default::default()
+        };
+        #[cfg(feature = "parachain")]
+        orml_asset_registry_mock::GenesisConfig {
+            metadata: vec![
+                (
+                    CurrencyId::ForeignAsset(100),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "ACALA USD".as_bytes().to_vec(),
+                        symbol: "AUSD".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: custom_metadata,
+                    },
+                ),
+                (
+                    CurrencyId::ForeignAsset(420),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "FANCY_TOKEN".as_bytes().to_vec(),
+                        symbol: "FTK".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: zeitgeist_primitives::types::CustomMetadata::default(),
+                    },
+                ),
+            ],
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
         t.into()
     }
 }

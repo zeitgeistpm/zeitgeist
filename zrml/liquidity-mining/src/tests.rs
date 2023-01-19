@@ -31,7 +31,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
-    Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
     MarketStatus, MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
@@ -202,6 +202,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
     Markets::<Runtime>::insert(
         market_id,
         Market {
+            base_asset: Asset::Ztg,
             creation: MarketCreation::Permissionless,
             creator_fee: 0,
             creator: 0,

@@ -34,8 +34,8 @@ use frame_support::{
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use zeitgeist_primitives::types::{
-    Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-    MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
+    Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
@@ -67,21 +67,24 @@ type OldMarketOf<T> = OldMarket<
     MomentOf<T>,
 >;
 
-pub struct RecordBonds<T>(PhantomData<T>);
+pub struct UpdateMarketsForBaseAssetAndRecordBonds<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T> {
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
+    for UpdateMarketsForBaseAssetAndRecordBonds<T>
+{
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "RecordBonds: market-commons version is {:?}, but {:?} is required",
+                "UpdateMarketsForBaseAssetAndRecordBonds: market-commons version is {:?}, but \
+                 {:?} is required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("RecordBonds: Starting...");
+        log::info!("UpdateMarketsForBaseAssetAndRecordBonds: Starting...");
 
         let new_markets = storage_iter::<OldMarketOf<T>>(MARKET_COMMONS, MARKETS)
             .map(|(key, old_market)| {
@@ -110,6 +113,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
                     ),
                 });
                 let new_market = Market {
+                    base_asset: Asset::Ztg,
                     creator: old_market.creator,
                     creation: old_market.creation,
                     creator_fee: old_market.creator_fee,
@@ -136,7 +140,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("RecordBonds: Done!");
+        log::info!("UpdateMarketsForBaseAssetAndRecordBonds: Done!");
         total_weight
     }
 
@@ -163,6 +167,13 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for RecordBonds<T
             let old_market = old_markets
                 .get(&market_id)
                 .expect(&format!("Market {:?} not found", market_id)[..]);
+            assert_eq!(
+                new_market.base_asset,
+                Asset::Ztg,
+                "found unexpected base_asset in new_market. market_id: {:?}, base_asset: {:?}",
+                market_id,
+                new_market.base_asset
+            );
             assert_eq!(new_market.creator, old_market.creator);
             assert_eq!(new_market.creation, old_market.creation);
             assert_eq!(new_market.creator_fee, old_market.creator_fee);
@@ -201,7 +212,7 @@ mod tests {
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            RecordBonds::<Runtime>::on_runtime_upgrade();
+            UpdateMarketsForBaseAssetAndRecordBonds::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -221,7 +232,7 @@ mod tests {
                 MARKETS,
                 new_markets.clone(),
             );
-            RecordBonds::<Runtime>::on_runtime_upgrade();
+            UpdateMarketsForBaseAssetAndRecordBonds::<Runtime>::on_runtime_upgrade();
             for (market_id, expected) in new_markets.iter().enumerate() {
                 let actual =
                     <zrml_market_commons::Pallet<Runtime>>::market(&(market_id as u128)).unwrap();
@@ -242,12 +253,16 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            RecordBonds::<Runtime>::on_runtime_upgrade();
+            UpdateMarketsForBaseAssetAndRecordBonds::<Runtime>::on_runtime_upgrade();
             for (market_id, expected) in new_markets.iter().enumerate() {
                 let actual =
                     <zrml_market_commons::Pallet<Runtime>>::market(&(market_id as u128)).unwrap();
                 assert_eq!(actual, *expected);
             }
+            assert_eq!(
+                StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
+                MARKET_COMMONS_NEXT_STORAGE_VERSION
+            );
         });
     }
 
@@ -259,6 +274,7 @@ mod tests {
     fn construct_test_vector() -> Vec<(OldMarketOf<Runtime>, MarketOf<Runtime>)> {
         let creator = 999;
         let construct_markets = |creation: MarketCreation, status, bonds| {
+            let base_asset = Asset::Ztg;
             let creator_fee = 1;
             let oracle = 2;
             let metadata = vec![3, 4, 5];
@@ -286,6 +302,7 @@ mod tests {
                 deadlines,
             };
             let new_market = Market {
+                base_asset,
                 creator,
                 creation,
                 creator_fee,
@@ -674,8 +691,10 @@ mod tests_authorized {
         StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
     }
 
-    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u128, u64, u64> {
+    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u128, u64, u64, Asset<u128>>
+    {
         zeitgeist_primitives::types::Market {
+            base_asset: Asset::Ztg,
             creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
             creator_fee: 0,
             creator: ALICE,

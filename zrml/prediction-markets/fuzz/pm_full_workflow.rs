@@ -22,7 +22,7 @@ use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{
-    Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
+    Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
     OutcomeReport, ScoringRule,
 };
 use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
@@ -40,6 +40,7 @@ fuzz_target!(|data: Data| {
         };
         let _ = PredictionMarkets::create_market(
             Origin::signed(data.create_scalar_market_origin.into()),
+            Asset::Ztg,
             data.create_scalar_market_oracle.into(),
             MarketPeriod::Block(data.create_scalar_market_period),
             deadlines,

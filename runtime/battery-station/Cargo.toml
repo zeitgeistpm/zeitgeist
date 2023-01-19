@@ -124,6 +124,7 @@ xcm-emulator = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com
 [features]
 default = ["std"]
 parachain = [
+    "zrml-prediction-markets/parachain",
     # Cumulus
 
     "cumulus-pallet-dmp-queue",

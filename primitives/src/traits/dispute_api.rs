@@ -15,8 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
+use crate::{
+    market::MarketDispute,
+    outcome_report::OutcomeReport,
+    types::{Asset, Market},
+};
 use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight, BoundedVec};
+use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
@@ -26,13 +31,14 @@ type MarketOfDisputeApi<T> = Market<
     <T as DisputeApi>::Balance,
     <T as DisputeApi>::BlockNumber,
     <T as DisputeApi>::Moment,
+    Asset<<T as DisputeApi>::MarketId>,
 >;
 
 pub trait DisputeApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId;
+    type MarketId: MaxEncodedLen;
     type Moment;
     type Origin;
 
@@ -88,13 +94,14 @@ type MarketOfDisputeResolutionApi<T> = Market<
     <T as DisputeResolutionApi>::Balance,
     <T as DisputeResolutionApi>::BlockNumber,
     <T as DisputeResolutionApi>::Moment,
+    Asset<<T as DisputeResolutionApi>::MarketId>,
 >;
 
 pub trait DisputeResolutionApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId;
+    type MarketId: MaxEncodedLen;
     type MaxDisputes;
     type Moment;
 

@@ -25,11 +25,7 @@ use crate::{
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
-    xcm_config::{
-        asset_registry::{CustomMetadata, XcmMetadata},
-        config::zeitgeist,
-        fees::default_per_second,
-    },
+    xcm_config::{config::zeitgeist, fees::default_per_second},
     AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
     ZeitgeistTreasuryAccount,
 };
@@ -38,7 +34,10 @@ use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 use xcm_emulator::TestExt;
-use zeitgeist_primitives::constants::BalanceFractionalDecimals;
+use zeitgeist_primitives::{
+    constants::BalanceFractionalDecimals,
+    types::{CustomMetadata, XcmMetadata},
+};
 
 #[test]
 fn transfer_ztg_to_sibling() {

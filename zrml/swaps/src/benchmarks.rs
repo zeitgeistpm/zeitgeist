@@ -174,6 +174,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = T::MarketCommons::push_market(
             Market {
+                base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
                 creator: caller.clone(),
@@ -214,6 +215,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = T::MarketCommons::push_market(
             Market {
+                base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
                 creator: caller.clone(),
