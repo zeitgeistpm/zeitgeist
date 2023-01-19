@@ -74,7 +74,6 @@ std = [
     "frame-system/std",
     "orml-asset-registry?/std",
     "orml-traits/std",
-    "pallet-aura?/std",
     "parity-scale-codec/std",
     'scale-info/std',
     "serde?/std",
