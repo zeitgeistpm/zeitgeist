@@ -1875,6 +1875,40 @@ macro_rules! create_common_tests {
                     });
                 }
             }
+
+            mod dust_removal {
+                use crate::*;
+                use frame_support::PalletId;
+                use test_case::test_case;
+
+                #[test_case(AuthorizedPalletId::get(); "authorized")]
+                #[test_case(CourtPalletId::get(); "court")]
+                #[test_case(LiquidityMiningPalletId::get(); "liquidity_mining")]
+                #[test_case(PmPalletId::get(); "prediction_markets")]
+                #[test_case(SimpleDisputesPalletId::get(); "simple_disputes")]
+                #[test_case(SwapsPalletId::get(); "swaps")]
+                #[test_case(TreasuryPalletId::get(); "treasury")]
+                fn whitelisted_pallet_accounts_dont_get_reaped(pallet_id: PalletId) {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let pallet_main_account: AccountId = pallet_id.into_account_truncating();
+                        let pallet_sub_account: AccountId = pallet_id.into_sub_account_truncating(42);
+                        assert!(DustRemovalWhitelist::contains(&pallet_main_account));
+                        assert!(DustRemovalWhitelist::contains(&pallet_sub_account));
+                    });
+                }
+
+                #[test]
+                fn non_whitelisted_accounts_get_reaped() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let not_whitelisted = AccountId::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+                        assert!(!DustRemovalWhitelist::contains(&not_whitelisted))
+                    });
+                }
+            }
         }
 
     }

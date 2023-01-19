@@ -114,6 +114,7 @@ zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/ru
 
 [dev-dependencies]
 sp-io = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
+test-case = "2.0.2"
 xcm-emulator = { rev = "ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe", git = "https://github.com/shaunxw/xcm-simulator" }
 
 [features]
