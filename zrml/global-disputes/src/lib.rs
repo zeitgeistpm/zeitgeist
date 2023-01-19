@@ -51,9 +51,16 @@ mod pallet {
         DispatchError, DispatchResult,
     };
     use sp_std::{vec, vec::Vec};
-    use zeitgeist_primitives::types::OutcomeReport;
+    use zeitgeist_primitives::types::{Asset, Market, OutcomeReport};
     use zrml_market_commons::MarketCommonsPalletApi;
 
+    pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        MarketCommonsBalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketCommonsBalanceOf<T> =
@@ -832,12 +839,7 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<
-    T::AccountId,
-    MarketCommonsBalanceOf<T>,
-    T::BlockNumber,
-    MomentOf<T>,
->
+pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
 {
@@ -846,6 +848,7 @@ where
     use zeitgeist_primitives::types::ScoringRule;
 
     zeitgeist_primitives::types::Market {
+        base_asset: zeitgeist_primitives::types::Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
         creator: T::GlobalDisputesPalletId::get().into_account_truncating(),

@@ -1362,13 +1362,8 @@ mod pallet {
                 );
 
                 // add report outcome to voting choices
-<<<<<<< HEAD
-                if let Some(report) = market.report {
-                    T::GlobalDisputes::push_vote_outcome(
-=======
                 if let Some(report) = &market.report {
-                    T::GlobalDisputes::push_voting_outcome(
->>>>>>> main
+                    T::GlobalDisputes::push_vote_outcome(
                         &market_id,
                         report.outcome.clone(),
                         &report.by,
@@ -1386,12 +1381,8 @@ mod pallet {
                     )?;
                 }
 
-<<<<<<< HEAD
                 T::GlobalDisputes::start_global_dispute(&market_id)?;
 
-=======
-                // TODO(#372): Allow court with global disputes.
->>>>>>> main
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
 
@@ -1698,16 +1689,12 @@ mod pallet {
         OracleDurationGreaterThanMaxOracleDuration,
         /// The weights length has to be equal to the assets length.
         WeightsLenMustEqualAssetsLen,
-        /// The start of the global dispute for this market happened already.
-<<<<<<< HEAD
-        GlobalDisputeExistsAlready,
-=======
-        GlobalDisputeAlreadyStarted,
         /// Provided base_asset is not allowed to be used as base_asset.
         InvalidBaseAsset,
         /// A foreign asset in not registered in AssetRegistry.
         UnregisteredForeignAsset,
->>>>>>> main
+        /// The start of the global dispute for this market happened already.
+        GlobalDisputeExistsAlready,
     }
 
     #[pallet::event]
