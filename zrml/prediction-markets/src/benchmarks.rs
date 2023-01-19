@@ -696,8 +696,8 @@ benchmarks! {
         <frame_system::Pallet<T>>::set_block_number(2_u64.saturated_into());
         let block = frame_system::Pallet::<T>::block_number();
         zeitgeist_utils::set_block_number_timestamp::<T>(block, start.saturated_into());
-        let range_start: MomentOf<T> = ((2_u64 + 100_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
-        let range_end: MomentOf<T> = ((2_u64 + 100_000_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_start: MomentOf<T> = ((2_u64 + 100_00_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
+        let range_end: MomentOf<T> = ((2_u64 + 100_000_u64) * MILLISECS_PER_BLOCK as u64).saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
