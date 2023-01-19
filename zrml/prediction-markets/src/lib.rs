@@ -2936,7 +2936,10 @@ mod pallet {
         type MaxDisputes = T::MaxDisputes;
         type Moment = MomentOf<T>;
 
-        fn resolve(market_id: &Self::MarketId, market: &MarketOf<T>) -> Result<Weight, DispatchError> {
+        fn resolve(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Weight, DispatchError> {
             Self::on_resolution(market_id, market)
         }
 
