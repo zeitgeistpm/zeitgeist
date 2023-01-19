@@ -749,7 +749,6 @@ where
 {
     fn on_runtime_upgrade() -> Weight {
         use orml_traits::NamedMultiReservableCurrency;
-        use zeitgeist_primitives::types::Asset;
 
         let mut total_weight = T::DbWeight::get().reads(1);
         let pm_version = StorageVersion::get::<crate::Pallet<T>>();

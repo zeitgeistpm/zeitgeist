@@ -45,7 +45,9 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{Blake2_128Concat, DispatchResultWithPostInfo, StorageMap, ValueQuery},
+        pallet_prelude::{
+            Blake2_128Concat, ConstU32, DispatchResultWithPostInfo, StorageMap, ValueQuery,
+        },
         traits::{Currency, Get, Hooks, Imbalance, IsType, NamedReservableCurrency},
         transactional, BoundedVec, PalletId,
     };
@@ -140,6 +142,7 @@ mod pallet {
         >,
         <T as Config>::MaxDisputes,
     >;
+    pub type CacheSize = ConstU32<64>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
@@ -182,7 +185,11 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(5000)]
+        #[pallet::weight(T::WeightInfo::reserve_outcome(
+            T::MaxDisputes::get(),
+            CacheSize::get(),
+            CacheSize::get(),
+        ))]
         #[transactional]
         pub fn reserve_outcome(
             origin: OriginFor<T>,
@@ -216,14 +223,15 @@ mod pallet {
             })?;
 
             // each dispute resets dispute_duration
-            Self::remove_auto_resolve(disputes.as_slice(), &market_id, &market);
+            let r = Self::remove_auto_resolve(disputes.as_slice(), &market_id, &market);
             let dispute_duration_ends_at_block =
                 now.saturating_add(market.deadlines.dispute_duration);
-            T::DisputeResolution::add_auto_resolve(&market_id, dispute_duration_ends_at_block)?;
+            let e =
+                T::DisputeResolution::add_auto_resolve(&market_id, dispute_duration_ends_at_block)?;
 
             Self::deposit_event(Event::OutcomeReserved { market_id, dispute: market_dispute });
 
-            Ok((Some(5000)).into())
+            Ok((Some(T::WeightInfo::reserve_outcome(num_disputes, r, e))).into())
         }
     }
 
@@ -266,13 +274,14 @@ mod pallet {
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) {
+        ) -> u32 {
             if let Some(dispute_duration_ends_at_block) = Self::get_auto_resolve(disputes, market) {
-                T::DisputeResolution::remove_auto_resolve(
+                return T::DisputeResolution::remove_auto_resolve(
                     market_id,
                     dispute_duration_ends_at_block,
                 );
             }
+            0u32
         }
     }
 
@@ -455,8 +464,7 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, BalanceOf<T>, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
 {
@@ -465,6 +473,7 @@ where
     use zeitgeist_primitives::types::{MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
+        base_asset: Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
         creator: T::PalletId::get().into_account_truncating(),

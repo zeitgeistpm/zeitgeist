@@ -38,8 +38,8 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId, Moment,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
+        Moment, UncheckedExtrinsicTest,
     },
 };
 

@@ -66,7 +66,9 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{
+            Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 

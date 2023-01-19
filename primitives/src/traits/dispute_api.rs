@@ -16,11 +16,10 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    market::MarketDispute,
     outcome_report::OutcomeReport,
     types::{Asset, Market},
 };
-use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight, BoundedVec};
+use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
 

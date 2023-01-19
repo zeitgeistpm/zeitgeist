@@ -46,7 +46,9 @@ mod pallet {
     use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{Asset, AuthorityReport, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{
+            Asset, AuthorityReport, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 

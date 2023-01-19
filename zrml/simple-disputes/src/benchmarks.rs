@@ -22,32 +22,54 @@
 #![allow(clippy::type_complexity)]
 #![cfg(feature = "runtime-benchmarks")]
 
+#[cfg(test)]
+use crate::Pallet as SimpleDisputes;
+
 use super::*;
-use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller, Vec};
+use frame_support::{dispatch::RawOrigin, traits::Get};
+use orml_traits::MultiCurrency;
+use sp_runtime::traits::{One, Saturating};
+use zrml_market_commons::MarketCommonsPalletApi;
 
 benchmarks! {
     reserve_outcome {
         let d in 1..(T::MaxDisputes::get() - 1);
+        let r in 1..63;
         let e in 1..63;
 
         let caller: T::AccountId = whitelisted_caller();
         let market_id = 0u32.into();
         let market = market_mock::<T>();
-        T::MarketCommons::push_market(market).unwrap();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+
+        let mut now;
+
+        let mut disputes = Vec::new();
+        for i in 0..d {
+            now = <frame_system::Pallet<T>>::block_number();
+
+            let disputor = account("disputor", i, 0);
+            let last_dispute = MarketDispute {
+                at: now,
+                by: disputor,
+                outcome: OutcomeReport::Scalar((2 + i).into()),
+                bond: default_outcome_bond::<T>(i as usize),
+            };
+            disputes.push(last_dispute);
+            <frame_system::Pallet<T>>::set_block_number(now.saturating_add(T::BlockNumber::one()));
+        }
+        let last_dispute = disputes.last().unwrap();
+        let auto_resolve = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        for i in 0..r {
+            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
+            T::DisputeResolution::add_auto_resolve(&id, auto_resolve).unwrap();
+        }
 
         let now = <frame_system::Pallet<T>>::block_number();
 
-        for i in 0..d {
-
-        }
-        let last_dispute = MarketDispute {
-            at: now,
-            by: caller.clone(),
-            outcome: OutcomeReport::Scalar(2),
-            bond: default_outcome_bond::<T>(0usize),
-        };
-        Disputes::<T>::insert(market_id, last_dispute);
-
+        let bounded_vec = <DisputesOf<T>>::try_from(disputes).unwrap();
+        Disputes::<T>::insert(market_id, bounded_vec);
 
         let dispute_duration_ends_at_block =
                 now.saturating_add(market.deadlines.dispute_duration);
@@ -57,12 +79,12 @@ benchmarks! {
         }
 
         let outcome = OutcomeReport::Scalar(1);
-        let bond = default_outcome_bond::<T>(0usize);
-        let _ = T::Currency::deposit_creating(&caller, bond);
+        let bond = default_outcome_bond::<T>(T::MaxDisputes::get() as usize);
+        T::AssetManager::deposit(Asset::Ztg, &caller, bond).unwrap();
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome)
 
     impl_benchmark_test_suite!(
-        PredictionMarket,
+        SimpleDisputes,
         crate::mock::ExtBuilder::default().build(),
         crate::mock::Runtime,
     );
