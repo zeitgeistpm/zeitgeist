@@ -20,6 +20,7 @@ use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
+use zeitgeist_primitives::types::CustomMetadata;
 
 #[derive(
     Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
@@ -45,50 +46,4 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
     ) -> Result<(), DispatchError> {
         Ok(())
     }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Default,
-    PartialOrd,
-    Ord,
-    PartialEq,
-    Eq,
-    Debug,
-    Encode,
-    Decode,
-    TypeInfo,
-    MaxEncodedLen,
-)]
-/// Custom XC asset metadata
-pub struct CustomMetadata {
-    /// XCM-related metadata.
-    pub xcm: XcmMetadata,
-
-    /// Whether an asset can be used in pools.
-    pub allow_in_pool: bool,
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Default,
-    PartialOrd,
-    Ord,
-    PartialEq,
-    Eq,
-    Debug,
-    Encode,
-    Decode,
-    TypeInfo,
-    MaxEncodedLen,
-)]
-pub struct XcmMetadata {
-    /// The factor used to determine the fee.
-    /// It is multiplied by the fee that would have been paid in native currency, so it represents
-    /// the ratio `native_price / other_asset_price`. It is a fixed point decimal number containing
-    /// as many fractional decimals as the asset it is used for contains.
-    /// Should be updated regularly.
-    pub fee_factor: Option<Balance>,
 }

@@ -19,8 +19,9 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
-    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    default_dispute_bond, mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
+    MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -30,15 +31,15 @@ use frame_support::{
 };
 use test_case::test_case;
 
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::traits::{AccountIdConversion, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
-        MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment,
-        MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
+        MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType,
+        Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
     },
 };
 use zrml_authorized::Error as AuthorizedError;
@@ -87,12 +88,14 @@ fn check_reserve(account: &AccountIdTest, expected: Balance) {
 }
 
 fn simple_create_categorical_market(
+    base_asset: Asset<MarketId>,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,
 ) {
     assert_ok!(PredictionMarkets::create_market(
         Origin::signed(ALICE),
+        base_asset,
         BOB,
         MarketPeriod::Block(period),
         get_deadlines(),
@@ -105,12 +108,14 @@ fn simple_create_categorical_market(
 }
 
 fn simple_create_scalar_market(
+    base_asset: Asset<MarketId>,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,
 ) {
     assert_ok!(PredictionMarkets::create_market(
         Origin::signed(ALICE),
+        base_asset,
         BOB,
         MarketPeriod::Block(period),
         get_deadlines(),
@@ -126,7 +131,12 @@ fn simple_create_scalar_market(
 fn admin_move_market_to_closed_successfully_closes_market() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..2,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
         let market = MarketCommons::market(&market_id).unwrap();
@@ -154,7 +164,12 @@ fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
 #[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
             market.status = market_status;
@@ -162,7 +177,7 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: Mark
         }));
         assert_noop!(
             PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id),
-            crate::Error::<Runtime>::MarketIsNotActive,
+            Error::<Runtime>::MarketIsNotActive,
         );
     });
 }
@@ -173,6 +188,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..66),
             get_deadlines(),
@@ -185,6 +201,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(33..66),
             get_deadlines(),
@@ -197,6 +214,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..33),
             get_deadlines(),
@@ -226,6 +244,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 get_deadlines(),
@@ -235,7 +254,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::InvalidOutcomeRange
+            Error::<Runtime>::InvalidOutcomeRange
         );
     });
 }
@@ -251,6 +270,7 @@ fn create_market_fails_on_min_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -260,7 +280,7 @@ fn create_market_fails_on_min_dispute_period() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
+            Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
         );
     });
 }
@@ -276,6 +296,7 @@ fn create_market_fails_on_min_oracle_duration() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -285,7 +306,7 @@ fn create_market_fails_on_min_oracle_duration() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
+            Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
         );
     });
 }
@@ -301,6 +322,7 @@ fn create_market_fails_on_max_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -310,7 +332,7 @@ fn create_market_fails_on_max_dispute_period() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::DisputeDurationGreaterThanMaxDisputeDuration
+            Error::<Runtime>::DisputeDurationGreaterThanMaxDisputeDuration
         );
     });
 }
@@ -326,6 +348,7 @@ fn create_market_fails_on_max_grace_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -335,7 +358,7 @@ fn create_market_fails_on_max_grace_period() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::GracePeriodGreaterThanMaxGracePeriod
+            Error::<Runtime>::GracePeriodGreaterThanMaxGracePeriod
         );
     });
 }
@@ -351,6 +374,7 @@ fn create_market_fails_on_max_oracle_duration() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -360,15 +384,82 @@ fn create_market_fails_on_max_oracle_duration() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::OracleDurationGreaterThanMaxOracleDuration
+            Error::<Runtime>::OracleDurationGreaterThanMaxOracleDuration
         );
+    });
+}
+
+#[cfg(feature = "parachain")]
+#[test]
+fn create_market_with_foreign_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
+        };
+
+        // As per Mock asset_registry genesis ForeignAsset(420) has allow_as_base_asset set to false.
+
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                Asset::ForeignAsset(420),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            Error::<Runtime>::InvalidBaseAsset,
+        );
+        // As per Mock asset_registry genesis ForeignAsset(50) is not registered in asset_registry.
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                Asset::ForeignAsset(50),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            Error::<Runtime>::UnregisteredForeignAsset,
+        );
+        // As per Mock asset_registry genesis ForeignAsset(100) has allow_as_base_asset set to true.
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::ForeignAsset(100),
+            BOB,
+            MarketPeriod::Block(123..456),
+            deadlines,
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(2),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.base_asset, Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..2,
+            ScoringRule::CPMM,
+        );
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(
             &PredictionMarkets::reserve_id(),
@@ -383,14 +474,27 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2_u64;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market = MarketCommons::market(&0).unwrap();
         run_to_block(end + market.deadlines.grace_period);
         assert_ok!(PredictionMarkets::report(
@@ -412,14 +516,27 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         assert_ne!(grace_period, 0);
@@ -449,14 +566,92 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        assert_ne!(grace_period, 0);
+        run_to_block(grace_period + 1);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(grace_period + 2);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        let set_up_account = |account| {
+            assert_ok!(AssetManager::deposit(Asset::Ztg, account, SENTINEL_AMOUNT));
+            assert_ok!(Balances::reserve_named(
+                &PredictionMarkets::reserve_id(),
+                account,
+                SENTINEL_AMOUNT,
+            ));
+        };
+        set_up_account(&CHARLIE);
+        set_up_account(&DAVE);
+
+        let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
+        let balance_free_before_dave = Balances::free_balance(&DAVE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), market_id));
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &DAVE),
+            SENTINEL_AMOUNT,
+        );
+        assert_eq!(
+            Balances::free_balance(CHARLIE),
+            balance_free_before_charlie + default_dispute_bond::<Runtime>(0)
+        );
+        assert_eq!(
+            Balances::free_balance(DAVE),
+            balance_free_before_dave + default_dispute_bond::<Runtime>(1),
+        );
+        assert!(Disputes::<Runtime>::get(market_id).is_empty());
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -481,13 +676,26 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(
             &PredictionMarkets::reserve_id(),
@@ -502,13 +710,26 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_advised_market_proposed_with_edit_request() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(
             &PredictionMarkets::reserve_id(),
@@ -531,13 +752,26 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed_with_edit_requ
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
         assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_advised_market_active() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(
@@ -553,14 +787,27 @@ fn admin_destroy_market_correctly_slashes_advised_market_active() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_advised_market_reported() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..end,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -584,14 +831,27 @@ fn admin_destroy_market_correctly_slashes_advised_market_reported() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..end,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -620,14 +880,27 @@ fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..end,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -653,22 +926,34 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
-
 #[test]
 fn admin_destroy_market_correctly_cleans_up_accounts() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
+        let alice_ztg_before_market_creation = AssetManager::free_balance(Asset::Ztg, &ALICE);
+        let alice_base_asset_before_market_creation =
+            AssetManager::free_balance(base_asset, &ALICE);
+        let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
+        let min_liquidity = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            base_asset,
             ALICE,
             MarketPeriod::Block(0..42),
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(3),
             MarketDisputeMechanism::SimpleDisputes,
-            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
-            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            swap_fee,
+            min_liquidity,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 3],
         ));
         // Buy some outcome tokens for Alice so that we can check that they get destroyed.
@@ -677,17 +962,45 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         let pool_id = 0;
         let pool_account = Swaps::pool_account_id(&pool_id);
         let market_account = MarketCommons::market_account(market_id);
-        let alice_ztg_before = AssetManager::free_balance(Asset::Ztg, &ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::Ztg, &pool_account), 0);
+        assert_eq!(AssetManager::free_balance(base_asset, &pool_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::Ztg, &market_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
+        assert_eq!(AssetManager::free_balance(base_asset, &market_account), 0);
+        // premissionless market so using ValidityBond
+        let creation_bond = <Runtime as Config>::ValidityBond::get();
+        let oracle_bond = <Runtime as Config>::OracleBond::get();
+        // substract min_liquidity twice, one for buy_complete_set() in
+        // create_cpmm_market_and_deploy_assets() and one in swaps::create_pool()
+        // then again substract BASE as buy_complete_set() above
+        let expected_base_asset_value =
+            alice_base_asset_before_market_creation - min_liquidity - min_liquidity - BASE;
+        if base_asset == Asset::Ztg {
+            let alice_base_asset_balance = AssetManager::free_balance(base_asset, &ALICE);
+            assert_eq!(
+                alice_base_asset_balance,
+                expected_base_asset_value - creation_bond - oracle_bond
+            );
+        } else {
+            let alice_base_asset_balance = AssetManager::free_balance(base_asset, &ALICE);
+            assert_eq!(alice_base_asset_balance, expected_base_asset_value);
+            let alice_ztg_balance = AssetManager::free_balance(Asset::Ztg, &ALICE);
+            assert_eq!(
+                alice_ztg_balance,
+                alice_ztg_before_market_creation - creation_bond - oracle_bond
+            );
+        }
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -697,6 +1010,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..66),
             get_deadlines(),
@@ -709,6 +1023,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(33..66),
             get_deadlines(),
@@ -721,6 +1036,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(22..33),
             get_deadlines(),
@@ -745,9 +1061,15 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
 
 #[test]
 fn admin_move_market_to_resolved_resolves_reported_market() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 33;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
 
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
@@ -797,6 +1119,13 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
                 + <Runtime as Config>::OracleBond::get()
                 + <Runtime as Config>::ValidityBond::get()
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -808,7 +1137,12 @@ fn admin_move_market_to_resovled_fails_if_market_is_not_reported_or_disputed(
     market_status: MarketStatus,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..33, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..33,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
             market.status = market_status;
@@ -816,7 +1150,7 @@ fn admin_move_market_to_resovled_fails_if_market_is_not_reported_or_disputed(
         }));
         assert_noop!(
             PredictionMarkets::admin_move_market_to_resolved(Origin::signed(SUDO), market_id,),
-            crate::Error::<Runtime>::InvalidMarketStatus,
+            Error::<Runtime>::InvalidMarketStatus,
         );
     });
 }
@@ -824,14 +1158,24 @@ fn admin_move_market_to_resovled_fails_if_market_is_not_reported_or_disputed(
 #[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..2,
+            ScoringRule::CPMM,
+        );
 
         // check the correct amount was reserved
         let alice_reserved = Balances::reserved_balance(&ALICE);
         assert_eq!(alice_reserved, ValidityBond::get() + OracleBond::get());
 
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..2, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..2,
+            ScoringRule::CPMM,
+        );
 
         let new_alice_reserved = Balances::reserved_balance(&ALICE);
         assert_eq!(new_alice_reserved, AdvisoryBond::get() + OracleBond::get() + alice_reserved);
@@ -846,7 +1190,12 @@ fn it_creates_binary_markets() {
 fn create_categorical_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        simple_create_categorical_market(MarketCreation::Permissionless, 1..2, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = MarketCommons::market_account(market_id);
@@ -858,7 +1207,12 @@ fn create_categorical_market_deposits_the_correct_event() {
 fn create_scalar_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        simple_create_scalar_market(MarketCreation::Permissionless, 1..2, ScoringRule::CPMM);
+        simple_create_scalar_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = MarketCommons::market_account(market_id);
@@ -872,6 +1226,7 @@ fn it_does_not_create_market_with_too_few_categories() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(0..100),
                 get_deadlines(),
@@ -892,6 +1247,7 @@ fn it_does_not_create_market_with_too_many_categories() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(0..100),
                 get_deadlines(),
@@ -910,7 +1266,12 @@ fn it_does_not_create_market_with_too_many_categories() {
 fn it_allows_sudo_to_destroy_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // destroy the market
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -926,7 +1287,12 @@ fn it_allows_sudo_to_destroy_markets() {
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -951,7 +1317,12 @@ fn it_allows_request_edit_origin_to_request_edits_for_markets() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 2..4, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            2..4,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -983,7 +1354,12 @@ fn request_edit_fails_on_bad_origin() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 2..4, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            2..4,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -1002,7 +1378,12 @@ fn request_edit_fails_on_bad_origin() {
 fn edit_request_fails_if_edit_reason_is_too_long() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -1021,7 +1402,12 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
 fn market_with_edit_request_cannot_be_approved() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -1044,7 +1430,12 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(2);
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 4..6, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            4..6,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -1072,7 +1463,12 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 fn reject_errors_if_reject_reason_is_too_long() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -1091,7 +1487,12 @@ fn reject_errors_if_reject_reason_is_too_long() {
 fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -1114,8 +1515,14 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
 
 #[test]
 fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
@@ -1160,6 +1567,13 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         // AdvisoryBond is transferred to the treasury
         let balance_treasury_after = Balances::free_balance(Treasury::account_id());
         assert_eq!(balance_treasury_after, slash_amount_advisory_bond);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -1168,9 +1582,24 @@ fn reject_market_clears_auto_close_blocks() {
     // We don't have to check that reject market clears the cache for opening pools, since Cpmm pools
     // can not be deployed on pending advised pools.
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Advised, 33..66, ScoringRule::CPMM);
-        simple_create_categorical_market(MarketCreation::Advised, 22..66, ScoringRule::CPMM);
-        simple_create_categorical_market(MarketCreation::Advised, 22..33, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            22..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            22..33,
+            ScoringRule::CPMM,
+        );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason));
@@ -1183,7 +1612,8 @@ fn reject_market_clears_auto_close_blocks() {
 
 #[test]
 fn on_market_close_auto_rejects_expired_advised_market() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -1197,7 +1627,12 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
         let end = 33;
-        simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market_id = 0;
 
         run_to_block(end);
@@ -1212,12 +1647,19 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
         System::assert_has_event(Event::MarketExpired(market_id).into());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -1231,7 +1673,12 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
         let end = 33;
-        simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Advised,
+            0..end,
+            ScoringRule::CPMM,
+        );
         run_to_block(2);
         let market_id = 0;
         let market = MarketCommons::market(&market_id);
@@ -1255,6 +1702,13 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
         System::assert_has_event(Event::MarketExpired(market_id).into());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -1266,6 +1720,7 @@ fn on_market_open_successfully_auto_opens_market_pool_with_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(start..end),
             get_deadlines(),
@@ -1296,6 +1751,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -1333,6 +1789,7 @@ fn on_market_open_successfully_auto_opens_market_with_timestamps() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1366,6 +1823,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1411,6 +1869,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1423,6 +1882,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1454,6 +1914,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1466,6 +1927,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1504,6 +1966,7 @@ fn on_initialize_skips_the_genesis_block() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1534,10 +1997,15 @@ fn on_initialize_skips_the_genesis_block() {
 
 #[test]
 fn it_allows_to_buy_a_complete_set() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates a permissionless market.
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..2,
+            ScoringRule::CPMM,
+        );
 
         // Allows someone to generate a complete set
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
@@ -1551,14 +2019,20 @@ fn it_allows_to_buy_a_complete_set() {
             assert_eq!(bal, CENT);
         }
 
-        // also check native balance
-        let bal = Balances::free_balance(&BOB);
+        let market_account = MarketCommons::market_account(0);
+        let bal = AssetManager::free_balance(base_asset, &BOB);
         assert_eq!(bal, 1_000 * BASE - CENT);
 
-        let market_account = MarketCommons::market_account(0);
-        let market_bal = Balances::free_balance(market_account);
+        let market_bal = AssetManager::free_balance(base_asset, &market_account);
         assert_eq!(market_bal, CENT);
         System::assert_last_event(Event::BoughtCompleteSet(0, CENT, BOB).into());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -1566,7 +2040,12 @@ fn it_allows_to_buy_a_complete_set() {
 fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
             Error::<Runtime>::MarketIsNotActive,
@@ -1580,6 +2059,7 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(3..3),
                 get_deadlines(),
@@ -1589,23 +2069,15 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
                 MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
+            Error::<Runtime>::InvalidMarketPeriod,
         );
     });
 }
 
 #[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
 #[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
-#[test_case(
-    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "block end greater than max market period"
-)]
 #[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
 #[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
-#[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "timestamp end greater than max market period"
-)]
 #[test_case(
     MarketPeriod::Timestamp(0..(MILLISECS_PER_BLOCK - 1).into());
     "range shorter than block time"
@@ -1617,6 +2089,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 period,
                 get_deadlines(),
@@ -1626,7 +2099,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
                 MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
+            Error::<Runtime>::InvalidMarketPeriod,
         );
     });
 }
@@ -1639,6 +2112,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Block(0..end_block),
                 get_deadlines(),
@@ -1648,13 +2122,14 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
+            Error::<Runtime>::InvalidMarketPeriod,
         );
 
         let end_time = MILLISECS_PER_BLOCK as u64 / 2;
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
+                Asset::Ztg,
                 BOB,
                 MarketPeriod::Timestamp(0..end_time),
                 get_deadlines(),
@@ -1664,7 +2139,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
+            Error::<Runtime>::InvalidMarketPeriod,
         );
     });
 }
@@ -1672,7 +2147,12 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
 #[test]
 fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 0),
             Error::<Runtime>::ZeroAmount
@@ -1682,20 +2162,36 @@ fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
 
 #[test]
 fn it_does_not_allow_buying_complete_sets_with_insufficient_balance() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 10000 * BASE),
             Error::<Runtime>::NotEnoughBalance
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
-
 #[test]
 fn it_allows_to_deploy_a_pool() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         // Creates a permissionless market.
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE));
 
@@ -1712,13 +2208,25 @@ fn it_allows_to_deploy_a_pool() {
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 2],
         ));
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 200 * BASE));
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
@@ -1744,7 +2252,12 @@ fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
 fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_noop!(
             PredictionMarkets::deploy_swap_pool_for_market(
@@ -1761,10 +2274,15 @@ fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
 
 #[test]
 fn it_allows_to_sell_a_complete_set() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates a permissionless market.
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..2, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..2,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
@@ -1784,13 +2302,25 @@ fn it_allows_to_sell_a_complete_set() {
         assert_eq!(bal, 1_000 * BASE);
 
         System::assert_last_event(Event::SoldCompleteSet(0, CENT, BOB).into());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_noop!(
             PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 0),
             Error::<Runtime>::ZeroAmount
@@ -1800,14 +2330,26 @@ fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
 
 #[test]
 fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * CENT));
         assert_eq!(AssetManager::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
         assert_noop!(
             PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 2 * CENT),
             Error::<Runtime>::InsufficientShareBalance
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -1815,7 +2357,12 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
 fn it_allows_to_report_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -1856,7 +2403,12 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 fn report_fails_before_grace_period_is_over() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         run_to_block(end);
 
@@ -1875,7 +2427,12 @@ fn report_fails_before_grace_period_is_over() {
 fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duration_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -1909,6 +2466,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -1946,7 +2504,12 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
 fn report_fails_on_mismatched_outcome_for_categorical_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -1964,7 +2527,12 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
 fn report_fails_on_out_of_range_outcome_for_categorical_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -1982,7 +2550,12 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
 fn report_fails_on_mismatched_outcome_for_scalar_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
-        simple_create_scalar_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_scalar_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -2000,7 +2573,12 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
 fn it_allows_to_dispute_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         // Run to the end of the trading phase.
         let market = MarketCommons::market(&0).unwrap();
@@ -2045,6 +2623,7 @@ fn dispute_fails_authority_reported_already() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -2086,7 +2665,12 @@ fn dispute_fails_authority_reported_already() {
 fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         let market = MarketCommons::market(&0).unwrap();
         // Just skip to waaaay overdue.
@@ -2118,7 +2702,12 @@ fn it_allows_anyone_to_report_an_unreported_market() {
 fn it_correctly_resolves_a_market_that_was_reported_on() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
@@ -2170,9 +2759,14 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
 #[test]
 fn it_resolves_a_disputed_market() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         let market = MarketCommons::market(&0).unwrap();
@@ -2286,6 +2880,13 @@ fn it_resolves_a_disputed_market() {
 
         assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -2298,7 +2899,12 @@ fn it_resolves_a_disputed_market() {
 fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
             market_inner.status = status;
@@ -2318,6 +2924,7 @@ fn start_global_dispute_works() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..2),
             get_deadlines(),
@@ -2419,6 +3026,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..2),
             get_deadlines(),
@@ -2480,9 +3088,14 @@ fn start_global_dispute_works_without_feature() {
 
 #[test]
 fn it_allows_to_redeem_shares() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         let market = MarketCommons::market(&0).unwrap();
@@ -2504,28 +3117,34 @@ fn it_allows_to_redeem_shares() {
         System::assert_last_event(
             Event::TokensRedeemed(0, Asset::CategoricalOutcome(0, 1), CENT, CENT, CHARLIE).into(),
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params() {
-    let oracle = ALICE;
-    let period = MarketPeriod::Block(0..42);
-    let metadata = gen_metadata(42);
-    let category_count = 4;
-    let market_type = MarketType::Categorical(category_count);
-    let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
-    let amount = 123 * BASE;
-    let pool_id = 0;
-    let weight = <Runtime as zrml_swaps::Config>::MinWeight::get();
-    let weights = vec![weight; category_count.into()];
-    let base_asset_weight = (category_count as u128) * weight;
-    let total_weight = 2 * base_asset_weight;
-
-    // Execute the combined convenience function
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
+        let oracle = ALICE;
+        let period = MarketPeriod::Block(0..42);
+        let metadata = gen_metadata(42);
+        let category_count = 4;
+        let market_type = MarketType::Categorical(category_count);
+        let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
+        let amount = 123 * BASE;
+        let pool_id = 0;
+        let weight = <Runtime as zrml_swaps::Config>::MinWeight::get();
+        let weights = vec![weight; category_count.into()];
+        let base_asset_weight = (category_count as u128) * weight;
+        let total_weight = 2 * base_asset_weight;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            base_asset,
             oracle,
             period,
             get_deadlines(),
@@ -2548,7 +3167,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
-        assert_eq!(System::account(&pool_account).data.free, amount);
+        assert_eq!(AssetManager::free_balance(base_asset, &pool_account), amount);
 
         let pool = Pools::<Runtime>::get(0).unwrap();
         let assets_expected = vec![
@@ -2556,10 +3175,10 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
             Asset::CategoricalOutcome(market_id, 1),
             Asset::CategoricalOutcome(market_id, 2),
             Asset::CategoricalOutcome(market_id, 3),
-            Asset::Ztg,
+            base_asset,
         ];
         assert_eq!(pool.assets, assets_expected);
-        assert_eq!(pool.base_asset, Asset::Ztg);
+        assert_eq!(pool.base_asset, base_asset);
         assert_eq!(pool.market_id, market_id);
         assert_eq!(pool.scoring_rule, ScoringRule::CPMM);
         assert_eq!(pool.swap_fee, Some(swap_fee));
@@ -2571,19 +3190,28 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 1)], weight);
         assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 2)], weight);
         assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 3)], weight);
-        assert_eq!(pool_weights[&Asset::Ztg], base_asset_weight);
+        assert_eq!(pool_weights[&base_asset], base_asset_weight);
+    };
+
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn process_subsidy_activates_market_with_sufficient_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         let min_sub_period =
             <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
         let max_sub_period =
             <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
         simple_create_categorical_market(
+            base_asset,
             MarketCreation::Permissionless,
             min_sub_period..max_sub_period,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
@@ -2594,18 +3222,26 @@ fn process_subsidy_activates_market_with_sufficient_subsidy() {
         let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
         assert_eq!(subsidy_queue.len(), 0);
         assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Active);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn process_subsidy_blocks_market_with_insufficient_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         let min_sub_period =
             <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
         let max_sub_period =
             <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
         simple_create_categorical_market(
+            base_asset,
             MarketCreation::Permissionless,
             min_sub_period..max_sub_period,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
@@ -2619,20 +3255,28 @@ fn process_subsidy_blocks_market_with_insufficient_subsidy() {
         assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::InsufficientSubsidy);
 
         // Check that the balances are correctly unreserved.
-        assert_eq!(Balances::reserved_balance(&ALICE), 0);
-        assert_eq!(Balances::reserved_balance(&BOB), 0);
+        assert_eq!(AssetManager::reserved_balance(base_asset, &ALICE), 0);
+        assert_eq!(AssetManager::reserved_balance(base_asset, &BOB), 0);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn process_subsidy_keeps_market_in_subsidy_queue_until_end_of_subsidy_phase() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         let min_sub_period =
             <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
         let max_sub_period =
             <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
         simple_create_categorical_market(
+            base_asset,
             MarketCreation::Permissionless,
             min_sub_period + 42..max_sub_period,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
@@ -2644,14 +3288,22 @@ fn process_subsidy_keeps_market_in_subsidy_queue_until_end_of_subsidy_phase() {
         assert!(subsidy_queue.len() == 1);
         assert!(subsidy_queue[0].market_id == 0);
         assert!(MarketCommons::market(&0).unwrap().status == MarketStatus::CollectingSubsidy);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn start_subsidy_creates_pool_and_starts_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         // Create advised categorical market using Rikiddo.
         simple_create_categorical_market(
+            base_asset,
             MarketCreation::Advised,
             1337..1338,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
@@ -2662,7 +3314,7 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
         // Ensure and set correct market status.
         assert_err!(
             PredictionMarkets::start_subsidy(&market, market_id),
-            crate::Error::<Runtime>::MarketIsNotCollectingSubsidy
+            Error::<Runtime>::MarketIsNotCollectingSubsidy
         );
         assert_ok!(MarketCommons::mutate_market(&market_id, |market_inner| {
             market_inner.status = MarketStatus::CollectingSubsidy;
@@ -2682,6 +3334,13 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
         }
 
         assert!(inserted);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -2689,7 +3348,12 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
 fn only_creator_can_edit_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -2706,6 +3370,7 @@ fn only_creator_can_edit_market() {
         assert_noop!(
             PredictionMarkets::edit_market(
                 Origin::signed(BOB),
+                Asset::Ztg,
                 0,
                 CHARLIE,
                 MarketPeriod::Block(0..1),
@@ -2725,7 +3390,12 @@ fn edit_cycle_for_proposed_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         run_to_block(1);
-        simple_create_categorical_market(MarketCreation::Advised, 2..4, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            2..4,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -2742,6 +3412,7 @@ fn edit_cycle_for_proposed_markets() {
         // After this edit its changed to ALICE
         assert_ok!(PredictionMarkets::edit_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             0,
             CHARLIE,
             MarketPeriod::Block(2..4),
@@ -2760,12 +3431,87 @@ fn edit_cycle_for_proposed_markets() {
     });
 }
 
+#[cfg(feature = "parachain")]
+#[test]
+fn edit_market_with_foreign_asset() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
+
+        // Now it should work from SUDO
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+
+        // ALICE is market creator through simple_create_categorical_market
+        // As per Mock asset_registry genesis ForeignAsset(50) is not registered in asset_registry.
+        assert_noop!(
+            PredictionMarkets::edit_market(
+                Origin::signed(ALICE),
+                Asset::ForeignAsset(50),
+                0,
+                CHARLIE,
+                MarketPeriod::Block(0..1),
+                get_deadlines(),
+                gen_metadata(2),
+                MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM
+            ),
+            Error::<Runtime>::UnregisteredForeignAsset
+        );
+        // As per Mock asset_registry genesis ForeignAsset(420) has allow_as_base_asset set to false.
+        assert_noop!(
+            PredictionMarkets::edit_market(
+                Origin::signed(ALICE),
+                Asset::ForeignAsset(420),
+                0,
+                CHARLIE,
+                MarketPeriod::Block(0..1),
+                get_deadlines(),
+                gen_metadata(2),
+                MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM
+            ),
+            Error::<Runtime>::InvalidBaseAsset,
+        );
+        // As per Mock asset_registry genesis ForeignAsset(100) has allow_as_base_asset set to true.
+        assert_ok!(PredictionMarkets::edit_market(
+            Origin::signed(ALICE),
+            Asset::ForeignAsset(100),
+            0,
+            CHARLIE,
+            MarketPeriod::Block(0..1),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.base_asset, Asset::ForeignAsset(100));
+    });
+}
+
 #[test]
 fn the_entire_market_lifecycle_works_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -2801,9 +3547,10 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
 
 #[test]
 fn full_scalar_market_lifecycle() {
-    ExtBuilder::default().build().execute_with(|| {
+    let test = |base_asset: Asset<MarketId>| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -2873,10 +3620,10 @@ fn full_scalar_market_lifecycle() {
         }
 
         // check payouts is right for each CHARLIE and EVE
-        let ztg_bal_charlie = Balances::free_balance(&CHARLIE);
-        let ztg_bal_eve = Balances::free_balance(&EVE);
-        assert_eq!(ztg_bal_charlie, 98750 * CENT); // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
-        assert_eq!(ztg_bal_eve, 1000 * BASE);
+        let base_asset_bal_charlie = AssetManager::free_balance(base_asset, &CHARLIE);
+        let base_asset_bal_eve = AssetManager::free_balance(base_asset, &EVE);
+        assert_eq!(base_asset_bal_charlie, 98750 * CENT); // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
+        assert_eq!(base_asset_bal_eve, 1000 * BASE);
         System::assert_has_event(
             Event::TokensRedeemed(
                 0,
@@ -2899,8 +3646,8 @@ fn full_scalar_market_lifecycle() {
         );
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
-        let ztg_bal_eve_after = Balances::free_balance(&EVE);
-        assert_eq!(ztg_bal_eve_after, 101250 * CENT); // 12.5 (SHORT) + 1000 (balance)
+        let base_asset_bal_eve_after = AssetManager::free_balance(base_asset, &EVE);
+        assert_eq!(base_asset_bal_eve_after, 101250 * CENT); // 12.5 (SHORT) + 1000 (balance)
         System::assert_last_event(
             Event::TokensRedeemed(
                 0,
@@ -2911,32 +3658,58 @@ fn full_scalar_market_lifecycle() {
             )
             .into(),
         );
-    })
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
 }
 
 #[test]
 fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
+    let test = |base_asset: Asset<MarketId>| {
+        scalar_market_correctly_resolves_common(base_asset, 50);
+        assert_eq!(AssetManager::free_balance(base_asset, &CHARLIE), 900 * BASE);
+        assert_eq!(AssetManager::free_balance(base_asset, &EVE), 1100 * BASE);
+    };
     ExtBuilder::default().build().execute_with(|| {
-        scalar_market_correctly_resolves_common(50);
-        assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
-        assert_eq!(Balances::free_balance(&EVE), 1100 * BASE);
-    })
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
 }
 
 #[test]
 fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
+    let test = |base_asset: Asset<MarketId>| {
+        scalar_market_correctly_resolves_common(base_asset, 250);
+        assert_eq!(AssetManager::free_balance(base_asset, &CHARLIE), 1000 * BASE);
+        assert_eq!(AssetManager::free_balance(base_asset, &EVE), 1000 * BASE);
+    };
     ExtBuilder::default().build().execute_with(|| {
-        scalar_market_correctly_resolves_common(250);
-        assert_eq!(Balances::free_balance(&CHARLIE), 1000 * BASE);
-        assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
-    })
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
 }
 
 #[test]
 fn reject_market_fails_on_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
@@ -2950,7 +3723,12 @@ fn reject_market_fails_on_permissionless_market() {
 fn reject_market_fails_on_approved_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
@@ -2967,6 +3745,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -2998,10 +3777,12 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 
 #[test]
 fn authorized_correctly_resolves_disputed_market() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3022,7 +3803,7 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(0)
         ));
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
+        let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
         assert_eq!(charlie_balance, 1_000 * BASE - CENT);
 
         let dispute_at = grace_period + 1 + 1;
@@ -3033,8 +3814,15 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         // Fred authorizses an outcome, but fat-fingers it on the first try.
         assert_ok!(Authorized::authorize_market_outcome(
@@ -3064,21 +3852,42 @@ fn authorized_correctly_resolves_disputed_market() {
         );
         assert_eq!(market_ids_1.len(), 1);
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get() - 1);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Disputed);
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         run_blocks(1);
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE - CENT);
+        }
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -3087,30 +3896,46 @@ fn authorized_correctly_resolves_disputed_market() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
-        let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
+        if base_asset == Asset::Ztg {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+        } else {
+            let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
+            assert_eq!(charlie_balance, 1_000 * BASE);
+        }
+        let charlie_reserved_2 = AssetManager::reserved_balance(Asset::Ztg, &CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
 
-        let alice_balance = Balances::free_balance(&ALICE);
+        let alice_balance = AssetManager::free_balance(Asset::Ztg, &ALICE);
         assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
-        let bob_balance = Balances::free_balance(&BOB);
+        let bob_balance = AssetManager::free_balance(Asset::Ztg, &BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
 
         assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn approve_market_correctly_unreserves_advisory_bond() {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3128,6 +3953,13 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();
         assert!(market.bonds.creation.unwrap().is_settled);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3141,6 +3973,7 @@ fn deploy_swap_pool_correctly_sets_weight_of_base_asset() {
         ];
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
+            Asset::Ztg,
             ALICE,
             MarketPeriod::Block(0..42),
             get_deadlines(),
@@ -3166,6 +3999,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
         let category_count = 5;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3202,6 +4036,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
         let category_count = 5;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3235,11 +4070,13 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
 #[test]
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_oracle_report()
  {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3265,17 +4102,26 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             Balances::free_balance(&ALICE),
             alice_balance_before + ValidityBond::get() + OracleBond::get()
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_outsider_report()
  {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -3381,17 +4227,26 @@ fn outsider_reports_wrong_outcome() {
             Balances::free_balance(&EVE),
             eve_balance_before + dispute_bond + OutsiderBond::get() + OracleBond::get()
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_oracle_report()
  {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3417,17 +4272,26 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         check_reserve(&ALICE, 0);
         // Check that nothing got slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_outsider_report()
  {
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3453,6 +4317,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         // Check that oracle bond got slashed
         check_reserve(&ALICE, 0);
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3460,11 +4331,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_with_correct_disputed_outcome_with_oracle_report()
  {
     // Oracle reports in time but incorrect report, so OracleBond gets slashed on resolution
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3493,6 +4366,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3500,11 +4380,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_with_correct_disputed_outcome_with_oracle_report()
  {
     // Oracle reports in time but incorrect report, so OracleBond gets slashed on resolution
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3534,6 +4416,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3541,11 +4430,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_with_wrong_disputed_outcome_with_oracle_report()
  {
     // Oracle reports in time and correct report, so OracleBond does not get slashed on resolution
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3583,6 +4474,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             Balances::free_balance(&ALICE),
             alice_balance_before + ValidityBond::get() + OracleBond::get()
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3590,11 +4488,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_market_with_wrong_disputed_outcome_with_oracle_report()
  {
     // Oracle reports in time and correct report, so OracleBond does not get slashed on resolution
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3630,6 +4530,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3637,11 +4544,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_with_disputed_outcome_with_outsider_report()
  {
     // Oracle does not report in time, so OracleBond gets slashed on resolution
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3692,6 +4601,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             Balances::free_balance(&outsider),
             outsider_balance_before + OracleBond::get() + OutsiderBond::get()
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3699,11 +4615,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_market_with_disputed_outcome_with_outsider_report()
  {
     // Oracle does not report in time, so OracleBond gets slashed on resolution
-    ExtBuilder::default().build().execute_with(|| {
+    // NOTE: Bonds are always in ZTG
+    let test = |base_asset: Asset<MarketId>| {
         reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            base_asset,
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3754,6 +4672,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             Balances::free_balance(&outsider),
             outsider_balance_before + OracleBond::get() + OutsiderBond::get()
         );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -3762,6 +4687,7 @@ fn report_fails_on_market_state_proposed() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3783,6 +4709,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3804,6 +4731,7 @@ fn report_fails_on_market_state_collecting_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             get_deadlines(),
@@ -3825,6 +4753,7 @@ fn report_fails_on_market_state_insufficient_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             get_deadlines(),
@@ -3850,6 +4779,7 @@ fn report_fails_on_market_state_active() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3871,6 +4801,7 @@ fn report_fails_on_market_state_suspended() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3896,6 +4827,7 @@ fn report_fails_on_market_state_resolved() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3921,6 +4853,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
+            Asset::Ztg,
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -3939,6 +4872,118 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle,
+        );
+    });
+}
+
+#[test]
+fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 1;
+        frame_system::Pallet::<Runtime>::set_block_number(now);
+        let start = 5;
+        let end = now + <Runtime as Config>::MaxMarketLifetime::get();
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(start..end),
+            get_deadlines(),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test]
+fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 12_001u64;
+        Timestamp::set_timestamp(now);
+        let start = 5 * MILLISECS_PER_BLOCK as u64;
+        let end =
+            now + <Runtime as Config>::MaxMarketLifetime::get() * (MILLISECS_PER_BLOCK as u64);
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+    });
+}
+
+#[test]
+fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 1;
+        frame_system::Pallet::<Runtime>::set_block_number(now);
+        let start = 5;
+        let end = now + <Runtime as Config>::MaxMarketLifetime::get() + 1;
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                Asset::Ztg,
+                BOB,
+                MarketPeriod::Block(start..end),
+                get_deadlines(),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::MarketDurationTooLong,
+        );
+    });
+}
+
+#[test]
+fn create_market_fails_if_market_duration_is_too_long_in_moments() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = 12_001u64;
+        Timestamp::set_timestamp(now);
+        let start = 5 * MILLISECS_PER_BLOCK as u64;
+        let end = now
+            + (<Runtime as Config>::MaxMarketLifetime::get() + 1) * (MILLISECS_PER_BLOCK as u64);
+        assert!(
+            end > start,
+            "Test failed due to misconfiguration: `MaxMarketLifetime` is too small"
+        );
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                Asset::Ztg,
+                BOB,
+                MarketPeriod::Timestamp(start..end),
+                get_deadlines(),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::MarketDurationTooLong,
         );
     });
 }
@@ -3984,6 +5029,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let dispute_mechanism = MarketDisputeMechanism::Authorized;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(creator),
+            Asset::Ztg,
             oracle,
             period.clone(),
             deadlines,
@@ -4012,7 +5058,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
 }
 
 fn deploy_swap_pool(
-    market: Market<AccountIdTest, Balance, BlockNumber, Moment>,
+    market: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<u128>>,
     market_id: u128,
 ) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
@@ -4032,9 +5078,14 @@ fn deploy_swap_pool(
 }
 
 // Common code of `scalar_market_correctly_resolves_*`
-fn scalar_market_correctly_resolves_common(reported_value: u128) {
+fn scalar_market_correctly_resolves_common(base_asset: Asset<MarketId>, reported_value: u128) {
     let end = 100;
-    simple_create_scalar_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+    simple_create_scalar_market(
+        base_asset,
+        MarketCreation::Permissionless,
+        0..end,
+        ScoringRule::CPMM,
+    );
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
     assert_ok!(Tokens::transfer(
         Origin::signed(CHARLIE),
@@ -4065,14 +5116,14 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
 
     // Check balances before redeeming (just to make sure that our tests are based on correct
     // assumptions)!
-    assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
-    assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
+    assert_eq!(AssetManager::free_balance(base_asset, &CHARLIE), 900 * BASE);
+    assert_eq!(AssetManager::free_balance(base_asset, &EVE), 1000 * BASE);
 
     assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
     assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
     let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
     for asset in assets.iter() {
-        assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
-        assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
+        assert_eq!(AssetManager::free_balance(*asset, &CHARLIE), 0);
+        assert_eq!(AssetManager::free_balance(*asset, &EVE), 0);
     }
 }

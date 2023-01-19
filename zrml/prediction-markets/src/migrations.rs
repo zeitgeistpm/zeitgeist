@@ -34,8 +34,8 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::types::{
-    Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-    MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
+    Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
@@ -175,6 +175,13 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
             let old_market = old_markets
                 .get(&market_id)
                 .expect(&format!("Market {:?} not found", market_id)[..]);
+            assert_eq!(
+                new_market.base_asset,
+                Asset::Ztg,
+                "found unexpected base_asset in new_market. market_id: {:?}, base_asset: {:?}",
+                market_id,
+                new_market.base_asset
+            );
             assert_eq!(new_market.creator, old_market.creator);
             assert_eq!(new_market.creation, old_market.creation);
             assert_eq!(new_market.creator_fee, old_market.creator_fee);
@@ -592,8 +599,10 @@ mod tests_authorized {
         StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
     }
 
-    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u128, u64, u64> {
+    fn get_sample_market() -> zeitgeist_primitives::types::Market<u128, u128, u64, u64, Asset<u128>>
+    {
         zeitgeist_primitives::types::Market {
+            base_asset: Asset::Ztg,
             creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
             creator_fee: 0,
             creator: ALICE,

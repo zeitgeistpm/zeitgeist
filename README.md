@@ -15,7 +15,7 @@ prediction markets. The platform's native currency, the ZTG, is used to sway the
 direction of the network, and as a means of last-call dispute resolution.
 Additionally, Zeitgeist is a protocol for efficient trading of prediction market
 shares and will one day become the backbone of the decentralized finance
-ecosystem by allowing for traders to create complex financial contracts on
+ecosystem by allowing traders to create complex financial contracts on
 virtually _anything_.
 
 ## Modules
@@ -46,7 +46,7 @@ virtually _anything_.
   constants.
 - [rikiddo](./zrml/rikiddo) - The module contains a completely modular
   implementation of our novel market scoring rule [Rikiddo][rikiddo]. It also
-  offer a pallet, that other pallets can use to utilize the Rikiddo market
+  offers a pallet, that other pallets can use to utilize the Rikiddo market
   scoring rule. Rikiddo can be used by the automated market maker to determine
   swap prices.
 
@@ -62,7 +62,7 @@ project and type:
 cargo build --release
 ```
 
-To build the parachain version, execute the following conmmand:
+To build the parachain version, execute the following command:
 
 ```
 cargo build --features parachain --release

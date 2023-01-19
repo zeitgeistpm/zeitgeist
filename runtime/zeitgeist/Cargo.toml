@@ -119,6 +119,7 @@ xcm-emulator = { rev = "ab5cd6c5fabe6ddda52ed6803ee1bf54c258fefe", git = "https:
 [features]
 default = ["std"]
 parachain = [
+    "zrml-prediction-markets/parachain",
     # Cumulus
 
     "cumulus-pallet-dmp-queue",
@@ -378,7 +379,7 @@ with-global-disputes = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.7"
+version = "0.3.8"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
