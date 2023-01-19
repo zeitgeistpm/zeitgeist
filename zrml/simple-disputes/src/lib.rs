@@ -130,6 +130,7 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
+        Asset<MarketIdOf<T>>,
     >;
     pub(crate) type DisputesOf<T> = BoundedVec<
         MarketDispute<

@@ -26,12 +26,13 @@ use zeitgeist_primitives::{
     constants::mock::{OutcomeBond, OutcomeFactor},
     traits::DisputeApi,
     types::{
-        Deadlines, Market, MarketBonds, MarketCreation, MarketDispute, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, OutcomeReport, ScoringRule,
+        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, OutcomeReport, ScoringRule,
     },
 };
 
 const DEFAULT_MARKET: MarketOf<Runtime> = Market {
+    base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,

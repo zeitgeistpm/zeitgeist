@@ -46,7 +46,7 @@ mod pallet {
     use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{AuthorityReport, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{Asset, AuthorityReport, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -62,13 +62,13 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-
     pub type CacheSize = ConstU32<64>;
     pub(crate) type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
+        Asset<MarketIdOf<T>>,
     >;
 
     #[pallet::call]
@@ -287,16 +287,16 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, BalanceOf<T>, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
 {
     use frame_support::traits::Get;
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::{MarketBonds, ScoringRule};
+    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
+        base_asset: Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
         creator: T::PalletId::get().into_account_truncating(),

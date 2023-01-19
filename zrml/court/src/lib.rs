@@ -66,7 +66,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -96,6 +96,7 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
+        Asset<MarketIdOf<T>>,
     >;
 
     #[pallet::call]

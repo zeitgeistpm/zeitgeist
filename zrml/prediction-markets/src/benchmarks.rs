@@ -90,6 +90,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {
+        base_asset: Asset::Ztg,
         oracle,
         period,
         deadlines,
@@ -624,6 +625,7 @@ benchmarks! {
         }
     }: _(
             RawOrigin::Signed(caller),
+            Asset::Ztg,
             oracle,
             period,
             deadlines,
@@ -646,6 +648,7 @@ benchmarks! {
         let (caller, oracle, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
         Call::<T>::create_market {
+            base_asset: Asset::Ztg,
             oracle: oracle.clone(),
             period: period.clone(),
             deadlines,
@@ -676,6 +679,7 @@ benchmarks! {
         };
     }: _(
             RawOrigin::Signed(caller),
+            Asset::Ztg,
             market_id,
             oracle,
             period,

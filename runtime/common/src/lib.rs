@@ -59,7 +59,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
@@ -72,7 +72,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
@@ -1018,6 +1018,8 @@ macro_rules! impl_config_traits {
             >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
+            #[cfg(feature = "parachain")]
+            type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type Swaps = Swaps;
