@@ -35,7 +35,8 @@ where
     let slot = timestamp / pallet_aura::Pallet::<T>::slot_duration();
     let digest = Digest { logs: vec![DigestItem::PreRuntime(AURA_ENGINE_ID, slot.encode())] };
     frame_system::Pallet::<T>::initialize(&block_number, &Default::default(), &digest);
-    // NOTE: pallet aura only needed with the `parachain` feature
+    // NOTE: pallet aura only used in standalone mode when
+    //       the `parachain` feature is disabled.
     pallet_aura::Pallet::<T>::on_initialize(block_number);
     pallet_timestamp::Pallet::<T>::set_timestamp(timestamp);
 }

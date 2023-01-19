@@ -73,6 +73,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "orml-traits/std",
+    "pallet-aura?/std",
     "parity-scale-codec/std",
     'scale-info/std',
     "sp-arithmetic/std",
