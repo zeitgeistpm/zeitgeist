@@ -77,6 +77,8 @@ pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
 // Prediction Markets
+/// The maximum allowed market life time, measured in blocks.
+pub const MAX_MARKET_LIFETIME: BlockNumber = 365 * BLOCKS_PER_DAY;
 /// Max. categories in a prediction market.
 pub const MAX_CATEGORIES: u16 = 64;
 /// The dispute_duration is time where users can dispute the outcome.

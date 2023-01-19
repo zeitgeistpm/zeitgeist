@@ -59,7 +59,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
@@ -72,7 +72,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_prediction_markets::migrations::RecordBonds<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
         >;
@@ -999,13 +999,13 @@ macro_rules! impl_config_traits {
             // type LiquidityMining = LiquidityMining;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
+            type MaxMarketLifetime = MaxMarketLifetime;
             type MinDisputeDuration = MinDisputeDuration;
             type MaxDisputeDuration = MaxDisputeDuration;
             type MaxGracePeriod = MaxGracePeriod;
             type MaxOracleDuration = MaxOracleDuration;
             type MinOracleDuration = MinOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;
-            type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
             type MinSubsidyPeriod = MinSubsidyPeriod;
             type MaxEditReasonLen = MaxEditReasonLen;
@@ -1019,6 +1019,8 @@ macro_rules! impl_config_traits {
             >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
+            #[cfg(feature = "parachain")]
+            type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type Swaps = Swaps;
