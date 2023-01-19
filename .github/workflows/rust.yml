@@ -94,7 +94,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Tests
-        run: ./scripts/tests/misc.sh
+        run: ./scripts/tests/misc.sh -Cinstrument-coverage
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
