@@ -20,6 +20,8 @@
 
 extern crate alloc;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarks;
 mod mock;
 mod simple_disputes_pallet_api;
 mod tests;
@@ -27,9 +29,16 @@ pub mod weights;
 
 pub use pallet::*;
 pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
+use zeitgeist_primitives::{
+    traits::{DisputeApi, DisputeResolutionApi, ZeitgeistAssetManager},
+    types::{
+        Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport, Report,
+    },
+};
 
 #[frame_support::pallet]
 mod pallet {
+    use super::*;
     use crate::{weights::WeightInfoZeitgeist, SimpleDisputesPalletApi};
     use alloc::vec::Vec;
     use core::marker::PhantomData;
@@ -48,13 +57,7 @@ mod pallet {
         traits::{CheckedDiv, Saturating},
         DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::{
-        traits::{DisputeApi, DisputeResolutionApi, ZeitgeistAssetManager},
-        types::{
-            Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport,
-            Report,
-        },
-    };
+
     #[cfg(feature = "with-global-disputes")]
     use zrml_global_disputes::GlobalDisputesPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -128,6 +131,14 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
     >;
+    pub(crate) type DisputesOf<T> = BoundedVec<
+        MarketDispute<
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::BlockNumber,
+            BalanceOf<T>,
+        >,
+        <T as Config>::MaxDisputes,
+    >;
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
@@ -135,13 +146,8 @@ mod pallet {
     /// For each market, this holds the dispute information for each dispute that's
     /// been issued.
     #[pallet::storage]
-    pub type Disputes<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>, T::MaxDisputes>,
-        ValueQuery,
-    >;
+    pub type Disputes<T: Config> =
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, DisputesOf<T>, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -444,5 +450,41 @@ mod pallet {
         T::OutcomeBond::get().saturating_add(
             T::OutcomeFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
         )
+    }
+}
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>()
+-> zeitgeist_primitives::types::Market<T::AccountId, BalanceOf<T>, T::BlockNumber, MomentOf<T>>
+where
+    T: crate::Config,
+{
+    use frame_support::traits::Get;
+    use sp_runtime::{traits::AccountIdConversion, SaturatedConversion};
+    use zeitgeist_primitives::types::{MarketBonds, ScoringRule};
+
+    zeitgeist_primitives::types::Market {
+        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: T::PalletId::get().into_account_truncating(),
+        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes,
+        metadata: Default::default(),
+        oracle: T::PalletId::get().into_account_truncating(),
+        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        deadlines: zeitgeist_primitives::types::Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 42_u32.into(),
+        },
+        report: Some(zeitgeist_primitives::types::Report {
+            outcome: OutcomeReport::Scalar(0),
+            at: 0u64.saturated_into(),
+            by: T::PalletId::get().into_account_truncating(),
+        }),
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
     }
 }
