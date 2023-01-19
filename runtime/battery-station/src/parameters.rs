@@ -62,9 +62,10 @@ impl MinimumPeriod {
         {
             use frame_benchmarking::benchmarking::get_whitelist;
             // Should that condition be true, we can assume that we are in a benchmark environment.
-            if !get_whitelist().is_empty() { return u64::MAX; }
+            if !get_whitelist().is_empty() {
+                return u64::MAX;
+            }
         }
-
 
         MILLISECS_PER_BLOCK as u64 / 2
     }
