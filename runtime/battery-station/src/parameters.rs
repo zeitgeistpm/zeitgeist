@@ -50,38 +50,6 @@ pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 
-// Timestamp
-/// Custom getter for minimum timestamp delta.
-/// This ensures that consensus systems like Aura don't break assertions
-/// in a benchmark environment
-pub struct MinimumPeriod;
-impl MinimumPeriod {
-    /// Returns the value of this parameter type.
-    pub fn get() -> u64 {
-        #[cfg(feature = "runtime-benchmarks")]
-        {
-            use frame_benchmarking::benchmarking::get_whitelist;
-            // Should that condition be true, we can assume that we are in a benchmark environment.
-            if !get_whitelist().is_empty() {
-                return u64::MAX;
-            }
-        }
-
-        MILLISECS_PER_BLOCK as u64 / 2
-    }
-}
-impl<I: From<u64>> frame_support::traits::Get<I> for MinimumPeriod {
-    fn get() -> I {
-        I::from(Self::get())
-    }
-}
-impl frame_support::traits::TypedGet for MinimumPeriod {
-    type Type = u64;
-    fn get() -> u64 {
-        Self::get()
-    }
-}
-
 parameter_types! {
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
@@ -344,6 +312,10 @@ parameter_types! {
     pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
     /// Treasury account.
     pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+
+    // Timestamp
+    /// MinimumPeriod for Timestamp
+    pub const MinimumPeriodValue: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.

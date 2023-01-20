@@ -327,9 +327,9 @@ checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
 name = "async-trait"
-version = "0.1.61"
+version = "0.1.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "705339e0e4a9690e2908d2b3d049d85682cf19fbd5782494498fbf7003a6a282"
+checksum = "689894c2db1ea643a50834b999abf1c110887402542955ff5451dab8f861f9ed"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1908,9 +1908,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51d1075c37807dcf850c379432f0df05ba52cc30f279c5cfc43cc221ce7f8579"
+checksum = "b61a7545f753a88bcbe0a70de1fcc0221e10bfc752f576754fa91e663db1622e"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -1920,9 +1920,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5044281f61b27bc598f2f6647d480aed48d2bf52d6eb0b627d84c0361b17aa70"
+checksum = "f464457d494b5ed6905c63b0c4704842aba319084a0a3561cdc1359536b53200"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -1935,15 +1935,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61b50bc93ba22c27b0d31128d2d130a0a6b3d267ae27ef7e4fae2167dfe8781c"
+checksum = "43c7119ce3a3701ed81aca8410b9acf6fc399d2629d057b87e2efa4e63a3aaea"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e61fda7e62115119469c7b3591fd913ecca96fb766cfd3f2e2502ab7bc87a5"
+checksum = "65e07508b90551e610910fa648a1878991d367064997a596135b86df30daf07e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5077,9 +5077,9 @@ dependencies = [
 
 [[package]]
 name = "num-complex"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ae39348c8bc5fbd7f40c727a9925f03517afd2ab27d46702108b6a7e5414c19"
+checksum = "02e0d21255c828d6f128a1e41534206671e8c3ea0c62f32291e808dc82cff17d"
 dependencies = [
  "num-traits",
 ]
@@ -11488,9 +11488,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.10"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1333c76748e868a4d9d1017b5ab53171dfd095f70c712fdb4653a406547f598f"
+checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
 dependencies = [
  "serde",
 ]
@@ -12363,9 +12363,9 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "4.3.0"
+version = "4.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c831fbbee9e129a8cf93e7747a82da9d95ba8e16621cae60ec2cdc849bacb7b"
+checksum = "2441c784c52b289a054b7201fc93253e288f094e2f4be9058343127c4226a269"
 dependencies = [
  "either",
  "libc",
@@ -12866,7 +12866,6 @@ name = "zrml-authorized"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -12885,7 +12884,6 @@ version = "0.3.8"
 dependencies = [
  "arrayvec 0.7.2",
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -12905,7 +12903,6 @@ name = "zrml-global-disputes"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "num-traits",
@@ -12926,7 +12923,6 @@ name = "zrml-liquidity-mining"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -12944,7 +12940,6 @@ dependencies = [
 name = "zrml-market-commons"
 version = "0.3.8"
 dependencies = [
- "frame-executive",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -12962,7 +12957,6 @@ name = "zrml-orderbook-v1"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "orml-tokens",
@@ -12992,7 +12986,6 @@ name = "zrml-prediction-markets"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "more-asserts",
@@ -13054,7 +13047,6 @@ version = "0.3.8"
 dependencies = [
  "arbitrary",
  "cfg-if 1.0.0",
- "frame-executive",
  "frame-support",
  "frame-system",
  "hashbrown 0.11.2",
@@ -13087,7 +13079,6 @@ name = "zrml-simple-disputes"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -13105,7 +13096,6 @@ name = "zrml-styx"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -13122,7 +13112,6 @@ name = "zrml-swaps"
 version = "0.3.8"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "more-asserts",

@@ -1,7 +1,6 @@
 [dependencies]
 arbitrary = { version = "1.0.1", features = ["derive"], optional = true }
 cfg-if = { version = "1.0.0", default-features = false }
-frame-executive = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 hashbrown = { default-features = true, version = "0.11" }
