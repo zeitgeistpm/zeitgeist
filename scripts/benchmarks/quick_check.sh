@@ -12,13 +12,13 @@ if [ ! -d "./scripts/benchmarks" ]; then
     exit 1
 fi;
 
-export FRAME_PALLETS_STEPS=1
+export FRAME_PALLETS_STEPS=2
 export FRAME_PALLETS_RUNS=0
 
-export ORML_PALLETS_STEPS=1
+export ORML_PALLETS_STEPS=2
 export ORML_PALLETS_RUNS=0
 
-export ZEITGEIST_PALLETS_STEPS=1
+export ZEITGEIST_PALLETS_STEPS=2
 export ZEITGEIST_PALLETS_RUNS=0
 
 export PROFILE=release

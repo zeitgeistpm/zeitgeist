@@ -150,14 +150,17 @@ macro_rules! generate_generic_genesis_function {
                 parachain_info: $runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
                 #[cfg(feature = "parachain")]
                 parachain_staking: $runtime::ParachainStakingConfig {
+                    blocks_per_round: acs.blocks_per_round,
                     candidates: acs
                         .candidates
                         .iter()
                         .cloned()
                         .map(|(account, _, bond)| (account, bond))
                         .collect(),
+                    collator_commission: acs.collator_commission,
                     inflation_config: acs.inflation_info,
                     delegations: acs.nominations,
+                    parachain_bond_reserve_percent: acs.parachain_bond_reserve_percent,
                 },
                 #[cfg(feature = "parachain")]
                 parachain_system: Default::default(),
