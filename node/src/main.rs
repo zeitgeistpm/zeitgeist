@@ -17,10 +17,10 @@
 
 #![warn(unused_extern_crates)]
 
+mod benchmarking;
 mod chain_spec;
 mod cli;
 mod command;
-mod command_helper;
 mod rpc;
 #[macro_use]
 mod service;

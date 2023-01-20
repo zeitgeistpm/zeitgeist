@@ -56,17 +56,18 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Authorized AuthorizedOutcomeReports (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
     fn authorize_market_outcome_first_report(m: u32) -> Weight {
-        (31_031_000 as Weight)
+        Weight::from_ref_time(31_031_000)
             // Standard Error: 0
-            .saturating_add((85_000 as Weight).saturating_mul(m as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(Weight::from_ref_time(85_000))
+            .saturating_mul(m.into())
+            .saturating_add(T::DbWeight::get().reads(3_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
     }
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: Authorized AuthorizedOutcomeReports (r:1 w:1)
     fn authorize_market_outcome_existing_report() -> Weight {
-        (24_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(24_000_000)
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
 }
