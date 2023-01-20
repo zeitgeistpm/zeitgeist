@@ -34,7 +34,8 @@ use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{
-    traits::AccountIdConversion, FixedPointNumber, Perbill, Percent, Permill, Perquintill,
+    traits::{AccountIdConversion, Bounded},
+    FixedPointNumber, Perbill, Percent, Permill, Perquintill,
 };
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
@@ -43,7 +44,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
+    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
@@ -277,9 +279,6 @@ parameter_types! {
     .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
     .build_or_panic();
 
-    // Timestamp
-    pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
-
     // Transaction payment
     /// A fee mulitplier for Operational extrinsics to compute “virtual tip”
     /// to boost their priority.
@@ -296,6 +295,12 @@ parameter_types! {
     /// Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
     /// that this value is not too low.
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
+    /// Maximum amount of the multiplier.
+    pub MaximumMultiplier: Multiplier = Bounded::max_value();
+
+    // Timestamp
+    /// MinimumPeriod for Timestamp
+    pub const MinimumPeriodValue: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 
     // Treasury
     /// Percentage of spare funds (if any) that are burnt per spend period.
@@ -382,5 +387,10 @@ parameter_type_with_key! {
 
 // Parameterized slow adjusting fee updated based on
 // https://research.web3.foundation/en/latest/polkadot/overview/2-token-economics.html#-2.-slow-adjusting-mechanism
-pub type SlowAdjustingFeeUpdate<R> =
-    TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+pub type SlowAdjustingFeeUpdate<R> = TargetedFeeAdjustment<
+    R,
+    TargetBlockFullness,
+    AdjustmentVariable,
+    MinimumMultiplier,
+    MaximumMultiplier,
+>;

@@ -56,14 +56,14 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:2 w:2)
     fn reserve_outcome(d: u32, r: u32, e: u32) -> Weight {
-        (400_160_000 as Weight)
+        Weight::from_ref_time(400_160_000)
             // Standard Error: 1_302_000
-            .saturating_add((3_511_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(Weight::from_ref_time(3_511_000).saturating_mul(d.into()))
             // Standard Error: 69_000
-            .saturating_add((324_000 as Weight).saturating_mul(r as Weight))
+            .saturating_add(Weight::from_ref_time(324_000).saturating_mul(r.into()))
             // Standard Error: 69_000
-            .saturating_add((311_000 as Weight).saturating_mul(e as Weight))
-            .saturating_add(T::DbWeight::get().reads(5 as Weight))
-            .saturating_add(T::DbWeight::get().writes(4 as Weight))
+            .saturating_add(Weight::from_ref_time(311_000).saturating_mul(e.into()))
+            .saturating_add(T::DbWeight::get().reads(5))
+            .saturating_add(T::DbWeight::get().writes(4))
     }
 }

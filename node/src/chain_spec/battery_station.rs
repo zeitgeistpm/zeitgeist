@@ -34,7 +34,11 @@ use zeitgeist_primitives::{
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    battery_station_runtime::{CollatorDeposit, EligibilityValue, PolkadotXcmConfig},
+    crate::BATTERY_STATION_PARACHAIN_ID,
+    battery_station_runtime::{
+        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
+        DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
+    },
 };
 
 cfg_if::cfg_if! {
@@ -56,15 +60,18 @@ fn additional_chain_spec_staging_battery_station(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
     AdditionalChainSpec {
+        blocks_per_round: DefaultBlocksPerRound::get(),
         candidates: vec![(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
             hex!["e6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"]
                 .unchecked_into(),
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
         )],
+        collator_commission: DefaultCollatorCommission::get(),
         crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_BATTERY_STATION,
         inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
+        parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
         parachain_id,
     }
 }
@@ -131,7 +138,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
             generic_genesis(
                 additional_chain_spec_staging_battery_station(
                     #[cfg(feature = "parachain")]
-                    crate::BATTERY_STATION_PARACHAIN_ID.into(),
+                    BATTERY_STATION_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_battery_station(),
                 wasm,
@@ -145,7 +152,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
-            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
+            parachain_id: BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
