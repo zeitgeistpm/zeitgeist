@@ -1816,7 +1816,7 @@ macro_rules! create_common_tests {
                     let mut t: sp_io::TestExternalities =
                         frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
                     t.execute_with(|| {
-                        let not_whitelisted = AccountId::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+                        let not_whitelisted = AccountId::from([0u8; 32]);
                         assert!(!DustRemovalWhitelist::contains(&not_whitelisted))
                     });
                 }
