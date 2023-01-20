@@ -15,7 +15,7 @@ export FRAME_WEIGHT_TEMPLATE="./misc/frame_weight_template.hbs"
 # pallet_crowdloan_rewards benchmark lead to an error within the verify function (deprecated)
 export FRAME_PALLETS_PARACHAIN=( 
                 cumulus_pallet_xcmp_queue \
-                # pallet_author_inherent \
+                pallet_author_inherent \
                 pallet_author_slot_filter \
                 pallet_author_mapping \
                 pallet_parachain_staking \

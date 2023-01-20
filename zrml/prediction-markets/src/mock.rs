@@ -27,6 +27,8 @@ use frame_support::{
     traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+#[cfg(feature = "parachain")]
+use orml_asset_registry::AssetMetadata;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
@@ -35,15 +37,15 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
-        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
-        MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
-        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
-        MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
-        MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
-        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
+        CourtCaseDuration, CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
+        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets,
+        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod,
+        MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
+        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -138,6 +140,8 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    #[cfg(feature = "parachain")]
+    type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
@@ -158,7 +162,7 @@ impl crate::Config for Runtime {
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
-    type MaxMarketPeriod = MaxMarketPeriod;
+    type MaxMarketLifetime = MaxMarketLifetime;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type MaxEditReasonLen = MaxEditReasonLen;
@@ -226,6 +230,14 @@ impl orml_tokens::Config for Runtime {
     type WeightInfo = ();
 }
 
+#[cfg(feature = "parachain")]
+crate::orml_asset_registry::impl_mock_registry! {
+    MockRegistry,
+    CurrencyId,
+    Balance,
+    zeitgeist_primitives::types::CustomMetadata
+}
+
 impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
@@ -252,16 +264,19 @@ ord_parameter_types! {
 }
 
 impl zrml_authorized::Config for Runtime {
-    type Event = Event;
-    type MarketCommons = MarketCommons;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
+    type CorrectionPeriod = CorrectionPeriod;
+    type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
@@ -303,6 +318,7 @@ impl zrml_rikiddo::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
 }
@@ -392,7 +408,51 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
-
+        #[cfg(feature = "parachain")]
+        use frame_support::traits::GenesisBuild;
+        #[cfg(feature = "parachain")]
+        orml_tokens::GenesisConfig::<Runtime> {
+            balances: (0..69)
+                .into_iter()
+                .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
+                .collect(),
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+        #[cfg(feature = "parachain")]
+        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+            allow_as_base_asset: true,
+            ..Default::default()
+        };
+        #[cfg(feature = "parachain")]
+        orml_asset_registry_mock::GenesisConfig {
+            metadata: vec![
+                (
+                    CurrencyId::ForeignAsset(100),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "ACALA USD".as_bytes().to_vec(),
+                        symbol: "AUSD".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: custom_metadata,
+                    },
+                ),
+                (
+                    CurrencyId::ForeignAsset(420),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "FANCY_TOKEN".as_bytes().to_vec(),
+                        symbol: "FTK".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: zeitgeist_primitives::types::CustomMetadata::default(),
+                    },
+                ),
+            ],
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
         t.into()
     }
 }

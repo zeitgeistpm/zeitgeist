@@ -34,7 +34,8 @@ use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{
-    traits::AccountIdConversion, FixedPointNumber, Perbill, Percent, Permill, Perquintill,
+    traits::{AccountIdConversion, Bounded},
+    FixedPointNumber, Perbill, Percent, Permill, Perquintill,
 };
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
@@ -43,7 +44,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
+    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
@@ -51,6 +53,7 @@ pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 parameter_types! {
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
+    pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
 
     // Authority
     pub const MaxAuthorities: u32 = 32;
@@ -146,6 +149,7 @@ parameter_types! {
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 25 * CENT;
+    /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
@@ -155,31 +159,35 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
-    /// Maximum number of disputes.
-    pub const MaxDisputes: u16 = 6;
-    /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
-    pub const MinCategories: u16 = 2;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
-    pub const MinSubsidyPeriod: Moment = 60_000;
-    // 2_678_400_000 = 31 days.
-    /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
-    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    /// The dispute_duration is time where users can dispute the outcome.
-    /// Minimum block period for a dispute.
-    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
     /// Maximum block period for a dispute.
     pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
+    /// Maximum number of disputes.
+    pub const MaxDisputes: u16 = 6;
+    /// Maximum string length for edit reason.
+    pub const MaxEditReasonLen: u32 = 1024;
     /// Maximum block period for a grace_period.
     /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
     pub const MaxGracePeriod: BlockNumber = MAX_GRACE_PERIOD;
-    /// Minimum block period for a oracle_duration.
-    pub const MinOracleDuration: BlockNumber = MIN_ORACLE_DURATION;
+    /// The maximum allowed duration of a market from creation to market close in blocks.
+    pub const MaxMarketLifetime: BlockNumber = MAX_MARKET_LIFETIME;
     /// Maximum block period for a oracle_duration.
     /// The oracle_duration is a duration where the oracle has to submit its report.
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
-    /// The maximum market period.
-    pub const MaxMarketPeriod: Moment = u64::MAX / 2;
+    /// Maximum string length allowed for reject reason.
+    pub const MaxRejectReasonLen: u32 = 1024;
+    // 2_678_400_000 = 31 days.
+    /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
+    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
+    pub const MinCategories: u16 = 2;
+    /// The dispute_duration is time where users can dispute the outcome.
+    /// Minimum block period for a dispute.
+    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
+    /// Minimum block period for a oracle_duration.
+    pub const MinOracleDuration: BlockNumber = MIN_ORACLE_DURATION;
+    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
+    pub const MinSubsidyPeriod: Moment = 60_000;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 50 * CENT;
@@ -188,10 +196,6 @@ parameter_types! {
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 50 * CENT;
-    /// Maximum string length for edit reason.
-    pub const MaxEditReasonLen: u32 = 1024;
-    /// Maximum string length allowed for reject reason.
-    pub const MaxRejectReasonLen: u32 = 1024;
 
     // Preimage
     pub const PreimageMaxSize: u32 = 4096 * 1024;
@@ -271,9 +275,6 @@ parameter_types! {
     .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
     .build_or_panic();
 
-    // Timestamp
-    pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
-
     // Transaction payment
     /// A fee mulitplier for Operational extrinsics to compute “virtual tip”
     /// to boost their priority.
@@ -290,6 +291,8 @@ parameter_types! {
     /// Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
     /// that this value is not too low.
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
+    /// Maximum amount of the multiplier.
+    pub MaximumMultiplier: Multiplier = Bounded::max_value();
 
     // Treasury
     /// Percentage of spare funds (if any) that are burnt per spend period.
@@ -309,6 +312,10 @@ parameter_types! {
     pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
     /// Treasury account.
     pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+
+    // Timestamp
+    /// MinimumPeriod for Timestamp
+    pub const MinimumPeriodValue: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.
@@ -398,5 +405,10 @@ parameter_type_with_key! {
 
 // Parameterized slow adjusting fee updated based on
 // https://research.web3.foundation/en/latest/polkadot/overview/2-token-economics.html#-2.-slow-adjusting-mechanism
-pub type SlowAdjustingFeeUpdate<R> =
-    TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+pub type SlowAdjustingFeeUpdate<R> = TargetedFeeAdjustment<
+    R,
+    TargetBlockFullness,
+    AdjustmentVariable,
+    MinimumMultiplier,
+    MaximumMultiplier,
+>;

@@ -1,20 +1,20 @@
 [dependencies]
 arrayvec = { default-features = false, version = "0.7" }
-frame-benchmarking = { branch = "polkadot-v0.9.26", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
-frame-support = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 rand = { default-features = false, features = ["alloc", "std_rng"], version = "0.8" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-runtime = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
-pallet-balances = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
-pallet-randomness-collective-flip = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.26", git = "https://github.com/paritytech/substrate" }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
 zeitgeist-primitives = { default-features = false, features = ["mock"], path = "../../primitives" }
 
 [features]
@@ -41,4 +41,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-court"
-version = "0.3.7"
+version = "0.3.8"

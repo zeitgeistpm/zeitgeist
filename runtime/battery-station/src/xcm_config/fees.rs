@@ -1,3 +1,4 @@
+// Copyright 2021 Centrifuge Foundation (centrifuge.io).
 // Copyright 2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -15,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{xcm_config::asset_registry::CustomMetadata, Balance, CurrencyId};
+use crate::{Balance, CurrencyId};
 use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
 use xcm::latest::MultiLocation;
-use zeitgeist_primitives::constants::BalanceFractionalDecimals;
+use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::CustomMetadata};
 use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
 
 /// The fee cost per second for transferring the native token in cents.
@@ -28,8 +29,8 @@ pub fn native_per_second() -> Balance {
 }
 
 pub fn default_per_second(decimals: u32) -> Balance {
-    let base_weight = Balance::from(ExtrinsicBaseWeight::get());
-    let default_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+    let base_weight = ExtrinsicBaseWeight::get().ref_time() as u128;
+    let default_per_second = (WEIGHT_PER_SECOND.ref_time() as u128) / base_weight;
     default_per_second * base_fee(decimals)
 }
 

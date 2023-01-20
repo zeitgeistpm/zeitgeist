@@ -1,9 +1,9 @@
 [dependencies]
-jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
+jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
 parity-scale-codec = { default-features = false, version = "3.0.0" }
-sp-api = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-blockchain = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "polkadot-v0.9.26", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-api = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+sp-blockchain = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../../primitives" }
 zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "../runtime-api" }
 
@@ -11,4 +11,4 @@ zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = 
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-swaps-rpc"
-version = "0.3.7"
+version = "0.3.8"
