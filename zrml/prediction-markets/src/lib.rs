@@ -315,7 +315,7 @@ mod pallet {
                 )
                     .into())
             } else {
-                Ok((None, Pays::No).into())
+                Ok((Option::<Weight>::None, Pays::No).into())
             }
         }
 
@@ -432,7 +432,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
-            let mut extra_weight = 0;
+            let mut extra_weight = Weight::zero();
             let mut status = MarketStatus::Active;
 
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
@@ -729,7 +729,7 @@ mod pallet {
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
-            let mut extra_weight = 0;
+            let mut extra_weight = Weight::zero();
 
             if market.status == MarketStatus::CollectingSubsidy {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
@@ -1126,7 +1126,8 @@ mod pallet {
                 return Ok(Some(T::WeightInfo::redeem_shares_scalar()).into());
             }
 
-            Ok(None.into())
+            let default_weight: Option<Weight> = None;
+            Ok((default_weight, Pays::No).into())
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
@@ -1753,7 +1754,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let mut total_weight: Weight = 0u64;
+            let mut total_weight: Weight = Weight::zero();
 
             // TODO(#808): Use weight when Rikiddo is ready
             let _ = Self::process_subsidy_collecting_markets(
@@ -2481,7 +2482,7 @@ mod pallet {
                 Self::unreserve_creation_bond(market_id)?;
             }
 
-            let mut total_weight = 0;
+            let mut total_weight: Weight = Weight::zero();
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
@@ -2514,7 +2515,7 @@ mod pallet {
             current_block: T::BlockNumber,
             current_time: MomentOf<T>,
         ) -> Weight {
-            let mut total_weight = 0;
+            let mut total_weight: Weight = Weight::zero();
             let dbweight = T::DbWeight::get();
             let one_read = T::DbWeight::get().reads(1);
             let one_write = T::DbWeight::get().writes(1);
@@ -2654,7 +2655,7 @@ mod pallet {
                 true
             };
 
-            let mut weight_basis = 0;
+            let mut weight_basis = Weight::zero();
             <MarketsCollectingSubsidy<T>>::mutate(
                 |e: &mut BoundedVec<
                     SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
@@ -2941,7 +2942,10 @@ mod pallet {
         type MaxDisputes = T::MaxDisputes;
         type Moment = MomentOf<T>;
 
-        fn resolve(market_id: &Self::MarketId, market: &MarketOf<T>) -> Result<u64, DispatchError> {
+        fn resolve(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Weight, DispatchError> {
             Self::on_resolution(market_id, market)
         }
 

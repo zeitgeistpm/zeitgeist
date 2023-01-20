@@ -3121,7 +3121,7 @@ fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
         let pool_id = 0;
         // Force the pool into the cache.
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
-        Swaps::on_idle(System::block_number(), Weight::max_value());
+        Swaps::on_idle(System::block_number(), Weight::MAX);
         System::assert_has_event(Event::ArbitrageSkipped(pool_id).into());
     });
 }
@@ -3156,7 +3156,7 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
 
         // Force arbitrage hook.
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
-        Swaps::on_idle(System::block_number(), Weight::max_value());
+        Swaps::on_idle(System::block_number(), Weight::MAX);
 
         let arbitrage_amount = 49_537_658_690;
         assert_eq!(
@@ -3216,7 +3216,7 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
 
         // Force arbitrage hook.
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
-        Swaps::on_idle(System::block_number(), Weight::max_value());
+        Swaps::on_idle(System::block_number(), Weight::MAX);
 
         assert_eq!(
             Currencies::free_balance(base_asset, &pool_account_id),
@@ -3241,8 +3241,8 @@ fn apply_to_cached_pools_only_drains_requested_pools() {
         let number_of_pools_to_retain: u32 = 3;
         Swaps::apply_to_cached_pools(
             pool_count.saturated_into::<u32>() - number_of_pools_to_retain,
-            |_| Ok(0),
-            Weight::max_value(),
+            |_| Ok(Weight::zero()),
+            Weight::MAX,
         );
         assert_eq!(
             PoolsCachedForArbitrage::<Runtime>::iter().count(),

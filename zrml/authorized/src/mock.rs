@@ -91,7 +91,7 @@ impl DisputeResolutionApi for MockResolution {
             Asset<Self::MarketId>,
         >,
     ) -> Result<Weight, DispatchError> {
-        Ok(0)
+        Ok(Weight::zero())
     }
 
     fn add_auto_resolve(

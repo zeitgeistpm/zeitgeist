@@ -45,7 +45,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin};
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -79,6 +79,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
                 zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
                 zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
             ),
@@ -536,9 +537,6 @@ macro_rules! impl_config_traits {
             type BlockAuthor = AuthorInherent;
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
-            type DefaultBlocksPerRound = DefaultBlocksPerRound;
-            type DefaultCollatorCommission = DefaultCollatorCommission;
-            type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
             type DelegationBondLessDelay = DelegationBondLessDelay;
             type Event = Event;
             type LeaveCandidatesDelay = LeaveCandidatesDelay;
@@ -645,7 +643,7 @@ macro_rules! impl_config_traits {
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
-            type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>; // weights::pallet_balances::WeightInfo<Runtime>;
+            type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
         }
 
         impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {
@@ -861,6 +859,38 @@ macro_rules! impl_config_traits {
             type NoPreimagePostponement = NoPreimagePostponement;
         }
 
+        // Timestamp
+        /// Custom getter for minimum timestamp delta.
+        /// This ensures that consensus systems like Aura don't break assertions
+        /// in a benchmark environment
+        pub struct MinimumPeriod;
+        impl MinimumPeriod {
+            /// Returns the value of this parameter type.
+            pub fn get() -> u64 {
+                #[cfg(feature = "runtime-benchmarks")]
+                {
+                    use frame_benchmarking::benchmarking::get_whitelist;
+                    // Should that condition be true, we can assume that we are in a benchmark environment.
+                    if !get_whitelist().is_empty() {
+                        return u64::MAX;
+                    }
+                }
+
+                MinimumPeriodValue::get()
+            }
+        }
+        impl<I: From<u64>> frame_support::traits::Get<I> for MinimumPeriod {
+            fn get() -> I {
+                I::from(Self::get())
+            }
+        }
+        impl frame_support::traits::TypedGet for MinimumPeriod {
+            type Type = u64;
+            fn get() -> u64 {
+                Self::get()
+            }
+        }
+
         impl pallet_timestamp::Config for Runtime {
             type MinimumPeriod = MinimumPeriod;
             type Moment = u64;
@@ -927,7 +957,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
             type MinVestedTransfer = MinVestedTransfer;
-            type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>; // weights::pallet_vesting::WeightInfo<Runtime>;
+            type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 
             // `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
             // highest number of schedules that encodes less than 2^10.
@@ -1136,14 +1166,6 @@ macro_rules! create_runtime_api {
             }
 
             #[cfg(feature = "parachain")]
-            // Required to satisify trait bounds at the client implementation.
-            impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
-                fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
-                    panic!("AuthorFilterAPI is no longer supported. Please update your client.")
-                }
-            }
-
-            #[cfg(feature = "parachain")]
             impl nimbus_primitives::NimbusApi<Block> for Runtime {
                 fn can_author(
                     author: nimbus_primitives::NimbusId,
@@ -1229,6 +1251,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_court, Court);
                     #[cfg(feature = "with-global-disputes")]
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
+                    #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
@@ -1307,6 +1330,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_court, Court);
                     #[cfg(feature = "with-global-disputes")]
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
+                    #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);
@@ -1352,6 +1376,23 @@ macro_rules! create_runtime_api {
                     len: u32,
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
+                }
+            }
+
+            impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, Call>
+            for Runtime
+            {
+                fn query_call_info(
+                    call: Call,
+                    len: u32,
+                ) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> {
+                    TransactionPayment::query_call_info(call, len)
+                }
+                fn query_call_fee_details(
+                    call: Call,
+                    len: u32,
+                ) -> pallet_transaction_payment::FeeDetails<Balance> {
+                    TransactionPayment::query_call_fee_details(call, len)
                 }
             }
 
@@ -1509,8 +1550,17 @@ macro_rules! create_runtime_api {
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
 
-                fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
-                    Executive::execute_block_no_check(block)
+                fn execute_block(block: Block, state_root_check: bool, try_state: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
+                    log::info!(
+                        "try-runtime: executing block #{} {:?} / root checks: {:?} / try-state-select: {:?}",
+                        block.header.number,
+                        block.header.hash(),
+                        state_root_check,
+                        try_state,
+                    );
+                    // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+                    // have a backtrace here.
+                    Executive::try_execute_block(block, state_root_check, try_state).expect("execute-block failed")
                 }
             }
 
@@ -1830,7 +1880,7 @@ macro_rules! create_common_tests {
                     pub BlockLength: frame_system::limits::BlockLength =
                         frame_system::limits::BlockLength::max(2 * 1024);
                     pub BlockWeights: frame_system::limits::BlockWeights =
-                        frame_system::limits::BlockWeights::simple_max(1024);
+                        frame_system::limits::BlockWeights::simple_max(Weight::from_ref_time(1024));
                 }
 
                 impl frame_system::Config for Runtime {
