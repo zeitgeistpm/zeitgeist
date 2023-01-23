@@ -133,12 +133,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
     // Storage: GlobalDisputes Outcomes (r:3 w:2)
     fn refund_vote_fees(k: u32, _o: u32) -> Weight {
-        (31_076_000 as Weight)
+        Weight::from_ref_time(31_076_000)
             // Standard Error: 4_000
-            .saturating_add((13_543_000 as Weight).saturating_mul(k as Weight))
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(k as Weight)))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(k as Weight)))
+            .saturating_add(Weight::from_ref_time(13_543_000).saturating_mul(k.into()))
+            .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(k.into())))
+            .saturating_add(T::DbWeight::get().writes(1))
+            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(k.into())))
     }
 }
