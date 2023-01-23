@@ -51,6 +51,12 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+        #[cfg(feature = "with-global-disputes")]
+        type ConditionalMigration = zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>;
+
+        #[cfg(not(feature = "with-global-disputes"))]
+        type ConditionalMigration = ();
+
         #[cfg(feature = "parachain")]
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -58,7 +64,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
+            ConditionalMigration,
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -68,7 +74,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
+            ConditionalMigration,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
