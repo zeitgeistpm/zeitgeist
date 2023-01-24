@@ -30,11 +30,6 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// - `outcome` - The voting outcome to push.
     /// - `owner` - The owner of the outcome.
     /// - `initial_vote_balance` - The initial vote amount for the specified outcome.
-    ///
-    /// # Returns
-    ///
-    /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
-    /// returned, this means that the dispute could not be resolved.
     fn push_vote_outcome(
         market_id: &MarketId,
         outcome: OutcomeReport,
