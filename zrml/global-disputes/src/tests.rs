@@ -21,6 +21,7 @@ use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     market_mock,
     mock::*,
+    BalanceOf,
     types::{GDInfo, GDStatus, OutcomeInfo, Possession},
     Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
 };
@@ -920,6 +921,69 @@ fn purge_outcomes_partially_cleaned_works() {
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
         assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
+    });
+}
+
+#[test]
+fn refund_vote_fees_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let pushed_outcome_1 = 0;
+        GlobalDisputes::push_vote_outcome(
+            &market_id,
+            OutcomeReport::Scalar(pushed_outcome_1),
+            &ALICE,
+            SETUP_AMOUNT,
+        )
+        .unwrap();
+
+        let pushed_outcome_2 = 20;
+        GlobalDisputes::push_vote_outcome(
+            &market_id,
+            OutcomeReport::Scalar(pushed_outcome_2),
+            &ALICE,
+            SETUP_AMOUNT,
+        )
+        .unwrap();
+
+        let offset = pushed_outcome_1.max(pushed_outcome_2) + 1;
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        let mut overall_fees = <BalanceOf<Runtime>>::zero();
+        // minus 2 because of the above push_vote_outcome calls
+        for i in 0..(2 * RemoveKeysLimit::get() - 2) {
+            assert_ok!(GlobalDisputes::add_vote_outcome(
+                Origin::signed(ALICE),
+                market_id,
+                // offset to not conflict with pushed outcomes
+                OutcomeReport::Scalar((offset + i as u128).into()),
+            ));
+            overall_fees = overall_fees.saturating_add(VotingOutcomeFee::get());
+        }
+
+        assert_ok!(GlobalDisputes::destroy_global_dispute(&market_id));
+
+        let alice_free_balance_before = Balances::free_balance(&ALICE);
+        assert_ok!(GlobalDisputes::refund_vote_fees(Origin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesPartiallyCleaned { market_id }.into());
+
+        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_some());
+
+        assert_ok!(GlobalDisputes::refund_vote_fees(Origin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
+        assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
+
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            alice_free_balance_before.saturating_add(overall_fees)
+        );
     });
 }
 
