@@ -959,7 +959,7 @@ fn refund_vote_fees_works() {
                 Origin::signed(ALICE),
                 market_id,
                 // offset to not conflict with pushed outcomes
-                OutcomeReport::Scalar((offset + i as u128).into()),
+                OutcomeReport::Scalar(offset + i as u128),
             ));
             overall_fees = overall_fees.saturating_add(VotingOutcomeFee::get());
         }
