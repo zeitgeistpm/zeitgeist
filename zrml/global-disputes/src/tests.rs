@@ -21,9 +21,8 @@ use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     market_mock,
     mock::*,
-    BalanceOf,
     types::{GDInfo, GDStatus, OutcomeInfo, Possession},
-    Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
+    BalanceOf, Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
 };
 use frame_support::{
     assert_noop, assert_ok,
