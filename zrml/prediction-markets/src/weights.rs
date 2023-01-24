@@ -106,7 +106,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(10))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(a.into())))
-            .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(d.into())))
     }
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
