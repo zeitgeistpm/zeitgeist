@@ -134,7 +134,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
         });
         log::info!("AddOutsiderBond: Upgraded {} markets.", translated);
         total_weight = total_weight
-            .saturating_add(T::DbWeight::get().reads_writes(translated + 1, translated + 1));
+            .saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
