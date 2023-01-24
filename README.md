@@ -4,11 +4,7 @@
 
 # Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
 
-![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg)
-
-<a href="https://t.me/zeitgeist_official">
-  <img src="https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue" />
-</a>
+![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg) [![Codecov](https://codecov.io/gh/zeitgeistpm/zeitgeist/branch/main/graph/badge.svg)](https://codecov.io/gh/zeitgeistpm/zeitgeist) [![Discord](https://img.shields.io/badge/discord-https%3A%2F%2Fdiscord.gg%2FMD3TbH3ctv-purple)](https://discord.gg/MD3TbH3ctv) [![Telegram](https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue)](https://t.me/zeitgeist_official)
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
 prediction markets. The platform's native currency, the ZTG, is used to sway the
