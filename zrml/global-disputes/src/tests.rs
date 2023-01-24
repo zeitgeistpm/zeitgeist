@@ -32,7 +32,9 @@ use frame_support::{
 use pallet_balances::{BalanceLock, Error as BalancesError};
 use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{
-    constants::mock::{GlobalDisputeLockId, MinOutcomeVoteAmount, VotingOutcomeFee, BASE},
+    constants::mock::{
+        GlobalDisputeLockId, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee, BASE,
+    },
     types::OutcomeReport,
 };
 use zrml_market_commons::{Error as MarketError, Markets};
@@ -846,7 +848,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
 }
 
 #[test]
-fn purge_outcomes_works() {
+fn purge_outcomes_fully_cleaned_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -877,6 +879,41 @@ fn purge_outcomes_works() {
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+
+        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
+        assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
+    });
+}
+
+#[test]
+fn purge_outcomes_partially_cleaned_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        for i in 0..(2 * RemoveKeysLimit::get()) {
+            GlobalDisputes::push_vote_outcome(
+                &market_id,
+                OutcomeReport::Scalar(i.into()),
+                &ALICE,
+                SETUP_AMOUNT,
+            )
+            .unwrap();
+        }
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
+
+        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesPartiallyCleaned { market_id }.into());
+
+        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_some());
 
         assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
 
