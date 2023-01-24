@@ -178,13 +178,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
             let old_market = old_markets
                 .get(&market_id)
                 .expect(&format!("Market {:?} not found", market_id)[..]);
-            assert_eq!(
-                new_market.base_asset,
-                Asset::Ztg,
-                "found unexpected base_asset in new_market. market_id: {:?}, base_asset: {:?}",
-                market_id,
-                new_market.base_asset
-            );
+            assert_eq!(new_market.base_asset, old_market.base_asset)
             assert_eq!(new_market.creator, old_market.creator);
             assert_eq!(new_market.creation, old_market.creation);
             assert_eq!(new_market.creator_fee, old_market.creator_fee);
