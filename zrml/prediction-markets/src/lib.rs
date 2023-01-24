@@ -260,6 +260,11 @@ mod pallet {
     }
 
     macro_rules! impl_is_bond_pending {
+        /// Check whether the $bond_type is present (ready to get unreserved or slashed).
+        /// Set the flag with_warning to true, when warnings should be logged 
+        /// in case the bond is not present or already settled.
+        ///
+        /// Return true if the bond is present and not settled, false otherwise.
         ($fn_name:ident, $bond_type:ident) => {
             fn $fn_name(
                 market_id: &MarketIdOf<T>,
