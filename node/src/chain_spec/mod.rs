@@ -135,8 +135,6 @@ macro_rules! generate_generic_genesis_function {
                     members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
-                #[cfg(feature = "parachain")]
-                crowdloan: $runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
                 democracy: Default::default(),
                 #[cfg(not(feature = "parachain"))]
                 grandpa: $runtime::GrandpaConfig {
