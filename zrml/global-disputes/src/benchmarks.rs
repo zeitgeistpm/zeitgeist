@@ -100,8 +100,16 @@ benchmarks! {
         let vote_sum = amount - 1u128.saturated_into();
         let possession = Some(Possession::Shared { owners: Default::default() });
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
-        let gd_info = GDInfo {winner_outcome: outcome.clone(), status: GDStatus::Active, outcome_info};
+        let now = <frame_system::Pallet<T>>::block_number();
+        let add_outcome_end = now + T::AddOutcomePeriod::get();
+        let vote_end = add_outcome_end + T::VotePeriod::get();
+        let gd_info = GDInfo {
+            winner_outcome: outcome.clone(),
+            status: GDStatus::Active { add_outcome_end, vote_end },
+            outcome_info,
+        };
         <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
+        <frame_system::Pallet<T>>::set_block_number(add_outcome_end + 1u32.into());
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone(), amount)
     verify {
         assert_last_event::<T>(
@@ -131,7 +139,14 @@ benchmarks! {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         // is_finished is false,
         // because we need `lock_needed` to be greater zero to set a lock.
-        let gd_info = GDInfo {winner_outcome: outcome, status: GDStatus::Active, outcome_info};
+        let now = <frame_system::Pallet<T>>::block_number();
+        let add_outcome_end = now + T::AddOutcomePeriod::get();
+        let vote_end = add_outcome_end + T::VotePeriod::get();
+        let gd_info = GDInfo {
+            winner_outcome: outcome,
+            status: GDStatus::Active { add_outcome_end, vote_end },
+            outcome_info
+        };
 
         let caller: T::AccountId = whitelisted_caller();
         let voter: T::AccountId = account("voter", 0, 0);
@@ -217,9 +232,12 @@ benchmarks! {
         .unwrap();
 
         let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), possession: None };
+        let now = <frame_system::Pallet<T>>::block_number();
+        let add_outcome_end = now + T::AddOutcomePeriod::get();
+        let vote_end = add_outcome_end + T::VotePeriod::get();
         let gd_info = GDInfo {
             winner_outcome: OutcomeReport::Scalar(0),
-            status: GDStatus::Active,
+            status: GDStatus::Active { add_outcome_end, vote_end },
             outcome_info,
         };
 

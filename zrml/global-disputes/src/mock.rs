@@ -18,19 +18,27 @@
 #![cfg(test)]
 
 use crate::{self as zrml_global_disputes};
-use frame_support::{construct_runtime, parameter_types, traits::Everything};
+use frame_support::{
+    construct_runtime,
+    pallet_prelude::{DispatchError, Weight},
+    parameter_types,
+    traits::Everything,
+    BoundedVec,
+};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
-        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, VotingOutcomeFee, BASE,
+        AddOutcomePeriod, BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
+        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, VotePeriod,
+        VotingOutcomeFee, BASE,
     },
+    traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
+        MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -56,13 +64,61 @@ construct_runtime!(
     }
 );
 
+// NoopResolution implements DisputeResolutionApi with no-ops.
+pub struct NoopResolution;
+
+impl DisputeResolutionApi for NoopResolution {
+    type AccountId = AccountIdTest;
+    type Balance = Balance;
+    type BlockNumber = BlockNumber;
+    type MarketId = MarketId;
+    type MaxDisputes = u32;
+    type Moment = Moment;
+
+    fn resolve(
+        _market_id: &Self::MarketId,
+        _market: &Market<
+            Self::AccountId,
+            Self::Balance,
+            Self::BlockNumber,
+            Self::Moment,
+            Asset<Self::MarketId>,
+        >,
+    ) -> Result<Weight, DispatchError> {
+        Ok(Weight::zero())
+    }
+
+    fn add_auto_resolve(
+        _market_id: &Self::MarketId,
+        _resolve_at: Self::BlockNumber,
+    ) -> Result<u32, DispatchError> {
+        Ok(0u32)
+    }
+
+    fn auto_resolve_exists(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> bool {
+        false
+    }
+
+    fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
+        0u32
+    }
+
+    fn get_disputes(
+        _market_id: &Self::MarketId,
+    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
+        Default::default()
+    }
+}
+
 parameter_types! {
     pub const MaxGlobalDisputeVotes: u32 = 50;
     pub const MaxOwners: u32 = 10;
 }
 
 impl crate::Config for Runtime {
+    type AddOutcomePeriod = AddOutcomePeriod;
     type Currency = Balances;
+    type DisputeResolution = NoopResolution;
     type Event = Event;
     type GlobalDisputeLockId = GlobalDisputeLockId;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
@@ -71,6 +127,7 @@ impl crate::Config for Runtime {
     type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
+    type VotePeriod = VotePeriod;
     type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

@@ -223,7 +223,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 benchmarks! {
     where_clause {
         where
-            T: pallet_timestamp::Config + zrml_authorized::Config,
+            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_global_disputes::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }
@@ -833,10 +833,11 @@ benchmarks! {
 
         #[cfg(feature = "with-global-disputes")]
         {
-            let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
+            let add_outcome_end = current_block + <T as zrml_global_disputes::Config>::AddOutcomePeriod::get();
+            let vote_end = add_outcome_end + <T as zrml_global_disputes::Config>::VotePeriod::get();
             // the complexity depends on MarketIdsPerDisputeBlock at the current block
             // this is because a variable number of market ids need to be decoded from the storage
-            MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);
+            MarketIdsPerDisputeBlock::<T>::insert(vote_end, market_ids_1);
         }
 
         let call = Call::<T>::start_global_dispute { market_id };

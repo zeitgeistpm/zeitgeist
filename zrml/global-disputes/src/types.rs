@@ -36,16 +36,18 @@ pub struct OutcomeInfo<AccountId, Balance, Owners> {
 
 /// The general information about the global dispute.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct GDInfo<AccountId, Balance, Owners> {
+pub struct GDInfo<AccountId, Balance, Owners, BlockNumber> {
     /// The outcome, which is in the lead.
     pub winner_outcome: OutcomeReport,
     /// The information about the winning outcome.
     pub outcome_info: OutcomeInfo<AccountId, Balance, Owners>,
     /// The current status of the global dispute.
-    pub status: GDStatus,
+    pub status: GDStatus<BlockNumber>,
 }
 
-impl<AccountId, Balance: Saturating, Owners: Default> GDInfo<AccountId, Balance, Owners> {
+impl<AccountId, Balance: Saturating, Owners: Default, BlockNumber>
+    GDInfo<AccountId, Balance, Owners, BlockNumber>
+{
     pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession: None };
         GDInfo { winner_outcome: outcome, status: GDStatus::Initialized, outcome_info }
@@ -58,11 +60,13 @@ impl<AccountId, Balance: Saturating, Owners: Default> GDInfo<AccountId, Balance,
 }
 
 #[derive(TypeInfo, Debug, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub enum GDStatus {
+pub enum GDStatus<BlockNumber> {
     /// The global dispute is initialized.
     Initialized,
-    /// The global dispute is in progress.
-    Active,
+    /// The global dispute is in progress. Save the addition of outcome end and vote end.
+    /// The block number `add_outcome_end`, when the addition of new outcomes is over.
+    /// The block number `vote_end`, when the global dispute voting period is over.
+    Active { add_outcome_end: BlockNumber, vote_end: BlockNumber },
     /// The global dispute is finished.
     Finished,
     /// The global dispute was triggered to get destroyed.

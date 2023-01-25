@@ -1382,27 +1382,18 @@ mod pallet {
                     )?;
                 }
 
-                T::GlobalDisputes::start_global_dispute(&market_id)?;
-
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
 
                 // ignore first of tuple because we always have max disputes
                 let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
 
-                let now = <frame_system::Pallet<T>>::block_number();
-                let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
-                let market_ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
-                    global_dispute_end,
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?;
+                // global disputes uses DisputeResolution API to control its resolution
+                let ids_len_1 = T::GlobalDisputes::start_global_dispute(&market_id)?;
 
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len, ids_len_2)).into())
+                Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
             }
 
             #[cfg(not(feature = "with-global-disputes"))]
@@ -1483,11 +1474,8 @@ mod pallet {
             MarketIdOf<Self>,
             Self::AccountId,
             BalanceOf<Self>,
+            Self::BlockNumber,
         >;
-
-        /// The number of blocks the global dispute period remains open.
-        #[cfg(feature = "with-global-disputes")]
-        type GlobalDisputePeriod: Get<Self::BlockNumber>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
             AccountId = Self::AccountId,

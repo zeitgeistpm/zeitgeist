@@ -58,6 +58,13 @@ fn setup_vote_outcomes_with_hundred(market_id: &MarketIdOf<Runtime>) {
         .unwrap();
 }
 
+fn set_vote_period() {
+    let now = <frame_system::Pallet<Runtime>>::block_number();
+    <frame_system::Pallet<Runtime>>::set_block_number(
+        now + <Runtime as crate::Config>::AddOutcomePeriod::get() + 1,
+    );
+}
+
 fn check_outcome_sum(
     market_id: &MarketIdOf<Runtime>,
     outcome: OutcomeReport,
@@ -437,6 +444,8 @@ fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_c
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
             market_id,
@@ -486,6 +495,8 @@ fn vote_on_outcome_check_event() {
 
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(EVE),
@@ -542,6 +553,8 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
 
         GlobalDisputes::start_global_dispute(&market_id).unwrap();
 
+        set_vote_period();
+
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
                 Origin::signed(*disputor),
@@ -579,6 +592,8 @@ fn transfer_fails_with_fully_locked_balance() {
 
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
         let arbitrary_amount = 42 * BASE;
@@ -614,6 +629,8 @@ fn reserve_fails_with_fully_locked_balance() {
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
         let arbitrary_amount = 42 * BASE;
@@ -648,6 +665,8 @@ fn determine_voting_winner_works_four_outcome_votes() {
 
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
@@ -702,6 +721,8 @@ fn determine_voting_winner_works_three_outcome_votes() {
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
             market_id,
@@ -749,6 +770,8 @@ fn determine_voting_winner_works_two_outcome_votes() {
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
             market_id,
@@ -795,6 +818,8 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
 
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
@@ -856,6 +881,8 @@ fn purge_outcomes_fully_cleaned_works() {
 
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
@@ -996,6 +1023,8 @@ fn unlock_clears_lock_info() {
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
             market_id,
@@ -1031,6 +1060,8 @@ fn vote_fails_if_outcome_does_not_exist() {
 
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
 
+        set_vote_period();
+
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
                 Origin::signed(ALICE),
@@ -1052,6 +1083,8 @@ fn locking_works_for_one_market() {
 
         setup_vote_outcomes_with_hundred(&market_id);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+
+        set_vote_period();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
@@ -1147,6 +1180,8 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         setup_vote_outcomes_with_hundred(&market_id_2);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1));
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2));
+
+        set_vote_period();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
@@ -1244,6 +1279,8 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         setup_vote_outcomes_with_hundred(&market_id_2);
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1));
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2));
+
+        set_vote_period();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());

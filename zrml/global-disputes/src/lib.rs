@@ -51,7 +51,10 @@ mod pallet {
         DispatchError, DispatchResult,
     };
     use sp_std::{vec, vec::Vec};
-    use zeitgeist_primitives::types::{Asset, Market, OutcomeReport};
+    use zeitgeist_primitives::{
+        traits::DisputeResolutionApi,
+        types::{Asset, Market, OutcomeReport},
+    };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type MarketOf<T> = Market<
@@ -73,7 +76,12 @@ mod pallet {
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
     pub type OutcomeInfoOf<T> = OutcomeInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
-    pub type GDInfoOf<T> = GDInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
+    pub type GDInfoOf<T> = GDInfo<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        OwnerInfoOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+    >;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub(crate) type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type LockInfoOf<T> =
@@ -88,10 +96,21 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The time period in which the addition of new outcomes are allowed.
+        #[pallet::constant]
+        type AddOutcomePeriod: Get<Self::BlockNumber>;
+
         /// The currency implementation used to lock tokens for voting.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// The vote lock identifier.
         #[pallet::constant]
@@ -126,6 +145,10 @@ mod pallet {
         /// The maximum number of keys to remove from a storage map.
         #[pallet::constant]
         type RemoveKeysLimit: Get<u32>;
+
+        /// The time period in which votes are allowed.
+        #[pallet::constant]
+        type VotePeriod: Get<Self::BlockNumber>;
 
         /// The fee required to add a voting outcome.
         #[pallet::constant]
@@ -234,6 +257,10 @@ mod pallet {
         SharedPossessionRequired,
         /// The global dispute period is not over yet. The winner is not yet determined.
         UnfinishedGlobalDispute,
+        /// The period in which outcomes can be added is over.
+        AddOutcomePeriodIsOver,
+        /// It is not inside the period in which votes are allowed.
+        NotInVotePeriod,
     }
 
     #[pallet::call]
@@ -265,7 +292,12 @@ mod pallet {
 
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-            ensure!(gd_info.status == GDStatus::Active, Error::<T>::InvalidGlobalDisputeStatus);
+            let now = <frame_system::Pallet<T>>::block_number();
+            if let GDStatus::Active { add_outcome_end, vote_end: _ } = gd_info.status {
+                ensure!(now <= add_outcome_end, Error::<T>::AddOutcomePeriodIsOver);
+            } else {
+                return Err(Error::<T>::InvalidGlobalDisputeStatus.into());
+            }
 
             ensure!(
                 !<Outcomes<T>>::contains_key(market_id, &outcome),
@@ -493,7 +525,12 @@ mod pallet {
 
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-            ensure!(gd_info.status == GDStatus::Active, Error::<T>::InvalidGlobalDisputeStatus);
+            let now = <frame_system::Pallet<T>>::block_number();
+            if let GDStatus::Active { add_outcome_end, vote_end } = gd_info.status {
+                ensure!(add_outcome_end < now && now <= vote_end, Error::<T>::NotInVotePeriod);
+            } else {
+                return Err(Error::<T>::InvalidGlobalDisputeStatus.into());
+            }
 
             let mut outcome_info =
                 <Outcomes<T>>::get(market_id, &outcome).ok_or(Error::<T>::OutcomeDoesNotExist)?;
@@ -718,7 +755,8 @@ mod pallet {
         }
     }
 
-    impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Pallet<T>
+    impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>
+        for Pallet<T>
     where
         T: Config,
     {
@@ -801,13 +839,15 @@ mod pallet {
 
         fn is_unfinished(market_id: &MarketIdOf<T>) -> bool {
             if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
-                return gd_info.status == GDStatus::Active
-                    || gd_info.status == GDStatus::Initialized;
+                return matches!(
+                    gd_info.status,
+                    GDStatus::Active { add_outcome_end: _, vote_end: _ } | GDStatus::Initialized
+                );
             }
             false
         }
 
-        fn start_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {
+        fn start_global_dispute(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             T::MarketCommons::market(market_id)?;
 
             let mut iter = <Outcomes<T>>::iter_prefix(market_id);
@@ -816,13 +856,20 @@ mod pallet {
                 Error::<T>::AtLeastTwoOutcomesRequired
             );
 
-            <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| {
+            let now = <frame_system::Pallet<T>>::block_number();
+            let add_outcome_end = now.saturating_add(T::AddOutcomePeriod::get());
+            let vote_end = add_outcome_end.saturating_add(T::VotePeriod::get());
+            let ids_len = T::DisputeResolution::add_auto_resolve(market_id, vote_end)?;
+
+            <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| -> DispatchResult {
                 let mut raw_gd_info =
                     gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-                raw_gd_info.status = GDStatus::Active;
+                raw_gd_info.status = GDStatus::Active { add_outcome_end, vote_end };
                 *gd_info = Some(raw_gd_info.clone());
                 Ok(())
-            })
+            })?;
+
+            Ok(ids_len)
         }
 
         fn destroy_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {
@@ -830,6 +877,9 @@ mod pallet {
                 let mut raw_gd_info =
                     gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
                 raw_gd_info.status = GDStatus::Destroyed;
+                if let GDStatus::Active { add_outcome_end: _, vote_end } = raw_gd_info.status {
+                    T::DisputeResolution::remove_auto_resolve(market_id, vote_end);
+                }
                 *gd_info = Some(raw_gd_info.clone());
                 Ok(())
             })

@@ -22,7 +22,7 @@ use sp_runtime::{DispatchError, DispatchResult};
 use zeitgeist_primitives::types::OutcomeReport;
 
 /// The trait to initiate and resolve the global disputes.
-pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
+pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// Push a voting outcome for one global dispute.
     ///
     /// # Arguments
@@ -88,7 +88,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    fn start_global_dispute(market_id: &MarketId) -> Result<(), DispatchError>;
+    fn start_global_dispute(market_id: &MarketId) -> Result<u32, DispatchError>;
 
     /// Destroy a global dispute and allow to return all funds of the participants.
     ///
