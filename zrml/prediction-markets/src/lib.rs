@@ -2354,10 +2354,8 @@ mod pallet {
                         MarketPeriod::Block(range.start..current_block)
                     }
                     MarketPeriod::Timestamp(ref range) => {
-                        let current_time_frame = Self::calculate_time_frame_of_moment(
-                            <zrml_market_commons::Pallet<T>>::now(),
-                        );
-                        MarketPeriod::Timestamp(range.start..current_time_frame)
+                        let now = <zrml_market_commons::Pallet<T>>::now();
+                        MarketPeriod::Timestamp(range.start..now)
                     }
                 };
                 Ok(())
