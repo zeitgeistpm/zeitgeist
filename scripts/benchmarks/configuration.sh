@@ -12,14 +12,12 @@ export FRAME_PALLETS_STEPS="${FRAME_PALLETS_STEPS:-50}"
 
 export FRAME_WEIGHT_TEMPLATE="./misc/frame_weight_template.hbs"
 
-# pallet_crowdloan_rewards benchmark lead to an error within the verify function (deprecated)
 export FRAME_PALLETS_PARACHAIN=( 
                 cumulus_pallet_xcmp_queue \
                 pallet_author_inherent \
                 pallet_author_slot_filter \
                 pallet_author_mapping \
                 pallet_parachain_staking \
-                # pallet_crowdloan_rewards \
 )
 export FRAME_PALLETS_PARACHAIN_RUNS="${FRAME_PALLETS_PARACHAIN_RUNS:-$FRAME_PALLETS_RUNS}"
 export FRAME_PALLETS_PARACHAIN_STEPS="${FRAME_PALLETS_PARACHAIN_STEPS:-$FRAME_PALLETS_STEPS}"

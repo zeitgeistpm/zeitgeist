@@ -41,7 +41,6 @@ cfg_if::cfg_if! {
         const DEFAULT_STAKING_AMOUNT_ZEITGEIST: u128 = MinCollatorStk::get();
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
-        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_ZEITGEIST: u128 = 0;
         pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
     } else {
         pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
@@ -98,7 +97,6 @@ fn additional_chain_spec_staging_zeitgeist(
             ),
         ],
         collator_commission: DefaultCollatorCommission::get(),
-        crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_ZEITGEIST,
         inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
         parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
