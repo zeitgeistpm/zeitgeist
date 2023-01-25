@@ -1,0 +1,42 @@
+name: Try Runtime on New Tags
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  try_runtime_battery_station:
+    name: Test Try Runtime
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
+      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
+      # to the lack of support of `rust-toolchain` files with TOML syntax:
+      # https://github.com/actions-rs/toolchain/issues/126.
+      - name: Install rust toolchain
+        run: rustup show
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - run: make try-runtime-upgrade-battery-station 
+  try_runtime_zeitgeist:
+    name: Test Try Runtime
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
+      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
+      # to the lack of support of `rust-toolchain` files with TOML syntax:
+      # https://github.com/actions-rs/toolchain/issues/126.
+      - name: Install rust toolchain
+        run: rustup show
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - run: make try-runtime-upgrade-zeitgeist 

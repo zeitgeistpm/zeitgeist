@@ -334,9 +334,6 @@ macro_rules! create_runtime_with_additional_pallets {
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
 
-            // Third-party
-            Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
-
             // Others
             $($additional_pallets)*
         );
@@ -586,25 +583,6 @@ macro_rules! impl_config_traits {
             type SelfLocation = SelfLocation;
             type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
-        }
-
-        #[cfg(feature = "parachain")]
-        impl pallet_crowdloan_rewards::Config for Runtime {
-            type Event = Event;
-            type InitializationPayment = InitializationPayment;
-            type Initialized = Initialized;
-            type MaxInitContributors = MaxInitContributorsBatchSizes;
-            type MinimumReward = MinimumReward;
-            type RelayChainAccountId = AccountId;
-            type RewardCurrency = Balances;
-            type RewardAddressAssociateOrigin = EnsureSigned<Self::AccountId>;
-            type RewardAddressChangeOrigin = frame_system::EnsureSigned<Self::AccountId>;
-            type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
-            type SignatureNetworkIdentifier = SignatureNetworkIdentifier;
-            type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
-            type VestingBlockProvider =
-                cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
-            type WeightInfo = pallet_crowdloan_rewards::weights::SubstrateWeight<Runtime>;
         }
 
         impl pallet_balances::Config for Runtime {
@@ -1237,7 +1215,6 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
-                            list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
                         }
@@ -1317,7 +1294,6 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
-                            add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
 
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
@@ -1822,67 +1798,11 @@ macro_rules! create_common_tests {
     {} => {
         #[cfg(test)]
         mod common_tests {
-            mod fee_multiplier {
-                use crate::parameters::{MinimumMultiplier, SlowAdjustingFeeUpdate, TargetBlockFullness};
-                use frame_support::{
-                    parameter_types,
-                    weights::{DispatchClass, Weight},
-                };
+            mod fees {
+                use crate::*;
+                use frame_support::weights::{DispatchClass, Weight};
                 use sp_core::H256;
-                use sp_runtime::{
-                    testing::Header,
-                    traits::{BlakeTwo256, Convert, IdentityLookup},
-                    Perbill,
-                };
-
-                type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-                type Block = frame_system::mocking::MockBlock<Runtime>;
-
-                frame_support::construct_runtime!(
-                    pub enum Runtime where
-                        Block = Block,
-                        NodeBlock = Block,
-                        UncheckedExtrinsic = UncheckedExtrinsic,
-                    {
-                        System: frame_system::{Pallet, Call, Config, Storage, Event<T>}
-                    }
-                );
-
-                parameter_types! {
-                    pub const BlockHashCount: u64 = 250;
-                    pub const AvailableBlockRatio: Perbill = Perbill::one();
-                    pub BlockLength: frame_system::limits::BlockLength =
-                        frame_system::limits::BlockLength::max(2 * 1024);
-                    pub BlockWeights: frame_system::limits::BlockWeights =
-                        frame_system::limits::BlockWeights::simple_max(Weight::from_ref_time(1024));
-                }
-
-                impl frame_system::Config for Runtime {
-                    type BaseCallFilter = frame_support::traits::Everything;
-                    type BlockWeights = BlockWeights;
-                    type BlockLength = ();
-                    type DbWeight = ();
-                    type Origin = Origin;
-                    type Index = u64;
-                    type BlockNumber = u64;
-                    type Call = Call;
-                    type Hash = H256;
-                    type Hashing = BlakeTwo256;
-                    type AccountId = u64;
-                    type Lookup = IdentityLookup<Self::AccountId>;
-                    type Header = Header;
-                    type Event = Event;
-                    type BlockHashCount = BlockHashCount;
-                    type Version = ();
-                    type PalletInfo = PalletInfo;
-                    type AccountData = ();
-                    type OnNewAccount = ();
-                    type OnKilledAccount = ();
-                    type SystemWeightInfo = ();
-                    type SS58Prefix = ();
-                    type OnSetCode = ();
-                    type MaxConsumers = frame_support::traits::ConstU32<16>;
-                }
+                use sp_runtime::traits::Convert;
 
                 fn run_with_system_weight<F>(w: Weight, mut assertions: F)
                 where
@@ -1895,23 +1815,6 @@ macro_rules! create_common_tests {
                         assertions()
                     });
                 }
-
-                #[test]
-                fn multiplier_can_grow_from_zero() {
-                    let minimum_multiplier = MinimumMultiplier::get();
-                    let target = TargetBlockFullness::get()
-                        * BlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
-                    // if the min is too small, then this will not change, and we are doomed forever.
-                    // the weight is 1/100th bigger than target.
-                    run_with_system_weight(target * 101 / 100, || {
-                        let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
-                        assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
-                    })
-                }
-            }
-
-            mod deal_with_fees {
-                use crate::*;
 
                 #[test]
                 fn treasury_receives_correct_amount_of_fees_and_tips() {
@@ -1930,8 +1833,54 @@ macro_rules! create_common_tests {
                         );
                     });
                 }
+
+                #[test]
+                fn fee_multiplier_can_grow_from_zero() {
+                    let minimum_multiplier = MinimumMultiplier::get();
+                    let target = TargetBlockFullness::get()
+                        * RuntimeBlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
+                    // if the min is too small, then this will not change, and we are doomed forever.
+                    // the weight is 1/100th bigger than target.
+                    run_with_system_weight(target * 101 / 100, || {
+                        let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
+                        assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
+                    })
+                }
+            }
+
+            mod dust_removal {
+                use crate::*;
+                use frame_support::PalletId;
+                use test_case::test_case;
+
+                #[test_case(AuthorizedPalletId::get(); "authorized")]
+                #[test_case(CourtPalletId::get(); "court")]
+                #[test_case(LiquidityMiningPalletId::get(); "liquidity_mining")]
+                #[test_case(PmPalletId::get(); "prediction_markets")]
+                #[test_case(SimpleDisputesPalletId::get(); "simple_disputes")]
+                #[test_case(SwapsPalletId::get(); "swaps")]
+                #[test_case(TreasuryPalletId::get(); "treasury")]
+                fn whitelisted_pallet_accounts_dont_get_reaped(pallet_id: PalletId) {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let pallet_main_account: AccountId = pallet_id.into_account_truncating();
+                        let pallet_sub_account: AccountId = pallet_id.into_sub_account_truncating(42);
+                        assert!(DustRemovalWhitelist::contains(&pallet_main_account));
+                        assert!(DustRemovalWhitelist::contains(&pallet_sub_account));
+                    });
+                }
+
+                #[test]
+                fn non_whitelisted_accounts_get_reaped() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let not_whitelisted = AccountId::from([0u8; 32]);
+                        assert!(!DustRemovalWhitelist::contains(&not_whitelisted))
+                    });
+                }
             }
         }
-
     }
 }

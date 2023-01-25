@@ -234,7 +234,7 @@ where
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-#[sc_tracing::logging::prefix_logs_with("🌔 Zeitgeist Parachain")]
+#[sc_tracing::logging::prefix_logs_with("🔮 Zeitgeist Parachain")]
 async fn do_new_full<RuntimeApi, Executor, BIC>(
     parachain_config: Configuration,
     polkadot_config: Configuration,

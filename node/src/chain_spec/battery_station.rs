@@ -46,7 +46,6 @@ cfg_if::cfg_if! {
         pub(super) const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
         const DEFAULT_COLLATOR_BALANCE_BATTERY_STATION: Option<u128> =
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION.checked_add(CollatorDeposit::get());
-        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_BATTERY_STATION: u128 = 100 * BASE;
         pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::GenesisConfig, Extensions>;
     } else {
         pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::GenesisConfig>;
@@ -68,7 +67,6 @@ fn additional_chain_spec_staging_battery_station(
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
         )],
         collator_commission: DefaultCollatorCommission::get(),
-        crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_BATTERY_STATION,
         inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
         parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
