@@ -151,6 +151,10 @@ impl crate::Config for Runtime {
     type Event = Event;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
+    #[cfg(all(feature = "runtime-benchmarks", feature = "with-global-disputes"))]
+    type AddOutcomePeriod = AddOutcomePeriod;
+    #[cfg(all(feature = "runtime-benchmarks", feature = "with-global-disputes"))]
+    type VotePeriod = VotePeriod;
     type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;

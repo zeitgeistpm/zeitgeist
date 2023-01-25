@@ -1020,6 +1020,10 @@ macro_rules! impl_config_traits {
             type Event = Event;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
+            #[cfg(all(feature = "runtime-benchmarks", feature = "with-global-disputes"))]
+            type AddOutcomePeriod = AddOutcomePeriod;
+            #[cfg(all(feature = "runtime-benchmarks", feature = "with-global-disputes"))]
+            type VotePeriod = VotePeriod;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
