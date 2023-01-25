@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! Runtime API definition for the swaps pallet.
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::{Codec, MaxEncodedLen};
@@ -31,7 +30,12 @@ sp_api::decl_runtime_apis! {
         MarketId: Codec + MaxEncodedLen,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
-        fn pool_account_id(pool_id: PoolId) -> AccountId;
-        fn get_spot_price(pool_id: PoolId, asset_in: Asset<MarketId>, asset_out: Asset<MarketId>) -> SerdeWrapper<Balance>;
+        fn pool_account_id(pool_id: &PoolId) -> AccountId;
+        fn get_spot_price(
+            pool_id: &PoolId,
+            asset_in: &Asset<MarketId>,
+            asset_out: &Asset<MarketId>,
+            with_fees: bool,
+        ) -> SerdeWrapper<Balance>;
     }
 }

@@ -19,16 +19,20 @@
 use {
     cumulus_primitives_core::ParaId,
     nimbus_primitives::NimbusId,
-    parachain_staking::InflationInfo,
+    pallet_parachain_staking::InflationInfo,
+    sp_runtime::{Perbill, Percent},
     zeitgeist_primitives::types::{AccountId, Balance},
 };
 
 #[cfg(feature = "parachain")]
 pub struct AdditionalChainSpec {
+    pub blocks_per_round: u32,
     pub candidates: Vec<(AccountId, NimbusId, Balance)>,
+    pub collator_commission: Perbill,
     pub crowdloan_fund_pot: Balance,
     pub inflation_info: InflationInfo<Balance>,
-    pub nominations: Vec<(AccountId, AccountId, Balance)>,
+    pub nominations: Vec<(AccountId, AccountId, Balance, Percent)>,
+    pub parachain_bond_reserve_percent: Percent,
     pub parachain_id: ParaId,
 }
 

@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Court
-
 // It is important to note that if a categorical market has only two outcomes, then winners
 // won't receive any rewards because accounts of the most voted outcome on the loser side are
 // simply registered as `JurorStatus::Tardy`.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
@@ -51,6 +50,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
@@ -65,8 +65,8 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        traits::{DisputeApi, DisputeResolutionApi},
+        types::{Asset, Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -74,7 +74,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -89,6 +89,13 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -144,6 +151,13 @@ mod pallet {
         /// Block duration to cast a vote on an outcome.
         #[pallet::constant]
         type CourtCaseDuration: Get<Self::BlockNumber>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -254,8 +268,9 @@ mod pallet {
             })
         }
 
+        #[inline]
         pub(crate) fn treasury_account_id() -> T::AccountId {
-            T::TreasuryPalletId::get().into_account()
+            T::TreasuryPalletId::get().into_account_truncating()
         }
 
         // No-one can stake more than BalanceOf::<T>::max(), therefore, this function saturates
@@ -498,11 +513,12 @@ mod pallet {
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            market: &MarketOf<T>,
         ) -> DispatchResult {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
             let necessary_jurors_num = Self::necessary_jurors_num(disputes);
             let mut rng = Self::rng();
@@ -522,11 +538,12 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
-                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
-            }
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
             let requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
                 .map(|(juror_id, max_allowed_block)| {
@@ -542,9 +559,33 @@ mod pallet {
                 Self::manage_tardy_jurors(&requested_jurors, |_| false)?
             };
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
-            Votes::<T>::remove_prefix(market_id, None);
-            RequestedJurors::<T>::remove_prefix(market_id, None);
+            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
             Ok(Some(first))
+        }
+
+        fn get_auto_resolve(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            Ok(None)
+        }
+
+        fn has_failed(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<bool, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            Ok(false)
         }
     }
 

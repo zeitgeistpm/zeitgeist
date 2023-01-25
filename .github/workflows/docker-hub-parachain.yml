@@ -23,7 +23,7 @@ jobs:
           images: |
             zeitgeistpm/zeitgeist-node-parachain
           tags: |
-            type=sha
+            type=semver,pattern={{version}}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -41,6 +41,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           build-args: |
+            PROFILE=production
             FEATURES=parachain
           push: true
           tags: ${{ steps.meta.outputs.tags }}

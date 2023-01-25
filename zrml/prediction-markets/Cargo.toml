@@ -1,29 +1,35 @@
 [dependencies]
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+serde = { version = "1.0.144", default-features = false, optional = true }
+sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../authorized" }
 zrml-court = { default-features = false, path = "../court" }
+zrml-global-disputes = { default-features = false, path = "../global-disputes", optional = true }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
+
 # Mock
 
-orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+orml-asset-registry = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
+pallet-treasury = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+sp-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
+xcm = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/polkadot", optional = true, default-features = false }
 zrml-prediction-markets-runtime-api = { features = ["std"], optional = true, path = "./runtime-api" }
 zrml-rikiddo = { optional = true, path = "../rikiddo" }
 zrml-swaps = { optional = true, path = "../swaps" }
@@ -40,7 +46,9 @@ mock = [
     "orml-tokens",
     "pallet-balances",
     "pallet-randomness-collective-flip",
-    "pallet-timestamp",
+    "pallet-timestamp/std",
+    "pallet-treasury",
+    "serde",
     "sp-api",
     "sp-io",
     "substrate-fixed",
@@ -48,19 +56,26 @@ mock = [
     "zrml-prediction-markets-runtime-api",
     "zrml-rikiddo",
     "zrml-swaps",
+    "xcm",
+    "orml-asset-registry",
 ]
+parachain = []
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
     "zeitgeist-primitives/mock",
 ]
 std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "orml-asset-registry?/std",
     "orml-traits/std",
     "parity-scale-codec/std",
+    'scale-info/std',
+    "serde?/std",
     "sp-arithmetic/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
@@ -69,13 +84,18 @@ std = [
     "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
     "zrml-simple-disputes/std",
+    "zrml-global-disputes?/std",
+    "xcm?/std",
 ]
 try-runtime = [
     "frame-support/try-runtime",
+]
+with-global-disputes = [
+    "zrml-global-disputes",
 ]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.3.5"
+version = "0.3.8"

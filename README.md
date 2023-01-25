@@ -4,18 +4,14 @@
 
 # Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
 
-![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg)
-
-<a href="https://t.me/zeitgeist_official">
-  <img src="https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue" />
-</a>
+![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg) [![Codecov](https://codecov.io/gh/zeitgeistpm/zeitgeist/branch/main/graph/badge.svg)](https://codecov.io/gh/zeitgeistpm/zeitgeist) [![Discord](https://img.shields.io/badge/discord-https%3A%2F%2Fdiscord.gg%2FMD3TbH3ctv-purple)](https://discord.gg/MD3TbH3ctv) [![Telegram](https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue)](https://t.me/zeitgeist_official)
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
 prediction markets. The platform's native currency, the ZTG, is used to sway the
 direction of the network, and as a means of last-call dispute resolution.
 Additionally, Zeitgeist is a protocol for efficient trading of prediction market
 shares and will one day become the backbone of the decentralized finance
-ecosystem by allowing for traders to create complex financial contracts on
+ecosystem by allowing traders to create complex financial contracts on
 virtually _anything_.
 
 ## Modules
@@ -23,6 +19,9 @@ virtually _anything_.
 - [authorized](./zrml/authorized) - Offers authorized resolution of disputes.
 - [court](./zrml/court) - An implementation of a court mechanism used to resolve
   disputes in a decentralized fashion.
+- [global-disputes](./zrml-global-disputes) - Global disputes sets one out of
+  multiple outcomes with the most locked ZTG tokens as the canonical outcome.
+  This is the default process if a dispute mechanism fails to resolve.
 - [liquidity-mining](./zrml/liquidity-mining) - This pallet implements the
   time-based incentivization with Zeitgeist tokens for continuously providing
   liquidity to swap pools.
@@ -43,7 +42,7 @@ virtually _anything_.
   constants.
 - [rikiddo](./zrml/rikiddo) - The module contains a completely modular
   implementation of our novel market scoring rule [Rikiddo][rikiddo]. It also
-  offer a pallet, that other pallets can use to utilize the Rikiddo market
+  offers a pallet, that other pallets can use to utilize the Rikiddo market
   scoring rule. Rikiddo can be used by the automated market maker to determine
   swap prices.
 
@@ -59,7 +58,7 @@ project and type:
 cargo build --release
 ```
 
-To build the parachain version, execute the following conmmand:
+To build the parachain version, execute the following command:
 
 ```
 cargo build --features parachain --release

@@ -22,8 +22,8 @@ use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{
-    MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash, OutcomeReport,
-    ScoringRule,
+    Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
+    OutcomeReport, ScoringRule,
 };
 use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
 
@@ -33,10 +33,17 @@ fuzz_target!(|data: Data| {
         let _ = PredictionMarkets::on_initialize(1);
         System::set_block_number(1);
 
+        let deadlines = Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 3_u32.into(),
+        };
         let _ = PredictionMarkets::create_market(
             Origin::signed(data.create_scalar_market_origin.into()),
+            Asset::Ztg,
             data.create_scalar_market_oracle.into(),
             MarketPeriod::Block(data.create_scalar_market_period),
+            deadlines,
             data.create_scalar_market_metadata,
             market_creation(data.create_scalar_market_creation),
             MarketType::Scalar(data.create_scalar_market_outcome_range),
@@ -114,9 +121,9 @@ fn market_creation(seed: u8) -> MarketCreation {
 }
 
 #[inline]
-fn market_dispute_mechanism(seed: u8) -> MarketDisputeMechanism<u128> {
+fn market_dispute_mechanism(seed: u8) -> MarketDisputeMechanism {
     match seed % 3 {
-        0 => MarketDisputeMechanism::Authorized(seed.into()),
+        0 => MarketDisputeMechanism::Authorized,
         1 => MarketDisputeMechanism::Court,
         _ => MarketDisputeMechanism::SimpleDisputes,
     }

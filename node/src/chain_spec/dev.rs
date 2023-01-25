@@ -24,7 +24,10 @@ use super::{
 };
 
 #[cfg(feature = "parachain")]
-use battery_station_runtime::{EligibilityValue, PolkadotXcmConfig};
+use battery_station_runtime::{
+    DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+    EligibilityValue, PolkadotXcmConfig,
+};
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
@@ -44,16 +47,17 @@ fn authority_keys_from_seed(
     )
 }
 
-generate_generic_genesis_function! {battery_station_runtime,
-    sudo: battery_station_runtime::SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
+generate_generic_genesis_function! {
+    battery_station_runtime,
+    sudo: battery_station_runtime::SudoConfig {
+        key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+    },
 }
 
 // Dev currently uses battery station runtime for the following reasons:
 // 1. It is the most experimental runtime (as of writing this)
 // 2. It offers the sudo pallet
-pub fn dev_config(
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<BatteryStationChainSpec, String> {
+pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
     let wasm = super::battery_station::get_wasm()?;
 
     Ok(BatteryStationChainSpec::from_genesis(
@@ -64,15 +68,18 @@ pub fn dev_config(
             generic_genesis(
                 #[cfg(feature = "parachain")]
                 AdditionalChainSpec {
+                    blocks_per_round: DefaultBlocksPerRound::get(),
                     candidates: vec![(
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
                         super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
+                    collator_commission: DefaultCollatorCommission::get(),
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     nominations: vec![],
-                    parachain_id,
+                    parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
+                    parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
@@ -106,7 +113,7 @@ pub fn dev_config(
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo-dev".into(),
-            parachain_id: parachain_id.into(),
+            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

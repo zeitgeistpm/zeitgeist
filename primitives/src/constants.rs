@@ -67,13 +67,34 @@ pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
 
+// Global Disputes
+pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
+/// Lock identifier, mainly used for the locks on the accounts.
+pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
+
 // Liqudity Mining
 /// Pallet identifier, mainly used for named balance reserves.
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
 // Prediction Markets
+/// The maximum allowed market life time, measured in blocks.
+pub const MAX_MARKET_LIFETIME: BlockNumber = 365 * BLOCKS_PER_DAY;
 /// Max. categories in a prediction market.
-pub const MAX_CATEGORIES: u16 = 10;
+pub const MAX_CATEGORIES: u16 = 64;
+/// The dispute_duration is time where users can dispute the outcome.
+/// Minimum block period for a dispute.
+pub const MIN_DISPUTE_DURATION: BlockNumber = 12 * BLOCKS_PER_HOUR;
+/// Minimum block period for oracle_duration.
+pub const MIN_ORACLE_DURATION: BlockNumber = BLOCKS_PER_HOUR;
+/// Maximum block period for a dispute.
+pub const MAX_DISPUTE_DURATION: BlockNumber = 30 * BLOCKS_PER_DAY;
+/// Maximum block period for an grace_period.
+/// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
+pub const MAX_GRACE_PERIOD: BlockNumber = 365 * BLOCKS_PER_DAY;
+/// Maximum block period for an oracle_duration.
+/// The oracle_duration is a duration where the oracle has to submit its report.
+pub const MAX_ORACLE_DURATION: BlockNumber = 14 * BLOCKS_PER_DAY;
+
 /// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
 
@@ -85,3 +106,7 @@ pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
 pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
 /// Pallet identifier, mainly used for named balance reserves.
 pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
+
+// Treasury
+/// Pallet identifier, used to derive treasury account
+pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/tsry");

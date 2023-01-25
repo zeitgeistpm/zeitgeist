@@ -31,8 +31,8 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
-    Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-    ScoringRule,
+    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -202,6 +202,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
     Markets::<Runtime>::insert(
         market_id,
         Market {
+            base_asset: Asset::Ztg,
             creation: MarketCreation::Permissionless,
             creator_fee: 0,
             creator: 0,
@@ -210,10 +211,16 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             metadata: vec![],
             oracle: 0,
             period: MarketPeriod::Block(period),
+            deadlines: Deadlines {
+                grace_period: 1_u64,
+                oracle_duration: 1_u64,
+                dispute_duration: 1_u64,
+            },
             report: None,
             resolved_outcome: None,
             status: MarketStatus::Closed,
             scoring_rule: ScoringRule::CPMM,
+            bonds: MarketBonds::default(),
         },
     );
 }

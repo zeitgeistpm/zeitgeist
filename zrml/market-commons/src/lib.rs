@@ -15,22 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Common market parameters used by `Simple disputes` and `Prediction markets` pallets.
-//!
-//! As stated by the contract of `MarketCommonsPalletApi::now`, the caller must ensure that the
-//! time implementation returns milliseconds.
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
-mod market_commons_pallet_api;
 pub mod migrations;
 mod mock;
 mod tests;
 
-pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use pallet::*;
+pub use zeitgeist_primitives::traits::MarketCommonsPalletApi;
 
 #[frame_support::pallet]
 mod pallet {
@@ -41,20 +36,33 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
-        Blake2_128Concat, Parameter,
+        traits::{Currency, Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
+        Blake2_128Concat, PalletId, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
-        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, Saturating},
-        ArithmeticError, DispatchError,
+        traits::{
+            AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member,
+            Saturating,
+        },
+        ArithmeticError, DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::types::{Market, PoolId};
+    use zeitgeist_primitives::types::{Asset, Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
 
-    type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
+    pub type MarketIdOf<T> = <T as Config>::MarketId;
+    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -74,6 +82,11 @@ mod pallet {
             + MaybeSerializeDeserialize
             + Member
             + Parameter;
+
+        // TODO(#837): Remove when on-chain arbitrage is removed!
+        /// The prefix used to calculate the prize pool accounts.
+        #[pallet::constant]
+        type PredictionMarketsPalletId: Get<PalletId>;
 
         /// Time tracker
         type Timestamp: Time<Moment = u64>;
@@ -111,7 +124,7 @@ mod pallet {
         // on the storage so next following calls will return yet another incremented number.
         //
         // Returns `Err` if `MarketId` addition overflows.
-        fn next_market_id() -> Result<T::MarketId, DispatchError> {
+        pub fn next_market_id() -> Result<T::MarketId, DispatchError> {
             let id = MarketCounter::<T>::get();
             let new_counter = id.checked_add(&1u8.into()).ok_or(ArithmeticError::Overflow)?;
             <MarketCounter<T>>::put(new_counter);
@@ -141,25 +154,17 @@ mod pallet {
             }
         }
 
-        fn market_iter() -> PrefixIterator<(
-            Self::MarketId,
-            Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        )> {
+        fn market_iter() -> PrefixIterator<(Self::MarketId, MarketOf<T>)> {
             <Markets<T>>::iter()
         }
 
-        fn market(
-            market_id: &Self::MarketId,
-        ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>
-        {
+        fn market(market_id: &Self::MarketId) -> Result<MarketOf<T>, DispatchError> {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
         where
-            F: FnOnce(
-                &mut Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-            ) -> DispatchResult,
+            F: FnOnce(&mut MarketOf<T>) -> DispatchResult,
         {
             <Markets<T>>::try_mutate(market_id, |opt| {
                 if let Some(market) = opt {
@@ -170,9 +175,7 @@ mod pallet {
             })
         }
 
-        fn push_market(
-            market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<Self::MarketId, DispatchError> {
+        fn push_market(market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
             let market_id = Self::next_market_id()?;
             <Markets<T>>::insert(market_id, market);
             Ok(market_id)
@@ -184,6 +187,13 @@ mod pallet {
             }
             <Markets<T>>::remove(market_id);
             Ok(())
+        }
+
+        // TODO(#837): Remove when on-chain arbitrage is removed!
+        #[inline]
+        fn market_account(market_id: Self::MarketId) -> Self::AccountId {
+            T::PredictionMarketsPalletId::get()
+                .into_sub_account_truncating(market_id.saturated_into::<u128>())
         }
 
         // MarketPool
@@ -217,12 +227,7 @@ mod pallet {
 
     /// Holds all markets
     #[pallet::storage]
-    pub type Markets<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::MarketId,
-        Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-    >;
+    pub type Markets<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, MarketOf<T>>;
 
     /// The number of markets that have been created (including removed markets) and the next
     /// identifier for a created market.

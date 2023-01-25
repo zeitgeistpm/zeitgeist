@@ -19,18 +19,19 @@
 
 use crate::{
     mock::{ExtBuilder, Runtime, SimpleDisputes},
-    Error,
+    Error, MarketOf,
 };
 use frame_support::assert_noop;
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
-        Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, ScoringRule,
+        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, OutcomeReport, ScoringRule,
     },
 };
 
-const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
+const DEFAULT_MARKET: MarketOf<Runtime> = Market {
+    base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,
@@ -39,10 +40,12 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
+    deadlines: Deadlines { grace_period: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
+    bonds: MarketBonds { creation: None, oracle: None },
 };
 
 #[test]

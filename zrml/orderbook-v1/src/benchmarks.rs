@@ -25,7 +25,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as OrderBook;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -101,10 +101,10 @@ benchmarks! {
     make_order_bid {
         let (caller, asset, amt, prc) = order_common_parameters::<T>(None)?;
     }: make_order(RawOrigin::Signed(caller), asset, OrderSide::Bid, amt, prc)
-}
 
-impl_benchmark_test_suite!(
-    OrderBook,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+    impl_benchmark_test_suite!(
+        OrderBook,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

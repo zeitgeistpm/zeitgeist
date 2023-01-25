@@ -49,20 +49,20 @@ impl<T: frame_system::Config> pallet_grandpa::weights::WeightInfo for WeightInfo
 
 
     fn check_equivocation_proof(x: u32, ) -> Weight {
-        (206_093_000 as Weight)
+        Weight::from_ref_time(206_093_000)
         
         // Standard Error: 82_000
 
-            .saturating_add((33_636_000 as Weight).saturating_mul(x as Weight))
+            .saturating_add(Weight::from_ref_time(33_636_000).saturating_mul(x as u64))
 
     }
 
         // Storage: Grandpa Stalled (r:0 w:1)
 
     fn note_stalled() -> Weight {
-        (6_440_000 as Weight)
+        Weight::from_ref_time(6_440_000)
 
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
 
     }
 }
