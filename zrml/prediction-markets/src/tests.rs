@@ -21,7 +21,7 @@
 use crate::{
     default_dispute_bond, mock::*, Config, Disputes, Error, Event, LastTimeFrame, MarketIdsForEdit,
     MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
-    MarketIdsPerReportBlock,
+    MarketIdsPerReportBlock, TimeFrame,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -104,19 +104,66 @@ fn simple_create_scalar_market(
 }
 
 #[test]
-fn admin_move_market_to_closed_successfully_closes_market() {
+fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumber() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
+        run_blocks(7);
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let end = 42;
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..2,
+            now..end,
             ScoringRule::CPMM,
         );
+        run_blocks(3);
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
+        let new_end = now + 3;
+        assert_eq!(market.period, MarketPeriod::Block(now..new_end));
+        assert_ne!(new_end, end);
+        System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp() {
+    ExtBuilder::default().build().execute_with(|| {
+        let start_block = 7;
+        set_timestamp_for_on_initialize(start_block * MILLISECS_PER_BLOCK as u64);
+        run_blocks(start_block);
+        let start = <zrml_market_commons::Pallet<Runtime>>::now();
+
+        let end = start + 42.saturated_into::<TimeFrame>() * MILLISECS_PER_BLOCK as u64;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.period, MarketPeriod::Timestamp(start..end));
+
+        let shift_blocks = 3;
+        let shift = shift_blocks * MILLISECS_PER_BLOCK as u64;
+        // millisecs per block is substracted inside the function
+        set_timestamp_for_on_initialize(start + shift + MILLISECS_PER_BLOCK as u64);
+        run_blocks(shift_blocks);
+
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        let new_end = start + shift;
+        assert_eq!(market.period, MarketPeriod::Timestamp(start..new_end));
+        assert_ne!(new_end, end);
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
