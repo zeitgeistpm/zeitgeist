@@ -86,6 +86,7 @@ impl<AI, BA> Bond<AI, BA> {
 pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
+    pub outsider: Option<Bond<AI, BA>>,
 }
 
 impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
@@ -95,14 +96,16 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
             Some(bond) if bond.who == *who => bond.value,
             _ => BA::zero(),
         };
-        value_or_default(&self.creation).saturating_add(value_or_default(&self.oracle))
+        value_or_default(&self.creation)
+            .saturating_add(value_or_default(&self.oracle))
+            .saturating_add(value_or_default(&self.outsider))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None }
+        MarketBonds { creation: None, oracle: None, outsider: None }
     }
 }
 

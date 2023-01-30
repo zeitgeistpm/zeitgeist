@@ -58,11 +58,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
-                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
-                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            ),
+            zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -72,10 +68,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
-                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            ),
+            zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -1019,6 +1012,7 @@ macro_rules! impl_config_traits {
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
+            type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type RequestEditOrigin = EitherOfDiverse<
