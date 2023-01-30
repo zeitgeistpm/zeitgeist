@@ -36,6 +36,7 @@ use zeitgeist_primitives::{
 #[cfg(feature = "parachain")]
 use {
     super::battery_station::inflation_config,
+    sp_runtime::Perbill,
     zeitgeist_primitives::constants::{ztg::TOTAL_INITIAL_ZTG, BASE},
 };
 
@@ -80,7 +81,9 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                     )],
                     collator_commission: DefaultCollatorCommission::get(),
                     inflation_info: inflation_config(
-                        sp_runtime::Perbill::from_percent(5),
+                        Perbill::from_parts(20),
+                        Perbill::from_parts(35),
+                        Perbill::from_parts(50),
                         TOTAL_INITIAL_ZTG * BASE,
                     ),
                     nominations: vec![],

@@ -102,7 +102,12 @@ fn additional_chain_spec_staging_zeitgeist(
             ),
         ],
         collator_commission: DefaultCollatorCommission::get(),
-        inflation_info: inflation_config(Perbill::from_percent(5), TOTAL_INITIAL_ZTG * BASE),
+        inflation_info: inflation_config(
+            Perbill::from_parts(20),
+            Perbill::from_parts(35),
+            Perbill::from_parts(50),
+            TOTAL_INITIAL_ZTG * BASE,
+        ),
         nominations: vec![],
         parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
         parachain_id,

@@ -51,7 +51,9 @@ cfg_if::cfg_if! {
                 use sp_runtime::Perbill;
 
                 pub(super) fn inflation_config(
-                    annual_inflation: Perbill,
+                    annual_inflation_min: Perbill,
+                    annual_inflation_ideal: Perbill,
+                    annual_inflation_max: Perbill,
                     total_supply: zeitgeist_primitives::types::Balance
                 ) -> pallet_parachain_staking::inflation::InflationInfo<zeitgeist_primitives::types::Balance> {
                     fn to_round_inflation(annual: pallet_parachain_staking::inflation::Range<Perbill>) -> pallet_parachain_staking::inflation::Range<Perbill> {
@@ -67,17 +69,16 @@ cfg_if::cfg_if! {
                         )
                     }
                     let annual = pallet_parachain_staking::inflation::Range {
-                        min: annual_inflation,
-                        ideal: annual_inflation,
-                        max: annual_inflation,
+                        min: annual_inflation_min,
+                        ideal: annual_inflation_ideal,
+                        max: annual_inflation_max,
                     };
-                    let total_max = annual_inflation.mul_floor(total_supply);
                     pallet_parachain_staking::inflation::InflationInfo {
                         // staking expectations
                         expect: pallet_parachain_staking::inflation::Range {
-                            min: Perbill::from_percent(20).mul_floor(total_max),
-                            ideal: Perbill::from_percent(50).mul_floor(total_max),
-                            max: total_max
+                            min: Perbill::from_percent(5).mul_floor(total_supply),
+                            ideal: Perbill::from_percent(10).mul_floor(total_supply),
+                            max: Perbill::from_percent(15).mul_floor(total_supply),
                         },
                         // annual inflation
                         annual,
