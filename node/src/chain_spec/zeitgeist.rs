@@ -17,8 +17,10 @@
 
 #![cfg(feature = "with-zeitgeist-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance};
-use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{
+    generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
+    EndowedAccountWithBalance,
+};
 use hex_literal::hex;
 use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
@@ -28,8 +30,9 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
+    super::{generate_inflation_config_function, Extensions},
     crate::KUSAMA_PARACHAIN_ID,
+    zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
     zeitgeist_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
@@ -74,6 +77,8 @@ fn endowed_accounts_staging_zeitgeist() -> Vec<EndowedAccountWithBalance> {
 fn additional_chain_spec_staging_zeitgeist(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
+    use zeitgeist_primitives::constants::BASE;
+
     AdditionalChainSpec {
         blocks_per_round: DefaultBlocksPerRound::get(),
         candidates: vec![
@@ -97,7 +102,7 @@ fn additional_chain_spec_staging_zeitgeist(
             ),
         ],
         collator_commission: DefaultCollatorCommission::get(),
-        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
+        inflation_info: inflation_config(Perbill::from_percent(5), TOTAL_INITIAL_ZTG * BASE),
         nominations: vec![],
         parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
         parachain_id,
@@ -118,12 +123,14 @@ fn additional_chain_spec_staging_zeitgeist() -> AdditionalChainSpec {
     }
 }
 
-#[inline]
 pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 
 generate_generic_genesis_function!(zeitgeist_runtime,);
+
+#[cfg(feature = "parachain")]
+generate_inflation_config_function!(zeitgeist_runtime);
 
 pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
     let wasm = get_wasm()?;
