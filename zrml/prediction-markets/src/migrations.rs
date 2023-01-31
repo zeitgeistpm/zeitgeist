@@ -628,6 +628,167 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests_simple_disputes_migration {
+    use super::*;
+    use crate::{
+        mock::{DisputeBond, ExtBuilder, Runtime},
+        MarketOf,
+    };
+    use zrml_market_commons::MarketCommonsPalletApi;
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_version() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            MoveDataToSimpleDisputes::<Runtime>::on_runtime_upgrade();
+            assert_eq!(
+                StorageVersion::get::<crate::Pallet<Runtime>>(),
+                PREDICTION_MARKETS_NEXT_STORAGE_VERSION
+            );
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            // Don't set up chain to signal that storage is already up to date.
+            let market_id = 0u128;
+            let mut disputes = zrml_simple_disputes::Disputes::<Runtime>::get(market_id);
+            let dispute = MarketDispute {
+                at: 42u64,
+                by: 0u128,
+                outcome: OutcomeReport::Categorical(0u16),
+                bond: DisputeBond::get(),
+            };
+            disputes.try_push(dispute.clone()).unwrap();
+            zrml_simple_disputes::Disputes::<Runtime>::insert(market_id, disputes);
+            let market = get_market(MarketDisputeMechanism::SimpleDisputes);
+            <zrml_market_commons::Pallet<Runtime>>::push_market(market).unwrap();
+
+            MoveDataToSimpleDisputes::<Runtime>::on_runtime_upgrade();
+
+            let actual = zrml_simple_disputes::Disputes::<Runtime>::get(0);
+            assert_eq!(actual, vec![dispute]);
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_correctly_updates_simple_disputes() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            let market_id = 0u128;
+
+            let mut disputes = crate::Disputes::<Runtime>::get(0);
+            for i in 0..<Runtime as crate::Config>::MaxDisputes::get() {
+                let dispute = OldMarketDispute {
+                    at: i as u64 + 42u64,
+                    by: i as u128,
+                    outcome: OutcomeReport::Categorical(i as u16),
+                };
+                disputes.try_push(dispute).unwrap();
+            }
+            crate::Disputes::<Runtime>::insert(market_id, disputes);
+            let market = get_market(MarketDisputeMechanism::SimpleDisputes);
+            <zrml_market_commons::Pallet<Runtime>>::push_market(market).unwrap();
+
+            MoveDataToSimpleDisputes::<Runtime>::on_runtime_upgrade();
+
+            let mut disputes = zrml_simple_disputes::Disputes::<Runtime>::get(market_id);
+            for i in 0..<Runtime as crate::Config>::MaxDisputes::get() {
+                let dispute = disputes.get_mut(i as usize).unwrap();
+
+                assert_eq!(dispute.at, i as u64 + 42u64);
+                assert_eq!(dispute.by, i as u128);
+                assert_eq!(dispute.outcome, OutcomeReport::Categorical(i as u16));
+
+                let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i as usize);
+                assert_eq!(dispute.bond, bond);
+            }
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_correctly_updates_reserve_ids() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            let market_id = 0u128;
+
+            let mut disputes = crate::Disputes::<Runtime>::get(0);
+            for i in 0..<Runtime as crate::Config>::MaxDisputes::get() {
+                let dispute = OldMarketDispute {
+                    at: i as u64 + 42u64,
+                    by: i as u128,
+                    outcome: OutcomeReport::Categorical(i as u16),
+                };
+                disputes.try_push(dispute).unwrap();
+            }
+            crate::Disputes::<Runtime>::insert(market_id, disputes);
+            let market = get_market(MarketDisputeMechanism::SimpleDisputes);
+            <zrml_market_commons::Pallet<Runtime>>::push_market(market).unwrap();
+
+            MoveDataToSimpleDisputes::<Runtime>::on_runtime_upgrade();
+
+            let mut disputes = zrml_simple_disputes::Disputes::<Runtime>::get(market_id);
+            for i in 0..<Runtime as crate::Config>::MaxDisputes::get() {
+                let dispute = disputes.get_mut(i as usize).unwrap();
+
+                assert_eq!(dispute.at, i as u64 + 42u64);
+                assert_eq!(dispute.by, i as u128);
+                assert_eq!(dispute.outcome, OutcomeReport::Categorical(i as u16));
+
+                let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i as usize);
+                assert_eq!(dispute.bond, bond);
+            }
+        });
+    }
+
+    fn set_up_version() {
+        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION)
+            .put::<crate::Pallet<Runtime>>();
+    }
+
+    fn get_market(dispute_mechanism: MarketDisputeMechanism) -> MarketOf<Runtime> {
+        let base_asset = Asset::Ztg;
+        let creator = 999;
+        let creator_fee = 1;
+        let oracle = 2;
+        let metadata = vec![3, 4, 5];
+        let market_type = MarketType::Categorical(6);
+        let period = MarketPeriod::Block(7..8);
+        let scoring_rule = ScoringRule::CPMM;
+        let status = MarketStatus::Disputed;
+        let creation = MarketCreation::Permissionless;
+        let report = None;
+        let resolved_outcome = None;
+        let deadlines = Deadlines::default();
+        let bonds = MarketBonds {
+            creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
+            oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
+            outsider: None,
+            dispute: None,
+        };
+
+        Market {
+            base_asset,
+            creator,
+            creation,
+            creator_fee,
+            oracle,
+            metadata,
+            market_type,
+            period,
+            scoring_rule,
+            status,
+            report,
+            resolved_outcome,
+            dispute_mechanism,
+            deadlines,
+            bonds,
+        }
+    }
+}
+
 // We use these utilities to prevent having to make the swaps pallet a dependency of
 // prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
 // https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
