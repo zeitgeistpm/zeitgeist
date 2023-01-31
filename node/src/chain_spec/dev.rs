@@ -75,7 +75,6 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                         super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
                     collator_commission: DefaultCollatorCommission::get(),
-                    crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     nominations: vec![],
                     parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),

@@ -20,7 +20,7 @@
 
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
-    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock, TimeFrame,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -33,7 +33,7 @@ use test_case::test_case;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::traits::{AccountIdConversion, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{OutcomeBond, OutcomeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
+    constants::mock::{OutcomeBond, OutcomeFactor, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
@@ -59,6 +59,30 @@ fn gen_metadata(byte: u8) -> MultiHash {
     metadata[0] = 0x15;
     metadata[1] = 0x30;
     MultiHash::Sha3_384(metadata)
+}
+
+fn reserve_sentinel_amounts() {
+    // Reserve a sentinel amount to check that we don't unreserve too much.
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &ALICE, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &BOB, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(
+        &PredictionMarkets::reserve_id(),
+        &CHARLIE,
+        SENTINEL_AMOUNT
+    ));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &DAVE, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &EVE, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &FRED, SENTINEL_AMOUNT));
+    assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(&BOB), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(&CHARLIE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(&DAVE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(&EVE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(&FRED), SENTINEL_AMOUNT);
+}
+
+fn check_reserve(account: &AccountIdTest, expected: Balance) {
+    assert_eq!(Balances::reserved_balance(account), SENTINEL_AMOUNT + expected);
 }
 
 fn simple_create_categorical_market(
@@ -102,19 +126,66 @@ fn simple_create_scalar_market(
 }
 
 #[test]
-fn admin_move_market_to_closed_successfully_closes_market() {
+fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumber() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
+        run_blocks(7);
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let end = 42;
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..2,
+            now..end,
             ScoringRule::CPMM,
         );
+        run_blocks(3);
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
+        let new_end = now + 3;
+        assert_eq!(market.period, MarketPeriod::Block(now..new_end));
+        assert_ne!(new_end, end);
+        System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp() {
+    ExtBuilder::default().build().execute_with(|| {
+        let start_block = 7;
+        set_timestamp_for_on_initialize(start_block * MILLISECS_PER_BLOCK as u64);
+        run_blocks(start_block);
+        let start = <zrml_market_commons::Pallet<Runtime>>::now();
+
+        let end = start + 42.saturated_into::<TimeFrame>() * MILLISECS_PER_BLOCK as u64;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.period, MarketPeriod::Timestamp(start..end));
+
+        let shift_blocks = 3;
+        let shift = shift_blocks * MILLISECS_PER_BLOCK as u64;
+        // millisecs per block is substracted inside the function
+        set_timestamp_for_on_initialize(start + shift + MILLISECS_PER_BLOCK as u64);
+        run_blocks(shift_blocks);
+
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        let new_end = start + shift;
+        assert_eq!(market.period, MarketPeriod::Timestamp(start..new_end));
+        assert_ne!(new_end, end);
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
@@ -3897,6 +3968,7 @@ fn authorized_correctly_resolves_disputed_market() {
 fn approve_market_correctly_unreserves_advisory_bond() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             base_asset,
@@ -3910,19 +3982,10 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             ScoringRule::CPMM,
         ));
         let market_id = 0;
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(
-            Balances::reserved_balance(&ALICE),
-            SENTINEL_AMOUNT + AdvisoryBond::get() + OracleBond::get()
-        );
+        check_reserve(&ALICE, AdvisoryBond::get() + OracleBond::get());
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), market_id));
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        check_reserve(&ALICE, OracleBond::get());
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();
         assert!(market.bonds.creation.unwrap().is_settled);
@@ -4045,6 +4108,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
  {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4058,17 +4122,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(
-            Balances::reserved_balance(&ALICE),
-            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
-        );
+        check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -4078,7 +4133,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(0)
         ));
         run_to_block(grace_period + market.deadlines.dispute_duration + 1);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         assert_eq!(
             Balances::free_balance(&ALICE),
             alice_balance_before + ValidityBond::get() + OracleBond::get()
@@ -4098,6 +4153,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
  {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4111,30 +4167,122 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(
-            Balances::reserved_balance(&ALICE),
-            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
-        );
+        check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
+
+        let charlie_balance_before = Balances::free_balance(&CHARLIE);
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         let report_at = grace_period + market.deadlines.oracle_duration + 1;
         run_to_block(report_at);
+
+        assert!(market.bonds.outsider.is_none());
         assert_ok!(PredictionMarkets::report(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.bonds.outsider, Some(Bond::new(CHARLIE, OutsiderBond::get())));
+        check_reserve(&CHARLIE, OutsiderBond::get());
+        assert_eq!(Balances::free_balance(&CHARLIE), charlie_balance_before - OutsiderBond::get());
+        let charlie_balance_before = Balances::free_balance(&CHARLIE);
+
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // Check that validity bond didn't get slashed, but oracle bond did
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+
+        check_reserve(&CHARLIE, 0);
+        // Check that the outsider gets the OracleBond together with the OutsiderBond
+        assert_eq!(
+            Balances::free_balance(&CHARLIE),
+            charlie_balance_before + OracleBond::get() + OutsiderBond::get()
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert!(market.bonds.outsider.unwrap().is_settled);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn outsider_reports_wrong_outcome() {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
+
+        let end = 100;
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            base_asset,
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(2),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+
+        let outsider = CHARLIE;
+
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        let report_at = grace_period + market.deadlines.oracle_duration + 1;
+        run_to_block(report_at);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(outsider),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let outsider_balance_before = Balances::free_balance(&outsider);
+        check_reserve(&outsider, OutsiderBond::get());
+
+        let dispute_at_0 = report_at + 1;
+        run_to_block(dispute_at_0);
+        let eve_reserved = Balances::reserved_balance(&EVE);
+
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+        ));
+
+        assert_eq!(eve_reserved, DisputeBond::get());
+        
+        assert_ok!(SimpleDisputes::reserve_outcome(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        
+        assert_eq!(eve_reserved, DisputeBond::get() + zrml_simple_disputes::default_outcome_bond::<Runtime>(0));
+
+        let eve_balance_before = Balances::free_balance(&EVE);
+
+        // on_resolution called
+        run_blocks(market.deadlines.dispute_duration);
+
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before - OracleBond::get());
+
+        check_reserve(&outsider, 0);
+        assert_eq!(Balances::free_balance(&outsider), outsider_balance_before);
+
+        let dispute_bond = crate::default_dispute_bond::<Runtime>(0usize);
+        // disputor EVE gets the OracleBond and OutsiderBond and dispute bond
+        assert_eq!(
+            Balances::free_balance(&EVE),
+            eve_balance_before + dispute_bond + OutsiderBond::get() + OracleBond::get()
+        );
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4150,6 +4298,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
  {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4163,15 +4312,9 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         let report_at = grace_period + 1;
@@ -4182,7 +4325,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             OutcomeReport::Categorical(1)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // Check that nothing got slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
     };
@@ -4200,6 +4343,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
  {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4213,15 +4357,9 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         let report_at = grace_period + market.deadlines.oracle_duration + 1;
@@ -4233,7 +4371,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         ));
         run_blocks(market.deadlines.dispute_duration);
         // Check that oracle bond got slashed
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -4251,6 +4389,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
     // Oracle reports in time but incorrect report, so OracleBond gets slashed on resolution
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4264,17 +4403,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(
-            Balances::reserved_balance(&ALICE),
-            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
-        );
+        check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -4290,7 +4420,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(1)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
     };
@@ -4309,6 +4439,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
     // Oracle reports in time but incorrect report, so OracleBond gets slashed on resolution
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4322,15 +4453,9 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -4346,7 +4471,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             OutcomeReport::Categorical(1)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
     };
@@ -4365,6 +4490,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
     // Oracle reports in time and correct report, so OracleBond does not get slashed on resolution
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4378,17 +4504,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(
-            Balances::reserved_balance(&ALICE),
-            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
-        );
+        check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -4410,7 +4527,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(0)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
         assert_eq!(
             Balances::free_balance(&ALICE),
@@ -4432,6 +4549,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
     // Oracle reports in time and correct report, so OracleBond does not get slashed on resolution
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4445,15 +4563,9 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
@@ -4475,7 +4587,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             OutcomeReport::Categorical(0)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
     };
@@ -4494,6 +4606,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
     // Oracle does not report in time, so OracleBond gets slashed on resolution
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4507,27 +4620,25 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
+
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(
-            Balances::reserved_balance(&ALICE),
-            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
-        );
+        check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
+
+        let outsider = CHARLIE;
+
         let market = MarketCommons::market(&0).unwrap();
         let after_oracle_duration =
             end + market.deadlines.grace_period + market.deadlines.oracle_duration + 1;
         run_to_block(after_oracle_duration);
         // CHARLIE is not an Oracle
         assert_ok!(PredictionMarkets::report(
-            Origin::signed(CHARLIE),
+            Origin::signed(outsider),
             0,
             OutcomeReport::Categorical(0)
         ));
+        let outsider_balance_before = Balances::free_balance(&outsider);
+        check_reserve(&outsider, OutsiderBond::get());
+
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         // EVE disputes with wrong outcome
         assert_ok!(SimpleDisputes::reserve_outcome(
@@ -4541,9 +4652,15 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(0)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+
+        check_reserve(&outsider, 0);
+        assert_eq!(
+            Balances::free_balance(&outsider),
+            outsider_balance_before + OracleBond::get() + OutsiderBond::get()
+        );
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4560,6 +4677,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
     // Oracle does not report in time, so OracleBond gets slashed on resolution
     // NOTE: Bonds are always in ZTG
     let test = |base_asset: Asset<MarketId>| {
+        reserve_sentinel_amounts();
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -4573,25 +4691,25 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(
-            &PredictionMarkets::reserve_id(),
-            &ALICE,
-            SENTINEL_AMOUNT
-        ));
+
+        let outsider = CHARLIE;
+
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let after_oracle_duration =
             end + market.deadlines.grace_period + market.deadlines.oracle_duration + 1;
         run_to_block(after_oracle_duration);
         // CHARLIE is not an Oracle
         assert_ok!(PredictionMarkets::report(
-            Origin::signed(CHARLIE),
+            Origin::signed(outsider),
             0,
             OutcomeReport::Categorical(0)
         ));
+        let outsider_balance_before = Balances::free_balance(&outsider);
+        check_reserve(&outsider, OutsiderBond::get());
+
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         // EVE disputes with wrong outcome
         assert_ok!(SimpleDisputes::reserve_outcome(
@@ -4605,9 +4723,15 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             OutcomeReport::Categorical(0)
         ));
         run_blocks(market.deadlines.dispute_duration);
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+
+        check_reserve(&outsider, 0);
+        assert_eq!(
+            Balances::free_balance(&outsider),
+            outsider_balance_before + OracleBond::get() + OutsiderBond::get()
+        );
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4931,6 +5055,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        outsider: None,
         dispute: None,
     }
 )]
@@ -4941,6 +5066,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
         oracle: Some(Bond::new(ALICE, <Runtime as Config>::OracleBond::get())),
+        outsider: None,
         dispute: None,
     }
 )]

@@ -52,7 +52,7 @@ jobs:
         run: rustup show
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Checks
         run: ./scripts/tests/${{ matrix.scripts }}.sh

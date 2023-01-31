@@ -86,6 +86,7 @@ impl<AI, BA> Bond<AI, BA> {
 pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
+    pub outsider: Option<Bond<AI, BA>>,
     pub dispute: Option<Bond<AI, BA>>,
 }
 
@@ -98,6 +99,7 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
         };
         value_or_default(&self.creation)
             .saturating_add(value_or_default(&self.oracle))
+            .saturating_add(value_or_default(&self.outsider))
             .saturating_add(value_or_default(&self.dispute))
     }
 }
@@ -105,7 +107,7 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None, dispute: None }
+        MarketBonds { creation: None, oracle: None, outsider: None, dispute: None }
     }
 }
 
