@@ -48,9 +48,6 @@ pub const ZEITGEIST_FOUNDATION: u128 = 22_000_000;
 
 // Inflation
 
-/// Perthousand crowdloan inflation. 1.5%
-pub const CROWDLOAN_PTD: Perbill = Perbill::from_perthousand(15);
-
 /// Perthousand liquidity mining inflation. 2%
 pub const LIQUIDITY_MINING_PTD: Perbill = Perbill::from_perthousand(20);
 

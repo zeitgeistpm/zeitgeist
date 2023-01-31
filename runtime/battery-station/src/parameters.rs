@@ -191,6 +191,9 @@ parameter_types! {
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 50 * CENT;
+    /// (Slashable) A bond for an outcome reporter, who is not the oracle.
+    /// Slashed in case the final outcome does not match the outcome by the outsider.
+    pub const OutsiderBond: Balance = 2 * OracleBond::get();
     /// Pallet identifier, mainly used for named balance reserves.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case

@@ -64,7 +64,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            ConditionalMigration,
+            (
+                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
+                ConditionalMigration,
+            ),
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -74,7 +77,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            ConditionalMigration,
+            (
+                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
+                ConditionalMigration,
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -340,9 +346,6 @@ macro_rules! create_runtime_with_additional_pallets {
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
 
-            // Third-party
-            Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
-
             // Others
             $($additional_pallets)*
         );
@@ -592,25 +595,6 @@ macro_rules! impl_config_traits {
             type SelfLocation = SelfLocation;
             type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
-        }
-
-        #[cfg(feature = "parachain")]
-        impl pallet_crowdloan_rewards::Config for Runtime {
-            type Event = Event;
-            type InitializationPayment = InitializationPayment;
-            type Initialized = Initialized;
-            type MaxInitContributors = MaxInitContributorsBatchSizes;
-            type MinimumReward = MinimumReward;
-            type RelayChainAccountId = AccountId;
-            type RewardCurrency = Balances;
-            type RewardAddressAssociateOrigin = EnsureSigned<Self::AccountId>;
-            type RewardAddressChangeOrigin = frame_system::EnsureSigned<Self::AccountId>;
-            type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
-            type SignatureNetworkIdentifier = SignatureNetworkIdentifier;
-            type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
-            type VestingBlockProvider =
-                cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
-            type WeightInfo = pallet_crowdloan_rewards::weights::SubstrateWeight<Runtime>;
         }
 
         impl pallet_balances::Config for Runtime {
@@ -1042,6 +1026,7 @@ macro_rules! impl_config_traits {
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
+            type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type RequestEditOrigin = EitherOfDiverse<
@@ -1247,7 +1232,6 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
-                            list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
                         }
@@ -1327,7 +1311,6 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
-                            add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
 
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
