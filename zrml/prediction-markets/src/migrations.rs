@@ -635,6 +635,7 @@ mod tests_simple_disputes_migration {
         mock::{DisputeBond, ExtBuilder, Runtime},
         MarketOf,
     };
+    use orml_traits::NamedMultiReservableCurrency;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[test]
@@ -721,6 +722,15 @@ mod tests_simple_disputes_migration {
                     by: i as u128,
                     outcome: OutcomeReport::Categorical(i as u16),
                 };
+                let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i.into());
+                let pm_reserve_id = crate::Pallet::<Runtime>::reserve_id();
+                let res = <Runtime as crate::Config>::AssetManager::reserve_named(
+                    &pm_reserve_id,
+                    Asset::Ztg,
+                    &dispute.by,
+                    bond.saturated_into::<u128>().saturated_into(),
+                );
+                assert!(res.is_ok());
                 disputes.try_push(dispute).unwrap();
             }
             crate::Disputes::<Runtime>::insert(market_id, disputes);
@@ -733,12 +743,25 @@ mod tests_simple_disputes_migration {
             for i in 0..<Runtime as crate::Config>::MaxDisputes::get() {
                 let dispute = disputes.get_mut(i as usize).unwrap();
 
-                assert_eq!(dispute.at, i as u64 + 42u64);
-                assert_eq!(dispute.by, i as u128);
-                assert_eq!(dispute.outcome, OutcomeReport::Categorical(i as u16));
+                let sd_reserve_id = zrml_simple_disputes::Pallet::<Runtime>::reserve_id();
+                let reserved_balance =
+                    <Runtime as crate::Config>::AssetManager::reserved_balance_named(
+                        &sd_reserve_id,
+                        Asset::Ztg,
+                        &dispute.by,
+                    );
+                let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i.into());
+                assert_eq!(reserved_balance, bond);
+                assert!(reserved_balance > 0);
 
-                let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i as usize);
-                assert_eq!(dispute.bond, bond);
+                let pm_reserve_id = crate::Pallet::<Runtime>::reserve_id();
+                let reserved_balance =
+                    <Runtime as crate::Config>::AssetManager::reserved_balance_named(
+                        &pm_reserve_id,
+                        Asset::Ztg,
+                        &dispute.by,
+                    );
+                assert_eq!(reserved_balance, 0);
             }
         });
     }
