@@ -332,6 +332,10 @@ mod pallet {
             let market_status = market.status;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
+            if Self::is_dispute_bond_pending(&market_id, &market, false) {
+                Self::unreserve_dispute_bond(&market_id)?;
+            }
+
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
@@ -2055,9 +2059,6 @@ mod pallet {
             if Self::is_outsider_bond_pending(market_id, market, false) {
                 Self::slash_outsider_bond(market_id, None)?;
             }
-            if Self::is_dispute_bond_pending(market_id, market, false) {
-                Self::slash_dispute_bond(market_id, None)?;
-            }
             Ok(())
         }
 
@@ -2523,8 +2524,6 @@ mod pallet {
             let resolved_outcome =
                 resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
-            let mut overall_imbalance = <NegativeImbalanceOf<T>>::zero();
-
             // If the oracle reported right, return the OracleBond, otherwise slash it to
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
@@ -2569,14 +2568,16 @@ mod pallet {
             }
 
             let mut correct_disputor = None;
-            if Self::is_dispute_bond_pending(market_id, market, false) {
-                if is_correct {
-                    let imb = Self::slash_dispute_bond(market_id, None)?;
-                    overall_imbalance.subsume(imb);
-                } else {
-                    // If the report outcome was wrong, the dispute was justified
-                    Self::unreserve_dispute_bond(market_id)?;
-                    correct_disputor = Some(bond.who);
+            if let Some(bond) = market.bonds.dispute.clone() {
+                if !bond.is_settled {
+                    if is_correct {
+                        let imb = Self::slash_dispute_bond(market_id, None)?;
+                        overall_imbalance.subsume(imb);
+                    } else {
+                        // If the report outcome was wrong, the dispute was justified
+                        Self::unreserve_dispute_bond(market_id)?;
+                        correct_disputor = Some(bond.who);
+                    }
                 }
             }
 

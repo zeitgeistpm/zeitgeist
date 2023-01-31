@@ -58,7 +58,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
+            (
+                zrml_prediction_markets::migrations::AddOutsiderAndDisputeBond<Runtime>,
+                zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
+            ),
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -68,7 +71,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
+            (
+                zrml_prediction_markets::migrations::AddOutsiderAndDisputeBond<Runtime>,
+                zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

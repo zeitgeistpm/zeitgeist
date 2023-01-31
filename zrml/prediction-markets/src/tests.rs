@@ -4250,24 +4250,21 @@ fn outsider_reports_wrong_outcome() {
 
         let dispute_at_0 = report_at + 1;
         run_to_block(dispute_at_0);
-        let eve_reserved = Balances::reserved_balance(&EVE);
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
+        check_reserve(&EVE, DisputeBond::get());
 
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(EVE),
-            0,
-        ));
-
-        assert_eq!(eve_reserved, DisputeBond::get());
-        
         assert_ok!(SimpleDisputes::reserve_outcome(
-            Origin::signed(EVE),
+            Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(0)
         ));
-        
-        assert_eq!(eve_reserved, DisputeBond::get() + zrml_simple_disputes::default_outcome_bond::<Runtime>(0));
+
+        let outcome_bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(0);
+
+        check_reserve(&DAVE, outcome_bond);
 
         let eve_balance_before = Balances::free_balance(&EVE);
+        let dave_balance_before = Balances::free_balance(&DAVE);
 
         // on_resolution called
         run_blocks(market.deadlines.dispute_duration);
@@ -4277,12 +4274,13 @@ fn outsider_reports_wrong_outcome() {
         check_reserve(&outsider, 0);
         assert_eq!(Balances::free_balance(&outsider), outsider_balance_before);
 
-        let dispute_bond = crate::default_dispute_bond::<Runtime>(0usize);
-        // disputor EVE gets the OracleBond and OutsiderBond and dispute bond
+        // disputor EVE gets the OracleBond and OutsiderBond and DisputeBond
         assert_eq!(
             Balances::free_balance(&EVE),
-            eve_balance_before + dispute_bond + OutsiderBond::get() + OracleBond::get()
+            eve_balance_before + DisputeBond::get() + OutsiderBond::get() + OracleBond::get()
         );
+        // DAVE gets his outcome bond back
+        assert_eq!(Balances::free_balance(&DAVE), dave_balance_before + outcome_bond);
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
