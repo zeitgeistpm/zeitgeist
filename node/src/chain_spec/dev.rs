@@ -81,9 +81,9 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                     )],
                     collator_commission: DefaultCollatorCommission::get(),
                     inflation_info: inflation_config(
-                        Perbill::from_parts(20),
-                        Perbill::from_parts(35),
-                        Perbill::from_parts(50),
+                        Perbill::from_perthousand(20),
+                        Perbill::from_perthousand(35),
+                        Perbill::from_perthousand(50),
                         TOTAL_INITIAL_ZTG * BASE,
                     ),
                     nominations: vec![],
