@@ -57,8 +57,8 @@ pub const TOTAL_INITIAL_ZTG: u128 = COMMUNITY_INCENTIVES
 
 // Inflation
 
-/// Perthousand liquidity mining inflation. 2%
+/// Perthousand liquidity mining inflation. 0%
 pub const LIQUIDITY_MINING_PTD: Perbill = Perbill::from_perthousand(0);
 
-/// Perthousand collator staking inflation. 1.5%
+/// Perthousand collator staking inflation. 5%
 pub const STAKING_PTD: Perbill = Perbill::from_perthousand(50);
