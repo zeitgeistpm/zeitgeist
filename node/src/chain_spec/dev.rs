@@ -30,7 +30,7 @@ use battery_station_runtime::{
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
-    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD, STAKING_PTD},
     types::Balance,
 };
 #[cfg(feature = "parachain")]
@@ -81,9 +81,9 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                     )],
                     collator_commission: DefaultCollatorCommission::get(),
                     inflation_info: inflation_config(
-                        Perbill::from_perthousand(20),
-                        Perbill::from_perthousand(35),
-                        Perbill::from_perthousand(50),
+                        STAKING_PTD * Perbill::from_percent(40),
+                        STAKING_PTD * Perbill::from_percent(70),
+                        STAKING_PTD,
                         TOTAL_INITIAL_ZTG * BASE,
                     ),
                     nominations: vec![],

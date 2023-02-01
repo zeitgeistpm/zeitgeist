@@ -25,7 +25,7 @@ use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
 use zeitgeist_primitives::{
     constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD, STAKING_PTD},
         BASE,
     },
     types::AccountId,
@@ -69,9 +69,9 @@ fn additional_chain_spec_staging_battery_station(
         )],
         collator_commission: DefaultCollatorCommission::get(),
         inflation_info: inflation_config(
-            Perbill::from_perthousand(20),
-            Perbill::from_perthousand(35),
-            Perbill::from_perthousand(50),
+            STAKING_PTD * Perbill::from_percent(40),
+            STAKING_PTD * Perbill::from_percent(70),
+            STAKING_PTD,
             TOTAL_INITIAL_ZTG * BASE,
         ),
         nominations: vec![],
