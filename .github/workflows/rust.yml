@@ -34,6 +34,19 @@ jobs:
       - name: Format
         run: ./scripts/tests/format.sh --check
 
+  copyright:
+    name: Copyright Notices
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+      - name: Install license checker
+        run: pip install scripts/check-license
+      - name: Check copyright
+        run: check-license
+
   checks:
     name: Checks
     runs-on: ubuntu-latest
