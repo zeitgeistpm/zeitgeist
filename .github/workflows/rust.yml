@@ -42,8 +42,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v2
-      - name: Install license checker
-        run: pip install scripts/check-license
+      - name: Install license checker and dependencies
+        run: pip install scripts/check-license && pip install -r scripts/check-license/requirements.txt
       - name: Check copyright
         run: check-license
 
