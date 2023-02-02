@@ -59,7 +59,7 @@
         if [[ -v RELEASE_VERSION ]]; then
           wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
         else
-          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/v0.3.6/zeitgeist_parachain
+          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/v0.3.4/zeitgeist_parachain
         fi
         chmod 0755 zeitgeist
         chown zeitgeist:zeitgeist zeitgeist
