@@ -97,7 +97,7 @@ class TestFile:
             (
                 [Copyright.from_string("Copyright 2023 some dude.")],
                 2023,
-                OutdatedCopyrightError,
+                MissingCopyrightError,
             ),
             (
                 [Copyright.from_string("Copyright 2022 Forecasting Technologies LTD.")],

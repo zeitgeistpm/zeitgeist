@@ -167,6 +167,28 @@ class LicenseChecker:
     def __init__(self, git_object: Optional[GitObject] = None) -> None:
         self._git = git_object or GitObject()
 
+    def check_files(
+        self,
+        year: int,
+        files: list[str],
+        file_filter: Optional[Callable] = None,
+    ) -> bool:
+        if file_filter is None:
+            file_filter = lambda f: f.endswith(".rs")
+        files = [File(f) for f in filter(file_filter, files)]
+        return self._check_files_common(files, year)
+
+    def update_files(
+        self,
+        year: int,
+        files: list[str],
+        file_filter: Optional[Callable] = None,
+    ) -> bool:
+        if file_filter is None:
+            file_filter = lambda f: f.endswith(".rs")
+        files = [File(f) for f in filter(file_filter, files)]
+        return self._update_files_common(files, year)
+
     def check_branch(
         self,
         year: int,
@@ -181,33 +203,16 @@ class LicenseChecker:
             file_filter: A predicate which filters files which should not be tracked.
         """
         files = self._get_files_from_branch(branch, file_filter)
-        result = False
-        for f in files:
-            try:
-                f.read()
-                f.check(year)
-            except LicenseCheckerError as e:
-                logging.error(str(e))
-                result = True
-        return result
+        return self._check_files_common(files, year)
 
     def update_branch(
         self,
         year: int,
         branch: Optional[str] = None,
         file_filter: Optional[Callable] = None,
-    ) -> None:
+    ) -> bool:
         files = self._get_files_from_branch(branch, file_filter)
-        result = False
-        for f in files:
-            try:
-                f.read()
-                f.update_license(year)
-                f.write()
-            except LicenseCheckerError as e:
-                logging.error(str(e))
-                result = True
-        return result
+        return self._update_files_common(files, year)
 
     def _get_files_from_branch(
         self, branch: Optional[str] = None, file_filter: Optional[Callable] = None
@@ -219,6 +224,29 @@ class LicenseChecker:
         files = self._git.get_files_changed_in_branch(branch)
         files = filter(file_filter, files)
         return [File(f) for f in files]
+
+    def _check_files_common(self, files: list[str], year: int) -> bool:
+        result = False
+        for f in files:
+            try:
+                f.read()
+                f.check(year)
+            except LicenseCheckerError as e:
+                logging.error(str(e))
+                result = True
+        return result
+
+    def _update_files_common(self, files: list[str], year: int) -> None:
+        result = False
+        for f in files:
+            try:
+                f.read()
+                f.update_license(year)
+                f.write()
+            except LicenseCheckerError as e:
+                logging.error(str(e))
+                result = True
+        return result
 
 
 class GitObject:
