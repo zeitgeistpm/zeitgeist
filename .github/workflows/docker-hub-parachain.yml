@@ -49,13 +49,24 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Update image version of the existing network spec
+      - name: Update image version of the existing Zeitgeist network spec
         uses: "OnFinality-io/action-onf-release@v1"
         with:
           onf-access-key: ${{ secrets.ONF_ACCESS_KEY }}
           onf-secret-key: ${{ secrets.ONF_SECRET_KEY }}
           onf-workspace-id: ${{ secrets.ONF_WORKSPACE_ID }}
-          onf-network-key: ${{ secrets.ONF_NETWORK_KEY }}
+          onf-network-key: ${{ secrets.ONF_NETWORK_KEY_ZG }}
+          onf-sub-command: image
+          onf-action: add
+          image-version: ${{ steps.vars.outputs.tag }}
+          
+      - name: Update image version of the existing Battery Station network spec
+        uses: "OnFinality-io/action-onf-release@v1"
+        with:
+          onf-access-key: ${{ secrets.ONF_ACCESS_KEY }}
+          onf-secret-key: ${{ secrets.ONF_SECRET_KEY }}
+          onf-workspace-id: ${{ secrets.ONF_WORKSPACE_ID }}
+          onf-network-key: ${{ secrets.ONF_NETWORK_KEY_BS }}
           onf-sub-command: image
           onf-action: add
           image-version: ${{ steps.vars.outputs.tag }}
