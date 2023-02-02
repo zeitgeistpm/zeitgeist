@@ -46,7 +46,7 @@ jobs:
         run: pip install scripts/check-license && pip install -r scripts/check-license/requirements.txt
       - id: files_changed
         uses: Ana06/get-changed-files@v1.2
-        # filter: *.rs
+        filter: *.rs
       - name: Check copyright
         run: check-license -f ${{ steps.files_changed.outputs.added_modified }}
 

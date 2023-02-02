@@ -171,22 +171,16 @@ class LicenseChecker:
         self,
         year: int,
         files: list[str],
-        file_filter: Optional[Callable] = None,
     ) -> bool:
-        if file_filter is None:
-            file_filter = lambda f: f.endswith(".rs")
-        files = [File(f) for f in filter(file_filter, files)]
+        files = [File(f) for f files]
         return self._check_files_common(files, year)
 
     def update_files(
         self,
         year: int,
         files: list[str],
-        file_filter: Optional[Callable] = None,
     ) -> bool:
-        if file_filter is None:
-            file_filter = lambda f: f.endswith(".rs")
-        files = [File(f) for f in filter(file_filter, files)]
+        files = [File(f) for f files]
         return self._update_files_common(files, year)
 
     def check_branch(
