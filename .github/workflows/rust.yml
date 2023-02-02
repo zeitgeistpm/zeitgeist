@@ -45,7 +45,7 @@ jobs:
       - name: Install license checker and dependencies
         run: pip install scripts/check-license && pip install -r scripts/check-license/requirements.txt
       - name: Check copyright
-        run: check-license
+        run: check-license -b ${{ github.ref_name }}
 
   checks:
     name: Checks
