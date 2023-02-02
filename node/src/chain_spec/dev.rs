@@ -22,7 +22,6 @@ use super::{
     get_account_id_from_seed, get_from_seed, token_properties, AdditionalChainSpec,
     EndowedAccountWithBalance,
 };
-
 #[cfg(feature = "parachain")]
 use battery_station_runtime::{
     DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
@@ -31,8 +30,14 @@ use battery_station_runtime::{
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
-    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD, STAKING_PTD},
     types::Balance,
+};
+#[cfg(feature = "parachain")]
+use {
+    super::battery_station::inflation_config,
+    sp_runtime::Perbill,
+    zeitgeist_primitives::constants::{ztg::TOTAL_INITIAL_ZTG, BASE},
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
@@ -75,7 +80,12 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                         super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
                     collator_commission: DefaultCollatorCommission::get(),
-                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    inflation_info: inflation_config(
+                        STAKING_PTD * Perbill::from_percent(40),
+                        STAKING_PTD * Perbill::from_percent(70),
+                        STAKING_PTD,
+                        TOTAL_INITIAL_ZTG * BASE,
+                    ),
                     nominations: vec![],
                     parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
                     parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
