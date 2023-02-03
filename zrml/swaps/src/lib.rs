@@ -25,7 +25,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
-extern crate alloc; //
+extern crate alloc;
 
 #[macro_use]
 mod utils;
