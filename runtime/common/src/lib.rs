@@ -272,7 +272,7 @@ macro_rules! create_runtime {
                 TransactionPayment: pallet_transaction_payment::{Config, Event<T>, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
-                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
