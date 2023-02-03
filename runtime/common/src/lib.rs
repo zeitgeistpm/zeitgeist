@@ -1190,7 +1190,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
                     list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
-                    list_benchmark!(list, extra, pallet_multisig, MultiSig);
+                    list_benchmark!(list, extra, pallet_multisig, Multisig);
                     list_benchmark!(list, extra, pallet_preimage, Preimage);
                     list_benchmark!(list, extra, pallet_proxy, Proxy);
                     list_benchmark!(list, extra, pallet_scheduler, Scheduler);
@@ -1268,7 +1268,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
                     add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
-                    add_benchmark!(params, batches, pallet_multisig, MultiSig);
+                    add_benchmark!(params, batches, pallet_multisig, Multisig);
                     add_benchmark!(params, batches, pallet_preimage, Preimage);
                     add_benchmark!(params, batches, pallet_proxy, Proxy);
                     add_benchmark!(params, batches, pallet_scheduler, Scheduler);
