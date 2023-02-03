@@ -6,8 +6,6 @@ import logging
 import re
 import os
 
-import git
-
 from check_license.errors import (
     LicenseCheckerError,
     MissingCopyrightError,
@@ -25,6 +23,8 @@ OWNER = FORECASTING_TECH
 
 @dataclasses.dataclass
 class Years:
+    """A class for inclusive ranges of years."""
+
     start: int
     end: int = None
 
@@ -57,9 +57,10 @@ class Copyright:
 
     @classmethod
     def from_string(cls, s) -> Copyright:
+        # TODO This could use better error handling!
         match = re.match(COPYRIGHT_REGEX, s)
-        if match:
-            years, holder = match.group(1, 2)
+        assert match
+        years, holder = match.group(1, 2)
         years = years.split(", ")
         return Copyright(holder, [Years.from_string(y) for y in years])
 
@@ -72,6 +73,7 @@ class Copyright:
         return self.years[-1].end
 
     def push_year(self, year: int) -> None:
+        """Safely add ``year`` to this copyright."""
         if year == self.years[-1].end + 1:
             self.years[-1].end = year
         else:
@@ -92,10 +94,8 @@ class File:
 
     def last_changed(self) -> datetime.datetime:
         """Return the UTC date at which the file was last changed."""
-        if True:  # TODO already checked in and modified
-            return datetime.datetime.utcfromtimestamp(os.path.getmtime(self._path))
-        else:
-            return 0
+        # FIXME This doesn't take git into account.
+        return datetime.datetime.utcfromtimestamp(os.path.getmtime(self._path))
 
     def read(self) -> None:
         """Read contents of file to buffer.
@@ -163,105 +163,28 @@ class File:
         return next(matches, None)
 
 
-class LicenseChecker:
-    def __init__(self, git_object: Optional[GitObject] = None) -> None:
-        self._git = git_object or GitObject()
-
-    def check_files(
-        self,
-        year: int,
-        files: list[str],
-    ) -> bool:
-        files = [File(f) for f files]
-        return self._check_files_common(files, year)
-
-    def update_files(
-        self,
-        year: int,
-        files: list[str],
-    ) -> bool:
-        files = [File(f) for f files]
-        return self._update_files_common(files, year)
-
-    def check_branch(
-        self,
-        year: int,
-        branch: Optional[str] = None,
-        file_filter: Optional[Callable] = None,
-    ) -> bool:
-        """Check if the copyright notices of files changed in a branch are up to date.
-
-        Args:
-            year: The current year.
-            branch: The name of the branch (the active branch if ``None``).
-            file_filter: A predicate which filters files which should not be tracked.
-        """
-        files = self._get_files_from_branch(branch, file_filter)
-        return self._check_files_common(files, year)
-
-    def update_branch(
-        self,
-        year: int,
-        branch: Optional[str] = None,
-        file_filter: Optional[Callable] = None,
-    ) -> bool:
-        files = self._get_files_from_branch(branch, file_filter)
-        return self._update_files_common(files, year)
-
-    def _get_files_from_branch(
-        self, branch: Optional[str] = None, file_filter: Optional[Callable] = None
-    ) -> list[File]:
-        if branch is None:
-            branch = self._git.get_active_branch()
-        if file_filter is None:
-            file_filter = lambda f: f.endswith(".rs")
-        files = self._git.get_files_changed_in_branch(branch)
-        files = filter(file_filter, files)
-        return [File(f) for f in files]
-
-    def _check_files_common(self, files: list[str], year: int) -> bool:
-        result = False
-        for f in files:
-            try:
-                f.read()
-                f.check(year)
-            except LicenseCheckerError as e:
-                logging.error(str(e))
-                result = True
-        return result
-
-    def _update_files_common(self, files: list[str], year: int) -> None:
-        result = False
-        for f in files:
-            try:
-                f.read()
-                f.update_license(year)
-                f.write()
-            except LicenseCheckerError as e:
-                logging.error(str(e))
-                result = True
-        return result
+def check_files(year: int, files: list[str]) -> bool:
+    files = [File(f) for f in files]
+    result = False
+    for f in files:
+        try:
+            f.read()
+            f.check(year)
+        except LicenseCheckerError as e:
+            logging.error(str(e))
+            result = True
+    return result
 
 
-class GitObject:
-    def __init__(self) -> None:
-        g = git.Git()
-        path = g.rev_parse("--show-toplevel")
-        self._repo = git.Repo(path)
-
-    def get_active_branch(self) -> str:
-        return self._repo.active_branch.name
-
-    def get_files_changed_in_branch(self, branch: str) -> list[str]:
-        """Return the list of files changed in ``branch``."""
-        branch = self._get_branch(branch)
-        diff = branch.commit.diff(self._repo.commit("main"))
-        # We exclude any deleted files (including renames).
-        return [
-            d.a_path
-            for d in diff
-            if not (d.deleted_file or d.raw_rename_from or d.rename_from)
-        ]
-
-    def _get_branch(self, branch_name: str):
-        return next(b for b in self._repo.branches if b.name == branch_name)
+def update_files(year: int, files: list[str]) -> bool:
+    files = [File(f) for f in files]
+    result = False
+    for f in files:
+        try:
+            f.read()
+            f.update_license(year)
+            f.write()
+        except LicenseCheckerError as e:
+            logging.error(str(e))
+            result = True
+    return result

@@ -3,29 +3,20 @@ import datetime
 import logging
 import sys
 
-from check_license.check_license import LicenseChecker
+from check_license.check_license import check_files, update_files
 
 
 def main():
-    # TODO Ignore foreign files?
+    # TODO Add option to ignore files?
     parser = argparse.ArgumentParser()
-    # TODO Assert that only one of these options is used:
-    parser.add_argument("-b", "--branch")
-    parser.add_argument("-f", "--files", nargs="+")
+    parser.add_argument("files", nargs="+")
     parser.add_argument("-w", "--write", action="store_true")
     args = parser.parse_args(sys.argv[1:])
     current_year = datetime.date.today().year
-    license_checker = LicenseChecker()
     if args.write:
-        if args.branch:
-            failed = license_checker.update_branch(current_year, args.branch)
-        else:
-            failed = license_checker.update_files(current_year, args.files)
+        failed = update_files(current_year, args.files)
     else:
-        if args.branch:
-            failed = license_checker.check_branch(current_year, args.branch)
-        else:
-            failed = license_checker.check_files(current_year, args.files)
+        failed = check_files(current_year, args.files)
     if failed:
         print("check-license: failed!")
         sys.exit(1)
