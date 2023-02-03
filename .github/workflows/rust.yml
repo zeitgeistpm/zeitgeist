@@ -49,7 +49,7 @@ jobs:
       - id: files_changed
         uses: Ana06/get-changed-files@v1.2
         with:
-          filter: '**.rs'
+          filter: '*.rs'
       - name: Check copyright
         run: check-license ${{ steps.files_changed.outputs.added_modified }}
 
