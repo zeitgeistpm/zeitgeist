@@ -438,7 +438,7 @@ macro_rules! impl_config_traits {
             type AccountLookup = AuthorMapping;
             type CanAuthor = AuthorFilter;
             type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
-            type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
+            type WeightInfo = pallet_author_inherent::weights::SubstrateWeight<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -447,7 +447,7 @@ macro_rules! impl_config_traits {
             type DepositCurrency = Balances;
             type Event = Event;
             type Keys = session_keys_primitives::VrfId;
-            type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
+            type WeightInfo = pallet_author_mapping::weights::SubstrateWeight<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -455,7 +455,7 @@ macro_rules! impl_config_traits {
             type Event = Event;
             type RandomnessSource = RandomnessCollectiveFlip;
             type PotentialAuthors = ParachainStaking;
-            type WeightInfo = weights::pallet_author_slot_filter::WeightInfo<Runtime>;
+            type WeightInfo = pallet_author_slot_filter::weights::SubstrateWeight<Runtime>;
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -522,10 +522,11 @@ macro_rules! impl_config_traits {
             type MinSelectedCandidates = MinSelectedCandidates;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type OnCollatorPayout = ();
+            type PayoutCollatorReward = ();
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
-            type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
+            type WeightInfo = pallet_parachain_staking::weights::SubstrateWeight<Runtime>;
         }
 
         #[cfg(feature = "parachain")]

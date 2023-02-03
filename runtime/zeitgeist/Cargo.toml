@@ -62,12 +62,12 @@ parachain-info = { branch = "moonbeam-polkadot-v0.9.29", default-features = fals
 
 # Parachain
 
-nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/nimbus", optional = true }
-pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/nimbus", optional = true }
-pallet-author-mapping = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
-pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/nimbus", optional = true }
-pallet-parachain-staking = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
-session-keys-primitives = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
+nimbus-primitives = { default-features = false, path = "../../external/nimbus-primitives", optional = true }
+pallet-author-inherent = { default-features = false, path = "../../external/pallets/author-inherent", optional = true }
+pallet-author-mapping = { default-features = false, path = "../../external/pallets/author-mapping", optional = true }
+pallet-author-slot-filter = { default-features = false, path = "../../external/pallets/author-slot-filter", optional = true }
+pallet-parachain-staking = { default-features = false, path = "../../external/pallets/parachain-staking", optional = true }
+session-keys-primitives = { default-features = false, path = "../../external/session-keys", optional = true }
 
 # Polkadot
 
