@@ -42,15 +42,16 @@ jobs:
         uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v2
-      - name: Install license checker and dependencies
+      - name: Install check-license and dependencies
         run: |
           pip install scripts/check-license
           pip install -r scripts/check-license/requirements.txt
-      - id: files_changed
+      - name: Query files changed
+        id: files_changed
         uses: Ana06/get-changed-files@v1.2
         with:
           filter: '*.rs$'
-      - name: Check copyright
+      - name: Check copyright notices
         run: check-license ${{ steps.files_changed.outputs.added_modified }}
 
   checks:

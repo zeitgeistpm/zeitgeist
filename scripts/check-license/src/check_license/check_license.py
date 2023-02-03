@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-import logging
 import re
 import os
 
+from check_license.console import echo
 from check_license.errors import (
     LicenseCheckerError,
     MissingCopyrightError,
@@ -171,7 +171,7 @@ def check_files(year: int, files: list[str]) -> bool:
             f.read()
             f.check(year)
         except LicenseCheckerError as e:
-            logging.error(str(e))
+            echo(str(e))
             result = True
     return result
 
@@ -185,6 +185,6 @@ def update_files(year: int, files: list[str]) -> bool:
             f.update_license(year)
             f.write()
         except LicenseCheckerError as e:
-            logging.error(str(e))
+            echo(str(e))
             result = True
     return result

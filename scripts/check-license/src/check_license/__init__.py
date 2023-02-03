@@ -4,6 +4,7 @@ import logging
 import sys
 
 from check_license.check_license import check_files, update_files
+from check_license.console import echo
 
 
 def main():
@@ -18,7 +19,6 @@ def main():
     else:
         failed = check_files(current_year, args.files)
     if failed:
-        print("check-license: failed!")
         sys.exit(1)
-    print("check-license: success!")
+    echo("All copyright notices are up to date! 🍉")
     sys.exit(0)
