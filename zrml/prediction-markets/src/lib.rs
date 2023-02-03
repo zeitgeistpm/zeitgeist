@@ -41,8 +41,8 @@ mod pallet {
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
-            OnUnbalanced, StorageVersion,
+            tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
+            NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional,
         weights::Pays,
@@ -196,6 +196,108 @@ mod pallet {
         };
     }
 
+    macro_rules! impl_repatriate_bond {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Settle the $bond_type bond by repatriating it to free balance of beneficiary.
+            ///
+            /// This function **should** only be called if the bond is not yet settled, and calling
+            /// it if the bond is settled is most likely a logic error. If the bond is already
+            /// settled, storage is not changed, a warning is raised and `Ok(())` is returned.
+            fn $fn_name(market_id: &MarketIdOf<T>, beneficiary: &T::AccountId) -> DispatchResult {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                let bond = market.bonds.$bond_type.as_ref().ok_or(Error::<T>::MissingBond)?;
+                if bond.is_settled {
+                    let warning = format!(
+                        "Attempting to settle the {} bond of market {:?} multiple times",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                    return Ok(());
+                }
+                let res = <CurrencyOf<T>>::repatriate_reserved_named(
+                    &Self::reserve_id(),
+                    &bond.who,
+                    beneficiary,
+                    bond.value,
+                    BalanceStatus::Free,
+                );
+                // If there's an error or missing balance,
+                // there's nothing we can do, so we don't count this as error
+                // and log a warning instead.
+                match res {
+                    Ok(missing) if missing != <BalanceOf<T>>::zero() => {
+                        let warning = format!(
+                            "Failed to repatriate all of the {} bond of market {:?} (missing \
+                             balance {:?}).",
+                            stringify!($bond_type),
+                            market_id,
+                            missing,
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                    }
+                    Ok(_) => (),
+                    Err(_err) => {
+                        let warning = format!(
+                            "Failed to settle the {} bond of market {:?} (error: {}).",
+                            stringify!($bond_type),
+                            market_id,
+                            stringify!(_err),
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                    }
+                }
+                <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
+                    m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
+                    Ok(())
+                })?;
+                Ok(())
+            }
+        };
+    }
+
+    macro_rules! impl_is_bond_pending {
+        ($fn_name:ident, $bond_type:ident) => {
+            /// Check whether the $bond_type is present (ready to get unreserved or slashed).
+            /// Set the flag `with_warning` to `true`, when warnings should be logged
+            /// in case the bond is not present or already settled.
+            ///
+            /// Return `true` if the bond is present and not settled, `false` otherwise.
+            fn $fn_name(
+                market_id: &MarketIdOf<T>,
+                market: &MarketOf<T>,
+                with_warning: bool,
+            ) -> bool {
+                if let Some(bond) = &market.bonds.$bond_type {
+                    if !bond.is_settled {
+                        return true;
+                    } else if with_warning {
+                        let warning = format!(
+                            "[PredictionMarkets] The {} bond is already settled for market {:?}.",
+                            stringify!($bond_type),
+                            market_id,
+                        );
+                        log::warn!("{}", warning);
+                        debug_assert!(false, "{}", warning);
+                    }
+                } else if with_warning {
+                    let warning = format!(
+                        "[PredictionMarkets] The {} bond is not present for market {:?}.",
+                        stringify!($bond_type),
+                        market_id,
+                    );
+                    log::warn!("{}", warning);
+                    debug_assert!(false, "{}", warning);
+                }
+
+                false
+            }
+        };
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Destroy a market, including its outcome assets, market account and pool account.
@@ -234,16 +336,7 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            if let Some(bond) = market.bonds.creation {
-                if !bond.is_settled {
-                    Self::slash_creation_bond(&market_id, None)?;
-                }
-            }
-            if let Some(bond) = market.bonds.oracle {
-                if !bond.is_settled {
-                    Self::slash_oracle_bond(&market_id, None)?;
-                }
-            }
+            Self::slash_pending_bonds(&market_id, &market)?;
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
@@ -344,6 +437,7 @@ mod pallet {
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
+            Self::set_market_end(&market_id)?;
             // The CloseOrigin should not pay fees for providing this service
             Ok((
                 Some(T::WeightInfo::admin_move_market_to_closed(open_ids_len, close_ids_len)),
@@ -691,10 +785,12 @@ mod pallet {
                 MarketCreation::Advised => MarketBonds {
                     creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    ..Default::default()
                 },
                 MarketCreation::Permissionless => MarketBonds {
                     creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
                     oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
+                    ..Default::default()
                 },
             };
 
@@ -1228,13 +1324,26 @@ mod pallet {
                     }
                 }
 
+                let sender_is_oracle = sender == market.oracle;
+                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
+                let sender_is_outsider = !sender_is_oracle && !origin_has_permission;
+
                 if should_check_origin {
-                    let sender_is_oracle = sender == market.oracle;
-                    let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
                     ensure!(
                         sender_is_oracle || origin_has_permission,
                         Error::<T>::ReporterNotOracle
                     );
+                } else if sender_is_outsider {
+                    let outsider_bond = T::OutsiderBond::get();
+
+                    market.bonds.outsider = Some(Bond::new(sender.clone(), outsider_bond));
+
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &sender,
+                        outsider_bond,
+                    )?;
                 }
 
                 market.report = Some(market_report.clone());
@@ -1545,6 +1654,9 @@ mod pallet {
         /// The maximum number of bytes allowed as edit reason.
         #[pallet::constant]
         type MaxEditReasonLen: Get<u32>;
+
+        #[pallet::constant]
+        type OutsiderBond: Get<BalanceOf<Self>>;
 
         /// The module identifier.
         #[pallet::constant]
@@ -1954,8 +2066,27 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         impl_unreserve_bond!(unreserve_creation_bond, creation);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
+        impl_unreserve_bond!(unreserve_outsider_bond, outsider);
         impl_slash_bond!(slash_creation_bond, creation);
         impl_slash_bond!(slash_oracle_bond, oracle);
+        impl_slash_bond!(slash_outsider_bond, outsider);
+        impl_repatriate_bond!(repatriate_oracle_bond, oracle);
+        impl_is_bond_pending!(is_creation_bond_pending, creation);
+        impl_is_bond_pending!(is_oracle_bond_pending, oracle);
+        impl_is_bond_pending!(is_outsider_bond_pending, outsider);
+
+        fn slash_pending_bonds(market_id: &MarketIdOf<T>, market: &MarketOf<T>) -> DispatchResult {
+            if Self::is_creation_bond_pending(market_id, market, false) {
+                Self::slash_creation_bond(market_id, None)?;
+            }
+            if Self::is_oracle_bond_pending(market_id, market, false) {
+                Self::slash_oracle_bond(market_id, None)?;
+            }
+            if Self::is_outsider_bond_pending(market_id, market, false) {
+                Self::slash_outsider_bond(market_id, None)?;
+            }
+            Ok(())
+        }
 
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -2346,6 +2477,23 @@ mod pallet {
             Ok(total_weight)
         }
 
+        pub(crate) fn set_market_end(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
+            <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
+                market.period = match market.period {
+                    MarketPeriod::Block(ref range) => {
+                        let current_block = <frame_system::Pallet<T>>::block_number();
+                        MarketPeriod::Block(range.start..current_block)
+                    }
+                    MarketPeriod::Timestamp(ref range) => {
+                        let now = <zrml_market_commons::Pallet<T>>::now();
+                        MarketPeriod::Timestamp(range.start..now)
+                    }
+                };
+                Ok(())
+            })?;
+            Ok(T::DbWeight::get().reads_writes(1, 1))
+        }
+
         /// Handle market state transitions at the end of its active phase.
         fn on_market_close(
             market_id: &MarketIdOf<T>,
@@ -2367,16 +2515,11 @@ mod pallet {
             if report.by == market.oracle {
                 Self::unreserve_oracle_bond(market_id)?;
             } else {
-                let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
+                // reward outsider reporter with oracle bond
+                Self::repatriate_oracle_bond(market_id, &report.by)?;
 
-                // deposit only to the real reporter what actually was slashed
-                if let Err(err) =
-                    T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance.peek())
-                {
-                    log::warn!(
-                        "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
-                        err
-                    );
+                if Self::is_outsider_bond_pending(market_id, market, true) {
+                    Self::unreserve_outsider_bond(market_id)?;
                 }
             }
 
@@ -2423,11 +2566,44 @@ mod pallet {
             // If the oracle reported right, return the OracleBond, otherwise slash it to
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
-            if report.by == market.oracle && report.outcome == resolved_outcome {
-                Self::unreserve_oracle_bond(market_id)?;
+
+            let report_by_oracle = report.by == market.oracle;
+            let is_correct = report.outcome == resolved_outcome;
+
+            let unreserve_outsider = || -> DispatchResult {
+                if Self::is_outsider_bond_pending(market_id, market, true) {
+                    Self::unreserve_outsider_bond(market_id)?;
+                }
+                Ok(())
+            };
+
+            let slash_outsider = || -> Result<NegativeImbalanceOf<T>, DispatchError> {
+                if Self::is_outsider_bond_pending(market_id, market, true) {
+                    let imbalance = Self::slash_outsider_bond(market_id, None)?;
+                    return Ok(imbalance);
+                }
+                Ok(NegativeImbalanceOf::<T>::zero())
+            };
+
+            if report_by_oracle {
+                if is_correct {
+                    Self::unreserve_oracle_bond(market_id)?;
+                } else {
+                    let negative_imbalance = Self::slash_oracle_bond(market_id, None)?;
+                    overall_imbalance.subsume(negative_imbalance);
+                }
             } else {
-                let imbalance = Self::slash_oracle_bond(market_id, None)?;
-                overall_imbalance.subsume(imbalance);
+                // outsider report
+                if is_correct {
+                    // reward outsider reporter with oracle bond
+                    Self::repatriate_oracle_bond(market_id, &report.by)?;
+                    unreserve_outsider()?;
+                } else {
+                    let oracle_imbalance = Self::slash_oracle_bond(market_id, None)?;
+                    let outsider_imbalance = slash_outsider()?;
+                    overall_imbalance.subsume(oracle_imbalance);
+                    overall_imbalance.subsume(outsider_imbalance);
+                }
             }
 
             for (i, dispute) in disputes.iter().enumerate() {

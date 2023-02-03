@@ -52,7 +52,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     resolved_outcome: None,
     status: MarketStatus::Closed,
     scoring_rule: ScoringRule::CPMM,
-    bonds: MarketBonds { creation: None, oracle: None },
+    bonds: MarketBonds { creation: None, oracle: None, outsider: None },
 };
 const DEFAULT_SET_OF_JURORS: &[(u128, Juror)] = &[
     (7, Juror { status: JurorStatus::Ok }),

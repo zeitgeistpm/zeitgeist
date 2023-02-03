@@ -59,6 +59,7 @@ parameter_types! {
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
     pub const MinSubsidyPeriod: Moment = 60_000;
     pub const OracleBond: Balance = 50 * CENT;
+    pub const OutsiderBond: Balance = 2 * OracleBond::get();
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
 }
