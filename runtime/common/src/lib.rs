@@ -272,7 +272,7 @@ macro_rules! create_runtime {
                 TransactionPayment: pallet_transaction_payment::{Config, Event<T>, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
-                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
@@ -1190,7 +1190,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
                     list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
-                    list_benchmark!(list, extra, pallet_multisig, MultiSig);
+                    list_benchmark!(list, extra, pallet_multisig, Multisig);
                     list_benchmark!(list, extra, pallet_preimage, Preimage);
                     list_benchmark!(list, extra, pallet_proxy, Proxy);
                     list_benchmark!(list, extra, pallet_scheduler, Scheduler);
@@ -1268,7 +1268,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
                     add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
-                    add_benchmark!(params, batches, pallet_multisig, MultiSig);
+                    add_benchmark!(params, batches, pallet_multisig, Multisig);
                     add_benchmark!(params, batches, pallet_preimage, Preimage);
                     add_benchmark!(params, batches, pallet_proxy, Proxy);
                     add_benchmark!(params, batches, pallet_scheduler, Scheduler);
