@@ -113,6 +113,7 @@ zrml-prediction-markets = { default-features = false, path = "../../zrml/predict
 zrml-rikiddo = { default-features = false, path = "../../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-disputes" }
 zrml-styx = { default-features = false, path = "../../zrml/styx" }
+zrml-crowdfund = { default-features = false, path = "../../zrml/crowdfund" }
 zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
 
@@ -319,6 +320,7 @@ std = [
     "zrml-simple-disputes/std",
     "zrml-global-disputes?/std",
     "zrml-styx/std",
+    "zrml-crowdfund/std",
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
@@ -370,6 +372,7 @@ try-runtime = [
     "zrml-simple-disputes/try-runtime",
     "zrml-global-disputes?/try-runtime",
     "zrml-styx/try-runtime",
+    "zrml-crowdfund/try-runtime",
     "zrml-swaps/try-runtime",
 
     # Parachain

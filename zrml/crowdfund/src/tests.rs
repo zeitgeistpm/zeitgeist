@@ -18,10 +18,9 @@
 #![cfg(test)]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi,
+    crowdfund_pallet_api::CrowdfundPalletApi,
     mock::*,
-    types::{OutcomeInfo, WinnerInfo},
-    Error, Event, Locks, MarketIdOf, Outcomes, Winners,
+    Error, Event, MarketIdOf
 };
 use frame_support::{
     assert_noop, assert_ok,

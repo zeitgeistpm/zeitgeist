@@ -86,6 +86,9 @@ parameter_types! {
     /// the juror has to pay.
     pub const StakeWeight: u128 = 2 * BASE;
 
+    // Crowdfund
+    pub const CrowdfundPalletId: PalletId = CROWDFUND_PALLET_ID;
+
     // Democracy
     /// How often (in blocks) new public referenda are launched.
     pub const LaunchPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;

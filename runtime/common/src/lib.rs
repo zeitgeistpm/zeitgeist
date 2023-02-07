@@ -304,6 +304,8 @@ macro_rules! create_runtime {
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
+                // 59 is used by Global Disputes Pallet
+                Crowdfund: zrml_crowdfund::{Call, Event<T>, Pallet, Storage} = 60,
 
                 $($additional_pallets)*
             }
@@ -1100,6 +1102,14 @@ macro_rules! impl_config_traits {
             type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
             type Currency = Balances;
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_crowdfund::Config for Runtime {
+            type CrowdfundPalletId = CrowdfundPalletId;
+            type Currency = Balances;
+            type Event = Event;
+            type MarketCommons = MarketCommons;
+            type UniqueFundItem = UniqueFundItem;
         }
     }
 }

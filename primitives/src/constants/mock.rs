@@ -39,6 +39,11 @@ parameter_types! {
     pub const StakeWeight: u128 = 2 * BASE;
 }
 
+// Crowdfund
+parameter_types! {
+    pub const CrowdfundPalletId: PalletId = PalletId(*b"zge/crow");
+}
+
 // Global disputes parameters
 parameter_types! {
     pub const GlobalDisputeLockId: LockIdentifier = *b"zge/vote";

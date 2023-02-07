@@ -17,7 +17,7 @@
 
 #![cfg(test)]
 
-use crate::{self as zrml_global_disputes};
+use crate::{self as zrml_crowdfund};
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use sp_runtime::{
     testing::Header,
@@ -25,8 +25,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
-        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, VotingOutcomeFee, BASE,
+        BlockHashCount, MaxReserves,
+        MinimumPeriod, PmPalletId, BASE,
+        CrowdfundPalletId,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
@@ -59,7 +60,6 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
-    type GlobalDisputeLockId = GlobalDisputeLockId;
     type CrowdfundPalletId = CrowdfundPalletId;
     type MarketCommons = MarketCommons;
 }

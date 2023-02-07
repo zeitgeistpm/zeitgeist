@@ -20,6 +20,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use sp_runtime::DispatchResult;
 use zeitgeist_primitives::types::OutcomeReport;
+use crate::types::UniqueFundItem;
 
 /// The trait to initiate and resolve the global disputes.
 pub trait CrowdfundPalletApi<MarketId, AccountId, Balance> {
@@ -29,6 +30,7 @@ pub trait CrowdfundPalletApi<MarketId, AccountId, Balance> {
 
     fn stop_crowdfund(
         market_id: &MarketId,
+        winner: UniqueFundItem,
     ) -> DispatchResult;
 
     /// Query the all looser balances combined

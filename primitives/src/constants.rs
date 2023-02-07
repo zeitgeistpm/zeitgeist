@@ -69,6 +69,10 @@ pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
 
+// Crowdfund
+/// Pallet identifier, mainly used for named balance reserves.
+pub const CROWDFUND_PALLET_ID: PalletId = PalletId(*b"zge/crow");
+
 // Global Disputes
 pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
 /// Lock identifier, mainly used for the locks on the accounts.
