@@ -12926,6 +12926,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-crowdfund"
+version = "0.3.8"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "test-case",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
+]
+
+[[package]]
 name = "zrml-global-disputes"
 version = "0.3.8"
 dependencies = [
