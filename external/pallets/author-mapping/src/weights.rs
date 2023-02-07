@@ -44,116 +44,116 @@
 #![allow(unused_imports)]
 
 use frame_support::{
-	traits::Get,
-	weights::{constants::RocksDbWeight, Weight},
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
 };
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_author_mapping.
 pub trait WeightInfo {
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	fn add_association() -> Weight;
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	fn update_association() -> Weight;
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	fn clear_association() -> Weight;
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	fn remove_keys() -> Weight;
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	fn set_keys() -> Weight;
 }
 
 /// Weights for pallet_author_mapping using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-	// Storage: System Account (r:1 w:1)
-	// Storage: AuthorMapping NimbusLookup (r:0 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    // Storage: AuthorMapping NimbusLookup (r:0 w:1)
 	#[rustfmt::skip]
-	fn add_association() -> Weight {
-		Weight::from_ref_time(50_753_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
-			.saturating_add(T::DbWeight::get().writes(3 as u64))
+    fn add_association() -> Weight {
+		Weight::from_ref_time(50_753_000_u64)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
-	// Storage: AuthorMapping NimbusLookup (r:0 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+    // Storage: AuthorMapping NimbusLookup (r:0 w:1)
 	#[rustfmt::skip]
-	fn update_association() -> Weight {
-		Weight::from_ref_time(41_499_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
-			.saturating_add(T::DbWeight::get().writes(3 as u64))
+    fn update_association() -> Weight {
+		Weight::from_ref_time(41_499_000_u64)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-	// Storage: System Account (r:1 w:1)
-	// Storage: AuthorMapping NimbusLookup (r:0 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    // Storage: AuthorMapping NimbusLookup (r:0 w:1)
 	#[rustfmt::skip]
-	fn clear_association() -> Weight {
-		Weight::from_ref_time(55_398_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
-			.saturating_add(T::DbWeight::get().writes(3 as u64))
+    fn clear_association() -> Weight {
+		Weight::from_ref_time(55_398_000_u64)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping NimbusLookup (r:1 w:1)
-	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-	// Storage: System Account (r:1 w:1)
+    // Storage: AuthorMapping NimbusLookup (r:1 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
 	#[rustfmt::skip]
-	fn remove_keys() -> Weight {
-		Weight::from_ref_time(60_757_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(3 as u64))
-			.saturating_add(T::DbWeight::get().writes(3 as u64))
+    fn remove_keys() -> Weight {
+		Weight::from_ref_time(60_757_000_u64)
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping NimbusLookup (r:1 w:1)
-	// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+    // Storage: AuthorMapping NimbusLookup (r:1 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
 	#[rustfmt::skip]
-	fn set_keys() -> Weight {
-		Weight::from_ref_time(45_388_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(3 as u64))
-			.saturating_add(T::DbWeight::get().writes(3 as u64))
+    fn set_keys() -> Weight {
+		Weight::from_ref_time(45_388_000_u64)
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-	// Storage: System Account (r:1 w:1)
-	// Storage: AuthorMapping NimbusLookup (r:0 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    // Storage: AuthorMapping NimbusLookup (r:0 w:1)
 	#[rustfmt::skip]
-	fn add_association() -> Weight {
-		Weight::from_ref_time(50_753_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes(3 as u64))
+    fn add_association() -> Weight {
+		Weight::from_ref_time(50_753_000_u64)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
-	// Storage: AuthorMapping NimbusLookup (r:0 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+    // Storage: AuthorMapping NimbusLookup (r:0 w:1)
 	#[rustfmt::skip]
-	fn update_association() -> Weight {
-		Weight::from_ref_time(41_499_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes(3 as u64))
+    fn update_association() -> Weight {
+		Weight::from_ref_time(41_499_000_u64)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-	// Storage: System Account (r:1 w:1)
-	// Storage: AuthorMapping NimbusLookup (r:0 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    // Storage: AuthorMapping NimbusLookup (r:0 w:1)
 	#[rustfmt::skip]
-	fn clear_association() -> Weight {
-		Weight::from_ref_time(55_398_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes(3 as u64))
+    fn clear_association() -> Weight {
+		Weight::from_ref_time(55_398_000_u64)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping NimbusLookup (r:1 w:1)
-	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-	// Storage: System Account (r:1 w:1)
+    // Storage: AuthorMapping NimbusLookup (r:1 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
 	#[rustfmt::skip]
-	fn remove_keys() -> Weight {
-		Weight::from_ref_time(60_757_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(3 as u64))
-			.saturating_add(RocksDbWeight::get().writes(3 as u64))
+    fn remove_keys() -> Weight {
+		Weight::from_ref_time(60_757_000_u64)
+			.saturating_add(RocksDbWeight::get().reads(3_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
-	// Storage: AuthorMapping NimbusLookup (r:1 w:1)
-	// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+    // Storage: AuthorMapping NimbusLookup (r:1 w:1)
+    // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
 	#[rustfmt::skip]
-	fn set_keys() -> Weight {
-		Weight::from_ref_time(45_388_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(3 as u64))
-			.saturating_add(RocksDbWeight::get().writes(3 as u64))
+    fn set_keys() -> Weight {
+		Weight::from_ref_time(45_388_000_u64)
+			.saturating_add(RocksDbWeight::get().reads(3_u64))
+			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
 }

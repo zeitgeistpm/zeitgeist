@@ -16,35 +16,28 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::num::NonZeroU32;
-use crate::{Call, Config, Pallet};
+use crate::{num::NonZeroU32, Call, Config, Pallet};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
 use frame_system::RawOrigin;
 
 benchmarks! {
-	set_eligible {
-		let count = NonZeroU32::new_unchecked(34);
-	}: _(RawOrigin::Root, count.clone())
-	verify {
-		assert_eq!(Pallet::<T>::eligible_count(), count);
-	}
+    set_eligible {
+        let count = NonZeroU32::new_unchecked(34);
+    }: _(RawOrigin::Root, count.clone())
+    verify {
+        assert_eq!(Pallet::<T>::eligible_count(), count);
+    }
 }
 
 #[cfg(test)]
 mod tests {
-	use crate::mock::Test;
-	use sp_io::TestExternalities;
+    use crate::mock::Test;
+    use sp_io::TestExternalities;
 
-	pub fn new_test_ext() -> TestExternalities {
-		let t = frame_system::GenesisConfig::default()
-			.build_storage::<Test>()
-			.unwrap();
-		TestExternalities::new(t)
-	}
+    pub fn new_test_ext() -> TestExternalities {
+        let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+        TestExternalities::new(t)
+    }
 }
 
-impl_benchmark_test_suite!(
-	Pallet,
-	crate::benchmarks::tests::new_test_ext(),
-	crate::mock::Test
-);
+impl_benchmark_test_suite!(Pallet, crate::benchmarks::tests::new_test_ext(), crate::mock::Test);

@@ -22,7 +22,7 @@
 )]
 #![cfg(feature = "parachain")]
 
-use super::{parameters::MAXIMUM_BLOCK_WEIGHT, RuntimeOrigin, ParachainInfo};
+use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};

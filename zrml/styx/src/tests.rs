@@ -39,7 +39,10 @@ fn account_should_only_be_able_to_cross_once() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         assert_ok!(Styx::cross(RuntimeOrigin::signed(ALICE)));
-        assert_noop!(Styx::cross(RuntimeOrigin::signed(ALICE)), Error::<Runtime>::HasAlreadyCrossed);
+        assert_noop!(
+            Styx::cross(RuntimeOrigin::signed(ALICE)),
+            Error::<Runtime>::HasAlreadyCrossed
+        );
     });
 }
 

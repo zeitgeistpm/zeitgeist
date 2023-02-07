@@ -47,7 +47,8 @@ fuzz_target!(|data: Data| {
             data.make_fill_order_price,
         );
 
-        let _ = Orderbook::fill_order(RuntimeOrigin::signed(data.fill_order_origin.into()), order_hash);
+        let _ =
+            Orderbook::fill_order(RuntimeOrigin::signed(data.fill_order_origin.into()), order_hash);
 
         // Make arbitrary order and attempt to cancel
         let order_asset = asset(data.make_cancel_order_asset);

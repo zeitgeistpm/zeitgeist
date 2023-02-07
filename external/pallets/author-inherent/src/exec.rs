@@ -40,60 +40,55 @@ pub struct BlockExecutor<T, I>(sp_std::marker::PhantomData<(T, I)>);
 
 impl<Block, T, I> ExecuteBlock<Block> for BlockExecutor<T, I>
 where
-	Block: BlockT,
-	I: ExecuteBlock<Block>,
+    Block: BlockT,
+    I: ExecuteBlock<Block>,
 {
-	fn execute_block(block: Block) {
-		let (mut header, extrinsics) = block.deconstruct();
+    fn execute_block(block: Block) {
+        let (mut header, extrinsics) = block.deconstruct();
 
-		debug!(target: "executive", "In hacked Executive. Initial digests are {:?}", header.digest());
+        debug!(target: "executive", "In hacked Executive. Initial digests are {:?}", header.digest());
 
-		// Set the seal aside for checking.
-		let seal = header
-			.digest_mut()
-			.pop()
-			.expect("Seal digest is present and is last item");
+        // Set the seal aside for checking.
+        let seal = header.digest_mut().pop().expect("Seal digest is present and is last item");
 
-		debug!(target: "executive", "In hacked Executive. digests after stripping {:?}", header.digest());
-		debug!(target: "executive", "The seal we got {:?}", seal);
+        debug!(target: "executive", "In hacked Executive. digests after stripping {:?}", header.digest());
+        debug!(target: "executive", "The seal we got {:?}", seal);
 
-		let signature = seal
-			.as_nimbus_seal()
-			.unwrap_or_else(|| panic!("HeaderUnsealed"));
+        let signature = seal.as_nimbus_seal().unwrap_or_else(|| panic!("HeaderUnsealed"));
 
-		debug!(target: "executive", "🪲 Header hash after popping digest {:?}", header.hash());
+        debug!(target: "executive", "🪲 Header hash after popping digest {:?}", header.hash());
 
-		debug!(target: "executive", "🪲 Signature according to executive is {:?}", signature);
+        debug!(target: "executive", "🪲 Signature according to executive is {:?}", signature);
 
-		// Grab the author information from the preruntime digest
-		//TODO use the trait
-		let claimed_author = header
-			.digest()
-			.logs
-			.iter()
-			.find_map(|digest| match *digest {
-				DigestItem::PreRuntime(id, ref author_id) if id == NIMBUS_ENGINE_ID => {
-					Some(author_id.clone())
-				}
-				_ => None,
-			})
-			.expect("Expected pre-runtime digest that contains author id bytes");
+        // Grab the author information from the preruntime digest
+        //TODO use the trait
+        let claimed_author = header
+            .digest()
+            .logs
+            .iter()
+            .find_map(|digest| match *digest {
+                DigestItem::PreRuntime(id, ref author_id) if id == NIMBUS_ENGINE_ID => {
+                    Some(author_id.clone())
+                }
+                _ => None,
+            })
+            .expect("Expected pre-runtime digest that contains author id bytes");
 
-		debug!(target: "executive", "🪲 Claimed Author according to executive is {:?}", claimed_author);
+        debug!(target: "executive", "🪲 Claimed Author according to executive is {:?}", claimed_author);
 
-		// Verify the signature
-		let valid_signature = NimbusId::from_slice(&claimed_author)
-			.expect("Expected claimed author to be a valid NimbusId.")
-			.verify(&header.hash(), &signature);
+        // Verify the signature
+        let valid_signature = NimbusId::from_slice(&claimed_author)
+            .expect("Expected claimed author to be a valid NimbusId.")
+            .verify(&header.hash(), &signature);
 
-		debug!(target: "executive", "🪲 Valid signature? {:?}", valid_signature);
+        debug!(target: "executive", "🪲 Valid signature? {:?}", valid_signature);
 
-		if !valid_signature {
-			panic!("Block signature invalid");
-		}
+        if !valid_signature {
+            panic!("Block signature invalid");
+        }
 
-		// Now that we've verified the signature, hand execution off to the inner executor
-		// which is probably the normal frame executive.
-		I::execute_block(Block::new(header, extrinsics));
-	}
+        // Now that we've verified the signature, hand execution off to the inner executor
+        // which is probably the normal frame executive.
+        I::execute_block(Block::new(header, extrinsics));
+    }
 }

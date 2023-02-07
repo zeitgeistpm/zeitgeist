@@ -71,7 +71,7 @@ fn transfer_ztg_to_sibling() {
                 )
                 .into()
             ),
-            4_000_000_000,
+            xcm_emulator::Limited(4_000_000_000),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -141,7 +141,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                 )
                 .into()
             ),
-            4_000_000_000,
+            xcm_emulator::Limited(4_000_000_000),
         ));
 
         // Confirm that Bobs's balance is initial balance - amount transferred
@@ -187,7 +187,7 @@ fn transfer_ksm_from_relay_chain() {
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::Origin::signed(ALICE.into()),
+            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
             Box::new(Parachain(zeitgeist::ID).into().into()),
             Box::new(Junction::AccountId32 { network: NetworkId::Any, id: BOB }.into().into()),
             Box::new((Here, transfer_amount).into()),
@@ -225,7 +225,7 @@ fn transfer_ksm_to_relay_chain() {
                 )
                 .into()
             ),
-            4_000_000_000
+            xcm_emulator::Limited(4_000_000_000)
         ));
 
         assert_eq!(
@@ -287,7 +287,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
                 )
                 .into()
             ),
-            4_000_000_000,
+            xcm_emulator::Limited(4_000_000_000),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred

@@ -1,7 +1,7 @@
 [package]
-name = "nimbus-consensus"
 description = "Client-side worker for the Nimbus family of consensus algorithms"
 edition = "2021"
+name = "nimbus-consensus"
 version = "0.9.0"
 [dependencies]
 # Substrate deps
@@ -20,7 +20,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
 
 # Polkadot dependencies
-polkadot-client = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.32" }
+polkadot-client = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.32" }
 
 # Cumulus dependencies
 cumulus-client-consensus-common = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.32" }
@@ -32,8 +32,8 @@ nimbus-primitives = { path = "../nimbus-primitives" }
 
 # Other deps
 async-trait = "0.1"
-codec = { package = "parity-scale-codec", version = "3.0.0", features = [ "derive" ] }
-futures = { version = "0.3.24", features = [ "compat" ] }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+futures = { version = "0.3.24", features = ["compat"] }
 log = "0.4.17"
 parking_lot = "0.12"
 tracing = "0.1.22"

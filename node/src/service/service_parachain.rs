@@ -19,7 +19,7 @@ use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
-use cumulus_client_cli::CollatorOptions;
+// use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -322,7 +322,7 @@ where
         keystore: params.keystore_container.sync_keystore(),
         network: network.clone(),
         rpc_builder,
-        tx_handler_controller: tx_handler_controller,
+        tx_handler_controller,
         system_rpc_tx,
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),

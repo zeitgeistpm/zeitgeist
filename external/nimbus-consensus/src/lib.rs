@@ -21,29 +21,28 @@
 //! key it authors.
 
 use cumulus_client_consensus_common::{
-	ParachainBlockImport, ParachainCandidate, ParachainConsensus,
+    ParachainBlockImport, ParachainCandidate, ParachainConsensus,
 };
 use cumulus_primitives_core::{relay_chain::v2::Hash as PHash, ParaId, PersistedValidationData};
 pub use import_queue::import_queue;
 use log::{debug, info, warn};
 use nimbus_primitives::{
-	CompatibleDigestItem, DigestsProvider, NimbusApi, NimbusId, NIMBUS_KEY_ID,
+    CompatibleDigestItem, DigestsProvider, NimbusApi, NimbusId, NIMBUS_KEY_ID,
 };
 use parking_lot::Mutex;
 use sc_consensus::{BlockImport, BlockImportParams};
 use sp_api::{BlockId, ProvideRuntimeApi};
 use sp_application_crypto::{ByteArray, CryptoTypePublicPair};
 use sp_consensus::{
-	BlockOrigin, EnableProofRecording, Environment, ProofRecording, Proposal, Proposer,
+    BlockOrigin, EnableProofRecording, Environment, ProofRecording, Proposal, Proposer,
 };
 use sp_inherents::{CreateInherentDataProviders, InherentData, InherentDataProvider};
 use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 use sp_runtime::{
-	traits::{Block as BlockT, Header as HeaderT},
-	DigestItem,
+    traits::{Block as BlockT, Header as HeaderT},
+    DigestItem,
 };
-use std::convert::TryInto;
-use std::{marker::PhantomData, sync::Arc, time::Duration};
+use std::{convert::TryInto, marker::PhantomData, sync::Arc, time::Duration};
 use tracing::error;
 mod import_queue;
 mod manual_seal;
@@ -53,109 +52,109 @@ const LOG_TARGET: &str = "filtering-consensus";
 
 /// The implementation of the relay-chain provided consensus for parachains.
 pub struct NimbusConsensus<B, PF, BI, ParaClient, CIDP, DP = ()> {
-	para_id: ParaId,
-	proposer_factory: Arc<Mutex<PF>>,
-	create_inherent_data_providers: Arc<CIDP>,
-	block_import: Arc<futures::lock::Mutex<ParachainBlockImport<BI>>>,
-	parachain_client: Arc<ParaClient>,
-	keystore: SyncCryptoStorePtr,
-	skip_prediction: bool,
-	additional_digests_provider: Arc<DP>,
-	_phantom: PhantomData<B>,
+    para_id: ParaId,
+    proposer_factory: Arc<Mutex<PF>>,
+    create_inherent_data_providers: Arc<CIDP>,
+    block_import: Arc<futures::lock::Mutex<ParachainBlockImport<BI>>>,
+    parachain_client: Arc<ParaClient>,
+    keystore: SyncCryptoStorePtr,
+    skip_prediction: bool,
+    additional_digests_provider: Arc<DP>,
+    _phantom: PhantomData<B>,
 }
 
 impl<B, PF, BI, ParaClient, CIDP, DP> Clone for NimbusConsensus<B, PF, BI, ParaClient, CIDP, DP> {
-	fn clone(&self) -> Self {
-		Self {
-			para_id: self.para_id,
-			proposer_factory: self.proposer_factory.clone(),
-			create_inherent_data_providers: self.create_inherent_data_providers.clone(),
-			block_import: self.block_import.clone(),
-			parachain_client: self.parachain_client.clone(),
-			keystore: self.keystore.clone(),
-			skip_prediction: self.skip_prediction,
-			additional_digests_provider: self.additional_digests_provider.clone(),
-			_phantom: PhantomData,
-		}
-	}
+    fn clone(&self) -> Self {
+        Self {
+            para_id: self.para_id,
+            proposer_factory: self.proposer_factory.clone(),
+            create_inherent_data_providers: self.create_inherent_data_providers.clone(),
+            block_import: self.block_import.clone(),
+            parachain_client: self.parachain_client.clone(),
+            keystore: self.keystore.clone(),
+            skip_prediction: self.skip_prediction,
+            additional_digests_provider: self.additional_digests_provider.clone(),
+            _phantom: PhantomData,
+        }
+    }
 }
 
 impl<B, PF, BI, ParaClient, CIDP, DP> NimbusConsensus<B, PF, BI, ParaClient, CIDP, DP>
 where
-	B: BlockT,
-	PF: 'static,
-	BI: 'static,
-	ParaClient: ProvideRuntimeApi<B> + 'static,
-	CIDP: CreateInherentDataProviders<B, (PHash, PersistedValidationData, NimbusId)> + 'static,
-	DP: DigestsProvider<NimbusId, <B as BlockT>::Hash> + 'static,
+    B: BlockT,
+    PF: 'static,
+    BI: 'static,
+    ParaClient: ProvideRuntimeApi<B> + 'static,
+    CIDP: CreateInherentDataProviders<B, (PHash, PersistedValidationData, NimbusId)> + 'static,
+    DP: DigestsProvider<NimbusId, <B as BlockT>::Hash> + 'static,
 {
-	/// Create a new instance of nimbus consensus.
-	pub fn build(
-		BuildNimbusConsensusParams {
-			para_id,
-			proposer_factory,
-			create_inherent_data_providers,
-			block_import,
-			parachain_client,
-			keystore,
-			skip_prediction,
-			additional_digests_provider,
-		}: BuildNimbusConsensusParams<PF, BI, ParaClient, CIDP, DP>,
-	) -> Box<dyn ParachainConsensus<B>>
-	where
-		Self: ParachainConsensus<B>,
-	{
-		Box::new(Self {
-			para_id,
-			proposer_factory: Arc::new(Mutex::new(proposer_factory)),
-			create_inherent_data_providers: Arc::new(create_inherent_data_providers),
-			block_import: Arc::new(futures::lock::Mutex::new(ParachainBlockImport::new(
-				block_import,
-			))),
-			parachain_client,
-			keystore,
-			skip_prediction,
-			additional_digests_provider: Arc::new(additional_digests_provider),
-			_phantom: PhantomData,
-		})
-	}
+    /// Create a new instance of nimbus consensus.
+    pub fn build(
+        BuildNimbusConsensusParams {
+            para_id,
+            proposer_factory,
+            create_inherent_data_providers,
+            block_import,
+            parachain_client,
+            keystore,
+            skip_prediction,
+            additional_digests_provider,
+        }: BuildNimbusConsensusParams<PF, BI, ParaClient, CIDP, DP>,
+    ) -> Box<dyn ParachainConsensus<B>>
+    where
+        Self: ParachainConsensus<B>,
+    {
+        Box::new(Self {
+            para_id,
+            proposer_factory: Arc::new(Mutex::new(proposer_factory)),
+            create_inherent_data_providers: Arc::new(create_inherent_data_providers),
+            block_import: Arc::new(futures::lock::Mutex::new(ParachainBlockImport::new(
+                block_import,
+            ))),
+            parachain_client,
+            keystore,
+            skip_prediction,
+            additional_digests_provider: Arc::new(additional_digests_provider),
+            _phantom: PhantomData,
+        })
+    }
 
-	//TODO Could this be a provided implementation now that we have this async inherent stuff?
-	/// Create the data.
-	async fn inherent_data(
-		&self,
-		parent: B::Hash,
-		validation_data: &PersistedValidationData,
-		relay_parent: PHash,
-		author_id: NimbusId,
-	) -> Option<InherentData> {
-		let inherent_data_providers = self
-			.create_inherent_data_providers
-			.create_inherent_data_providers(
-				parent,
-				(relay_parent, validation_data.clone(), author_id),
-			)
-			.await
-			.map_err(|e| {
-				tracing::error!(
-					target: LOG_TARGET,
-					error = ?e,
-					"Failed to create inherent data providers.",
-				)
-			})
-			.ok()?;
+    //TODO Could this be a provided implementation now that we have this async inherent stuff?
+    /// Create the data.
+    async fn inherent_data(
+        &self,
+        parent: B::Hash,
+        validation_data: &PersistedValidationData,
+        relay_parent: PHash,
+        author_id: NimbusId,
+    ) -> Option<InherentData> {
+        let inherent_data_providers = self
+            .create_inherent_data_providers
+            .create_inherent_data_providers(
+                parent,
+                (relay_parent, validation_data.clone(), author_id),
+            )
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    target: LOG_TARGET,
+                    error = ?e,
+                    "Failed to create inherent data providers.",
+                )
+            })
+            .ok()?;
 
-		inherent_data_providers
-			.create_inherent_data()
-			.map_err(|e| {
-				tracing::error!(
-					target: LOG_TARGET,
-					error = ?e,
-					"Failed to create inherent data.",
-				)
-			})
-			.ok()
-	}
+        inherent_data_providers
+            .create_inherent_data()
+            .map_err(|e| {
+                tracing::error!(
+                    target: LOG_TARGET,
+                    error = ?e,
+                    "Failed to create inherent data.",
+                )
+            })
+            .ok()
+    }
 }
 
 /// Grabs any available nimbus key from the keystore.
@@ -164,20 +163,17 @@ where
 /// expected to be eligible. Concretely, this is used in the consensus worker
 /// to implement the `skip_prediction` feature.
 pub(crate) fn first_available_key(keystore: &dyn SyncCryptoStore) -> Option<CryptoTypePublicPair> {
-	// Get all the available keys
-	let available_keys = SyncCryptoStore::keys(keystore, NIMBUS_KEY_ID)
-		.expect("keystore should return the keys it has");
+    // Get all the available keys
+    let available_keys = SyncCryptoStore::keys(keystore, NIMBUS_KEY_ID)
+        .expect("keystore should return the keys it has");
 
-	// Print a more helpful message than "not eligible" when there are no keys at all.
-	if available_keys.is_empty() {
-		warn!(
-			target: LOG_TARGET,
-			"🔏 No Nimbus keys available. We will not be able to author."
-		);
-		return None;
-	}
+    // Print a more helpful message than "not eligible" when there are no keys at all.
+    if available_keys.is_empty() {
+        warn!(target: LOG_TARGET, "🔏 No Nimbus keys available. We will not be able to author.");
+        return None;
+    }
 
-	Some(available_keys[0].clone())
+    Some(available_keys[0].clone())
 }
 
 /// Grab the first eligible nimbus key from the keystore
@@ -185,246 +181,222 @@ pub(crate) fn first_available_key(keystore: &dyn SyncCryptoStore) -> Option<Cryp
 /// and makes no guarantees which one as that depends on the keystore's iterator behavior.
 /// This is the standard way of determining which key to author with.
 pub(crate) fn first_eligible_key<B: BlockT, C>(
-	client: Arc<C>,
-	keystore: &dyn SyncCryptoStore,
-	parent: &B::Header,
-	slot_number: u32,
+    client: Arc<C>,
+    keystore: &dyn SyncCryptoStore,
+    parent: &B::Header,
+    slot_number: u32,
 ) -> Option<CryptoTypePublicPair>
 where
-	C: ProvideRuntimeApi<B>,
-	C::Api: NimbusApi<B>,
+    C: ProvideRuntimeApi<B>,
+    C::Api: NimbusApi<B>,
 {
-	// Get all the available keys
-	let available_keys = SyncCryptoStore::keys(keystore, NIMBUS_KEY_ID)
-		.expect("keystore should return the keys it has");
+    // Get all the available keys
+    let available_keys = SyncCryptoStore::keys(keystore, NIMBUS_KEY_ID)
+        .expect("keystore should return the keys it has");
 
-	// Print a more helpful message than "not eligible" when there are no keys at all.
-	if available_keys.is_empty() {
-		warn!(
-			target: LOG_TARGET,
-			"🔏 No Nimbus keys available. We will not be able to author."
-		);
-		return None;
-	}
+    // Print a more helpful message than "not eligible" when there are no keys at all.
+    if available_keys.is_empty() {
+        warn!(target: LOG_TARGET, "🔏 No Nimbus keys available. We will not be able to author.");
+        return None;
+    }
 
-	let at = BlockId::Hash(parent.hash());
+    let at = BlockId::Hash(parent.hash());
 
-	// Iterate keys until we find an eligible one, or run out of candidates.
-	// If we are skipping prediction, then we author with the first key we find.
-	// prediction skipping only really makes sense when there is a single key in the keystore.
-	let maybe_key = available_keys.into_iter().find(|type_public_pair| {
-		// Have to convert to a typed NimbusId to pass to the runtime API. Maybe this is a clue
-		// That I should be passing Vec<u8> across the wasm boundary?
-		NimbusApi::can_author(
-			&*client.runtime_api(),
-			&at,
-			NimbusId::from_slice(&type_public_pair.1).expect("Provided keys should be valid"),
-			slot_number,
-			parent,
-		)
-		.expect("NimbusAPI should not return error")
-	});
+    // Iterate keys until we find an eligible one, or run out of candidates.
+    // If we are skipping prediction, then we author with the first key we find.
+    // prediction skipping only really makes sense when there is a single key in the keystore.
+    let maybe_key = available_keys.into_iter().find(|type_public_pair| {
+        // Have to convert to a typed NimbusId to pass to the runtime API. Maybe this is a clue
+        // That I should be passing Vec<u8> across the wasm boundary?
+        NimbusApi::can_author(
+            &*client.runtime_api(),
+            &at,
+            NimbusId::from_slice(&type_public_pair.1).expect("Provided keys should be valid"),
+            slot_number,
+            parent,
+        )
+        .expect("NimbusAPI should not return error")
+    });
 
-	// If there are no eligible keys, print the log, and exit early.
-	if maybe_key.is_none() {
-		info!(
-			target: LOG_TARGET,
-			"🔮 Skipping candidate production because we are not eligible for slot {}", slot_number
-		);
-	}
+    // If there are no eligible keys, print the log, and exit early.
+    if maybe_key.is_none() {
+        info!(
+            target: LOG_TARGET,
+            "🔮 Skipping candidate production because we are not eligible for slot {}", slot_number
+        );
+    }
 
-	maybe_key
+    maybe_key
 }
 
 pub(crate) fn seal_header<B>(
-	header: &B::Header,
-	keystore: &dyn SyncCryptoStore,
-	type_public_pair: &CryptoTypePublicPair,
+    header: &B::Header,
+    keystore: &dyn SyncCryptoStore,
+    type_public_pair: &CryptoTypePublicPair,
 ) -> DigestItem
 where
-	B: BlockT,
+    B: BlockT,
 {
-	let pre_hash = header.hash();
+    let pre_hash = header.hash();
 
-	let raw_sig = SyncCryptoStore::sign_with(
-		&*keystore,
-		NIMBUS_KEY_ID,
-		type_public_pair,
-		pre_hash.as_ref(),
-	)
-	.expect("Keystore should be able to sign")
-	.expect("We already checked that the key was present");
+    let raw_sig =
+        SyncCryptoStore::sign_with(keystore, NIMBUS_KEY_ID, type_public_pair, pre_hash.as_ref())
+            .expect("Keystore should be able to sign")
+            .expect("We already checked that the key was present");
 
-	debug!(target: LOG_TARGET, "The signature is \n{:?}", raw_sig);
+    debug!(target: LOG_TARGET, "The signature is \n{:?}", raw_sig);
 
-	let signature = raw_sig
-		.clone()
-		.try_into()
-		.expect("signature bytes produced by keystore should be right length");
+    let signature =
+        raw_sig.try_into().expect("signature bytes produced by keystore should be right length");
 
-	<DigestItem as CompatibleDigestItem>::nimbus_seal(signature)
+    <DigestItem as CompatibleDigestItem>::nimbus_seal(signature)
 }
 
 #[async_trait::async_trait]
 impl<B, PF, BI, ParaClient, CIDP, DP> ParachainConsensus<B>
-	for NimbusConsensus<B, PF, BI, ParaClient, CIDP, DP>
+    for NimbusConsensus<B, PF, BI, ParaClient, CIDP, DP>
 where
-	B: BlockT,
-	BI: BlockImport<B> + Send + Sync + 'static,
-	PF: Environment<B> + Send + Sync + 'static,
-	PF::Proposer: Proposer<
-		B,
-		Transaction = BI::Transaction,
-		ProofRecording = EnableProofRecording,
-		Proof = <EnableProofRecording as ProofRecording>::Proof,
-	>,
-	ParaClient: ProvideRuntimeApi<B> + Send + Sync + 'static,
-	ParaClient::Api: NimbusApi<B>,
-	CIDP: CreateInherentDataProviders<B, (PHash, PersistedValidationData, NimbusId)> + 'static,
-	DP: DigestsProvider<NimbusId, <B as BlockT>::Hash> + 'static + Send + Sync,
+    B: BlockT,
+    BI: BlockImport<B> + Send + Sync + 'static,
+    PF: Environment<B> + Send + Sync + 'static,
+    PF::Proposer: Proposer<
+        B,
+        Transaction = BI::Transaction,
+        ProofRecording = EnableProofRecording,
+        Proof = <EnableProofRecording as ProofRecording>::Proof,
+    >,
+    ParaClient: ProvideRuntimeApi<B> + Send + Sync + 'static,
+    ParaClient::Api: NimbusApi<B>,
+    CIDP: CreateInherentDataProviders<B, (PHash, PersistedValidationData, NimbusId)> + 'static,
+    DP: DigestsProvider<NimbusId, <B as BlockT>::Hash> + 'static + Send + Sync,
 {
-	async fn produce_candidate(
-		&mut self,
-		parent: &B::Header,
-		relay_parent: PHash,
-		validation_data: &PersistedValidationData,
-	) -> Option<ParachainCandidate<B>> {
-		// Determine if runtime change
-		let runtime_upgraded = if *parent.number() > sp_runtime::traits::Zero::zero() {
-			let at = BlockId::Hash(parent.hash());
-			let parent_at = BlockId::<B>::Hash(*parent.parent_hash());
-			use sp_api::Core as _;
-			let previous_runtime_version: sp_api::RuntimeVersion = self
-				.parachain_client
-				.runtime_api()
-				.version(&parent_at)
-				.expect("Runtime api access to not error.");
-			let runtime_version: sp_api::RuntimeVersion = self
-				.parachain_client
-				.runtime_api()
-				.version(&at)
-				.expect("Runtime api access to not error.");
+    async fn produce_candidate(
+        &mut self,
+        parent: &B::Header,
+        relay_parent: PHash,
+        validation_data: &PersistedValidationData,
+    ) -> Option<ParachainCandidate<B>> {
+        // Determine if runtime change
+        let runtime_upgraded = if *parent.number() > sp_runtime::traits::Zero::zero() {
+            let at = BlockId::Hash(parent.hash());
+            let parent_at = BlockId::<B>::Hash(*parent.parent_hash());
+            use sp_api::Core as _;
+            let previous_runtime_version: sp_api::RuntimeVersion = self
+                .parachain_client
+                .runtime_api()
+                .version(&parent_at)
+                .expect("Runtime api access to not error.");
+            let runtime_version: sp_api::RuntimeVersion = self
+                .parachain_client
+                .runtime_api()
+                .version(&at)
+                .expect("Runtime api access to not error.");
 
-			previous_runtime_version != runtime_version
-		} else {
-			false
-		};
+            previous_runtime_version != runtime_version
+        } else {
+            false
+        };
 
-		let maybe_key = if self.skip_prediction || runtime_upgraded {
-			first_available_key(&*self.keystore)
-		} else {
-			first_eligible_key::<B, ParaClient>(
-				self.parachain_client.clone(),
-				&*self.keystore,
-				parent,
-				validation_data.relay_parent_number,
-			)
-		};
+        let maybe_key = if self.skip_prediction || runtime_upgraded {
+            first_available_key(&*self.keystore)
+        } else {
+            first_eligible_key::<B, ParaClient>(
+                self.parachain_client.clone(),
+                &*self.keystore,
+                parent,
+                validation_data.relay_parent_number,
+            )
+        };
 
-		// If there are no eligible keys, print the log, and exit early.
-		let type_public_pair = match maybe_key {
-			Some(p) => p,
-			None => {
-				return None;
-			}
-		};
+        // If there are no eligible keys, print the log, and exit early.
+        let type_public_pair = match maybe_key {
+            Some(p) => p,
+            None => {
+                return None;
+            }
+        };
 
-		let proposer_future = self.proposer_factory.lock().init(&parent);
+        let proposer_future = self.proposer_factory.lock().init(parent);
 
-		let proposer = proposer_future
-			.await
-			.map_err(|e| error!(target: LOG_TARGET, error = ?e, "Could not create proposer."))
-			.ok()?;
+        let proposer = proposer_future
+            .await
+            .map_err(|e| error!(target: LOG_TARGET, error = ?e, "Could not create proposer."))
+            .ok()?;
 
-		let nimbus_id = NimbusId::from_slice(&type_public_pair.1)
-			.map_err(
-				|e| error!(target: LOG_TARGET, error = ?e, "Invalid Nimbus ID (wrong length)."),
-			)
-			.ok()?;
+        let nimbus_id = NimbusId::from_slice(&type_public_pair.1)
+            .map_err(
+                |e| error!(target: LOG_TARGET, error = ?e, "Invalid Nimbus ID (wrong length)."),
+            )
+            .ok()?;
 
-		let inherent_data = self
-			.inherent_data(
-				parent.hash(),
-				&validation_data,
-				relay_parent,
-				nimbus_id.clone(),
-			)
-			.await?;
+        let inherent_data = self
+            .inherent_data(parent.hash(), validation_data, relay_parent, nimbus_id.clone())
+            .await?;
 
-		let mut logs = vec![CompatibleDigestItem::nimbus_pre_digest(nimbus_id.clone())];
-		logs.extend(
-			self.additional_digests_provider
-				.provide_digests(nimbus_id, parent.hash()),
-		);
-		let inherent_digests = sp_runtime::generic::Digest { logs };
+        let mut logs = vec![CompatibleDigestItem::nimbus_pre_digest(nimbus_id.clone())];
+        logs.extend(self.additional_digests_provider.provide_digests(nimbus_id, parent.hash()));
+        let inherent_digests = sp_runtime::generic::Digest { logs };
 
-		let Proposal {
-			block,
-			storage_changes,
-			proof,
-		} = proposer
-			.propose(
-				inherent_data,
-				inherent_digests,
-				//TODO: Fix this.
-				Duration::from_millis(500),
-				// Set the block limit to 50% of the maximum PoV size.
-				//
-				// TODO: If we got benchmarking that includes that encapsulates the proof size,
-				// we should be able to use the maximum pov size.
-				Some((validation_data.max_pov_size / 2) as usize),
-			)
-			.await
-			.map_err(|e| error!(target: LOG_TARGET, error = ?e, "Proposing failed."))
-			.ok()?;
+        let Proposal { block, storage_changes, proof } = proposer
+            .propose(
+                inherent_data,
+                inherent_digests,
+                //TODO: Fix this.
+                Duration::from_millis(500),
+                // Set the block limit to 50% of the maximum PoV size.
+                //
+                // TODO: If we got benchmarking that includes that encapsulates the proof size,
+                // we should be able to use the maximum pov size.
+                Some((validation_data.max_pov_size / 2) as usize),
+            )
+            .await
+            .map_err(|e| error!(target: LOG_TARGET, error = ?e, "Proposing failed."))
+            .ok()?;
 
-		let (header, extrinsics) = block.clone().deconstruct();
+        let (header, extrinsics) = block.clone().deconstruct();
 
-		let sig_digest = seal_header::<B>(&header, &*self.keystore, &type_public_pair);
+        let sig_digest = seal_header::<B>(&header, &*self.keystore, &type_public_pair);
 
-		let mut block_import_params = BlockImportParams::new(BlockOrigin::Own, header.clone());
-		block_import_params.post_digests.push(sig_digest.clone());
-		block_import_params.body = Some(extrinsics.clone());
-		block_import_params.state_action = sc_consensus::StateAction::ApplyChanges(
-			sc_consensus::StorageChanges::Changes(storage_changes),
-		);
+        let mut block_import_params = BlockImportParams::new(BlockOrigin::Own, header.clone());
+        block_import_params.post_digests.push(sig_digest.clone());
+        block_import_params.body = Some(extrinsics.clone());
+        block_import_params.state_action = sc_consensus::StateAction::ApplyChanges(
+            sc_consensus::StorageChanges::Changes(storage_changes),
+        );
 
-		// Print the same log line as slots (aura and babe)
-		info!(
-			"🔖 Sealed block for proposal at {}. Hash now {:?}, previously {:?}.",
-			*header.number(),
-			block_import_params.post_hash(),
-			header.hash(),
-		);
+        // Print the same log line as slots (aura and babe)
+        info!(
+            "🔖 Sealed block for proposal at {}. Hash now {:?}, previously {:?}.",
+            *header.number(),
+            block_import_params.post_hash(),
+            header.hash(),
+        );
 
-		if let Err(err) = self
-			.block_import
-			.lock()
-			.await
-			.import_block(block_import_params, Default::default())
-			.await
-		{
-			error!(
-				target: LOG_TARGET,
-				at = ?parent.hash(),
-				error = ?err,
-				"Error importing built block.",
-			);
+        if let Err(err) = self
+            .block_import
+            .lock()
+            .await
+            .import_block(block_import_params, Default::default())
+            .await
+        {
+            error!(
+                target: LOG_TARGET,
+                at = ?parent.hash(),
+                error = ?err,
+                "Error importing built block.",
+            );
 
-			return None;
-		}
+            return None;
+        }
 
-		// Compute info about the block after the digest is added
-		let mut post_header = header.clone();
-		post_header.digest_mut().logs.push(sig_digest.clone());
-		let post_block = B::new(post_header, extrinsics);
+        // Compute info about the block after the digest is added
+        let mut post_header = header.clone();
+        post_header.digest_mut().logs.push(sig_digest.clone());
+        let post_block = B::new(post_header, extrinsics);
 
-		// Returning the block WITH the seal for distribution around the network.
-		Some(ParachainCandidate {
-			block: post_block,
-			proof,
-		})
-	}
+        // Returning the block WITH the seal for distribution around the network.
+        Some(ParachainCandidate { block: post_block, proof })
+    }
 }
 
 /// Paramaters of [`build_relay_chain_consensus`].
@@ -432,12 +404,12 @@ where
 /// I briefly tried the async keystore approach, but decided to go sync so I can copy
 /// code from Aura. Maybe after it is working, Jeremy can help me go async.
 pub struct BuildNimbusConsensusParams<PF, BI, ParaClient, CIDP, DP> {
-	pub para_id: ParaId,
-	pub proposer_factory: PF,
-	pub create_inherent_data_providers: CIDP,
-	pub block_import: BI,
-	pub parachain_client: Arc<ParaClient>,
-	pub keystore: SyncCryptoStorePtr,
-	pub skip_prediction: bool,
-	pub additional_digests_provider: DP,
+    pub para_id: ParaId,
+    pub proposer_factory: PF,
+    pub create_inherent_data_providers: CIDP,
+    pub block_import: BI,
+    pub parachain_client: Arc<ParaClient>,
+    pub keystore: SyncCryptoStorePtr,
+    pub skip_prediction: bool,
+    pub additional_digests_provider: DP,
 }

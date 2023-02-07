@@ -179,7 +179,8 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderBo
         // let old_markets: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
         //     Self::get_temp_storage("old_markets").unwrap();
         let old_markets: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
-            Decode::decode(&mut old_markets.as_slice()).expect("old_markets not generated properly by pre_upgrade");
+            Decode::decode(&mut old_markets.as_slice())
+                .expect("old_markets not generated properly by pre_upgrade");
         let new_market_count = <zrml_market_commons::Pallet<T>>::market_iter().count();
         assert_eq!(old_markets.len(), new_market_count);
         for (market_id, new_market) in <zrml_market_commons::Pallet<T>>::market_iter() {

@@ -1108,7 +1108,11 @@ fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
         assert_ok!(Swaps::close_pool(0));
-        assert_ok!(Swaps::admin_clean_up_pool(RuntimeOrigin::root(), 0, OutcomeReport::Categorical(65),));
+        assert_ok!(Swaps::admin_clean_up_pool(
+            RuntimeOrigin::root(),
+            0,
+            OutcomeReport::Categorical(65),
+        ));
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1),));
 
         System::assert_last_event(
@@ -2920,7 +2924,13 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
         ));
 
         assert_noop!(
-            Swaps::pool_exit_with_exact_pool_amount(RuntimeOrigin::signed(BOB), pool_id, ASSET_A, _1, 0),
+            Swaps::pool_exit_with_exact_pool_amount(
+                RuntimeOrigin::signed(BOB),
+                pool_id,
+                ASSET_A,
+                _1,
+                0
+            ),
             crate::Error::<Runtime>::PoolDrain,
         );
     });

@@ -19,7 +19,7 @@
 
 use crate::{
     market_mock,
-    mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, RuntimeOrigin, Runtime, BOB},
+    mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Runtime, RuntimeOrigin, BOB},
     mock_storage::pallet as mock_storage,
     AuthorizedOutcomeReports, Error,
 };
@@ -150,7 +150,11 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_noop!(
-            Authorized::authorize_market_outcome(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Scalar(1)),
+            Authorized::authorize_market_outcome(
+                RuntimeOrigin::signed(BOB),
+                0,
+                OutcomeReport::Scalar(1)
+            ),
             DispatchError::BadOrigin,
         );
     });

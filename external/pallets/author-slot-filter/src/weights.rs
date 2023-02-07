@@ -44,28 +44,27 @@
 #![allow(unused_imports)]
 
 use frame_support::{
-	traits::Get,
-	weights::{constants::RocksDbWeight, Weight},
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
 };
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_author_slot_filter.
 pub trait WeightInfo {
-	fn set_eligible() -> Weight;
+    fn set_eligible() -> Weight;
 }
 
 /// Weights for pallet_author_slot_filter using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	fn set_eligible() -> Weight {
-		Weight::from_ref_time(13_250_000 as u64).saturating_add(T::DbWeight::get().writes(1 as u64))
-	}
+    fn set_eligible() -> Weight {
+        Weight::from_ref_time(13_250_000_u64).saturating_add(T::DbWeight::get().writes(1_u64))
+    }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn set_eligible() -> Weight {
-		Weight::from_ref_time(13_250_000 as u64)
-			.saturating_add(RocksDbWeight::get().writes(1 as u64))
-	}
+    fn set_eligible() -> Weight {
+        Weight::from_ref_time(13_250_000_u64).saturating_add(RocksDbWeight::get().writes(1_u64))
+    }
 }

@@ -25,7 +25,7 @@ use zeitgeist_primitives::types::{
     Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
     OutcomeReport, ScoringRule,
 };
-use zrml_prediction_markets::mock::{ExtBuilder, RuntimeOrigin, PredictionMarkets, System};
+use zrml_prediction_markets::mock::{ExtBuilder, PredictionMarkets, RuntimeOrigin, System};
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();

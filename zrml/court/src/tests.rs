@@ -19,8 +19,8 @@
 
 use crate::{
     mock::{
-        Balances, Court, ExtBuilder, RuntimeOrigin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
-        CHARLIE, INITIAL_BALANCE,
+        Balances, Court, ExtBuilder, RandomnessCollectiveFlip, Runtime, RuntimeOrigin, System,
+        ALICE, BOB, CHARLIE, INITIAL_BALANCE,
     },
     Error, Juror, JurorStatus, Jurors, MarketOf, RequestedJurors, Votes,
 };

@@ -17,7 +17,7 @@
 
 use crate::{
     parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist, AccountId, CurrencyId,
-    DmpQueue, RuntimeOrigin, Runtime, XcmpQueue,
+    DmpQueue, Runtime, RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};

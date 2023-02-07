@@ -1,8 +1,8 @@
 [package]
-name = "pallet-author-mapping"
-authors = [ "PureStake" ]
+authors = ["PureStake"]
 description = "Maps AuthorIds to AccountIds Useful for associating consensus authors with in-runtime accounts"
 edition = "2021"
+name = "pallet-author-mapping"
 version = "2.0.5"
 
 [dependencies]
@@ -13,8 +13,8 @@ serde = { version = "1.0.124", optional = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", optional = true, default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", default-features = false }
-parity-scale-codec = { version = "3.0.0", default-features = false, features = [ "derive" ] }
-scale-info = { version = "2.0", default-features = false, features = [ "derive" ] }
+parity-scale-codec = { version = "3.0.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.0", default-features = false, features = ["derive"] }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", default-features = false }
 
@@ -29,22 +29,22 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
 
 [features]
-default = [ "std" ]
-std = [
-	"frame-benchmarking/std",
-	"frame-support/std",
-	"frame-system/std",
-	"log/std",
-	"nimbus-primitives/std",
-	"parity-scale-codec/std",
-	"scale-info/std",
-	"serde",
-	"session-keys-primitives/std",
-	"sp-runtime/std",
-	"sp-std/std",
-]
+default = ["std"]
 runtime-benchmarks = [
-	"frame-benchmarking",
-	"session-keys-primitives/runtime-benchmarks",
+    "frame-benchmarking",
+    "session-keys-primitives/runtime-benchmarks",
 ]
-try-runtime = [ "frame-support/try-runtime" ]
+std = [
+    "frame-benchmarking/std",
+    "frame-support/std",
+    "frame-system/std",
+    "log/std",
+    "nimbus-primitives/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "serde",
+    "session-keys-primitives/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+try-runtime = ["frame-support/try-runtime"]

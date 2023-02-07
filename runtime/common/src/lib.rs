@@ -1812,7 +1812,7 @@ macro_rules! create_common_tests {
         mod common_tests {
             mod fees {
                 use crate::*;
-                use frame_support::weights::{DispatchClass, Weight};
+                use frame_support::{dispatch::DispatchClass, weights::Weight};
                 use sp_core::H256;
                 use sp_runtime::traits::Convert;
 

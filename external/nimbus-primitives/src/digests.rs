@@ -29,52 +29,52 @@ use sp_runtime::generic::DigestItem;
 
 /// A digest item which is usable with aura consensus.
 pub trait CompatibleDigestItem: Sized {
-	/// Construct a pre-runtime digest from the given AuthorId
-	fn nimbus_pre_digest(author: NimbusId) -> Self;
+    /// Construct a pre-runtime digest from the given AuthorId
+    fn nimbus_pre_digest(author: NimbusId) -> Self;
 
-	/// If this item is a nimbus pre-runtime digest, return the author
-	fn as_nimbus_pre_digest(&self) -> Option<NimbusId>;
+    /// If this item is a nimbus pre-runtime digest, return the author
+    fn as_nimbus_pre_digest(&self) -> Option<NimbusId>;
 
-	/// Construct a seal digest item from the given signature
-	fn nimbus_seal(signature: NimbusSignature) -> Self;
+    /// Construct a seal digest item from the given signature
+    fn nimbus_seal(signature: NimbusSignature) -> Self;
 
-	/// If this item is a nimbus seal, return the signature.
-	fn as_nimbus_seal(&self) -> Option<NimbusSignature>;
+    /// If this item is a nimbus seal, return the signature.
+    fn as_nimbus_seal(&self) -> Option<NimbusSignature>;
 
-	/// This will be deprecated in the future
-	/// Construct a consensus digest from the given AuthorId
-	fn nimbus_consensus_digest(author: NimbusId) -> Self;
+    /// This will be deprecated in the future
+    /// Construct a consensus digest from the given AuthorId
+    fn nimbus_consensus_digest(author: NimbusId) -> Self;
 
-	/// This will be deprecated in the future
-	/// If this item is a nimbus consensus digest, return the author
-	fn as_nimbus_consensus_digest(&self) -> Option<NimbusId>;
+    /// This will be deprecated in the future
+    /// If this item is a nimbus consensus digest, return the author
+    fn as_nimbus_consensus_digest(&self) -> Option<NimbusId>;
 }
 
 impl CompatibleDigestItem for DigestItem {
-	fn nimbus_pre_digest(author: NimbusId) -> Self {
-		DigestItem::PreRuntime(NIMBUS_ENGINE_ID, author.encode())
-	}
+    fn nimbus_pre_digest(author: NimbusId) -> Self {
+        DigestItem::PreRuntime(NIMBUS_ENGINE_ID, author.encode())
+    }
 
-	fn as_nimbus_pre_digest(&self) -> Option<NimbusId> {
-		self.pre_runtime_try_to(&NIMBUS_ENGINE_ID)
-	}
+    fn as_nimbus_pre_digest(&self) -> Option<NimbusId> {
+        self.pre_runtime_try_to(&NIMBUS_ENGINE_ID)
+    }
 
-	fn nimbus_seal(signature: NimbusSignature) -> Self {
-		DigestItem::Seal(NIMBUS_ENGINE_ID, signature.encode())
-	}
+    fn nimbus_seal(signature: NimbusSignature) -> Self {
+        DigestItem::Seal(NIMBUS_ENGINE_ID, signature.encode())
+    }
 
-	fn as_nimbus_seal(&self) -> Option<NimbusSignature> {
-		self.seal_try_to(&NIMBUS_ENGINE_ID)
-	}
+    fn as_nimbus_seal(&self) -> Option<NimbusSignature> {
+        self.seal_try_to(&NIMBUS_ENGINE_ID)
+    }
 
-	// Remove this once deprecated
-	fn nimbus_consensus_digest(author: NimbusId) -> Self {
-		DigestItem::Consensus(NIMBUS_ENGINE_ID, author.encode())
-	}
+    // Remove this once deprecated
+    fn nimbus_consensus_digest(author: NimbusId) -> Self {
+        DigestItem::Consensus(NIMBUS_ENGINE_ID, author.encode())
+    }
 
-	// Remove this once deprecated. I don't think it is used anyway.
-	// Notice that it calls the pre_runtime helper function.
-	fn as_nimbus_consensus_digest(&self) -> Option<NimbusId> {
-		self.pre_runtime_try_to(&NIMBUS_ENGINE_ID)
-	}
+    // Remove this once deprecated. I don't think it is used anyway.
+    // Notice that it calls the pre_runtime helper function.
+    fn as_nimbus_consensus_digest(&self) -> Option<NimbusId> {
+        self.pre_runtime_try_to(&NIMBUS_ENGINE_ID)
+    }
 }

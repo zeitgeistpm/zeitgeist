@@ -141,7 +141,10 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
         );
         run_blocks(3);
         let market_id = 0;
-        assert_ok!(PredictionMarkets::admin_move_market_to_closed(RuntimeOrigin::signed(SUDO), market_id));
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(
+            RuntimeOrigin::signed(SUDO),
+            market_id
+        ));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
         let new_end = now + 3;
@@ -182,7 +185,10 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
         set_timestamp_for_on_initialize(start + shift + MILLISECS_PER_BLOCK as u64);
         run_blocks(shift_blocks);
 
-        assert_ok!(PredictionMarkets::admin_move_market_to_closed(RuntimeOrigin::signed(SUDO), market_id));
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(
+            RuntimeOrigin::signed(SUDO),
+            market_id
+        ));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
         let new_end = start + shift;
@@ -1196,7 +1202,10 @@ fn admin_move_market_to_resovled_fails_if_market_is_not_reported_or_disputed(
             Ok(())
         }));
         assert_noop!(
-            PredictionMarkets::admin_move_market_to_resolved(RuntimeOrigin::signed(SUDO), market_id,),
+            PredictionMarkets::admin_move_market_to_resolved(
+                RuntimeOrigin::signed(SUDO),
+                market_id,
+            ),
             Error::<Runtime>::InvalidMarketStatus,
         );
     });
@@ -1383,7 +1392,11 @@ fn it_allows_request_edit_origin_to_request_edits_for_markets() {
         );
 
         // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason.clone()));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(SUDO),
+            0,
+            edit_reason.clone()
+        ));
         System::assert_last_event(
             Event::MarketRequestedEdit(
                 0,
@@ -1733,7 +1746,11 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
 
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), market_id, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(SUDO),
+            market_id,
+            edit_reason
+        ));
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
         run_blocks(end);
@@ -2490,7 +2507,11 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         assert!(market.report.is_none());
 
         assert_noop!(
-            PredictionMarkets::report(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            PredictionMarkets::report(
+                RuntimeOrigin::signed(CHARLIE),
+                0,
+                OutcomeReport::Categorical(1)
+            ),
             Error::<Runtime>::ReporterNotOracle
         );
 
@@ -2702,7 +2723,11 @@ fn dispute_fails_authority_reported_already() {
         ));
 
         assert_noop!(
-            PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            PredictionMarkets::dispute(
+                RuntimeOrigin::signed(CHARLIE),
+                0,
+                OutcomeReport::Categorical(1)
+            ),
             AuthorizedError::<Runtime>::OnlyOneDisputeAllowed
         );
     });
@@ -2959,7 +2984,11 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
         }));
 
         assert_noop!(
-            PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0, OutcomeReport::Categorical(1)),
+            PredictionMarkets::dispute(
+                RuntimeOrigin::signed(EVE),
+                0,
+                OutcomeReport::Categorical(1)
+            ),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
@@ -2997,13 +3026,19 @@ fn start_global_dispute_works() {
             if i == 1 {
                 #[cfg(feature = "with-global-disputes")]
                 assert_noop!(
-                    PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id),
+                    PredictionMarkets::start_global_dispute(
+                        RuntimeOrigin::signed(CHARLIE),
+                        market_id
+                    ),
                     Error::<Runtime>::InvalidMarketStatus
                 );
             } else {
                 #[cfg(feature = "with-global-disputes")]
                 assert_noop!(
-                    PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id),
+                    PredictionMarkets::start_global_dispute(
+                        RuntimeOrigin::signed(CHARLIE),
+                        market_id
+                    ),
                     Error::<Runtime>::MaxDisputesNeeded
                 );
             }
@@ -3030,7 +3065,10 @@ fn start_global_dispute_works() {
             use zrml_global_disputes::GlobalDisputesPalletApi;
 
             let now = <frame_system::Pallet<Runtime>>::block_number();
-            assert_ok!(PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id));
+            assert_ok!(PredictionMarkets::start_global_dispute(
+                RuntimeOrigin::signed(CHARLIE),
+                market_id
+            ));
 
             // report check
             assert_eq!(
@@ -3608,7 +3646,11 @@ fn full_scalar_market_lifecycle() {
             ScoringRule::CPMM
         ));
 
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, 100 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(CHARLIE),
+            0,
+            100 * BASE
+        ));
 
         // check balances
         let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
@@ -3626,7 +3668,11 @@ fn full_scalar_market_lifecycle() {
         Timestamp::set_timestamp(100_000_000 + grace_period);
 
         // report
-        assert_ok!(PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Scalar(100)));
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            0,
+            OutcomeReport::Scalar(100)
+        ));
 
         let market_after_report = MarketCommons::market(&0).unwrap();
         assert!(market_after_report.report.is_some());
@@ -3636,7 +3682,11 @@ fn full_scalar_market_lifecycle() {
         assert_eq!(report.outcome, OutcomeReport::Scalar(100));
 
         // dispute
-        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(DAVE), 0, OutcomeReport::Scalar(25)));
+        assert_ok!(PredictionMarkets::dispute(
+            RuntimeOrigin::signed(DAVE),
+            0,
+            OutcomeReport::Scalar(25)
+        ));
         let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 1);
 
@@ -3805,7 +3855,11 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(ALICE), 0, BASE));
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * BASE));
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, 3 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(CHARLIE),
+            0,
+            3 * BASE
+        ));
         let market = MarketCommons::market(&0).unwrap();
 
         let grace_period = end + market.deadlines.grace_period;
@@ -4926,7 +4980,11 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
         set_timestamp_for_on_initialize(100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64);
         assert_noop!(
-            PredictionMarkets::report(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            PredictionMarkets::report(
+                RuntimeOrigin::signed(CHARLIE),
+                0,
+                OutcomeReport::Categorical(1)
+            ),
             Error::<Runtime>::ReporterNotOracle,
         );
     });

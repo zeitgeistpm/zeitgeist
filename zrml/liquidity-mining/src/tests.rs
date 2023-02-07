@@ -18,7 +18,7 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, ExtBuilder, LiquidityMining, RuntimeOrigin, Runtime, System, ALICE, BOB},
+    mock::{Balances, ExtBuilder, LiquidityMining, Runtime, RuntimeOrigin, System, ALICE, BOB},
     track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
     track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
     BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, OwnedValues,

@@ -22,11 +22,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_application_crypto::KeyTypeId;
-use sp_runtime::generic::DigestItem;
-use sp_runtime::traits::BlockNumberProvider;
-use sp_runtime::ConsensusEngineId;
+use sp_runtime::{generic::DigestItem, traits::BlockNumberProvider, ConsensusEngineId};
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec;
+#[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec::Vec;
 
 pub mod digests;
@@ -37,45 +36,45 @@ pub use digests::CompatibleDigestItem;
 pub use inherents::{InherentDataProvider, INHERENT_IDENTIFIER};
 
 pub trait DigestsProvider<Id, BlockHash> {
-	type Digests: IntoIterator<Item = DigestItem>;
-	fn provide_digests(&self, id: Id, parent: BlockHash) -> Self::Digests;
+    type Digests: IntoIterator<Item = DigestItem>;
+    fn provide_digests(&self, id: Id, parent: BlockHash) -> Self::Digests;
 }
 
 impl<Id, BlockHash> DigestsProvider<Id, BlockHash> for () {
-	type Digests = [DigestItem; 0];
-	fn provide_digests(&self, _id: Id, _parent: BlockHash) -> Self::Digests {
-		[]
-	}
+    type Digests = [DigestItem; 0];
+    fn provide_digests(&self, _id: Id, _parent: BlockHash) -> Self::Digests {
+        []
+    }
 }
 
 impl<F, Id, BlockHash, D> DigestsProvider<Id, BlockHash> for F
 where
-	F: Fn(Id, BlockHash) -> D,
-	D: IntoIterator<Item = DigestItem>,
+    F: Fn(Id, BlockHash) -> D,
+    D: IntoIterator<Item = DigestItem>,
 {
-	type Digests = D;
+    type Digests = D;
 
-	fn provide_digests(&self, id: Id, parent: BlockHash) -> Self::Digests {
-		(*self)(id, parent)
-	}
+    fn provide_digests(&self, id: Id, parent: BlockHash) -> Self::Digests {
+        (*self)(id, parent)
+    }
 }
 
 /// The given account ID is the author of the current block.
 pub trait EventHandler<Author> {
-	//TODO should we be tking ownership here?
-	fn note_author(author: Author);
+    //TODO should we be tking ownership here?
+    fn note_author(author: Author);
 }
 
 impl<T> EventHandler<T> for () {
-	fn note_author(_author: T) {}
+    fn note_author(_author: T) {}
 }
 
 /// A mechanism for determining the current slot.
 /// For now we use u32 as the slot type everywhere. Let's see how long we can get away with that.
 pub trait SlotBeacon {
-	fn slot() -> u32;
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_slot(_slot: u32) {}
+    fn slot() -> u32;
+    #[cfg(feature = "runtime-benchmarks")]
+    fn set_slot(_slot: u32) {}
 }
 
 /// Anything that can provide a block height can be used as a slot beacon. This could be
@@ -83,13 +82,13 @@ pub trait SlotBeacon {
 /// 1. Use your own chain's height as the slot number
 /// 2. If you're a parachain, use the relay chain's height as the slot number.
 impl<T: BlockNumberProvider<BlockNumber = u32>> SlotBeacon for T {
-	fn slot() -> u32 {
-		Self::current_block_number()
-	}
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_slot(slot: u32) {
-		Self::set_block_number(slot);
-	}
+    fn slot() -> u32 {
+        Self::current_block_number()
+    }
+    #[cfg(feature = "runtime-benchmarks")]
+    fn set_slot(slot: u32) {
+        Self::set_block_number(slot);
+    }
 }
 
 /// PLANNED: A SlotBeacon that starts a new slot based on the timestamp. Behaviorally, this is
@@ -98,9 +97,9 @@ impl<T: BlockNumberProvider<BlockNumber = u32>> SlotBeacon for T {
 pub struct IntervalBeacon;
 
 impl SlotBeacon for IntervalBeacon {
-	fn slot() -> u32 {
-		todo!()
-	}
+    fn slot() -> u32 {
+        todo!()
+    }
 }
 
 /// Trait to determine whether this author is eligible to author in this slot.
@@ -113,27 +112,27 @@ impl SlotBeacon for IntervalBeacon {
 /// There may be another variant where the caller only supplies a slot and the
 /// implementation replies with a complete set of eligible authors.
 pub trait CanAuthor<AuthorId> {
-	#[cfg(feature = "try-runtime")]
-	// With `try-runtime` the local author should always be able to author a block.
-	fn can_author(author: &AuthorId, slot: &u32) -> bool {
-		true
-	}
-	#[cfg(not(feature = "try-runtime"))]
-	fn can_author(author: &AuthorId, slot: &u32) -> bool;
-	#[cfg(feature = "runtime-benchmarks")]
-	fn get_authors(_slot: &u32) -> Vec<AuthorId> {
-		vec![]
-	}
-	#[cfg(feature = "runtime-benchmarks")]
-	fn set_eligible_author(_slot: &u32) {}
+    #[cfg(feature = "try-runtime")]
+    // With `try-runtime` the local author should always be able to author a block.
+    fn can_author(_author: &AuthorId, _slot: &u32) -> bool {
+        true
+    }
+    #[cfg(not(feature = "try-runtime"))]
+    fn can_author(author: &AuthorId, slot: &u32) -> bool;
+    #[cfg(feature = "runtime-benchmarks")]
+    fn get_authors(_slot: &u32) -> Vec<AuthorId> {
+        vec![]
+    }
+    #[cfg(feature = "runtime-benchmarks")]
+    fn set_eligible_author(_slot: &u32) {}
 }
 /// Default implementation where anyone can author.
 ///
 /// This is identical to Cumulus's RelayChainConsensus
 impl<T> CanAuthor<T> for () {
-	fn can_author(_: &T, _: &u32) -> bool {
-		true
-	}
+    fn can_author(_: &T, _: &u32) -> bool {
+        true
+    }
 }
 
 /// A Trait to lookup runtime AccountIds from AuthorIds (probably NimbusIds)
@@ -142,14 +141,14 @@ impl<T> CanAuthor<T> for () {
 /// support the usecase where the author inherent is used for beneficiary info
 /// and contains an AccountId directly.
 pub trait AccountLookup<AccountId> {
-	fn lookup_account(author: &NimbusId) -> Option<AccountId>;
+    fn lookup_account(author: &NimbusId) -> Option<AccountId>;
 }
 
 // A dummy impl used in simple tests
 impl<AccountId> AccountLookup<AccountId> for () {
-	fn lookup_account(_: &NimbusId) -> Option<AccountId> {
-		None
-	}
+    fn lookup_account(_: &NimbusId) -> Option<AccountId> {
+        None
+    }
 }
 
 /// The ConsensusEngineId for nimbus consensus
@@ -162,8 +161,8 @@ pub const NIMBUS_KEY_ID: KeyTypeId = KeyTypeId(*b"nmbs");
 
 // The strongly-typed crypto wrappers to be used by Nimbus in the keystore
 mod nimbus_crypto {
-	use sp_application_crypto::{app_crypto, sr25519};
-	app_crypto!(sr25519, crate::NIMBUS_KEY_ID);
+    use sp_application_crypto::{app_crypto, sr25519};
+    app_crypto!(sr25519, crate::NIMBUS_KEY_ID);
 }
 
 /// A nimbus author identifier (A public key).
@@ -173,13 +172,13 @@ pub type NimbusId = nimbus_crypto::Public;
 pub type NimbusSignature = nimbus_crypto::Signature;
 
 sp_application_crypto::with_pair! {
-	/// A nimbus keypair
-	pub type NimbusPair = nimbus_crypto::Pair;
+    /// A nimbus keypair
+    pub type NimbusPair = nimbus_crypto::Pair;
 }
 
 sp_api::decl_runtime_apis! {
-	/// The runtime api used to predict whether a Nimbus author will be eligible in the given slot
-	pub trait NimbusApi {
-		fn can_author(author: NimbusId, relay_parent: u32, parent_header: &Block::Header) -> bool;
-	}
+    /// The runtime api used to predict whether a Nimbus author will be eligible in the given slot
+    pub trait NimbusApi {
+        fn can_author(author: NimbusId, relay_parent: u32, parent_header: &Block::Header) -> bool;
+    }
 }

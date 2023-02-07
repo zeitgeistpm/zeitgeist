@@ -64,8 +64,8 @@ cumulus-relay-chain-rpc-interface = { branch = "polkadot-v0.9.32", git = "https:
 # Parachain
 
 moonbeam-vrf = { path = "../external/vrf", optional = true }
-nimbus-primitives = { default-features = false, path = "../external/nimbus-primitives", optional = true }
 nimbus-consensus = { default-features = false, path = "../external/nimbus-consensus", optional = true }
+nimbus-primitives = { default-features = false, path = "../external/nimbus-primitives", optional = true }
 pallet-author-inherent = { default-features = false, path = "../external/pallets/author-inherent", optional = true }
 pallet-parachain-staking = { default-features = false, path = "../external/pallets/parachain-staking", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }

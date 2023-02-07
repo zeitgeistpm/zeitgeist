@@ -46,46 +46,46 @@
 #![allow(unused_imports)]
 
 use frame_support::{
-	traits::Get,
-	weights::{constants::RocksDbWeight, Weight},
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
 };
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_author_inherent.
 pub trait WeightInfo {
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	fn kick_off_authorship_validation() -> Weight;
 }
 
 /// Weights for pallet_author_inherent using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	// Storage: ParachainSystem ValidationData (r:1 w:0)
-	// Storage: AuthorInherent HighestSlotSeen (r:1 w:1)
-	// Storage: AuthorInherent Author (r:1 w:0)
-	// Storage: ParachainStaking SelectedCandidates (r:1 w:0)
-	// Storage: AuthorFilter EligibleCount (r:1 w:0)
-	// Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
+    // Storage: ParachainSystem ValidationData (r:1 w:0)
+    // Storage: AuthorInherent HighestSlotSeen (r:1 w:1)
+    // Storage: AuthorInherent Author (r:1 w:0)
+    // Storage: ParachainStaking SelectedCandidates (r:1 w:0)
+    // Storage: AuthorFilter EligibleCount (r:1 w:0)
+    // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
 	#[rustfmt::skip]
-	fn kick_off_authorship_validation() -> Weight {
-		Weight::from_ref_time(20_862_000 as u64)
-			.saturating_add(T::DbWeight::get().reads(6 as u64))
-			.saturating_add(T::DbWeight::get().writes(1 as u64))
+    fn kick_off_authorship_validation() -> Weight {
+		Weight::from_ref_time(20_862_000_u64)
+			.saturating_add(T::DbWeight::get().reads(6_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	// Storage: ParachainSystem ValidationData (r:1 w:0)
-	// Storage: AuthorInherent HighestSlotSeen (r:1 w:1)
-	// Storage: AuthorInherent Author (r:1 w:0)
-	// Storage: ParachainStaking SelectedCandidates (r:1 w:0)
-	// Storage: AuthorFilter EligibleCount (r:1 w:0)
-	// Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
+    // Storage: ParachainSystem ValidationData (r:1 w:0)
+    // Storage: AuthorInherent HighestSlotSeen (r:1 w:1)
+    // Storage: AuthorInherent Author (r:1 w:0)
+    // Storage: ParachainStaking SelectedCandidates (r:1 w:0)
+    // Storage: AuthorFilter EligibleCount (r:1 w:0)
+    // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
 	#[rustfmt::skip]
-	fn kick_off_authorship_validation() -> Weight {
-		Weight::from_ref_time(20_862_000 as u64)
-			.saturating_add(RocksDbWeight::get().reads(6 as u64))
-			.saturating_add(RocksDbWeight::get().writes(1 as u64))
+    fn kick_off_authorship_validation() -> Weight {
+		Weight::from_ref_time(20_862_000_u64)
+			.saturating_add(RocksDbWeight::get().reads(6_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }
