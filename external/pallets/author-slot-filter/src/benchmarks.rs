@@ -32,7 +32,7 @@ benchmarks! {
 
 #[cfg(test)]
 mod tests {
-	use crate::tests::Test;
+	use crate::mock::Test;
 	use sp_io::TestExternalities;
 
 	pub fn new_test_ext() -> TestExternalities {
@@ -46,5 +46,5 @@ mod tests {
 impl_benchmark_test_suite!(
 	Pallet,
 	crate::benchmarks::tests::new_test_ext(),
-	crate::tests::Test
+	crate::mock::Test
 );

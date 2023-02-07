@@ -61,7 +61,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The overarching event type
-		type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Deterministic on-chain pseudo-randomness used to do the filtering
 		type RandomnessSource: Randomness<H256, Self::BlockNumber>;
 		//TODO introduce a new trait for exhaustive sets and use it here.

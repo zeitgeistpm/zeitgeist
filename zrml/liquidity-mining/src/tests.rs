@@ -18,7 +18,7 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, ExtBuilder, LiquidityMining, Origin, Runtime, System, ALICE, BOB},
+    mock::{Balances, ExtBuilder, LiquidityMining, RuntimeOrigin, Runtime, System, ALICE, BOB},
     track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
     track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
     BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, OwnedValues,
@@ -192,7 +192,7 @@ fn only_sudo_can_change_per_block_distribution() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(LiquidityMining::set_per_block_distribution(RawOrigin::Root.into(), 100));
         assert_err!(
-            LiquidityMining::set_per_block_distribution(Origin::signed(ALICE), 100),
+            LiquidityMining::set_per_block_distribution(RuntimeOrigin::signed(ALICE), 100),
             DispatchError::BadOrigin
         );
     });

@@ -34,31 +34,31 @@ fuzz_target!(|data: Data| {
         // Make arbitrary order and attempt to fill
         let order_asset = asset(data.make_fill_order_asset);
         let order_hash = Orderbook::order_hash(
-            &ensure_signed(Origin::signed(data.make_fill_order_origin.into())).unwrap(),
+            &ensure_signed(RuntimeOrigin::signed(data.make_fill_order_origin.into())).unwrap(),
             order_asset,
             Orderbook::nonce(),
         );
 
         let _ = Orderbook::make_order(
-            Origin::signed(data.make_fill_order_origin.into()),
+            RuntimeOrigin::signed(data.make_fill_order_origin.into()),
             order_asset,
             orderside(data.make_fill_order_side),
             data.make_fill_order_amount,
             data.make_fill_order_price,
         );
 
-        let _ = Orderbook::fill_order(Origin::signed(data.fill_order_origin.into()), order_hash);
+        let _ = Orderbook::fill_order(RuntimeOrigin::signed(data.fill_order_origin.into()), order_hash);
 
         // Make arbitrary order and attempt to cancel
         let order_asset = asset(data.make_cancel_order_asset);
         let order_hash = Orderbook::order_hash(
-            &ensure_signed(Origin::signed(data.make_cancel_order_origin.into())).unwrap(),
+            &ensure_signed(RuntimeOrigin::signed(data.make_cancel_order_origin.into())).unwrap(),
             order_asset,
             Orderbook::nonce(),
         );
 
         let _ = Orderbook::make_order(
-            Origin::signed(data.make_cancel_order_origin.into()),
+            RuntimeOrigin::signed(data.make_cancel_order_origin.into()),
             order_asset,
             orderside(data.make_cancel_order_side),
             data.make_cancel_order_amount,
@@ -66,7 +66,7 @@ fuzz_target!(|data: Data| {
         );
 
         let _ = Orderbook::cancel_order(
-            Origin::signed(data.make_cancel_order_origin.into()),
+            RuntimeOrigin::signed(data.make_cancel_order_origin.into()),
             order_asset,
             order_hash,
         );

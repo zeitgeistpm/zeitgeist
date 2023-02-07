@@ -19,7 +19,7 @@
 
 use crate::{
     mock::{
-        Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
+        Balances, Court, ExtBuilder, RuntimeOrigin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
         CHARLIE, INITIAL_BALANCE,
     },
     Error, Juror, JurorStatus, Jurors, MarketOf, RequestedJurors, Votes,
@@ -67,11 +67,11 @@ const DEFAULT_SET_OF_JURORS: &[(u128, Juror)] = &[
 #[test]
 fn exit_court_successfully_removes_a_juror_and_frees_balances() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 1);
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
-        assert_ok!(Court::exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::exit_court(RuntimeOrigin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 0);
@@ -82,7 +82,7 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
 fn exit_court_will_not_remove_an_unknown_juror() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE)),
+            Court::exit_court(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::JurorDoesNotExists
         );
     });
@@ -92,12 +92,12 @@ fn exit_court_will_not_remove_an_unknown_juror() {
 fn join_court_reserves_balance_according_to_the_number_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE)));
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
 
         assert_eq!(Balances::free_balance(BOB), 1000 * BASE);
-        assert_ok!(Court::join_court(Origin::signed(BOB)));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB)));
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
     });
@@ -106,7 +106,7 @@ fn join_court_reserves_balance_according_to_the_number_of_jurors() {
 #[test]
 fn join_court_successfully_stores_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE)));
         assert_eq!(
             Jurors::<Runtime>::iter().next().unwrap(),
             (ALICE, Juror { status: JurorStatus::Ok })
@@ -117,9 +117,9 @@ fn join_court_successfully_stores_a_juror() {
 #[test]
 fn join_court_will_not_insert_an_already_stored_juror() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE)));
         assert_noop!(
-            Court::join_court(Origin::signed(ALICE)),
+            Court::join_court(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::JurorAlreadyExists
         );
     });
@@ -153,11 +153,11 @@ fn on_resolution_denies_non_court_markets() {
 fn on_dispute_stores_jurors_that_should_vote() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
-        let _ = Court::join_court(Origin::signed(ALICE));
-        let _ = Court::join_court(Origin::signed(BOB));
+        let _ = Court::join_court(RuntimeOrigin::signed(ALICE));
+        let _ = Court::join_court(RuntimeOrigin::signed(BOB));
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_noop!(
-            Court::join_court(Origin::signed(ALICE)),
+            Court::join_court(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::JurorAlreadyExists
         );
         assert_eq!(RequestedJurors::<Runtime>::iter().count(), 2);
@@ -169,13 +169,13 @@ fn on_dispute_stores_jurors_that_should_vote() {
 fn on_resolution_awards_winners_and_slashes_losers() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(ALICE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(BOB)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
+        Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
@@ -190,13 +190,13 @@ fn on_resolution_awards_winners_and_slashes_losers() {
 fn on_resolution_decides_market_outcome_based_on_the_majority() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(ALICE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(BOB)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
         let outcome = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(outcome, Some(OutcomeReport::Scalar(1)));
     });
@@ -206,9 +206,9 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
 fn on_resolution_sets_late_jurors_as_tardy() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(ALICE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(BOB)).unwrap();
+        Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().status, JurorStatus::Ok);
@@ -220,13 +220,13 @@ fn on_resolution_sets_late_jurors_as_tardy() {
 fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tardy() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(ALICE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(BOB)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(CHARLIE).unwrap().status, JurorStatus::Tardy);
     });
@@ -236,10 +236,10 @@ fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tard
 fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(ALICE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(BOB)).unwrap();
         Court::set_stored_juror_as_tardy(&BOB).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         let join_court_stake = 40000000000;
@@ -254,13 +254,13 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
 fn on_resolution_removes_requested_jurors_and_votes() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(ALICE)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(BOB)).unwrap();
+        Court::join_court(RuntimeOrigin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(RuntimeOrigin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(RequestedJurors::<Runtime>::iter().count(), 0);
         assert_eq!(Votes::<Runtime>::iter().count(), 0);
@@ -317,7 +317,7 @@ fn random_jurors_returns_a_subset_of_jurors() {
 fn vote_will_not_accept_unknown_accounts() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(0)),
+            Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(0)),
             Error::<Runtime>::OnlyJurorsCanVote
         );
     });
@@ -326,8 +326,8 @@ fn vote_will_not_accept_unknown_accounts() {
 #[test]
 fn vote_will_stored_outcome_from_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
-        let _ = Court::join_court(Origin::signed(ALICE));
-        let _ = Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(0));
+        let _ = Court::join_court(RuntimeOrigin::signed(ALICE));
+        let _ = Court::vote(RuntimeOrigin::signed(ALICE), 0, OutcomeReport::Scalar(0));
         assert_eq!(Votes::<Runtime>::get(ALICE, 0).unwrap(), (0, OutcomeReport::Scalar(0)));
     });
 }

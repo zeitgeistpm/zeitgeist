@@ -34,7 +34,7 @@ fn it_makes_orders() {
 
         // Make an order from Alice to buy shares.
         assert_ok!(Orderbook::make_order(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             Asset::CategoricalOutcome(0, 2),
             OrderSide::Bid,
             25,
@@ -47,7 +47,7 @@ fn it_makes_orders() {
 
         // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::make_order(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             Asset::CategoricalOutcome(0, 1),
             OrderSide::Ask,
             10,
@@ -67,7 +67,7 @@ fn it_takes_orders() {
 
         // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::make_order(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             Asset::CategoricalOutcome(0, 1),
             OrderSide::Ask,
             10,
@@ -75,7 +75,7 @@ fn it_takes_orders() {
         ));
 
         let order_hash = Orderbook::order_hash(&BOB, Asset::CategoricalOutcome(0, 1), 0);
-        assert_ok!(Orderbook::fill_order(Origin::signed(ALICE), order_hash));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash));
 
         let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
         let alice_shares = Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE);
@@ -94,15 +94,15 @@ fn it_cancels_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Make an order from Alice to buy shares.
         let share_id = Asset::CategoricalOutcome(0, 2);
-        assert_ok!(Orderbook::make_order(Origin::signed(ALICE), share_id, OrderSide::Bid, 25, 10));
+        assert_ok!(Orderbook::make_order(RuntimeOrigin::signed(ALICE), share_id, OrderSide::Bid, 25, 10));
 
         let order_hash = Orderbook::order_hash(&ALICE, share_id, 0);
 
         assert_noop!(
-            Orderbook::cancel_order(Origin::signed(BOB), share_id, order_hash),
+            Orderbook::cancel_order(RuntimeOrigin::signed(BOB), share_id, order_hash),
             Error::<Runtime>::NotOrderCreator,
         );
 
-        assert_ok!(Orderbook::cancel_order(Origin::signed(ALICE), share_id, order_hash));
+        assert_ok!(Orderbook::cancel_order(RuntimeOrigin::signed(ALICE), share_id, order_hash));
     });
 }

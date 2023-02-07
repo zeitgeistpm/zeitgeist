@@ -26,7 +26,7 @@ use crate::{
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
     xcm_config::{config::battery_station, fees::default_per_second},
-    AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
+    AssetRegistry, Balance, Balances, CurrencyId, RuntimeOrigin, Tokens, XTokens,
     ZeitgeistTreasuryAccount,
 };
 
@@ -58,7 +58,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
         assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Ztg,
             transfer_amount,
             Box::new(
@@ -128,7 +128,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         assert_eq!(Balances::free_balance(&zeitgeist_parachain_account()), 0);
         assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance);
         assert_ok!(XTokens::transfer(
-            Origin::signed(BOB.into()),
+            RuntimeOrigin::signed(BOB.into()),
             FOREIGN_ZTG_ID,
             transfer_amount,
             Box::new(
@@ -215,7 +215,7 @@ fn transfer_ksm_to_relay_chain() {
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
@@ -274,7 +274,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
         assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Ztg,
             transfer_amount,
             Box::new(

@@ -84,7 +84,7 @@ construct_runtime!(
 pub type AssetManager = Currencies;
 
 impl crate::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
@@ -115,9 +115,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -127,7 +127,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type OnSetCode = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -146,13 +146,11 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
-    type OnDust = ();
-    type OnKilledTokenAccount = ();
-    type OnNewTokenAccount = ();
+    type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -161,7 +159,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
@@ -170,7 +168,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;

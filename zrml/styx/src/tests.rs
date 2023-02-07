@@ -26,7 +26,7 @@ fn cross_slashes_funds_and_stores_crossing() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         let burn_amount = crate::BurnAmount::<Runtime>::get();
         let original_balance = Balances::free_balance(&ALICE);
-        assert_ok!(Styx::cross(Origin::signed(ALICE)));
+        assert_ok!(Styx::cross(RuntimeOrigin::signed(ALICE)));
         let balance_after_crossing = Balances::free_balance(&ALICE);
         let diff = original_balance - balance_after_crossing;
         assert!(Crossings::<Runtime>::contains_key(ALICE));
@@ -38,8 +38,8 @@ fn cross_slashes_funds_and_stores_crossing() {
 fn account_should_only_be_able_to_cross_once() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_ok!(Styx::cross(Origin::signed(ALICE)));
-        assert_noop!(Styx::cross(Origin::signed(ALICE)), Error::<Runtime>::HasAlreadyCrossed);
+        assert_ok!(Styx::cross(RuntimeOrigin::signed(ALICE)));
+        assert_noop!(Styx::cross(RuntimeOrigin::signed(ALICE)), Error::<Runtime>::HasAlreadyCrossed);
     });
 }
 
@@ -47,7 +47,7 @@ fn account_should_only_be_able_to_cross_once() {
 fn should_set_burn_amount() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_ok!(Styx::set_burn_amount(Origin::signed(SUDO), 144u128));
+        assert_ok!(Styx::set_burn_amount(RuntimeOrigin::signed(SUDO), 144u128));
         System::assert_last_event(Event::CrossingFeeChanged(144u128).into());
         assert_eq!(crate::BurnAmount::<Runtime>::get(), 144u128);
     });
@@ -57,7 +57,7 @@ fn should_set_burn_amount() {
 fn set_burn_amount_should_fail_with_unathorized_caller() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_noop!(Styx::set_burn_amount(Origin::signed(9999), 144u128), BadOrigin);
+        assert_noop!(Styx::set_burn_amount(RuntimeOrigin::signed(9999), 144u128), BadOrigin);
     });
 }
 
@@ -65,9 +65,9 @@ fn set_burn_amount_should_fail_with_unathorized_caller() {
 fn account_should_not_cross_without_sufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_ok!(Balances::set_balance(Origin::root(), ALICE, 0, 0));
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, 0, 0));
         assert_noop!(
-            Styx::cross(Origin::signed(ALICE)),
+            Styx::cross(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::FundDoesNotHaveEnoughFreeBalance
         );
     });
@@ -77,7 +77,7 @@ fn account_should_not_cross_without_sufficient_funds() {
 fn should_emit_account_crossed_event_with_correct_value() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_ok!(Styx::cross(Origin::signed(ALICE)));
+        assert_ok!(Styx::cross(RuntimeOrigin::signed(ALICE)));
         System::assert_last_event(
             Event::AccountCrossed(ALICE, crate::BurnAmount::<Runtime>::get()).into(),
         );

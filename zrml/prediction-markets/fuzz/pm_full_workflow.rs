@@ -25,7 +25,7 @@ use zeitgeist_primitives::types::{
     Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
     OutcomeReport, ScoringRule,
 };
-use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
+use zrml_prediction_markets::mock::{ExtBuilder, RuntimeOrigin, PredictionMarkets, System};
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
@@ -39,7 +39,7 @@ fuzz_target!(|data: Data| {
             dispute_duration: 3_u32.into(),
         };
         let _ = PredictionMarkets::create_market(
-            Origin::signed(data.create_scalar_market_origin.into()),
+            RuntimeOrigin::signed(data.create_scalar_market_origin.into()),
             Asset::Ztg,
             data.create_scalar_market_oracle.into(),
             MarketPeriod::Block(data.create_scalar_market_period),
@@ -55,7 +55,7 @@ fuzz_target!(|data: Data| {
         System::set_block_number(2);
 
         let _ = PredictionMarkets::buy_complete_set(
-            Origin::signed(data.buy_complete_set_origin.into()),
+            RuntimeOrigin::signed(data.buy_complete_set_origin.into()),
             data.buy_complete_set_market_id.into(),
             data.buy_complete_set_amount,
         );
@@ -63,7 +63,7 @@ fuzz_target!(|data: Data| {
         System::set_block_number(3);
 
         let _ = PredictionMarkets::report(
-            Origin::signed(data.report_origin.into()),
+            RuntimeOrigin::signed(data.report_origin.into()),
             data.report_market_id.into(),
             outcome(data.report_outcome),
         );
@@ -73,7 +73,7 @@ fuzz_target!(|data: Data| {
 
         let dispute_market_id = data.dispute_market_id.into();
         let _ = PredictionMarkets::dispute(
-            Origin::signed(data.report_origin.into()),
+            RuntimeOrigin::signed(data.report_origin.into()),
             dispute_market_id,
             outcome(data.report_outcome),
         );
@@ -82,7 +82,7 @@ fuzz_target!(|data: Data| {
         System::set_block_number(5);
 
         let _ = PredictionMarkets::redeem_shares(
-            Origin::signed(data.redeem_origin.into()),
+            RuntimeOrigin::signed(data.redeem_origin.into()),
             data.redeem_market_id.into(),
         );
 

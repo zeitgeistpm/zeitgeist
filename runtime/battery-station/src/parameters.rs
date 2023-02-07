@@ -28,6 +28,7 @@ use frame_support::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         DispatchClass, Weight,
     },
+    traits::WithdrawReasons,
     PalletId,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
@@ -351,6 +352,8 @@ parameter_types! {
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
+    pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+		 WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
 #[cfg(feature = "with-global-disputes")]

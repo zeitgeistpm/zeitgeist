@@ -18,7 +18,7 @@
 
 use crate::{
     xcm_config::config::{battery_station, general_key},
-    AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, Origin, Runtime, System,
+    AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, RuntimeOrigin, Runtime, System,
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;
@@ -133,7 +133,7 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         additional: additional_meta.unwrap_or_default(),
     };
 
-    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_ZTG_ID)));
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_ZTG_ID)));
 }
 
 pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {
@@ -147,7 +147,7 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         additional: additional_meta.unwrap_or_default(),
     };
 
-    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_SIBLING_ID)));
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_SIBLING_ID)));
 }
 
 pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
@@ -161,7 +161,7 @@ pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
         additional: additional_meta.unwrap_or_default(),
     };
 
-    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_PARENT_ID)));
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_PARENT_ID)));
 }
 
 #[inline]

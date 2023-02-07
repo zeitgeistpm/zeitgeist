@@ -3,63 +3,63 @@ name = "zeitgeist"
 path = "./src/main.rs"
 
 [build-dependencies]
-substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+substrate-build-script-utils = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 
 [dependencies]
-pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-cli = { branch = "moonbeam-polkadot-v0.9.29", features = ["wasmtime"], git = "https://github.com/zeitgeistpm/substrate" }
-sc-client-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-consensus = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-executor = { branch = "moonbeam-polkadot-v0.9.29", features = ["wasmtime"], git = "https://github.com/zeitgeistpm/substrate" }
-sc-keystore = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-rpc = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-rpc-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-service = { branch = "moonbeam-polkadot-v0.9.29", features = ["wasmtime"], git = "https://github.com/zeitgeistpm/substrate" }
-sc-sysinfo = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-telemetry = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-transaction-pool = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-transaction-pool-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-api = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-block-builder = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-blockchain = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-consensus = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-core = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-inherents = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-keyring = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-offchain = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-session = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-storage = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-timestamp = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-trie = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+pallet-transaction-payment = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment-rpc = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment-rpc-runtime-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-basic-authorship = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-cli = { branch = "polkadot-v0.9.32", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
+sc-client-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-consensus = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-executor = { branch = "polkadot-v0.9.32", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
+sc-keystore = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-rpc = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-rpc-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-service = { branch = "polkadot-v0.9.32", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
+sc-sysinfo = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-telemetry = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-transaction-pool = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-transaction-pool-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-block-builder = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-blockchain = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-consensus = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-inherents = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-keyring = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-offchain = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-session = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-storage = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-timestamp = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-transaction-pool = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-trie = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+substrate-frame-rpc-system = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 
 # Try-Runtime
 
-try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+try-runtime-cli = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 
 # Benchmark
 
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
-frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+frame-benchmarking = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
+frame-benchmarking-cli = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 
 # Cumulus
 
-cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-client-collator = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-client-consensus-common = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-client-consensus-relay-chain = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-client-network = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-client-service = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-relay-chain-inprocess-interface = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-relay-chain-interface = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-relay-chain-rpc-interface = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/cumulus", optional = true }
+cumulus-client-cli = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-collator = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-consensus-common = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-consensus-relay-chain = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-network = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-service = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-core = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-parachain-inherent = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-relay-chain-inprocess-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-relay-chain-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-relay-chain-rpc-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
 
 # Parachain
 
@@ -69,33 +69,33 @@ nimbus-consensus = { default-features = false, path = "../external/nimbus-consen
 pallet-author-inherent = { default-features = false, path = "../external/pallets/author-inherent", optional = true }
 pallet-parachain-staking = { default-features = false, path = "../external/pallets/parachain-staking", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }
-sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
-sc-network = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
-sc-network-common = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
-sc-tracing = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+sc-chain-spec = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
+sc-network = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
+sc-network-common = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
+sc-tracing = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.144" }
 session-keys-primitives = { default-features = false, path = "../external/session-keys", optional = true }
-sp-keystore = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
-substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate", optional = true }
+sp-keystore = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
+substrate-prometheus-endpoint = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 
 # Polkadot
 
-polkadot-cli = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-polkadot-service = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-polkadot-test-service = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+polkadot-cli = { branch = "release-v0.9.32", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-parachain = { branch = "release-v0.9.32", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-primitives = { branch = "release-v0.9.32", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-service = { branch = "release-v0.9.32", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-test-service = { branch = "release-v0.9.32", git = "https://github.com/paritytech/polkadot", optional = true }
 
 # Standalone
 
-sc-consensus-aura = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sc-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+sc-consensus-aura = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sc-finality-grandpa = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-consensus-aura = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
+sp-finality-grandpa = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 
 # Utility
 cfg-if = { version = "1.0.0" }
-clap = { version = "3.2.20", features = ["derive"] }
+clap = { version = "4.0.9", features = ["derive"] }
 hex-literal = { version = "0.3.4" }
 jsonrpsee = { version = "0.15.1", features = ["server"] }
 log = { optional = true, version = "0.4.17" }
@@ -157,6 +157,7 @@ parachain = [
 runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
+    "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]

@@ -101,8 +101,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 pub struct IsCallable;
 
 // Currently disables Court, Rikiddo and creation of markets using Court.
-impl Contains<Call> for IsCallable {
-    fn contains(call: &Call) -> bool {
+impl Contains<RuntimeCall> for IsCallable {
+    fn contains(call: &RuntimeCall) -> bool {
         use zeitgeist_primitives::types::{
             MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
@@ -112,9 +112,9 @@ impl Contains<Call> for IsCallable {
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
-            Call::Court(_) => false,
-            Call::LiquidityMining(_) => false,
-            Call::PredictionMarkets(inner_call) => {
+            RuntimeCall::Court(_) => false,
+            RuntimeCall::LiquidityMining(_) => false,
+            RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
@@ -145,8 +145,8 @@ create_runtime_with_additional_pallets!(
 );
 
 impl pallet_sudo::Config for Runtime {
-    type Call = Call;
-    type Event = Event;
+    type RuntimeCall = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
 }
 
 impl_config_traits!();

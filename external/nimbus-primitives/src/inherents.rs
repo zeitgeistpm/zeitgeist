@@ -21,7 +21,7 @@ pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"author__";
 
 /// A bare minimum inherent data provider that provides no real data.
 /// The inherent is simply used as a way to kick off some computation
-/// until https://github.com/zeitgeistpm/substrate/pull/10128 lands.
+/// until https://github.com/paritytech/substrate/pull/10128 lands.
 pub struct InherentDataProvider;
 
 #[cfg(feature = "std")]

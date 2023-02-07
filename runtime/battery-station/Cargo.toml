@@ -1,66 +1,67 @@
 [build-dependencies]
-substrate-wasm-builder = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+substrate-wasm-builder = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 
 
 [dependencies]
-frame-executive = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-bounties = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-collective = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-democracy = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-identity = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-membership = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-multisig = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-preimage = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-proxy = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-sudo = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-treasury = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-utility = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-vesting = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+frame-executive = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system-rpc-runtime-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+orml-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, optional = true, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-currencies = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-bounties = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-collective = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-democracy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-identity = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-membership = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-multisig = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-preimage = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-proxy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-randomness-collective-flip = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-scheduler = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-sudo = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-timestamp = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment-rpc-runtime-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-treasury = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-utility = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-vesting = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-api = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-block-builder = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-core = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-inherents = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-offchain = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-session = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-version = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+sp-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-block-builder = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-inherents = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-offchain = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-session = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-transaction-pool = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-version = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 
 # Try-Runtime
 
-frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/substrate" }
+frame-try-runtime = { branch = "polkadot-v0.9.32", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
 
 # Benchmark
 
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
-frame-system-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate", optional = true }
+frame-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate", optional = true }
+frame-system-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate", optional = true }
 
 # Cumulus
 
-cumulus-pallet-dmp-queue = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-pallet-parachain-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-pallet-xcmp-queue = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-primitives-timestamp = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-cumulus-primitives-utility = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
-parachain-info = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/cumulus", optional = true }
+cumulus-pallet-dmp-queue = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-parachain-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-xcm = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-xcmp-queue = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-core = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-timestamp = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-utility = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+parachain-info = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
 
 # Parachain
 nimbus-primitives = { default-features = false, path = "../../external/nimbus-primitives", optional = true }
@@ -73,14 +74,14 @@ session-keys-primitives = { default-features = false, path = "../../external/ses
 
 # Polkadot
 
-polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+polkadot-parachain = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 
 # Standalone
 
-pallet-aura = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-grandpa = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+pallet-aura = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-grandpa = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-consensus-aura = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-finality-grandpa = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 
 # Utility
 cfg-if = { version = "1.0.0" }
@@ -88,17 +89,17 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.17", default-features = false, optional = true }
 
 # XCM
-kusama-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-orml-asset-registry = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-unknown-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-xcm-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-xtokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-polkadot-runtime-parachains = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-xcm-builder = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
-xcm-executor = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+kusama-runtime = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+orml-asset-registry = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-unknown-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-xcm-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-xtokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+pallet-xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-primitives = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-runtime-parachains = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm-builder = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm-executor = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 
 # Zeitgeist
 
@@ -117,9 +118,9 @@ zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
 
 [dev-dependencies]
-sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
+sp-io = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 test-case = "2.0.2"
-xcm-emulator = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/xcm-simulator" }
+xcm-emulator = { rev = "158a6bd2768c679563efa891aa17329635b2764b", git = "https://github.com/shaunxw/xcm-simulator" }
 
 [features]
 default = ["std"]
@@ -170,7 +171,7 @@ runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "frame-system-benchmarking",
+    "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal",
     "kusama-runtime?/runtime-benchmarks",

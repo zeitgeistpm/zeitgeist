@@ -56,7 +56,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type Event = ();
+    type RuntimeEvent = ();
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
@@ -71,9 +71,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -82,7 +82,7 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -95,7 +95,7 @@ impl pallet_balances::Config for Runtime {
     type Balance = Balance;
     type DustRemoval = ();
     type ReserveIdentifier = [u8; 8];
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;

@@ -101,8 +101,8 @@ pub struct IsCallable;
 
 // Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
-impl Contains<Call> for IsCallable {
-    fn contains(call: &Call) -> bool {
+impl Contains<RuntimeCall> for IsCallable {
+    fn contains(call: &RuntimeCall) -> bool {
         #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
@@ -124,10 +124,10 @@ impl Contains<Call> for IsCallable {
         #[allow(clippy::match_like_matches_macro)]
         match call {
             // Membership is managed by the respective Membership instance
-            Call::AdvisoryCommittee(set_members { .. }) => false,
+            RuntimeCall::AdvisoryCommittee(set_members { .. }) => false,
             // See "balance.set_balance"
-            Call::AssetManager(update_balance { .. }) => false,
-            Call::Balances(inner_call) => {
+            RuntimeCall::AssetManager(update_balance { .. }) => false,
+            RuntimeCall::Balances(inner_call) => {
                 match inner_call {
                     // Balances should not be set. All newly generated tokens be minted by well
                     // known and approved processes, like staking. However, this could be used
@@ -142,12 +142,12 @@ impl Contains<Call> for IsCallable {
                 }
             }
             // Membership is managed by the respective Membership instance
-            Call::Council(set_members { .. }) => false,
-            Call::Court(_) => false,
+            RuntimeCall::Council(set_members { .. }) => false,
+            RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
-            Call::DmpQueue(service_overweight { .. }) => false,
-            Call::LiquidityMining(_) => false,
-            Call::PredictionMarkets(inner_call) => {
+            RuntimeCall::DmpQueue(service_overweight { .. }) => false,
+            RuntimeCall::LiquidityMining(_) => false,
+            RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
@@ -162,7 +162,7 @@ impl Contains<Call> for IsCallable {
                     _ => true,
                 }
             }
-            Call::System(inner_call) => {
+            RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
                     // Cleaning up storage should be done by pallets or independent migrations.
@@ -183,9 +183,9 @@ impl Contains<Call> for IsCallable {
                 }
             }
             // Membership is managed by the respective Membership instance
-            Call::TechnicalCommittee(set_members { .. }) => false,
+            RuntimeCall::TechnicalCommittee(set_members { .. }) => false,
             // There should be no reason to force vested transfer.
-            Call::Vesting(force_vested_transfer { .. }) => false,
+            RuntimeCall::Vesting(force_vested_transfer { .. }) => false,
             _ => true,
         }
     }

@@ -52,7 +52,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type Currency = Balances;
-    type Event = ();
+    type RuntimeEvent = ();
     type MarketId = MarketId;
     type Shares = Tokens;
     type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
@@ -66,9 +66,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -77,7 +77,7 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -90,13 +90,11 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
-    type OnDust = ();
-    type OnKilledTokenAccount = ();
-    type OnNewTokenAccount = ();
+    type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -105,7 +103,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;

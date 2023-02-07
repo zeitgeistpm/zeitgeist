@@ -163,7 +163,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<
 >(
     client: &FullClient<RuntimeApi, Executor>,
     sender: sp_core::sr25519::Pair,
-    call: zeitgeist_runtime::Call,
+    call: zeitgeist_runtime::RuntimeCall,
     nonce: u32,
 ) -> zeitgeist_runtime::UncheckedExtrinsic {
     let genesis_hash = client.block_hash(0).ok().flatten().expect("Genesis block exists; qed");
@@ -221,7 +221,7 @@ pub fn create_benchmark_extrinsic_battery_station<
 >(
     client: &FullClient<RuntimeApi, Executor>,
     sender: sp_core::sr25519::Pair,
-    call: battery_station_runtime::Call,
+    call: battery_station_runtime::RuntimeCall,
     nonce: u32,
 ) -> battery_station_runtime::UncheckedExtrinsic {
     let genesis_hash = client.block_hash(0).ok().flatten().expect("Genesis block exists; qed");

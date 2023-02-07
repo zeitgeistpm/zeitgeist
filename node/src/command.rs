@@ -114,6 +114,12 @@ pub fn run() -> sc_cli::Result<()> {
                 BenchmarkCmd::Machine(cmd) => {
                     runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
                 }
+                #[cfg(not(feature = "runtime-benchmarks"))]
+                BenchmarkCmd::Storage(_) => Err(
+                    "Storage benchmarking can be enabled with `--features runtime-benchmarks`."
+                    .into(),
+                ),
+                #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => match chain_spec {
                     #[cfg(feature = "with-zeitgeist-runtime")]
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {

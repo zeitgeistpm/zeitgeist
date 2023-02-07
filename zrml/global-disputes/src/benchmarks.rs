@@ -48,7 +48,7 @@ where
         T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value() / 2u128.saturated_into());
 }
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 

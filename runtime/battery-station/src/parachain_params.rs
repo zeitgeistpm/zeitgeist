@@ -22,7 +22,7 @@
 )]
 #![cfg(feature = "parachain")]
 
-use super::{parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo};
+use super::{parameters::MAXIMUM_BLOCK_WEIGHT, RuntimeOrigin, ParachainInfo};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
@@ -43,7 +43,7 @@ parameter_types! {
     pub const RelayNetwork: NetworkId = NetworkId::Any;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+    pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub UnitWeightCost: u64 = 200_000_000;
 
     // Staking

@@ -756,7 +756,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The fee for exiting a pool.
         #[pallet::constant]
@@ -1097,7 +1097,7 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
-            if remaining_weight < ON_IDLE_MIN_WEIGHT {
+            if remaining_weight.all_lt(ON_IDLE_MIN_WEIGHT) {
                 return Weight::zero();
             }
             Self::execute_arbitrage_all(remaining_weight / 2)
