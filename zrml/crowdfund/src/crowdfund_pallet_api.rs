@@ -17,31 +17,33 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::types::*;
 use sp_runtime::DispatchResult;
 use zeitgeist_primitives::types::OutcomeReport;
-use crate::types::UniqueFundItem;
 
 /// The trait to initiate and resolve the global disputes.
 pub trait CrowdfundPalletApi<MarketId, AccountId, Balance> {
-    fn start_crowdfund(
+    fn start_crowdfund(market_id: &MarketId) -> DispatchResult;
+
+    fn iter_items(
         market_id: &MarketId,
+    ) -> frame_support::storage::PrefixIterator<(OutcomeReport, FundItemInfo<Balance>)>;
+
+    fn set_item_status(
+        market_id: &MarketId,
+        item: &OutcomeReport,
+        status: FundItemStatus,
     ) -> DispatchResult;
 
-    fn stop_crowdfund(
-        market_id: &MarketId,
-        winner: UniqueFundItem,
-    ) -> DispatchResult;
+    fn stop_crowdfund(market_id: &MarketId) -> DispatchResult;
 
-    /// Query the all looser balances combined
+    /// Query the crowdfund account.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
     ///
     /// # Returns
     ///
-    /// Returns the looser balance.
-    fn get_looser_stake(market_id: &MarketId) -> Balance;
-
-    fn get_party_account(market_id: &MarketId) -> AccountId;
+    /// Returns the crowdfund account.
+    fn get_fund_account() -> AccountId;
 }

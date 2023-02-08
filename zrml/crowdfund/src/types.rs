@@ -16,34 +16,32 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
-use zeitgeist_primitives::types::OutcomeReport;
+
+#[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
+pub enum FundItemStatus {
+    Active,
+    Spent,
+    Refundable,
+}
 
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub struct FundItemInfo<Balance> {
     pub raised: Balance,
+    pub status: FundItemStatus,
 }
 
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub struct BackerInfo<Balance> {
-    pub reserved: Balance,
+    pub amount: Balance,
 }
 
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum CrowdfundStatus {
     Active,
-    Locked,
-    Finished { winner: OutcomeReport },
+    Closed,
 }
 
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct CrowdfundInfo<Balance> {
+pub struct CrowdfundInfo {
     pub status: CrowdfundStatus,
-    // this should be multiplied by 2 for each new appeal
-    pub appeal_threshold: Balance,
-}
-
-#[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub enum UniqueFundItem {
-    Outcome(OutcomeReport),
-    Appeal(u8),
 }
