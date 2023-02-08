@@ -47,7 +47,8 @@ use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
-    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
+    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2)
+        .set_proof_size(polkadot_primitives::v2::MAX_POV_SIZE as u64);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;

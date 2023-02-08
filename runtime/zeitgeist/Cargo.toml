@@ -93,7 +93,7 @@ orml-unknown-tokens = { branch = "polkadot-v0.9.32", default-features = false, g
 orml-xcm-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-xtokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
-polkadot-primitives = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-primitives = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot" }
 polkadot-runtime-parachains = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-builder = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
@@ -148,7 +148,6 @@ parachain = [
     # XCM
 
     "kusama-runtime",
-    "polkadot-primitives",
     "polkadot-runtime-parachains",
     "orml-asset-registry",
     "orml-unknown-tokens",
@@ -281,7 +280,7 @@ std = [
     # XCM
 
     "kusama-runtime?/std",
-    "polkadot-primitives?/std",
+    "polkadot-primitives/std",
     "polkadot-runtime-parachains?/std",
     "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",
