@@ -17,11 +17,7 @@
 
 #![cfg(test)]
 
-use crate::{
-    crowdfund_pallet_api::CrowdfundPalletApi,
-    mock::*,
-    Error, Event, MarketIdOf
-};
+use crate::{crowdfund_pallet_api::CrowdfundPalletApi, mock::*, Error, Event, MarketIdOf};
 use frame_support::{
     assert_noop, assert_ok,
     traits::{Currency, ReservableCurrency},
@@ -36,7 +32,5 @@ use zeitgeist_primitives::{
 
 #[test]
 fn crowdfund_works() {
-    ExtBuilder::default().build().execute_with(|| {
-
-    });
+    ExtBuilder::default().build().execute_with(|| {});
 }

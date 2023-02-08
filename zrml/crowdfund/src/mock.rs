@@ -25,9 +25,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, MaxReserves,
-        MinimumPeriod, PmPalletId, BASE,
-        CrowdfundPalletId,
+        BlockHashCount, CrowdfundPalletId, MaxReserves, MinimumPeriod, PmPalletId, BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,

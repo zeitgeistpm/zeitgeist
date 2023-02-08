@@ -20,8 +20,7 @@ use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum FundItemStatus {
     Active,
-    Spent,
-    Refundable,
+    Refundable { share: sp_runtime::Percent },
 }
 
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
@@ -45,3 +44,5 @@ pub enum CrowdfundStatus {
 pub struct CrowdfundInfo {
     pub status: CrowdfundStatus,
 }
+
+pub type FundIndex = u128;

@@ -23,10 +23,7 @@
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::{
-    types::*, BalanceOf, Call, Config,
-    Pallet as Crowdfund, *,
-};
+use crate::{types::*, BalanceOf, Call, Config, Pallet as Crowdfund, *};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     sp_runtime::traits::StaticLookup,

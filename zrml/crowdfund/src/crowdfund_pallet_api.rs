@@ -18,29 +18,29 @@
 extern crate alloc;
 
 use crate::types::*;
-use sp_runtime::DispatchResult;
-use zeitgeist_primitives::types::OutcomeReport;
+use sp_runtime::{DispatchError, DispatchResult};
 
 /// The trait to initiate and resolve the global disputes.
-pub trait CrowdfundPalletApi<MarketId, AccountId, Balance> {
-    fn start_crowdfund(market_id: &MarketId) -> DispatchResult;
+pub trait CrowdfundPalletApi<AccountId, Balance, FundItem> {
+    fn open_crowdfund() -> Result<FundIndex, DispatchError>;
 
     fn iter_items(
-        market_id: &MarketId,
-    ) -> frame_support::storage::PrefixIterator<(OutcomeReport, FundItemInfo<Balance>)>;
+        fund_index: FundIndex,
+    ) -> frame_support::storage::PrefixIterator<(FundItem, FundItemInfo<Balance>)>;
 
     fn set_item_status(
-        market_id: &MarketId,
-        item: &OutcomeReport,
+        fund_index: FundIndex,
+        item: &FundItem,
         status: FundItemStatus,
     ) -> DispatchResult;
 
-    fn stop_crowdfund(market_id: &MarketId) -> DispatchResult;
-
-    /// Query the crowdfund account.
+    /// Close a crowdfund.
     ///
     /// # Arguments
-    /// - `market_id` - The id of the market.
+    /// - `fund_index` - The id of the crowdfund.
+    fn close_crowdfund(fund_index: FundIndex) -> DispatchResult;
+
+    /// Query the crowdfund account.
     ///
     /// # Returns
     ///
