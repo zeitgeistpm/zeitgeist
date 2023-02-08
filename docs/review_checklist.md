@@ -3,12 +3,14 @@
 - [ ] Does the PR link relevant issues and contain a detailed description?
 - [ ] If the PR changes the business logic, does it add the corresponding
       labels?
-- [ ] If the PR adds or changes functions:
-  - [ ] Are the doc strings up to date?
+- [ ] Are the doc strings up to date?
+- [ ] If the PR adds or changes extrinsics or functions used by extrinsics:
   - [ ] Is the _Weight_ section in the documentation up to date?
   - [ ] Are the benchmarks up to date?
   - [ ] Do the call filters need to be adjusted (forbidden scoring rules,
         dispute mechanisms)?
+  - [ ] Do the extrinsics emit all the required events (see [Events](#events)
+        below)?
 - [ ] Is the module `README.md` up to date?
 - [ ] Is [docs.zeitgeist.pm] up to date?
 - [ ] Is `docs/changelog_for_devs.md` up to date, specifically:
@@ -49,5 +51,35 @@
     - [ ] The try-runtime passes without any warnings (substrate storage
           operations often just log a warning instead of failing, so these
           warnings usually point to problem which could break the storage).
+
+## Events
+
+_All_ modifications of the on-chain storage **must** be broadcast to our indexer
+by emitting a high-level event. The term _high-level_ event refers to an event
+which may or may not contextualize _low-level_ events emitted by pallets that
+our business logic builds on, for example pallet-balances. Examples of
+high-level events are:
+
+- `SwapExactAmountIn` (contextualizes a couple of low-level events like
+  `Transfer`)
+- `PoolActive` (doesn't add context, but describes a storage change of a pool
+  structure)
+
+Furthermore, these modifications need to be detailed by specifying either a diff
+or the new storage content, unless the change is absolutely clear from the
+context. For example, `SwapExactAmountIn` specifies the balance changes that the
+accounts suffer, but `PoolActive` only provides the id of the pool, _not_ the
+new status (`Active`), which is clear from the context. Information that is
+implicitly already available to the indexer **may** be provided, but this is not
+necessary. For example, the `MarketRejected(market_id, reason)` event not only
+specifies that the market with `market_id` was rejected and for what `reason`,
+but also that the advisory bond and oracle bond are settled, but it doesn't
+include the info how much the oracle bond actually was.
+
+Additional info (similar to the remark emitted by
+[`remark_with_event`](https://github.com/paritytech/substrate/blob/6a504b063cf66351b6e352ef18cc18d49146487b/frame/system/src/lib.rs#L488-L499))
+**may** be added to the event. For example,
+`MarketRequestedEdit(market_id, reason)` contains a `reason` which is not stored
+anywhere in the chain storage.
 
 [docs.zeitgeist.pm]: docs.zeitgeist.pm
