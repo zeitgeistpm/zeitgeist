@@ -21,29 +21,22 @@ use crate::types::*;
 use sp_runtime::{DispatchError, DispatchResult};
 
 /// The trait to initiate and resolve the global disputes.
-pub trait CrowdfundPalletApi<AccountId, Balance, FundItem> {
+pub trait CrowdfundPalletApi<AccountId, Balance, FundItem, NegativeImbalance> {
     fn open_crowdfund() -> Result<FundIndex, DispatchError>;
 
     fn iter_items(
         fund_index: FundIndex,
     ) -> frame_support::storage::PrefixIterator<(FundItem, FundItemInfo<Balance>)>;
 
-    fn set_item_status(
+    fn prepare_refund(
         fund_index: FundIndex,
         item: &FundItem,
-        status: FundItemStatus,
-    ) -> DispatchResult;
+        fee: sp_runtime::Percent,
+    ) -> Result<NegativeImbalance, DispatchError>;
 
     /// Close a crowdfund.
     ///
     /// # Arguments
     /// - `fund_index` - The id of the crowdfund.
     fn close_crowdfund(fund_index: FundIndex) -> DispatchResult;
-
-    /// Query the crowdfund account.
-    ///
-    /// # Returns
-    ///
-    /// Returns the crowdfund account.
-    fn get_fund_account() -> AccountId;
 }

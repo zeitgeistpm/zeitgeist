@@ -42,7 +42,7 @@ mod pallet {
             DispatchError, DispatchResultWithPostInfo, MaybeSerializeDeserialize, Member,
             OptionQuery, StorageDoubleMap, StorageMap, StorageValue, TypeInfo, ValueQuery,
         },
-        traits::{Currency, ExistenceRequirement, Get, IsType},
+        traits::{Currency, ExistenceRequirement, Get, IsType, WithdrawReasons},
         Blake2_128Concat, PalletId, Parameter, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -88,6 +88,9 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+    pub(crate) type CurrencyOf<T> = <T as Config>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
     pub type FundItemInfoOf<T> = FundItemInfo<BalanceOf<T>>;
     pub type BackerInfoOf<T> = BackerInfo<BalanceOf<T>>;
@@ -159,7 +162,7 @@ mod pallet {
         CrowdfundNotClosed,
         FundItemNotFound,
         FundIndexOverflow,
-        InvalidShare,
+        InvalidFee,
         InvalidFundItemStatus,
         NotFullyRefunded,
     }
@@ -188,6 +191,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
 
             ensure!(amount >= T::MinFunding::get(), Error::<T>::AmountTooLow);
+
             let crowdfund_info =
                 <Crowdfunds<T>>::get(&fund_index).ok_or(Error::<T>::CrowdfundNotFound)?;
             ensure!(
@@ -237,6 +241,7 @@ mod pallet {
                 if let Some(mut fund_item) = <FundItems<T>>::get(&fund_index, &item) {
                     match fund_item.status {
                         FundItemStatus::Refundable { share } => {
+                            // share is ensured to be between 0 and 1, overflow is impossible
                             let refund_amount = share * backer_info.amount;
                             amount = amount.saturating_add(refund_amount);
 
@@ -254,13 +259,11 @@ mod pallet {
                         item
                     );
                     debug_assert!(false);
-                    continue;
                 }
             }
 
-            let fund_account = Self::crowdfund_account();
             T::Currency::transfer(
-                &fund_account,
+                &Self::crowdfund_account(),
                 &backer,
                 amount,
                 ExistenceRequirement::AllowDeath,
@@ -331,7 +334,8 @@ mod pallet {
         }
     }
 
-    impl<T> CrowdfundPalletApi<AccountIdOf<T>, BalanceOf<T>, T::FundItem> for Pallet<T>
+    impl<T> CrowdfundPalletApi<AccountIdOf<T>, BalanceOf<T>, T::FundItem, NegativeImbalanceOf<T>>
+        for Pallet<T>
     where
         T: Config,
     {
@@ -352,25 +356,35 @@ mod pallet {
             <FundItems<T>>::iter_prefix(fund_index)
         }
 
-        fn set_item_status(
+        fn prepare_refund(
             fund_index: FundIndex,
             item: &T::FundItem,
-            status: FundItemStatus,
-        ) -> DispatchResult {
+            fee: Percent,
+        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
             let mut fund_item =
                 <FundItems<T>>::get(fund_index, item).ok_or(Error::<T>::FundItemNotFound)?;
-            match status {
-                FundItemStatus::Active => (),
-                FundItemStatus::Refundable { share } => {
-                    ensure!(
-                        Percent::from_percent(0) <= share && share <= Percent::from_percent(100),
-                        Error::<T>::InvalidShare
-                    );
-                }
-            }
-            fund_item.status = status;
+            ensure!(
+                matches!(fund_item.status, FundItemStatus::Active),
+                Error::<T>::InvalidFundItemStatus
+            );
+            ensure!(
+                Percent::from_percent(0) <= fee && fee <= Percent::from_percent(100),
+                Error::<T>::InvalidFee
+            );
+
+            let fee_amount = fee * fund_item.raised;
+            let imb = T::Currency::withdraw(
+                &Self::crowdfund_account(),
+                fee_amount,
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::AllowDeath,
+            )?;
+
+            let share = Percent::from_percent(100).saturating_sub(fee);
+            fund_item.status = FundItemStatus::Refundable { share };
             <FundItems<T>>::insert(fund_index, item, fund_item);
-            Ok(())
+
+            Ok(imb)
         }
 
         fn close_crowdfund(fund_index: FundIndex) -> DispatchResult {
@@ -380,10 +394,6 @@ mod pallet {
             <Crowdfunds<T>>::insert(fund_index, crowdfund_info);
             Self::deposit_event(Event::CrowdfundClosed { fund_index });
             Ok(())
-        }
-
-        fn get_fund_account() -> AccountIdOf<T> {
-            Self::crowdfund_account()
         }
     }
 }
