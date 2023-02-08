@@ -141,6 +141,10 @@ mod pallet {
         BackerFullyRefunded { backer: AccountIdOf<T>, refunded: BalanceOf<T> },
         /// A backer refunded some of their funds.
         BackerPartiallyRefunded { backer: AccountIdOf<T>, refunded: BalanceOf<T> },
+        /// A crowdfund was opened.
+        CrowdfundOpened { fund_index: FundIndex },
+        /// A crowdfund was closed.
+        CrowdfundClosed { fund_index: FundIndex },
         /// A crowdfund was cleared.
         CrowdfundFullyCleared { fund_index: FundIndex },
         /// A crowdfund was partially cleared.
@@ -276,11 +280,11 @@ mod pallet {
             Ok(Some(5000).into())
         }
 
-        /// Refund all crowdfunds, which are in a refundable state.
+        /// Clear the storage of a crowdfund.
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, in which `n` is the number of fund items of the caller.
+        /// Complexity: `O(n)`, in which `n` is the number of fund items.
         #[frame_support::transactional]
         #[pallet::weight(5000)]
         pub fn clear(origin: OriginFor<T>, fund_index: FundIndex) -> DispatchResultWithPostInfo {
@@ -299,9 +303,9 @@ mod pallet {
             {
                 ensure!(
                     matches!(fund_info.status, FundItemStatus::Refundable { .. }),
-                    InvalidFundItemStatus
+                    Error::<T>::InvalidFundItemStatus
                 );
-                ensure!(fund_info.raised.is_zero(), NotFullyRefunded);
+                ensure!(fund_info.raised.is_zero(), Error::<T>::NotFullyRefunded);
                 removables.push(fund_item);
             }
 
@@ -338,6 +342,7 @@ mod pallet {
             let crowdfund_info = CrowdfundInfo { status };
             <Crowdfunds<T>>::insert(fund_index, crowdfund_info);
             <NextFundIndex<T>>::put(next_fund_index);
+            Self::deposit_event(Event::CrowdfundOpened { fund_index });
             Ok(fund_index)
         }
 
@@ -373,6 +378,7 @@ mod pallet {
                 <Crowdfunds<T>>::get(fund_index).ok_or(Error::<T>::CrowdfundNotFound)?;
             crowdfund_info.status = CrowdfundStatus::Closed;
             <Crowdfunds<T>>::insert(fund_index, crowdfund_info);
+            Self::deposit_event(Event::CrowdfundClosed { fund_index });
             Ok(())
         }
 
