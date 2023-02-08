@@ -27,7 +27,6 @@ use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_core::{ByteArray, H256};
-// use sp_io;
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     Perbill, RuntimeDebug,
@@ -45,16 +44,6 @@ impl Default for TestAuthor {
         TestAuthor::Alice
     }
 }
-// impl Into<NimbusId> for TestAuthor {
-// 	fn into(self) -> NimbusId {
-// 		match self {
-// 			Self::Alice => NimbusId::from_slice(&[0u8; 32]),
-// 			Self::Bob => NimbusId::from_slice(&[1u8; 32]),
-// 			Self::Charlie => NimbusId::from_slice(&[2u8; 32]),
-// 		}
-// 		.expect("valid ids")
-// 	}
-// }
 impl From<TestAuthor> for NimbusId {
     fn from(test_author: TestAuthor) -> Self {
         match test_author {
@@ -153,15 +142,6 @@ pub(crate) struct ExtBuilder {
     /// AuthorId -> AccoutId mappings
     mappings: Vec<(NimbusId, AccountId)>,
 }
-
-// impl Default for ExtBuilder {
-// 	fn default() -> ExtBuilder {
-// 		ExtBuilder {
-// 			balances: vec![],
-// 			mappings: vec![],
-// 		}
-// 	}
-// }
 
 impl ExtBuilder {
     pub(crate) fn with_balances(mut self, balances: Vec<(AccountId, Balance)>) -> Self {

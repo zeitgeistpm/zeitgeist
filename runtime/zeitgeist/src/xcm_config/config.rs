@@ -71,7 +71,6 @@ impl Config for XcmConfig {
     type Barrier = Barrier;
     /// The outer call dispatch type.
     type RuntimeCall = RuntimeCall;
-    // type CallDispatcher = Call;
     /// Combinations of (Location, Asset) pairs which are trusted as reserves.
     // Trust the parent chain, sibling parachains and children chains of this chain.
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;

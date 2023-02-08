@@ -19,7 +19,6 @@ use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
-// use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -390,7 +389,6 @@ where
             relay_chain_interface,
             relay_chain_slot_duration,
             import_queue,
-            // collator_options: CollatorOptions { relay_chain_rpc_url: Default::default() },
         };
 
         start_full_node(params)?;

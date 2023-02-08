@@ -16,7 +16,6 @@
 
 use crate::{self as pallet_testing, AccountLookup, NimbusId};
 use frame_support::{parameter_types, traits::ConstU32, weights::RuntimeDbWeight};
-// use frame_system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,

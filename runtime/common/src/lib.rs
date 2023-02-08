@@ -473,7 +473,6 @@ macro_rules! impl_config_traits {
         #[cfg(not(feature = "parachain"))]
         impl pallet_grandpa::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            // type RuntimeCall = RuntimeCall;
             type KeyOwnerProofSystem = ();
             type KeyOwnerProof =
                 <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
@@ -685,8 +684,6 @@ macro_rules! impl_config_traits {
             /// Origin for anyone able to veto proposals.
             type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
             type CooloffPeriod = CooloffPeriod;
-            // type PreimageByteDeposit = PreimageByteDeposit;
-            // type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
             type Slash = Treasury;
             type Scheduler = Scheduler;
             type PalletsOrigin = OriginCaller;

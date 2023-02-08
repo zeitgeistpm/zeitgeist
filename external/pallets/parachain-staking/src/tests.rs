@@ -1722,7 +1722,6 @@ fn sufficient_delegate_weight_hint_succeeds() {
         .with_delegations(vec![(3, 1, 10), (4, 1, 10), (5, 1, 10), (6, 1, 10)])
         .build()
         .execute_with(|| {
-            // let mut count = 4u32;
             for (count, i) in (7..11).enumerate() {
                 assert_ok!(ParachainStaking::delegate(
                     RuntimeOrigin::signed(i),
@@ -1731,9 +1730,7 @@ fn sufficient_delegate_weight_hint_succeeds() {
                     count as u32,
                     0u32
                 ));
-                // count += 1u32;
             }
-            // let mut count = 0u32;
             for (count, i) in (3..11).enumerate() {
                 assert_ok!(ParachainStaking::delegate(
                     RuntimeOrigin::signed(i),
@@ -1742,7 +1739,6 @@ fn sufficient_delegate_weight_hint_succeeds() {
                     count as u32,
                     1u32
                 ));
-                // count += 1u32;
             }
         });
 }
@@ -5205,10 +5201,8 @@ fn no_selected_candidates_defaults_to_last_round_collators() {
             // check AtStake matches previous
             let new_selected_candidates = ParachainStaking::selected_candidates();
             assert_eq!(old_selected_candidates, new_selected_candidates);
-            // let mut index = 0usize;
             for (index, account) in new_selected_candidates.into_iter().enumerate() {
                 assert_eq!(old_at_stake_snapshots[index], <AtStake<Test>>::get(new_round, account));
-                // index += 1usize;
             }
         });
 }

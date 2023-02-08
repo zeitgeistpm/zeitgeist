@@ -26,7 +26,6 @@ use frame_support::{
     weights::{constants::RocksDbWeight, Weight},
 };
 use sp_core::H256;
-// use sp_io;
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     Perbill, Percent,
