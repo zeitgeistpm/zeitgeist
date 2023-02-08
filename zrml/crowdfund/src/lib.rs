@@ -72,7 +72,7 @@ mod pallet {
         type FundItem: Parameter
             + Member
             + Ord
-            + Copy
+            + Clone
             + TypeInfo
             + MaybeSerializeDeserialize
             + Default
