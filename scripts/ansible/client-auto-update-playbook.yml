@@ -23,20 +23,18 @@
         path: /mnt/
       register: mnt
 
-    - name: Create Backup from Previous Zeitgeist Client in Mount Dir
+    - name: Remove Previous Zeitgeist Client in Mount Dir
       no_log: true
       shell: |
         cd /mnt/*/services/zeitgeist/bin
-        PREV_VERSION=$(./zeitgeist --version | grep -Eo '([0-9]{1,}\.)+[0-9]{1,}' | tr -d '.')
-        mv zeitgeist zeitgeist_$PREV_VERSION.bak
+        rm zeitgeist 
       when: mnt.stat.exists and mnt.stat.isdir
         
-    - name: Create Backup from Previous Zeitgeist Client
+    - name: Remove Previous Zeitgeist Client
       no_log: true
       shell: |
         cd /services/zeitgeist/bin
-        PREV_VERSION=$(./zeitgeist --version | grep -Eo '([0-9]{1,}\.)+[0-9]{1,}' | tr -d '.')
-        mv zeitgeist zeitgeist_$PREV_VERSION.bak
+        rm zeitgeist
       when: not mnt.stat.exists and mnt.stat.isdir
 
     - name: Download Zeitgeist Client to Mount Dir 
@@ -46,7 +44,7 @@
         if [[ -v RELEASE_VERSION ]]; then
           wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/$RELEASE_VERSION/zeitgeist_parachain
         else
-          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/v0.3.6/zeitgeist_parachain
+          wget -O zeitgeist https://github.com/zeitgeistpm/zeitgeist/releases/download/v0.3.4/zeitgeist_parachain
         fi 
         chmod 0755 zeitgeist
         chown zeitgeist:zeitgeist zeitgeist
