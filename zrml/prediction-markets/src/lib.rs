@@ -1467,7 +1467,7 @@ mod pallet {
                 );
 
                 ensure!(
-                    T::GlobalDisputes::does_not_exist(&market_id),
+                    !T::GlobalDisputes::does_exist(&market_id),
                     Error::<T>::GlobalDisputeExistsAlready
                 );
 

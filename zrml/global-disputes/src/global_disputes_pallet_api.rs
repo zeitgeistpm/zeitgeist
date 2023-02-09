@@ -63,10 +63,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// Returns the winning outcome.
     fn determine_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
-    /// Check if global dispute already exists.
-    ///
-    /// # Arguments
-    /// - `market_id` - The id of the market.
+    /// Check if a global dispute exists for the specified market.
     fn does_exist(market_id: &MarketId) -> bool;
 
     /// Check if global dispute is active or initialized. But not finished.
@@ -75,14 +72,6 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// # Arguments
     /// - `market_id` - The id of the market.
     fn is_unfinished(market_id: &MarketId) -> bool;
-
-    /// Check if a global dispute does not exist.
-    ///
-    /// # Arguments
-    /// - `market_id` - The id of the market.
-    fn does_not_exist(market_id: &MarketId) -> bool {
-        !Self::does_exist(market_id)
-    }
 
     /// Start a global dispute.
     ///

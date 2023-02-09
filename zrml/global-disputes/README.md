@@ -45,7 +45,7 @@ on which the market finally resolves.
   total locked tokens.
 - `does_exist` - Check if the global dispute does already exist.
 - `is_active` - Check if the global dispute is active to get votes
-  (`vote_on_outcome`) and allow the addition of new vote outcomes with
+  (`vote_on_outcome`) and allow the addition of new voting outcomes with
   `add_vote_outcome`.
 - `start_global_dispute` - Start a global dispute.
 - `destroy_global_dispute` - Allow the users to get their voting funds and fee
