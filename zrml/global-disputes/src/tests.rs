@@ -19,9 +19,9 @@
 
 use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
-    market_mock,
     mock::*,
     types::{GDInfo, GDStatus, OutcomeInfo, Possession},
+    utils::market_mock,
     BalanceOf, Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
 };
 use frame_support::{

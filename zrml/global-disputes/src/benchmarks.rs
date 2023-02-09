@@ -25,8 +25,8 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi, market_mock, types::*, BalanceOf, Call,
-    Config, Pallet as GlobalDisputes, *,
+    global_disputes_pallet_api::GlobalDisputesPalletApi, types::*, utils::market_mock, BalanceOf,
+    Call, Config, Pallet as GlobalDisputes, *,
 };
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
