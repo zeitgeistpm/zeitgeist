@@ -248,6 +248,8 @@ mod pallet {
         AddOutcomePeriodIsOver,
         /// It is not inside the period in which votes are allowed.
         NotInVotePeriod,
+        /// The operation requires a global dispute in a destroyed state.
+        GlobalDisputeNotDestroyed,
     }
 
     #[pallet::call]
@@ -338,7 +340,7 @@ mod pallet {
 
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-            ensure!(gd_info.status == GDStatus::Destroyed, Error::<T>::UnfinishedGlobalDispute);
+            ensure!(gd_info.status == GDStatus::Destroyed, Error::<T>::GlobalDisputeNotDestroyed);
 
             let mut owners_len = 0u32;
             let mut removed_keys_amount = 0u32;
