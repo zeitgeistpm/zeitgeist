@@ -409,7 +409,7 @@ mod pallet {
                     owners_len = owners.len() as u32;
                 }
                 // storage write is needed here in case,
-                // that the first call to purge_outcomes 
+                // that the first call to purge_outcomes
                 // doesn't save the owners of the winning outcome
                 // saving this information is required to reward the winners
                 // this can happen if there are more than RemoveKeysLimit keys to remove
@@ -717,7 +717,7 @@ mod pallet {
             } else {
                 log::error!(
                     "Global Disputes: There should be always at least one owner for a voting \
-                     outcome."
+                     outcome. This can also happen if reward is smaller than owners_len."
                 );
                 debug_assert!(false);
             }
