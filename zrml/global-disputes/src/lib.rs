@@ -229,7 +229,7 @@ mod pallet {
         /// No global dispute present at the moment.
         NoGlobalDisputeInitialized,
         /// The global dispute has to be in initialized state during the initial outcome setup.
-        NotInSetupMode,
+        NotInitialized,
         /// There is no owner information for this outcome.
         NoPossession,
         /// The voting outcome has been already added.
@@ -766,7 +766,7 @@ mod pallet {
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
 
             if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
-                ensure!(gd_info.status == GDStatus::Initialized, Error::<T>::NotInSetupMode);
+                ensure!(gd_info.status == GDStatus::Initialized, Error::<T>::NotInitialized);
             }
 
             match <Outcomes<T>>::get(market_id, &outcome) {
