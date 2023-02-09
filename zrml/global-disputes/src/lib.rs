@@ -357,7 +357,7 @@ mod pallet {
                         )?;
                     }
                     Some(Possession::Shared { owners }) => {
-                        owners_len = owners_len.max(owners.len() as u32);
+                        owners_len = owners_len.saturating_add(owners.len() as u32);
                     }
                     None => (),
                 }
