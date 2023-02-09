@@ -199,11 +199,16 @@ mod pallet {
                 Error::<T>::CrowdfundNotActive
             );
 
+            let mut fund_item = <FundItems<T>>::get(&fund_index, &item)
+                .unwrap_or(FundItemInfo { raised: Zero::zero(), status: FundItemStatus::Active });
+            ensure!(
+                fund_item.status == FundItemStatus::Active,
+                Error::<T>::InvalidFundItemStatus
+            );
+
             let fund_account = Self::crowdfund_account();
             T::Currency::transfer(&who, &fund_account, amount, ExistenceRequirement::AllowDeath)?;
 
-            let mut fund_item = <FundItems<T>>::get(&fund_index, &item)
-                .unwrap_or(FundItemInfo { raised: Zero::zero(), status: FundItemStatus::Active });
             fund_item.raised = fund_item.raised.saturating_add(amount);
 
             let mut backer = <Backers<T>>::get(&who, (&fund_index, &item))

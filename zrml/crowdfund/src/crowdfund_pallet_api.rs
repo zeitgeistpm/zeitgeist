@@ -20,14 +20,35 @@ extern crate alloc;
 use crate::types::*;
 use sp_runtime::{DispatchError, DispatchResult};
 
-/// The trait to initiate and resolve the global disputes.
+/// The trait for handling of crowdfunds.
 pub trait CrowdfundPalletApi<AccountId, Balance, FundItem, NegativeImbalance> {
+    /// Create a new crowdfund.
+    /// 
+    /// # Returns
+    /// - `FundIndex` - The id of the crowdfund.
     fn open_crowdfund() -> Result<FundIndex, DispatchError>;
 
+    /// Get an iterator over all items of a crowdfund.
+    /// 
+    /// # Arguments
+    /// - `fund_index` - The id of the crowdfund.
+    /// 
+    /// # Returns
+    /// - `PrefixIterator` - The iterator over all items of the crowdfund.
     fn iter_items(
         fund_index: FundIndex,
     ) -> frame_support::storage::PrefixIterator<(FundItem, FundItemInfo<Balance>)>;
 
+    /// Prepare for all related backers to potentially refund their stake.
+    /// 
+    /// # Arguments
+    /// - `fund_index` - The id of the crowdfund.
+    /// - `item` - The item to refund.
+    /// - `fee` - The overall fee to charge from the fund item
+    ///  before the backer refunds are possible.
+    /// 
+    /// # Returns
+    /// - `NegativeImbalance` - The imbalance that contains the charged fees.
     fn prepare_refund(
         fund_index: FundIndex,
         item: &FundItem,
