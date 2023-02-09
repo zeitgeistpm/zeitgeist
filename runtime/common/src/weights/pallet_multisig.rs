@@ -39,20 +39,23 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_multisig (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_multisig::weights::WeightInfo for WeightInfo<T> {
-    fn as_multi_threshold_1(z: u32, ) -> Weight {
+    fn as_multi_threshold_1(z: u32) -> Weight {
         Weight::from_ref_time(15_009_826)
             // Standard Error: 4
             .saturating_add(Weight::from_ref_time(279).saturating_mul(z.into()))
     }
     // Storage: MultiSig Multisigs (r:1 w:1)
     // Storage: unknown [0x3a65787472696e7369635f696e646578] (r:1 w:0)
-    fn as_multi_create(s: u32, z: u32, ) -> Weight {
+    fn as_multi_create(s: u32, z: u32) -> Weight {
         Weight::from_ref_time(26_652_211)
             // Standard Error: 1_415
             .saturating_add(Weight::from_ref_time(94_659).saturating_mul(s.into()))
@@ -62,7 +65,7 @@ impl<T: frame_system::Config> pallet_multisig::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1))
     }
     // Storage: MultiSig Multisigs (r:1 w:1)
-    fn as_multi_approve(s: u32, z: u32, ) -> Weight {
+    fn as_multi_approve(s: u32, z: u32) -> Weight {
         Weight::from_ref_time(20_049_942)
             // Standard Error: 908
             .saturating_add(Weight::from_ref_time(84_603).saturating_mul(s.into()))
@@ -73,7 +76,7 @@ impl<T: frame_system::Config> pallet_multisig::weights::WeightInfo for WeightInf
     }
     // Storage: MultiSig Multisigs (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn as_multi_complete(s: u32, z: u32, ) -> Weight {
+    fn as_multi_complete(s: u32, z: u32) -> Weight {
         Weight::from_ref_time(27_852_359)
             // Standard Error: 1_356
             .saturating_add(Weight::from_ref_time(117_468).saturating_mul(s.into()))
@@ -84,7 +87,7 @@ impl<T: frame_system::Config> pallet_multisig::weights::WeightInfo for WeightInf
     }
     // Storage: MultiSig Multisigs (r:1 w:1)
     // Storage: unknown [0x3a65787472696e7369635f696e646578] (r:1 w:0)
-    fn approve_as_multi_create(s: u32, ) -> Weight {
+    fn approve_as_multi_create(s: u32) -> Weight {
         Weight::from_ref_time(24_697_515)
             // Standard Error: 1_850
             .saturating_add(Weight::from_ref_time(97_497).saturating_mul(s.into()))
@@ -92,7 +95,7 @@ impl<T: frame_system::Config> pallet_multisig::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1))
     }
     // Storage: MultiSig Multisigs (r:1 w:1)
-    fn approve_as_multi_approve(s: u32, ) -> Weight {
+    fn approve_as_multi_approve(s: u32) -> Weight {
         Weight::from_ref_time(17_670_882)
             // Standard Error: 1_328
             .saturating_add(Weight::from_ref_time(94_493).saturating_mul(s.into()))
@@ -100,7 +103,7 @@ impl<T: frame_system::Config> pallet_multisig::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1))
     }
     // Storage: MultiSig Multisigs (r:1 w:1)
-    fn cancel_as_multi(s: u32, ) -> Weight {
+    fn cancel_as_multi(s: u32) -> Weight {
         Weight::from_ref_time(24_687_555)
             // Standard Error: 1_647
             .saturating_add(Weight::from_ref_time(108_089).saturating_mul(s.into()))

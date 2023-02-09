@@ -39,14 +39,17 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_proxy (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T> {
     // Storage: Proxy Proxies (r:1 w:0)
-    fn proxy(p: u32, ) -> Weight {
+    fn proxy(p: u32) -> Weight {
         Weight::from_ref_time(14_846_152)
             // Standard Error: 3_656
             .saturating_add(Weight::from_ref_time(20_035).saturating_mul(p.into()))
@@ -55,7 +58,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
     // Storage: Proxy Proxies (r:1 w:0)
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn proxy_announced(a: u32, p: u32, ) -> Weight {
+    fn proxy_announced(a: u32, p: u32) -> Weight {
         Weight::from_ref_time(29_808_110)
             // Standard Error: 3_086
             .saturating_add(Weight::from_ref_time(68_700).saturating_mul(a.into()))
@@ -66,7 +69,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
     }
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn remove_announcement(a: u32, _p: u32, ) -> Weight {
+    fn remove_announcement(a: u32, _p: u32) -> Weight {
         Weight::from_ref_time(21_154_842)
             // Standard Error: 2_354
             .saturating_add(Weight::from_ref_time(67_662).saturating_mul(a.into()))
@@ -75,7 +78,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
     }
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn reject_announcement(a: u32, _p: u32, ) -> Weight {
+    fn reject_announcement(a: u32, _p: u32) -> Weight {
         Weight::from_ref_time(20_587_474)
             // Standard Error: 2_191
             .saturating_add(Weight::from_ref_time(91_044).saturating_mul(a.into()))
@@ -85,7 +88,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
     // Storage: Proxy Proxies (r:1 w:0)
     // Storage: Proxy Announcements (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn announce(a: u32, p: u32, ) -> Weight {
+    fn announce(a: u32, p: u32) -> Weight {
         Weight::from_ref_time(25_960_647)
             // Standard Error: 3_453
             .saturating_add(Weight::from_ref_time(90_065).saturating_mul(a.into()))
@@ -95,7 +98,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().writes(2))
     }
     // Storage: Proxy Proxies (r:1 w:1)
-    fn add_proxy(p: u32, ) -> Weight {
+    fn add_proxy(p: u32) -> Weight {
         Weight::from_ref_time(21_515_673)
             // Standard Error: 9_730
             .saturating_add(Weight::from_ref_time(27_609).saturating_mul(p.into()))
@@ -103,7 +106,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().writes(1))
     }
     // Storage: Proxy Proxies (r:1 w:1)
-    fn remove_proxy(p: u32, ) -> Weight {
+    fn remove_proxy(p: u32) -> Weight {
         Weight::from_ref_time(20_632_234)
             // Standard Error: 2_374
             .saturating_add(Weight::from_ref_time(68_381).saturating_mul(p.into()))
@@ -111,7 +114,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().writes(1))
     }
     // Storage: Proxy Proxies (r:1 w:1)
-    fn remove_proxies(p: u32, ) -> Weight {
+    fn remove_proxies(p: u32) -> Weight {
         Weight::from_ref_time(17_793_375)
             // Standard Error: 1_672
             .saturating_add(Weight::from_ref_time(42_726).saturating_mul(p.into()))
@@ -120,7 +123,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
     }
     // Storage: unknown [0x3a65787472696e7369635f696e646578] (r:1 w:0)
     // Storage: Proxy Proxies (r:1 w:1)
-    fn create_pure(p: u32, ) -> Weight {
+    fn create_pure(p: u32) -> Weight {
         Weight::from_ref_time(22_473_896)
             // Standard Error: 1_953
             .saturating_add(Weight::from_ref_time(15_155).saturating_mul(p.into()))
@@ -128,7 +131,7 @@ impl<T: frame_system::Config> pallet_proxy::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().writes(1))
     }
     // Storage: Proxy Proxies (r:1 w:1)
-    fn kill_pure(p: u32, ) -> Weight {
+    fn kill_pure(p: u32) -> Weight {
         Weight::from_ref_time(18_850_050)
             // Standard Error: 1_796
             .saturating_add(Weight::from_ref_time(42_672).saturating_mul(p.into()))

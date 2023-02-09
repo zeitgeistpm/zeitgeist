@@ -39,15 +39,17 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_author_slot_filter (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_slot_filter::weights::WeightInfo for WeightInfo<T> {
     // Storage: AuthorFilter EligibleCount (r:0 w:1)
     fn set_eligible() -> Weight {
-        Weight::from_ref_time(9_073_000)
-            .saturating_add(T::DbWeight::get().writes(1))
+        Weight::from_ref_time(9_073_000).saturating_add(T::DbWeight::get().writes(1))
     }
 }

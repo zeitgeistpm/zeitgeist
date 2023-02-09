@@ -39,8 +39,11 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_parachain_staking (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -99,7 +102,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking Total (r:1 w:1)
     // Storage: ParachainStaking TopDelegations (r:0 w:1)
     // Storage: ParachainStaking BottomDelegations (r:0 w:1)
-    fn join_candidates(x: u32, ) -> Weight {
+    fn join_candidates(x: u32) -> Weight {
         Weight::from_ref_time(32_869_323)
             // Standard Error: 1_610
             .saturating_add(Weight::from_ref_time(193_154).saturating_mul(x.into()))
@@ -109,7 +112,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking CandidateInfo (r:1 w:1)
     // Storage: ParachainStaking Round (r:1 w:0)
     // Storage: ParachainStaking CandidatePool (r:1 w:1)
-    fn schedule_leave_candidates(x: u32, ) -> Weight {
+    fn schedule_leave_candidates(x: u32) -> Weight {
         Weight::from_ref_time(25_820_357)
             // Standard Error: 1_488
             .saturating_add(Weight::from_ref_time(174_057).saturating_mul(x.into()))
@@ -126,7 +129,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
     // Storage: ParachainStaking BottomDelegations (r:1 w:1)
     // Storage: ParachainStaking Total (r:1 w:1)
-    fn execute_leave_candidates(x: u32, ) -> Weight {
+    fn execute_leave_candidates(x: u32) -> Weight {
         Weight::from_ref_time(62_477_000)
             // Standard Error: 41_796
             .saturating_add(Weight::from_ref_time(15_946_001).saturating_mul(x.into()))
@@ -137,7 +140,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     }
     // Storage: ParachainStaking CandidateInfo (r:1 w:1)
     // Storage: ParachainStaking CandidatePool (r:1 w:1)
-    fn cancel_leave_candidates(x: u32, ) -> Weight {
+    fn cancel_leave_candidates(x: u32) -> Weight {
         Weight::from_ref_time(23_095_410)
             // Standard Error: 1_510
             .saturating_add(Weight::from_ref_time(190_401).saturating_mul(x.into()))
@@ -199,7 +202,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking CandidatePool (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: ParachainStaking Total (r:1 w:1)
-    fn delegate(_x: u32, y: u32, ) -> Weight {
+    fn delegate(_x: u32, y: u32) -> Weight {
         Weight::from_ref_time(98_852_381)
             // Standard Error: 3_632
             .saturating_add(Weight::from_ref_time(74_937).saturating_mul(y.into()))
@@ -224,7 +227,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:0)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn execute_leave_delegators(x: u32, ) -> Weight {
+    fn execute_leave_delegators(x: u32) -> Weight {
         Weight::from_ref_time(17_452_622)
             // Standard Error: 21_795
             .saturating_add(Weight::from_ref_time(13_924_996).saturating_mul(x.into()))
@@ -326,7 +329,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     }
     // Storage: ParachainStaking DelegationScheduledRequests (r:1 w:0)
     // Storage: ParachainStaking TopDelegations (r:1 w:0)
-    fn get_rewardable_delegators(y: u32, ) -> Weight {
+    fn get_rewardable_delegators(y: u32) -> Weight {
         Weight::from_ref_time(9_044_052)
             // Standard Error: 934
             .saturating_add(Weight::from_ref_time(166_721).saturating_mul(y.into()))
@@ -340,7 +343,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:0)
     // Storage: ParachainStaking SelectedCandidates (r:0 w:1)
     // Storage: ParachainStaking AtStake (r:0 w:1)
-    fn select_top_candidates(x: u32, y: u32, ) -> Weight {
+    fn select_top_candidates(x: u32, y: u32) -> Weight {
         Weight::from_ref_time(19_457_000)
             // Standard Error: 194_470
             .saturating_add(Weight::from_ref_time(14_446_541).saturating_mul(x.into()))
@@ -356,7 +359,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: ParachainStaking AtStake (r:2 w:1)
     // Storage: ParachainStaking AwardedPts (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn pay_one_collator_reward(y: u32, ) -> Weight {
+    fn pay_one_collator_reward(y: u32) -> Weight {
         Weight::from_ref_time(41_033_942)
             // Standard Error: 5_622
             .saturating_add(Weight::from_ref_time(7_673_326).saturating_mul(y.into()))
@@ -367,12 +370,11 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     }
     // Storage: ParachainStaking Round (r:1 w:0)
     fn base_on_initialize() -> Weight {
-        Weight::from_ref_time(5_312_000)
-            .saturating_add(T::DbWeight::get().reads(1))
+        Weight::from_ref_time(5_312_000).saturating_add(T::DbWeight::get().reads(1))
     }
     // Storage: ParachainStaking DelegatorState (r:1 w:0)
     // Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
-    fn set_auto_compound(x: u32, y: u32, ) -> Weight {
+    fn set_auto_compound(x: u32, y: u32) -> Weight {
         Weight::from_ref_time(42_718_871)
             // Standard Error: 2_814
             .saturating_add(Weight::from_ref_time(161_876).saturating_mul(x.into()))
@@ -390,7 +392,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     // Storage: Balances Locks (r:1 w:1)
     // Storage: ParachainStaking Total (r:1 w:1)
     // Storage: ParachainStaking BottomDelegations (r:1 w:1)
-    fn delegate_with_auto_compound(x: u32, y: u32, _z: u32, ) -> Weight {
+    fn delegate_with_auto_compound(x: u32, y: u32, _z: u32) -> Weight {
         Weight::from_ref_time(100_631_109)
             // Standard Error: 2_763
             .saturating_add(Weight::from_ref_time(81_505).saturating_mul(x.into()))
