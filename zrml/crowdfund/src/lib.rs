@@ -146,6 +146,8 @@ mod pallet {
         BackerPartiallyRefunded { backer: AccountIdOf<T>, refunded: BalanceOf<T> },
         /// A crowdfund was opened.
         CrowdfundOpened { fund_index: FundIndex },
+        /// A crowdfund item was prepared for a refund.
+        RefundPrepared { fund_index: FundIndex, item: T::FundItem, refund_share: Percent },
         /// A crowdfund was closed.
         CrowdfundClosed { fund_index: FundIndex },
         /// A crowdfund was cleared.
@@ -201,10 +203,7 @@ mod pallet {
 
             let mut fund_item = <FundItems<T>>::get(&fund_index, &item)
                 .unwrap_or(FundItemInfo { raised: Zero::zero(), status: FundItemStatus::Active });
-            ensure!(
-                fund_item.status == FundItemStatus::Active,
-                Error::<T>::InvalidFundItemStatus
-            );
+            ensure!(fund_item.status == FundItemStatus::Active, Error::<T>::InvalidFundItemStatus);
 
             let fund_account = Self::crowdfund_account();
             T::Currency::transfer(&who, &fund_account, amount, ExistenceRequirement::AllowDeath)?;
@@ -389,6 +388,11 @@ mod pallet {
             fund_item.status = FundItemStatus::Refundable { share };
             <FundItems<T>>::insert(fund_index, item, fund_item);
 
+            Self::deposit_event(Event::RefundPrepared {
+                fund_index,
+                item: item.clone(),
+                refund_share: share,
+            });
             Ok(imb)
         }
 
