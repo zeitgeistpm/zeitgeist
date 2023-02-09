@@ -19,8 +19,10 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade},
     weights::Weight,
 };
+#[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::Percent;
+#[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
 use super::{

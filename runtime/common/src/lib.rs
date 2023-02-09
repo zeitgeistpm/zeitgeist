@@ -434,7 +434,7 @@ macro_rules! impl_config_traits {
             type RuntimeOrigin = RuntimeOrigin;
             type PalletInfo = PalletInfo;
             type SS58Prefix = SS58Prefix;
-            type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
+            type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
         }
 
@@ -450,7 +450,7 @@ macro_rules! impl_config_traits {
             type AccountLookup = AuthorMapping;
             type CanAuthor = AuthorFilter;
             type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
-            type WeightInfo = pallet_author_inherent::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -459,7 +459,7 @@ macro_rules! impl_config_traits {
             type DepositCurrency = Balances;
             type RuntimeEvent = RuntimeEvent;
             type Keys = session_keys_primitives::VrfId;
-            type WeightInfo = pallet_author_mapping::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -467,7 +467,7 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type RandomnessSource = RandomnessCollectiveFlip;
             type PotentialAuthors = ParachainStaking;
-            type WeightInfo = pallet_author_slot_filter::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_author_slot_filter::WeightInfo<Runtime>;
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -537,7 +537,7 @@ macro_rules! impl_config_traits {
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
-            type WeightInfo = pallet_parachain_staking::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -688,7 +688,7 @@ macro_rules! impl_config_traits {
             type Scheduler = Scheduler;
             type PalletsOrigin = OriginCaller;
             type MaxVotes = MaxVotes;
-            type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
             type MaxProposals = MaxProposals;
             type Preimages = Preimage;
             type MaxBlacklisted = ConstU32<100>;
@@ -756,7 +756,7 @@ macro_rules! impl_config_traits {
             type DepositBase = DepositBase;
             type DepositFactor = DepositFactor;
             type MaxSignatories = ConstU16<100>;
-            type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
         }
 
         impl pallet_preimage::Config for Runtime {
@@ -808,7 +808,7 @@ macro_rules! impl_config_traits {
             type ProxyDepositBase = ProxyDepositBase;
             type ProxyDepositFactor = ProxyDepositFactor;
             type MaxProxies = ConstU32<32>;
-            type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
             type MaxPending = ConstU32<32>;
             type CallHasher = BlakeTwo256;
             type AnnouncementDepositBase = AnnouncementDepositBase;
@@ -825,7 +825,7 @@ macro_rules! impl_config_traits {
             type MaximumWeight = MaximumSchedulerWeight;
             type ScheduleOrigin = EnsureRoot<AccountId>;
             type MaxScheduledPerBlock = MaxScheduledPerBlock;
-            type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
             type OriginPrivilegeCmp = EqualPrivilegeOnly;
             type Preimages = Preimage;
         }
