@@ -5,11 +5,11 @@ use frame_support::traits::Currency;
 
 type CurrencyOf<T> =
     <<T as Config>::MarketCommons as zrml_market_commons::MarketCommonsPalletApi>::Currency;
-type MarketCommonsBalanceOf<T> =
+type BalanceOf<T> =
     <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MarketOf<T> = zeitgeist_primitives::types::Market<
     <T as frame_system::Config>::AccountId,
-    MarketCommonsBalanceOf<T>,
+    BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
     zeitgeist_primitives::types::Asset<MarketIdOf<T>>,
