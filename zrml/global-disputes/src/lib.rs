@@ -732,12 +732,17 @@ mod pallet {
             reward_info: RewardInfoOf<T>,
             owner: AccountIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::Currency::transfer(
+            let res = T::Currency::transfer(
                 &reward_info.source,
                 &owner,
                 reward_info.reward,
                 ExistenceRequirement::AllowDeath,
-            )?;
+            );
+            // not really much we can do if it fails
+            debug_assert!(
+                res.is_ok(),
+                "Global Disputes: Rewarding a outcome owner failed."
+            );
             Self::deposit_event(Event::OutcomeOwnerRewarded {
                 market_id: reward_info.market_id,
                 owner,
