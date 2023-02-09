@@ -75,7 +75,7 @@ mod pallet {
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
     type RewardInfoOf<T> = RewardInfo<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>>;
 
-    // TODO: to remove after the storage migration
+    // TODO(#968): to remove after the storage migration
     pub type WinnerInfoOf<T> = OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
 
     /// The current storage version.
@@ -174,7 +174,7 @@ mod pallet {
     pub type GlobalDisputesInfo<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, GDInfoOf<T>, OptionQuery>;
 
-    // TODO: to remove after the storage migration
+    // TODO(#986): to remove after the storage migration
     #[pallet::storage]
     pub type Winners<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;

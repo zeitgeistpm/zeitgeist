@@ -79,7 +79,7 @@ pub struct RewardInfo<MarketId, AccountId, Balance> {
     pub source: AccountId,
 }
 
-// TODO: to remove after the storage migration
+// TODO(#986): to remove after the storage migration
 
 /// The information about a voting outcome of a global dispute.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
