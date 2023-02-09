@@ -409,7 +409,9 @@ mod pallet {
                     owners_len = owners.len() as u32;
                 }
                 // storage write is needed here in case,
-                // that the first call of reward_outcome_owner doesn't reward the owners
+                // that the first call to purge_outcomes 
+                // doesn't save the owners of the winning outcome
+                // saving this information is required to reward the winners
                 // this can happen if there are more than RemoveKeysLimit keys to remove
                 gd_info.outcome_info = outcome_info;
                 <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
@@ -420,7 +422,7 @@ mod pallet {
                 <Outcomes<T>>::drain_prefix(market_id).take(T::RemoveKeysLimit::get() as usize)
             {
                 if let Some(Possession::Shared { owners }) = outcome_info.possession {
-                    owners_len = owners_len.max(owners.len() as u32);
+                    owners_len = owners_len.saturating_add(owners.len() as u32);
                 }
                 removed_keys_amount = removed_keys_amount.saturating_add(1u32);
             }
