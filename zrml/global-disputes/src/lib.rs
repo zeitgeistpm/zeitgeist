@@ -212,7 +212,7 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Sender tried to vote with an amount below a defined minium.
+        /// Sender tried to vote with an amount below a defined minimum.
         AmountTooLow,
         /// To start a global dispute, at least two outcomes are required.
         AtLeastTwoOutcomesRequired,
@@ -330,7 +330,7 @@ mod pallet {
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::refund_vote_fees(
             T::RemoveKeysLimit::get(),
-            T::MaxOwners::get()
+            T::MaxOwners::get(),
         ))]
         pub fn refund_vote_fees(
             origin: OriginFor<T>,
@@ -701,7 +701,7 @@ mod pallet {
                     // *Should* always be equal to `reward_per_each`
                     let reward = remainder.min(reward_per_each);
                     remainder = remainder.saturating_sub(reward);
-                    // Reward the loosing funds to the winners
+                    // Reward the losing funds to the winners
                     let res = T::Currency::transfer(
                         &reward_info.source,
                         winner,

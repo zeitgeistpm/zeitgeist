@@ -15,11 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-// We use these utilities to prevent having to make the swaps pallet a dependency of
-// prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
-// https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
-// and previous migrations.
-
 extern crate alloc;
 
 use crate::{types::*, Config, Pallet as GDPallet, *};

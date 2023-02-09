@@ -37,7 +37,7 @@ pub struct OutcomeInfo<AccountId, Balance, Owners> {
 /// The general information about the global dispute.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub struct GDInfo<AccountId, Balance, Owners, BlockNumber> {
-    /// The outcome, which is in the lead.
+    /// The outcome which is in the lead.
     pub winner_outcome: OutcomeReport,
     /// The information about the winning outcome.
     pub outcome_info: OutcomeInfo<AccountId, Balance, Owners>,
