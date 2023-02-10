@@ -46,7 +46,7 @@ pub struct OutcomeInfo<AccountId, Balance, OwnerInfo> {
     /// The current sum of all locks on this outcome.
     pub outcome_sum: Balance,
     /// The information about the owner(s) and optionally additional fee.
-    pub possession: Option<Possession<AccountId, Balance, OwnerInfo>>,
+    pub possession: Possession<AccountId, Balance, OwnerInfo>,
 }
 
 /// The general information about the global dispute.
@@ -63,8 +63,12 @@ pub struct GlobalDisputeInfo<AccountId, Balance, OwnerInfo, BlockNumber> {
 impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber>
     GlobalDisputeInfo<AccountId, Balance, OwnerInfo, BlockNumber>
 {
-    pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
-        let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession: None };
+    pub fn new(
+        outcome: OutcomeReport,
+        possession: Possession<AccountId, Balance, OwnerInfo>,
+        vote_sum: Balance,
+    ) -> Self {
+        let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         GlobalDisputeInfo { winner_outcome: outcome, status: GdStatus::Initialized, outcome_info }
     }
 

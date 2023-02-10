@@ -62,15 +62,14 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
             let owners = winner_info.outcome_info.owners;
             let owners_len = owners.len();
             let possession = match owners_len {
-                0usize => None,
-                1usize => Some(Possession::Paid {
+                1usize => Possession::Paid {
                     owner: owners
                         .get(0)
                         .expect("Owners len is 1, but could not get this owner.")
                         .clone(),
                     fee: T::VotingOutcomeFee::get(),
-                }),
-                _ => Some(Possession::Shared { owners }),
+                },
+                _ => Possession::Shared { owners },
             };
 
             let outcome_info =
@@ -93,15 +92,14 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
                 let owners = old_value.owners;
                 let owners_len = owners.len();
                 let possession = match owners_len {
-                    0usize => None,
-                    1usize => Some(Possession::Paid {
+                    1usize => Possession::Paid {
                         owner: owners
                             .get(0)
                             .expect("Owners len is 1, but could not get this owner.")
                             .clone(),
                         fee: T::VotingOutcomeFee::get(),
-                    }),
-                    _ => Some(Possession::Shared { owners }),
+                    },
+                    _ => Possession::Shared { owners },
                 };
 
                 let new_value = OutcomeInfo { outcome_sum: old_value.outcome_sum, possession };
@@ -156,15 +154,14 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
             let owners_len = owners.len();
 
             let possession = match owners_len {
-                0usize => None,
-                1usize => Some(Possession::Paid {
+                1usize => Possession::Paid {
                     owner: owners
                         .get(0)
                         .expect("Owners len is 1, but could not get this owner.")
                         .clone(),
                     fee: T::VotingOutcomeFee::get(),
-                }),
-                _ => Some(Possession::Shared { owners }),
+                },
+                _ => Possession::Shared { owners },
             };
 
             let outcome_info_expected =
@@ -231,7 +228,7 @@ mod tests {
 
             ModifyGlobalDisputesStructures::<Runtime>::on_runtime_upgrade();
 
-            let possession = Some(Possession::Paid { owner: ALICE, fee: VotingOutcomeFee::get() });
+            let possession = Possession::Paid { owner: ALICE, fee: VotingOutcomeFee::get() };
 
             let new_outcome_info = OutcomeInfo { outcome_sum, possession };
 
@@ -267,7 +264,7 @@ mod tests {
 
             ModifyGlobalDisputesStructures::<Runtime>::on_runtime_upgrade();
 
-            let possession = Some(Possession::Shared { owners });
+            let possession = Possession::Shared { owners };
 
             let new_outcome_info = OutcomeInfo { outcome_sum, possession };
 
@@ -307,7 +304,7 @@ mod tests {
 
             ModifyGlobalDisputesStructures::<Runtime>::on_runtime_upgrade();
 
-            let possession = Some(Possession::Shared { owners });
+            let possession = Possession::Shared { owners };
             let expected = OutcomeInfo { outcome_sum, possession };
 
             let actual = frame_support::migration::get_storage_value::<OutcomeInfoOf<Runtime>>(
@@ -343,7 +340,7 @@ mod tests {
 
             ModifyGlobalDisputesStructures::<Runtime>::on_runtime_upgrade();
 
-            let possession = Some(Possession::Paid { owner: ALICE, fee: VotingOutcomeFee::get() });
+            let possession = Possession::Paid { owner: ALICE, fee: VotingOutcomeFee::get() };
             let expected = OutcomeInfo { outcome_sum, possession };
 
             let actual = frame_support::migration::get_storage_value::<OutcomeInfoOf<Runtime>>(

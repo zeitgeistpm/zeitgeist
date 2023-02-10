@@ -98,7 +98,7 @@ benchmarks! {
         // minus one to ensure, that we use the worst case
         // for using a new winner info after the vote_on_outcome call
         let vote_sum = amount - 1u128.saturated_into();
-        let possession = Some(Possession::Shared { owners: Default::default() });
+        let possession = Possession::Shared { owners: Default::default() };
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
@@ -135,7 +135,7 @@ benchmarks! {
         }
         let owners = BoundedVec::try_from(owners).unwrap();
         let outcome = OutcomeReport::Scalar(0);
-        let possession = Some(Possession::Shared { owners });
+        let possession = Possession::Shared { owners };
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         // is_finished is false,
         // because we need `lock_needed` to be greater zero to set a lock.
@@ -183,7 +183,7 @@ benchmarks! {
         }
         let owners = BoundedVec::try_from(owners).unwrap();
         let outcome = OutcomeReport::Scalar(0);
-        let possession = Some(Possession::Shared { owners });
+        let possession = Possession::Shared { owners };
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         // is_finished is true,
         // because we need `lock_needed` to be zero to remove all locks.
@@ -231,7 +231,8 @@ benchmarks! {
         let owners: BoundedVec<AccountIdOf<T>, T::MaxOwners> = BoundedVec::try_from(owners)
         .unwrap();
 
-        let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), possession: None };
+        let possession = Possession::Shared { owners };
+        let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), possession: possession.clone() };
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
         let vote_end = add_outcome_end + T::GdVotingPeriod::get();
@@ -258,12 +259,12 @@ benchmarks! {
         let gd_info = <GlobalDisputesInfo<T>>::get(market_id).unwrap();
         assert_eq!(gd_info.outcome_info.outcome_sum, T::VotingOutcomeFee::get());
         // None as long as dispute not finished and reward_outcome_owner not happened
-        assert_eq!(gd_info.outcome_info.possession, None);
+        assert_eq!(gd_info.outcome_info.possession, possession);
 
         let outcomes_item = <Outcomes<T>>::get(market_id, outcome).unwrap();
         assert_eq!(outcomes_item.outcome_sum, T::VotingOutcomeFee::get());
         assert_eq!(
-            outcomes_item.possession.unwrap(),
+            outcomes_item.possession,
             Possession::Paid { owner: caller, fee: T::VotingOutcomeFee::get() },
         );
     }
@@ -279,7 +280,7 @@ benchmarks! {
             owners_vec.push(owner);
         }
         let owners = BoundedVec::try_from(owners_vec.clone()).unwrap();
-        let possession = Some(Possession::Shared { owners });
+        let possession = Possession::Shared { owners };
         let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(0),
             status: GdStatus::Finished,
@@ -309,7 +310,7 @@ benchmarks! {
         )
         .unwrap();
     } verify {
-        assert!(gd_info.outcome_info.possession.unwrap().get_shared_owners().unwrap().len() == o as usize);
+        assert!(gd_info.outcome_info.possession.get_shared_owners().unwrap().len() == o as usize);
         assert_last_event::<T>(
             Event::OutcomeOwnersRewarded::<T> {
                 market_id,
@@ -355,14 +356,14 @@ benchmarks! {
         let owners = BoundedVec::try_from(owners.clone()).unwrap();
         let winner_outcome = OutcomeReport::Scalar(0);
 
-        let possession = Some(Possession::Shared { owners });
+        let possession = Possession::Shared { owners };
         let outcome_info = OutcomeInfo {
             outcome_sum: 42u128.saturated_into(),
             possession,
         };
         <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
 
-        let possession = Some(Possession::Shared { owners: Default::default() });
+        let possession = Possession::Shared { owners: Default::default() };
         let outcome_info = OutcomeInfo {
             outcome_sum: 42u128.saturated_into(),
             possession,
@@ -410,14 +411,14 @@ benchmarks! {
         let owners = BoundedVec::try_from(owners.clone()).unwrap();
         let winner_outcome = OutcomeReport::Scalar(0);
 
-        let possession = Some(Possession::Shared { owners });
+        let possession = Possession::Shared { owners };
         let outcome_info = OutcomeInfo {
             outcome_sum: 42u128.saturated_into(),
             possession,
         };
         <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
 
-        let possession = Some(Possession::Shared { owners: Default::default() });
+        let possession = Possession::Shared { owners: Default::default() };
         let outcome_info = OutcomeInfo {
             outcome_sum: 42u128.saturated_into(),
             possession,

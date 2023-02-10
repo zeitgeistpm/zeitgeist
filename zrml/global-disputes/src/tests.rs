@@ -75,9 +75,7 @@ fn check_outcome_sum(
         <Outcomes<Runtime>>::get(market_id, outcome).unwrap(),
         OutcomeInfo {
             outcome_sum: SETUP_AMOUNT + post_setup_amount,
-            possession: Some(Possession::Shared {
-                owners: BoundedVec::try_from(vec![ALICE]).unwrap()
-            })
+            possession: Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() }
         }
     );
 }
@@ -179,7 +177,8 @@ fn add_vote_outcome_fails_if_global_dispute_finished() {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
-        let mut gd_info = GlobalDisputeInfo::new(OutcomeReport::Scalar(0), 10 * BASE);
+        let possession = Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() };
+        let mut gd_info = GlobalDisputeInfo::new(OutcomeReport::Scalar(0), possession, 10 * BASE);
         gd_info.status = GdStatus::Finished;
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
@@ -209,7 +208,7 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                possession: Some(Possession::Shared { owners: Default::default() }),
+                possession: Possession::Shared { owners: Default::default() },
             },
         );
         assert_noop!(
@@ -253,9 +252,9 @@ fn reward_outcome_owner_works_for_multiple_owners() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                possession: Some(Possession::Shared {
+                possession: Possession::Shared {
                     owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE]).unwrap(),
-                }),
+                },
             },
         );
         let _ = Balances::deposit_creating(
@@ -267,7 +266,7 @@ fn reward_outcome_owner_works_for_multiple_owners() {
             status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 10 * BASE,
-                possession: Some(Possession::Shared { owners: Default::default() }),
+                possession: Possession::Shared { owners: Default::default() },
             },
         };
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
@@ -312,10 +311,10 @@ fn reward_outcome_owner_has_dust() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                possession: Some(Possession::Shared {
+                possession: Possession::Shared {
                     owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE, EVE, POOR_PAUL, DAVE])
                         .unwrap(),
-                }),
+                },
             },
         );
         let _ = Balances::deposit_creating(&GlobalDisputes::reward_account(&market_id), 100 * BASE);
@@ -324,7 +323,7 @@ fn reward_outcome_owner_has_dust() {
             status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 10 * BASE,
-                possession: Some(Possession::Shared { owners: Default::default() }),
+                possession: Possession::Shared { owners: Default::default() },
             },
         };
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
@@ -348,9 +347,9 @@ fn reward_outcome_owner_works_for_one_owner() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                possession: Some(Possession::Shared {
+                possession: Possession::Shared {
                     owners: BoundedVec::try_from(vec![ALICE]).unwrap(),
-                }),
+                },
             },
         );
         let _ = Balances::deposit_creating(
@@ -362,9 +361,7 @@ fn reward_outcome_owner_works_for_one_owner() {
             status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 10 * BASE,
-                possession: Some(Possession::Shared {
-                    owners: BoundedVec::try_from(vec![]).unwrap(),
-                }),
+                possession: Possession::Shared { owners: BoundedVec::try_from(vec![]).unwrap() },
             },
         };
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);

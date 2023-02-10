@@ -71,6 +71,7 @@ mod pallet {
         OwnerInfoOf<T>,
         <T as frame_system::Config>::BlockNumber,
     >;
+    pub type PossessionOf<T> = Possession<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
@@ -230,8 +231,6 @@ mod pallet {
         NoGlobalDisputeInitialized,
         /// The global dispute has to be in initialized state during the initial outcome setup.
         NotInitialized,
-        /// There is no owner information for this outcome.
-        NoPossession,
         /// The voting outcome has been already added.
         OutcomeAlreadyExists,
         /// The outcome specified is not present in the voting outcomes.
@@ -304,10 +303,9 @@ mod pallet {
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            Self::update_winner(&market_id, &outcome, voting_outcome_fee);
-            let possession =
-                Some(Possession::Paid { owner: owner.clone(), fee: voting_outcome_fee });
+            let possession = Possession::Paid { owner: owner.clone(), fee: voting_outcome_fee };
             let outcome_info = OutcomeInfo { outcome_sum: voting_outcome_fee, possession };
+            Self::update_winner(&market_id, &outcome, outcome_info.clone());
             <Outcomes<T>>::insert(market_id, outcome.clone(), outcome_info);
 
             Self::deposit_event(Event::AddedVotingOutcome { market_id, owner, outcome });
@@ -348,7 +346,7 @@ mod pallet {
                 <Outcomes<T>>::drain_prefix(market_id).take(T::RemoveKeysLimit::get() as usize)
             {
                 match outcome_info.possession {
-                    Some(Possession::Paid { owner, fee }) => {
+                    Possession::Paid { owner, fee } => {
                         T::Currency::transfer(
                             &Self::reward_account(&market_id),
                             &owner,
@@ -356,10 +354,9 @@ mod pallet {
                             ExistenceRequirement::AllowDeath,
                         )?;
                     }
-                    Some(Possession::Shared { owners }) => {
+                    Possession::Shared { owners } => {
                         owners_len = owners_len.saturating_add(owners.len() as u32);
                     }
-                    None => (),
                 }
                 removed_keys_amount = removed_keys_amount.saturating_add(1u32);
             }
@@ -405,7 +402,7 @@ mod pallet {
             let mut owners_len = 0u32;
             // move the winning outcome info to GlobalDisputesInfo before it gets drained
             if let Some(outcome_info) = winning_outcome {
-                if let Some(Possession::Shared { owners }) = &outcome_info.possession {
+                if let Possession::Shared { owners } = &outcome_info.possession {
                     owners_len = owners.len() as u32;
                 }
                 // storage write is needed here in case,
@@ -421,7 +418,7 @@ mod pallet {
             for (_, outcome_info) in
                 <Outcomes<T>>::drain_prefix(market_id).take(T::RemoveKeysLimit::get() as usize)
             {
-                if let Some(Possession::Shared { owners }) = outcome_info.possession {
+                if let Possession::Shared { owners } = outcome_info.possession {
                     owners_len = owners_len.saturating_add(owners.len() as u32);
                 }
                 removed_keys_amount = removed_keys_amount.saturating_add(1u32);
@@ -469,19 +466,18 @@ mod pallet {
             ensure!(!reward_account_free_balance.is_zero(), Error::<T>::NoFundsToReward);
 
             match gd_info.outcome_info.possession {
-                Some(Possession::Shared { owners }) => Self::reward_shared_possession(
+                Possession::Shared { owners } => Self::reward_shared_possession(
                     market_id,
                     reward_account,
                     reward_account_free_balance,
                     owners,
                 ),
-                Some(Possession::Paid { owner, fee: _ }) => Self::reward_paid_possession(
+                Possession::Paid { owner, fee: _ } => Self::reward_paid_possession(
                     market_id,
                     reward_account,
                     reward_account_free_balance,
                     owner,
                 ),
-                None => Err(Error::<T>::NoPossession.into()),
             }
         }
 
@@ -526,9 +522,8 @@ mod pallet {
             let mut outcome_info =
                 <Outcomes<T>>::get(market_id, &outcome).ok_or(Error::<T>::OutcomeDoesNotExist)?;
             let outcome_owners_len = match outcome_info.possession {
-                Some(Possession::Shared { ref owners }) => owners.len() as u32,
-                Some(Possession::Paid { .. }) => 1u32,
-                None => 0u32,
+                Possession::Shared { ref owners } => owners.len() as u32,
+                Possession::Paid { .. } => 1u32,
             };
 
             // The `outcome_sum` never decreases (only increases) to allow
@@ -538,7 +533,7 @@ mod pallet {
             // than the second highest `outcome_sum`.
             let add_to_outcome_sum = |a| {
                 outcome_info.outcome_sum = outcome_info.outcome_sum.saturating_add(a);
-                Self::update_winner(&market_id, &outcome, outcome_info.outcome_sum);
+                Self::update_winner(&market_id, &outcome, outcome_info.clone());
                 <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
             };
 
@@ -673,12 +668,17 @@ mod pallet {
             T::GlobalDisputesPalletId::get().into_sub_account_truncating(market_id)
         }
 
-        fn update_winner(market_id: &MarketIdOf<T>, outcome: &OutcomeReport, amount: BalanceOf<T>) {
+        fn update_winner(
+            market_id: &MarketIdOf<T>,
+            outcome: &OutcomeReport,
+            outcome_info: OutcomeInfoOf<T>,
+        ) {
+            let amount = outcome_info.outcome_sum;
             <GlobalDisputesInfo<T>>::mutate(
                 market_id,
                 |highest: &mut Option<GlobalDisputeInfoOf<T>>| {
                     *highest = Some(highest.clone().map_or(
-                        GlobalDisputeInfo::new(outcome.clone(), amount),
+                        GlobalDisputeInfo::new(outcome.clone(), outcome_info.possession, amount),
                         |mut prev_gd_info| {
                             if amount >= prev_gd_info.outcome_info.outcome_sum {
                                 prev_gd_info.update_winner(outcome.clone(), amount);
@@ -782,22 +782,22 @@ mod pallet {
                 Some(mut outcome_info) => {
                     let outcome_sum = outcome_info.outcome_sum.saturating_add(initial_vote_balance);
                     outcome_info.outcome_sum = outcome_sum;
-                    let possession = outcome_info.possession.ok_or(Error::<T>::NoPossession)?;
-                    let mut owners = possession
+                    let mut owners = outcome_info
+                        .possession
                         .get_shared_owners()
                         .ok_or(Error::<T>::SharedPossessionRequired)?;
                     owners.try_push(owner.clone()).map_err(|_| Error::<T>::MaxOwnersReached)?;
-                    outcome_info.possession = Some(Possession::Shared { owners });
-                    Self::update_winner(market_id, &outcome, outcome_sum);
+                    outcome_info.possession = Possession::Shared { owners };
+                    Self::update_winner(market_id, &outcome, outcome_info.clone());
                     <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                 }
                 None => {
                     // adding one item to BoundedVec can not fail
                     if let Ok(owners) = BoundedVec::try_from(vec![owner.clone()]) {
-                        Self::update_winner(market_id, &outcome, initial_vote_balance);
-                        let possession = Some(Possession::Shared { owners });
+                        let possession = Possession::Shared { owners };
                         let outcome_info =
                             OutcomeInfo { outcome_sum: initial_vote_balance, possession };
+                        Self::update_winner(market_id, &outcome, outcome_info.clone());
                         <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                     } else {
                         log::error!("Global Disputes: Could not construct a bounded vector.");
@@ -814,11 +814,10 @@ mod pallet {
         ) -> Option<(BalanceOf<T>, Vec<AccountIdOf<T>>)> {
             <Outcomes<T>>::get(market_id, outcome).map(|outcome_info| {
                 match outcome_info.possession {
-                    Some(Possession::Shared { owners }) => {
+                    Possession::Shared { owners } => {
                         (outcome_info.outcome_sum, owners.into_inner())
                     }
-                    Some(Possession::Paid { owner, .. }) => (outcome_info.outcome_sum, vec![owner]),
-                    None => (outcome_info.outcome_sum, vec![]),
+                    Possession::Paid { owner, .. } => (outcome_info.outcome_sum, vec![owner]),
                 }
             })
         }
