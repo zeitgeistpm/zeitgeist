@@ -1,0 +1,49 @@
+name: zeitgeist-node
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  hadolint:
+    runs-on: ubuntu-20.04
+    name: "Hadolint"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: jbergstroem/hadolint-gh-action@v1
+        with:
+          dockerfile: "./Dockerfile"
+
+  build:
+    needs: hadolint
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Build image from Dockerfile
+        run: |
+          # If it is a tag:
+          if [ -z "${GITHUB_REF##refs/tags/*}" ] ; then
+            docker build . -t zeitgeistpm/zeitgeist-node:${GITHUB_REF#refs/tags/} -t zeitgeistpm/zeitgeist-node:latest
+          else
+            docker build . -t zeitgeistpm/zeitgeist-node:${GITHUB_SHA} -t zeitgeistpm/zeitgeist-node:latest
+          fi
+
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'zeitgeistpm/zeitgeist-node:latest'
+          format: 'sarif'
+          output: 'zetgeist-node-report.sarif'
+          severity: 'HIGH,CRITICAL'
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'zeitgeist-node-report.sarif'
