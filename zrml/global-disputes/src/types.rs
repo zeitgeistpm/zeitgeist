@@ -79,7 +79,7 @@ impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber>
 pub enum GdStatus<BlockNumber> {
     /// The global dispute is initialized.
     Initialized,
-    /// The global dispute is in progress. Save the addition of outcome end and vote end.
+    /// The global dispute is in progress.
     /// The block number `add_outcome_end`, when the addition of new outcomes is over.
     /// The block number `vote_end`, when the global dispute voting period is over.
     Active { add_outcome_end: BlockNumber, vote_end: BlockNumber },
