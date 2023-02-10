@@ -22,21 +22,21 @@ use zeitgeist_primitives::types::OutcomeReport;
 
 /// The original voting outcome owner information.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub enum Possession<AccountId, Balance, Owners> {
+pub enum Possession<AccountId, Balance, OwnerInfo> {
     /// The outcome is owned by a single account.
     /// This happens due to the call to `add_vote_outcome`.
     Paid { owner: AccountId, fee: Balance },
     /// The outcome is owned by multiple accounts.
     /// When a global dispute is triggered, these are the owners of the initially added outcomes.
-    Shared { owners: Owners },
+    Shared { owners: OwnerInfo },
 }
 
-impl<AccountId, Balance, Owners> Possession<AccountId, Balance, Owners> {
+impl<AccountId, Balance, OwnerInfo> Possession<AccountId, Balance, OwnerInfo> {
     pub fn is_shared(&self) -> bool {
         matches!(self, Possession::Shared { .. })
     }
 
-    pub fn get_shared_owners(self) -> Option<Owners> {
+    pub fn get_shared_owners(self) -> Option<OwnerInfo> {
         match self {
             Possession::Shared { owners } => Some(owners),
             _ => None,
@@ -50,26 +50,26 @@ impl<AccountId, Balance, Owners> Possession<AccountId, Balance, Owners> {
 
 /// The information about a voting outcome of a global dispute.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct OutcomeInfo<AccountId, Balance, Owners> {
+pub struct OutcomeInfo<AccountId, Balance, OwnerInfo> {
     /// The current sum of all locks on this outcome.
     pub outcome_sum: Balance,
     /// The information about the owner(s) and optionally additional fee.
-    pub possession: Option<Possession<AccountId, Balance, Owners>>,
+    pub possession: Option<Possession<AccountId, Balance, OwnerInfo>>,
 }
 
 /// The general information about the global dispute.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct GlobalDisputeInfo<AccountId, Balance, Owners, BlockNumber> {
+pub struct GlobalDisputeInfo<AccountId, Balance, OwnerInfo, BlockNumber> {
     /// The outcome which is in the lead.
     pub winner_outcome: OutcomeReport,
     /// The information about the winning outcome.
-    pub outcome_info: OutcomeInfo<AccountId, Balance, Owners>,
+    pub outcome_info: OutcomeInfo<AccountId, Balance, OwnerInfo>,
     /// The current status of the global dispute.
     pub status: GdStatus<BlockNumber>,
 }
 
-impl<AccountId, Balance: Saturating, Owners: Default, BlockNumber>
-    GlobalDisputeInfo<AccountId, Balance, Owners, BlockNumber>
+impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber>
+    GlobalDisputeInfo<AccountId, Balance, OwnerInfo, BlockNumber>
 {
     pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession: None };

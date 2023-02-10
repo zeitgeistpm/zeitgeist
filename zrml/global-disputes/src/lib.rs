@@ -63,6 +63,7 @@ mod pallet {
 
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+    pub(crate) type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type OutcomeInfoOf<T> = OutcomeInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
     pub type GlobalDisputeInfoOf<T> = GlobalDisputeInfo<
         AccountIdOf<T>,
@@ -71,7 +72,6 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
     >;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-    pub(crate) type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
     type RewardInfoOf<T> = RewardInfo<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>>;
