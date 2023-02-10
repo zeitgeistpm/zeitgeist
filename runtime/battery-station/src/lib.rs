@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -77,7 +78,6 @@ use sp_runtime::{
 use nimbus_primitives::CanAuthor;
 use sp_version::RuntimeVersion;
 
-#[cfg(feature = "parachain")]
 #[cfg(test)]
 pub mod integration_tests;
 #[cfg(feature = "parachain")]
