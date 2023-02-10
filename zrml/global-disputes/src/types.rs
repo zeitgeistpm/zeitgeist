@@ -20,9 +20,14 @@ use frame_support::pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo};
 use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::types::OutcomeReport;
 
+/// The original voting outcome owner information.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum Possession<AccountId, Balance, Owners> {
+    /// The outcome is owned by a single account. 
+    /// This happens due to the call to `add_vote_outcome`.
     Paid { owner: AccountId, fee: Balance },
+    /// The outcome is owned by multiple accounts.
+    /// When a global dispute is triggered, these are the owners of the initially added outcomes.
     Shared { owners: Owners },
 }
 
@@ -77,6 +82,7 @@ impl<AccountId, Balance: Saturating, Owners: Default, BlockNumber>
     }
 }
 
+/// The current status of the global dispute.
 #[derive(TypeInfo, Debug, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum GdStatus<BlockNumber> {
     /// The global dispute is initialized.
@@ -91,9 +97,14 @@ pub enum GdStatus<BlockNumber> {
     Destroyed,
 }
 
+/// Relevant details about a reward.
 pub struct RewardInfo<MarketId, AccountId, Balance> {
+    /// The market id of the market, which was resolved by a global dispute.
     pub market_id: MarketId,
+    /// The amount of the reward.
+    /// It is equal to the free balance of source.
     pub reward: Balance,
+    /// The account which holds the reward.
     pub source: AccountId,
 }
 
