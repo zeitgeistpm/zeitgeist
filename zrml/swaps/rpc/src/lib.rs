@@ -34,6 +34,7 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
+use std::collections::BTreeMap;
 use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
@@ -72,6 +73,14 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
+        with_fees: bool,
+        blocks: Vec<BlockNumber>,
+    ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
+
+    #[method(name = "swaps_getAssetSpotPricesForPool")]
+    async fn get_asset_spot_prices_for_pool(
+        &self,
+        pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<BlockNumber>,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
@@ -204,5 +213,44 @@ where
                 Ok(res)
             })
             .collect()
+    }
+
+    async fn get_asset_spot_prices_for_pool(
+        &self,
+        pool_id: PoolId,
+        with_fees: bool,
+        blocks: Vec<NumberFor<Block>>,
+    ) -> RpcResult<BTreeMap<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>> {
+        let api = self.client.runtime_api();
+        let pool = api.pool_by_id(pool_id).map_err(|e| {
+            CallError::Custom(ErrorObject::owned(
+                Error::RuntimeError.into(),
+                "Unable to find pool by id",
+                Some(e.to_string()),
+            ))
+        })?;
+        let mut result_map = BTreeMap::<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>::new();
+        for asset in pool.assets {
+            if asset != pool.base_asset {
+                let prices = blocks
+                    .into_iter()
+                    .map(|block| {
+                        let hash = BlockId::number(block);
+                        let res = api
+                            .get_spot_prices(&hash, &pool_id, &asset, &pool.base_asset, with_fees)
+                            .map_err(|e| {
+                                CallError::Custom(ErrorObject::owned(
+                                    Error::RuntimeError.into(),
+                                    "Unable to get spot price.",
+                                    Some(e.to_string()),
+                                ))
+                            })?;
+                        Ok(res)
+                    })
+                    .collect();
+                result_map.insert(asset, prices);
+            }
+        }
+        Ok(result_map)
     }
 }
