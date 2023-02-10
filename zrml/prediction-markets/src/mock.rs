@@ -56,8 +56,8 @@ use zeitgeist_primitives::{
 
 #[cfg(feature = "with-global-disputes")]
 use zeitgeist_primitives::constants::mock::{
-    AddOutcomePeriod, GlobalDisputeLockId, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
-    MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, GdVotingPeriod, VotingOutcomeFee,
+    AddOutcomePeriod, GdVotingPeriod, GlobalDisputeLockId, GlobalDisputesPalletId,
+    MaxGlobalDisputeVotes, MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
 };
 
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};

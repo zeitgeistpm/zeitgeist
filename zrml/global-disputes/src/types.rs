@@ -32,19 +32,11 @@ pub enum Possession<AccountId, Balance, OwnerInfo> {
 }
 
 impl<AccountId, Balance, OwnerInfo> Possession<AccountId, Balance, OwnerInfo> {
-    pub fn is_shared(&self) -> bool {
-        matches!(self, Possession::Shared { .. })
-    }
-
     pub fn get_shared_owners(self) -> Option<OwnerInfo> {
         match self {
             Possession::Shared { owners } => Some(owners),
             _ => None,
         }
-    }
-
-    pub fn is_paid(&self) -> bool {
-        matches!(self, Possession::Paid { .. })
     }
 }
 

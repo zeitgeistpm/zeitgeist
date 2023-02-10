@@ -32,9 +32,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AddOutcomePeriod, BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
-        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, GdVotingPeriod,
-        VotingOutcomeFee, BASE,
+        AddOutcomePeriod, BlockHashCount, GdVotingPeriod, GlobalDisputeLockId,
+        GlobalDisputesPalletId, MaxReserves, MinOutcomeVoteAmount, MinimumPeriod, PmPalletId,
+        RemoveKeysLimit, VotingOutcomeFee, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
