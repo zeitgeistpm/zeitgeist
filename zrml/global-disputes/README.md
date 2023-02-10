@@ -39,8 +39,6 @@ on which the market finally resolves.
 
 - `push_vote_outcome` - Add an initial voting outcome and vote on it with
   `initial_vote_balance`.
-- `get_voting_outcome_info` - Get the information (`outcome_sum`, `owners`) of a
-  voting outcome.
 - `determine_voting_winner` - Determine the canonical voting outcome based on
   total locked tokens.
 - `does_exist` - Check if the global dispute does already exist.

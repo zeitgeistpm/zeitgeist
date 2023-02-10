@@ -31,6 +31,8 @@ pub mod weights;
 pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
 pub use pallet::*;
 
+pub type PossessionOf<T> = crate::types::Possession<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
+
 #[frame_support::pallet]
 mod pallet {
     use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
@@ -71,7 +73,7 @@ mod pallet {
         OwnerInfoOf<T>,
         <T as frame_system::Config>::BlockNumber,
     >;
-    pub type PossessionOf<T> = Possession<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
+
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
@@ -806,20 +808,6 @@ mod pallet {
                 }
             }
             Ok(())
-        }
-
-        fn get_voting_outcome_info(
-            market_id: &MarketIdOf<T>,
-            outcome: &OutcomeReport,
-        ) -> Option<(BalanceOf<T>, Vec<AccountIdOf<T>>)> {
-            <Outcomes<T>>::get(market_id, outcome).map(|outcome_info| {
-                match outcome_info.possession {
-                    Possession::Shared { owners } => {
-                        (outcome_info.outcome_sum, owners.into_inner())
-                    }
-                    Possession::Paid { owner, .. } => (outcome_info.outcome_sum, vec![owner]),
-                }
-            })
         }
 
         fn determine_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {

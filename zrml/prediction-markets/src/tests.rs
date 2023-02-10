@@ -3027,24 +3027,37 @@ fn start_global_dispute_works() {
 
         #[cfg(feature = "with-global-disputes")]
         {
-            use zrml_global_disputes::GlobalDisputesPalletApi;
+            use zrml_global_disputes::{
+                types::{OutcomeInfo, Possession},
+                GlobalDisputesPalletApi, Outcomes, PossessionOf,
+            };
 
             let now = <frame_system::Pallet<Runtime>>::block_number();
             assert_ok!(PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id));
 
             // report check
+            let possession: PossessionOf<Runtime> = Possession::Shared {
+                owners: frame_support::BoundedVec::try_from(vec![BOB]).unwrap(),
+            };
+            let outcome_info = OutcomeInfo { outcome_sum: Zero::zero(), possession };
             assert_eq!(
-                GlobalDisputes::get_voting_outcome_info(&market_id, &OutcomeReport::Categorical(0)),
-                Some((Zero::zero(), vec![BOB])),
+                Outcomes::<Runtime>::get(&market_id, &OutcomeReport::Categorical(0)).unwrap(),
+                outcome_info
             );
+            let possession: PossessionOf<Runtime> = Possession::Shared {
+                owners: frame_support::BoundedVec::try_from(vec![CHARLIE]).unwrap(),
+            };
             for i in 1..=<Runtime as Config>::MaxDisputes::get() {
                 let dispute_bond = crate::default_dispute_bond::<Runtime>((i - 1).into());
+                let outcome_info =
+                    OutcomeInfo { outcome_sum: dispute_bond, possession: possession.clone() };
                 assert_eq!(
-                    GlobalDisputes::get_voting_outcome_info(
+                    Outcomes::<Runtime>::get(
                         &market_id,
                         &OutcomeReport::Categorical(i.saturated_into())
-                    ),
-                    Some((dispute_bond, vec![CHARLIE])),
+                    )
+                    .unwrap(),
+                    outcome_info
                 );
             }
 
