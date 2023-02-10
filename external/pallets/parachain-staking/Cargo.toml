@@ -6,7 +6,7 @@ name = "pallet-parachain-staking"
 version = "3.0.0"
 
 [dependencies]
-log = "0.4"
+log = "0.4.17"
 serde = { version = "1.0.101", optional = true }
 
 # Substrate
