@@ -1586,12 +1586,6 @@ mod pallet {
             Self::BlockNumber,
         >;
 
-        #[cfg(all(feature = "runtime-benchmarks", feature = "with-global-disputes"))]
-        type AddOutcomePeriod: Get<Self::BlockNumber>;
-
-        #[cfg(all(feature = "runtime-benchmarks", feature = "with-global-disputes"))]
-        type VotePeriod: Get<Self::BlockNumber>;
-
         type LiquidityMining: LiquidityMiningPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,

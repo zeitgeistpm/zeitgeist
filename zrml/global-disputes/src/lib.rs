@@ -675,19 +675,22 @@ mod pallet {
         }
 
         fn update_winner(market_id: &MarketIdOf<T>, outcome: &OutcomeReport, amount: BalanceOf<T>) {
-            <GlobalDisputesInfo<T>>::mutate(market_id, |highest: &mut Option<GlobalDisputeInfoOf<T>>| {
-                *highest = Some(highest.clone().map_or(
-                    GlobalDisputeInfo::new(outcome.clone(), amount),
-                    |mut prev_gd_info| {
-                        if amount >= prev_gd_info.outcome_info.outcome_sum {
-                            prev_gd_info.update_winner(outcome.clone(), amount);
-                            prev_gd_info
-                        } else {
-                            prev_gd_info
-                        }
-                    },
-                ));
-            });
+            <GlobalDisputesInfo<T>>::mutate(
+                market_id,
+                |highest: &mut Option<GlobalDisputeInfoOf<T>>| {
+                    *highest = Some(highest.clone().map_or(
+                        GlobalDisputeInfo::new(outcome.clone(), amount),
+                        |mut prev_gd_info| {
+                            if amount >= prev_gd_info.outcome_info.outcome_sum {
+                                prev_gd_info.update_winner(outcome.clone(), amount);
+                                prev_gd_info
+                            } else {
+                                prev_gd_info
+                            }
+                        },
+                    ));
+                },
+            );
         }
 
         fn reward_shared_possession(
@@ -740,10 +743,7 @@ mod pallet {
                 ExistenceRequirement::AllowDeath,
             );
             // not really much we can do if it fails
-            debug_assert!(
-                res.is_ok(),
-                "Global Disputes: Rewarding a outcome owner failed."
-            );
+            debug_assert!(res.is_ok(), "Global Disputes: Rewarding a outcome owner failed.");
             Self::deposit_event(Event::OutcomeOwnerRewarded {
                 market_id: reward_info.market_id,
                 owner,
@@ -757,6 +757,14 @@ mod pallet {
     where
         T: Config,
     {
+        fn get_add_outcome_period() -> T::BlockNumber {
+            T::AddOutcomePeriod::get()
+        }
+
+        fn get_vote_period() -> T::BlockNumber {
+            T::VotePeriod::get()
+        }
+
         fn push_vote_outcome(
             market_id: &MarketIdOf<T>,
             outcome: OutcomeReport,

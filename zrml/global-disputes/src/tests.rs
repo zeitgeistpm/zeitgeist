@@ -21,7 +21,7 @@
 use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     mock::*,
-    types::{GlobalDisputeInfo, GdStatus, OutcomeInfo, Possession},
+    types::{GdStatus, GlobalDisputeInfo, OutcomeInfo, Possession},
     utils::market_mock,
     BalanceOf, Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
 };

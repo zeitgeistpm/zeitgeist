@@ -44,6 +44,8 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
+#[cfg(feature = "with-global-disputes")]
+use zrml_global_disputes::GlobalDisputesPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
@@ -833,8 +835,9 @@ benchmarks! {
 
         #[cfg(feature = "with-global-disputes")]
         {
-            let add_outcome_end = current_block + <T as Config>::AddOutcomePeriod::get();
-            let vote_end = add_outcome_end + <T as Config>::VotePeriod::get();
+            let add_outcome_end = current_block +
+                <T as Config>::GlobalDisputes::get_add_outcome_period();
+            let vote_end = add_outcome_end + <T as Config>::GlobalDisputes::get_vote_period();
             // the complexity depends on MarketIdsPerDisputeBlock at the current block
             // this is because a variable number of market ids need to be decoded from the storage
             MarketIdsPerDisputeBlock::<T>::insert(vote_end, market_ids_1);

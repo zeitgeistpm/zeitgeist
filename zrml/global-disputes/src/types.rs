@@ -23,7 +23,7 @@ use zeitgeist_primitives::types::OutcomeReport;
 /// The original voting outcome owner information.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum Possession<AccountId, Balance, Owners> {
-    /// The outcome is owned by a single account. 
+    /// The outcome is owned by a single account.
     /// This happens due to the call to `add_vote_outcome`.
     Paid { owner: AccountId, fee: Balance },
     /// The outcome is owned by multiple accounts.
