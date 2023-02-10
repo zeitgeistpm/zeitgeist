@@ -14,6 +14,9 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -45,6 +48,9 @@ jobs:
           "standalone"
         ]
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -60,6 +66,9 @@ jobs:
     name: Quick check benchmarks
     runs-on: ubuntu-latest
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -72,6 +81,9 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -110,6 +122,9 @@ jobs:
     name: Fuzz
     runs-on: ubuntu-latest
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
