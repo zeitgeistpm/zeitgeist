@@ -134,13 +134,30 @@ macro_rules! decl_common_types {
         >;
 
         // Advisory committee vote proportions
-        // At least 50%
-        type EnsureRootOrHalfAdvisoryCommittee = EitherOfDiverse<
+        // More than 20%
+        type EnsureRootOrMoreThanTwentyPercentAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
-            EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 2, 10>,
         >;
 
-        // Technical committee vote proportions
+        // More than 30%
+        type EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 3, 10>,
+        >;
+
+        // More than 50%
+        type EnsureRootOrMoreThanFiftyPercentAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 2>,
+        >;
+
+        // More than 70%
+        type EnsureRootOrMoreThanSeventyPercentAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 7, 10>,
+        >;
+
         // At least 66%
         type EnsureRootOrTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
@@ -920,7 +937,8 @@ macro_rules! impl_config_traits {
         impl parachain_info::Config for Runtime {}
 
         impl zrml_authorized::Config for Runtime {
-            type AuthorizedDisputeResolutionOrigin = EnsureRootOrHalfAdvisoryCommittee;
+            type AuthorizedDisputeResolutionOrigin =
+                EnsureRootOrMoreThanFiftyPercentAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
@@ -980,13 +998,10 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-            type ApproveOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
-            >;
+            type ApproveOrigin = EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee;
             type Authorized = Authorized;
             type Court = Court;
-            type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+            type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
@@ -1015,11 +1030,8 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
-            type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type RequestEditOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
-            >;
+            type RejectOrigin = EnsureRootOrMoreThanSeventyPercentAdvisoryCommittee;
+            type RequestEditOrigin = EnsureRootOrMoreThanTwentyPercentAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
