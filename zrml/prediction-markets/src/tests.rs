@@ -3042,7 +3042,7 @@ fn start_global_dispute_works() {
             };
             let outcome_info = OutcomeInfo { outcome_sum: Zero::zero(), possession };
             assert_eq!(
-                Outcomes::<Runtime>::get(&market_id, &OutcomeReport::Categorical(0)).unwrap(),
+                Outcomes::<Runtime>::get(market_id, &OutcomeReport::Categorical(0)).unwrap(),
                 outcome_info
             );
             let possession: PossessionOf<Runtime> = Possession::Shared {
@@ -3054,7 +3054,7 @@ fn start_global_dispute_works() {
                     OutcomeInfo { outcome_sum: dispute_bond, possession: possession.clone() };
                 assert_eq!(
                     Outcomes::<Runtime>::get(
-                        &market_id,
+                        market_id,
                         &OutcomeReport::Categorical(i.saturated_into())
                     )
                     .unwrap(),
@@ -3070,7 +3070,7 @@ fn start_global_dispute_works() {
             let vote_end = add_outcome_end + GlobalDisputes::get_vote_period();
             let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(vote_end);
             assert_eq!(market_ids, vec![market_id]);
-            assert!(GlobalDisputes::is_unfinished(&market_id));
+            assert!(GlobalDisputes::is_active(&market_id));
             System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
 
             assert_noop!(

@@ -55,7 +55,7 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 benchmarks! {
     vote_on_outcome {
         // only Outcomes owners, but not GlobalDisputesInfo owners is present during vote_on_outcome
-        let o in 1..T::MaxOwners::get();
+        let o in 2..T::MaxOwners::get();
 
         // ensure we have one vote left for the call
         let v in 0..(T::MaxGlobalDisputeVotes::get() - 1);
@@ -72,16 +72,22 @@ benchmarks! {
         let outcome = OutcomeReport::Scalar(0);
         let amount: BalanceOf<T> = T::MinOutcomeVoteAmount::get().saturated_into();
         deposit::<T>(&caller);
+
+        let mut initial_items: Vec<crate::InitialItemOf<T>> = Vec::new();
         for i in 1..=o {
             let owner = account("outcomes_owner", i, 0);
-            GlobalDisputes::<T>::push_vote_outcome(
-                &market_id,
-                outcome.clone(),
-                &owner,
-                1_000_000_000u128.saturated_into(),
-            )
-            .unwrap();
+            initial_items.push(InitialItem {
+                outcome: outcome.clone(),
+                owner,
+                amount: 1_000_000_000u128.saturated_into(),
+            });
         }
+
+        GlobalDisputes::<T>::start_global_dispute(
+            &market_id,
+            initial_items.as_slice(),
+        )
+        .unwrap();
 
         let mut vote_locks: BoundedVec<(
             MarketIdOf<T>,
@@ -328,7 +334,8 @@ benchmarks! {
 
     purge_outcomes {
         // RemoveKeysLimit - 2 to ensure that we actually fully clean and return at the end
-        let k in 1..(T::RemoveKeysLimit::get() - 2);
+        // at least two voting outcomes
+        let k in 2..(T::RemoveKeysLimit::get() - 2);
 
         let o in 1..T::MaxOwners::get();
 
@@ -336,16 +343,21 @@ benchmarks! {
         let market = market_mock::<T>();
         T::MarketCommons::push_market(market).unwrap();
 
+        let mut initial_items: Vec<crate::InitialItemOf<T>> = Vec::new();
         for i in 1..=k {
             let owner = account("outcomes_owner", i, 0);
-            GlobalDisputes::<T>::push_vote_outcome(
-                &market_id,
-                OutcomeReport::Scalar(i.into()),
-                &owner,
-                1_000_000_000u128.saturated_into(),
-            )
-            .unwrap();
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(i.into()),
+                owner,
+                amount: 1_000_000_000u128.saturated_into(),
+            });
         }
+
+        GlobalDisputes::<T>::start_global_dispute(
+            &market_id,
+            initial_items.as_slice(),
+        )
+        .unwrap();
 
         let mut owners = Vec::new();
         for i in 1..=o {
@@ -383,7 +395,8 @@ benchmarks! {
 
     refund_vote_fees {
         // RemoveKeysLimit - 2 to ensure that we actually fully clean and return at the end
-        let k in 1..(T::RemoveKeysLimit::get() - 2);
+        // at least two voting outcomes
+        let k in 2..(T::RemoveKeysLimit::get() - 2);
 
         let o in 1..T::MaxOwners::get();
 
@@ -391,16 +404,21 @@ benchmarks! {
         let market = market_mock::<T>();
         T::MarketCommons::push_market(market).unwrap();
 
+        let mut initial_items: Vec<crate::InitialItemOf<T>> = Vec::new();
         for i in 1..=k {
             let owner = account("outcomes_owner", i, 0);
-            GlobalDisputes::<T>::push_vote_outcome(
-                &market_id,
-                OutcomeReport::Scalar(i.into()),
-                &owner,
-                1_000_000_000u128.saturated_into(),
-            )
-            .unwrap();
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(i.into()),
+                owner,
+                amount: 1_000_000_000u128.saturated_into(),
+            });
         }
+
+        GlobalDisputes::<T>::start_global_dispute(
+            &market_id,
+            initial_items.as_slice(),
+        )
+        .unwrap();
 
         let mut owners = Vec::new();
         for i in 1..=o {

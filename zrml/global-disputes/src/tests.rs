@@ -20,9 +20,9 @@
 use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     mock::*,
-    types::{GdStatus, GlobalDisputeInfo, OutcomeInfo, Possession},
+    types::{GdStatus, GlobalDisputeInfo, InitialItem, OutcomeInfo, Possession},
     utils::market_mock,
-    BalanceOf, Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
+    BalanceOf, Error, Event, GlobalDisputesInfo, InitialItemOf, Locks, MarketIdOf, Outcomes,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -45,17 +45,13 @@ fn the_lock(amount: u128) -> BalanceLock<u128> {
     BalanceLock { id: GlobalDisputeLockId::get(), amount, reasons: pallet_balances::Reasons::Misc }
 }
 
-fn setup_vote_outcomes_with_hundred(market_id: &MarketIdOf<Runtime>) {
-    GlobalDisputes::push_vote_outcome(market_id, OutcomeReport::Scalar(0), &ALICE, SETUP_AMOUNT)
-        .unwrap();
-
-    GlobalDisputes::push_vote_outcome(market_id, OutcomeReport::Scalar(20), &ALICE, SETUP_AMOUNT)
-        .unwrap();
-    GlobalDisputes::push_vote_outcome(market_id, OutcomeReport::Scalar(40), &ALICE, SETUP_AMOUNT)
-        .unwrap();
-
-    GlobalDisputes::push_vote_outcome(market_id, OutcomeReport::Scalar(60), &ALICE, SETUP_AMOUNT)
-        .unwrap();
+fn get_initial_items() -> Vec<InitialItemOf<Runtime>> {
+    vec![
+        InitialItem { outcome: OutcomeReport::Scalar(0), owner: ALICE, amount: SETUP_AMOUNT },
+        InitialItem { outcome: OutcomeReport::Scalar(20), owner: ALICE, amount: SETUP_AMOUNT },
+        InitialItem { outcome: OutcomeReport::Scalar(40), owner: ALICE, amount: SETUP_AMOUNT },
+        InitialItem { outcome: OutcomeReport::Scalar(60), owner: ALICE, amount: SETUP_AMOUNT },
+    ]
 }
 
 fn set_vote_period() {
@@ -86,8 +82,8 @@ fn add_vote_outcome_works() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         let free_balance_alice_before = Balances::free_balance(&ALICE);
         let free_balance_reward_account =
@@ -124,8 +120,8 @@ fn add_vote_outcome_fails_with_outcome_mismatch() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
@@ -165,7 +161,7 @@ fn add_vote_outcome_fails_if_no_global_dispute_present() {
                 market_id,
                 OutcomeReport::Scalar(20),
             ),
-            Error::<Runtime>::NoGlobalDisputeInitialized
+            Error::<Runtime>::GlobalDisputeNotFound
         );
     });
 }
@@ -199,9 +195,8 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
-
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
         <Outcomes<Runtime>>::insert(
             market_id,
             OutcomeReport::Scalar(20),
@@ -228,8 +223,8 @@ fn add_vote_outcome_fails_if_balance_too_low() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
@@ -393,8 +388,8 @@ fn vote_fails_if_amount_below_min_outcome_vote_amount() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -415,8 +410,8 @@ fn vote_fails_for_insufficient_funds() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         // Paul does not have 50 * BASE
         assert_noop!(
@@ -438,8 +433,8 @@ fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_c
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -471,8 +466,6 @@ fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_c
             42 * BASE
         ));
 
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
-
         assert_eq!(
             &GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
             &OutcomeReport::Scalar(60)
@@ -490,8 +483,8 @@ fn vote_on_outcome_check_event() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -532,23 +525,20 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
             free_balance_disputor_before - reserved_balance_disputor
         );
 
-        GlobalDisputes::push_vote_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            reserved_balance_disputor,
-        )
-        .unwrap();
+        let initial_items = vec![
+            InitialItem {
+                outcome: OutcomeReport::Scalar(0),
+                owner: ALICE,
+                amount: reserved_balance_disputor,
+            },
+            InitialItem {
+                outcome: OutcomeReport::Scalar(20),
+                owner: ALICE,
+                amount: reserved_balance_disputor * 2,
+            },
+        ];
 
-        GlobalDisputes::push_vote_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            &ALICE,
-            reserved_balance_disputor * 2,
-        )
-        .unwrap();
-
-        GlobalDisputes::start_global_dispute(&market_id).unwrap();
+        GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()).unwrap();
 
         set_vote_period();
 
@@ -585,9 +575,8 @@ fn transfer_fails_with_fully_locked_balance() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -623,8 +612,8 @@ fn reserve_fails_with_fully_locked_balance() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -660,8 +649,8 @@ fn determine_voting_winner_works_four_outcome_votes() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -715,8 +704,8 @@ fn determine_voting_winner_works_three_outcome_votes() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -764,8 +753,8 @@ fn determine_voting_winner_works_two_outcome_votes() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -813,8 +802,8 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -876,8 +865,8 @@ fn purge_outcomes_fully_cleaned_works() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -919,17 +908,16 @@ fn purge_outcomes_partially_cleaned_works() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
+        let mut initial_items = Vec::new();
         for i in 0..(2 * RemoveKeysLimit::get()) {
-            GlobalDisputes::push_vote_outcome(
-                &market_id,
-                OutcomeReport::Scalar(i.into()),
-                &ALICE,
-                SETUP_AMOUNT,
-            )
-            .unwrap();
+            initial_items.push(InitialItem {
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(i.into()),
+                amount: SETUP_AMOUNT,
+            });
         }
 
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
@@ -955,26 +943,24 @@ fn refund_vote_fees_works() {
         Markets::<Runtime>::insert(market_id, &market);
 
         let pushed_outcome_1 = 0;
-        GlobalDisputes::push_vote_outcome(
-            &market_id,
-            OutcomeReport::Scalar(pushed_outcome_1),
-            &ALICE,
-            SETUP_AMOUNT,
-        )
-        .unwrap();
-
         let pushed_outcome_2 = 20;
-        GlobalDisputes::push_vote_outcome(
-            &market_id,
-            OutcomeReport::Scalar(pushed_outcome_2),
-            &ALICE,
-            SETUP_AMOUNT,
-        )
-        .unwrap();
+
+        let initial_items = vec![
+            InitialItem {
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(pushed_outcome_1),
+                amount: SETUP_AMOUNT,
+            },
+            InitialItem {
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(pushed_outcome_2),
+                amount: SETUP_AMOUNT,
+            },
+        ];
 
         let offset = pushed_outcome_1.max(pushed_outcome_2) + 1;
 
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         let mut overall_fees = <BalanceOf<Runtime>>::zero();
         // minus 2 because of the above push_vote_outcome calls
@@ -1017,8 +1003,8 @@ fn unlock_clears_lock_info() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -1046,16 +1032,14 @@ fn vote_fails_if_outcome_does_not_exist() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        GlobalDisputes::push_vote_outcome(&market_id, OutcomeReport::Scalar(0), &ALICE, 10 * BASE)
-            .unwrap();
-        GlobalDisputes::push_vote_outcome(&market_id, OutcomeReport::Scalar(20), &ALICE, 20 * BASE)
-            .unwrap();
-        GlobalDisputes::push_vote_outcome(&market_id, OutcomeReport::Scalar(40), &ALICE, 30 * BASE)
-            .unwrap();
-        GlobalDisputes::push_vote_outcome(&market_id, OutcomeReport::Scalar(60), &ALICE, 40 * BASE)
-            .unwrap();
+        let initial_items = vec![
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(0), amount: 10 * BASE },
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(20), amount: 20 * BASE },
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(40), amount: 30 * BASE },
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(60), amount: 40 * BASE },
+        ];
 
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -1078,8 +1062,8 @@ fn locking_works_for_one_market() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -1173,10 +1157,10 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         let market_2 = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id_2, &market_2);
 
-        setup_vote_outcomes_with_hundred(&market_id_1);
-        setup_vote_outcomes_with_hundred(&market_id_2);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1));
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1, initial_items.as_slice()));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2, initial_items.as_slice()));
 
         set_vote_period();
 
@@ -1272,10 +1256,10 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         let market_2 = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id_2, &market_2);
 
-        setup_vote_outcomes_with_hundred(&market_id_1);
-        setup_vote_outcomes_with_hundred(&market_id_2);
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1));
-        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1, initial_items.as_slice()));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2, initial_items.as_slice()));
 
         set_vote_period();
 

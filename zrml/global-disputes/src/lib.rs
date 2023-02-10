@@ -31,10 +31,11 @@ pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
 pub use pallet::*;
 
 pub type PossessionOf<T> = crate::types::Possession<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
+pub type InitialItemOf<T> = crate::types::InitialItem<AccountIdOf<T>, BalanceOf<T>>;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
+    use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi, InitialItemOf};
     use core::marker::PhantomData;
     use frame_support::{
         ensure, log,
@@ -229,9 +230,7 @@ mod pallet {
         /// The amount in the reward pot is zero.
         NoFundsToReward,
         /// No global dispute present at the moment.
-        NoGlobalDisputeInitialized,
-        /// The global dispute has to be in initialized state during the initial outcome setup.
-        NotInitialized,
+        GlobalDisputeNotFound,
         /// The voting outcome has been already added.
         OutcomeAlreadyExists,
         /// The outcome specified is not present in the voting outcomes.
@@ -250,6 +249,8 @@ mod pallet {
         NotInGdVotingPeriod,
         /// The operation requires a global dispute in a destroyed state.
         GlobalDisputeNotDestroyed,
+        /// The global dispute was already started.
+        GlobalDisputeAlreadyExists,
     }
 
     #[pallet::call]
@@ -279,8 +280,8 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
 
-            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
-                .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+            let gd_info =
+                <GlobalDisputesInfo<T>>::get(market_id).ok_or(Error::<T>::GlobalDisputeNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             if let GdStatus::Active { add_outcome_end, vote_end: _ } = gd_info.status {
                 ensure!(now <= add_outcome_end, Error::<T>::AddOutcomePeriodIsOver);
@@ -337,8 +338,8 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
-                .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+            let gd_info =
+                <GlobalDisputesInfo<T>>::get(market_id).ok_or(Error::<T>::GlobalDisputeNotFound)?;
             ensure!(gd_info.status == GdStatus::Destroyed, Error::<T>::GlobalDisputeNotDestroyed);
 
             let mut owners_len = 0u32;
@@ -394,8 +395,8 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let mut gd_info = <GlobalDisputesInfo<T>>::get(market_id)
-                .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+            let mut gd_info =
+                <GlobalDisputesInfo<T>>::get(market_id).ok_or(Error::<T>::GlobalDisputeNotFound)?;
             ensure!(gd_info.status == GdStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let winning_outcome: Option<OutcomeInfoOf<T>> =
@@ -458,8 +459,8 @@ mod pallet {
                 <Error<T>>::OutcomesNotFullyCleaned
             );
 
-            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
-                .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+            let gd_info =
+                <GlobalDisputesInfo<T>>::get(market_id).ok_or(Error::<T>::GlobalDisputeNotFound)?;
             ensure!(gd_info.status == GdStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let reward_account = Self::reward_account(&market_id);
@@ -511,8 +512,8 @@ mod pallet {
             ensure!(amount <= voter_free_balance, Error::<T>::InsufficientAmount);
             ensure!(amount >= T::MinOutcomeVoteAmount::get(), Error::<T>::AmountTooLow);
 
-            let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
-                .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+            let gd_info =
+                <GlobalDisputesInfo<T>>::get(market_id).ok_or(Error::<T>::GlobalDisputeNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             if let GdStatus::Active { add_outcome_end, vote_end } = gd_info.status {
                 ensure!(add_outcome_end < now && now <= vote_end, Error::<T>::NotInGdVotingPeriod);
@@ -679,6 +680,7 @@ mod pallet {
                 market_id,
                 |highest: &mut Option<GlobalDisputeInfoOf<T>>| {
                     *highest = Some(highest.clone().map_or(
+                        // if never a highest was present set the first here
                         GlobalDisputeInfo::new(outcome.clone(), outcome_info.possession, amount),
                         |mut prev_gd_info| {
                             if amount >= prev_gd_info.outcome_info.outcome_sum {
@@ -766,49 +768,6 @@ mod pallet {
             T::GdVotingPeriod::get()
         }
 
-        fn push_vote_outcome(
-            market_id: &MarketIdOf<T>,
-            outcome: OutcomeReport,
-            owner: &T::AccountId,
-            initial_vote_balance: BalanceOf<T>,
-        ) -> DispatchResult {
-            let market = T::MarketCommons::market(market_id)?;
-            ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-
-            if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
-                ensure!(gd_info.status == GdStatus::Initialized, Error::<T>::NotInitialized);
-            }
-
-            match <Outcomes<T>>::get(market_id, &outcome) {
-                Some(mut outcome_info) => {
-                    let outcome_sum = outcome_info.outcome_sum.saturating_add(initial_vote_balance);
-                    outcome_info.outcome_sum = outcome_sum;
-                    let mut owners = outcome_info
-                        .possession
-                        .get_shared_owners()
-                        .ok_or(Error::<T>::SharedPossessionRequired)?;
-                    owners.try_push(owner.clone()).map_err(|_| Error::<T>::MaxOwnersReached)?;
-                    outcome_info.possession = Possession::Shared { owners };
-                    Self::update_winner(market_id, &outcome, outcome_info.clone());
-                    <Outcomes<T>>::insert(market_id, outcome, outcome_info);
-                }
-                None => {
-                    // adding one item to BoundedVec can not fail
-                    if let Ok(owners) = BoundedVec::try_from(vec![owner.clone()]) {
-                        let possession = Possession::Shared { owners };
-                        let outcome_info =
-                            OutcomeInfo { outcome_sum: initial_vote_balance, possession };
-                        Self::update_winner(market_id, &outcome, outcome_info.clone());
-                        <Outcomes<T>>::insert(market_id, outcome, outcome_info);
-                    } else {
-                        log::error!("Global Disputes: Could not construct a bounded vector.");
-                        debug_assert!(false);
-                    }
-                }
-            }
-            Ok(())
-        }
-
         fn determine_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
             match <GlobalDisputesInfo<T>>::get(market_id) {
                 Some(mut gd_info) => {
@@ -828,24 +787,58 @@ mod pallet {
             <GlobalDisputesInfo<T>>::get(market_id).is_some()
         }
 
-        fn is_unfinished(market_id: &MarketIdOf<T>) -> bool {
+        fn is_active(market_id: &MarketIdOf<T>) -> bool {
             if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
-                return matches!(
-                    gd_info.status,
-                    GdStatus::Active { add_outcome_end: _, vote_end: _ } | GdStatus::Initialized
-                );
+                if let GdStatus::Active { add_outcome_end: _, vote_end: _ } = gd_info.status {
+                    return true;
+                }
             }
             false
         }
 
-        fn start_global_dispute(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
-            T::MarketCommons::market(market_id)?;
+        fn start_global_dispute(
+            market_id: &MarketIdOf<T>,
+            initial_items: &[InitialItemOf<T>],
+        ) -> Result<u32, DispatchError> {
+            let market = T::MarketCommons::market(market_id)?;
 
-            let mut iter = <Outcomes<T>>::iter_prefix(market_id);
             ensure!(
-                iter.next().is_some() && iter.next().is_some(),
-                Error::<T>::AtLeastTwoOutcomesRequired
+                <GlobalDisputesInfo<T>>::get(market_id).is_none(),
+                Error::<T>::GlobalDisputeAlreadyExists
             );
+
+            ensure!(initial_items.len() >= 2, Error::<T>::AtLeastTwoOutcomesRequired);
+
+            for InitialItem { outcome, owner, amount } in initial_items {
+                ensure!(market.matches_outcome_report(outcome), Error::<T>::OutcomeMismatch);
+
+                match <Outcomes<T>>::get(market_id, outcome) {
+                    Some(mut outcome_info) => {
+                        let outcome_sum = outcome_info.outcome_sum.saturating_add(*amount);
+                        outcome_info.outcome_sum = outcome_sum;
+                        let mut owners = outcome_info
+                            .possession
+                            .get_shared_owners()
+                            .ok_or(Error::<T>::SharedPossessionRequired)?;
+                        owners.try_push(owner.clone()).map_err(|_| Error::<T>::MaxOwnersReached)?;
+                        outcome_info.possession = Possession::Shared { owners };
+                        Self::update_winner(market_id, outcome, outcome_info.clone());
+                        <Outcomes<T>>::insert(market_id, outcome, outcome_info);
+                    }
+                    None => {
+                        // adding one item to BoundedVec can not fail
+                        if let Ok(owners) = BoundedVec::try_from(vec![owner.clone()]) {
+                            let possession = Possession::Shared { owners };
+                            let outcome_info = OutcomeInfo { outcome_sum: *amount, possession };
+                            Self::update_winner(market_id, outcome, outcome_info.clone());
+                            <Outcomes<T>>::insert(market_id, outcome, outcome_info);
+                        } else {
+                            log::error!("Global Disputes: Could not construct a bounded vector.");
+                            debug_assert!(false);
+                        }
+                    }
+                }
+            }
 
             let now = <frame_system::Pallet<T>>::block_number();
             let add_outcome_end = now.saturating_add(T::AddOutcomePeriod::get());
@@ -853,8 +846,7 @@ mod pallet {
             let ids_len = T::DisputeResolution::add_auto_resolve(market_id, vote_end)?;
 
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| -> DispatchResult {
-                let mut raw_gd_info =
-                    gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+                let mut raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
                 raw_gd_info.status = GdStatus::Active { add_outcome_end, vote_end };
                 *gd_info = Some(raw_gd_info.clone());
                 Ok(())
@@ -865,8 +857,7 @@ mod pallet {
 
         fn destroy_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| {
-                let mut raw_gd_info =
-                    gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
+                let mut raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
                 raw_gd_info.status = GdStatus::Destroyed;
                 if let GdStatus::Active { add_outcome_end: _, vote_end } = raw_gd_info.status {
                     T::DisputeResolution::remove_auto_resolve(market_id, vote_end);

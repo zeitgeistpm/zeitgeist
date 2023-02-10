@@ -17,7 +17,8 @@
 
 extern crate alloc;
 
-use sp_runtime::{DispatchError, DispatchResult};
+use crate::types::InitialItem;
+use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::OutcomeReport;
 
 /// The trait to initiate and resolve the global disputes.
@@ -28,19 +29,15 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// Return the `GdVotingPeriod` parameter.
     fn get_vote_period() -> BlockNumber;
 
-    /// Push a voting outcome for one global dispute.
+    /// Start a global dispute.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    /// - `outcome` - The voting outcome to push.
-    /// - `owner` - The owner of the outcome.
-    /// - `initial_vote_balance` - The initial vote amount for the specified outcome.
-    fn push_vote_outcome(
+    /// - `initial_items` - The initial items (outcome, owner, amount) to add to the global dispute.
+    fn start_global_dispute(
         market_id: &MarketId,
-        outcome: OutcomeReport,
-        owner: &AccountId,
-        initial_vote_balance: Balance,
-    ) -> DispatchResult;
+        initial_items: &[InitialItem<AccountId, Balance>],
+    ) -> Result<u32, DispatchError>;
 
     /// Determine the winner of a global dispute.
     ///
@@ -55,18 +52,12 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// Check if a global dispute exists for the specified market.
     fn does_exist(market_id: &MarketId) -> bool;
 
-    /// Check if global dispute is active or initialized. But not finished.
+    /// Check if global dispute is active.
     /// This call is useful to check if a global dispute is ready for a destruction.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    fn is_unfinished(market_id: &MarketId) -> bool;
-
-    /// Start a global dispute.
-    ///
-    /// # Arguments
-    /// - `market_id` - The id of the market.
-    fn start_global_dispute(market_id: &MarketId) -> Result<u32, DispatchError>;
+    fn is_active(market_id: &MarketId) -> bool;
 
     /// Destroy a global dispute and allow to return all funds of the participants.
     ///

@@ -59,7 +59,7 @@ pub struct GlobalDisputeInfo<AccountId, Balance, OwnerInfo, BlockNumber> {
     pub status: GdStatus<BlockNumber>,
 }
 
-impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber>
+impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber: Default>
     GlobalDisputeInfo<AccountId, Balance, OwnerInfo, BlockNumber>
 {
     pub fn new(
@@ -68,7 +68,10 @@ impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber>
         vote_sum: Balance,
     ) -> Self {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
-        GlobalDisputeInfo { winner_outcome: outcome, status: GdStatus::Initialized, outcome_info }
+        // `add_outcome_end` and `vote_end` gets set in `start_global_dispute`
+        let status =
+            GdStatus::Active { add_outcome_end: Default::default(), vote_end: Default::default() };
+        GlobalDisputeInfo { winner_outcome: outcome, status, outcome_info }
     }
 
     pub fn update_winner(&mut self, outcome: OutcomeReport, vote_sum: Balance) {
@@ -80,8 +83,6 @@ impl<AccountId, Balance: Saturating, OwnerInfo: Default, BlockNumber>
 /// The current status of the global dispute.
 #[derive(TypeInfo, Debug, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
 pub enum GdStatus<BlockNumber> {
-    /// The global dispute is initialized.
-    Initialized,
     /// The global dispute is in progress.
     /// The block number `add_outcome_end`, when the addition of new outcomes is over.
     /// The block number `vote_end`, when the global dispute voting period is over.
@@ -119,4 +120,10 @@ impl<Balance: Saturating, OwnerInfo: Default> OldWinnerInfo<Balance, OwnerInfo> 
         let outcome_info = OldOutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
         OldWinnerInfo { outcome, is_finished: false, outcome_info }
     }
+}
+
+pub struct InitialItem<AccountId, Balance> {
+    pub outcome: OutcomeReport,
+    pub owner: AccountId,
+    pub amount: Balance,
 }

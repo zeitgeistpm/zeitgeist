@@ -70,7 +70,7 @@ mod pallet {
         },
     };
     #[cfg(feature = "with-global-disputes")]
-    use zrml_global_disputes::GlobalDisputesPalletApi;
+    use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
 
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -98,6 +98,8 @@ mod pallet {
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
+    #[cfg(feature = "with-global-disputes")]
+    type InitialItemOf<T> = InitialItem<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
 
     macro_rules! impl_unreserve_bond {
         ($fn_name:ident, $bond_type:ident) => {
@@ -344,7 +346,7 @@ mod pallet {
             }
 
             #[cfg(feature = "with-global-disputes")]
-            if T::GlobalDisputes::is_unfinished(&market_id) {
+            if T::GlobalDisputes::is_active(&market_id) {
                 T::GlobalDisputes::destroy_global_dispute(&market_id)?;
             }
 
@@ -1472,24 +1474,24 @@ mod pallet {
                     Error::<T>::GlobalDisputeExistsAlready
                 );
 
+                let mut initial_items: Vec<InitialItemOf<T>> = Vec::new();
+
                 // add report outcome to voting choices
                 if let Some(report) = &market.report {
-                    T::GlobalDisputes::push_vote_outcome(
-                        &market_id,
-                        report.outcome.clone(),
-                        &report.by,
-                        <BalanceOf<T>>::zero(),
-                    )?;
+                    initial_items.push(InitialItemOf::<T> {
+                        outcome: report.outcome.clone(),
+                        owner: report.by.clone(),
+                        amount: <BalanceOf<T>>::zero(),
+                    });
                 }
 
                 for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
                     let dispute_bond = default_dispute_bond::<T>(index);
-                    T::GlobalDisputes::push_vote_outcome(
-                        &market_id,
-                        outcome.clone(),
-                        by,
-                        dispute_bond,
-                    )?;
+                    initial_items.push(InitialItemOf::<T> {
+                        outcome: outcome.clone(),
+                        owner: by.clone(),
+                        amount: dispute_bond,
+                    });
                 }
 
                 // ensure, that global disputes controls the resolution now
@@ -1499,7 +1501,8 @@ mod pallet {
                 let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
 
                 // global disputes uses DisputeResolution API to control its resolution
-                let ids_len_1 = T::GlobalDisputes::start_global_dispute(&market_id)?;
+                let ids_len_1 =
+                    T::GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice())?;
 
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
