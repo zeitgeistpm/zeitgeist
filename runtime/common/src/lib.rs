@@ -45,11 +45,19 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
+        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
+
+        // Migration for scheduler pallet to move from a plain RuntimeCall to a CallOrHash.
+        pub struct SchedulerMigrationV1toV4;
+        impl OnRuntimeUpgrade for SchedulerMigrationV1toV4 {
+            fn on_runtime_upgrade() -> frame_support::weights::Weight {
+                Scheduler::migrate_v1_to_v4()
+            }
+        }
 
         #[cfg(feature = "parachain")]
         pub type Executive = frame_executive::Executive<
@@ -59,10 +67,10 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                SchedulerMigrationV1toV4,
                 pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
                 pallet_preimage::migration::v1::Migration<Runtime>,
                 pallet_democracy::migrations::v1::Migration<Runtime>,
-                pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
                 zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
             ),
         >;
@@ -75,10 +83,10 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                SchedulerMigrationV1toV4,
                 pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
                 pallet_preimage::migration::v1::Migration<Runtime>,
                 pallet_democracy::migrations::v1::Migration<Runtime>,
-                pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
                 zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
             ),
         >;
