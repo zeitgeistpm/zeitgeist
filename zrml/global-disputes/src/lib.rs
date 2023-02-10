@@ -64,7 +64,7 @@ mod pallet {
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
     pub type OutcomeInfoOf<T> = OutcomeInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
-    pub type GDInfoOf<T> = GDInfo<
+    pub type GlobalDisputeInfoOf<T> = GlobalDisputeInfo<
         AccountIdOf<T>,
         BalanceOf<T>,
         OwnerInfoOf<T>,
@@ -173,7 +173,7 @@ mod pallet {
     /// about the global dispute.
     #[pallet::storage]
     pub type GlobalDisputesInfo<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, GDInfoOf<T>, OptionQuery>;
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, GlobalDisputeInfoOf<T>, OptionQuery>;
 
     // TODO(#986): to remove after the storage migration
     #[pallet::storage]
@@ -283,7 +283,7 @@ mod pallet {
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
             let now = <frame_system::Pallet<T>>::block_number();
-            if let GDStatus::Active { add_outcome_end, vote_end: _ } = gd_info.status {
+            if let GdStatus::Active { add_outcome_end, vote_end: _ } = gd_info.status {
                 ensure!(now <= add_outcome_end, Error::<T>::AddOutcomePeriodIsOver);
             } else {
                 return Err(Error::<T>::InvalidGlobalDisputeStatus.into());
@@ -341,7 +341,7 @@ mod pallet {
 
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-            ensure!(gd_info.status == GDStatus::Destroyed, Error::<T>::GlobalDisputeNotDestroyed);
+            ensure!(gd_info.status == GdStatus::Destroyed, Error::<T>::GlobalDisputeNotDestroyed);
 
             let mut owners_len = 0u32;
             let mut removed_keys_amount = 0u32;
@@ -399,7 +399,7 @@ mod pallet {
 
             let mut gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-            ensure!(gd_info.status == GDStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
+            ensure!(gd_info.status == GdStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let winning_outcome: Option<OutcomeInfoOf<T>> =
                 <Outcomes<T>>::get(market_id, &gd_info.winner_outcome);
@@ -463,7 +463,7 @@ mod pallet {
 
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-            ensure!(gd_info.status == GDStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
+            ensure!(gd_info.status == GdStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let reward_account = Self::reward_account(&market_id);
             let reward_account_free_balance = T::Currency::free_balance(&reward_account);
@@ -518,7 +518,7 @@ mod pallet {
             let gd_info = <GlobalDisputesInfo<T>>::get(market_id)
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
             let now = <frame_system::Pallet<T>>::block_number();
-            if let GDStatus::Active { add_outcome_end, vote_end } = gd_info.status {
+            if let GdStatus::Active { add_outcome_end, vote_end } = gd_info.status {
                 ensure!(add_outcome_end < now && now <= vote_end, Error::<T>::NotInVotePeriod);
             } else {
                 return Err(Error::<T>::InvalidGlobalDisputeStatus.into());
@@ -622,7 +622,7 @@ mod pallet {
                 // weight component MaxOwners comes from querying the winner information
                 match <GlobalDisputesInfo<T>>::get(market_id) {
                     Some(gd_info) => {
-                        if matches!(gd_info.status, GDStatus::Finished | GDStatus::Destroyed) {
+                        if matches!(gd_info.status, GdStatus::Finished | GdStatus::Destroyed) {
                             false
                         } else {
                             lock_needed = lock_needed.max(locked_balance);
@@ -675,9 +675,9 @@ mod pallet {
         }
 
         fn update_winner(market_id: &MarketIdOf<T>, outcome: &OutcomeReport, amount: BalanceOf<T>) {
-            <GlobalDisputesInfo<T>>::mutate(market_id, |highest: &mut Option<GDInfoOf<T>>| {
+            <GlobalDisputesInfo<T>>::mutate(market_id, |highest: &mut Option<GlobalDisputeInfoOf<T>>| {
                 *highest = Some(highest.clone().map_or(
-                    GDInfo::new(outcome.clone(), amount),
+                    GlobalDisputeInfo::new(outcome.clone(), amount),
                     |mut prev_gd_info| {
                         if amount >= prev_gd_info.outcome_info.outcome_sum {
                             prev_gd_info.update_winner(outcome.clone(), amount);
@@ -767,7 +767,7 @@ mod pallet {
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
 
             if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
-                ensure!(gd_info.status == GDStatus::Initialized, Error::<T>::NotInitialized);
+                ensure!(gd_info.status == GdStatus::Initialized, Error::<T>::NotInitialized);
             }
 
             match <Outcomes<T>>::get(market_id, &outcome) {
@@ -818,7 +818,7 @@ mod pallet {
         fn determine_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
             match <GlobalDisputesInfo<T>>::get(market_id) {
                 Some(mut gd_info) => {
-                    gd_info.status = GDStatus::Finished;
+                    gd_info.status = GdStatus::Finished;
                     let winner_outcome = gd_info.winner_outcome.clone();
                     <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
                     Self::deposit_event(Event::GlobalDisputeWinnerDetermined {
@@ -838,7 +838,7 @@ mod pallet {
             if let Some(gd_info) = <GlobalDisputesInfo<T>>::get(market_id) {
                 return matches!(
                     gd_info.status,
-                    GDStatus::Active { add_outcome_end: _, vote_end: _ } | GDStatus::Initialized
+                    GdStatus::Active { add_outcome_end: _, vote_end: _ } | GdStatus::Initialized
                 );
             }
             false
@@ -861,7 +861,7 @@ mod pallet {
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| -> DispatchResult {
                 let mut raw_gd_info =
                     gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-                raw_gd_info.status = GDStatus::Active { add_outcome_end, vote_end };
+                raw_gd_info.status = GdStatus::Active { add_outcome_end, vote_end };
                 *gd_info = Some(raw_gd_info.clone());
                 Ok(())
             })?;
@@ -873,8 +873,8 @@ mod pallet {
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| {
                 let mut raw_gd_info =
                     gd_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
-                raw_gd_info.status = GDStatus::Destroyed;
-                if let GDStatus::Active { add_outcome_end: _, vote_end } = raw_gd_info.status {
+                raw_gd_info.status = GdStatus::Destroyed;
+                if let GdStatus::Active { add_outcome_end: _, vote_end } = raw_gd_info.status {
                     T::DisputeResolution::remove_auto_resolve(market_id, vote_end);
                 }
                 *gd_info = Some(raw_gd_info.clone());

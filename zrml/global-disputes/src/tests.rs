@@ -21,7 +21,7 @@
 use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     mock::*,
-    types::{GDInfo, GDStatus, OutcomeInfo, Possession},
+    types::{GlobalDisputeInfo, GdStatus, OutcomeInfo, Possession},
     utils::market_mock,
     BalanceOf, Error, Event, GlobalDisputesInfo, Locks, MarketIdOf, Outcomes,
 };
@@ -179,8 +179,8 @@ fn add_vote_outcome_fails_if_global_dispute_finished() {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
-        let mut gd_info = GDInfo::new(OutcomeReport::Scalar(0), 10 * BASE);
-        gd_info.status = GDStatus::Finished;
+        let mut gd_info = GlobalDisputeInfo::new(OutcomeReport::Scalar(0), 10 * BASE);
+        gd_info.status = GdStatus::Finished;
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
         assert_noop!(
@@ -262,9 +262,9 @@ fn reward_outcome_owner_works_for_multiple_owners() {
             &GlobalDisputes::reward_account(&market_id),
             3 * VotingOutcomeFee::get(),
         );
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(20),
-            status: GDStatus::Finished,
+            status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 10 * BASE,
                 possession: Some(Possession::Shared { owners: Default::default() }),
@@ -319,9 +319,9 @@ fn reward_outcome_owner_has_dust() {
             },
         );
         let _ = Balances::deposit_creating(&GlobalDisputes::reward_account(&market_id), 100 * BASE);
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(20),
-            status: GDStatus::Finished,
+            status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 10 * BASE,
                 possession: Some(Possession::Shared { owners: Default::default() }),
@@ -357,9 +357,9 @@ fn reward_outcome_owner_works_for_one_owner() {
             &GlobalDisputes::reward_account(&market_id),
             3 * VotingOutcomeFee::get(),
         );
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(20),
-            status: GDStatus::Finished,
+            status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 10 * BASE,
                 possession: Some(Possession::Shared {
@@ -707,7 +707,7 @@ fn determine_voting_winner_works_four_outcome_votes() {
 
         assert_eq!(
             <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap().status,
-            GDStatus::Finished
+            GdStatus::Finished
         );
     });
 }

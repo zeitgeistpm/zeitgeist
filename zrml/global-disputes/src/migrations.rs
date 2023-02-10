@@ -75,10 +75,10 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
 
             let outcome_info =
                 OutcomeInfo { outcome_sum: winner_info.outcome_info.outcome_sum, possession };
-            let gd_info = GDInfo {
+            let gd_info = GlobalDisputeInfo {
                 winner_outcome: winner_info.outcome,
                 outcome_info,
-                status: GDStatus::Finished,
+                status: GdStatus::Finished,
             };
             crate::GlobalDisputesInfo::<T>::insert(market_id, gd_info);
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -141,7 +141,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
         let mut markets_count = 0_u32;
         let old_counter_key = "counter_key".to_string();
         for (market_id, gd_info) in crate::GlobalDisputesInfo::<T>::iter() {
-            let GDInfo { winner_outcome, outcome_info, status } = gd_info;
+            let GlobalDisputeInfo { winner_outcome, outcome_info, status } = gd_info;
 
             let market_id_str = format!("{:?}", market_id);
 
@@ -150,7 +150,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
                     .unwrap_or_else(|| panic!("old value not found for market id {:?}", market_id));
 
             assert_eq!(winner_outcome, winner_info.outcome);
-            assert_eq!(status, GDStatus::Finished);
+            assert_eq!(status, GdStatus::Finished);
 
             let owners = winner_info.outcome_info.owners;
             let owners_len = owners.len();
@@ -235,10 +235,10 @@ mod tests {
 
             let new_outcome_info = OutcomeInfo { outcome_sum, possession };
 
-            let expected = GDInfo {
+            let expected = GlobalDisputeInfo {
                 winner_outcome: outcome,
                 outcome_info: new_outcome_info,
-                status: GDStatus::Finished,
+                status: GdStatus::Finished,
             };
 
             let actual = crate::GlobalDisputesInfo::<Runtime>::get(market_id).unwrap();
@@ -271,10 +271,10 @@ mod tests {
 
             let new_outcome_info = OutcomeInfo { outcome_sum, possession };
 
-            let expected = GDInfo {
+            let expected = GlobalDisputeInfo {
                 winner_outcome: outcome,
                 outcome_info: new_outcome_info,
-                status: GDStatus::Finished,
+                status: GdStatus::Finished,
             };
 
             let actual = crate::GlobalDisputesInfo::<Runtime>::get(market_id).unwrap();

@@ -54,21 +54,21 @@ pub struct OutcomeInfo<AccountId, Balance, Owners> {
 
 /// The general information about the global dispute.
 #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct GDInfo<AccountId, Balance, Owners, BlockNumber> {
+pub struct GlobalDisputeInfo<AccountId, Balance, Owners, BlockNumber> {
     /// The outcome which is in the lead.
     pub winner_outcome: OutcomeReport,
     /// The information about the winning outcome.
     pub outcome_info: OutcomeInfo<AccountId, Balance, Owners>,
     /// The current status of the global dispute.
-    pub status: GDStatus<BlockNumber>,
+    pub status: GdStatus<BlockNumber>,
 }
 
 impl<AccountId, Balance: Saturating, Owners: Default, BlockNumber>
-    GDInfo<AccountId, Balance, Owners, BlockNumber>
+    GlobalDisputeInfo<AccountId, Balance, Owners, BlockNumber>
 {
     pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession: None };
-        GDInfo { winner_outcome: outcome, status: GDStatus::Initialized, outcome_info }
+        GlobalDisputeInfo { winner_outcome: outcome, status: GdStatus::Initialized, outcome_info }
     }
 
     pub fn update_winner(&mut self, outcome: OutcomeReport, vote_sum: Balance) {
@@ -78,7 +78,7 @@ impl<AccountId, Balance: Saturating, Owners: Default, BlockNumber>
 }
 
 #[derive(TypeInfo, Debug, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub enum GDStatus<BlockNumber> {
+pub enum GdStatus<BlockNumber> {
     /// The global dispute is initialized.
     Initialized,
     /// The global dispute is in progress. Save the addition of outcome end and vote end.

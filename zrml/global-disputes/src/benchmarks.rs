@@ -103,9 +103,9 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
         let vote_end = add_outcome_end + T::VotePeriod::get();
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: outcome.clone(),
-            status: GDStatus::Active { add_outcome_end, vote_end },
+            status: GdStatus::Active { add_outcome_end, vote_end },
             outcome_info,
         };
         <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
@@ -142,9 +142,9 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
         let vote_end = add_outcome_end + T::VotePeriod::get();
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: outcome,
-            status: GDStatus::Active { add_outcome_end, vote_end },
+            status: GdStatus::Active { add_outcome_end, vote_end },
             outcome_info
         };
 
@@ -187,7 +187,7 @@ benchmarks! {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         // is_finished is true,
         // because we need `lock_needed` to be zero to remove all locks.
-        let gd_info = GDInfo {winner_outcome: outcome, status: GDStatus::Finished, outcome_info};
+        let gd_info = GlobalDisputeInfo {winner_outcome: outcome, status: GdStatus::Finished, outcome_info};
 
         let caller: T::AccountId = whitelisted_caller();
         let voter: T::AccountId = account("voter", 0, 0);
@@ -235,9 +235,9 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
         let vote_end = add_outcome_end + T::VotePeriod::get();
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(0),
-            status: GDStatus::Active { add_outcome_end, vote_end },
+            status: GdStatus::Active { add_outcome_end, vote_end },
             outcome_info,
         };
 
@@ -280,9 +280,9 @@ benchmarks! {
         }
         let owners = BoundedVec::try_from(owners_vec.clone()).unwrap();
         let possession = Some(Possession::Shared { owners });
-        let gd_info = GDInfo {
+        let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(0),
-            status: GDStatus::Finished,
+            status: GdStatus::Finished,
             outcome_info: OutcomeInfo {
                 outcome_sum: 42u128.saturated_into(),
                 possession,
@@ -367,7 +367,7 @@ benchmarks! {
             outcome_sum: 42u128.saturated_into(),
             possession,
         };
-        let gd_info = GDInfo {winner_outcome, status: GDStatus::Finished, outcome_info};
+        let gd_info = GlobalDisputeInfo {winner_outcome, status: GdStatus::Finished, outcome_info};
         <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
 
         let caller: T::AccountId = whitelisted_caller();
@@ -422,7 +422,7 @@ benchmarks! {
             outcome_sum: 42u128.saturated_into(),
             possession,
         };
-        let gd_info = GDInfo {winner_outcome, status: GDStatus::Destroyed, outcome_info};
+        let gd_info = GlobalDisputeInfo {winner_outcome, status: GdStatus::Destroyed, outcome_info};
         <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
 
         let caller: T::AccountId = whitelisted_caller();
