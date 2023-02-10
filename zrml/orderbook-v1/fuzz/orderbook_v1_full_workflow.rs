@@ -21,7 +21,7 @@ use frame_system::ensure_signed;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
 use zrml_orderbook_v1::{
-    mock::{ExtBuilder, Orderbook, Origin},
+    mock::{ExtBuilder, Orderbook, RuntimeOrigin},
     OrderSide,
 };
 
