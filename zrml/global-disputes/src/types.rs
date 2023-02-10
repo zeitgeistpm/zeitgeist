@@ -89,17 +89,6 @@ pub enum GdStatus<BlockNumber> {
     Destroyed,
 }
 
-/// Relevant details about a reward.
-pub struct RewardInfo<MarketId, AccountId, Balance> {
-    /// The market id of the market, which was resolved by a global dispute.
-    pub market_id: MarketId,
-    /// The amount of the reward.
-    /// It is equal to the free balance of source.
-    pub reward: Balance,
-    /// The account which holds the reward.
-    pub source: AccountId,
-}
-
 // TODO(#986): to remove after the storage migration
 
 /// The information about a voting outcome of a global dispute.

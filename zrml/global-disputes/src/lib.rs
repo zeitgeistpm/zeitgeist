@@ -74,7 +74,6 @@ mod pallet {
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
-    type RewardInfoOf<T> = RewardInfo<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>>;
 
     // TODO(#968): to remove after the storage migration
     pub type WinnerInfoOf<T> = OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
@@ -469,19 +468,19 @@ mod pallet {
             let reward_account_free_balance = T::Currency::free_balance(&reward_account);
             ensure!(!reward_account_free_balance.is_zero(), Error::<T>::NoFundsToReward);
 
-            let reward_info = RewardInfo {
-                market_id,
-                reward: reward_account_free_balance,
-                source: reward_account,
-            };
-
             match gd_info.outcome_info.possession {
-                Some(Possession::Shared { owners }) => {
-                    Self::reward_shared_possession(reward_info, owners)
-                }
-                Some(Possession::Paid { owner, fee: _ }) => {
-                    Self::reward_paid_possession(reward_info, owner)
-                }
+                Some(Possession::Shared { owners }) => Self::reward_shared_possession(
+                    market_id,
+                    reward_account,
+                    reward_account_free_balance,
+                    owners,
+                ),
+                Some(Possession::Paid { owner, fee: _ }) => Self::reward_paid_possession(
+                    market_id,
+                    reward_account,
+                    reward_account_free_balance,
+                    owner,
+                ),
                 None => Err(Error::<T>::NoPossession.into()),
             }
         }
@@ -694,20 +693,22 @@ mod pallet {
         }
 
         fn reward_shared_possession(
-            reward_info: RewardInfoOf<T>,
+            market_id: MarketIdOf<T>,
+            reward_account: AccountIdOf<T>,
+            reward: BalanceOf<T>,
             owners: OwnerInfoOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let mut remainder = reward_info.reward;
+            let mut remainder = reward;
             let owners_len = owners.len() as u32;
             let owners_len_in_balance: BalanceOf<T> = <BalanceOf<T>>::from(owners_len);
-            if let Some(reward_per_each) = reward_info.reward.checked_div(&owners_len_in_balance) {
+            if let Some(reward_per_each) = reward.checked_div(&owners_len_in_balance) {
                 for winner in owners.iter() {
                     // *Should* always be equal to `reward_per_each`
                     let reward = remainder.min(reward_per_each);
                     remainder = remainder.saturating_sub(reward);
                     // Reward the losing funds to the winners
                     let res = T::Currency::transfer(
-                        &reward_info.source,
+                        &reward_account,
                         winner,
                         reward,
                         ExistenceRequirement::AllowDeath,
@@ -726,28 +727,27 @@ mod pallet {
                 debug_assert!(false);
             }
             Self::deposit_event(Event::OutcomeOwnersRewarded {
-                market_id: reward_info.market_id,
+                market_id,
                 owners: owners.into_inner(),
             });
             Ok((Some(T::WeightInfo::reward_outcome_owner_with_funds(owners_len))).into())
         }
 
         fn reward_paid_possession(
-            reward_info: RewardInfoOf<T>,
+            market_id: MarketIdOf<T>,
+            reward_account: AccountIdOf<T>,
+            reward: BalanceOf<T>,
             owner: AccountIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let res = T::Currency::transfer(
-                &reward_info.source,
+                &reward_account,
                 &owner,
-                reward_info.reward,
+                reward,
                 ExistenceRequirement::AllowDeath,
             );
             // not really much we can do if it fails
             debug_assert!(res.is_ok(), "Global Disputes: Rewarding a outcome owner failed.");
-            Self::deposit_event(Event::OutcomeOwnerRewarded {
-                market_id: reward_info.market_id,
-                owner,
-            });
+            Self::deposit_event(Event::OutcomeOwnerRewarded { market_id, owner });
             Ok((Some(T::WeightInfo::reward_outcome_owner_with_funds(1u32))).into())
         }
     }
