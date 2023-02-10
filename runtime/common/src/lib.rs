@@ -1075,7 +1075,7 @@ macro_rules! impl_config_traits {
             type MaxOwners = MaxOwners;
             type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
             type RemoveKeysLimit = RemoveKeysLimit;
-            type VotePeriod = VotePeriod;
+            type GdVotingPeriod = GdVotingPeriod;
             type VotingOutcomeFee = VotingOutcomeFee;
             type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
         }

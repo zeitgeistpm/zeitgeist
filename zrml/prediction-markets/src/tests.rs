@@ -3027,7 +3027,6 @@ fn start_global_dispute_works() {
 
         #[cfg(feature = "with-global-disputes")]
         {
-            use zeitgeist_primitives::constants::mock::{AddOutcomePeriod, VotePeriod};
             use zrml_global_disputes::GlobalDisputesPalletApi;
 
             let now = <frame_system::Pallet<Runtime>>::block_number();
@@ -3053,8 +3052,8 @@ fn start_global_dispute_works() {
             let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
             assert_eq!(removable_market_ids.len(), 0);
 
-            let add_outcome_end = now + AddOutcomePeriod::get();
-            let vote_end = add_outcome_end + VotePeriod::get();
+            let add_outcome_end = now + GlobalDisputes::get_add_outcome_period();
+            let vote_end = add_outcome_end + GlobalDisputes::get_vote_period();
             let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(vote_end);
             assert_eq!(market_ids, vec![market_id]);
             assert!(GlobalDisputes::is_unfinished(&market_id));

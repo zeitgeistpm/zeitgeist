@@ -30,7 +30,7 @@ parameter_types! {
     pub const MaxOwners: u32 = 10;
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     pub const RemoveKeysLimit: u32 = 250;
-    pub const VotePeriod: BlockNumber = 140;
+    pub const GdVotingPeriod: BlockNumber = 140;
     pub const VotingOutcomeFee: Balance = 100 * CENT;
 }
 

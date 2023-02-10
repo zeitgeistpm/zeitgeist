@@ -102,7 +102,7 @@ benchmarks! {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, possession };
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
-        let vote_end = add_outcome_end + T::VotePeriod::get();
+        let vote_end = add_outcome_end + T::GdVotingPeriod::get();
         let gd_info = GlobalDisputeInfo {
             winner_outcome: outcome.clone(),
             status: GdStatus::Active { add_outcome_end, vote_end },
@@ -141,7 +141,7 @@ benchmarks! {
         // because we need `lock_needed` to be greater zero to set a lock.
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
-        let vote_end = add_outcome_end + T::VotePeriod::get();
+        let vote_end = add_outcome_end + T::GdVotingPeriod::get();
         let gd_info = GlobalDisputeInfo {
             winner_outcome: outcome,
             status: GdStatus::Active { add_outcome_end, vote_end },
@@ -234,7 +234,7 @@ benchmarks! {
         let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), possession: None };
         let now = <frame_system::Pallet<T>>::block_number();
         let add_outcome_end = now + T::AddOutcomePeriod::get();
-        let vote_end = add_outcome_end + T::VotePeriod::get();
+        let vote_end = add_outcome_end + T::GdVotingPeriod::get();
         let gd_info = GlobalDisputeInfo {
             winner_outcome: OutcomeReport::Scalar(0),
             status: GdStatus::Active { add_outcome_end, vote_end },

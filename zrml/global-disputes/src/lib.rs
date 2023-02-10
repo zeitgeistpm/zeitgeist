@@ -136,7 +136,7 @@ mod pallet {
 
         /// The time period in which votes are allowed.
         #[pallet::constant]
-        type VotePeriod: Get<Self::BlockNumber>;
+        type GdVotingPeriod: Get<Self::BlockNumber>;
 
         /// The fee required to add a voting outcome.
         #[pallet::constant]
@@ -248,7 +248,7 @@ mod pallet {
         /// The period in which outcomes can be added is over.
         AddOutcomePeriodIsOver,
         /// It is not inside the period in which votes are allowed.
-        NotInVotePeriod,
+        NotInGdVotingPeriod,
         /// The operation requires a global dispute in a destroyed state.
         GlobalDisputeNotDestroyed,
     }
@@ -519,7 +519,7 @@ mod pallet {
                 .ok_or(Error::<T>::NoGlobalDisputeInitialized)?;
             let now = <frame_system::Pallet<T>>::block_number();
             if let GdStatus::Active { add_outcome_end, vote_end } = gd_info.status {
-                ensure!(add_outcome_end < now && now <= vote_end, Error::<T>::NotInVotePeriod);
+                ensure!(add_outcome_end < now && now <= vote_end, Error::<T>::NotInGdVotingPeriod);
             } else {
                 return Err(Error::<T>::InvalidGlobalDisputeStatus.into());
             }
@@ -762,7 +762,7 @@ mod pallet {
         }
 
         fn get_vote_period() -> T::BlockNumber {
-            T::VotePeriod::get()
+            T::GdVotingPeriod::get()
         }
 
         fn push_vote_outcome(
@@ -863,7 +863,7 @@ mod pallet {
 
             let now = <frame_system::Pallet<T>>::block_number();
             let add_outcome_end = now.saturating_add(T::AddOutcomePeriod::get());
-            let vote_end = add_outcome_end.saturating_add(T::VotePeriod::get());
+            let vote_end = add_outcome_end.saturating_add(T::GdVotingPeriod::get());
             let ids_len = T::DisputeResolution::add_auto_resolve(market_id, vote_end)?;
 
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| -> DispatchResult {

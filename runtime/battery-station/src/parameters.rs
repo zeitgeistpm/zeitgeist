@@ -369,7 +369,7 @@ parameter_types! {
     /// The minimum required amount to vote on an outcome.
     pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
     /// The time period in which votes are allowed.
-    pub const VotePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    pub const GdVotingPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
     /// The fee required to add a voting outcome.
     pub const VotingOutcomeFee: Balance = 200 * BASE;
     /// The remove limit for the Outcomes storage double map.

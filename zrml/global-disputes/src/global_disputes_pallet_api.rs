@@ -27,7 +27,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// Return the `AddOutcomePeriod` parameter.
     fn get_add_outcome_period() -> BlockNumber;
 
-    /// Return the `VotePeriod` parameter.
+    /// Return the `GdVotingPeriod` parameter.
     fn get_vote_period() -> BlockNumber;
 
     /// Push a voting outcome for one global dispute.

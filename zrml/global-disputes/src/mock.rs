@@ -33,7 +33,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
-        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, VotePeriod,
+        MinOutcomeVoteAmount, MinimumPeriod, PmPalletId, RemoveKeysLimit, GdVotingPeriod,
         VotingOutcomeFee, BASE,
     },
     traits::DisputeResolutionApi,
@@ -128,7 +128,7 @@ impl crate::Config for Runtime {
     type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
-    type VotePeriod = VotePeriod;
+    type GdVotingPeriod = GdVotingPeriod;
     type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
