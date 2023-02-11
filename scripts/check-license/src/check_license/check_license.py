@@ -149,11 +149,10 @@ class File:
         return False
 
     def write(self) -> None:
-        content = (
-            "\n".join(["// " + str(c) for c in self._copyright_notices])
-            + "\n"
-            + self._blob
-        )
+        content = "\n".join(["// " + str(c) for c in self._copyright_notices])
+        if content:
+            content += "\n"
+        content += self._blob
         with open(self._path, "w") as f:
             f.write(content)
 

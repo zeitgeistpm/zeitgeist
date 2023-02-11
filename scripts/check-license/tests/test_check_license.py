@@ -1,3 +1,6 @@
+import builtins
+import textwrap
+
 import pytest
 
 from check_license.check_license import Copyright, Years, File
@@ -45,7 +48,7 @@ class TestCopyright:
 
 
 class TestFile:
-    def test_read(self, monkeypatch, mocker):
+    def test_read(self):
         path_to_file = "resources/test_read"
         file = File(path_to_file)
         file.read()
@@ -175,19 +178,37 @@ class TestFile:
         assert result == expected
 
     def test_write(self, mocker, monkeypatch):
-        mock_open = mocker.Mock()
-        mock_file = mocker.Mock(write=mocker.Mock())
+        mock_manager = mocker.Mock(__enter__=mocker.Mock(), __exit__=mocker.Mock())
+        mock_open = mocker.Mock(return_value=mock_manager)
+        monkeypatch.setattr(builtins, "open", mock_open)
 
         path_to_file = "path/to/file"
-        file = File(path_to_file, [], "//\n// The license\n\nThe rest of the file.")
+        file = File(
+            path_to_file,
+            [
+                Copyright.from_string("Copyright 2022-2023 New Company."),
+                Copyright.from_string("Copyright 2021-2022 Old Company."),
+            ],
+            textwrap.dedent(
+                """\
+                //
+                // The license
 
-        expected = """
-// Copyright 2023 Forecasting Technologies.
-// Copyright 2019-2020, 2022 Some Other Company.
-//
-// The license
+                The rest of the file.
+                """,
+            ),
+        )
+        file.write()
 
-The rest of the file.
-"""
-        assert mock_open.called_once_with(path_to_file)
-        assert mock_file.called_once_with(expected)
+        expected = textwrap.dedent(
+            """\
+            // Copyright 2022-2023 New Company.
+            // Copyright 2021-2022 Old Company.
+            //
+            // The license
+
+            The rest of the file.
+            """,
+        )
+        mock_open.assert_called_once_with(path_to_file, "w")
+        mock_manager.__enter__().write.assert_called_once_with(expected)
