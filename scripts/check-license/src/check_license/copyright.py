@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import re
 
+
 @dataclasses.dataclass
 class Copyright:
     owner: str
@@ -66,7 +67,7 @@ class Years:
         if match:
             year = int(s)
             return Years(year, year)
-        # `s` is a year range, e.g. `"2022-2023"` 
+        # `s` is a year range, e.g. `"2022-2023"`
         match = re.match(r"^(\d{4})-(\d{4})$", s)
         if match:
             start, end = [int(n) for n in match.group(1, 2)]
