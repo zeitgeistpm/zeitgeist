@@ -3,48 +3,9 @@ import textwrap
 
 import pytest
 
-from check_license.check_license import Copyright, Years, File
+from check_license.copyright import Copyright, Years
+from check_license.check_license import File
 from check_license.errors import *
-
-
-class TestCopyright:
-    @pytest.mark.parametrize(
-        "value, holder, years",
-        [
-            (
-                "Copyright 2020 Copyright Holder.",
-                "Copyright Holder",
-                [Years(2020)],
-            ),
-            (
-                "Copyright 2020-2021 Copyright Holder.",
-                "Copyright Holder",
-                [Years(2020, 2021)],
-            ),
-            (
-                "Copyright 2020-2021, 2023 Copyright Holder.",
-                "Copyright Holder",
-                [Years(2020, 2021), Years(2023)],
-            ),
-        ],
-    )
-    def test_from_string(self, value, holder, years):
-        actual = Copyright.from_string(value)
-        assert actual == Copyright(holder, years)
-
-    @pytest.mark.parametrize(
-        "copyright, expected",
-        [
-            (Copyright("Holder", [Years(2020)]), "Copyright 2020 Holder."),
-            (Copyright("Holder", [Years(2020, 2021)]), "Copyright 2020-2021 Holder."),
-            (
-                Copyright("Holder", [Years(2020, 2021), Years(2023)]),
-                "Copyright 2020-2021, 2023 Holder.",
-            ),
-        ],
-    )
-    def test_str(self, copyright, expected):
-        assert str(copyright) == expected
 
 
 class TestFile:
@@ -65,7 +26,7 @@ class TestFile:
     def test_read_fails_on_broken_copyright_notice(self):
         path_to_file = "resources/test_read_fails_on_broken_copyright_notice"
         file = File(path_to_file)
-        with pytest.raises(CopyrightError):
+        with pytest.raises(IllegalCopyrightError):
             file.read()
 
     def test_check_success_or_outdated(self):

@@ -14,7 +14,7 @@ class MissingCopyrightError(LicenseCheckerError):
         super().__init__(msg)
 
 
-class CopyrightError(LicenseCheckerError):
+class IllegalCopyrightError(LicenseCheckerError):
     def __init__(self, path: str, number: int, line: str) -> None:
         msg = f"{path}:{number}: expected copyright notice, found '{line}'"
         super().__init__(msg)

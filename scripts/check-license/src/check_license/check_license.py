@@ -6,78 +6,18 @@ import re
 import os
 
 from check_license.console import echo
+from check_license.copyright import Copyright, CopyrightError
 from check_license.errors import (
     LicenseCheckerError,
     MissingCopyrightError,
-    CopyrightError,
+    IllegalCopyrightError,
     DuplicateCopyrightError,
     OutdatedCopyrightError,
 )
 
-DATE_REGEX = r"(\d{4})-(\d{4})"
-COPYRIGHT_REGEX = r"Copyright ([0-9,\- ]*) (.*)\."
-FORECASTING_TECH = "Forecasting Technologies LTD"
 # TODO Get owner according to exact date
+FORECASTING_TECH = "Forecasting Technologies LTD"
 OWNER = FORECASTING_TECH
-
-
-@dataclasses.dataclass
-class Years:
-    """A class for inclusive ranges of years."""
-
-    start: int
-    end: int = None
-
-    def __post_init__(self) -> None:
-        if self.end is None:
-            self.end = self.start
-
-    @classmethod
-    def from_string(cls, s: str) -> Years:
-        try:
-            year = int(s)
-            return Years(year, year)
-        except ValueError:
-            pass
-        match = re.match(DATE_REGEX, s)
-        start, end = match.group(1, 2)
-        return Years(int(start), int(end))
-
-    def __str__(self) -> str:
-        if self.start == self.end:
-            return str(self.start)
-        else:
-            return f"{self.start}-{self.end}"
-
-
-@dataclasses.dataclass
-class Copyright:
-    owner: str
-    years: list[Years]
-
-    @classmethod
-    def from_string(cls, s) -> Copyright:
-        # TODO This could use better error handling!
-        match = re.match(COPYRIGHT_REGEX, s)
-        assert match
-        years, holder = match.group(1, 2)
-        years = years.split(", ")
-        return Copyright(holder, [Years.from_string(y) for y in years])
-
-    def __str__(self) -> str:
-        dates = ", ".join(str(y) for y in self.years)
-        return f"Copyright {dates} {self.owner}."
-
-    @property
-    def end(self) -> int:
-        return self.years[-1].end
-
-    def push_year(self, year: int) -> None:
-        """Safely add ``year`` to this copyright."""
-        if year == self.years[-1].end + 1:
-            self.years[-1].end = year
-        else:
-            self.years.push(Years(year, year))
 
 
 class File:
@@ -108,7 +48,7 @@ class File:
             # We're assuming that all copyright notices come in one bunch, so once
             # we meet a line of whitespace, we give up.
             while (line := f.readline()) and line.startswith("//"):
-                if re.match(r"// *$", line):
+                if re.match(r"^// *$", line):
                     blob += line
                     break
                 raw_copyright.append(line[3:])  # Strip "// ".
@@ -116,8 +56,8 @@ class File:
         for i, s in enumerate(raw_copyright):
             try:
                 copyright = Copyright.from_string(s)
-            except:
-                raise CopyrightError(self._path, i, s)
+            except CopyrightError:
+                raise IllegalCopyrightError(self._path, i, s)
             self._copyright_notices.append(copyright)
         self._blob = blob
 
@@ -141,7 +81,7 @@ class File:
         """Update the copyright notice and return `True` if anything changed."""
         owner_copyright = self._get_owner_copyright()
         if owner_copyright is None:
-            self._copyright_notices.insert(0, Copyright(OWNER, [Years(year)]))
+            self._copyright_notices.insert(0, Copyright.from_year(OWNER, year))
             return True
         if owner_copyright.end != year:
             owner_copyright.push_year(year)
