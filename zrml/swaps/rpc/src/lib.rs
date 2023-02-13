@@ -27,7 +27,7 @@ use jsonrpsee::{
     proc_macros::rpc,
     types::error::{CallError, ErrorObject},
 };
-use parity_scale_codec::{Codec, MaxEncodedLen};
+use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
@@ -35,7 +35,7 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
 use std::collections::BTreeMap;
-use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
@@ -43,7 +43,7 @@ pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 pub trait SwapsApi<BlockHash, BlockNumber, PoolId, AccountId, Balance, MarketId>
 where
     Balance: FromStr + Display + parity_scale_codec::MaxEncodedLen,
-    MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen,
+    MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen + Ord,
     PoolId: FromStr + Display,
 {
     #[method(name = "swaps_poolSharesId", aliases = ["swaps_poolSharesIdAt"])]
@@ -83,7 +83,7 @@ where
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<BlockNumber>,
-    ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
+    ) -> RpcResult<BTreeMap<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -124,7 +124,8 @@ where
     PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr + Send + 'static,
     AccountId: Clone + Display + Codec + Send + 'static,
     Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
-    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
+    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Ord + Send + 'static,
+    Pool<Balance, MarketId>: Decode,
 {
     async fn pool_shares_id(
         &self,
@@ -222,33 +223,37 @@ where
         blocks: Vec<NumberFor<Block>>,
     ) -> RpcResult<BTreeMap<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>> {
         let api = self.client.runtime_api();
-        let pool = api.pool_by_id(pool_id).map_err(|e| {
+        let at = BlockId::hash(self.client.info().best_hash);
+        let pool = api.pool_by_id(&at, pool_id.clone()).map_err(|e| {
             CallError::Custom(ErrorObject::owned(
                 Error::RuntimeError.into(),
-                "Unable to find pool by id",
+                "Unable to get spot price.",
                 Some(e.to_string()),
             ))
         })?;
         let mut result_map = BTreeMap::<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>::new();
-        for asset in pool.assets {
-            if asset != pool.base_asset {
-                let prices = blocks
+        for asset in &pool.assets {
+            if asset != &pool.base_asset {
+                let prices: Vec<Result<SerdeWrapper<Balance>, CallError>> = blocks
+                    .clone()
                     .into_iter()
                     .map(|block| {
                         let hash = BlockId::number(block);
                         let res = api
-                            .get_spot_prices(&hash, &pool_id, &asset, &pool.base_asset, with_fees)
+                            .get_spot_price(&hash, &pool_id, &asset, &pool.base_asset, with_fees)
                             .map_err(|e| {
                                 CallError::Custom(ErrorObject::owned(
                                     Error::RuntimeError.into(),
                                     "Unable to get spot price.",
                                     Some(e.to_string()),
                                 ))
-                            })?;
-                        Ok(res)
+                            });
+                        res
                     })
                     .collect();
-                result_map.insert(asset, prices);
+                let prices: Result<Vec<SerdeWrapper<Balance>>, CallError> =
+                    prices.into_iter().collect();
+                result_map.insert(asset.clone(), prices?);
             }
         }
         Ok(result_map)
