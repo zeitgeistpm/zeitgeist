@@ -31,11 +31,12 @@ use frame_support::{
 };
 use pallet_balances::{BalanceLock, Error as BalancesError};
 use sp_runtime::traits::Zero;
+use test_case::test_case;
 use zeitgeist_primitives::{
     constants::mock::{
         GlobalDisputeLockId, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee, BASE,
     },
-    types::OutcomeReport,
+    types::{BlockNumber, OutcomeReport},
 };
 use zrml_market_commons::{Error as MarketError, Markets};
 
@@ -166,15 +167,16 @@ fn add_vote_outcome_fails_if_no_global_dispute_present() {
     });
 }
 
-#[test]
-fn add_vote_outcome_fails_if_global_dispute_finished() {
+#[test_case(GdStatus::Finished; "finished")]
+#[test_case(GdStatus::Destroyed; "destroyed")]
+fn add_vote_outcome_fails_if_global_dispute_is_in_wrong_state(status: GdStatus<BlockNumber>) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
         let possession = Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() };
         let mut gd_info = GlobalDisputeInfo::new(OutcomeReport::Scalar(0), possession, 10 * BASE);
-        gd_info.status = GdStatus::Finished;
+        gd_info.status = status;
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
         assert_noop!(
