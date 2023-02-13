@@ -20,7 +20,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
-use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
+use sp_runtime::{
+    traits::{MaybeDisplay, MaybeFromStr},
+    DispatchError,
+};
 use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
@@ -41,6 +44,6 @@ sp_api::decl_runtime_apis! {
         ) -> SerdeWrapper<Balance>;
         fn pool_by_id(
             pool_id: PoolId,
-        ) -> Pool<Balance, MarketId>;
+        ) -> Result<Pool<Balance, MarketId>, DispatchError>;
     }
 }

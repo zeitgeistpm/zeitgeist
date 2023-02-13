@@ -1491,6 +1491,12 @@ macro_rules! create_runtime_api {
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
                 }
+
+        fn pool_by_id(
+            pool_id: PoolId,
+        ) -> Result<Pool<Balance, MarketId>, DispatchError> {
+            Swaps::pool_by_id(pool_id)
+        }
             }
 
             #[cfg(feature = "try-runtime")]

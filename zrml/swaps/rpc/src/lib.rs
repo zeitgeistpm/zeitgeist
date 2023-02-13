@@ -224,13 +224,22 @@ where
     ) -> RpcResult<BTreeMap<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(self.client.info().best_hash);
-        let pool = api.pool_by_id(&at, pool_id.clone()).map_err(|e| {
-            CallError::Custom(ErrorObject::owned(
-                Error::RuntimeError.into(),
-                "Unable to get spot price.",
-                Some(e.to_string()),
-            ))
-        })?;
+        let pool = api
+            .pool_by_id(&at, pool_id.clone())
+            .map_err(|e| {
+                CallError::Custom(ErrorObject::owned(
+                    Error::RuntimeError.into(),
+                    "Unable to get pool, Runtime trapped.",
+                    Some(e.to_string()),
+                ))
+            })?
+            .map_err(|e| {
+                CallError::Custom(ErrorObject::owned(
+                    Error::RuntimeError.into(),
+                    "Unable to get pool. DispatchError",
+                    Some(format!("{:?}", e)),
+                ))
+            })?;
         let mut result_map = BTreeMap::<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>::new();
         for asset in &pool.assets {
             if asset != &pool.base_asset {

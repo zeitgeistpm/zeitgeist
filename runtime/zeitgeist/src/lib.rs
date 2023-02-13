@@ -47,7 +47,10 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use pallet_transaction_payment::ChargeTransactionPayment;
-use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
+use sp_runtime::{
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
+    DispatchError,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};

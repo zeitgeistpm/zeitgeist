@@ -418,7 +418,7 @@ mod tests {
         );
     }
 
-    fn construct_pool<Balance>(
+    fn construct_pool<Balance: parity_scale_codec::Decode>(
         swap_fee: Option<Balance>,
         weights: Vec<u128>,
     ) -> Pool<Balance, MarketId> {

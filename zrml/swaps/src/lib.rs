@@ -1562,7 +1562,7 @@ mod pallet {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
 
-        pub(crate) fn pool_by_id(
+        pub fn pool_by_id(
             pool_id: PoolId,
         ) -> Result<Pool<BalanceOf<T>, MarketIdOf<T>>, DispatchError>
         where
