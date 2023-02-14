@@ -19,7 +19,7 @@
 
 use crate::{math::calc_spot_price, root::calc_preimage};
 use alloc::collections::btree_map::BTreeMap;
-use parity_scale_codec::{Decode, MaxEncodedLen};
+use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::{
     traits::{AtLeast32Bit, AtLeast32BitUnsigned},
     SaturatedConversion,
@@ -77,8 +77,8 @@ where
 
 impl<Balance, MarketId> ArbitrageForCpmm<Balance, MarketId> for Pool<Balance, MarketId>
 where
-    Balance: AtLeast32BitUnsigned + Copy + Decode,
-    MarketId: MaxEncodedLen + AtLeast32Bit + Copy + Decode,
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
     Pool<Balance, MarketId>: ArbitrageForCpmmHelper<Balance, MarketId>,
 {
     fn calc_total_spot_price(
@@ -162,8 +162,8 @@ where
 
 impl<Balance, MarketId> ArbitrageForCpmmHelper<Balance, MarketId> for Pool<Balance, MarketId>
 where
-    Balance: AtLeast32BitUnsigned + Copy + Decode,
-    MarketId: MaxEncodedLen + AtLeast32Bit + Copy + Decode,
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
 {
     fn calc_arbitrage_amount_common<F>(
         &self,
@@ -418,7 +418,7 @@ mod tests {
         );
     }
 
-    fn construct_pool<Balance: parity_scale_codec::Decode>(
+    fn construct_pool<Balance>(
         swap_fee: Option<Balance>,
         weights: Vec<u128>,
     ) -> Pool<Balance, MarketId> {

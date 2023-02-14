@@ -31,8 +31,8 @@ sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
         PoolId: Codec,
         AccountId: Codec,
-        Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Decode,
-        MarketId: Codec + MaxEncodedLen + Decode,
+        Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen,
+        MarketId: Codec + MaxEncodedLen,
         Pool<Balance, MarketId>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
