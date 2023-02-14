@@ -345,7 +345,7 @@ benchmarks! {
                 possession,
             },
         };
-        <GlobalDisputesInfo<T>>::insert(market_id, gd_info.clone());
+        <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
 
         let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
         let _ = T::Currency::deposit_creating(

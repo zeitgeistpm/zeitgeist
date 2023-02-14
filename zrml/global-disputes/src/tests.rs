@@ -164,7 +164,7 @@ fn destroy_global_dispute_works() {
         assert_ok!(GlobalDisputes::destroy_global_dispute(&market_id));
 
         assert_eq!(
-            <GlobalDisputesInfo<Runtime>>::get(&market_id).unwrap().status,
+            <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap().status,
             GdStatus::Destroyed
         );
     });
@@ -190,7 +190,7 @@ fn start_global_dispute_works() {
             possession: Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() },
         };
         assert_eq!(
-            <GlobalDisputesInfo<Runtime>>::get(&market_id).unwrap(),
+            <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap(),
             GlobalDisputeInfo {
                 winner_outcome: OutcomeReport::Scalar(60),
                 outcome_info,
