@@ -274,7 +274,7 @@ benchmarks! {
         );
     }
 
-    reward_outcome_owner_with_funds {
+    reward_outcome_owner_shared_possession {
         let o in 1..T::MaxOwners::get();
 
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
@@ -330,6 +330,50 @@ benchmarks! {
             remainder
         };
         assert_eq!(T::Currency::free_balance(&reward_account), expected);
+    }
+
+    reward_outcome_owner_paid_possession {
+        let market_id: MarketIdOf<T> = 0u128.saturated_into();
+
+        let owner: AccountIdOf<T> = account("winners_owner", 0, 0);
+        let possession = Possession::Paid { owner: owner.clone(), fee: T::VotingOutcomeFee::get() };
+        let gd_info = GlobalDisputeInfo {
+            winner_outcome: OutcomeReport::Scalar(0),
+            status: GdStatus::Finished,
+            outcome_info: OutcomeInfo {
+                outcome_sum: 42u128.saturated_into(),
+                possession,
+            },
+        };
+        <GlobalDisputesInfo<T>>::insert(market_id, gd_info.clone());
+
+        let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
+        let _ = T::Currency::deposit_creating(
+            &reward_account,
+            T::VotingOutcomeFee::get().saturating_mul(10u128.saturated_into()),
+        );
+        let reward_before = T::Currency::free_balance(&reward_account);
+
+        let caller: T::AccountId = whitelisted_caller();
+
+        let outcome = OutcomeReport::Scalar(20);
+
+        deposit::<T>(&caller);
+    }: {
+        <Pallet<T>>::reward_outcome_owner(
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id
+        )
+        .unwrap();
+    } verify {
+        assert_last_event::<T>(
+            Event::OutcomeOwnerRewarded::<T> {
+                market_id,
+                owner: owner.clone(),
+            }
+            .into(),
+        );
+        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
     }
 
     purge_outcomes {

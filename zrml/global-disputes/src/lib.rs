@@ -733,7 +733,7 @@ mod pallet {
                 market_id,
                 owners: owners.into_inner(),
             });
-            Ok((Some(T::WeightInfo::reward_outcome_owner_with_funds(owners_len))).into())
+            Ok((Some(T::WeightInfo::reward_outcome_owner_shared_possession(owners_len))).into())
         }
 
         fn reward_paid_possession(
@@ -751,7 +751,7 @@ mod pallet {
             // not really much we can do if it fails
             debug_assert!(res.is_ok(), "Global Disputes: Rewarding a outcome owner failed.");
             Self::deposit_event(Event::OutcomeOwnerRewarded { market_id, owner });
-            Ok((Some(T::WeightInfo::reward_outcome_owner_with_funds(1u32))).into())
+            Ok((Some(T::WeightInfo::reward_outcome_owner_paid_possession())).into())
         }
     }
 

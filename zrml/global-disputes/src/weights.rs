@@ -50,7 +50,8 @@ pub trait WeightInfoZeitgeist {
     fn unlock_vote_balance_set(l: u32, o: u32) -> Weight;
     fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight;
     fn add_vote_outcome(w: u32) -> Weight;
-    fn reward_outcome_owner_with_funds(o: u32) -> Weight;
+    fn reward_outcome_owner_shared_possession(o: u32) -> Weight;
+    fn reward_outcome_owner_paid_possession() -> Weight;
     fn purge_outcomes(k: u32, o: u32) -> Weight;
     fn refund_vote_fees(k: u32, o: u32) -> Weight;
 }
@@ -111,14 +112,22 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: GlobalDisputes Outcomes (r:1 w:0)
     // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
     // Storage: System Account (r:2 w:2)
-    fn reward_outcome_owner_with_funds(o: u32) -> Weight {
-        Weight::from_ref_time(54_189_000)
-            // Standard Error: 75_000
-            .saturating_add(Weight::from_ref_time(29_563_000).saturating_mul(o.into()))
+    fn reward_outcome_owner_shared_possession(o: u32) -> Weight {
+        Weight::from_ref_time(36_741_000)
+            // Standard Error: 20_000
+            .saturating_add(Weight::from_ref_time(22_017_000).saturating_mul(o.into()))
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(o.into())))
             .saturating_add(T::DbWeight::get().writes(1))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(o.into())))
+    }
+    // Storage: GlobalDisputes Outcomes (r:1 w:0)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
+    // Storage: System Account (r:2 w:2)
+    fn reward_outcome_owner_paid_possession() -> Weight {
+        Weight::from_ref_time(56_000_000)
+            .saturating_add(T::DbWeight::get().reads(4))
+            .saturating_add(T::DbWeight::get().writes(2))
     }
     // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:3 w:2)
