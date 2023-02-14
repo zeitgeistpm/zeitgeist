@@ -23,6 +23,7 @@
 // <https://github.com/balancer-labs/balancer-core>.
 
 #![cfg(all(feature = "mock", test))]
+#![allow(clippy::too_many_arguments)]
 
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
@@ -774,6 +775,86 @@ fn get_spot_price_returns_correct_results_rikiddo() {
             Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[1], true).unwrap();
         // Between 0.9 and 1.1
         assert!(price_asset_in_out > 9 * BASE / 10 && price_asset_in_out < 11 * BASE / 10);
+    });
+}
+
+#[test]
+fn get_all_spot_price_returns_correct_results_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
+        let pool_id = 0;
+        assert_noop!(
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[0], true),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        subsidize_and_start_rikiddo_pool(pool_id, &ALICE, 0);
+
+        let prices =
+            Swaps::get_all_spot_prices(&pool_id, false).expect("get_all_spot_prices fails");
+        // Base currency in, asset out.
+        // Price Between 0.3 and 0.4
+        for (asset, price) in prices {
+            // ASSETS.last() is base_asset
+            if asset != *ASSETS.last().expect("no last asset") {
+                assert!(price > 3 * BASE / 10 && price < 4 * BASE / 10);
+            }
+        }
+    });
+}
+
+#[test_case(_3, _3, _2, _2, 0, 15_000_000_000, 15_000_000_000, 10_000_000_000, 10_000_000_000)]
+#[test_case(_3, _3, _1, _3, 0, 10_000_000_000, 10_000_000_000, 3_333_333_333, 10_000_000_000)]
+#[test_case(_3, _4, _1, _1, 0, 30_000_000_000, 40_000_000_000, 10_000_000_000, 10_000_000_000)]
+#[test_case(_3, _4, _10, _4, 0, 7_500_000_000, 10_000_000_000, 25_000_000_000, 10_000_000_000)]
+#[test_case(_3, _6, _4, _5, 0, 6_000_000_000, 12_000_000_000, 8_000_000_000, 10_000_000_000)]
+#[test_case(_3, _3, _4, _5, 0, 6_000_000_000, 6_000_000_000, 8_000_000_000, 10_000_000_000)]
+#[test_case(_3, _3, _10, _10, _1_10, 3_333_333_333, 3_333_333_333, 11_111_111_111, 11_111_111_111)]
+#[test_case(_3, _3, _10, _5, _1_10, 6_666_666_667, 6_666_666_667, 22_222_222_222, 11_111_111_111)]
+#[test_case(_3, _4, _10, _10, _1_10, 3_333_333_333, 4_444_444_444, 11_111_111_111, 11_111_111_111)]
+#[test_case(_3, _4, _10, _5, _1_10, 6_666_666_667, 8_888_888_889, 22_222_222_222, 11_111_111_111)]
+#[test_case(_3, _6, _2, _5, _1_10, 6_666_666_667, 13_333_333_333, 4_444_444_444, 11_111_111_111)]
+#[test_case(_3, _6, _2, _10, _1_10, 3_333_333_333, 6_666_666_667, 2_222_222_222, 11_111_111_111)]
+fn get_all_spot_prices_returns_correct_results_cpmm(
+    weight_a: u128,
+    weight_b: u128,
+    weight_c: u128,
+    weight_d: u128,
+    swap_fee: BalanceOf<Runtime>,
+    exp_spot_price_a_with_fees: BalanceOf<Runtime>,
+    exp_spot_price_b_with_fees: BalanceOf<Runtime>,
+    exp_spot_price_c_with_fees: BalanceOf<Runtime>,
+    exp_spot_price_d_with_fees: BalanceOf<Runtime>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _100));
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.to_vec(),
+            *ASSETS.last().unwrap(),
+            0,
+            ScoringRule::CPMM,
+            Some(swap_fee),
+            Some(_100),
+            Some(vec!(weight_a, weight_b, weight_c, weight_d))
+        ));
+        let pool_id = 0;
+
+        // Gets spot prices for all assets against base_asset.
+        let prices =
+            Swaps::get_all_spot_prices(&pool_id, true).expect("get_all_spot_prices failed");
+        for (asset, price) in prices {
+            if asset == ASSET_A {
+                assert_eq!(exp_spot_price_a_with_fees, price);
+            } else if asset == ASSET_B {
+                assert_eq!(exp_spot_price_b_with_fees, price);
+            } else if asset == ASSET_C {
+                assert_eq!(exp_spot_price_c_with_fees, price);
+            } else if asset == ASSET_D {
+                assert_eq!(exp_spot_price_d_with_fees, price);
+            }
+        }
     });
 }
 

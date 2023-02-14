@@ -24,6 +24,7 @@ use sp_runtime::{
     traits::{MaybeDisplay, MaybeFromStr},
     DispatchError,
 };
+use sp_std::vec::Vec;
 use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
@@ -42,8 +43,9 @@ sp_api::decl_runtime_apis! {
             asset_out: &Asset<MarketId>,
             with_fees: bool,
         ) -> SerdeWrapper<Balance>;
-        fn pool_by_id(
-            pool_id: PoolId,
-        ) -> Result<Pool<Balance, MarketId>, DispatchError>;
+        fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool
+        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError>;
     }
 }

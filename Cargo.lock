@@ -13196,6 +13196,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
+ "sp-std",
  "zeitgeist-primitives",
 ]
 

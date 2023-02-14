@@ -45,6 +45,7 @@ where
     Balance: FromStr + Display + parity_scale_codec::MaxEncodedLen,
     MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen + Ord,
     PoolId: FromStr + Display,
+    BlockNumber: Ord,
 {
     #[method(name = "swaps_poolSharesId", aliases = ["swaps_poolSharesIdAt"])]
     async fn pool_shares_id(
@@ -77,13 +78,13 @@ where
         blocks: Vec<BlockNumber>,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
 
-    #[method(name = "swaps_getAssetSpotPricesForPool")]
-    async fn get_asset_spot_prices_for_pool(
+    #[method(name = "swaps_getAllSpotPrices")]
+    async fn get_all_spot_prices(
         &self,
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<BlockNumber>,
-    ) -> RpcResult<BTreeMap<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>>;
+    ) -> RpcResult<BTreeMap<(Asset<MarketId>, BlockNumber), Balance>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -216,55 +217,37 @@ where
             .collect()
     }
 
-    async fn get_asset_spot_prices_for_pool(
+    async fn get_all_spot_prices(
         &self,
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<NumberFor<Block>>,
-    ) -> RpcResult<BTreeMap<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>> {
+    ) -> RpcResult<BTreeMap<(Asset<MarketId>, NumberFor<Block>), Balance>> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(self.client.info().best_hash);
-        let pool = api
-            .pool_by_id(&at, pool_id.clone())
-            .map_err(|e| {
-                CallError::Custom(ErrorObject::owned(
-                    Error::RuntimeError.into(),
-                    "Unable to get pool, Runtime trapped.",
-                    Some(e.to_string()),
-                ))
-            })?
-            .map_err(|e| {
-                CallError::Custom(ErrorObject::owned(
-                    Error::RuntimeError.into(),
-                    "Unable to get pool. DispatchError",
-                    Some(format!("{:?}", e)),
-                ))
-            })?;
-        let mut result_map = BTreeMap::<Asset<MarketId>, Vec<SerdeWrapper<Balance>>>::new();
-        for asset in &pool.assets {
-            if asset != &pool.base_asset {
-                let prices: Vec<Result<SerdeWrapper<Balance>, CallError>> = blocks
-                    .clone()
-                    .into_iter()
-                    .map(|block| {
-                        let hash = BlockId::number(block);
-                        let res = api
-                            .get_spot_price(&hash, &pool_id, &asset, &pool.base_asset, with_fees)
-                            .map_err(|e| {
-                                CallError::Custom(ErrorObject::owned(
-                                    Error::RuntimeError.into(),
-                                    "Unable to get spot price.",
-                                    Some(e.to_string()),
-                                ))
-                            });
-                        res
-                    })
-                    .collect();
-                let prices: Result<Vec<SerdeWrapper<Balance>>, CallError> =
-                    prices.into_iter().collect();
-                result_map.insert(asset.clone(), prices?);
+        let mut res: BTreeMap<(Asset<MarketId>, NumberFor<Block>), Balance> = BTreeMap::new();
+        let _ = blocks.into_iter().try_for_each(|block| -> Result<(), CallError> {
+            let hash = BlockId::number(block);
+            let prices: Vec<(Asset<MarketId>, Balance)> = api
+                .get_all_spot_prices(&hash, &pool_id, with_fees)
+                .map_err(|e| {
+                    CallError::Custom(ErrorObject::owned(
+                        Error::RuntimeError.into(),
+                        "Unable to get_all_spot_prices.",
+                        Some(e.to_string()),
+                    ))
+                })?
+                .map_err(|e| {
+                    CallError::Custom(ErrorObject::owned(
+                        Error::RuntimeError.into(),
+                        "Unable to get_all_spot_prices. DispatchError",
+                        Some(format!("{:?}", e)),
+                    ))
+                })?;
+            for (asset, balance) in prices {
+                res.insert((asset, block), balance);
             }
-        }
-        Ok(result_map)
+            Ok(())
+        })?;
+        Ok(res)
     }
 }
