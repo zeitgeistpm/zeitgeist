@@ -33,6 +33,7 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 use {
     super::{generate_inflation_config_function, Extensions},
     crate::KUSAMA_PARACHAIN_ID,
+    zeitgeist_primitives::constants::ztg::STAKING_PTD,
     zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
     zeitgeist_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,

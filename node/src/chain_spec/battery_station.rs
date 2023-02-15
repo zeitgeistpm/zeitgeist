@@ -40,6 +40,7 @@ use {
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
     },
+    zeitgeist_primitives::constants::ztg::STAKING_PTD,
     zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
 
