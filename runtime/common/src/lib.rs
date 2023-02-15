@@ -133,13 +133,6 @@ macro_rules! decl_common_types {
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
         >;
 
-        // Advisory committee vote proportions
-        // More than 20%
-        type EnsureRootOrMoreThanTwentyPercentAdvisoryCommittee = EitherOfDiverse<
-            EnsureRoot<AccountId>,
-            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 2, 10>,
-        >;
-
         // More than 30%
         type EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
@@ -1031,7 +1024,7 @@ macro_rules! impl_config_traits {
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrMoreThanSeventyPercentAdvisoryCommittee;
-            type RequestEditOrigin = EnsureRootOrMoreThanTwentyPercentAdvisoryCommittee;
+            type RequestEditOrigin = EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
