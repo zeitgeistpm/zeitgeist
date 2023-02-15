@@ -39,6 +39,53 @@ pub use juror::Juror;
 pub use juror_status::JurorStatus;
 pub use pallet::*;
 
+// TODO: remove this crowdfund interface and use the real after crowdfund pallet is merged
+use frame_support::pallet_prelude::DispatchError;
+use zeitgeist_primitives::types::OutcomeReport;
+use frame_support::pallet_prelude::DispatchResult;
+
+/// The trait for handling of crowdfunds.
+pub trait CrowdfundPalletApi<AccountId, Balance, NegativeImbalance> {
+    /// Create a new crowdfund.
+    /// 
+    /// # Returns
+    /// - `FundIndex` - The id of the crowdfund.
+    fn open_crowdfund() -> Result<u128, DispatchError>;
+
+    /// Get an iterator over all items of a crowdfund.
+    /// 
+    /// # Arguments
+    /// - `fund_index` - The id of the crowdfund.
+    /// 
+    /// # Returns
+    /// - `PrefixIterator` - The iterator over all items of the crowdfund.
+    fn iter_items(
+        fund_index: u128,
+    ) -> frame_support::storage::PrefixIterator<(OutcomeReport, Balance)>;
+
+    /// Prepare for all related backers to potentially refund their stake.
+    /// 
+    /// # Arguments
+    /// - `fund_index` - The id of the crowdfund.
+    /// - `item` - The item to refund.
+    /// - `fee` - The overall fee to charge from the fund item
+    ///  before the backer refunds are possible.
+    /// 
+    /// # Returns
+    /// - `NegativeImbalance` - The imbalance that contains the charged fees.
+    fn prepare_refund(
+        fund_index: u128,
+        item: &OutcomeReport,
+        fee: sp_runtime::Percent,
+    ) -> Result<NegativeImbalance, DispatchError>;
+
+    /// Close a crowdfund.
+    ///
+    /// # Arguments
+    /// - `fund_index` - The id of the crowdfund.
+    fn close_crowdfund(fund_index: u128) -> DispatchResult;
+}
+
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, CourtPalletApi, Juror, JurorStatus};
@@ -182,6 +229,8 @@ mod pallet {
         /// Block duration to cast a vote on an outcome.
         #[pallet::constant]
         type CourtCaseDuration: Get<Self::BlockNumber>;
+
+        type Crowdfund: crate::CrowdfundPalletApi<Self::AccountId, BalanceOf<Self>, NegativeImbalanceOf<Self>>;
 
         type DisputeResolution: DisputeResolutionApi<
             AccountId = Self::AccountId,
