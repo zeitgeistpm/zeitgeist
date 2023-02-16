@@ -934,7 +934,42 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 
+        pub struct CrowdfundNoop;
+
+        type CurrencyOf<Runtime> = <Runtime as zrml_market_commons::Config>::Currency;
+        type NegativeImbalanceOf<Runtime> = <CurrencyOf<Runtime> as Currency<
+            <Runtime as frame_system::Config>::AccountId,
+        >>::NegativeImbalance;
+
+        impl zrml_court::CrowdfundPalletApi<AccountId, Balance, NegativeImbalanceOf<Runtime>>
+            for CrowdfundNoop
+        {
+            fn open_crowdfund() -> Result<u128, frame_support::pallet_prelude::DispatchError> {
+                Ok(0)
+            }
+
+            fn iter_items(
+                _fund_index: u128,
+            ) -> frame_support::storage::PrefixIterator<(zeitgeist_primitives::types::OutcomeReport, Balance)>
+            {
+                unimplemented!()
+            }
+
+            fn prepare_refund(
+                _fund_index: u128,
+                _item: &zeitgeist_primitives::types::OutcomeReport,
+                _fee: sp_runtime::Percent,
+            ) -> Result<NegativeImbalanceOf<Runtime>, frame_support::pallet_prelude::DispatchError> {
+                Ok(NegativeImbalanceOf::<Runtime>::zero())
+            }
+
+            fn close_crowdfund(_fund_index: u128) -> frame_support::pallet_prelude::DispatchResult {
+                Ok(())
+            }
+        }
+
         impl zrml_court::Config for Runtime {
+            type Crowdfund = CrowdfundNoop;
             type CourtCaseDuration = CourtCaseDuration;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
