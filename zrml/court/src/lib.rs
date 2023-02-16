@@ -121,7 +121,7 @@ mod pallet {
     use rand::{rngs::StdRng, seq::SliceRandom, RngCore, SeedableRng};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Hash, Saturating},
-        ArithmeticError, DispatchError, SaturatedConversion,
+        ArithmeticError, DispatchError, Percent, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
@@ -800,6 +800,19 @@ mod pallet {
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
             let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
             let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
+
+            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+
+            for (outcome, _crowdfund_amount) in T::Crowdfund::iter_items(court.crowdfund_info.index)
+            {
+                T::Crowdfund::prepare_refund(
+                    court.crowdfund_info.index,
+                    &outcome,
+                    Percent::zero(),
+                )?;
+            }
+            T::Crowdfund::close_crowdfund(court.crowdfund_info.index)?;
+
             Ok(Some(first))
         }
 
