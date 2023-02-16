@@ -277,7 +277,10 @@ mod pallet {
                 Error::<T>::NotInAppealPeriod
             );
 
-            ensure!((court.appeals as u32) < T::MaxAppeals::get(), Error::<T>::MaxAppealsReached);
+            ensure!(
+                court.appeal_info.current < court.appeal_info.max,
+                Error::<T>::MaxAppealsReached
+            );
 
             let iter = T::Crowdfund::iter_items(court.crowdfund_info.index);
             let mut count = 0u32;
@@ -291,14 +294,6 @@ mod pallet {
             }
             ensure!(count >= 2, Error::<T>::NotEnoughCrowdfundBackingToAppeal);
 
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            let necessary_jurors_num = Self::necessary_jurors_num(court.appeals as usize);
-            let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            for (ai, _) in random_jurors {
-                RequestedJurors::<T>::insert(market_id, ai, ());
-            }
-
             let last_resolve_at = court.periods.appeal_end;
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
@@ -309,7 +304,17 @@ mod pallet {
                 appeal_end: T::CourtAppealPeriod::get(),
             };
             // sets periods one after the other from now
-            CourtInfo::appeal(&mut court, periods, now);
+            court.appeal(periods, now);
+
+            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            let current_appeals = court.appeal_info.current as usize;
+            let necessary_jurors_num =
+                Self::necessary_jurors_num(current_appeals);
+            let mut rng = Self::rng();
+            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
+            for (ai, _) in random_jurors {
+                RequestedJurors::<T>::insert(market_id, ai, ());
+            }
 
             let _ids_len_1 =
                 T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
@@ -761,7 +766,7 @@ mod pallet {
             };
 
             // sets periods one after the other from now
-            let court = CourtInfo::new(crowdfund_info, now, periods);
+            let court = CourtInfo::new(crowdfund_info, now, periods, T::MaxAppeals::get() as u8);
 
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
