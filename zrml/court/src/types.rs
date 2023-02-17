@@ -107,6 +107,14 @@ pub struct Periods<BlockNumber> {
 pub struct AppealInfo {
     pub(crate) current: u8,
     pub(crate) max: u8,
+    pub(crate) is_drawn: bool,
+    pub(crate) is_funded: bool,
+}
+
+impl AppealInfo {
+    pub fn is_appeal_ready(&self) -> bool {
+        self.is_drawn && self.is_funded
+    }
 }
 
 #[derive(
@@ -140,16 +148,14 @@ impl<Balance: sp_runtime::traits::Saturating, BlockNumber: sp_runtime::traits::S
         let aggregation_end = vote_end.saturating_add(periods.aggregation_end);
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
         let periods = Periods { crowdfund_end, vote_end, aggregation_end, appeal_end };
-        let appeal_info = AppealInfo { current: 0, max: max_appeals };
+        let appeal_info =
+            AppealInfo { current: 0, max: max_appeals, is_drawn: false, is_funded: false };
         Self { crowdfund_info, appeal_info, winner: None, periods }
     }
 
     pub fn appeal(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
         // inc the appeal count
         self.appeal_info.current = self.appeal_info.current.saturating_add(1);
-        // crowdfund threshold
-        self.crowdfund_info.threshold =
-            self.crowdfund_info.threshold.saturating_add(self.crowdfund_info.threshold);
         // periods
         self.periods.crowdfund_end = now.saturating_add(periods.crowdfund_end);
         self.periods.vote_end = self.periods.crowdfund_end.saturating_add(periods.vote_end);

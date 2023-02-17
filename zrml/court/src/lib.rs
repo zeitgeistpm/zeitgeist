@@ -233,7 +233,6 @@ mod pallet {
                 Error::<T>::NotInAggregationPeriod
             );
 
-            // TODO maybe check here if fund amount does fulfill the required stake
             let fund_amount = T::Crowdfund::get_item(court.crowdfund_info.index, &outcome)
                 .ok_or(Error::<T>::InvalidCrowdfundItem)?;
             ensure!(
@@ -243,8 +242,13 @@ mod pallet {
 
             let secret = match vote {
                 Vote::Secret { secret } => {
+                    // market id and current appeal number is part of salt generation
+                    // salt should be signed by the juror (market_id ++ appeal number)
+                    // salt can be reproduced only be the juror address
+                    // with knowing market_id and appeal number
+                    // so even if the salt is forgotten it can be reproduced only by the juror
                     ensure!(
-                        secret == T::Hashing::hash_of(&(who, market_id, outcome, salt)),
+                        secret == T::Hashing::hash_of(&(who, outcome, salt)),
                         Error::<T>::InvalidReveal
                     );
                     secret
@@ -260,39 +264,76 @@ mod pallet {
         // TODO benchmark
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
-        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn check_crowdfund(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             ensure_signed(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
 
             let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            ensure!(!court.appeal_info.is_funded, Error::<T>::AppealAlreadyFunded);
             let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
 
-            ensure!(
-                court.periods.aggregation_end < now && now <= court.periods.appeal_end,
-                Error::<T>::NotInAppealPeriod
-            );
+            // update crowdfund threshold
+            let threshold =
+                court.crowdfund_info.threshold.saturating_add(court.crowdfund_info.threshold);
 
-            ensure!(
-                court.appeal_info.current < court.appeal_info.max,
-                Error::<T>::MaxAppealsReached
-            );
-
-            let iter = T::Crowdfund::iter_items(court.crowdfund_info.index);
             let mut count = 0u32;
-            let mut funded_outcomes = Vec::new();
-            let threshold = court.crowdfund_info.threshold;
-            for (outcome, crowdfund_amount) in iter {
+            // TODO: use iter_from https://paritytech.github.io/substrate/master/frame_support/pallet_prelude/struct.StorageMap.html#method.iter_from
+            // TODO: with iter_from we can iterate from the last checked item (weight restrictions)
+            for (outcome, crowdfund_amount) in T::Crowdfund::iter_items(court.crowdfund_info.index)
+            {
                 if crowdfund_amount >= threshold {
-                    funded_outcomes.push(outcome);
                     count = count.saturating_add(1);
+                    if count >= 2 {
+                        break;
+                    }
                 }
             }
             ensure!(count >= 2, Error::<T>::NotEnoughCrowdfundBackingToAppeal);
+
+            court.crowdfund_info.threshold = threshold;
+            court.appeal_info.is_funded = true;
+            <Courts<T>>::insert(&market_id, court);
+
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
+        pub fn draw_jurors(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            ensure_signed(origin)?;
+
+            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            ensure!(!court.appeal_info.is_drawn, Error::<T>::JurorsAlreadyDrawn);
+            ensure!(court.appeal_info.is_funded, Error::<T>::CheckCrowdfundFirst);
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
+
+            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            let current_appeals = court.appeal_info.current as usize;
+            let necessary_jurors_num = Self::necessary_jurors_num(current_appeals);
+            let mut rng = Self::rng();
+            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
+            for (ai, _) in random_jurors {
+                RequestedJurors::<T>::insert(market_id, ai, ());
+            }
+
+            court.appeal_info.is_drawn = true;
+            <Courts<T>>::insert(&market_id, court);
+
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
+        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            ensure_signed(origin)?;
+
+            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            ensure!(court.appeal_info.is_appeal_ready(), Error::<T>::AppealNotReady);
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
 
             let last_resolve_at = court.periods.appeal_end;
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
@@ -305,16 +346,6 @@ mod pallet {
             };
             // sets periods one after the other from now
             court.appeal(periods, now);
-
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            let current_appeals = court.appeal_info.current as usize;
-            let necessary_jurors_num =
-                Self::necessary_jurors_num(current_appeals);
-            let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            for (ai, _) in random_jurors {
-                RequestedJurors::<T>::insert(market_id, ai, ());
-            }
 
             let _ids_len_1 =
                 T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
@@ -429,6 +460,10 @@ mod pallet {
         CourtAlreadyExists,
         /// The revealed outcome is below the minimum threshold for the crowdfund.
         OutcomeCrowdfundsBelowThreshold,
+        JurorsAlreadyDrawn,
+        AppealAlreadyFunded,
+        CheckCrowdfundFirst,
+        AppealNotReady,
     }
 
     #[pallet::event]
@@ -456,6 +491,31 @@ mod pallet {
     where
         T: Config,
     {
+        pub(crate) fn check_appealable_market(
+            market_id: &MarketIdOf<T>,
+            court: &CourtOf<T>,
+            now: T::BlockNumber,
+        ) -> Result<(), DispatchError> {
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+
+            ensure!(
+                court.periods.aggregation_end < now && now <= court.periods.appeal_end,
+                Error::<T>::NotInAppealPeriod
+            );
+
+            ensure!(
+                court.appeal_info.current < court.appeal_info.max,
+                Error::<T>::MaxAppealsReached
+            );
+
+            Ok(())
+        }
+
         // Returns an unique random subset of `jurors` with length `len`.
         //
         // If `len` is greater than the length of `jurors`, then `len` will be capped.
@@ -768,6 +828,15 @@ mod pallet {
             // sets periods one after the other from now
             let court = CourtInfo::new(crowdfund_info, now, periods, T::MaxAppeals::get() as u8);
 
+            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            // appeal number is zero (0usize) at the beginning
+            let necessary_jurors_num = Self::necessary_jurors_num(0usize);
+            let mut rng = Self::rng();
+            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
+            for (ai, _) in random_jurors {
+                RequestedJurors::<T>::insert(market_id, ai, ());
+            }
+
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
 
@@ -845,7 +914,6 @@ mod pallet {
             );
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-
             Ok(Some(court.periods.appeal_end))
         }
 
@@ -859,8 +927,7 @@ mod pallet {
             );
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-
-            Ok(court.appeals as u32 >= T::MaxAppeals::get())
+            Ok(court.appeal_info.current >= court.appeal_info.max)
         }
 
         fn on_global_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
