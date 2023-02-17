@@ -112,7 +112,7 @@ mod pallet {
             CountedStorageMap, OptionQuery, StorageDoubleMap, StorageMap, StorageValue, ValueQuery,
         },
         traits::{
-            BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
+            BalanceStatus, Currency, Get, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
         },
         transactional, Blake2_128Concat, PalletId,
@@ -128,235 +128,6 @@ mod pallet {
         types::{Asset, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
-
-    // Number of jurors for an initial market dispute
-    const INITIAL_JURORS_NUM: usize = 3;
-    const MAX_RANDOM_JURORS: usize = 13;
-    /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-    // Weight used to increase the number of jurors for subsequent disputes
-    // of the same market
-    const SUBSEQUENT_JURORS_FACTOR: usize = 2;
-    // Divides the reserved juror balance to calculate the slash amount. `5` here
-    // means that the output value will be 20% of the dividend.
-    const TARDY_PUNISHMENT_DIVISOR: u8 = 5;
-
-    pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
-    pub(crate) type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        Asset<MarketIdOf<T>>,
-    >;
-    pub(crate) type CourtOf<T> = CourtInfo<BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::join_court())]
-        #[transactional]
-        pub fn join_court(origin: OriginFor<T>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            if Jurors::<T>::get(&who).is_some() {
-                return Err(Error::<T>::JurorAlreadyExists.into());
-            }
-            let jurors_num = Jurors::<T>::count() as usize;
-            let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-            let stake = Self::current_required_stake(jurors_num_plus_one);
-            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, stake)?;
-            let juror = Juror { status: JurorStatus::Ok };
-            Jurors::<T>::insert(&who, juror.clone());
-            Self::deposit_event(Event::JoinedJuror(who, juror));
-            Ok(())
-        }
-
-        #[pallet::weight(T::WeightInfo::exit_court())]
-        #[transactional]
-        pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            let juror = Self::juror(&who)?;
-            Self::remove_juror_from_all_courts_of_all_markets(&who);
-            Self::deposit_event(Event::ExitedJuror(who, juror));
-            Ok(())
-        }
-
-        #[pallet::weight(T::WeightInfo::vote())]
-        #[transactional]
-        pub fn vote(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-            secret_vote: T::Hash,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            if Jurors::<T>::get(&who).is_none() {
-                return Err(Error::<T>::OnlyJurorsCanVote.into());
-            }
-
-            let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let now = <frame_system::Pallet<T>>::block_number();
-            ensure!(
-                court.periods.crowdfund_end < now && now <= court.periods.vote_end,
-                Error::<T>::NotInVotingPeriod
-            );
-
-            let vote = Vote::Secret { secret: secret_vote };
-            Votes::<T>::insert(market_id, who, vote);
-            Ok(())
-        }
-
-        // TODO benchmark
-        #[pallet::weight(T::WeightInfo::vote())]
-        #[transactional]
-        pub fn reveal_vote(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-            outcome: OutcomeReport,
-            salt: T::Hash,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            if Jurors::<T>::get(&who).is_none() {
-                return Err(Error::<T>::OnlyJurorsCanReveal.into());
-            }
-            let vote = <Votes<T>>::get(market_id, &who).ok_or(Error::<T>::NoVoteFound)?;
-            let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let now = <frame_system::Pallet<T>>::block_number();
-            ensure!(
-                court.periods.vote_end < now && now <= court.periods.aggregation_end,
-                Error::<T>::NotInAggregationPeriod
-            );
-
-            let fund_amount = T::Crowdfund::get_item(court.crowdfund_info.index, &outcome)
-                .ok_or(Error::<T>::InvalidCrowdfundItem)?;
-            ensure!(
-                fund_amount >= court.crowdfund_info.threshold,
-                Error::<T>::OutcomeCrowdfundsBelowThreshold
-            );
-
-            let secret = match vote {
-                Vote::Secret { secret } => {
-                    // market id and current appeal number is part of salt generation
-                    // salt should be signed by the juror (market_id ++ appeal number)
-                    // salt can be reproduced only be the juror address
-                    // with knowing market_id and appeal number
-                    // so even if the salt is forgotten it can be reproduced only by the juror
-                    ensure!(
-                        secret == T::Hashing::hash_of(&(who, outcome, salt)),
-                        Error::<T>::InvalidReveal
-                    );
-                    secret
-                }
-                _ => return Err(Error::<T>::VoteIsNotSecret.into()),
-            };
-
-            let raw_vote = Vote::Revealed { secret, outcome, salt };
-            Votes::<T>::insert(market_id, who, raw_vote);
-            Ok(())
-        }
-
-        // TODO benchmark
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn check_crowdfund(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            ensure_signed(origin)?;
-
-            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(!court.appeal_info.is_funded, Error::<T>::AppealAlreadyFunded);
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::check_appealable_market(&market_id, &court, now)?;
-
-            // update crowdfund threshold
-            let threshold =
-                court.crowdfund_info.threshold.saturating_add(court.crowdfund_info.threshold);
-
-            let mut count = 0u32;
-            // TODO: use iter_from https://paritytech.github.io/substrate/master/frame_support/pallet_prelude/struct.StorageMap.html#method.iter_from
-            // TODO: with iter_from we can iterate from the last checked item (weight restrictions)
-            for (outcome, crowdfund_amount) in T::Crowdfund::iter_items(court.crowdfund_info.index)
-            {
-                if crowdfund_amount >= threshold {
-                    count = count.saturating_add(1);
-                    if count >= 2 {
-                        break;
-                    }
-                }
-            }
-            ensure!(count >= 2, Error::<T>::NotEnoughCrowdfundBackingToAppeal);
-
-            court.crowdfund_info.threshold = threshold;
-            court.appeal_info.is_funded = true;
-            <Courts<T>>::insert(&market_id, court);
-
-            Ok(())
-        }
-
-        // TODO benchmark
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn draw_jurors(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            ensure_signed(origin)?;
-
-            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(!court.appeal_info.is_drawn, Error::<T>::JurorsAlreadyDrawn);
-            ensure!(court.appeal_info.is_funded, Error::<T>::CheckCrowdfundFirst);
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::check_appealable_market(&market_id, &court, now)?;
-
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            let current_appeals = court.appeal_info.current as usize;
-            let necessary_jurors_num = Self::necessary_jurors_num(current_appeals);
-            let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            for (ai, _) in random_jurors {
-                RequestedJurors::<T>::insert(market_id, ai, ());
-            }
-
-            court.appeal_info.is_drawn = true;
-            <Courts<T>>::insert(&market_id, court);
-
-            Ok(())
-        }
-
-        // TODO benchmark
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            ensure_signed(origin)?;
-
-            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(court.appeal_info.is_appeal_ready(), Error::<T>::AppealNotReady);
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::check_appealable_market(&market_id, &court, now)?;
-
-            let last_resolve_at = court.periods.appeal_end;
-            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
-
-            let periods = Periods {
-                crowdfund_end: T::CourtCrowdfundPeriod::get(),
-                vote_end: T::CourtVotePeriod::get(),
-                aggregation_end: T::CourtAggregationPeriod::get(),
-                appeal_end: T::CourtAppealPeriod::get(),
-            };
-            // sets periods one after the other from now
-            court.appeal(periods, now);
-
-            let _ids_len_1 =
-                T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
-
-            <Courts<T>>::insert(market_id, court);
-
-            Self::deposit_event(Event::MarketAppealed { market_id });
-
-            Ok(())
-        }
-    }
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -420,6 +191,89 @@ mod pallet {
         type WeightInfo: WeightInfoZeitgeist;
     }
 
+    // Number of jurors for an initial market dispute
+    const INITIAL_JURORS_NUM: usize = 3;
+    const MAX_RANDOM_JURORS: usize = 13;
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    // Weight used to increase the number of jurors for subsequent disputes
+    // of the same market
+    const SUBSEQUENT_JURORS_FACTOR: usize = 2;
+    // Divides the reserved juror balance to calculate the slash amount. `5` here
+    // means that the output value will be 20% of the dividend.
+    const TARDY_PUNISHMENT_DIVISOR: u8 = 5;
+
+    pub(crate) type BalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type CurrencyOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
+    pub(crate) type CourtOf<T> = CourtInfo<BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
+
+    #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    /// Accounts that stake funds to decide outcomes.
+    #[pallet::storage]
+    pub type Jurors<T: Config> = CountedStorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
+
+    /// An extra layer of pseudo randomness.
+    #[pallet::storage]
+    pub type JurorsSelectionNonce<T: Config> = StorageValue<_, u64, ValueQuery>;
+
+    #[pallet::storage]
+    pub type RequestedVotes<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        Blake2_128Concat,
+        T::AccountId,
+        Vote<T::Hash>,
+    >;
+
+    #[pallet::storage]
+    pub type Courts<T: Config> =
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, CourtOf<T>, OptionQuery>;
+
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    pub enum Event<T>
+    where
+        T: Config,
+    {
+        /// A juror has been added to the court.
+        JoinedJuror(T::AccountId, Juror),
+        /// A juror has been removed from the court.
+        ExitedJuror(T::AccountId, Juror),
+        /// A juror has voted in a court.
+        JurorVoted { market_id: MarketIdOf<T>, juror: T::AccountId, secret: T::Hash },
+        /// A juror has revealed their vote.
+        JurorRevealedVote {
+            juror: T::AccountId,
+            market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+            salt: T::Hash,
+        },
+        /// The jurors for an appeal have been drawn.
+        AppealJurorsDrawn { market_id: MarketIdOf<T> },
+        /// The crowdfund for an appeal has been checked.
+        AppealCrowdfundChecked { market_id: MarketIdOf<T> },
+        /// A market has been appealed.
+        MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u8 },
+    }
+
     #[pallet::error]
     pub enum Error<T> {
         /// It is not possible to insert a Juror that is already stored
@@ -464,33 +318,237 @@ mod pallet {
         AppealAlreadyFunded,
         CheckCrowdfundFirst,
         AppealNotReady,
+        OnlyDrawnJurorsCanVote,
     }
 
-    #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
-    pub enum Event<T>
-    where
-        T: Config,
-    {
-        ExitedJuror(T::AccountId, Juror),
-        JoinedJuror(T::AccountId, Juror),
-        /// A market has been appealed.
-        MarketAppealed {
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        #[pallet::weight(T::WeightInfo::join_court())]
+        #[transactional]
+        pub fn join_court(origin: OriginFor<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            if Jurors::<T>::get(&who).is_some() {
+                return Err(Error::<T>::JurorAlreadyExists.into());
+            }
+            let jurors_num = Jurors::<T>::count() as usize;
+            let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+            let stake = Self::current_required_stake(jurors_num_plus_one);
+            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, stake)?;
+            let juror = Juror { status: JurorStatus::Ok };
+            Jurors::<T>::insert(&who, juror.clone());
+            Self::deposit_event(Event::JoinedJuror(who, juror));
+            Ok(())
+        }
+
+        #[pallet::weight(T::WeightInfo::exit_court())]
+        #[transactional]
+        pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let juror = Self::juror(&who)?;
+            Self::remove_juror_from_all_courts_of_all_markets(&who);
+            Self::deposit_event(Event::ExitedJuror(who, juror));
+            Ok(())
+        }
+
+        #[pallet::weight(T::WeightInfo::vote())]
+        #[transactional]
+        pub fn vote(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            secret_vote: T::Hash,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(<Jurors<T>>::contains_key(&who), Error::<T>::OnlyJurorsCanVote);
+            ensure!(
+                <RequestedVotes<T>>::contains_key(&market_id, &who),
+                Error::<T>::OnlyDrawnJurorsCanVote
+            );
+
+            let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            let now = <frame_system::Pallet<T>>::block_number();
+            ensure!(
+                court.periods.crowdfund_end < now && now <= court.periods.vote_end,
+                Error::<T>::NotInVotingPeriod
+            );
+
+            let vote = Vote::Secret { secret: secret_vote };
+            RequestedVotes::<T>::insert(market_id, who, vote);
+
+            Self::deposit_event(Event::JurorVoted { juror: who, market_id, secret: secret_vote });
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(T::WeightInfo::vote())]
+        #[transactional]
+        pub fn reveal_vote(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+            salt: T::Hash,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            if Jurors::<T>::get(&who).is_none() {
+                return Err(Error::<T>::OnlyJurorsCanReveal.into());
+            }
+            let vote = <RequestedVotes<T>>::get(market_id, &who).ok_or(Error::<T>::NoVoteFound)?;
+            let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            let now = <frame_system::Pallet<T>>::block_number();
+            ensure!(
+                court.periods.vote_end < now && now <= court.periods.aggregation_end,
+                Error::<T>::NotInAggregationPeriod
+            );
+
+            let fund_amount = T::Crowdfund::get_item(court.crowdfund_info.index, &outcome)
+                .ok_or(Error::<T>::InvalidCrowdfundItem)?;
+            ensure!(
+                fund_amount >= court.crowdfund_info.threshold,
+                Error::<T>::OutcomeCrowdfundsBelowThreshold
+            );
+
+            let secret = match vote {
+                Vote::Secret { secret } => {
+                    // market id and current appeal number is part of salt generation
+                    // salt should be signed by the juror (market_id ++ appeal number)
+                    // salt can be reproduced only be the juror address
+                    // with knowing market_id and appeal number
+                    // so even if the salt is forgotten it can be reproduced only by the juror
+                    ensure!(
+                        secret == T::Hashing::hash_of(&(who, outcome, salt)),
+                        Error::<T>::InvalidReveal
+                    );
+                    secret
+                }
+                _ => return Err(Error::<T>::VoteIsNotSecret.into()),
+            };
+
+            let raw_vote = Vote::Revealed { secret, outcome, salt };
+            RequestedVotes::<T>::insert(market_id, who, raw_vote);
+
+            Self::deposit_event(Event::JurorRevealedVote { juror: who, market_id, outcome, salt });
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
+        pub fn check_appeal_crowdfund(
+            origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-        },
+        ) -> DispatchResult {
+            ensure_signed(origin)?;
+
+            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            ensure!(!court.appeal_info.is_funded, Error::<T>::AppealAlreadyFunded);
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
+
+            // update crowdfund threshold
+            let threshold =
+                court.crowdfund_info.threshold.saturating_add(court.crowdfund_info.threshold);
+
+            let mut count = 0u32;
+            // TODO: use iter_from https://paritytech.github.io/substrate/master/frame_support/pallet_prelude/struct.StorageMap.html#method.iter_from
+            // TODO: with iter_from we can iterate from the last checked item (weight restrictions)
+            for (outcome, crowdfund_amount) in T::Crowdfund::iter_items(court.crowdfund_info.index)
+            {
+                if crowdfund_amount >= threshold {
+                    count = count.saturating_add(1);
+                    if count >= 2 {
+                        break;
+                    }
+                }
+            }
+            ensure!(count >= 2, Error::<T>::NotEnoughCrowdfundBackingToAppeal);
+
+            court.crowdfund_info.threshold = threshold;
+            court.appeal_info.is_funded = true;
+            <Courts<T>>::insert(&market_id, court);
+
+            Self::deposit_event(Event::AppealCrowdfundChecked { market_id });
+
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
+        pub fn draw_appeal_jurors(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
+            ensure_signed(origin)?;
+
+            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            ensure!(!court.appeal_info.is_drawn, Error::<T>::JurorsAlreadyDrawn);
+            ensure!(court.appeal_info.is_funded, Error::<T>::CheckCrowdfundFirst);
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
+
+            let appeal_number = court.appeal_info.current as usize;
+            Self::select_jurors(&market_id, appeal_number);
+
+            court.appeal_info.is_drawn = true;
+            <Courts<T>>::insert(&market_id, court);
+
+            Self::deposit_event(Event::AppealJurorsDrawn { market_id });
+
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
+        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            ensure_signed(origin)?;
+
+            let mut court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            ensure!(court.appeal_info.is_appeal_ready(), Error::<T>::AppealNotReady);
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
+
+            let last_resolve_at = court.periods.appeal_end;
+            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
+
+            let periods = Periods {
+                crowdfund_end: T::CourtCrowdfundPeriod::get(),
+                vote_end: T::CourtVotePeriod::get(),
+                aggregation_end: T::CourtAggregationPeriod::get(),
+                appeal_end: T::CourtAppealPeriod::get(),
+            };
+            // sets periods one after the other from now
+            court.update_periods(periods, now);
+            court.appeal_info.current = court.appeal_info.current.saturating_add(1);
+
+            let _ids_len_1 =
+                T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
+
+            <Courts<T>>::insert(market_id, court);
+
+            Self::deposit_event(Event::MarketAppealed {
+                market_id,
+                appeal_number: court.appeal_info.current,
+            });
+
+            Ok(())
+        }
     }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-
-    #[pallet::pallet]
-    #[pallet::storage_version(STORAGE_VERSION)]
-    pub struct Pallet<T>(PhantomData<T>);
 
     impl<T> Pallet<T>
     where
         T: Config,
     {
+        pub(crate) fn select_jurors(market_id: &MarketIdOf<T>, appeal_number: usize) {
+            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            let necessary_jurors_num = Self::necessary_jurors_num(appeal_number);
+            let mut rng = Self::rng();
+            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
+            for (ai, _) in random_jurors {
+                RequestedVotes::<T>::insert(market_id, ai, Vote::Drawn);
+            }
+        }
+
         pub(crate) fn check_appealable_market(
             market_id: &MarketIdOf<T>,
             court: &CourtOf<T>,
@@ -687,6 +745,7 @@ mod pallet {
         // Result is capped to `usize::MAX` or in other words, capped to a very, very, very
         // high number of jurors.
         fn necessary_jurors_num(appeals_len: usize) -> usize {
+            // TODO: increase requested juror number higher; current max example: 3 + 2 * MaxAppeals
             INITIAL_JURORS_NUM.saturating_add(SUBSEQUENT_JURORS_FACTOR.saturating_mul(appeals_len))
         }
 
@@ -780,14 +839,11 @@ mod pallet {
             CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), ai);
             Jurors::<T>::remove(ai);
             let mut market_ids = BTreeSet::new();
-            market_ids.extend(RequestedJurors::<T>::iter().map(|el| el.0));
+            market_ids.extend(RequestedVotes::<T>::iter().map(|el| el.0));
             for market_id in &market_ids {
-                RequestedJurors::<T>::remove(market_id, ai);
-            }
-            market_ids.clear();
-            market_ids.extend(Votes::<T>::iter().map(|el| el.0));
-            for market_id in &market_ids {
-                Votes::<T>::remove(market_id, ai);
+                // TODO: should we allow removing all vote requests?
+                // TODO: because the juror could avoid getting slashed by just exit_court
+                RequestedVotes::<T>::remove(market_id, ai);
             }
         }
     }
@@ -828,14 +884,7 @@ mod pallet {
             // sets periods one after the other from now
             let court = CourtInfo::new(crowdfund_info, now, periods, T::MaxAppeals::get() as u8);
 
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            // appeal number is zero (0usize) at the beginning
-            let necessary_jurors_num = Self::necessary_jurors_num(0usize);
-            let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            for (ai, _) in random_jurors {
-                RequestedJurors::<T>::insert(market_id, ai, ());
-            }
+            Self::select_jurors(market_id, 0usize);
 
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
@@ -857,26 +906,20 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
-            let requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
-                .map(|(juror_id, ())| {
-                    let juror = Self::juror(&juror_id)?;
-                    let vote_opt = votes.iter().find(|el| el.0 == juror_id).map(|el| &el.1);
-                    Ok((juror_id, juror, vote_opt))
-                })
-                .collect::<Result<_, DispatchError>>()?;
-            let (first, second_opt) = Self::two_best_outcomes(&votes)?;
+            let votes: Vec<_> = RequestedVotes::<T>::iter_prefix(market_id).collect();
+            let (first, second_opt) = Self::two_best_outcomes(votes.as_slice())?;
             let valid_winners_and_losers = if let Some(second) = second_opt {
                 Self::manage_tardy_jurors(&requested_jurors, |outcome| outcome == &second)?
             } else {
                 Self::manage_tardy_jurors(&requested_jurors, |_| false)?
             };
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
-            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
-            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
 
+            // TODO: use an own API call instead, which allows to prepare the refund for all inside the crowdfund pallet (call extrinsic multiple times)
+            // TODO: specify fees somehow for specific outcomes in this api call
+            // TODO: the reason for this is that there are weight limitations here (storage iter)
             for (outcome, _crowdfund_amount) in T::Crowdfund::iter_items(court.crowdfund_info.index)
             {
                 T::Crowdfund::prepare_refund(
@@ -886,6 +929,9 @@ mod pallet {
                 )?;
             }
             T::Crowdfund::close_crowdfund(court.crowdfund_info.index)?;
+
+            // this only removes a maximum of jurors according to MaxAppeals (weight limited)
+            let _ = RequestedVotes::<T>::clear_prefix(market_id, u32::max_value(), None);
 
             Ok(Some(first))
         }
@@ -943,41 +989,12 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
-            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
+            // only removes a maximum of jurors according to MaxAppeals (weight limited)
+            let _ = RequestedVotes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            <Courts<T>>::remove(market_id);
             Ok(())
         }
     }
 
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}
-
-    /// Accounts that stake funds to decide outcomes.
-    #[pallet::storage]
-    pub type Jurors<T: Config> = CountedStorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
-
-    /// An extra layer of pseudo randomness.
-    #[pallet::storage]
-    pub type JurorsSelectionNonce<T: Config> = StorageValue<_, u64, ValueQuery>;
-
-    /// Selected jurors that should vote a market outcome until a certain block number
-    #[pallet::storage]
-    pub type RequestedJurors<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, MarketIdOf<T>, Blake2_128Concat, T::AccountId, ()>;
-
-    /// Votes of market outcomes for disputes
-    ///
-    /// Stores the vote block number and the submitted outcome.
-    #[pallet::storage]
-    pub type Votes<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Blake2_128Concat,
-        T::AccountId,
-        Vote<T::Hash>,
-    >;
-
-    #[pallet::storage]
-    pub type Courts<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, CourtOf<T>, OptionQuery>;
 }

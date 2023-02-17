@@ -58,6 +58,7 @@ pub enum JurorStatus {
     Eq,
 )]
 pub enum Vote<Hash> {
+    Drawn,
     Secret { secret: Hash },
     Revealed { secret: Hash, outcome: OutcomeReport, salt: Hash },
 }
@@ -149,14 +150,11 @@ impl<Balance: sp_runtime::traits::Saturating, BlockNumber: sp_runtime::traits::S
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
         let periods = Periods { crowdfund_end, vote_end, aggregation_end, appeal_end };
         let appeal_info =
-            AppealInfo { current: 0, max: max_appeals, is_drawn: false, is_funded: false };
+            AppealInfo { current: 1, max: max_appeals, is_drawn: false, is_funded: false };
         Self { crowdfund_info, appeal_info, winner: None, periods }
     }
 
-    pub fn appeal(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
-        // inc the appeal count
-        self.appeal_info.current = self.appeal_info.current.saturating_add(1);
-        // periods
+    pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
         self.periods.crowdfund_end = now.saturating_add(periods.crowdfund_end);
         self.periods.vote_end = self.periods.crowdfund_end.saturating_add(periods.vote_end);
         self.periods.aggregation_end =
