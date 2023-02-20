@@ -45,6 +45,7 @@ pub enum Vote<Hash> {
     Drawn,
     Secret { secret: Hash },
     Revealed { secret: Hash, outcome: OutcomeReport, salt: Hash },
+    Denounced { secret: Hash, outcome: OutcomeReport, salt: Hash },
 }
 
 #[derive(

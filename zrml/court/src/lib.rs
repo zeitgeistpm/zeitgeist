@@ -146,6 +146,10 @@ mod pallet {
         #[pallet::constant]
         type CrowdfundMinThreshold: Get<BalanceOf<Self>>;
 
+        /// The slash percentage if the vote gets revealed during the voting period.
+        #[pallet::constant]
+        type DenounceSlashPercentage: Get<Percent>;
+
         type DisputeResolution: DisputeResolutionApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
@@ -183,6 +187,13 @@ mod pallet {
         /// Randomness source
         type Random: Randomness<Self::Hash, Self::BlockNumber>;
 
+        #[pallet::constant]
+        type RedistributionPercentage: Get<Percent>;
+
+        /// The percentage that is being slashed from the juror's stake.
+        #[pallet::constant]
+        type SlashPercentage: Get<Percent>;
+
         /// Weight used to calculate the necessary staking amount to become a juror
         #[pallet::constant]
         type StakeWeight: Get<BalanceOf<Self>>;
@@ -202,9 +213,6 @@ mod pallet {
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
-    // Divides the reserved juror balance to calculate the slash amount. `5` here
-    // means that the output value will be 20% of the dividend.
-    const TARDY_PUNISHMENT_DIVISOR: u8 = 5;
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -280,6 +288,14 @@ mod pallet {
             outcome: OutcomeReport,
             salt: T::Hash,
         },
+        /// A juror vote has been denounced.
+        DenouncedJurorVote {
+            denouncer: T::AccountId,
+            juror: T::AccountId,
+            market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+            salt: T::Hash,
+        },
         /// The jurors for an appeal have been drawn.
         AppealJurorsDrawn { market_id: MarketIdOf<T> },
         /// The crowdfund for an appeal has been checked.
@@ -300,10 +316,8 @@ mod pallet {
         MarketIsNotDisputed,
         /// Only jurors can reveal their votes.
         OnlyJurorsCanReveal,
-        /// The vote was not found.
-        NoVoteFound,
         /// The vote is not secret.
-        VoteIsNotSecret,
+        VoteAlreadyRevealed,
         /// The outcome and salt reveal do not match the secret vote.
         InvalidReveal,
         /// The revealed vote outcome was not crowdfunded.
@@ -334,6 +348,10 @@ mod pallet {
         JurorStillDrawn,
         JurorNotPreparedToExit,
         JurorNeedsToExit,
+        JurorNotDrawn,
+        JurorNotVoted,
+        VoteAlreadyDenounced,
+        DenouncerCannotBeJuror,
     }
 
     #[pallet::call]
@@ -475,6 +493,87 @@ mod pallet {
         // TODO benchmark
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
+        pub fn denounce_vote(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            juror: AccountIdLookupOf<T>,
+            outcome: OutcomeReport,
+            salt: T::Hash,
+        ) -> DispatchResult {
+            let denouncer = ensure_signed(origin)?;
+
+            let juror = T::Lookup::lookup(juror)?;
+
+            ensure!(denouncer != juror, Error::<T>::DenouncerCannotBeJuror);
+
+            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
+
+            let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
+            let now = <frame_system::Pallet<T>>::block_number();
+            // ensure in vote period
+            ensure!(
+                court.periods.crowdfund_end < now && now <= court.periods.vote_end,
+                Error::<T>::NotInVotingPeriod
+            );
+
+            let mut drawings = <Drawings<T>>::get(&market_id);
+            let (index, vote) = match drawings.iter().position(|(j, _)| j == &juror) {
+                Some(index) => (index, drawings[index].1.clone()),
+                None => return Err(Error::<T>::JurorNotDrawn.into()),
+            };
+
+            let secret = match vote {
+                Vote::Secret { secret } => {
+                    ensure!(
+                        secret == T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt)),
+                        Error::<T>::InvalidReveal
+                    );
+                    secret
+                }
+                Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
+                Vote::Revealed { secret: _, outcome: _, salt: _ } => {
+                    return Err(Error::<T>::VoteAlreadyRevealed.into());
+                }
+                Vote::Denounced { secret: _, outcome: _, salt: _ } => {
+                    return Err(Error::<T>::VoteAlreadyDenounced.into());
+                }
+            };
+
+            let treasury_account_id = Self::treasury_account_id();
+            let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), &juror);
+            let slash = T::DenounceSlashPercentage::get() * all_reserved;
+            let _ = CurrencyOf::<T>::repatriate_reserved_named(
+                &Self::reserve_id(),
+                &juror,
+                &treasury_account_id,
+                slash,
+                BalanceStatus::Free,
+            )?;
+
+            let mut jurors = JurorPool::<T>::get();
+            if let Ok(i) = jurors.binary_search_by_key(&prev_juror_info.stake, |tuple| tuple.0) {
+                // remove from juror list to prevent being drawn
+                jurors.remove(i);
+                <JurorPool<T>>::put(jurors);
+            }
+
+            let raw_vote = Vote::Denounced { secret, outcome: outcome.clone(), salt };
+            drawings[index] = (juror.clone(), raw_vote);
+            <Drawings<T>>::insert(&market_id, drawings);
+
+            Self::deposit_event(Event::DenouncedJurorVote {
+                denouncer,
+                juror,
+                market_id,
+                outcome,
+                salt,
+            });
+            Ok(())
+        }
+
+        // TODO benchmark
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
         pub fn reveal_vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -482,9 +581,8 @@ mod pallet {
             salt: T::Hash,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            if Jurors::<T>::get(&who).is_none() {
-                return Err(Error::<T>::OnlyJurorsCanReveal.into());
-            }
+
+            ensure!(<Jurors<T>>::get(&who).is_some(), Error::<T>::OnlyJurorsCanReveal);
             let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             ensure!(
@@ -502,7 +600,7 @@ mod pallet {
             let mut drawings = <Drawings<T>>::get(&market_id);
             let (index, vote) = match drawings.iter().position(|(juror, _)| juror == &who) {
                 Some(index) => (index, drawings[index].1.clone()),
-                None => return Err(Error::<T>::NoVoteFound.into()),
+                None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
             let secret = match vote {
@@ -518,7 +616,13 @@ mod pallet {
                     );
                     secret
                 }
-                _ => return Err(Error::<T>::VoteIsNotSecret.into()),
+                Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
+                Vote::Revealed { secret: _, outcome: _, salt: _ } => {
+                    return Err(Error::<T>::VoteAlreadyRevealed.into());
+                }
+                Vote::Denounced { secret: _, outcome: _, salt: _ } => {
+                    return Err(Error::<T>::VoteAlreadyDenounced.into());
+                }
             };
 
             let raw_vote = Vote::Revealed { secret, outcome: outcome.clone(), salt };
@@ -752,7 +856,6 @@ mod pallet {
                 )
         }
 
-        // Every juror that not voted on the first or second most voted outcome are slashed.
         fn slash_losers_to_award_winners(
             valid_winners_and_losers: &[(&T::AccountId, &OutcomeReport)],
             winner_outcome: &OutcomeReport,
@@ -768,10 +871,7 @@ mod pallet {
                 } else {
                     let all_reserved =
                         CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), juror);
-                    // Unsigned division will never overflow
-                    let slash = all_reserved
-                        .checked_div(&BalanceOf::<T>::from(2u8))
-                        .ok_or(DispatchError::Other("Zero division"))?;
+                    let slash = T::RedistributionPercentage::get() * all_reserved;
                     CurrencyOf::<T>::slash_reserved_named(&Self::reserve_id(), juror, slash);
                     total_incentives = total_incentives.saturating_add(slash);
                 }
@@ -801,10 +901,7 @@ mod pallet {
 
             let slash_and_remove_juror = |ai: &T::AccountId| {
                 let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), ai);
-                // Unsigned division will never overflow
-                let slash = all_reserved
-                    .checked_div(&BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR))
-                    .ok_or(DispatchError::Other("Zero division"))?;
+                let slash = T::SlashPercentage::get() * all_reserved;
                 let _ = CurrencyOf::<T>::repatriate_reserved_named(
                     &Self::reserve_id(),
                     ai,
@@ -840,6 +937,8 @@ mod pallet {
                     Vote::Secret { secret: _ } => {
                         slash_and_remove_juror(juror)?;
                     }
+                    // denounce extrinsic already slashed the juror
+                    Vote::Denounced { secret: _, outcome: _, salt: _ } => (),
                     Vote::Revealed { secret: _, outcome, salt: _ } => {
                         if let Some(el) = scores.get_mut(&outcome) {
                             *el = el.saturating_add(1);
