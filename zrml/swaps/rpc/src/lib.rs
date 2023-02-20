@@ -45,7 +45,7 @@ where
     Balance: FromStr + Display + parity_scale_codec::MaxEncodedLen,
     MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen + Ord,
     PoolId: FromStr + Display,
-    BlockNumber: Ord,
+    BlockNumber: Ord + parity_scale_codec::MaxEncodedLen + Display + FromStr,
 {
     #[method(name = "swaps_poolSharesId", aliases = ["swaps_poolSharesIdAt"])]
     async fn pool_shares_id(
@@ -84,7 +84,7 @@ where
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<BlockNumber>,
-    ) -> RpcResult<BTreeMap<(Asset<MarketId>, BlockNumber), Balance>>;
+    ) -> RpcResult<BTreeMap<SerdeWrapper<BlockNumber>, Vec<(Asset<MarketId>, Balance)>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -120,6 +120,7 @@ impl<C, Block, PoolId, AccountId, Balance, MarketId>
     for Swaps<C, Block>
 where
     Block: BlockT,
+    NumberFor<Block>: MaxEncodedLen,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr + Send + 'static,
@@ -222,9 +223,10 @@ where
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<NumberFor<Block>>,
-    ) -> RpcResult<BTreeMap<(Asset<MarketId>, NumberFor<Block>), Balance>> {
+    ) -> RpcResult<BTreeMap<SerdeWrapper<NumberFor<Block>>, Vec<(Asset<MarketId>, Balance)>>> {
         let api = self.client.runtime_api();
-        let mut res: BTreeMap<(Asset<MarketId>, NumberFor<Block>), Balance> = BTreeMap::new();
+        let mut res: BTreeMap<SerdeWrapper<NumberFor<Block>>, Vec<(Asset<MarketId>, Balance)>> =
+            BTreeMap::new();
         let _ = blocks.into_iter().try_for_each(|block| -> Result<(), CallError> {
             let hash = BlockId::number(block);
             let prices: Vec<(Asset<MarketId>, Balance)> = api
@@ -243,9 +245,7 @@ where
                         Some(format!("{:?}", e)),
                     ))
                 })?;
-            for (asset, balance) in prices {
-                res.insert((asset, block), balance);
-            }
+            res.insert(SerdeWrapper(block), prices);
             Ok(())
         })?;
         Ok(res)
