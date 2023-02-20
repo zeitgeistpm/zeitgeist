@@ -119,7 +119,7 @@ pub struct CourtInfo<Balance, BlockNumber> {
     pub(crate) periods: Periods<BlockNumber>,
 }
 
-impl<Balance: sp_runtime::traits::Saturating, BlockNumber: sp_runtime::traits::Saturating>
+impl<Balance: sp_runtime::traits::Saturating, BlockNumber: sp_runtime::traits::Saturating + Copy>
     CourtInfo<Balance, BlockNumber>
 {
     pub fn new(

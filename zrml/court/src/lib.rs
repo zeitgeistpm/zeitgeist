@@ -99,16 +99,12 @@ mod pallet {
         weights::WeightInfoZeitgeist, CourtInfo, CourtPalletApi, CrowdfundInfo, CrowdfundPalletApi,
         JurorInfo, Periods, Vote,
     };
-    use alloc::{
-        collections::{BTreeMap, BTreeSet},
-        vec::Vec,
-    };
-    use arrayvec::ArrayVec;
+    use alloc::{collections::BTreeMap, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
         ensure, log,
-        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -119,7 +115,7 @@ mod pallet {
     use rand::{rngs::StdRng, seq::SliceRandom, RngCore, SeedableRng};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Hash, Saturating},
-        DispatchError, Percent,
+        DispatchError, Percent, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
@@ -170,6 +166,10 @@ mod pallet {
         #[pallet::constant]
         type MaxAppeals: Get<u32>;
 
+        /// The maximum number of random selected jurors for a dispute.
+        #[pallet::constant]
+        type MaxElections: Get<u32>;
+
         #[pallet::constant]
         type MaxJurors: Get<u32>;
 
@@ -197,7 +197,6 @@ mod pallet {
 
     // Number of jurors for an initial market dispute
     const INITIAL_JURORS_NUM: usize = 3;
-    const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent disputes
@@ -229,6 +228,10 @@ mod pallet {
         (BalanceOf<T>, <T as frame_system::Config>::AccountId),
         <T as Config>::MaxJurors,
     >;
+    pub(crate) type ElectionsOf<T> = BoundedVec<
+        (<T as frame_system::Config>::AccountId, Vote<<T as frame_system::Config>::Hash>),
+        <T as Config>::MaxElections,
+    >;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -247,14 +250,8 @@ mod pallet {
     pub type JurorsSelectionNonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::storage]
-    pub type RequestedVotes<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Blake2_128Concat,
-        T::AccountId,
-        Vote<T::Hash>,
-    >;
+    pub type Elections<T: Config> =
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, ElectionsOf<T>, ValueQuery>;
 
     #[pallet::storage]
     pub type Courts<T: Config> =
@@ -295,8 +292,6 @@ mod pallet {
         MarketDoesNotHaveCourtMechanism,
         /// No-one voted on an outcome to resolve a market
         NoVotes,
-        /// Forbids voting of unknown accounts
-        OnlyJurorsCanVote,
         /// The market is not in a state where it can be disputed.
         MarketIsNotDisputed,
         /// Only jurors can reveal their votes.
@@ -332,6 +327,8 @@ mod pallet {
         OnlyDrawnJurorsCanVote,
         BelowMinStake,
         MaxJurorsReached,
+        BelowWeakestJuror,
+        JurorRequestedToVote,
     }
 
     #[pallet::call]
@@ -345,6 +342,16 @@ mod pallet {
             let mut jurors = JurorList::<T>::get();
 
             let mut juror_info = JurorInfoOf::<T> { stake: amount };
+
+            if jurors.is_full() {
+                if let Some((weakest_balance, weakest_juror)) = jurors.first() {
+                    ensure!(amount > *weakest_balance, Error::<T>::BelowWeakestJuror);
+                    // TODO problem here: weakest juror could have already been requested
+                    CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), &weakest_juror);
+                    <Jurors<T>>::remove(weakest_juror);
+                    jurors.remove(0);
+                }
+            }
 
             if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
                 if let Ok(i) = jurors.binary_search_by_key(&prev_juror_info.stake, |tuple| tuple.0)
@@ -391,22 +398,29 @@ mod pallet {
         #[transactional]
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::juror(&who)?;
+
+            let prev_juror_info = <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExists)?;
 
             let mut jurors = JurorList::<T>::get();
 
-            if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
-                if let Ok(i) = jurors.binary_search_by_key(&prev_juror_info.stake, |tuple| tuple.0)
-                {
-                    jurors.remove(i);
-                    <JurorList<T>>::put(jurors);
-                } else {
-                    log::warn!("Exit court: Juror stake not found in list");
-                    debug_assert!(false);
-                }
+            if let Ok(i) = jurors.binary_search_by_key(&prev_juror_info.stake, |tuple| tuple.0) {
+                jurors.remove(i);
+                <JurorList<T>>::put(jurors);
+            } else {
+                log::warn!("Exit court: Juror stake not found in list");
+                debug_assert!(false);
             }
 
-            Self::remove_juror_from_all_courts_of_all_markets(&who);
+            for (_, elections) in <Elections<T>>::iter() {
+                ensure!(
+                    !elections.iter().any(|(juror, _)| juror == &who),
+                    Error::<T>::JurorRequestedToVote
+                );
+            }
+
+            Jurors::<T>::remove(&who);
+
+            CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), &who);
 
             Self::deposit_event(Event::ExitedJuror { juror: who });
             Ok(())
@@ -421,12 +435,6 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            ensure!(<Jurors<T>>::contains_key(&who), Error::<T>::OnlyJurorsCanVote);
-            ensure!(
-                <RequestedVotes<T>>::contains_key(&market_id, &who),
-                Error::<T>::OnlyDrawnJurorsCanVote
-            );
-
             let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             ensure!(
@@ -434,8 +442,16 @@ mod pallet {
                 Error::<T>::NotInVotingPeriod
             );
 
-            let vote = Vote::Secret { secret: secret_vote };
-            RequestedVotes::<T>::insert(&market_id, &who, vote);
+            let mut elections = <Elections<T>>::get(&market_id);
+            match elections.iter().position(|(juror, _)| juror == &who) {
+                Some(index) => {
+                    let vote = Vote::Secret { secret: secret_vote };
+                    elections[index] = (who.clone(), vote);
+                }
+                None => return Err(Error::<T>::OnlyDrawnJurorsCanVote.into()),
+            }
+
+            <Elections<T>>::insert(&market_id, elections);
 
             Self::deposit_event(Event::JurorVoted { juror: who, market_id, secret: secret_vote });
             Ok(())
@@ -454,7 +470,6 @@ mod pallet {
             if Jurors::<T>::get(&who).is_none() {
                 return Err(Error::<T>::OnlyJurorsCanReveal.into());
             }
-            let vote = <RequestedVotes<T>>::get(market_id, &who).ok_or(Error::<T>::NoVoteFound)?;
             let court = <Courts<T>>::get(&market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             ensure!(
@@ -468,6 +483,12 @@ mod pallet {
                 fund_amount >= court.crowdfund_info.threshold,
                 Error::<T>::OutcomeCrowdfundsBelowThreshold
             );
+
+            let mut elections = <Elections<T>>::get(&market_id);
+            let (index, vote) = match elections.iter().position(|(juror, _)| juror == &who) {
+                Some(index) => (index, elections[index].1.clone()),
+                None => return Err(Error::<T>::NoVoteFound.into()),
+            };
 
             let secret = match vote {
                 Vote::Secret { secret } => {
@@ -486,7 +507,8 @@ mod pallet {
             };
 
             let raw_vote = Vote::Revealed { secret, outcome: outcome.clone(), salt };
-            RequestedVotes::<T>::insert(&market_id, &who, raw_vote);
+            elections[index] = (who.clone(), raw_vote);
+            <Elections<T>>::insert(&market_id, elections);
 
             Self::deposit_event(Event::JurorRevealedVote { juror: who, market_id, outcome, salt });
             Ok(())
@@ -599,13 +621,51 @@ mod pallet {
         T: Config,
     {
         pub(crate) fn select_jurors(market_id: &MarketIdOf<T>, appeal_number: usize) {
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            let jurors: JurorListOf<T> = JurorList::<T>::get();
             let necessary_jurors_num = Self::necessary_jurors_num(appeal_number);
             let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            for (ai, _) in random_jurors {
-                RequestedVotes::<T>::insert(market_id, ai, Vote::Drawn);
+            let actual_len = jurors.len().min(necessary_jurors_num);
+
+            let random_jurors = jurors
+                .choose_multiple_weighted(&mut rng, actual_len, |item| {
+                    let stake = item.0.saturated_into::<u128>();
+                    // split the u128 bits into two u64 bits and convert them to f64
+                    // f64 representation is only used to get weighted random selection
+                    let lo = (stake & 0xFFFFFFFFFFFFFFFF) as u64;
+                    let hi = (stake >> 64) as u64;
+
+                    let lo_f64 = f64::from_bits(lo);
+                    let hi_f64 = f64::from_bits(hi);
+
+                    hi_f64 * (2.0f64).powi(64) + lo_f64
+                })
+                .unwrap_or_else(|err| {
+                    log::warn!(
+                        "Court: weighted selection failed, falling back to random selection for \
+                         market {:?} with error: {:?}.",
+                        market_id,
+                        err
+                    );
+                    debug_assert!(false);
+                    // fallback to random selection if weighted selection fails
+                    jurors.choose_multiple(&mut rng, actual_len)
+                })
+                .collect::<Vec<_>>();
+
+            let mut elections = <Elections<T>>::get(market_id);
+            for (_, ai) in random_jurors {
+                let res = elections.try_push((ai.clone(), Vote::Drawn));
+                if let Err(err) = res {
+                    log::warn!(
+                        "Court: failed to add random juror {:?} to market {:?} with error: {:?}.",
+                        ai,
+                        market_id,
+                        err
+                    );
+                    debug_assert!(false);
+                }
             }
+            <Elections<T>>::insert(market_id, elections);
         }
 
         pub(crate) fn check_appealable_market(
@@ -631,22 +691,6 @@ mod pallet {
             );
 
             Ok(())
-        }
-
-        // Returns an unique random subset of `jurors` with length `len`.
-        //
-        // If `len` is greater than the length of `jurors`, then `len` will be capped.
-        pub(crate) fn random_jurors<'a, 'b, R>(
-            jurors: &'a [(T::AccountId, JurorInfoOf<T>)],
-            len: usize,
-            rng: &mut R,
-        ) -> ArrayVec<&'b (T::AccountId, JurorInfoOf<T>), MAX_RANDOM_JURORS>
-        where
-            'a: 'b,
-            R: RngCore,
-        {
-            let actual_len = jurors.len().min(len);
-            jurors.choose_multiple(rng, actual_len).collect()
         }
 
         /// The reserve ID of the court pallet.
@@ -676,18 +720,19 @@ mod pallet {
             T::TreasuryPalletId::get().into_account_truncating()
         }
 
-        // Retrieves a juror from the storage
-        fn juror(account_id: &T::AccountId) -> Result<JurorInfoOf<T>, DispatchError> {
-            Jurors::<T>::get(account_id).ok_or_else(|| Error::<T>::JurorDoesNotExists.into())
-        }
-
         // Calculates the necessary number of jurors depending on the number of market disputes.
         //
         // Result is capped to `usize::MAX` or in other words, capped to a very, very, very
         // high number of jurors.
         fn necessary_jurors_num(appeals_len: usize) -> usize {
-            // TODO: increase requested juror number higher; current max example: 3 + 2 * MaxAppeals
-            INITIAL_JURORS_NUM.saturating_add(SUBSEQUENT_JURORS_FACTOR.saturating_mul(appeals_len))
+            // 2^(appeals_len) * 3 + 2^(appeals_len) - 1
+            // MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127
+            SUBSEQUENT_JURORS_FACTOR
+                .saturating_pow(appeals_len as u32)
+                .saturating_mul(INITIAL_JURORS_NUM)
+                .saturating_add(
+                    SUBSEQUENT_JURORS_FACTOR.saturating_pow(appeals_len as u32).saturating_sub(1),
+                )
         }
 
         // Every juror that not voted on the first or second most voted outcome are slashed.
@@ -750,7 +795,21 @@ mod pallet {
                     slash,
                     BalanceStatus::Free,
                 )?;
-                Self::remove_juror_from_all_courts_of_all_markets(ai);
+                CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), ai);
+                let mut jurors = JurorList::<T>::get();
+                if let Some(prev_juror_info) = <Jurors<T>>::get(ai) {
+                    if let Ok(i) =
+                        jurors.binary_search_by_key(&prev_juror_info.stake, |tuple| tuple.0)
+                    {
+                        jurors.remove(i);
+                        <JurorList<T>>::put(jurors);
+                    } else {
+                        log::warn!("Exit court: Juror stake not found in list");
+                        debug_assert!(false);
+                    }
+                    Jurors::<T>::remove(ai);
+                }
+
                 Ok::<_, DispatchError>(())
             };
 
@@ -794,19 +853,6 @@ mod pallet {
             }
 
             Ok((best_score.0.clone(), valid_winners_and_losers))
-        }
-
-        // Obliterates all stored references of a juror un-reserving balances.
-        fn remove_juror_from_all_courts_of_all_markets(ai: &T::AccountId) {
-            CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), ai);
-            Jurors::<T>::remove(ai);
-            let mut market_ids = BTreeSet::new();
-            market_ids.extend(RequestedVotes::<T>::iter().map(|el| el.0));
-            for market_id in &market_ids {
-                // TODO: should we allow removing all vote requests?
-                // TODO: because the juror could avoid getting slashed by just exit_court
-                RequestedVotes::<T>::remove(market_id, ai);
-            }
         }
     }
 
@@ -864,8 +910,8 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            let votes: Vec<_> = RequestedVotes::<T>::iter_prefix(market_id).collect();
-            let (winner_outcome, valid_winners_and_losers) = Self::aggregate(votes.as_slice())?;
+            let elections: Vec<_> = Elections::<T>::get(market_id).into_inner();
+            let (winner_outcome, valid_winners_and_losers) = Self::aggregate(elections.as_slice())?;
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &winner_outcome)?;
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
@@ -882,9 +928,7 @@ mod pallet {
                 )?;
             }
             T::Crowdfund::close_crowdfund(court.crowdfund_info.index)?;
-
-            // this only removes a maximum of jurors according to MaxAppeals (weight limited)
-            let _ = RequestedVotes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            <Elections<T>>::remove(market_id);
 
             Ok(Some(winner_outcome))
         }
@@ -942,8 +986,7 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            // only removes a maximum of jurors according to MaxAppeals (weight limited)
-            let _ = RequestedVotes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            <Elections<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
             Ok(())
         }
