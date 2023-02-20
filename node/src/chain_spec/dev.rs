@@ -38,7 +38,10 @@ use zeitgeist_primitives::{
 use {
     super::battery_station::inflation_config,
     sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg::TOTAL_INITIAL_ZTG, BASE},
+    zeitgeist_primitives::constants::{
+        ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
+        BASE,
+    },
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
