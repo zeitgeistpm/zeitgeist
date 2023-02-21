@@ -1,13 +1,5 @@
 [workspace]
 default-members = [
-    "external/nimbus-consensus",
-    "external/nimbus-primitives",
-    "external/pallets/author-inherent",
-    "external/pallets/author-mapping",
-    "external/pallets/author-slot-filter",
-    "external/pallets/parachain-staking",
-    "external/session-keys",
-    "external/vrf",
     "node",
     "primitives",
     "runtime/common",
@@ -29,14 +21,6 @@ default-members = [
     "zrml/styx",
 ]
 members = [
-    "external/nimbus-consensus",
-    "external/nimbus-primitives",
-    "external/pallets/author-inherent",
-    "external/pallets/author-mapping",
-    "external/pallets/author-slot-filter",
-    "external/pallets/parachain-staking",
-    "external/session-keys",
-    "external/vrf",
     "node",
     "primitives",
     "runtime/common",

@@ -63,18 +63,18 @@ cumulus-relay-chain-rpc-interface = { branch = "polkadot-v0.9.32", git = "https:
 
 # Parachain
 
-moonbeam-vrf = { path = "../external/vrf", optional = true }
-nimbus-consensus = { default-features = false, path = "../external/nimbus-consensus", optional = true }
-nimbus-primitives = { default-features = false, path = "../external/nimbus-primitives", optional = true }
-pallet-author-inherent = { default-features = false, path = "../external/pallets/author-inherent", optional = true }
-pallet-parachain-staking = { default-features = false, path = "../external/pallets/parachain-staking", optional = true }
+moonbeam-vrf = { git = "https://github.com/zeitgeistpm/external", optional = true }
+nimbus-consensus = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
+nimbus-primitives = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
+pallet-author-inherent = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
+pallet-parachain-staking = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }
 sc-chain-spec = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 sc-network = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 sc-network-common = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 sc-tracing = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.144" }
-session-keys-primitives = { default-features = false, path = "../external/session-keys", optional = true }
+session-keys-primitives = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 sp-keystore = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 substrate-prometheus-endpoint = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 

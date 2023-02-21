@@ -5,9 +5,9 @@ frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "
 frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-currencies = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-author-inherent = { default-features = false, path = "../../external/pallets/author-inherent", optional = true }
-pallet-author-mapping = { default-features = false, path = "../../external/pallets/author-mapping", optional = true }
-pallet-author-slot-filter = { default-features = false, path = "../../external/pallets/author-slot-filter", optional = true }
+pallet-author-inherent = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
+pallet-author-mapping = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
+pallet-author-slot-filter = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-bounties = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -15,7 +15,7 @@ pallet-democracy = { branch = "polkadot-v0.9.32", default-features = false, git 
 pallet-identity = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-membership = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-multisig = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-parachain-staking = { default-features = false, path = "../../external/pallets/parachain-staking", optional = true }
+pallet-parachain-staking = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 pallet-preimage = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-proxy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
