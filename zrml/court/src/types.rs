@@ -58,23 +58,8 @@ pub enum Vote<Hash> {
     PartialEq,
     Eq,
 )]
-pub struct CrowdfundInfo<Balance> {
-    pub(crate) index: u128,
-    pub(crate) threshold: Balance,
-}
-
-#[derive(
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
-    scale_info::TypeInfo,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-)]
 pub struct Periods<BlockNumber> {
-    pub(crate) crowdfund_end: BlockNumber,
+    pub(crate) backing_end: BlockNumber,
     pub(crate) vote_end: BlockNumber,
     pub(crate) aggregation_end: BlockNumber,
     pub(crate) appeal_end: BlockNumber,
@@ -94,12 +79,12 @@ pub struct AppealInfo {
     pub(crate) current: u8,
     pub(crate) max: u8,
     pub(crate) is_drawn: bool,
-    pub(crate) is_funded: bool,
+    pub(crate) is_backed: bool,
 }
 
 impl AppealInfo {
     pub fn is_appeal_ready(&self) -> bool {
-        self.is_drawn && self.is_funded
+        self.is_drawn && self.is_backed
     }
 }
 
@@ -113,35 +98,27 @@ impl AppealInfo {
     PartialEq,
     Eq,
 )]
-pub struct CourtInfo<Balance, BlockNumber> {
-    pub(crate) crowdfund_info: CrowdfundInfo<Balance>,
+pub struct CourtInfo<BlockNumber> {
     pub(crate) appeal_info: AppealInfo,
     pub(crate) winner: Option<OutcomeReport>,
     pub(crate) periods: Periods<BlockNumber>,
 }
 
-impl<Balance: sp_runtime::traits::Saturating, BlockNumber: sp_runtime::traits::Saturating + Copy>
-    CourtInfo<Balance, BlockNumber>
-{
-    pub fn new(
-        crowdfund_info: CrowdfundInfo<Balance>,
-        now: BlockNumber,
-        periods: Periods<BlockNumber>,
-        max_appeals: u8,
-    ) -> Self {
-        let crowdfund_end = now.saturating_add(periods.crowdfund_end);
-        let vote_end = crowdfund_end.saturating_add(periods.vote_end);
+impl<BlockNumber: sp_runtime::traits::Saturating + Copy> CourtInfo<BlockNumber> {
+    pub fn new(now: BlockNumber, periods: Periods<BlockNumber>, max_appeals: u8) -> Self {
+        let backing_end = now.saturating_add(periods.backing_end);
+        let vote_end = backing_end.saturating_add(periods.vote_end);
         let aggregation_end = vote_end.saturating_add(periods.aggregation_end);
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
-        let periods = Periods { crowdfund_end, vote_end, aggregation_end, appeal_end };
+        let periods = Periods { backing_end, vote_end, aggregation_end, appeal_end };
         let appeal_info =
-            AppealInfo { current: 1, max: max_appeals, is_drawn: false, is_funded: false };
-        Self { crowdfund_info, appeal_info, winner: None, periods }
+            AppealInfo { current: 1, max: max_appeals, is_drawn: false, is_backed: false };
+        Self { appeal_info, winner: None, periods }
     }
 
     pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
-        self.periods.crowdfund_end = now.saturating_add(periods.crowdfund_end);
-        self.periods.vote_end = self.periods.crowdfund_end.saturating_add(periods.vote_end);
+        self.periods.backing_end = now.saturating_add(periods.backing_end);
+        self.periods.vote_end = self.periods.backing_end.saturating_add(periods.vote_end);
         self.periods.aggregation_end =
             self.periods.vote_end.saturating_add(periods.aggregation_end);
         self.periods.appeal_end = self.periods.aggregation_end.saturating_add(periods.appeal_end);
