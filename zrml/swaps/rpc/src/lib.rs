@@ -35,7 +35,7 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
 use std::collections::BTreeMap;
-use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
