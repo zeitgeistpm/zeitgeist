@@ -133,22 +133,23 @@ macro_rules! decl_common_types {
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
         >;
 
-        // More than 30%
+        // Advisory Committee vote proportions
+        // More than 33%
         type EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
-            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 3, 10>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 3>,
         >;
 
         // More than 50%
-        type EnsureRootOrMoreThanFiftyPercentAdvisoryCommittee = EitherOfDiverse<
+        type EnsureRootOrMoreThanHalfAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 2>,
         >;
 
-        // More than 70%
-        type EnsureRootOrMoreThanSeventyPercentAdvisoryCommittee = EitherOfDiverse<
+        // More than 66%
+        type EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
-            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 7, 10>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 2, 3>,
         >;
 
         // At least 66%
@@ -930,8 +931,7 @@ macro_rules! impl_config_traits {
         impl parachain_info::Config for Runtime {}
 
         impl zrml_authorized::Config for Runtime {
-            type AuthorizedDisputeResolutionOrigin =
-                EnsureRootOrMoreThanFiftyPercentAdvisoryCommittee;
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
@@ -1023,7 +1023,7 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
-            type RejectOrigin = EnsureRootOrMoreThanSeventyPercentAdvisoryCommittee;
+            type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
