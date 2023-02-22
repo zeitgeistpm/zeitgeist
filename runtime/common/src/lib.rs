@@ -135,7 +135,7 @@ macro_rules! decl_common_types {
 
         // Advisory Committee vote proportions
         // More than 33%
-        type EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee = EitherOfDiverse<
+        type EnsureRootOrMoreThanOneThirdAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 3>,
         >;
@@ -991,7 +991,7 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-            type ApproveOrigin = EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee;
+            type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type Authorized = Authorized;
             type Court = Court;
             type CloseOrigin = EnsureRoot<AccountId>;
@@ -1024,7 +1024,7 @@ macro_rules! impl_config_traits {
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
-            type RequestEditOrigin = EnsureRootOrMoreThanThirtyPercentAdvisoryCommittee;
+            type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
