@@ -7,6 +7,7 @@ use crate::{
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
+use sp_runtime::Percent;
 
 // Authorized
 parameter_types! {
@@ -19,6 +20,17 @@ parameter_types! {
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
     pub const StakeWeight: u128 = 2 * BASE;
+    pub const CourtBackingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtVotePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtAggregationPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtAppealPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const DenounceSlashPercentage: Percent = Percent::from_percent(70);
+    pub const MaxAppeals: u32 = 5;
+    pub const MaxDrawings: u32 = 127;
+    pub const MaxJurors: u32 = 10_000;
+    pub const MinJurorStake: Balance = 2 * BASE;
+    pub const RedistributionPercentage: Percent = Percent::from_percent(50);
+    pub const SlashPercentage: Percent = Percent::from_percent(10);
 }
 
 // Global disputes parameters

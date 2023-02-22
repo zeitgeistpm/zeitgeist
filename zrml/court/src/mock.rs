@@ -31,8 +31,10 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, PmPalletId,
-        StakeWeight, BASE,
+        BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod, CourtBackingPeriod,
+        CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDrawings,
+        MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
+        SlashPercentage, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -44,6 +46,12 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
+pub const EVE: AccountIdTest = 4;
+pub const FERDIE: AccountIdTest = 5;
+pub const GINA: AccountIdTest = 6;
+pub const HARRY: AccountIdTest = 7;
+pub const IAN: AccountIdTest = 8;
 pub const INITIAL_BALANCE: u128 = 1000 * BASE;
 
 parameter_types! {
@@ -106,12 +114,23 @@ impl DisputeResolutionApi for NoopResolution {
 }
 
 impl crate::Config for Runtime {
+    type AppealOrigin = frame_system::EnsureSigned<AccountIdTest>;
+    type CourtBackingPeriod = CourtBackingPeriod;
+    type CourtVotePeriod = CourtVotePeriod;
+    type CourtAggregationPeriod = CourtAggregationPeriod;
+    type CourtAppealPeriod = CourtAppealPeriod;
+    type DenounceSlashPercentage = DenounceSlashPercentage;
     type DisputeResolution = NoopResolution;
     type Event = ();
     type MarketCommons = MarketCommons;
+    type MaxAppeals = MaxAppeals;
+    type MaxDrawings = MaxDrawings;
+    type MaxJurors = MaxJurors;
+    type MinJurorStake = MinJurorStake;
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
-    type StakeWeight = StakeWeight;
+    type RedistributionPercentage = RedistributionPercentage;
+    type SlashPercentage = SlashPercentage;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

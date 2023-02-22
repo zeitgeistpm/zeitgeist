@@ -98,9 +98,24 @@ impl AppealInfo {
     PartialEq,
     Eq,
 )]
+pub enum CourtStatus {
+    Open,
+    Closed { winner: OutcomeReport, punished: bool, reassigned: bool },
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
 pub struct CourtInfo<BlockNumber> {
+    pub(crate) status: CourtStatus,
     pub(crate) appeal_info: AppealInfo,
-    pub(crate) winner: Option<OutcomeReport>,
     pub(crate) periods: Periods<BlockNumber>,
 }
 
@@ -111,9 +126,11 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy> CourtInfo<BlockNumber> 
         let aggregation_end = vote_end.saturating_add(periods.aggregation_end);
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
         let periods = Periods { backing_end, vote_end, aggregation_end, appeal_end };
+        // 2^1 * 3 + 2^1 - 1 = 7 jurors in the first appeal round (`necessary_jurors_num`)
         let appeal_info =
             AppealInfo { current: 1, max: max_appeals, is_drawn: false, is_backed: false };
-        Self { appeal_info, winner: None, periods }
+        let status = CourtStatus::Open;
+        Self { status, appeal_info, periods }
     }
 
     pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {

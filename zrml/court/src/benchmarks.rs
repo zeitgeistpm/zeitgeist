@@ -25,10 +25,9 @@
 use crate::Pallet as Court;
 use crate::{BalanceOf, Call, Config, CurrencyOf, Pallet};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
+use frame_support::traits::{Currency, Get};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
-use zeitgeist_primitives::types::OutcomeReport;
 
 fn deposit<T>(caller: &T::AccountId)
 where
@@ -37,33 +36,13 @@ where
     let _ = CurrencyOf::<T>::deposit_creating(caller, BalanceOf::<T>::max_value());
 }
 
-fn deposit_and_join_court<T>(caller: &T::AccountId)
-where
-    T: Config,
-{
-    deposit::<T>(caller);
-    Call::<T>::join_court {}
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())
-        .unwrap();
-}
-
 benchmarks! {
-    exit_court {
-        let caller: T::AccountId = whitelisted_caller();
-        deposit_and_join_court::<T>(&caller);
-    }: _(RawOrigin::Signed(caller))
-
     join_court {
         let caller: T::AccountId = whitelisted_caller();
         deposit::<T>(&caller);
-    }: _(RawOrigin::Signed(caller))
+        let amount = T::MinJurorStake::get();
+    }: _(RawOrigin::Signed(caller), amount)
 
-    vote {
-        let caller: T::AccountId = whitelisted_caller();
-        let market_id = Default::default();
-        let outcome = OutcomeReport::Scalar(u128::MAX);
-        deposit_and_join_court::<T>(&caller);
-    }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     impl_benchmark_test_suite!(
         Court,

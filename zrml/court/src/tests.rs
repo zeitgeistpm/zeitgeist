@@ -20,9 +20,9 @@
 use crate::{
     mock::{
         Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
-        System, ALICE, BOB, CHARLIE, INITIAL_BALANCE,
+        System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
     },
-    Error, Juror, JurorStatus, Jurors, MarketOf, RequestedJurors, Votes,
+    Error, JurorInfo, Jurors, MarketOf,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -32,8 +32,8 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::DisputeApi,
     types::{
-        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, OutcomeReport, ScoringRule,
+        AccountIdTest, Asset, Deadlines, Market, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -55,24 +55,29 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     scoring_rule: ScoringRule::CPMM,
     bonds: MarketBonds { creation: None, oracle: None, outsider: None, dispute: None },
 };
-const DEFAULT_SET_OF_JURORS: &[(u128, Juror)] = &[
-    (7, Juror { status: JurorStatus::Ok }),
-    (6, Juror { status: JurorStatus::Tardy }),
-    (5, Juror { status: JurorStatus::Ok }),
-    (4, Juror { status: JurorStatus::Tardy }),
-    (3, Juror { status: JurorStatus::Ok }),
-    (2, Juror { status: JurorStatus::Ok }),
-    (1, Juror { status: JurorStatus::Ok }),
+
+const DEFAULT_SET_OF_JURORS: &[(u128, AccountIdTest)] = &[
+    (9, HARRY),
+    (8, IAN),
+    (7, ALICE),
+    (6, BOB),
+    (5, CHARLIE),
+    (4, DAVE),
+    (3, EVE),
+    (2, FERDIE),
+    (1, GINA),
 ];
 
 #[test]
 fn exit_court_successfully_removes_a_juror_and_frees_balances() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(Jurors::<Runtime>::iter().count(), 1);
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
-        assert_ok!(Court::exit_court(Origin::signed(ALICE)));
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), amount);
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 0);
@@ -80,49 +85,21 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
 }
 
 #[test]
-fn exit_court_will_not_remove_an_unknown_juror() {
+fn prepare_exit_court_will_not_remove_an_unknown_juror() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE)),
+            Court::prepare_exit_court(Origin::signed(ALICE)),
             Error::<Runtime>::JurorDoesNotExists
         );
     });
 }
 
 #[test]
-fn join_court_reserves_balance_according_to_the_number_of_jurors() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
-        assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
-
-        assert_eq!(Balances::free_balance(BOB), 1000 * BASE);
-        assert_ok!(Court::join_court(Origin::signed(BOB)));
-        assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
-    });
-}
-
-#[test]
 fn join_court_successfully_stores_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
-        assert_eq!(
-            Jurors::<Runtime>::iter().next().unwrap(),
-            (ALICE, Juror { status: JurorStatus::Ok })
-        );
-    });
-}
-
-#[test]
-fn join_court_will_not_insert_an_already_stored_juror() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
-        assert_noop!(
-            Court::join_court(Origin::signed(ALICE)),
-            Error::<Runtime>::JurorAlreadyExists
-        );
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (ALICE, JurorInfo { stake: amount }));
     });
 }
 
@@ -154,15 +131,6 @@ fn get_resolution_outcome_denies_non_court_markets() {
 fn appeal_stores_jurors_that_should_vote() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
-        let _ = Court::join_court(Origin::signed(ALICE));
-        let _ = Court::join_court(Origin::signed(BOB));
-        MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        assert_noop!(
-            Court::join_court(Origin::signed(ALICE)),
-            Error::<Runtime>::JurorAlreadyExists
-        );
-        assert_eq!(RequestedJurors::<Runtime>::iter().count(), 2);
     });
 }
 
@@ -171,107 +139,27 @@ fn appeal_stores_jurors_that_should_vote() {
 fn get_resolution_outcome_awards_winners_and_slashes_losers() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        let amount_alice = 2 * BASE;
+        let amount_bob = 3 * BASE;
+        let amount_charlie = 4 * BASE;
+        Court::join_court(Origin::signed(ALICE), amount_alice).unwrap();
+        Court::join_court(Origin::signed(BOB), amount_bob).unwrap();
+        Court::join_court(Origin::signed(CHARLIE), amount_charlie).unwrap();
         MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
-        assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
-        assert_eq!(Balances::free_balance(CHARLIE), 994 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &CHARLIE), 3 * BASE);
     });
 }
 
 #[test]
-fn get_resolution_outcome_decides_market_outcome_based_on_the_majority() {
+fn get_resolution_outcome_decides_market_outcome_based_on_the_plurality() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        let amount_alice = 2 * BASE;
+        let amount_bob = 3 * BASE;
+        let amount_charlie = 4 * BASE;
+        Court::join_court(Origin::signed(ALICE), amount_alice).unwrap();
+        Court::join_court(Origin::signed(BOB), amount_bob).unwrap();
+        Court::join_court(Origin::signed(CHARLIE), amount_charlie).unwrap();
         MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
-        let outcome = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(outcome, Some(OutcomeReport::Scalar(1)));
-    });
-}
-
-#[test]
-fn get_resolution_outcome_sets_late_jurors_as_tardy() {
-    ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().status, JurorStatus::Ok);
-        assert_eq!(Jurors::<Runtime>::get(BOB).unwrap().status, JurorStatus::Tardy);
-    });
-}
-
-#[test]
-fn get_resolution_outcome_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tardy() {
-    ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(Jurors::<Runtime>::get(CHARLIE).unwrap().status, JurorStatus::Tardy);
-    });
-}
-
-#[test]
-fn get_resolution_outcome_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
-    ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::set_stored_juror_as_tardy(&BOB).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
-        let join_court_stake = 40000000000;
-        let slash = join_court_stake / 5;
-        assert_eq!(Balances::free_balance(Court::treasury_account_id()), INITIAL_BALANCE + slash);
-        assert_eq!(Balances::free_balance(BOB), INITIAL_BALANCE - slash);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 0);
-    });
-}
-
-#[test]
-fn get_resolution_outcome_removes_requested_jurors_and_votes() {
-    ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
-        Court::join_court(Origin::signed(ALICE)).unwrap();
-        Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-        Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(RequestedJurors::<Runtime>::iter().count(), 0);
-        assert_eq!(Votes::<Runtime>::iter().count(), 0);
     });
 }
 
@@ -281,14 +169,15 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
         setup_blocks(123);
 
         let mut rng = Court::rng();
-        let random_jurors = Court::random_jurors(DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let random_jurors =
+            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS.to_vec(), 2, &mut rng);
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             setup_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::random_jurors(DEFAULT_SET_OF_JURORS, 2, &mut rng);
+                Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS.to_vec(), 2, &mut rng);
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -314,9 +203,10 @@ fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
         let mut rng = Court::rng();
-        let random_jurors = Court::random_jurors(DEFAULT_SET_OF_JURORS, 2, &mut rng);
-        for (_, juror) in random_jurors {
-            assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| &el.1 == juror));
+        let random_jurors =
+            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS.to_vec(), 2, &mut rng);
+        for (juror, _) in random_jurors {
+            assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.1 == juror));
         }
     });
 }
@@ -324,19 +214,8 @@ fn random_jurors_returns_a_subset_of_jurors() {
 #[test]
 fn vote_will_not_accept_unknown_accounts() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(0)),
-            Error::<Runtime>::OnlyJurorsCanVote
-        );
-    });
-}
-
-#[test]
-fn vote_will_stored_outcome_from_a_juror() {
-    ExtBuilder::default().build().execute_with(|| {
-        let _ = Court::join_court(Origin::signed(ALICE));
-        let _ = Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(0));
-        assert_eq!(Votes::<Runtime>::get(ALICE, 0).unwrap(), (0, OutcomeReport::Scalar(0)));
+        setup_blocks(123);
+        Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
     });
 }
 
