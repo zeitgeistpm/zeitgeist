@@ -27,7 +27,7 @@ use jsonrpsee::{
     proc_macros::rpc,
     types::error::{CallError, ErrorObject},
 };
-use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
+use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
@@ -84,7 +84,7 @@ where
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<BlockNumber>,
-    ) -> RpcResult<BTreeMap<SerdeWrapper<BlockNumber>, Vec<(Asset<MarketId>, Balance)>>>;
+    ) -> RpcResult<BTreeMap<BlockNumber, Vec<(Asset<MarketId>, Balance)>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -127,7 +127,6 @@ where
     AccountId: Clone + Display + Codec + Send + 'static,
     Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
     MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Ord + Send + 'static,
-    Pool<Balance, MarketId>: Decode,
 {
     async fn pool_shares_id(
         &self,
@@ -223,11 +222,10 @@ where
         pool_id: PoolId,
         with_fees: bool,
         blocks: Vec<NumberFor<Block>>,
-    ) -> RpcResult<BTreeMap<SerdeWrapper<NumberFor<Block>>, Vec<(Asset<MarketId>, Balance)>>> {
+    ) -> RpcResult<BTreeMap<NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>>> {
         let api = self.client.runtime_api();
-        let mut res: BTreeMap<SerdeWrapper<NumberFor<Block>>, Vec<(Asset<MarketId>, Balance)>> =
-            BTreeMap::new();
-        let _ = blocks.into_iter().try_for_each(|block| -> Result<(), CallError> {
+        let mut res = BTreeMap::new();
+        blocks.into_iter().try_for_each(|block| -> Result<(), CallError> {
             let hash = BlockId::number(block);
             let prices: Vec<(Asset<MarketId>, Balance)> = api
                 .get_all_spot_prices(&hash, &pool_id, with_fees)
@@ -235,7 +233,7 @@ where
                     CallError::Custom(ErrorObject::owned(
                         Error::RuntimeError.into(),
                         "Unable to get_all_spot_prices.",
-                        Some(e.to_string()),
+                        Some(format!("{:?}", e)),
                     ))
                 })?
                 .map_err(|e| {
@@ -245,7 +243,7 @@ where
                         Some(format!("{:?}", e)),
                     ))
                 })?;
-            res.insert(SerdeWrapper(block), prices);
+            res.insert(block, prices);
             Ok(())
         })?;
         Ok(res)

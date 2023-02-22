@@ -1470,7 +1470,8 @@ mod pallet {
             }
         }
 
-        // Retunrs vector of units of base_asset required to buy one unit of given asset.
+        // Retunrs vector of pair of asset and units of base_asset
+        // required to buy one unit of given asset.
         pub fn get_all_spot_prices(
             pool_id: &PoolId,
             with_fees: bool,

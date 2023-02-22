@@ -1494,7 +1494,7 @@ macro_rules! create_runtime_api {
 
                 fn get_all_spot_prices(
                     pool_id: &PoolId,
-                    with_fees: bool
+                    with_fees: bool,
                 ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
                     Swaps::get_all_spot_prices(pool_id, with_fees)
                 }
