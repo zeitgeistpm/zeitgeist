@@ -100,7 +100,7 @@ parameter_types! {
     /// The maximum number of jurors that can be registered.
     pub const MaxJurors: u32 = 10_000;
     /// The minimum stake a user needs to reserve to become a juror.
-    pub const MinJurorStake: Balance = 2 * BASE;
+    pub const MinJurorStake: Balance = 5 * BASE;
     /// The percentage that is slashed if a juror did not vote for the plurality outcome.
     pub const RedistributionPercentage: Percent = Percent::from_percent(50);
     /// The percentage that is being slashed from the juror's stake.

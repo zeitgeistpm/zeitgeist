@@ -251,6 +251,8 @@ mod pallet {
         MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u8 },
         /// The juror stakes have been reassigned.
         JurorStakesReassigned { market_id: MarketIdOf<T> },
+        /// The tardy jurors have been punished.
+        TardyJurorsPunished { market_id: MarketIdOf<T> },
     }
 
     #[pallet::error]
@@ -324,6 +326,8 @@ mod pallet {
         TardyJurorsAlreadyPunished,
         /// Punish the tardy jurors first.
         PunishTardyJurorsFirst,
+        /// There are not enough jurors in the pool.
+        NotEnoughJurors,
     }
 
     #[pallet::call]
@@ -339,7 +343,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
-        #[pallet::weight(T::WeightInfo::join_court())]
+        #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn join_court(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -360,7 +364,7 @@ mod pallet {
                     return Err(Error::<T>::JurorNeedsToExit.into());
                 }
 
-                juror_info.stake = prev_juror_info.stake.saturating_add(amount);
+                juror_info.stake = juror_info.stake.saturating_add(prev_juror_info.stake);
             }
 
             match jurors.binary_search_by_key(&juror_info.stake, |tuple| tuple.0) {
@@ -369,10 +373,11 @@ mod pallet {
                 // if there are multiple jurors with the same stake
                 Ok(_) => return Err(Error::<T>::AmountAlreadyUsed.into()),
                 Err(i) => jurors
-                    .try_insert(i, (amount, who.clone()))
+                    .try_insert(i, (juror_info.stake, who.clone()))
                     .map_err(|_| Error::<T>::MaxJurorsReached)?,
             };
 
+            // full reserve = prev_juror_info.stake (already reserved) + amount
             CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, amount)?;
 
             JurorPool::<T>::put(jurors);
@@ -389,7 +394,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
-        #[pallet::weight(T::WeightInfo::exit_court())]
+        #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -425,7 +430,7 @@ mod pallet {
         /// Complexity: `O(n * m)`, where `n` is the number of markets
         /// which have active random selections in place, and `m` is the number of jurors
         /// randomly selected for each market.
-        #[pallet::weight(T::WeightInfo::exit_court())]
+        #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn exit_court(origin: OriginFor<T>, juror: AccountIdLookupOf<T>) -> DispatchResult {
             ensure_signed(origin)?;
@@ -465,7 +470,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
         /// in the list of random selections (drawings).
-        #[pallet::weight(T::WeightInfo::vote())]
+        #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn vote(
             origin: OriginFor<T>,
@@ -700,10 +705,6 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` depends on `choose_multiple_weighted` of `select_jurors`.
-        /// The complexity of this method depends on the feature partition_at_index.
-        /// If the feature is enabled, then for slices of length n,
-        /// the complexity is O(n) space and O(n) time.
-        /// Otherwise, the complexity is O(n) space and O(n * log amount) time.
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn draw_appeal_jurors(
@@ -721,7 +722,9 @@ mod pallet {
             let last_resolve_at = court.periods.appeal_end;
 
             let appeal_number = court.appeal_info.current as usize;
-            Self::select_jurors(&market_id, appeal_number);
+            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+            ensure!(jurors.len() >= INITIAL_JURORS_NUM, Error::<T>::NotEnoughJurors);
+            Self::select_jurors(&market_id, jurors.as_slice(), appeal_number);
             // at the time of flushing the last drawings in `select_jurors`
             // we want to avoid the resolution before the full appeal is executed
             // otherwise `draw_appeal_jurors` would replace all votes with `Vote::Drawn`
@@ -797,9 +800,8 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
-                CourtStatus::Closed { winner, punished, reassigned } => {
+                CourtStatus::Closed { winner, punished, reassigned: _ } => {
                     ensure!(!punished, Error::<T>::TardyJurorsAlreadyPunished);
-                    ensure!(!reassigned, Error::<T>::JurorsAlreadyReassigned);
                     winner
                 }
                 _ => return Err(Error::<T>::CourtNotClosed.into()),
@@ -859,7 +861,7 @@ mod pallet {
             <Courts<T>>::insert(market_id, court);
             <JurorPool<T>>::put(jurors);
 
-            Self::deposit_event(Event::JurorStakesReassigned { market_id });
+            Self::deposit_event(Event::TardyJurorsPunished { market_id });
 
             Ok(())
         }
@@ -957,14 +959,17 @@ mod pallet {
             selected
         }
 
-        pub(crate) fn select_jurors(market_id: &MarketIdOf<T>, appeal_number: usize) {
-            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+        pub(crate) fn select_jurors(
+            market_id: &MarketIdOf<T>,
+            jurors: &[(BalanceOf<T>, T::AccountId)],
+            appeal_number: usize,
+        ) {
             let necessary_jurors_num = Self::necessary_jurors_num(appeal_number);
             let mut rng = Self::rng();
             let actual_len = jurors.len().min(necessary_jurors_num);
 
             let random_jurors =
-                Self::choose_multiple_weighted(market_id, jurors.as_slice(), actual_len, &mut rng);
+                Self::choose_multiple_weighted(market_id, jurors, actual_len, &mut rng);
 
             // we allow at most MaxDrawings jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127
@@ -1129,6 +1134,10 @@ mod pallet {
 
             ensure!(!<Courts<T>>::contains_key(market_id), Error::<T>::CourtAlreadyExists);
 
+            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+            ensure!(jurors.len() >= INITIAL_JURORS_NUM, Error::<T>::NotEnoughJurors);
+            Self::select_jurors(market_id, jurors.as_slice(), 0usize);
+
             let now = <frame_system::Pallet<T>>::block_number();
 
             let periods = Periods {
@@ -1140,8 +1149,6 @@ mod pallet {
 
             // sets periods one after the other from now
             let court = CourtInfo::new(now, periods, T::MaxAppeals::get() as u8);
-
-            Self::select_jurors(market_id, 0usize);
 
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(market_id, court.periods.appeal_end)?;

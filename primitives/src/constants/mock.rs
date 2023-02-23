@@ -27,7 +27,7 @@ parameter_types! {
     pub const MaxAppeals: u32 = 5;
     pub const MaxDrawings: u32 = 127;
     pub const MaxJurors: u32 = 1000;
-    pub const MinJurorStake: Balance = 2 * BASE;
+    pub const MinJurorStake: Balance = 5 * BASE;
     pub const RedistributionPercentage: Percent = Percent::from_percent(50);
     pub const SlashPercentage: Percent = Percent::from_percent(10);
 }
