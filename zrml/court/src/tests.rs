@@ -213,6 +213,12 @@ fn random_jurors_returns_a_subset_of_jurors() {
 fn vote_will_not_accept_unknown_accounts() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
+        let amount_alice = 2 * BASE;
+        let amount_bob = 3 * BASE;
+        let amount_charlie = 4 * BASE;
+        Court::join_court(Origin::signed(ALICE), amount_alice).unwrap();
+        Court::join_court(Origin::signed(BOB), amount_bob).unwrap();
+        Court::join_court(Origin::signed(CHARLIE), amount_charlie).unwrap();
         Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
     });
 }
