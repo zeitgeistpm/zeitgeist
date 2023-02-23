@@ -919,58 +919,38 @@ mod pallet {
         T: Config,
     {
         pub(crate) fn choose_multiple_weighted<R: RngCore>(
-            mut jurors: Vec<(BalanceOf<T>, T::AccountId)>,
+            market_id: &MarketIdOf<T>,
+            jurors: &[(BalanceOf<T>, T::AccountId)],
             number: usize,
             rng: &mut R,
         ) -> Vec<(T::AccountId, Vote<T::Hash>)> {
-            use core::cmp::Ordering;
-            use rand::Rng;
-
-            let mut total_weight: u128 =
-                jurors.iter().map(|(stake, _)| (*stake).saturated_into::<u128>()).sum();
+            use rand::{
+                distributions::{Distribution, WeightedIndex},
+                seq::SliceRandom,
+            };
 
             let mut selected = Vec::with_capacity(number);
 
-            for _ in 0..number {
-                let mut remaining_weight = total_weight;
-                let mut index: usize = 0;
-                let threshold = rng.gen_range(0u128..total_weight);
+            let res = WeightedIndex::new(jurors.iter().map(|item| item.0.saturated_into::<u128>()));
 
-                let weight_0: u128 = jurors[index].0.saturated_into();
-                while remaining_weight > weight_0 {
-                    remaining_weight = remaining_weight.saturating_sub(weight_0);
-                    index = index.saturating_add(1);
-                }
-
-                if threshold < remaining_weight {
-                    selected.push((jurors[index].1.clone(), Vote::Drawn));
-                    total_weight = total_weight.saturating_sub(weight_0);
-                    jurors.swap_remove(index);
-                } else {
-                    for i in 0..jurors.len() {
-                        let weight_1: u128 = jurors[i].0.saturated_into();
-                        match threshold.cmp(&remaining_weight) {
-                            Ordering::Less => {
-                                remaining_weight = remaining_weight.saturating_sub(weight_1);
-                            }
-                            Ordering::Equal => {
-                                selected.push((jurors[i].1.clone(), Vote::Drawn));
-                                total_weight = total_weight.saturating_sub(weight_1);
-                                jurors.swap_remove(i);
-                                break;
-                            }
-                            Ordering::Greater => {
-                                selected.push((jurors[i].1.clone(), Vote::Drawn));
-                                total_weight = total_weight.saturating_sub(weight_1);
-                                jurors.swap_remove(i);
-                                break;
-                            }
-                        }
+            match res {
+                Ok(distribution) => {
+                    for _ in 0..number {
+                        selected.push((jurors[distribution.sample(rng)].1.clone(), Vote::Drawn));
                     }
                 }
-
-                if jurors.is_empty() {
-                    break;
+                Err(err) => {
+                    // this can also happen when there are no jurors
+                    log::warn!(
+                        "Court: weighted selection failed, falling back to random selection for \
+                         market {:?} with error: {:?}.",
+                        market_id,
+                        err
+                    );
+                    // fallback to random selection if weighted selection fails
+                    jurors.choose_multiple(rng, number).for_each(|item| {
+                        selected.push((item.1.clone(), Vote::Drawn));
+                    });
                 }
             }
 
@@ -984,7 +964,7 @@ mod pallet {
             let actual_len = jurors.len().min(necessary_jurors_num);
 
             let random_jurors =
-                Self::choose_multiple_weighted(jurors.into_inner(), actual_len, &mut rng);
+                Self::choose_multiple_weighted(market_id, jurors.as_slice(), actual_len, &mut rng);
 
             // we allow at most MaxDrawings jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127

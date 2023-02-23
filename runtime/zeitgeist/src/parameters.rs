@@ -81,9 +81,30 @@ parameter_types! {
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
-    /// This value is multiplied by the current number of jurors to determine the stake
-    /// the juror has to pay.
-    pub const StakeWeight: u128 = 2 * BASE;
+    /// The time to wait before jurors can start voting.
+    /// The intention is to use this period as preparation time
+    /// (for example vote outcome addition through crowdfunding)
+    pub const CourtBackingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The time in which the jurors can cast their secret vote.
+    pub const CourtVotePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The time in which the jurors should reveal their secret vote.
+    pub const CourtAggregationPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The time in which a court case can get appealed.
+    pub const CourtAppealPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The slash percentage if a secret vote gets revealed during the voting period.
+    pub const DenounceSlashPercentage: Percent = Percent::from_percent(70);
+    /// The maximum number of appeals until the court fails.
+    pub const MaxAppeals: u32 = 5;
+    /// The maximum number of randomly selected jurors for a dispute.
+    pub const MaxDrawings: u32 = 127;
+    /// The maximum number of jurors that can be registered.
+    pub const MaxJurors: u32 = 10_000;
+    /// The minimum stake a user needs to reserve to become a juror.
+    pub const MinJurorStake: Balance = 2 * BASE;
+    /// The percentage that is slashed if a juror did not vote for the plurality outcome.
+    pub const RedistributionPercentage: Percent = Percent::from_percent(50);
+    /// The percentage that is being slashed from the juror's stake.
+    pub const SlashPercentage: Percent = Percent::from_percent(10);
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.
