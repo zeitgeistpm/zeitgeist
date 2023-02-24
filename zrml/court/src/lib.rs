@@ -53,8 +53,8 @@ mod pallet {
         ensure, log,
         pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{
-            BalanceStatus, Currency, Get, Imbalance, IsType, NamedReservableCurrency, Randomness,
-            StorageVersion,
+            BalanceStatus, Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
+            NamedReservableCurrency, Randomness, StorageVersion, WithdrawReasons,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId,
     };
@@ -98,6 +98,15 @@ mod pallet {
         /// The time in which a court case can get appealed.
         #[pallet::constant]
         type CourtAppealPeriod: Get<Self::BlockNumber>;
+
+        /// The court lock identifier.
+        #[pallet::constant]
+        type CourtLockId: Get<LockIdentifier>;
+
+        /// The currency implementation used to transfer, lock and reserve tokens.
+        type Currency: Currency<Self::AccountId>
+            + NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>
+            + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         /// The slash percentage if a secret vote gets revealed during the voting period.
         #[pallet::constant]
@@ -169,8 +178,7 @@ mod pallet {
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type CurrencyOf<T> = <T as Config>::Currency;
     pub(crate) type NegativeImbalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
@@ -338,6 +346,8 @@ mod pallet {
         PunishTardyJurorsFirst,
         /// There are not enough jurors in the pool.
         NotEnoughJurors,
+        /// The report of the market was not found.
+        MarketReportNotFound,
     }
 
     #[pallet::call]
@@ -387,8 +397,12 @@ mod pallet {
                     .map_err(|_| Error::<T>::MaxJurorsReached)?,
             };
 
-            // full reserve = prev_juror_info.stake (already reserved) + amount
-            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, amount)?;
+            T::Currency::set_lock(
+                T::CourtLockId::get(),
+                &who,
+                juror_info.stake,
+                WithdrawReasons::all(),
+            );
 
             JurorPool::<T>::put(jurors);
 
@@ -463,7 +477,7 @@ mod pallet {
 
             Jurors::<T>::remove(&juror);
 
-            CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), &juror);
+            T::Currency::remove_lock(T::CourtLockId::get(), &juror);
 
             Self::deposit_event(Event::ExitedJuror { juror });
             Ok(())
@@ -583,9 +597,9 @@ mod pallet {
             };
 
             let treasury_account_id = Self::treasury_account_id();
-            let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), &juror);
+            let all_reserved = T::Currency::reserved_balance_named(&Self::reserve_id(), &juror);
             let slash = T::DenounceSlashPercentage::get() * all_reserved;
-            let _ = CurrencyOf::<T>::repatriate_reserved_named(
+            let _ = T::Currency::repatriate_reserved_named(
                 &Self::reserve_id(),
                 &juror,
                 &treasury_account_id,
@@ -701,16 +715,20 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
+            let draws = Draws::<T>::get(market_id);
+            // TODO: shouldn't fail here, especially when there are no votes an appeal should be necessary or start global dispute
+            let appealed_outcome = Self::get_winner(draws.as_slice())?;
+
             let appeal_number = court.appeals.len();
             let bond = default_appeal_bond::<T>(appeal_number);
-            let appeal_info = AppealInfo { backer: who.clone(), bond };
+            let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
 
             court.appeals.try_push(appeal_info).map_err(|_| Error::<T>::MaxAppealsReached)?;
 
-            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, bond)?;
+            T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
 
             let last_resolve_at = court.periods.appeal_end;
-            
+
             court.is_appeal_backed = true;
             <Courts<T>>::insert(market_id, court);
 
@@ -748,11 +766,9 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
-            let appeal_number = court.appeals.len().saturating_add(1usize);
             let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
-            // TODO trigger global disputes
-            ensure!(jurors.len() >= INITIAL_JURORS_NUM, Error::<T>::NotEnoughJurors);
-            Self::select_jurors(&market_id, jurors.as_slice(), appeal_number);
+            let appeal_number = court.appeals.len();
+            Self::select_jurors(&market_id, jurors.as_slice(), appeal_number)?;
 
             court.is_drawn = true;
             <Courts<T>>::insert(market_id, court);
@@ -831,9 +847,9 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
             let mut slash_and_remove_juror = |ai: &T::AccountId| {
-                let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), ai);
+                let all_reserved = T::Currency::reserved_balance_named(&Self::reserve_id(), ai);
                 let slash = T::SlashPercentage::get() * all_reserved;
-                let res = CurrencyOf::<T>::repatriate_reserved_named(
+                let res = T::Currency::repatriate_reserved_named(
                     &Self::reserve_id(),
                     ai,
                     &treasury_account_id,
@@ -995,12 +1011,14 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             jurors: &[(BalanceOf<T>, T::AccountId)],
             appeal_number: usize,
-        ) {
-            let necessary_jurors_num = Self::necessary_jurors_num(appeal_number);
-            let mut rng = Self::rng();
-            let actual_len = jurors.len().min(necessary_jurors_num);
+        ) -> Result<(), DispatchError> {
+            let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
+            ensure!(jurors.len() >= necessary_jurors_number, Error::<T>::NotEnoughJurors);
 
-            let random_jurors = Self::choose_multiple_weighted(jurors, actual_len, &mut rng);
+            let mut rng = Self::rng();
+
+            let random_jurors =
+                Self::choose_multiple_weighted(jurors, necessary_jurors_number, &mut rng);
 
             // we allow at most MaxDraws jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127
@@ -1008,6 +1026,8 @@ mod pallet {
             let draws = <DrawsOf<T>>::truncate_from(random_jurors);
             // new appeal round should have a fresh set of draws
             <Draws<T>>::insert(market_id, draws);
+
+            Ok(())
         }
 
         pub(crate) fn check_appealable_market(
@@ -1081,10 +1101,10 @@ mod pallet {
                     winners.push(juror);
                 } else {
                     let all_reserved =
-                        CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), juror);
+                        T::Currency::reserved_balance_named(&Self::reserve_id(), juror);
                     let slash = T::RedistributionPercentage::get() * all_reserved;
                     let (imb, _excess) =
-                        CurrencyOf::<T>::slash_reserved_named(&Self::reserve_id(), juror, slash);
+                        T::Currency::slash_reserved_named(&Self::reserve_id(), juror, slash);
                     total_incentives.subsume(imb);
                 }
             }
@@ -1095,12 +1115,12 @@ mod pallet {
                 for juror in winners {
                     let (actual_reward, leftover) = total_incentives.split(reward_per_each);
                     total_incentives = leftover;
-                    CurrencyOf::<T>::resolve_creating(juror, actual_reward);
+                    T::Currency::resolve_creating(juror, actual_reward);
                 }
             } else {
                 // if there are no winners reward the treasury
                 let treasury_acc = Self::treasury_account_id();
-                CurrencyOf::<T>::resolve_creating(&treasury_acc, total_incentives);
+                T::Currency::resolve_creating(&treasury_acc, total_incentives);
             }
 
             Ok(())
@@ -1159,8 +1179,8 @@ mod pallet {
             ensure!(!<Courts<T>>::contains_key(market_id), Error::<T>::CourtAlreadyExists);
 
             let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
-            ensure!(jurors.len() >= INITIAL_JURORS_NUM, Error::<T>::NotEnoughJurors);
-            Self::select_jurors(market_id, jurors.as_slice(), 0usize);
+            let appeal_number = 0usize;
+            Self::select_jurors(market_id, jurors.as_slice(), appeal_number)?;
 
             let now = <frame_system::Pallet<T>>::block_number();
 
@@ -1207,16 +1227,27 @@ mod pallet {
         }
 
         fn maybe_pay(
-            _: &Self::MarketId,
+            market_id: &Self::MarketId,
             market: &MarketOf<T>,
-            _: &OutcomeReport,
-            overall_imbalance: NegativeImbalanceOf<T>,
+            resolved_outcome: &OutcomeReport,
+            mut overall_imbalance: NegativeImbalanceOf<T>,
         ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            // TODO all funds to treasury?
+
+            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+            for AppealInfo { backer, bond, appealed_outcome } in &court.appeals {
+                if resolved_outcome == appealed_outcome {
+                    let (imb, _) =
+                        T::Currency::slash_reserved_named(&Self::reserve_id(), backer, *bond);
+                    overall_imbalance.subsume(imb);
+                } else {
+                    T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
+                }
+            }
+
             Ok(overall_imbalance)
         }
 
@@ -1234,7 +1265,7 @@ mod pallet {
         }
 
         fn has_failed(
-            _market_id: &Self::MarketId,
+            market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<bool, DispatchError> {
             ensure!(
@@ -1242,15 +1273,58 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            // TODO: for now disallow global dispute for court, later use max appeals check
-            Ok(false)
+            let mut has_failed = false;
+            let now = <frame_system::Pallet<T>>::block_number();
+
+            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+            match <Courts<T>>::get(market_id) {
+                Some(court) => {
+                    let appeals = &court.appeals;
+                    let appeal_number = appeals.len();
+                    let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
+                    let valid_period =
+                        Self::check_appealable_market(market_id, &court, now).is_ok();
+
+                    if valid_period {
+                        if jurors.len() < necessary_jurors_number {
+                            has_failed = true;
+                        }
+
+                        if appeals.is_full() {
+                            has_failed = true;
+                        }
+                    }
+                }
+                None => {
+                    let report = market.report.as_ref().ok_or(Error::<T>::MarketReportNotFound)?;
+                    let report_block = report.at;
+                    let block_after_dispute_duration =
+                        report_block.saturating_add(market.deadlines.dispute_duration);
+                    let during_dispute_duration =
+                        report_block <= now && now < block_after_dispute_duration;
+
+                    let necessary_jurors_number = Self::necessary_jurors_num(0usize);
+                    if jurors.len() < necessary_jurors_number && during_dispute_duration {
+                        has_failed = true;
+                    }
+                }
+            }
+
+            Ok(has_failed)
         }
 
-        fn on_global_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn on_global_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
+
+            if let Some(court) = <Courts<T>>::get(market_id) {
+                let last_resolve_at = court.periods.appeal_end;
+                let _ids_len_0 =
+                    T::DisputeResolution::remove_auto_resolve(market_id, last_resolve_at);
+            }
+
             Ok(())
         }
 

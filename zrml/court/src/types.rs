@@ -93,6 +93,7 @@ pub enum CourtStatus {
 pub struct AppealInfo<AccountId, Balance> {
     pub(crate) backer: AccountId,
     pub(crate) bond: Balance,
+    pub(crate) appealed_outcome: OutcomeReport,
 }
 
 #[derive(
