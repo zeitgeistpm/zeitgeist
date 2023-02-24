@@ -40,8 +40,8 @@ pub use types::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        weights::WeightInfoZeitgeist, CourtInfo, CourtPalletApi, CourtStatus, Draw, JurorInfo,
-        Periods, Vote,
+        weights::WeightInfoZeitgeist, AppealInfo, CourtInfo, CourtPalletApi, CourtStatus, Draw,
+        JurorInfo, Periods, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -51,7 +51,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure, log,
-        pallet_prelude::{EnsureOrigin, OptionQuery, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Imbalance, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -72,8 +72,14 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The origin which may start appeals.
-        type AppealOrigin: EnsureOrigin<Self::Origin>;
+        /// The required base bond in order to get an appeal initiated.
+        #[pallet::constant]
+        type AppealBond: Get<BalanceOf<Self>>;
+
+        /// The additional amount of currency that must be bonded when creating a subsequent
+        /// appeal.
+        #[pallet::constant]
+        type AppealBondFactor: Get<BalanceOf<Self>>;
 
         /// The time to wait before jurors can start voting.
         /// The intention is to use this period as preparation time
@@ -179,7 +185,7 @@ mod pallet {
     >;
     pub(crate) type AccountIdLookupOf<T> =
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-    pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber>;
+    pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber, AppealsOf<T>>;
     pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>>;
     pub(crate) type JurorPoolOf<T> = BoundedVec<
         (BalanceOf<T>, <T as frame_system::Config>::AccountId),
@@ -188,6 +194,8 @@ mod pallet {
     pub(crate) type DrawOf<T> =
         Draw<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash>;
     pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
+    pub(crate) type AppealOf<T> = AppealInfo<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
+    pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -248,9 +256,9 @@ mod pallet {
         /// The jurors for an appeal have been drawn.
         AppealJurorsDrawn { market_id: MarketIdOf<T> },
         /// The backing for an appeal has been checked.
-        AppealBackingChecked { market_id: MarketIdOf<T> },
+        AppealBacked { market_id: MarketIdOf<T> },
         /// A market has been appealed.
-        MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u8 },
+        MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u32 },
         /// The juror stakes have been reassigned.
         JurorStakesReassigned { market_id: MarketIdOf<T> },
         /// The tardy jurors have been punished.
@@ -290,7 +298,7 @@ mod pallet {
         /// For this appeal round the backing check extrinsic was already called.
         AppealAlreadyBacked,
         /// In order to start an appeal the backing check extrinsic must be called first.
-        CheckBackingFirst,
+        BackAppealFirst,
         /// The final appeal extrinsic can only be called after the backing check extrinsic
         /// and random selection of jurors for this appeal.
         AppealNotReady,
@@ -673,7 +681,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Check if the appeal of a court is allowed to get initiated.
+        /// Back an appeal of a court to get an appeal initiated.
         ///
         /// # Arguments
         ///
@@ -684,21 +692,34 @@ mod pallet {
         /// Complexity: `O(1)`
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
-        pub fn check_appeal_backing(
-            origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            T::AppealOrigin::ensure_origin(origin)?;
+        pub fn back_appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(!court.appeal_info.is_backed, Error::<T>::AppealAlreadyBacked);
+            ensure!(!court.is_appeal_backed, Error::<T>::AppealAlreadyBacked);
+
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
-            court.appeal_info.is_backed = true;
+            let appeal_number = court.appeals.len();
+            let bond = default_appeal_bond::<T>(appeal_number);
+            let appeal_info = AppealInfo { backer: who.clone(), bond };
+
+            court.appeals.try_push(appeal_info).map_err(|_| Error::<T>::MaxAppealsReached)?;
+
+            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, bond)?;
+
+            let last_resolve_at = court.periods.appeal_end;
+            
+            court.is_appeal_backed = true;
             <Courts<T>>::insert(market_id, court);
 
-            Self::deposit_event(Event::AppealBackingChecked { market_id });
+            // we want to avoid the resolution before the full appeal is executed
+            // So, the appeal is inevitable after the call to this extrinsic
+            // otherwise the market is not going to resolve
+            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
+
+            Self::deposit_event(Event::AppealBacked { market_id });
 
             Ok(())
         }
@@ -722,25 +743,18 @@ mod pallet {
             ensure_signed(origin)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(!court.appeal_info.is_drawn, Error::<T>::JurorsAlreadyDrawn);
-            ensure!(court.appeal_info.is_backed, Error::<T>::CheckBackingFirst);
+            ensure!(!court.is_drawn, Error::<T>::JurorsAlreadyDrawn);
+            ensure!(court.is_appeal_backed, Error::<T>::BackAppealFirst);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
-            let last_resolve_at = court.periods.appeal_end;
-
-            let appeal_number = court.appeal_info.current as usize;
+            let appeal_number = court.appeals.len().saturating_add(1usize);
             let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+            // TODO trigger global disputes
             ensure!(jurors.len() >= INITIAL_JURORS_NUM, Error::<T>::NotEnoughJurors);
             Self::select_jurors(&market_id, jurors.as_slice(), appeal_number);
-            // at the time of flushing the last draws in `select_jurors`
-            // we want to avoid the resolution before the full appeal is executed
-            // otherwise `draw_appeal_jurors` would replace all votes with `Vote::Drawn`
-            // So, the appeal is inevitable after the call to this extrinsic
-            // otherwise the market is not going to resolve
-            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
-            court.appeal_info.is_drawn = true;
+            court.is_drawn = true;
             <Courts<T>>::insert(market_id, court);
 
             Self::deposit_event(Event::AppealJurorsDrawn { market_id });
@@ -764,7 +778,7 @@ mod pallet {
             ensure_signed(origin)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(court.appeal_info.is_appeal_ready(), Error::<T>::AppealNotReady);
+            ensure!(court.is_appeal_backed && court.is_drawn, Error::<T>::AppealNotReady);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
@@ -776,9 +790,7 @@ mod pallet {
             };
             // sets periods one after the other from now
             court.update_periods(periods, now);
-            let appeal_number = court.appeal_info.current;
-            court.appeal_info.current = court.appeal_info.current.saturating_add(1);
-
+            let appeal_number = court.appeals.len() as u32;
             let _ids_len_1 =
                 T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
 
@@ -910,6 +922,7 @@ mod pallet {
 
             for draw in draws {
                 if let Vote::Revealed { secret: _, outcome, salt: _ } = draw.vote {
+                    // TODO slash and reward according to voting weight!
                     valid_winners_and_losers.push((draw.juror, outcome));
                 }
             }
@@ -972,7 +985,10 @@ mod pallet {
                 current_weight = upper_bound;
             }
 
-            selections.into_iter().map(|(juror, weight)| Draw { juror, weight, vote: Vote::Drawn }).collect()
+            selections
+                .into_iter()
+                .map(|(juror, weight)| Draw { juror, weight, vote: Vote::Drawn })
+                .collect()
         }
 
         pub(crate) fn select_jurors(
@@ -1009,11 +1025,6 @@ mod pallet {
             ensure!(
                 court.periods.aggregation_end < now && now <= court.periods.appeal_end,
                 Error::<T>::NotInAppealPeriod
-            );
-
-            ensure!(
-                court.appeal_info.current < court.appeal_info.max,
-                Error::<T>::MaxAppealsReached
             );
 
             Ok(())
@@ -1095,9 +1106,7 @@ mod pallet {
             Ok(())
         }
 
-        fn get_winner(
-            draws: &[DrawOf<T>],
-        ) -> Result<OutcomeReport, DispatchError> {
+        fn get_winner(draws: &[DrawOf<T>]) -> Result<OutcomeReport, DispatchError> {
             let mut scores = BTreeMap::<OutcomeReport, u32>::new();
 
             for draw in draws {
@@ -1163,7 +1172,7 @@ mod pallet {
             };
 
             // sets periods one after the other from now
-            let court = CourtInfo::new(now, periods, T::MaxAppeals::get() as u8);
+            let court = CourtInfo::new(now, periods);
 
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(market_id, court.periods.appeal_end)?;
@@ -1257,4 +1266,14 @@ mod pallet {
     }
 
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}
+
+    // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
+    pub fn default_appeal_bond<T>(n: usize) -> BalanceOf<T>
+    where
+        T: Config,
+    {
+        T::AppealBond::get().saturating_add(
+            T::AppealBondFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
+        )
+    }
 }

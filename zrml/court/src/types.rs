@@ -75,29 +75,6 @@ pub struct Periods<BlockNumber> {
     PartialEq,
     Eq,
 )]
-pub struct AppealInfo {
-    pub(crate) current: u8,
-    pub(crate) max: u8,
-    pub(crate) is_drawn: bool,
-    pub(crate) is_backed: bool,
-}
-
-impl AppealInfo {
-    pub fn is_appeal_ready(&self) -> bool {
-        self.is_drawn && self.is_backed
-    }
-}
-
-#[derive(
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
-    scale_info::TypeInfo,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-)]
 pub enum CourtStatus {
     Open,
     Closed { winner: OutcomeReport, punished: bool, reassigned: bool },
@@ -113,24 +90,46 @@ pub enum CourtStatus {
     PartialEq,
     Eq,
 )]
-pub struct CourtInfo<BlockNumber> {
+pub struct AppealInfo<AccountId, Balance> {
+    pub(crate) backer: AccountId,
+    pub(crate) bond: Balance,
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub struct CourtInfo<BlockNumber, Appeals> {
     pub(crate) status: CourtStatus,
-    pub(crate) appeal_info: AppealInfo,
+    pub(crate) is_appeal_backed: bool,
+    pub(crate) is_drawn: bool,
+    pub(crate) appeals: Appeals,
     pub(crate) periods: Periods<BlockNumber>,
 }
 
-impl<BlockNumber: sp_runtime::traits::Saturating + Copy> CourtInfo<BlockNumber> {
-    pub fn new(now: BlockNumber, periods: Periods<BlockNumber>, max_appeals: u8) -> Self {
+impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
+    CourtInfo<BlockNumber, Appeals>
+{
+    pub fn new(now: BlockNumber, periods: Periods<BlockNumber>) -> Self {
         let backing_end = now.saturating_add(periods.backing_end);
         let vote_end = backing_end.saturating_add(periods.vote_end);
         let aggregation_end = vote_end.saturating_add(periods.aggregation_end);
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
         let periods = Periods { backing_end, vote_end, aggregation_end, appeal_end };
-        // 2^1 * 3 + 2^1 - 1 = 7 jurors in the first appeal round (`necessary_jurors_num`)
-        let appeal_info =
-            AppealInfo { current: 1, max: max_appeals, is_drawn: false, is_backed: false };
         let status = CourtStatus::Open;
-        Self { status, appeal_info, periods }
+        Self {
+            status,
+            is_appeal_backed: false,
+            is_drawn: false,
+            appeals: Default::default(),
+            periods,
+        }
     }
 
     pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
