@@ -141,3 +141,19 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy> CourtInfo<BlockNumber> 
         self.periods.appeal_end = self.periods.aggregation_end.saturating_add(periods.appeal_end);
     }
 }
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub struct Draw<AccountId, Hash> {
+    pub(crate) juror: AccountId,
+    pub(crate) weight: u32,
+    pub(crate) vote: Vote<Hash>,
+}

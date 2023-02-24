@@ -40,10 +40,13 @@ pub use types::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        weights::WeightInfoZeitgeist, CourtInfo, CourtPalletApi, CourtStatus, JurorInfo, Periods,
-        Vote,
+        weights::WeightInfoZeitgeist, CourtInfo, CourtPalletApi, CourtStatus, Draw, JurorInfo,
+        Periods, Vote,
     };
-    use alloc::{collections::BTreeMap, vec::Vec};
+    use alloc::{
+        collections::{BTreeMap, BTreeSet},
+        vec::Vec,
+    };
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
@@ -56,7 +59,7 @@ mod pallet {
         transactional, Blake2_128Concat, BoundedVec, PalletId,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup},
         DispatchError, Percent, SaturatedConversion,
@@ -117,7 +120,7 @@ mod pallet {
 
         /// The maximum number of randomly selected jurors for a dispute.
         #[pallet::constant]
-        type MaxDrawings: Get<u32>;
+        type MaxDraws: Get<u32>;
 
         /// The maximum number of jurors that can be registered.
         #[pallet::constant]
@@ -182,10 +185,9 @@ mod pallet {
         (BalanceOf<T>, <T as frame_system::Config>::AccountId),
         <T as Config>::MaxJurors,
     >;
-    pub(crate) type DrawingsOf<T> = BoundedVec<
-        (<T as frame_system::Config>::AccountId, Vote<<T as frame_system::Config>::Hash>),
-        <T as Config>::MaxDrawings,
-    >;
+    pub(crate) type DrawOf<T> =
+        Draw<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash>;
+    pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -206,8 +208,8 @@ mod pallet {
 
     /// The randomly selected jurors with their vote.
     #[pallet::storage]
-    pub type Drawings<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, DrawingsOf<T>, ValueQuery>;
+    pub type Draws<T: Config> =
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, DrawsOf<T>, ValueQuery>;
 
     /// The general information about each court.
     #[pallet::storage]
@@ -447,8 +449,8 @@ mod pallet {
             );
 
             // ensure not drawn for any market
-            for (_, drawings) in <Drawings<T>>::iter() {
-                ensure!(!drawings.iter().any(|(j, _)| j == &juror), Error::<T>::JurorStillDrawn);
+            for (_, draws) in <Draws<T>>::iter() {
+                ensure!(!draws.iter().any(|draw| draw.juror == juror), Error::<T>::JurorStillDrawn);
             }
 
             Jurors::<T>::remove(&juror);
@@ -469,7 +471,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
-        /// in the list of random selections (drawings).
+        /// in the list of random selections (draws).
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn vote(
@@ -486,16 +488,22 @@ mod pallet {
                 Error::<T>::NotInVotingPeriod
             );
 
-            let mut drawings = <Drawings<T>>::get(market_id);
-            match drawings.iter().position(|(juror, _)| juror == &who) {
+            let mut draws = <Draws<T>>::get(market_id);
+            let (index, weight) = match draws.iter().position(|draw| draw.juror == who) {
                 Some(index) => {
-                    let vote = Vote::Secret { secret: secret_vote };
-                    drawings[index] = (who.clone(), vote);
+                    ensure!(
+                        matches!(draws[index].vote, Vote::Drawn | Vote::Secret { secret: _ }),
+                        Error::<T>::OnlyDrawnJurorsCanVote
+                    );
+                    (index, draws[index].weight)
                 }
                 None => return Err(Error::<T>::OnlyDrawnJurorsCanVote.into()),
-            }
+            };
 
-            <Drawings<T>>::insert(market_id, drawings);
+            let vote = Vote::Secret { secret: secret_vote };
+            draws[index] = Draw { juror: who.clone(), weight, vote };
+
+            <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::JurorVoted { juror: who, market_id, secret: secret_vote });
             Ok(())
@@ -517,7 +525,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
-        /// in the list of random selections (drawings).
+        /// in the list of random selections (draws).
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn denounce_vote(
@@ -543,9 +551,9 @@ mod pallet {
                 Error::<T>::NotInVotingPeriod
             );
 
-            let mut drawings = <Drawings<T>>::get(market_id);
-            let (index, vote) = match drawings.iter().position(|(j, _)| j == &juror) {
-                Some(index) => (index, drawings[index].1.clone()),
+            let mut draws = <Draws<T>>::get(market_id);
+            let (index, weight, vote) = match draws.iter().position(|draw| draw.juror == juror) {
+                Some(index) => (index, draws[index].weight, draws[index].vote.clone()),
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
@@ -585,8 +593,8 @@ mod pallet {
             }
 
             let raw_vote = Vote::Denounced { secret, outcome: outcome.clone(), salt };
-            drawings[index] = (juror.clone(), raw_vote);
-            <Drawings<T>>::insert(market_id, drawings);
+            draws[index] = Draw { juror: juror.clone(), weight, vote: raw_vote };
+            <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::DenouncedJurorVote {
                 denouncer,
@@ -610,7 +618,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
-        /// in the list of random selections (drawings).
+        /// in the list of random selections (draws).
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn reveal_vote(
@@ -629,9 +637,9 @@ mod pallet {
                 Error::<T>::NotInAggregationPeriod
             );
 
-            let mut drawings = <Drawings<T>>::get(market_id);
-            let (index, vote) = match drawings.iter().position(|(juror, _)| juror == &who) {
-                Some(index) => (index, drawings[index].1.clone()),
+            let mut draws = <Draws<T>>::get(market_id);
+            let (index, weight, vote) = match draws.iter().position(|draw| draw.juror == who) {
+                Some(index) => (index, draws[index].weight, draws[index].vote.clone()),
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
@@ -658,8 +666,8 @@ mod pallet {
             };
 
             let raw_vote = Vote::Revealed { secret, outcome: outcome.clone(), salt };
-            drawings[index] = (who.clone(), raw_vote);
-            <Drawings<T>>::insert(market_id, drawings);
+            draws[index] = Draw { juror: who.clone(), weight, vote: raw_vote };
+            <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::JurorRevealedVote { juror: who, market_id, outcome, salt });
             Ok(())
@@ -725,7 +733,7 @@ mod pallet {
             let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             ensure!(jurors.len() >= INITIAL_JURORS_NUM, Error::<T>::NotEnoughJurors);
             Self::select_jurors(&market_id, jurors.as_slice(), appeal_number);
-            // at the time of flushing the last drawings in `select_jurors`
+            // at the time of flushing the last draws in `select_jurors`
             // we want to avoid the resolution before the full appeal is executed
             // otherwise `draw_appeal_jurors` would replace all votes with `Vote::Drawn`
             // So, the appeal is inevitable after the call to this extrinsic
@@ -843,13 +851,15 @@ mod pallet {
                 }
             };
 
-            for (juror, vote) in Drawings::<T>::get(market_id).iter() {
-                match vote {
+            for draw in Draws::<T>::get(market_id).iter() {
+                match draw.vote {
                     Vote::Drawn => {
-                        slash_and_remove_juror(juror);
+                        // TODO slash according to weight?
+                        slash_and_remove_juror(&draw.juror);
                     }
                     Vote::Secret { secret: _ } => {
-                        slash_and_remove_juror(juror);
+                        // TODO slash according to weight?
+                        slash_and_remove_juror(&draw.juror);
                     }
                     // denounce extrinsic already punished the juror
                     Vote::Denounced { secret: _, outcome: _, salt: _ } => (),
@@ -894,13 +904,13 @@ mod pallet {
                 _ => return Err(Error::<T>::CourtNotClosed.into()),
             };
 
-            let drawings = Drawings::<T>::get(market_id);
+            let draws = Draws::<T>::get(market_id);
 
-            let mut valid_winners_and_losers = Vec::with_capacity(drawings.len());
+            let mut valid_winners_and_losers = Vec::with_capacity(draws.len());
 
-            for (juror, vote) in drawings {
-                if let Vote::Revealed { secret: _, outcome, salt: _ } = vote {
-                    valid_winners_and_losers.push((juror, outcome));
+            for draw in draws {
+                if let Vote::Revealed { secret: _, outcome, salt: _ } = draw.vote {
+                    valid_winners_and_losers.push((draw.juror, outcome));
                 }
             }
 
@@ -908,7 +918,7 @@ mod pallet {
 
             court.status = CourtStatus::Closed { winner, punished: true, reassigned: true };
             <Courts<T>>::insert(market_id, court);
-            <Drawings<T>>::remove(market_id);
+            <Draws<T>>::remove(market_id);
 
             Self::deposit_event(Event::JurorStakesReassigned { market_id });
 
@@ -921,42 +931,48 @@ mod pallet {
         T: Config,
     {
         pub(crate) fn choose_multiple_weighted<R: RngCore>(
-            market_id: &MarketIdOf<T>,
             jurors: &[(BalanceOf<T>, T::AccountId)],
             number: usize,
             rng: &mut R,
-        ) -> Vec<(T::AccountId, Vote<T::Hash>)> {
-            use rand::{
-                distributions::{Distribution, WeightedIndex},
-                seq::SliceRandom,
-            };
+        ) -> Vec<DrawOf<T>> {
+            let total_weight =
+                jurors.iter().map(|(stake, _)| (*stake).saturated_into::<u128>()).sum::<u128>();
 
-            let mut selected = Vec::with_capacity(number);
-
-            let res = WeightedIndex::new(jurors.iter().map(|item| item.0.saturated_into::<u128>()));
-
-            match res {
-                Ok(distribution) => {
-                    for _ in 0..number {
-                        selected.push((jurors[distribution.sample(rng)].1.clone(), Vote::Drawn));
-                    }
-                }
-                Err(err) => {
-                    // this can also happen when there are no jurors
-                    log::warn!(
-                        "Court: weighted selection failed, falling back to random selection for \
-                         market {:?} with error: {:?}.",
-                        market_id,
-                        err
-                    );
-                    // fallback to random selection if weighted selection fails
-                    jurors.choose_multiple(rng, number).for_each(|item| {
-                        selected.push((item.1.clone(), Vote::Drawn));
-                    });
-                }
+            let mut random_set = BTreeSet::new();
+            for _ in 0..number {
+                let random_number = rng.gen_range(0u128..total_weight);
+                random_set.insert(random_number);
             }
 
-            selected
+            let mut selections = BTreeMap::<T::AccountId, u32>::new();
+
+            let mut current_weight = 0u128;
+            for (stake, juror) in jurors {
+                let lower_bound = current_weight;
+                let upper_bound = current_weight.saturating_add((*stake).saturated_into::<u128>());
+
+                // this always gets the lowest random number first and maybe removes it
+                for random_number in random_set.clone().iter() {
+                    if &lower_bound <= random_number && random_number < &upper_bound {
+                        if let Some(el) = selections.get_mut(juror) {
+                            *el = el.saturating_add(1);
+                        } else {
+                            selections.insert(juror.clone(), 1);
+                        }
+                        random_set.remove(random_number);
+                    } else {
+                        break;
+                    }
+                }
+
+                if random_set.is_empty() {
+                    break;
+                }
+
+                current_weight = upper_bound;
+            }
+
+            selections.into_iter().map(|(juror, weight)| Draw { juror, weight, vote: Vote::Drawn }).collect()
         }
 
         pub(crate) fn select_jurors(
@@ -968,15 +984,14 @@ mod pallet {
             let mut rng = Self::rng();
             let actual_len = jurors.len().min(necessary_jurors_num);
 
-            let random_jurors =
-                Self::choose_multiple_weighted(market_id, jurors, actual_len, &mut rng);
+            let random_jurors = Self::choose_multiple_weighted(jurors, actual_len, &mut rng);
 
-            // we allow at most MaxDrawings jurors
+            // we allow at most MaxDraws jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127
-            // MaxDrawings should be 127 in this case
-            let drawings = <DrawingsOf<T>>::truncate_from(random_jurors);
-            // new appeal round should have a fresh set of drawings
-            <Drawings<T>>::insert(market_id, drawings);
+            // MaxDraws should be 127 in this case
+            let draws = <DrawsOf<T>>::truncate_from(random_jurors);
+            // new appeal round should have a fresh set of draws
+            <Draws<T>>::insert(market_id, draws);
         }
 
         pub(crate) fn check_appealable_market(
@@ -1081,16 +1096,16 @@ mod pallet {
         }
 
         fn get_winner(
-            votes: &[(T::AccountId, Vote<T::Hash>)],
+            draws: &[DrawOf<T>],
         ) -> Result<OutcomeReport, DispatchError> {
             let mut scores = BTreeMap::<OutcomeReport, u32>::new();
 
-            for (_juror, vote) in votes {
-                if let Vote::Revealed { secret: _, outcome, salt: _ } = vote {
+            for draw in draws {
+                if let Vote::Revealed { secret: _, outcome, salt: _ } = &draw.vote {
                     if let Some(el) = scores.get_mut(outcome) {
-                        *el = el.saturating_add(1);
+                        *el = el.saturating_add(draw.weight);
                     } else {
-                        scores.insert(outcome.clone(), 1);
+                        scores.insert(outcome.clone(), draw.weight);
                     }
                 }
             }
@@ -1100,7 +1115,7 @@ mod pallet {
             let mut best_score = if let Some(first) = iter.next() {
                 first
             } else {
-                // TODO(#980): Create another voting round
+                // TODO(#980): Create another voting round or trigger global dispute
                 return Err(Error::<T>::NoVotes.into());
             };
 
@@ -1169,8 +1184,8 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
 
-            let drawings = Drawings::<T>::get(market_id);
-            let winner_outcome = Self::get_winner(drawings.as_slice())?;
+            let draws = Draws::<T>::get(market_id);
+            let winner_outcome = Self::get_winner(draws.as_slice())?;
 
             court.status = CourtStatus::Closed {
                 winner: winner_outcome.clone(),
@@ -1235,7 +1250,7 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            <Drawings<T>>::remove(market_id);
+            <Draws<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
             Ok(())
         }
