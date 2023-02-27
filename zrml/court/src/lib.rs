@@ -354,6 +354,9 @@ mod pallet {
         InsufficientAmount,
         /// After the first join of the court the amount has to be higher than the last join.
         AmountBelowLastJoin,
+        /// If no last winner can be determined the market resolves
+        /// on the oracle report and is not able to get appealed.
+        NoLastWinner,
     }
 
     #[pallet::call]
@@ -380,11 +383,13 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
+            let mut slashed = <BalanceOf<T>>::zero();
             if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
                 if let Ok(i) =
                     jurors.binary_search_by_key(&prev_juror_info.stake, |pool_item| pool_item.stake)
                 {
+                    slashed = jurors[i].slashed;
                     jurors.remove(i);
                 } else {
                     // this happens if the juror behaved incorrectly
@@ -400,14 +405,7 @@ mod pallet {
                 // if there are multiple jurors with the same stake
                 Ok(_) => return Err(Error::<T>::AmountAlreadyUsed.into()),
                 Err(i) => jurors
-                    .try_insert(
-                        i,
-                        JurorPoolItem {
-                            stake: amount,
-                            juror: who.clone(),
-                            slashed: <BalanceOf<T>>::zero(),
-                        },
-                    )
+                    .try_insert(i, JurorPoolItem { stake: amount, juror: who.clone(), slashed })
                     .map_err(|_| Error::<T>::MaxJurorsReached)?,
             };
 
@@ -523,19 +521,19 @@ mod pallet {
             );
 
             let mut draws = <Draws<T>>::get(market_id);
-            let (index, weight, slashable) = match draws.iter().position(|draw| draw.juror == who) {
+            let (index, draw) = match draws.iter().position(|draw| draw.juror == who) {
                 Some(index) => {
                     ensure!(
                         matches!(draws[index].vote, Vote::Drawn | Vote::Secret { secret: _ }),
                         Error::<T>::OnlyDrawnJurorsCanVote
                     );
-                    (index, draws[index].weight, draws[index].slashable)
+                    (index, draws[index].clone())
                 }
                 None => return Err(Error::<T>::OnlyDrawnJurorsCanVote.into()),
             };
 
             let vote = Vote::Secret { secret: secret_vote };
-            draws[index] = Draw { juror: who.clone(), weight, vote, slashable };
+            draws[index] = Draw { juror: who.clone(), vote, ..draw };
 
             <Draws<T>>::insert(market_id, draws);
 
@@ -586,17 +584,12 @@ mod pallet {
             );
 
             let mut draws = <Draws<T>>::get(market_id);
-            let (index, weight, vote, slashable) = match draws
-                .iter()
-                .position(|draw| draw.juror == juror)
-            {
-                Some(index) => {
-                    (index, draws[index].weight, draws[index].vote.clone(), draws[index].slashable)
-                }
+            let (index, draw) = match draws.iter().position(|draw| draw.juror == juror) {
+                Some(index) => (index, draws[index].clone()),
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
-            let secret = match vote {
+            let secret = match draw.vote {
                 Vote::Secret { secret } => {
                     ensure!(
                         secret == T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt)),
@@ -614,7 +607,7 @@ mod pallet {
             };
 
             let reward_pot = Self::reward_pot(&market_id);
-            let slash = T::DenounceSlashPercentage::get() * slashable;
+            let slash = T::DenounceSlashPercentage::get() * draw.slashable;
             let (imbalance, missing) = T::Currency::slash(&juror, slash);
             debug_assert!(missing.is_zero(), "Could not slash all of the amount.");
             T::Currency::resolve_creating(&reward_pot, imbalance);
@@ -629,7 +622,7 @@ mod pallet {
             }
 
             let raw_vote = Vote::Denounced { secret, outcome: outcome.clone(), salt };
-            draws[index] = Draw { juror: juror.clone(), weight, vote: raw_vote, slashable };
+            draws[index] = Draw { juror: juror.clone(), vote: raw_vote, ..draw };
             <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::DenouncedJurorVote {
@@ -674,17 +667,12 @@ mod pallet {
             );
 
             let mut draws = <Draws<T>>::get(market_id);
-            let (index, weight, vote, slashable) = match draws
-                .iter()
-                .position(|draw| draw.juror == who)
-            {
-                Some(index) => {
-                    (index, draws[index].weight, draws[index].vote.clone(), draws[index].slashable)
-                }
+            let (index, draw) = match draws.iter().position(|draw| draw.juror == who) {
+                Some(index) => (index, draws[index].clone()),
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
-            let secret = match vote {
+            let secret = match draw.vote {
                 Vote::Secret { secret } => {
                     // market id and current appeal number is part of salt generation
                     // salt should be signed by the juror (market_id ++ appeal number)
@@ -707,7 +695,7 @@ mod pallet {
             };
 
             let raw_vote = Vote::Revealed { secret, outcome: outcome.clone(), salt };
-            draws[index] = Draw { juror: who.clone(), weight, vote: raw_vote, slashable };
+            draws[index] = Draw { juror: who.clone(), vote: raw_vote, ..draw };
             <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::JurorRevealedVote { juror: who, market_id, outcome, salt });
@@ -735,10 +723,15 @@ mod pallet {
             Self::check_appealable_market(&market_id, &court, now)?;
 
             let draws = Draws::<T>::get(market_id);
-            // TODO: shouldn't fail here, especially when there are no votes an appeal should be necessary or start global dispute
-            let appealed_outcome = Self::get_winner(draws.as_slice())?;
+            let appealed_outcome =
+                Self::get_winner(draws.as_slice()).ok_or(Error::<T>::NoLastWinner)?;
 
+            let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0);
             let appeal_number = court.appeals.len();
+            let necessary_jurors_number =
+                Self::necessary_jurors_num(appeal_number.saturating_add(1));
+            ensure!(jurors_len >= necessary_jurors_number, Error::<T>::NotEnoughJurors);
+
             let bond = default_appeal_bond::<T>(appeal_number);
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
 
@@ -1012,9 +1005,9 @@ mod pallet {
                 for random_number in random_set.clone().iter() {
                     if &lower_bound <= random_number && random_number < &upper_bound {
                         let slashable = remainder.min(T::MinJurorStake::get());
-                        if let Some((weight, sel_slashable)) = selections.get_mut(juror) {
+                        if let Some((weight, all_slashable)) = selections.get_mut(juror) {
                             *weight = weight.saturating_add(1);
-                            *sel_slashable = sel_slashable.saturating_add(slashable);
+                            *all_slashable = all_slashable.saturating_add(slashable);
                         } else {
                             selections.insert(juror.clone(), (1, slashable));
                         }
@@ -1194,7 +1187,7 @@ mod pallet {
             <JurorPool<T>>::put(jurors);
         }
 
-        fn get_winner(draws: &[DrawOf<T>]) -> Result<OutcomeReport, DispatchError> {
+        fn get_winner(draws: &[DrawOf<T>]) -> Option<OutcomeReport> {
             let mut scores = BTreeMap::<OutcomeReport, u32>::new();
 
             for draw in draws {
@@ -1212,17 +1205,35 @@ mod pallet {
             let mut best_score = if let Some(first) = iter.next() {
                 first
             } else {
-                // TODO(#980): Create another voting round or trigger global dispute
-                return Err(Error::<T>::NoVotes.into());
+                return None;
+            };
+
+            let mut second_best_score = if let Some(second) = iter.next() {
+                if second.1 > best_score.1 {
+                    best_score = second;
+                    best_score
+                } else {
+                    second
+                }
+            } else {
+                return Some(best_score.0.clone());
             };
 
             for el in iter {
                 if el.1 > best_score.1 {
                     best_score = el;
+                    second_best_score = best_score;
+                } else if el.1 > second_best_score.1 {
+                    second_best_score = el;
                 }
             }
 
-            Ok(best_score.0.clone())
+            if best_score.1 == second_best_score.1 {
+                // TODO(#980): Rather should start a new voting round instead of resolving to the oracle report outcome.
+                return None;
+            }
+
+            Some(best_score.0.clone())
         }
     }
 
@@ -1279,19 +1290,8 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-
             let draws = Draws::<T>::get(market_id);
-            let winner_outcome = Self::get_winner(draws.as_slice())?;
-
-            court.status = CourtStatus::Closed {
-                winner: winner_outcome.clone(),
-                punished: false,
-                reassigned: false,
-            };
-            <Courts<T>>::insert(market_id, court);
-
-            Ok(Some(winner_outcome))
+            Ok(Self::get_winner(draws.as_slice()))
         }
 
         fn maybe_pay(
@@ -1305,16 +1305,24 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            for AppealInfo { backer, bond, appealed_outcome } in court.appeals {
-                if resolved_outcome == &appealed_outcome {
+            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+
+            for AppealInfo { backer, bond, appealed_outcome } in &court.appeals {
+                if resolved_outcome == appealed_outcome {
                     let (imb, _) =
-                        T::Currency::slash_reserved_named(&Self::reserve_id(), &backer, bond);
+                        T::Currency::slash_reserved_named(&Self::reserve_id(), backer, *bond);
                     overall_imbalance.subsume(imb);
                 } else {
-                    T::Currency::unreserve_named(&Self::reserve_id(), &backer, bond);
+                    T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
                 }
             }
+
+            court.status = CourtStatus::Closed {
+                winner: resolved_outcome.clone(),
+                punished: false,
+                reassigned: false,
+            };
+            <Courts<T>>::insert(market_id, court);
 
             Ok(overall_imbalance)
         }
@@ -1344,13 +1352,18 @@ mod pallet {
             let mut has_failed = false;
             let now = <frame_system::Pallet<T>>::block_number();
 
-            // TODO maybe add the case that the voting decision is unclear (or NoVotes case)
-
             let jurors_len: usize = JurorPool::<T>::decode_len().unwrap_or(0);
             match <Courts<T>>::get(market_id) {
                 Some(court) => {
                     let appeals = &court.appeals;
-                    let appeal_number = appeals.len();
+                    let is_appeal_backed = &court.is_appeal_backed;
+                    let appeal_number = if *is_appeal_backed {
+                        // this case is after the extrinsic call to `back_appeal`
+                        appeals.len()
+                    } else {
+                        // this case is before the extrinsic call to `back_appeal`
+                        appeals.len().saturating_add(1)
+                    };
                     let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
                     let valid_period =
                         Self::check_appealable_market(market_id, &court, now).is_ok();
