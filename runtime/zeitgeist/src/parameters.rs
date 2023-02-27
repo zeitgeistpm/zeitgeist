@@ -96,7 +96,7 @@ parameter_types! {
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 5;
     /// The maximum number of randomly selected jurors for a dispute.
-    pub const MaxDrawings: u32 = 127;
+    pub const MaxDrawings: u32 = 191;
     /// The maximum number of jurors that can be registered.
     pub const MaxJurors: u32 = 10_000;
     /// The minimum stake a user needs to reserve to become a juror.

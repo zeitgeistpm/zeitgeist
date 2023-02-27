@@ -53,7 +53,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{
-            BalanceStatus, Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
+            Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
             NamedReservableCurrency, Randomness, StorageVersion, WithdrawReasons,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId,
@@ -61,7 +61,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup},
+        traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
         DispatchError, Percent, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -102,6 +102,10 @@ mod pallet {
         /// The court lock identifier.
         #[pallet::constant]
         type CourtLockId: Get<LockIdentifier>;
+
+        /// Identifier of this pallet
+        #[pallet::constant]
+        type CourtPalletId: Get<PalletId>;
 
         /// The currency implementation used to transfer, lock and reserve tokens.
         type Currency: Currency<Self::AccountId>
@@ -145,10 +149,6 @@ mod pallet {
         #[pallet::constant]
         type MinJurorStake: Get<BalanceOf<Self>>;
 
-        /// Identifier of this pallet
-        #[pallet::constant]
-        type PalletId: Get<PalletId>;
-
         /// Randomness source
         type Random: Randomness<Self::Hash, Self::BlockNumber>;
 
@@ -156,9 +156,9 @@ mod pallet {
         #[pallet::constant]
         type RedistributionPercentage: Get<Percent>;
 
-        /// The percentage that is being slashed from the juror's stake.
+        /// The percentage that is being slashed from the juror's stake in case she is tardy.
         #[pallet::constant]
-        type SlashPercentage: Get<Percent>;
+        type TardySlashPercentage: Get<Percent>;
 
         /// Slashed funds are send to the treasury
         #[pallet::constant]
@@ -169,7 +169,7 @@ mod pallet {
     }
 
     // Number of jurors for an initial market dispute
-    const INITIAL_JURORS_NUM: usize = 3;
+    const INITIAL_JURORS_NUM: usize = 5;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent appeals
@@ -596,16 +596,13 @@ mod pallet {
                 }
             };
 
-            let treasury_account_id = Self::treasury_account_id();
-            let all_reserved = T::Currency::reserved_balance_named(&Self::reserve_id(), &juror);
-            let slash = T::DenounceSlashPercentage::get() * all_reserved;
-            let _ = T::Currency::repatriate_reserved_named(
-                &Self::reserve_id(),
-                &juror,
-                &treasury_account_id,
-                slash,
-                BalanceStatus::Free,
-            )?;
+            let reward_pot = Self::reward_pot(&market_id);
+            let free_balance = T::Currency::free_balance(&juror);
+            let slash = T::DenounceSlashPercentage::get() * T::MinJurorStake::get();
+            let slash = slash.min(free_balance);
+            let (imbalance, missing) = T::Currency::slash(&juror, slash);
+            debug_assert!(missing.is_zero(), "Could not slash all of the amount.");
+            T::Currency::resolve_creating(&reward_pot, imbalance);
 
             let mut jurors = JurorPool::<T>::get();
             if let Ok(i) = jurors.binary_search_by_key(&prev_juror_info.stake, |tuple| tuple.0) {
@@ -843,28 +840,19 @@ mod pallet {
                 _ => return Err(Error::<T>::CourtNotClosed.into()),
             };
 
-            let treasury_account_id = Self::treasury_account_id();
-
             let mut jurors = JurorPool::<T>::get();
             let mut slash_and_remove_juror = |ai: &T::AccountId| {
-                let all_reserved = T::Currency::reserved_balance_named(&Self::reserve_id(), ai);
-                let slash = T::SlashPercentage::get() * all_reserved;
-                let res = T::Currency::repatriate_reserved_named(
-                    &Self::reserve_id(),
-                    ai,
-                    &treasury_account_id,
-                    slash,
-                    BalanceStatus::Free,
+                let all_free = T::Currency::free_balance(ai);
+                let slash = T::TardySlashPercentage::get() * T::MinJurorStake::get();
+                let slash = slash.min(all_free);
+                let (imbalance, missing) = T::Currency::slash(ai, slash);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount for juror {:?}.",
+                    ai
                 );
-                if let Err(e) = res {
-                    log::warn!(
-                        "Failed to slash juror {:?} for market {:?}: {:?}",
-                        ai,
-                        market_id,
-                        e
-                    );
-                    debug_assert!(false);
-                }
+                let reward_pot = Self::reward_pot(&market_id);
+                T::Currency::resolve_creating(&reward_pot, imbalance);
 
                 if let Some(prev_juror_info) = <Jurors<T>>::get(ai) {
                     if let Ok(i) =
@@ -943,7 +931,11 @@ mod pallet {
                 }
             }
 
-            Self::slash_losers_to_award_winners(valid_winners_and_losers.as_slice(), &winner)?;
+            Self::slash_losers_to_award_winners(
+                &market_id,
+                valid_winners_and_losers.as_slice(),
+                &winner,
+            )?;
 
             court.status = CourtStatus::Closed { winner, punished: true, reassigned: true };
             <Courts<T>>::insert(market_id, court);
@@ -1021,8 +1013,8 @@ mod pallet {
                 Self::choose_multiple_weighted(jurors, necessary_jurors_number, &mut rng);
 
             // we allow at most MaxDraws jurors
-            // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127
-            // MaxDraws should be 127 in this case
+            // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
+            // MaxDraws should be 191 in this case
             let draws = <DrawsOf<T>>::truncate_from(random_jurors);
             // new appeal round should have a fresh set of draws
             <Draws<T>>::insert(market_id, draws);
@@ -1053,7 +1045,17 @@ mod pallet {
         /// The reserve ID of the court pallet.
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
-            T::PalletId::get().0
+            T::CourtPalletId::get().0
+        }
+
+        #[inline]
+        pub fn reward_pot(market_id: &MarketIdOf<T>) -> T::AccountId {
+            T::CourtPalletId::get().into_sub_account_truncating(market_id)
+        }
+
+        #[inline]
+        pub(crate) fn treasury_account_id() -> T::AccountId {
+            T::TreasuryPalletId::get().into_account_truncating()
         }
 
         // Returns a pseudo random number generator implementation based on the seed
@@ -1072,15 +1074,10 @@ mod pallet {
             StdRng::from_seed(seed)
         }
 
-        #[inline]
-        pub(crate) fn treasury_account_id() -> T::AccountId {
-            T::TreasuryPalletId::get().into_account_truncating()
-        }
-
         // Calculates the necessary number of jurors depending on the number of market appeals.
         fn necessary_jurors_num(appeals_len: usize) -> usize {
-            // 2^(appeals_len) * 3 + 2^(appeals_len) - 1
-            // MaxAppeals (= 5) example: 2^5 * 3 + 2^5 - 1 = 127
+            // 2^(appeals_len) * 5 + 2^(appeals_len) - 1
+            // MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
             SUBSEQUENT_JURORS_FACTOR
                 .saturating_pow(appeals_len as u32)
                 .saturating_mul(INITIAL_JURORS_NUM)
@@ -1090,6 +1087,7 @@ mod pallet {
         }
 
         fn slash_losers_to_award_winners(
+            market_id: &MarketIdOf<T>,
             valid_winners_and_losers: &[(T::AccountId, OutcomeReport)],
             winner_outcome: &OutcomeReport,
         ) -> DispatchResult {
@@ -1100,14 +1098,24 @@ mod pallet {
                 if outcome == winner_outcome {
                     winners.push(juror);
                 } else {
-                    let all_reserved =
-                        T::Currency::reserved_balance_named(&Self::reserve_id(), juror);
-                    let slash = T::RedistributionPercentage::get() * all_reserved;
-                    let (imb, _excess) =
-                        T::Currency::slash_reserved_named(&Self::reserve_id(), juror, slash);
+                    let free_balance = T::Currency::free_balance(&juror);
+                    let slash = T::RedistributionPercentage::get() * T::MinJurorStake::get();
+                    let slash = slash.min(free_balance);
+                    let (imb, missing) = T::Currency::slash(&juror, slash);
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not slash all of the amount for juror {:?}.",
+                        juror
+                    );
                     total_incentives.subsume(imb);
                 }
             }
+
+            let reward_pot = Self::reward_pot(market_id);
+            let reward = T::Currency::free_balance(&reward_pot);
+            let (imb, missing) = T::Currency::slash(&reward_pot, reward);
+            debug_assert!(missing.is_zero(), "Could not slash all of the amount for reward pot.");
+            total_incentives.subsume(imb);
 
             if let Some(reward_per_each) =
                 total_incentives.peek().checked_div(&winners.len().saturated_into())
@@ -1238,13 +1246,13 @@ mod pallet {
             );
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            for AppealInfo { backer, bond, appealed_outcome } in &court.appeals {
-                if resolved_outcome == appealed_outcome {
+            for AppealInfo { backer, bond, appealed_outcome } in court.appeals {
+                if resolved_outcome == &appealed_outcome {
                     let (imb, _) =
-                        T::Currency::slash_reserved_named(&Self::reserve_id(), backer, *bond);
+                        T::Currency::slash_reserved_named(&Self::reserve_id(), &backer, bond);
                     overall_imbalance.subsume(imb);
                 } else {
-                    T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
+                    T::Currency::unreserve_named(&Self::reserve_id(), &backer, bond);
                 }
             }
 
@@ -1275,6 +1283,8 @@ mod pallet {
 
             let mut has_failed = false;
             let now = <frame_system::Pallet<T>>::block_number();
+
+            // TODO maybe add the case that the voting decision is unclear (or NoVotes case)
 
             let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             match <Courts<T>>::get(market_id) {

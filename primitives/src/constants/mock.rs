@@ -25,7 +25,7 @@ parameter_types! {
     pub const CourtAppealPeriod: BlockNumber = 34;
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(70);
     pub const MaxAppeals: u32 = 5;
-    pub const MaxDrawings: u32 = 127;
+    pub const MaxDrawings: u32 = 191;
     pub const MaxJurors: u32 = 1000;
     pub const MinJurorStake: Balance = 50 * CENT;
     pub const RedistributionPercentage: Percent = Percent::from_percent(50);
