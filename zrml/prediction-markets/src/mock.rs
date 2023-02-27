@@ -47,7 +47,7 @@ use zeitgeist_primitives::{
         MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinLiquidity,
         MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
         OutcomeFactor, OutsiderBond, PmPalletId, RedistributionPercentage, SimpleDisputesPalletId,
-        SlashPercentage, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        SwapsPalletId, TardySlashPercentage, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -293,7 +293,7 @@ impl zrml_court::Config for Runtime {
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RedistributionPercentage = RedistributionPercentage;
-    type SlashPercentage = SlashPercentage;
+    type TardySlashPercentage = TardySlashPercentage;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }

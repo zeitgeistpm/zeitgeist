@@ -954,7 +954,7 @@ macro_rules! impl_config_traits {
             type PalletId = CourtPalletId;
             type Random = RandomnessCollectiveFlip;
             type RedistributionPercentage = RedistributionPercentage;
-            type SlashPercentage = SlashPercentage;
+            type TardySlashPercentage = TardySlashPercentage;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }

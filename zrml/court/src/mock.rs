@@ -34,7 +34,7 @@ use zeitgeist_primitives::{
         BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod, CourtBackingPeriod,
         CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDrawings,
         MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
-        SlashPercentage, BASE,
+        TardySlashPercentage, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -130,7 +130,7 @@ impl crate::Config for Runtime {
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RedistributionPercentage = RedistributionPercentage;
-    type SlashPercentage = SlashPercentage;
+    type TardySlashPercentage = TardySlashPercentage;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

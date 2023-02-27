@@ -152,8 +152,25 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     PartialEq,
     Eq,
 )]
-pub struct Draw<AccountId, Hash> {
+pub struct Draw<AccountId, Balance, Hash> {
     pub(crate) juror: AccountId,
     pub(crate) weight: u32,
     pub(crate) vote: Vote<Hash>,
+    pub(crate) slashable: Balance,
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub struct JurorPoolItem<AccountId, Balance> {
+    pub(crate) stake: Balance,
+    pub(crate) juror: AccountId,
+    pub(crate) slashed: Balance,
 }
