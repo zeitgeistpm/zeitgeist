@@ -751,7 +751,7 @@ mod pallet {
             Self::check_appealable_market(&market_id, &court, now)?;
 
             // the outcome which would be resolved on is appealed (including oracle report)
-            let appealed_outcome = Self::get_last_resolved_outcome(&market_id)?;
+            let appealed_outcome = Self::get_latest_resolved_outcome(&market_id)?;
 
             let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0);
             let necessary_jurors_number =
@@ -814,7 +814,7 @@ mod pallet {
             Self::check_appealable_market(&market_id, &court, now)?;
 
             // the outcome which would be resolved on is appealed (including oracle report)
-            let appealed_outcome = Self::get_last_resolved_outcome(&market_id)?;
+            let appealed_outcome = Self::get_latest_resolved_outcome(&market_id)?;
 
             let bond = default_appeal_bond::<T>(appeal_number);
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
@@ -1326,7 +1326,7 @@ mod pallet {
             Some(best_score.0.clone())
         }
 
-        fn get_last_resolved_outcome(
+        fn get_latest_resolved_outcome(
             market_id: &MarketIdOf<T>,
         ) -> Result<OutcomeReport, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
@@ -1401,15 +1401,17 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let last_winner: Option<OutcomeReport> = court
-                .appeals
-                .last()
-                .map(|appeal_info| Some(appeal_info.appealed_outcome.clone()))
-                .unwrap_or(None);
-            let draws = Draws::<T>::get(market_id);
+            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             // if get_winner returns None, `on_resolution` will fall back on the oracle report
-            Ok(Self::get_winner(draws.as_slice(), last_winner))
+            let resolved_outcome = Self::get_latest_resolved_outcome(market_id)?;
+            court.status = CourtStatus::Closed {
+                winner: resolved_outcome.clone(),
+                punished: false,
+                reassigned: false,
+            };
+            <Courts<T>>::insert(market_id, court);
+
+            Ok(Some(resolved_outcome))
         }
 
         fn maybe_pay(
@@ -1423,8 +1425,7 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-
+            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             for AppealInfo { backer, bond, appealed_outcome } in &court.appeals {
                 if resolved_outcome == appealed_outcome {
                     let (imb, _) =
@@ -1434,13 +1435,6 @@ mod pallet {
                     T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
                 }
             }
-
-            court.status = CourtStatus::Closed {
-                winner: resolved_outcome.clone(),
-                punished: false,
-                reassigned: false,
-            };
-            <Courts<T>>::insert(market_id, court);
 
             Ok(overall_imbalance)
         }
