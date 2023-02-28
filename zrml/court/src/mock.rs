@@ -31,10 +31,10 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod, CourtBackingPeriod,
-        CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDrawings,
-        MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
-        TardySlashPercentage, BASE,
+        AppealBond, AppealBondFactor, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
+        CourtBackingPeriod, CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage,
+        MaxAppeals, MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
+        RedistributionPercentage, TardySlashPercentage, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -114,7 +114,10 @@ impl DisputeResolutionApi for NoopResolution {
 }
 
 impl crate::Config for Runtime {
-    type AppealOrigin = frame_system::EnsureSigned<AccountIdTest>;
+    type AppealBond = AppealBond;
+    type AppealBondFactor = AppealBondFactor;
+    type CourtLockId = CourtLockId;
+    type Currency = Balances;
     type CourtBackingPeriod = CourtBackingPeriod;
     type CourtVotePeriod = CourtVotePeriod;
     type CourtAggregationPeriod = CourtAggregationPeriod;
@@ -124,10 +127,10 @@ impl crate::Config for Runtime {
     type Event = ();
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
-    type MaxDrawings = MaxDrawings;
+    type MaxDraws = MaxDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
-    type PalletId = CourtPalletId;
+    type CourtPalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RedistributionPercentage = RedistributionPercentage;
     type TardySlashPercentage = TardySlashPercentage;
@@ -201,6 +204,8 @@ impl Default for ExtBuilder {
                 (ALICE, 1_000 * BASE),
                 (BOB, 1_000 * BASE),
                 (CHARLIE, 1_000 * BASE),
+                (EVE, 1_000 * BASE),
+                (DAVE, 1_000 * BASE),
                 (Court::treasury_account_id(), 1_000 * BASE),
             ],
         }

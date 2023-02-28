@@ -1138,7 +1138,7 @@ mod pallet {
                     winners.push(juror);
                 } else {
                     let slash = T::RedistributionPercentage::get() * *slashable;
-                    let (imb, missing) = T::Currency::slash(&juror, slash);
+                    let (imb, missing) = T::Currency::slash(juror, slash);
                     debug_assert!(
                         missing.is_zero(),
                         "Could not slash all of the amount for juror {:?}.",
@@ -1201,13 +1201,7 @@ mod pallet {
             }
 
             let mut iter = scores.iter();
-
-            let mut best_score = if let Some(first) = iter.next() {
-                first
-            } else {
-                return None;
-            };
-
+            let mut best_score = iter.next()?;
             let mut second_best_score = if let Some(second) = iter.next() {
                 if second.1 > best_score.1 {
                     best_score = second;

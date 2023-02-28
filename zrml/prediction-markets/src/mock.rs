@@ -37,17 +37,18 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
-        CourtAggregationPeriod, CourtAppealPeriod, CourtBackingPeriod, CourtPalletId,
-        CourtVotePeriod, DenounceSlashPercentage, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets,
-        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxDrawings, MaxEditReasonLen,
-        MaxGracePeriod, MaxInRatio, MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinLiquidity,
-        MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RedistributionPercentage, SimpleDisputesPalletId,
-        SwapsPalletId, TardySlashPercentage, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        AppealBond, AppealBondFactor, AuthorizedPalletId, BalanceFractionalDecimals,
+        BlockHashCount, CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod,
+        CourtBackingPeriod, CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage,
+        ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
+        LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
+        MaxDisputeDuration, MaxDisputes, MaxDraws, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
+        MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
+        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputeDuration, MinJurorStake, MinLiquidity, MinOracleDuration,
+        MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor,
+        OutsiderBond, PmPalletId, RedistributionPercentage, SimpleDisputesPalletId, SwapsPalletId,
+        TardySlashPercentage, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -277,20 +278,23 @@ impl zrml_authorized::Config for Runtime {
 }
 
 impl zrml_court::Config for Runtime {
+    type AppealBond = AppealBond;
+    type AppealBondFactor = AppealBondFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type AppealOrigin = frame_system::EnsureSigned<AccountIdTest>;
     type CourtBackingPeriod = CourtBackingPeriod;
     type CourtVotePeriod = CourtVotePeriod;
     type CourtAggregationPeriod = CourtAggregationPeriod;
     type CourtAppealPeriod = CourtAppealPeriod;
+    type CourtLockId = CourtLockId;
+    type Currency = Balances;
     type DenounceSlashPercentage = DenounceSlashPercentage;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
-    type MaxDrawings = MaxDrawings;
+    type MaxDraws = MaxDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
-    type PalletId = CourtPalletId;
+    type CourtPalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RedistributionPercentage = RedistributionPercentage;
     type TardySlashPercentage = TardySlashPercentage;

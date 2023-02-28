@@ -22,14 +22,12 @@ use crate::{
         Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
     },
-    Error, JurorInfo, Jurors, MarketOf,
+    Error, JurorInfo, JurorPoolItem, Jurors, MarketOf,
 };
-use frame_support::{
-    assert_noop, assert_ok,
-    traits::{Hooks, NamedReservableCurrency},
-};
+use frame_support::{assert_noop, assert_ok, traits::Hooks};
+use pallet_balances::BalanceLock;
 use zeitgeist_primitives::{
-    constants::BASE,
+    constants::{mock::CourtLockId, BASE},
     traits::DisputeApi,
     types::{
         AccountIdTest, Asset, Deadlines, Market, MarketBonds, MarketCreation,
@@ -56,17 +54,21 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     bonds: MarketBonds { creation: None, oracle: None, outsider: None, dispute: None },
 };
 
-const DEFAULT_SET_OF_JURORS: &[(u128, AccountIdTest)] = &[
-    (9, HARRY),
-    (8, IAN),
-    (7, ALICE),
-    (6, BOB),
-    (5, CHARLIE),
-    (4, DAVE),
-    (3, EVE),
-    (2, FERDIE),
-    (1, GINA),
+const DEFAULT_SET_OF_JURORS: &[JurorPoolItem<AccountIdTest, u128>] = &[
+    JurorPoolItem { stake: 9, juror: HARRY, slashed: 0 },
+    JurorPoolItem { stake: 8, juror: IAN, slashed: 0 },
+    JurorPoolItem { stake: 7, juror: ALICE, slashed: 0 },
+    JurorPoolItem { stake: 6, juror: BOB, slashed: 0 },
+    JurorPoolItem { stake: 5, juror: CHARLIE, slashed: 0 },
+    JurorPoolItem { stake: 4, juror: DAVE, slashed: 0 },
+    JurorPoolItem { stake: 3, juror: EVE, slashed: 0 },
+    JurorPoolItem { stake: 2, juror: FERDIE, slashed: 0 },
+    JurorPoolItem { stake: 1, juror: GINA, slashed: 0 },
 ];
+
+fn the_lock(amount: u128) -> BalanceLock<u128> {
+    BalanceLock { id: CourtLockId::get(), amount, reasons: pallet_balances::Reasons::All }
+}
 
 #[test]
 fn exit_court_successfully_removes_a_juror_and_frees_balances() {
@@ -74,13 +76,13 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(Jurors::<Runtime>::iter().count(), 1);
-        assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), amount);
+        assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
         assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
-        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 0);
+        assert_eq!(Balances::locks(ALICE), vec![]);
     });
 }
 
@@ -169,14 +171,14 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
         setup_blocks(123);
 
         let mut rng = Court::rng();
-        let random_jurors = Court::choose_multiple_weighted(&0, DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let random_jurors = Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng);
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             setup_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::choose_multiple_weighted(&0, DEFAULT_SET_OF_JURORS, 2, &mut rng);
+                Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng);
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -202,9 +204,9 @@ fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
         let mut rng = Court::rng();
-        let random_jurors = Court::choose_multiple_weighted(&0, DEFAULT_SET_OF_JURORS, 2, &mut rng);
-        for (juror, _) in random_jurors {
-            assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.1 == juror));
+        let random_jurors = Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        for draw in random_jurors {
+            assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.juror == draw.juror));
         }
     });
 }
@@ -216,9 +218,13 @@ fn vote_will_not_accept_unknown_accounts() {
         let amount_alice = 2 * BASE;
         let amount_bob = 3 * BASE;
         let amount_charlie = 4 * BASE;
+        let amount_eve = 5 * BASE;
+        let amount_dave = 6 * BASE;
         Court::join_court(Origin::signed(ALICE), amount_alice).unwrap();
         Court::join_court(Origin::signed(BOB), amount_bob).unwrap();
         Court::join_court(Origin::signed(CHARLIE), amount_charlie).unwrap();
+        Court::join_court(Origin::signed(EVE), amount_eve).unwrap();
+        Court::join_court(Origin::signed(DAVE), amount_dave).unwrap();
         Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
     });
 }

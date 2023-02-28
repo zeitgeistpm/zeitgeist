@@ -935,23 +935,23 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_court::Config for Runtime {
-            type AppealOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
-            >;
+            type AppealBond = AppealBond;
+            type AppealBondFactor = AppealBondFactor;
             type CourtBackingPeriod = CourtBackingPeriod;
             type CourtVotePeriod = CourtVotePeriod;
             type CourtAggregationPeriod = CourtAggregationPeriod;
             type CourtAppealPeriod = CourtAppealPeriod;
+            type CourtLockId = CourtLockId;
+            type CourtPalletId = CourtPalletId;
+            type Currency = Balances;
             type DenounceSlashPercentage = DenounceSlashPercentage;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type MarketCommons = MarketCommons;
             type MaxAppeals = MaxAppeals;
-            type MaxDrawings = MaxDrawings;
+            type MaxDraws = MaxDraws;
             type MaxJurors = MaxJurors;
             type MinJurorStake = MinJurorStake;
-            type PalletId = CourtPalletId;
             type Random = RandomnessCollectiveFlip;
             type RedistributionPercentage = RedistributionPercentage;
             type TardySlashPercentage = TardySlashPercentage;

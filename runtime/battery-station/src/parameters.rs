@@ -77,6 +77,12 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Court
+    /// (Slashable) Bond that is provided for overriding the last appeal.
+    /// Slashed in case the final outcome does match the appealed outcome for which the `AppealBond`
+    /// was deposited.
+    pub const AppealBond: Balance = 5 * BASE;
+    /// `OutcomeBond` is increased by this factor after every new appeal.
+    pub const AppealBondFactor: Balance = 2 * BASE;
     /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
@@ -91,12 +97,14 @@ parameter_types! {
     pub const CourtAggregationPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// The time in which a court case can get appealed.
     pub const CourtAppealPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The court lock identifier.
+    pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
     /// The slash percentage if a secret vote gets revealed during the voting period.
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 5;
     /// The maximum number of randomly selected jurors for a dispute.
-    pub const MaxDrawings: u32 = 191;
+    pub const MaxDraws: u32 = 191;
     /// The maximum number of jurors that can be registered.
     pub const MaxJurors: u32 = 10_000;
     /// The minimum stake a user needs to reserve to become a juror.
