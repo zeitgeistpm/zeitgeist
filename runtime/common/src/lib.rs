@@ -937,7 +937,7 @@ macro_rules! impl_config_traits {
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;
             type AppealBondFactor = AppealBondFactor;
-            type CourtBackingPeriod = CourtBackingPeriod;
+            type CourtPreVotePeriod = CourtPreVotePeriod;
             type CourtVotePeriod = CourtVotePeriod;
             type CourtAggregationPeriod = CourtAggregationPeriod;
             type CourtAppealPeriod = CourtAppealPeriod;

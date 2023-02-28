@@ -21,7 +21,7 @@ parameter_types! {
     pub const AppealBondFactor: Balance = 2 * BASE;
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-    pub const CourtBackingPeriod: BlockNumber = 34;
+    pub const CourtPreVotePeriod: BlockNumber = 34;
     pub const CourtVotePeriod: BlockNumber = 34;
     pub const CourtAggregationPeriod: BlockNumber = 34;
     pub const CourtAppealPeriod: BlockNumber = 34;

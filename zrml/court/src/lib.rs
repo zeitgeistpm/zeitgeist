@@ -85,7 +85,7 @@ mod pallet {
         /// The intention is to use this period as preparation time
         /// (for example vote outcome addition through crowdfunding)
         #[pallet::constant]
-        type CourtBackingPeriod: Get<Self::BlockNumber>;
+        type CourtPreVotePeriod: Get<Self::BlockNumber>;
 
         /// The time in which the jurors can cast their secret vote.
         #[pallet::constant]
@@ -176,16 +176,15 @@ mod pallet {
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
 
-    pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> = <T as Config>::Currency;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub(crate) type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+        <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
+        AccountIdOf<T>,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
@@ -195,16 +194,12 @@ mod pallet {
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber, AppealsOf<T>>;
     pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>>;
-    pub(crate) type JurorPoolItemOf<T> =
-        JurorPoolItem<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
+    pub(crate) type JurorPoolItemOf<T> = JurorPoolItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type JurorPoolOf<T> = BoundedVec<JurorPoolItemOf<T>, <T as Config>::MaxJurors>;
-    pub(crate) type DrawOf<T> = Draw<
-        <T as frame_system::Config>::AccountId,
-        BalanceOf<T>,
-        <T as frame_system::Config>::Hash,
-    >;
+    pub(crate) type DrawOf<T> =
+        Draw<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::Hash>;
     pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
-    pub(crate) type AppealOf<T> = AppealInfo<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
+    pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
 
     #[pallet::pallet]
@@ -354,9 +349,6 @@ mod pallet {
         InsufficientAmount,
         /// After the first join of the court the amount has to be higher than the last join.
         AmountBelowLastJoin,
-        /// If no last winner can be determined the market resolves
-        /// on the oracle report and is not able to get appealed.
-        NoLastWinner,
     }
 
     #[pallet::call]
@@ -513,10 +505,12 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
+            T::MarketCommons::market(&market_id)?;
+
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             ensure!(
-                court.periods.backing_end < now && now <= court.periods.vote_end,
+                court.periods.pre_vote_end < now && now <= court.periods.vote_end,
                 Error::<T>::NotInVotingPeriod
             );
 
@@ -569,6 +563,8 @@ mod pallet {
         ) -> DispatchResult {
             let denouncer = ensure_signed(origin)?;
 
+            T::MarketCommons::market(&market_id)?;
+
             let juror = T::Lookup::lookup(juror)?;
 
             ensure!(denouncer != juror, Error::<T>::SelfDenounceDisallowed);
@@ -579,7 +575,7 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
             // ensure in vote period
             ensure!(
-                court.periods.backing_end < now && now <= court.periods.vote_end,
+                court.periods.pre_vote_end < now && now <= court.periods.vote_end,
                 Error::<T>::NotInVotingPeriod
             );
 
@@ -658,6 +654,8 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
+            T::MarketCommons::market(&market_id)?;
+
             ensure!(<Jurors<T>>::get(&who).is_some(), Error::<T>::OnlyJurorsCanReveal);
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -716,15 +714,16 @@ mod pallet {
         pub fn back_appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
+            T::MarketCommons::market(&market_id)?;
+
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             ensure!(!court.is_appeal_backed, Error::<T>::AppealAlreadyBacked);
 
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
-            let draws = Draws::<T>::get(market_id);
-            let appealed_outcome =
-                Self::get_winner(draws.as_slice()).ok_or(Error::<T>::NoLastWinner)?;
+            // the outcome which would be resolved on is appealed (including oracle report)
+            let appealed_outcome = Self::get_last_resolved_outcome(&market_id)?;
 
             let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0);
             let appeal_number = court.appeals.len();
@@ -772,6 +771,8 @@ mod pallet {
         ) -> DispatchResult {
             ensure_signed(origin)?;
 
+            T::MarketCommons::market(&market_id)?;
+
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             ensure!(!court.is_drawn, Error::<T>::JurorsAlreadyDrawn);
             ensure!(court.is_appeal_backed, Error::<T>::BackAppealFirst);
@@ -805,13 +806,15 @@ mod pallet {
         pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             ensure_signed(origin)?;
 
+            T::MarketCommons::market(&market_id)?;
+
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             ensure!(court.is_appeal_backed && court.is_drawn, Error::<T>::AppealNotReady);
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
             let periods = Periods {
-                backing_end: T::CourtBackingPeriod::get(),
+                pre_vote_end: T::CourtPreVotePeriod::get(),
                 vote_end: T::CourtVotePeriod::get(),
                 aggregation_end: T::CourtAggregationPeriod::get(),
                 appeal_end: T::CourtAppealPeriod::get(),
@@ -845,6 +848,8 @@ mod pallet {
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             ensure_signed(origin)?;
+
+            T::MarketCommons::market(&market_id)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
@@ -934,6 +939,8 @@ mod pallet {
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             ensure_signed(origin)?;
+
+            T::MarketCommons::market(&market_id)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
@@ -1187,7 +1194,13 @@ mod pallet {
             <JurorPool<T>>::put(jurors);
         }
 
-        fn get_winner(draws: &[DrawOf<T>]) -> Option<OutcomeReport> {
+        // Returns the winner of the current court round.
+        // If there is no element inside `draws`, returns `None`.
+        // If the best two outcomes have the same score, returns the last court round winner.
+        fn get_winner(
+            draws: &[DrawOf<T>],
+            last_winner: Option<OutcomeReport>,
+        ) -> Option<OutcomeReport> {
             let mut scores = BTreeMap::<OutcomeReport, u32>::new();
 
             for draw in draws {
@@ -1223,11 +1236,28 @@ mod pallet {
             }
 
             if best_score.1 == second_best_score.1 {
-                // TODO(#980): Rather should start a new voting round instead of resolving to the oracle report outcome.
-                return None;
+                return last_winner;
             }
 
             Some(best_score.0.clone())
+        }
+
+        fn get_last_resolved_outcome(
+            market_id: &MarketIdOf<T>,
+        ) -> Result<OutcomeReport, DispatchError> {
+            let market = T::MarketCommons::market(market_id)?;
+            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+            let last_winner: Option<OutcomeReport> = court
+                .appeals
+                .last()
+                .map(|appeal_info| Some(appeal_info.appealed_outcome.clone()))
+                .unwrap_or(None);
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketReportNotFound)?;
+            let oracle_outcome = report.outcome.clone();
+            let draws = Draws::<T>::get(market_id);
+            let resolved_outcome =
+                Self::get_winner(draws.as_slice(), last_winner).unwrap_or(oracle_outcome);
+            Ok(resolved_outcome)
         }
     }
 
@@ -1258,7 +1288,7 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
 
             let periods = Periods {
-                backing_end: T::CourtBackingPeriod::get(),
+                pre_vote_end: T::CourtPreVotePeriod::get(),
                 vote_end: T::CourtVotePeriod::get(),
                 aggregation_end: T::CourtAggregationPeriod::get(),
                 appeal_end: T::CourtAppealPeriod::get(),
@@ -1284,8 +1314,15 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
+            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+            let last_winner: Option<OutcomeReport> = court
+                .appeals
+                .last()
+                .map(|appeal_info| Some(appeal_info.appealed_outcome.clone()))
+                .unwrap_or(None);
             let draws = Draws::<T>::get(market_id);
-            Ok(Self::get_winner(draws.as_slice()))
+            // if get_winner returns None, `on_resolution` will fall back on the oracle report
+            Ok(Self::get_winner(draws.as_slice(), last_winner))
         }
 
         fn maybe_pay(

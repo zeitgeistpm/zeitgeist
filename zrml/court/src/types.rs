@@ -59,7 +59,7 @@ pub enum Vote<Hash> {
     Eq,
 )]
 pub struct Periods<BlockNumber> {
-    pub(crate) backing_end: BlockNumber,
+    pub(crate) pre_vote_end: BlockNumber,
     pub(crate) vote_end: BlockNumber,
     pub(crate) aggregation_end: BlockNumber,
     pub(crate) appeal_end: BlockNumber,
@@ -118,11 +118,11 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     CourtInfo<BlockNumber, Appeals>
 {
     pub fn new(now: BlockNumber, periods: Periods<BlockNumber>) -> Self {
-        let backing_end = now.saturating_add(periods.backing_end);
-        let vote_end = backing_end.saturating_add(periods.vote_end);
+        let pre_vote_end = now.saturating_add(periods.pre_vote_end);
+        let vote_end = pre_vote_end.saturating_add(periods.vote_end);
         let aggregation_end = vote_end.saturating_add(periods.aggregation_end);
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
-        let periods = Periods { backing_end, vote_end, aggregation_end, appeal_end };
+        let periods = Periods { pre_vote_end, vote_end, aggregation_end, appeal_end };
         let status = CourtStatus::Open;
         Self {
             status,
@@ -134,8 +134,8 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     }
 
     pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
-        self.periods.backing_end = now.saturating_add(periods.backing_end);
-        self.periods.vote_end = self.periods.backing_end.saturating_add(periods.vote_end);
+        self.periods.pre_vote_end = now.saturating_add(periods.pre_vote_end);
+        self.periods.vote_end = self.periods.pre_vote_end.saturating_add(periods.vote_end);
         self.periods.aggregation_end =
             self.periods.vote_end.saturating_add(periods.aggregation_end);
         self.periods.appeal_end = self.periods.aggregation_end.saturating_add(periods.appeal_end);

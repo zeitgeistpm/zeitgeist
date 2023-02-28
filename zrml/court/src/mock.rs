@@ -32,7 +32,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, AppealBondFactor, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
-        CourtBackingPeriod, CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage,
+        CourtLockId, CourtPalletId, CourtPreVotePeriod, CourtVotePeriod, DenounceSlashPercentage,
         MaxAppeals, MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
         RedistributionPercentage, TardySlashPercentage, BASE,
     },
@@ -118,7 +118,7 @@ impl crate::Config for Runtime {
     type AppealBondFactor = AppealBondFactor;
     type CourtLockId = CourtLockId;
     type Currency = Balances;
-    type CourtBackingPeriod = CourtBackingPeriod;
+    type CourtPreVotePeriod = CourtPreVotePeriod;
     type CourtVotePeriod = CourtVotePeriod;
     type CourtAggregationPeriod = CourtAggregationPeriod;
     type CourtAppealPeriod = CourtAppealPeriod;

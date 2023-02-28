@@ -38,8 +38,8 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, AppealBondFactor, AuthorizedPalletId, BalanceFractionalDecimals,
-        BlockHashCount, CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod,
-        CourtBackingPeriod, CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage,
+        BlockHashCount, CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId,
+        CourtPalletId, CourtPreVotePeriod, CourtVotePeriod, DenounceSlashPercentage,
         ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
         LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
         MaxDisputeDuration, MaxDisputes, MaxDraws, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
@@ -281,7 +281,7 @@ impl zrml_court::Config for Runtime {
     type AppealBond = AppealBond;
     type AppealBondFactor = AppealBondFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type CourtBackingPeriod = CourtBackingPeriod;
+    type CourtPreVotePeriod = CourtPreVotePeriod;
     type CourtVotePeriod = CourtVotePeriod;
     type CourtAggregationPeriod = CourtAggregationPeriod;
     type CourtAppealPeriod = CourtAppealPeriod;

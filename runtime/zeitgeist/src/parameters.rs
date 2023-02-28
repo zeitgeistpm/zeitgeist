@@ -90,7 +90,7 @@ parameter_types! {
     /// The time to wait before jurors can start voting.
     /// The intention is to use this period as preparation time
     /// (for example vote outcome addition through crowdfunding)
-    pub const CourtBackingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtPreVotePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// The time in which the jurors can cast their secret vote.
     pub const CourtVotePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// The time in which the jurors should reveal their secret vote.

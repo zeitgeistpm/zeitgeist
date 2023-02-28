@@ -23,7 +23,7 @@
 
 #[cfg(test)]
 use crate::Pallet as Court;
-use crate::{BalanceOf, Call, Config, CurrencyOf, Pallet};
+use crate::{BalanceOf, Call, Config, Pallet};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::{Currency, Get};
 use frame_system::RawOrigin;
@@ -33,7 +33,7 @@ fn deposit<T>(caller: &T::AccountId)
 where
     T: Config,
 {
-    let _ = CurrencyOf::<T>::deposit_creating(caller, BalanceOf::<T>::max_value());
+    let _ = T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value());
 }
 
 benchmarks! {
