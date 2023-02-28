@@ -115,15 +115,17 @@ def check_files(year: int, files: list[str]) -> bool:
     return result
 
 
-def update_files(year: int, files: list[str]) -> bool:
+def update_files(year: int, files: list[str]) -> tuple[bool, int]:
     files = [File(f) for f in files]
     result = False
+    count = 0
     for f in files:
         try:
             f.read()
-            f.update_license(year)
+            changed = f.update_license(year)
             f.write()
+            count += changed
         except LicenseCheckerError as e:
             echo(str(e))
             result = True
-    return result
+    return result, count

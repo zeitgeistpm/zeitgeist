@@ -15,7 +15,8 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     current_year = datetime.date.today().year
     if args.write:
-        failed = update_files(current_year, args.files)
+        failed, count = update_files(current_year, args.files)
+        echo(f"Updated {count} files. ✍️")
     else:
         failed = check_files(current_year, args.files)
     if failed:
