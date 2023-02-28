@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -25,7 +26,7 @@ use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
 use zeitgeist_primitives::{
     constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD, STAKING_PTD},
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
         BASE,
     },
     types::AccountId,
@@ -39,6 +40,7 @@ use {
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
     },
+    zeitgeist_primitives::constants::ztg::STAKING_PTD,
     zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
 

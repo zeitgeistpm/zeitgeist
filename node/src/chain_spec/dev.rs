@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -30,13 +31,14 @@ use battery_station_runtime::{
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
-    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD, STAKING_PTD},
+    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
     types::Balance,
 };
 #[cfg(feature = "parachain")]
 use {
     super::battery_station::inflation_config,
     sp_runtime::Perbill,
+    zeitgeist_primitives::constants::ztg::STAKING_PTD,
     zeitgeist_primitives::constants::{ztg::TOTAL_INITIAL_ZTG, BASE},
 };
 

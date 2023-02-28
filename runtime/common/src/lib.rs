@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -132,14 +133,25 @@ macro_rules! decl_common_types {
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
         >;
 
-        // Advisory committee vote proportions
-        // At least 50%
-        type EnsureRootOrHalfAdvisoryCommittee = EitherOfDiverse<
+        // Advisory Committee vote proportions
+        // More than 33%
+        type EnsureRootOrMoreThanOneThirdAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
-            EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 3>,
         >;
 
-        // Technical committee vote proportions
+        // More than 50%
+        type EnsureRootOrMoreThanHalfAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 2>,
+        >;
+
+        // More than 66%
+        type EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 2, 3>,
+        >;
+
         // At least 66%
         type EnsureRootOrTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
@@ -272,7 +284,7 @@ macro_rules! create_runtime {
                 TransactionPayment: pallet_transaction_payment::{Config, Event<T>, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
-                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
@@ -919,7 +931,7 @@ macro_rules! impl_config_traits {
         impl parachain_info::Config for Runtime {}
 
         impl zrml_authorized::Config for Runtime {
-            type AuthorizedDisputeResolutionOrigin = EnsureRootOrHalfAdvisoryCommittee;
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
@@ -979,13 +991,10 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-            type ApproveOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
-            >;
+            type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type Authorized = Authorized;
             type Court = Court;
-            type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+            type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
@@ -1014,11 +1023,8 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
-            type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type RequestEditOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
-            >;
+            type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
+            type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
@@ -1190,7 +1196,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
                     list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
-                    list_benchmark!(list, extra, pallet_multisig, MultiSig);
+                    list_benchmark!(list, extra, pallet_multisig, Multisig);
                     list_benchmark!(list, extra, pallet_preimage, Preimage);
                     list_benchmark!(list, extra, pallet_proxy, Proxy);
                     list_benchmark!(list, extra, pallet_scheduler, Scheduler);
@@ -1268,7 +1274,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
                     add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
-                    add_benchmark!(params, batches, pallet_multisig, MultiSig);
+                    add_benchmark!(params, batches, pallet_multisig, Multisig);
                     add_benchmark!(params, batches, pallet_preimage, Preimage);
                     add_benchmark!(params, batches, pallet_proxy, Proxy);
                     add_benchmark!(params, batches, pallet_scheduler, Scheduler);
