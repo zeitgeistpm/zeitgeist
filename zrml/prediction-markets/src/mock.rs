@@ -39,15 +39,15 @@ use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, AppealBondFactor, AuthorizedPalletId, BalanceFractionalDecimals,
         BlockHashCount, CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId,
-        CourtPalletId, CourtPreVotePeriod, CourtVotePeriod, DenounceSlashPercentage,
-        ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
-        LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
-        MaxDisputeDuration, MaxDisputes, MaxDraws, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
-        MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
-        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinDisputeDuration, MinJurorStake, MinLiquidity, MinOracleDuration,
-        MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor,
-        OutsiderBond, PmPalletId, RedistributionPercentage, SimpleDisputesPalletId, SwapsPalletId,
+        CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, ExistentialDeposit,
+        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAppeals,
+        MaxApprovals, MaxAssets, MaxCategories, MaxDisputeDuration, MaxDisputes, MaxDraws,
+        MaxEditReasonLen, MaxGracePeriod, MaxInRatio, MaxJurors, MaxMarketLifetime,
+        MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
+        MinJurorStake, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
+        RedistributionPercentage, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
         TardySlashPercentage, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
@@ -281,7 +281,6 @@ impl zrml_court::Config for Runtime {
     type AppealBond = AppealBond;
     type AppealBondFactor = AppealBondFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type CourtPreVotePeriod = CourtPreVotePeriod;
     type CourtVotePeriod = CourtVotePeriod;
     type CourtAggregationPeriod = CourtAggregationPeriod;
     type CourtAppealPeriod = CourtAppealPeriod;
@@ -297,6 +296,7 @@ impl zrml_court::Config for Runtime {
     type CourtPalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RedistributionPercentage = RedistributionPercentage;
+    type RequestInterval = RequestInterval;
     type TardySlashPercentage = TardySlashPercentage;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;

@@ -937,7 +937,6 @@ macro_rules! impl_config_traits {
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;
             type AppealBondFactor = AppealBondFactor;
-            type CourtPreVotePeriod = CourtPreVotePeriod;
             type CourtVotePeriod = CourtVotePeriod;
             type CourtAggregationPeriod = CourtAggregationPeriod;
             type CourtAppealPeriod = CourtAppealPeriod;
@@ -954,6 +953,7 @@ macro_rules! impl_config_traits {
             type MinJurorStake = MinJurorStake;
             type Random = RandomnessCollectiveFlip;
             type RedistributionPercentage = RedistributionPercentage;
+            type RequestInterval = RequestInterval;
             type TardySlashPercentage = TardySlashPercentage;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;

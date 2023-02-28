@@ -24,6 +24,7 @@
 use super::VERSION;
 use frame_support::{
     parameter_types,
+    traits::LockIdentifier,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         DispatchClass, Weight,
@@ -39,9 +40,6 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
-
-#[cfg(feature = "with-global-disputes")]
-use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
@@ -87,22 +85,18 @@ parameter_types! {
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
-    /// The time to wait before jurors can start voting.
-    /// The intention is to use this period as preparation time
-    /// (for example vote outcome addition through crowdfunding)
-    pub const CourtPreVotePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// The time in which the jurors can cast their secret vote.
-    pub const CourtVotePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtVotePeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
     /// The time in which the jurors should reveal their secret vote.
-    pub const CourtAggregationPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtAggregationPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
     /// The time in which a court case can get appealed.
-    pub const CourtAppealPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const CourtAppealPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
     /// The lock identifier for the court votes.
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
     /// The slash percentage if a secret vote gets revealed during the voting period.
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
     /// The maximum number of appeals until the court fails.
-    pub const MaxAppeals: u32 = 5;
+    pub const MaxAppeals: u32 = 6;
     /// The maximum number of randomly selected jurors for a dispute.
     pub const MaxDraws: u32 = 191;
     /// The maximum number of jurors that can be registered.
@@ -111,6 +105,8 @@ parameter_types! {
     pub const MinJurorStake: Balance = 1000 * BASE;
     /// The percentage that is slashed if a juror did not vote for the plurality outcome.
     pub const RedistributionPercentage: Percent = Percent::from_percent(10);
+    /// The interval for requesting multiple court votes at once.
+    pub const RequestInterval: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// The percentage that is being slashed from the juror's stake.
     pub const TardySlashPercentage: Percent = Percent::from_percent(20);
 

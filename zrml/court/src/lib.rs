@@ -51,7 +51,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure, log,
-        pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{Hooks, OptionQuery, StorageMap, StorageValue, ValueQuery, Weight},
         traits::{
             Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
             NamedReservableCurrency, Randomness, StorageVersion, WithdrawReasons,
@@ -80,12 +80,6 @@ mod pallet {
         /// appeal.
         #[pallet::constant]
         type AppealBondFactor: Get<BalanceOf<Self>>;
-
-        /// The time to wait before jurors can start voting.
-        /// The intention is to use this period as preparation time
-        /// (for example vote outcome addition through crowdfunding)
-        #[pallet::constant]
-        type CourtPreVotePeriod: Get<Self::BlockNumber>;
 
         /// The time in which the jurors can cast their secret vote.
         #[pallet::constant]
@@ -151,6 +145,10 @@ mod pallet {
 
         /// Randomness source
         type Random: Randomness<Self::Hash, Self::BlockNumber>;
+
+        /// The interval for requesting multiple court votes at once.
+        #[pallet::constant]
+        type RequestInterval: Get<Self::BlockNumber>;
 
         /// The percentage that is slashed if a juror did not vote for the plurality outcome.
         #[pallet::constant]
@@ -229,6 +227,11 @@ mod pallet {
     pub type Courts<T: Config> =
         StorageMap<_, Blake2_128Concat, MarketIdOf<T>, CourtOf<T>, OptionQuery>;
 
+    /// The block number in the future when jurors should start voting.
+    /// This is useful for the user experience of the jurors to vote for multiple courts at once.
+    #[pallet::storage]
+    pub type RequestBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
@@ -268,6 +271,8 @@ mod pallet {
         JurorStakesReassigned { market_id: MarketIdOf<T> },
         /// The tardy jurors have been punished.
         TardyJurorsPunished { market_id: MarketIdOf<T> },
+        /// The global dispute backing was successful.
+        GlobalDisputeBacked { market_id: MarketIdOf<T> },
     }
 
     #[pallet::error]
@@ -349,6 +354,23 @@ mod pallet {
         InsufficientAmount,
         /// After the first join of the court the amount has to be higher than the last join.
         AmountBelowLastJoin,
+        /// The maximum number of normal appeals is reached. So only allow to back a global dispute.
+        OnlyGlobalDisputeAppealAllowed,
+        /// In order to back a global dispute, it has to be the last appeal (MaxAppeals reached).
+        NeedsToBeLastAppeal,
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_initialize(now: T::BlockNumber) -> Weight {
+            let mut total_weight: Weight = Weight::zero();
+            if now >= <RequestBlock<T>>::get() {
+                let future_request = now.saturating_add(T::RequestInterval::get());
+                <RequestBlock<T>>::put(future_request);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            }
+            total_weight
+        }
     }
 
     #[pallet::call]
@@ -517,6 +539,7 @@ mod pallet {
             let mut draws = <Draws<T>>::get(market_id);
             let (index, draw) = match draws.iter().position(|draw| draw.juror == who) {
                 Some(index) => {
+                    // allow to override last vote
                     ensure!(
                         matches!(draws[index].vote, Vote::Drawn | Vote::Secret { secret: _ }),
                         Error::<T>::OnlyDrawnJurorsCanVote
@@ -718,6 +741,11 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             ensure!(!court.is_appeal_backed, Error::<T>::AppealAlreadyBacked);
+            let appeal_number = court.appeals.len();
+            ensure!(
+                appeal_number < <AppealsOf<T>>::bound().saturating_sub(1),
+                Error::<T>::OnlyGlobalDisputeAppealAllowed
+            );
 
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
@@ -726,7 +754,6 @@ mod pallet {
             let appealed_outcome = Self::get_last_resolved_outcome(&market_id)?;
 
             let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0);
-            let appeal_number = court.appeals.len();
             let necessary_jurors_number =
                 Self::necessary_jurors_num(appeal_number.saturating_add(1));
             ensure!(jurors_len >= necessary_jurors_number, Error::<T>::NotEnoughJurors);
@@ -734,7 +761,10 @@ mod pallet {
             let bond = default_appeal_bond::<T>(appeal_number);
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
 
-            court.appeals.try_push(appeal_info).map_err(|_| Error::<T>::MaxAppealsReached)?;
+            court.appeals.try_push(appeal_info).map_err(|_| {
+                debug_assert!(false, "Appeal bound is checked above.");
+                Error::<T>::MaxAppealsReached
+            })?;
 
             T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
 
@@ -749,6 +779,57 @@ mod pallet {
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
             Self::deposit_event(Event::AppealBacked { market_id });
+
+            Ok(())
+        }
+
+        /// Back the global dispute to allow the market to be resolved
+        /// if the last appeal outcome is disagreed on.
+        ///
+        /// # Arguments
+        ///
+        /// - `market_id`: The identifier of the court.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::weight(1_000_000_000_000)]
+        #[transactional]
+        pub fn back_global_dispute(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            T::MarketCommons::market(&market_id)?;
+
+            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+            let appeal_number = court.appeals.len();
+            ensure!(
+                appeal_number == <AppealsOf<T>>::bound().saturating_sub(1),
+                Error::<T>::NeedsToBeLastAppeal
+            );
+
+            let now = <frame_system::Pallet<T>>::block_number();
+            Self::check_appealable_market(&market_id, &court, now)?;
+
+            // the outcome which would be resolved on is appealed (including oracle report)
+            let appealed_outcome = Self::get_last_resolved_outcome(&market_id)?;
+
+            let bond = default_appeal_bond::<T>(appeal_number);
+            let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
+
+            court.appeals.try_push(appeal_info).map_err(|_| {
+                debug_assert!(false, "Appeal bound is checked above.");
+                Error::<T>::MaxAppealsReached
+            })?;
+
+            T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
+
+            let last_resolve_at = court.periods.appeal_end;
+            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
+
+            Self::deposit_event(Event::GlobalDisputeBacked { market_id });
 
             Ok(())
         }
@@ -813,8 +894,11 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
+            let request_block = <RequestBlock<T>>::get();
+            debug_assert!(request_block >= now, "Request block must be greater than now.");
+            let pre_vote_end = request_block.saturating_sub(now);
             let periods = Periods {
-                pre_vote_end: T::CourtPreVotePeriod::get(),
+                pre_vote_end,
                 vote_end: T::CourtVotePeriod::get(),
                 aggregation_end: T::CourtAggregationPeriod::get(),
                 appeal_end: T::CourtAppealPeriod::get(),
@@ -996,7 +1080,7 @@ mod pallet {
 
             let mut random_set = BTreeSet::new();
             for _ in 0..number {
-                let random_number = rng.gen_range(0u128..total_weight);
+                let random_number = rng.gen_range(0u128..=total_weight);
                 random_set.insert(random_number);
             }
 
@@ -1286,9 +1370,12 @@ mod pallet {
             Self::select_jurors(market_id, jurors.as_slice(), appeal_number)?;
 
             let now = <frame_system::Pallet<T>>::block_number();
+            let request_block = <RequestBlock<T>>::get();
+            debug_assert!(request_block >= now, "Request block must be greater than now.");
+            let pre_vote_end = request_block.saturating_sub(now);
 
             let periods = Periods {
-                pre_vote_end: T::CourtPreVotePeriod::get(),
+                pre_vote_end,
                 vote_end: T::CourtVotePeriod::get(),
                 aggregation_end: T::CourtAggregationPeriod::get(),
                 appeal_end: T::CourtAppealPeriod::get(),
@@ -1399,14 +1486,9 @@ mod pallet {
                     let valid_period =
                         Self::check_appealable_market(market_id, &court, now).is_ok();
 
-                    if valid_period {
-                        if jurors_len < necessary_jurors_number {
-                            has_failed = true;
-                        }
-
-                        if appeals.is_full() {
-                            has_failed = true;
-                        }
+                    if appeals.is_full() || (valid_period && (jurors_len < necessary_jurors_number))
+                    {
+                        has_failed = true;
                     }
                 }
                 None => {
@@ -1418,7 +1500,7 @@ mod pallet {
                         report_block <= now && now < block_after_dispute_duration;
 
                     let necessary_jurors_number = Self::necessary_jurors_num(0usize);
-                    if jurors_len < necessary_jurors_number && during_dispute_duration {
+                    if during_dispute_duration && jurors_len < necessary_jurors_number {
                         has_failed = true;
                     }
                 }
@@ -1433,11 +1515,8 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            if let Some(court) = <Courts<T>>::get(market_id) {
-                let last_resolve_at = court.periods.appeal_end;
-                let _ids_len_0 =
-                    T::DisputeResolution::remove_auto_resolve(market_id, last_resolve_at);
-            }
+            <Draws<T>>::remove(market_id);
+            <Courts<T>>::remove(market_id);
 
             Ok(())
         }
@@ -1447,8 +1526,10 @@ mod pallet {
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
+
             <Draws<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
+
             Ok(())
         }
     }

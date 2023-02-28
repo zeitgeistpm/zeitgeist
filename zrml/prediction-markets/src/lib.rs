@@ -1461,7 +1461,6 @@ mod pallet {
                     }
                 };
 
-                // TODO(#372): Allow court with global disputes.
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
 

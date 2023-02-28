@@ -237,6 +237,7 @@ fn setup_blocks(num_blocks: u32) {
 
         System::initialize(&current_block_number, &parent_block_hash, &current_digest);
         RandomnessCollectiveFlip::on_initialize(current_block_number);
+        Court::on_initialize(current_block_number);
         System::finalize();
         System::set_block_number(current_block_number);
     }

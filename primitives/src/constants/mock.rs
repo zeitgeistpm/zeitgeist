@@ -21,13 +21,13 @@ parameter_types! {
     pub const AppealBondFactor: Balance = 2 * BASE;
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-    pub const CourtPreVotePeriod: BlockNumber = 34;
+    pub const RequestInterval: BlockNumber = 50;
     pub const CourtVotePeriod: BlockNumber = 34;
     pub const CourtAggregationPeriod: BlockNumber = 34;
     pub const CourtAppealPeriod: BlockNumber = 34;
     pub const CourtLockId: LockIdentifier = *b"zge/cloc";
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
-    pub const MaxAppeals: u32 = 5;
+    pub const MaxAppeals: u32 = 6;
     pub const MaxDraws: u32 = 191;
     pub const MaxJurors: u32 = 1000;
     pub const MinJurorStake: Balance = 50 * CENT;
