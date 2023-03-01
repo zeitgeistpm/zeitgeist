@@ -427,7 +427,14 @@ mod pallet {
                 Ok(_) => return Err(Error::<T>::AmountAlreadyUsed.into()),
                 Err(i) => jurors
                     .try_insert(i, JurorPoolItem { stake: amount, juror: who.clone(), slashed })
-                    .map_err(|_| Error::<T>::MaxJurorsReached)?,
+                    .map_err(|_| {
+                        debug_assert!(
+                            false,
+                            "This should never happen, because we are removing the lowest staked \
+                             juror above."
+                        );
+                        Error::<T>::MaxJurorsReached
+                    })?,
             };
 
             T::Currency::set_lock(T::CourtLockId::get(), &who, amount, WithdrawReasons::all());
