@@ -394,11 +394,11 @@ mod pallet {
                     jurors
                         .first()
                         .map(|pool_item| pool_item.stake)
-                        .unwrap_or(<BalanceOf<T>>::zero())
+                        .unwrap_or_else(<BalanceOf<T>>::zero)
                         <= jurors
                             .last()
                             .map(|pool_item| pool_item.stake)
-                            .unwrap_or(<BalanceOf<T>>::zero())
+                            .unwrap_or_else(<BalanceOf<T>>::zero)
                 );
                 jurors.remove(0);
             }
@@ -1066,7 +1066,7 @@ mod pallet {
             // this None case can happen when the lowest bonded juror was removed (`join_court`)
             // it can also happen when juror was denounced,
             // did not vote or reveal or when the juror decided to leave the court
-            return None;
+            None
         }
 
         pub(crate) fn check_appealable_market(
