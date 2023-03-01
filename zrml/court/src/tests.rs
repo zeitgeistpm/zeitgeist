@@ -171,14 +171,15 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
         setup_blocks(123);
 
         let mut rng = Court::rng();
-        let random_jurors = Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let random_jurors =
+            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             setup_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng);
+                Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -204,7 +205,8 @@ fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
         let mut rng = Court::rng();
-        let random_jurors = Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let random_jurors =
+            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
         for draw in random_jurors {
             assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.juror == draw.juror));
         }

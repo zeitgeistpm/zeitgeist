@@ -355,6 +355,8 @@ mod pallet {
         OnlyGlobalDisputeAppealAllowed,
         /// In order to back a global dispute, it has to be the last appeal (MaxAppeals reached).
         NeedsToBeLastAppeal,
+        /// The random number generation failed.
+        RandNumGenFailed,
     }
 
     #[pallet::hooks]
@@ -987,7 +989,7 @@ mod pallet {
             jurors: &[JurorPoolItemOf<T>],
             number: usize,
             rng: &mut R,
-        ) -> Vec<DrawOf<T>> {
+        ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let total_weight = jurors
                 .iter()
                 .map(|pool_item| {
@@ -996,15 +998,20 @@ mod pallet {
                 .sum::<u128>();
 
             let mut random_set = BTreeSet::new();
-            let mut insert_unused_random_number = || {
+            let mut insert_unused_random_number = || -> DispatchResult {
+                let mut count = 0u8;
                 // this loop is to make sure we don't insert the same random number twice
                 while !random_set.insert(rng.gen_range(0u128..=total_weight)) {
-                    random_set.insert(rng.gen_range(0u128..=total_weight));
+                    count = count.saturating_add(1u8);
+                    if count >= 3u8 {
+                        return Err(Error::<T>::RandNumGenFailed.into());
+                    }
                 }
+                Ok(())
             };
 
             for _ in 0..number {
-                insert_unused_random_number();
+                insert_unused_random_number()?;
             }
 
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
@@ -1039,7 +1046,7 @@ mod pallet {
                 current_weight = upper_bound;
             }
 
-            selections
+            Ok(selections
                 .into_iter()
                 .map(|(juror, (weight, slashable))| Draw {
                     juror,
@@ -1047,7 +1054,7 @@ mod pallet {
                     vote: Vote::Drawn,
                     slashable,
                 })
-                .collect()
+                .collect())
         }
 
         pub(crate) fn select_jurors(
@@ -1061,7 +1068,7 @@ mod pallet {
             let mut rng = Self::rng();
 
             let random_jurors =
-                Self::choose_multiple_weighted(jurors, necessary_jurors_number, &mut rng);
+                Self::choose_multiple_weighted(jurors, necessary_jurors_number, &mut rng)?;
 
             // we allow at most MaxDraws jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
