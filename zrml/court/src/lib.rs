@@ -313,8 +313,8 @@ mod pallet {
         /// In order to exit the court the juror has to exit
         /// the pool first with `prepare_exit_court`.
         JurorNotPreparedToExit,
-        /// The juror was not found in the pool. This happens after `prepare_exit_court`
-        /// or if the juror did not vote for plurality decisions.
+        /// The juror was not found in the pool.
+        JurorAlreadyPreparedToExit,
         /// The juror needs to exit the court and then rejoin.
         JurorNeedsToExit,
         /// The juror was not randomly selected for the court.
@@ -369,6 +369,7 @@ mod pallet {
         /// for court cases according to the provided stake.
         /// The probability to get selected is higher the more funds are staked.
         /// The amount is added to the stake-weighted pool.
+        /// If the pool is full, the juror with the lowest stake is removed from the juror pool.
         ///
         /// # Arguments
         ///
@@ -387,21 +388,28 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
-            // TODO: maybe remove the lowest bonded juror
+            if jurors.is_full() {
+                // remove the lowest staked juror
+                debug_assert!(
+                    jurors
+                        .first()
+                        .map(|pool_item| pool_item.stake)
+                        .unwrap_or(<BalanceOf<T>>::zero())
+                        <= jurors
+                            .last()
+                            .map(|pool_item| pool_item.stake)
+                            .unwrap_or(<BalanceOf<T>>::zero())
+                );
+                jurors.remove(0);
+            }
+
             let mut slashed = <BalanceOf<T>>::zero();
             if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
-                if let Ok(i) =
-                    jurors.binary_search_by_key(&prev_juror_info.stake, |pool_item| pool_item.stake)
-                {
-                    slashed = jurors[i].slashed;
-                    jurors.remove(i);
-                } else {
-                    // this happens if the juror behaved incorrectly
-                    // (was denounced, did not reveal, did not vote)
-                    // or if `prepare_exit_court` was called
-                    return Err(Error::<T>::JurorNeedsToExit.into());
-                }
+                let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake)
+                    .ok_or(Error::<T>::JurorNeedsToExit)?;
+                slashed = pool_item.slashed;
+                jurors.remove(index);
             }
 
             match jurors.binary_search_by_key(&amount, |pool_item| pool_item.stake) {
@@ -427,6 +435,7 @@ mod pallet {
 
         /// Prepare as a juror to exit the court.
         /// For this the juror has to be removed from the stake weighted pool first before the exit.
+        /// Returns an error if the juror is already not part of the pool anymore.
         ///
         /// # Weight
         ///
@@ -440,15 +449,14 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
-            if let Ok(i) =
-                jurors.binary_search_by_key(&prev_juror_info.stake, |pool_item| pool_item.stake)
-            {
-                // remove from juror list to prevent being drawn
-                jurors.remove(i);
+            if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake) {
+                jurors.remove(index);
                 <JurorPool<T>>::put(jurors);
             } else {
-                // this happens if the juror was slashed by the vote aggregation
-                return Err(Error::<T>::JurorNeedsToExit.into());
+                // this error can happen if the lowest bonded juror was removed
+                // it can also happen when juror was denounced,
+                // did not vote or reveal
+                return Err(Error::<T>::JurorAlreadyPreparedToExit.into());
             }
 
             Self::deposit_event(Event::JurorPreparedExit { juror: who });
@@ -478,10 +486,9 @@ mod pallet {
 
             let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
 
+            let jurors = JurorPool::<T>::get();
             ensure!(
-                JurorPool::<T>::get()
-                    .binary_search_by_key(&prev_juror_info.stake, |pool_item| pool_item.stake)
-                    .is_err(),
+                Self::get_pool_item(&jurors, prev_juror_info.stake).is_none(),
                 Error::<T>::JurorNotPreparedToExit
             );
 
@@ -621,11 +628,8 @@ mod pallet {
             T::Currency::resolve_creating(&reward_pot, imbalance);
 
             let mut jurors = JurorPool::<T>::get();
-            if let Ok(i) =
-                jurors.binary_search_by_key(&prev_juror_info.stake, |pool_item| pool_item.stake)
-            {
-                // remove from juror list to prevent being drawn
-                jurors.remove(i);
+            if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake) {
+                jurors.remove(index);
                 <JurorPool<T>>::put(jurors);
             }
 
@@ -794,11 +798,8 @@ mod pallet {
             let who = ensure_signed(origin)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let appeal_number = court.appeals.len();
-            ensure!(
-                appeal_number == <AppealsOf<T>>::bound().saturating_sub(1),
-                Error::<T>::NeedsToBeLastAppeal
-            );
+            let appeal_number = court.appeals.len().saturating_add(1);
+            ensure!(appeal_number == <AppealsOf<T>>::bound(), Error::<T>::NeedsToBeLastAppeal);
 
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
@@ -853,30 +854,18 @@ mod pallet {
             let mut jurors = JurorPool::<T>::get();
             let reward_pot = Self::reward_pot(&market_id);
             let mut slash_and_remove_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
+                let slash = T::TardySlashPercentage::get() * slashable;
+                let (imbalance, missing) = T::Currency::slash(ai, slash);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount for juror {:?}.",
+                    ai
+                );
+                T::Currency::resolve_creating(&reward_pot, imbalance);
+
                 if let Some(prev_juror_info) = <Jurors<T>>::get(ai) {
-                    if let Ok(i) = jurors
-                        .binary_search_by_key(&prev_juror_info.stake, |pool_item| pool_item.stake)
-                    {
-                        // remove from juror list to prevent being drawn
-                        jurors.remove(i);
-
-                        let slash = T::TardySlashPercentage::get() * slashable;
-                        let (imbalance, missing) = T::Currency::slash(ai, slash);
-                        debug_assert!(
-                            missing.is_zero(),
-                            "Could not slash all of the amount for juror {:?}.",
-                            ai
-                        );
-
-                        T::Currency::resolve_creating(&reward_pot, imbalance);
-                    } else {
-                        log::warn!(
-                            "Juror {:?} not found in JurorPool storage for vote aggregation. \
-                             Market id {:?}.",
-                            ai,
-                            market_id
-                        );
-                        debug_assert!(false);
+                    if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake) {
+                        jurors.remove(index);
                     }
                 } else {
                     log::warn!(
@@ -1065,6 +1054,21 @@ mod pallet {
             Ok(())
         }
 
+        // Returns (index, pool_item) if the stake associated with the juror was found.
+        // It returns None otherwise.
+        pub(crate) fn get_pool_item(
+            jurors: &[JurorPoolItemOf<T>],
+            stake: BalanceOf<T>,
+        ) -> Option<(usize, &JurorPoolItemOf<T>)> {
+            if let Ok(i) = jurors.binary_search_by_key(&stake, |pool_item| pool_item.stake) {
+                return Some((i, &jurors[i]));
+            }
+            // this None case can happen when the lowest bonded juror was removed (`join_court`)
+            // it can also happen when juror was denounced,
+            // did not vote or reveal or when the juror decided to leave the court
+            return None;
+        }
+
         pub(crate) fn check_appealable_market(
             market_id: &MarketIdOf<T>,
             court: &CourtOf<T>,
@@ -1153,14 +1157,8 @@ mod pallet {
                     total_incentives.subsume(imb);
 
                     if let Some(juror_info) = <Jurors<T>>::get(juror) {
-                        if let Ok(i) = jurors
-                            .binary_search_by_key(&juror_info.stake, |pool_item| pool_item.stake)
-                        {
-                            // remove from juror list to prevent being drawn
-                            jurors[i].slashed = jurors[i].slashed.saturating_add(slash);
-                        } else {
-                            log::warn!("Juror {:?} not found in the pool.", juror);
-                            debug_assert!(false);
+                        if let Some((index, _)) = Self::get_pool_item(&jurors, juror_info.stake) {
+                            jurors[index].slashed = jurors[index].slashed.saturating_add(slash);
                         }
                     } else {
                         log::warn!("Juror {:?} not found in Jurors storage.", juror);
