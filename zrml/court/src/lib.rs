@@ -54,7 +54,8 @@ mod pallet {
         pallet_prelude::{Hooks, OptionQuery, StorageMap, StorageValue, ValueQuery, Weight},
         traits::{
             Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
-            NamedReservableCurrency, Randomness, StorageVersion, WithdrawReasons,
+            NamedReservableCurrency, Randomness, ReservableCurrency, StorageVersion,
+            WithdrawReasons,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId,
     };
@@ -261,10 +262,6 @@ mod pallet {
             outcome: OutcomeReport,
             salt: T::Hash,
         },
-        /// The jurors for an appeal have been drawn.
-        AppealJurorsDrawn { market_id: MarketIdOf<T> },
-        /// The backing for an appeal has been checked.
-        AppealBacked { market_id: MarketIdOf<T> },
         /// A market has been appealed.
         MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u32 },
         /// The juror stakes have been reassigned.
@@ -303,15 +300,8 @@ mod pallet {
         NotInAppealPeriod,
         /// The court is already present for this market.
         CourtAlreadyExists,
-        /// For this appeal round the random juror selection extrinsic was already called.
-        JurorsAlreadyDrawn,
         /// For this appeal round the backing check extrinsic was already called.
         AppealAlreadyBacked,
-        /// In order to start an appeal the backing check extrinsic must be called first.
-        BackAppealFirst,
-        /// The final appeal extrinsic can only be called after the backing check extrinsic
-        /// and random selection of jurors for this appeal.
-        AppealNotReady,
         /// The caller of this extrinsic must be a randomly selected juror.
         OnlyDrawnJurorsCanVote,
         /// The amount is below the minimum required stake.
@@ -397,6 +387,7 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
+            // TODO: maybe remove the lowest bonded juror
             let mut slashed = <BalanceOf<T>>::zero();
             if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
@@ -494,6 +485,8 @@ mod pallet {
                 Error::<T>::JurorNotPreparedToExit
             );
 
+            // TODO this belongs to prepare_exit_court and this extrinsic should be called whenever a juror is removed from the pool (use state which recognizes that the call to this extrinsic is allowed)
+            // TODO unbounded iteration is dangerous here
             // ensure not drawn for any market
             for (_, draws) in <Draws<T>>::iter() {
                 ensure!(!draws.iter().any(|draw| draw.juror == juror), Error::<T>::JurorStillDrawn);
@@ -526,8 +519,6 @@ mod pallet {
             secret_vote: T::Hash,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -585,8 +576,6 @@ mod pallet {
             salt: T::Hash,
         ) -> DispatchResult {
             let denouncer = ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
 
             let juror = T::Lookup::lookup(juror)?;
 
@@ -677,8 +666,6 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            T::MarketCommons::market(&market_id)?;
-
             ensure!(<Jurors<T>>::get(&who).is_some(), Error::<T>::OnlyJurorsCanReveal);
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -723,7 +710,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Back an appeal of a court to get an appeal initiated.
+        /// Trigger an appeal for a court.
         ///
         /// # Arguments
         ///
@@ -731,54 +718,59 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(1)`
+        /// Complexity: `O(n)`, where `n` is the number of jurors.
+        /// It depends heavily on `choose_multiple_weighted` of `select_jurors`.
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
-        pub fn back_appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            T::MarketCommons::market(&market_id)?;
-
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(!court.is_appeal_backed, Error::<T>::AppealAlreadyBacked);
-            let appeal_number = court.appeals.len();
+            let appeal_number = court.appeals.len().saturating_add(1);
+            let bond = default_appeal_bond::<T>(appeal_number);
+            ensure!(T::Currency::can_reserve(&who, bond), Error::<T>::InsufficientAmount);
             ensure!(
-                appeal_number < <AppealsOf<T>>::bound().saturating_sub(1),
+                appeal_number < <AppealsOf<T>>::bound(),
                 Error::<T>::OnlyGlobalDisputeAppealAllowed
             );
-
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
-
             // the outcome which would be resolved on is appealed (including oracle report)
             let appealed_outcome = Self::get_latest_resolved_outcome(&market_id)?;
-
-            let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0);
-            let necessary_jurors_number =
-                Self::necessary_jurors_num(appeal_number.saturating_add(1));
-            ensure!(jurors_len >= necessary_jurors_number, Error::<T>::NotEnoughJurors);
-
-            let bond = default_appeal_bond::<T>(appeal_number);
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
-
             court.appeals.try_push(appeal_info).map_err(|_| {
                 debug_assert!(false, "Appeal bound is checked above.");
                 Error::<T>::MaxAppealsReached
             })?;
 
-            T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
+            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+            Self::select_jurors(&market_id, jurors.as_slice(), appeal_number)?;
 
             let last_resolve_at = court.periods.appeal_end;
-
-            court.is_appeal_backed = true;
-            <Courts<T>>::insert(market_id, court);
-
-            // we want to avoid the resolution before the full appeal is executed
-            // So, the appeal is inevitable after the call to this extrinsic
-            // otherwise the market is not going to resolve
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
-            Self::deposit_event(Event::AppealBacked { market_id });
+            let request_block = <RequestBlock<T>>::get();
+            debug_assert!(request_block >= now, "Request block must be greater than now.");
+            let pre_vote_end = request_block.saturating_sub(now);
+            let periods = Periods {
+                pre_vote_end,
+                vote_end: T::CourtVotePeriod::get(),
+                aggregation_end: T::CourtAggregationPeriod::get(),
+                appeal_end: T::CourtAppealPeriod::get(),
+            };
+            // sets periods one after the other from now
+            court.update_periods(periods, now);
+            let new_resolve_at = court.periods.appeal_end;
+            debug_assert!(new_resolve_at != last_resolve_at);
+            let _ids_len_1 =
+                T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
+
+            T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
+
+            <Courts<T>>::insert(market_id, court);
+
+            let appeal_number = appeal_number as u32;
+            Self::deposit_event(Event::MarketAppealed { market_id, appeal_number });
 
             Ok(())
         }
@@ -800,8 +792,6 @@ mod pallet {
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let appeal_number = court.appeals.len();
@@ -834,88 +824,6 @@ mod pallet {
             Ok(())
         }
 
-        /// Randomly select jurors from the pool according to their stake
-        /// for the coming appeal round.
-        ///
-        /// # Arguments
-        ///
-        /// - `market_id`: The identifier of the court.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(n)`, where `n` depends on `choose_multiple_weighted` of `select_jurors`.
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn draw_appeal_jurors(
-            origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
-
-            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(!court.is_drawn, Error::<T>::JurorsAlreadyDrawn);
-            ensure!(court.is_appeal_backed, Error::<T>::BackAppealFirst);
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::check_appealable_market(&market_id, &court, now)?;
-
-            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
-            let appeal_number = court.appeals.len();
-            Self::select_jurors(&market_id, jurors.as_slice(), appeal_number)?;
-
-            court.is_drawn = true;
-            <Courts<T>>::insert(market_id, court);
-
-            Self::deposit_event(Event::AppealJurorsDrawn { market_id });
-
-            Ok(())
-        }
-
-        /// Trigger an appeal for a court.
-        ///
-        /// # Arguments
-        ///
-        /// - `market_id`: The identifier of the court.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(n)`, where `n` is the number of market ids
-        /// inside the dispute resolution list.
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
-
-            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            ensure!(court.is_appeal_backed && court.is_drawn, Error::<T>::AppealNotReady);
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::check_appealable_market(&market_id, &court, now)?;
-
-            let request_block = <RequestBlock<T>>::get();
-            debug_assert!(request_block >= now, "Request block must be greater than now.");
-            let pre_vote_end = request_block.saturating_sub(now);
-            let periods = Periods {
-                pre_vote_end,
-                vote_end: T::CourtVotePeriod::get(),
-                aggregation_end: T::CourtAggregationPeriod::get(),
-                appeal_end: T::CourtAppealPeriod::get(),
-            };
-            // sets periods one after the other from now
-            court.update_periods(periods, now);
-            let appeal_number = court.appeals.len() as u32;
-            let _ids_len_1 =
-                T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
-
-            <Courts<T>>::insert(market_id, court);
-
-            Self::deposit_event(Event::MarketAppealed { market_id, appeal_number });
-
-            Ok(())
-        }
-
         /// After the court is closed (resolution happened), the tardy jurors can get punished.
         ///
         /// # Arguments
@@ -932,8 +840,6 @@ mod pallet {
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
@@ -1023,8 +929,6 @@ mod pallet {
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             ensure_signed(origin)?;
-
-            T::MarketCommons::market(&market_id)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
@@ -1144,6 +1048,17 @@ mod pallet {
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
             // MaxDraws should be 191 in this case
             let draws = <DrawsOf<T>>::truncate_from(random_jurors);
+            debug_assert!(
+                if appeal_number > 0 {
+                    appeal_number == <Courts<T>>::get(market_id).unwrap().appeals.len()
+                } else {
+                    // for the first court round, we have no previous winner
+                    true
+                },
+                "Before the draws are overwritten, we need to ensure that the winner of the last \
+                 appeal round was determined with 'get_latest_resolved_outcome' (the data of the \
+                 last Draws)."
+            );
             // new appeal round should have a fresh set of draws
             <Draws<T>>::insert(market_id, draws);
 
@@ -1402,7 +1317,6 @@ mod pallet {
             );
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            // if get_winner returns None, `on_resolution` will fall back on the oracle report
             let resolved_outcome = Self::get_latest_resolved_outcome(market_id)?;
             court.status = CourtStatus::Closed {
                 winner: resolved_outcome.clone(),
@@ -1468,14 +1382,7 @@ mod pallet {
             match <Courts<T>>::get(market_id) {
                 Some(court) => {
                     let appeals = &court.appeals;
-                    let is_appeal_backed = &court.is_appeal_backed;
-                    let appeal_number = if *is_appeal_backed {
-                        // this case is after the extrinsic call to `back_appeal`
-                        appeals.len()
-                    } else {
-                        // this case is before the extrinsic call to `back_appeal`
-                        appeals.len().saturating_add(1)
-                    };
+                    let appeal_number = appeals.len().saturating_add(1);
                     let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
                     let valid_period =
                         Self::check_appealable_market(market_id, &court, now).is_ok();

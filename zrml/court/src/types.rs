@@ -108,8 +108,6 @@ pub struct AppealInfo<AccountId, Balance> {
 )]
 pub struct CourtInfo<BlockNumber, Appeals> {
     pub(crate) status: CourtStatus,
-    pub(crate) is_appeal_backed: bool,
-    pub(crate) is_drawn: bool,
     pub(crate) appeals: Appeals,
     pub(crate) periods: Periods<BlockNumber>,
 }
@@ -124,13 +122,7 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
         let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
         let periods = Periods { pre_vote_end, vote_end, aggregation_end, appeal_end };
         let status = CourtStatus::Open;
-        Self {
-            status,
-            is_appeal_backed: false,
-            is_drawn: false,
-            appeals: Default::default(),
-            periods,
-        }
+        Self { status, appeals: Default::default(), periods }
     }
 
     pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
