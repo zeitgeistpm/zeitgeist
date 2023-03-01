@@ -41,7 +41,7 @@ pub use types::*;
 mod pallet {
     use crate::{
         weights::WeightInfoZeitgeist, AppealInfo, CourtInfo, CourtPalletApi, CourtStatus, Draw,
-        JurorInfo, JurorPoolItem, Periods, Vote,
+        ExitRequest, JurorInfo, JurorPoolItem, Periods, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -122,6 +122,9 @@ mod pallet {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        #[pallet::constant]
+        type IterationLimit: Get<u32>;
+
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
@@ -200,6 +203,7 @@ mod pallet {
     pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
     pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
+    pub(crate) type ExitRequestOf<T> = ExitRequest<MarketIdOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -213,6 +217,11 @@ mod pallet {
     #[pallet::storage]
     pub type Jurors<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, JurorInfoOf<T>, OptionQuery>;
+
+    /// If a juror wants to exit the court, this information is required for a multiblock execution.
+    #[pallet::storage]
+    pub type ExitRequests<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, ExitRequestOf<T>, OptionQuery>;
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]
@@ -240,11 +249,13 @@ mod pallet {
         T: Config,
     {
         /// A juror has been added to the court.
-        JoinedJuror { juror: T::AccountId },
+        JurorJoined { juror: T::AccountId },
         /// A juror prepared to exit the court.
         JurorPreparedExit { juror: T::AccountId },
+        /// A juror could potentially still be bonded in an active court case.
+        JurorMayStillBeDrawn { juror: T::AccountId },
         /// A juror has been removed from the court.
-        ExitedJuror { juror: T::AccountId },
+        JurorExited { juror: T::AccountId },
         /// A juror has voted in a court.
         JurorVoted { market_id: MarketIdOf<T>, juror: T::AccountId, secret: T::Hash },
         /// A juror has revealed their vote.
@@ -278,8 +289,6 @@ mod pallet {
         JurorDoesNotExists,
         /// On dispute or resolution, someone tried to pass a non-court market type
         MarketDoesNotHaveCourtMechanism,
-        /// No-one voted on an outcome to resolve a market
-        NoVotes,
         /// The market is not in a state where it can be disputed.
         MarketIsNotDisputed,
         /// Only jurors can reveal their votes.
@@ -300,8 +309,6 @@ mod pallet {
         NotInAppealPeriod,
         /// The court is already present for this market.
         CourtAlreadyExists,
-        /// For this appeal round the backing check extrinsic was already called.
-        AppealAlreadyBacked,
         /// The caller of this extrinsic must be a randomly selected juror.
         OnlyDrawnJurorsCanVote,
         /// The amount is below the minimum required stake.
@@ -368,7 +375,6 @@ mod pallet {
         /// Join to become a juror, who is able to get randomly selected
         /// for court cases according to the provided stake.
         /// The probability to get selected is higher the more funds are staked.
-        /// The amount is added to the stake-weighted pool.
         /// If the pool is full, the juror with the lowest stake is removed from the juror pool.
         ///
         /// # Arguments
@@ -389,7 +395,6 @@ mod pallet {
             let mut jurors = JurorPool::<T>::get();
 
             if jurors.is_full() {
-                // remove the lowest staked juror
                 debug_assert!(
                     jurors
                         .first()
@@ -400,6 +405,7 @@ mod pallet {
                             .map(|pool_item| pool_item.stake)
                             .unwrap_or_else(<BalanceOf<T>>::zero)
                 );
+                // remove the lowest staked juror
                 jurors.remove(0);
             }
 
@@ -429,7 +435,7 @@ mod pallet {
             let juror_info = JurorInfoOf::<T> { stake: amount };
             <Jurors<T>>::insert(&who, juror_info);
 
-            Self::deposit_event(Event::JoinedJuror { juror: who });
+            Self::deposit_event(Event::JurorJoined { juror: who });
             Ok(())
         }
 
@@ -485,25 +491,43 @@ mod pallet {
             let juror = T::Lookup::lookup(juror)?;
 
             let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
-
-            let jurors = JurorPool::<T>::get();
             ensure!(
-                Self::get_pool_item(&jurors, prev_juror_info.stake).is_none(),
+                Self::get_pool_item(&JurorPool::<T>::get(), prev_juror_info.stake).is_none(),
                 Error::<T>::JurorNotPreparedToExit
             );
 
-            // TODO this belongs to prepare_exit_court and this extrinsic should be called whenever a juror is removed from the pool (use state which recognizes that the call to this extrinsic is allowed)
-            // TODO unbounded iteration is dangerous here
+            let mut exit_request =
+                <ExitRequests<T>>::get(&juror).unwrap_or(ExitRequest { last_market_id: None });
+
+            let mut draws = {
+                if let Some(last) = exit_request.last_market_id {
+                    let hashed_market_id = <Draws<T>>::hashed_key_for(last);
+                    <Draws<T>>::iter_from(hashed_market_id)
+                } else {
+                    <Draws<T>>::iter()
+                }
+            };
+
             // ensure not drawn for any market
-            for (_, draws) in <Draws<T>>::iter() {
-                ensure!(!draws.iter().any(|draw| draw.juror == juror), Error::<T>::JurorStillDrawn);
+            for _ in 0..T::IterationLimit::get() {
+                if let Some((_market_id, ds)) = draws.next() {
+                    ensure!(!ds.iter().any(|d| d.juror == juror), Error::<T>::JurorStillDrawn);
+                } else {
+                    break;
+                }
             }
 
-            Jurors::<T>::remove(&juror);
+            if let Some((market_id, _)) = draws.next() {
+                exit_request.last_market_id = Some(market_id);
+                <ExitRequests<T>>::insert(&juror, exit_request);
+                Self::deposit_event(Event::JurorMayStillBeDrawn { juror });
+            } else {
+                T::Currency::remove_lock(T::CourtLockId::get(), &juror);
+                Jurors::<T>::remove(&juror);
+                <ExitRequests<T>>::remove(&juror);
+                Self::deposit_event(Event::JurorExited { juror });
+            }
 
-            T::Currency::remove_lock(T::CourtLockId::get(), &juror);
-
-            Self::deposit_event(Event::ExitedJuror { juror });
             Ok(())
         }
 
@@ -972,9 +996,15 @@ mod pallet {
                 .sum::<u128>();
 
             let mut random_set = BTreeSet::new();
+            let mut insert_unused_random_number = || {
+                // this loop is to make sure we don't insert the same random number twice
+                while !random_set.insert(rng.gen_range(0u128..=total_weight)) {
+                    random_set.insert(rng.gen_range(0u128..=total_weight));
+                }
+            };
+
             for _ in 0..number {
-                let random_number = rng.gen_range(0u128..=total_weight);
-                random_set.insert(random_number);
+                insert_unused_random_number();
             }
 
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
@@ -1036,6 +1066,11 @@ mod pallet {
             // we allow at most MaxDraws jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
             // MaxDraws should be 191 in this case
+            debug_assert!(
+                random_jurors.len() <= T::MaxDraws::get() as usize,
+                "The number of randomly selected jurors should be less than or equal to \
+                 `MaxDraws`."
+            );
             let draws = <DrawsOf<T>>::truncate_from(random_jurors);
             debug_assert!(
                 if appeal_number > 0 {
@@ -1149,12 +1184,12 @@ mod pallet {
                 } else {
                     let slash = T::RedistributionPercentage::get() * *slashable;
                     let (imb, missing) = T::Currency::slash(juror, slash);
+                    total_incentives.subsume(imb);
                     debug_assert!(
                         missing.is_zero(),
                         "Could not slash all of the amount for juror {:?}.",
                         juror
                     );
-                    total_incentives.subsume(imb);
 
                     if let Some(juror_info) = <Jurors<T>>::get(juror) {
                         if let Some((index, _)) = Self::get_pool_item(&jurors, juror_info.stake) {

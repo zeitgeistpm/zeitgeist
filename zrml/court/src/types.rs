@@ -41,6 +41,20 @@ pub struct JurorInfo<Balance> {
     PartialEq,
     Eq,
 )]
+pub struct ExitRequest<MarketId> {
+    pub(crate) last_market_id: Option<MarketId>,
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
 pub enum Vote<Hash> {
     Drawn,
     Secret { secret: Hash },

@@ -946,6 +946,7 @@ macro_rules! impl_config_traits {
             type DenounceSlashPercentage = DenounceSlashPercentage;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
+            type IterationLimit = IterationLimit;
             type MarketCommons = MarketCommons;
             type MaxAppeals = MaxAppeals;
             type MaxDraws = MaxDraws;

@@ -95,6 +95,8 @@ parameter_types! {
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
     /// The slash percentage if a secret vote gets revealed during the voting period.
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
+    /// The iteration limit over all markets for the randomly selected jurors.
+    pub const IterationLimit: u32 = 100;
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 6;
     /// The maximum number of randomly selected jurors for a dispute.
