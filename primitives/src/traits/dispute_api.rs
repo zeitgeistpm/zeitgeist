@@ -57,21 +57,22 @@ pub trait DisputeApi {
     ///
     /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
     /// returned, this means that the dispute could not be resolved.
-    fn get_resolution_outcome(
+    fn on_resolution(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 
-    /// Allow the flow of funds to the market dispute mechanism.
+    /// Allow the transfer of funds from the API caller to the API consumer and back.
+    /// This can be based on the final resolution outcome of the market.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     ///
     /// # Returns
-    /// Returns the negative imbalance which is meant to be used for the treasury.
-    fn maybe_pay(
+    /// Returns a negative imbalance back to the caller.
+    fn exchange(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
         resolved_outcome: &OutcomeReport,
-        overall_imbalance: Self::NegativeImbalance,
+        amount: Self::NegativeImbalance,
     ) -> Result<Self::NegativeImbalance, DispatchError>;
 
     /// Query the future resolution block of a disputed market.
@@ -100,7 +101,8 @@ pub trait DisputeApi {
         market: &MarketOfDisputeApi<Self>,
     ) -> DispatchResult;
 
-    /// Called, when a market is destroyed.
+    /// Allow the API consumer to clear storage items of the dispute mechanism.
+    /// This may be called, when the dispute mechanism is no longer needed.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     fn clear(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 }

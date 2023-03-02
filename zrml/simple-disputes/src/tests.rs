@@ -62,19 +62,19 @@ fn on_dispute_denies_non_simple_disputes_markets() {
 }
 
 #[test]
-fn get_resolution_outcome_denies_non_simple_disputes_markets() {
+fn on_resolution_denies_non_simple_disputes_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
-            SimpleDisputes::get_resolution_outcome(&0, &market),
+            SimpleDisputes::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
         );
     });
 }
 
 #[test]
-fn get_resolution_outcome_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outcome() {
+fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
@@ -98,7 +98,7 @@ fn get_resolution_outcome_sets_the_last_dispute_of_disputed_markets_as_the_canon
         .unwrap();
         Disputes::<Runtime>::insert(0, &disputes);
         assert_eq!(
-            &SimpleDisputes::get_resolution_outcome(&0, &market).unwrap().unwrap(),
+            &SimpleDisputes::on_resolution(&0, &market).unwrap().unwrap(),
             &disputes.last().unwrap().outcome
         )
     });

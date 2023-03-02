@@ -139,12 +139,12 @@ fn on_dispute_denies_non_court_markets() {
 }
 
 #[test]
-fn get_resolution_outcome_denies_non_court_markets() {
+fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         assert_noop!(
-            Court::get_resolution_outcome(&0, &market),
+            Court::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
         );
     });
@@ -168,7 +168,7 @@ fn appeal_stores_jurors_that_should_vote() {
 
 // Alice is the winner, Bob is tardy and Charlie is the loser
 #[test]
-fn get_resolution_outcome_awards_winners_and_slashes_losers() {
+fn on_resolution_awards_winners_and_slashes_losers() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
@@ -179,7 +179,7 @@ fn get_resolution_outcome_awards_winners_and_slashes_losers() {
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
+        let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
         assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
@@ -190,7 +190,7 @@ fn get_resolution_outcome_awards_winners_and_slashes_losers() {
 }
 
 #[test]
-fn get_resolution_outcome_decides_market_outcome_based_on_the_majority() {
+fn on_resolution_decides_market_outcome_based_on_the_majority() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
@@ -201,13 +201,13 @@ fn get_resolution_outcome_decides_market_outcome_based_on_the_majority() {
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
-        let outcome = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
+        let outcome = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         assert_eq!(outcome, Some(OutcomeReport::Scalar(1)));
     });
 }
 
 #[test]
-fn get_resolution_outcome_sets_late_jurors_as_tardy() {
+fn on_resolution_sets_late_jurors_as_tardy() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
@@ -215,14 +215,14 @@ fn get_resolution_outcome_sets_late_jurors_as_tardy() {
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         MarketCommons::push_market(DEFAULT_MARKET).unwrap();
         Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
+        let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().status, JurorStatus::Ok);
         assert_eq!(Jurors::<Runtime>::get(BOB).unwrap().status, JurorStatus::Tardy);
     });
 }
 
 #[test]
-fn get_resolution_outcome_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tardy() {
+fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tardy() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
@@ -233,13 +233,13 @@ fn get_resolution_outcome_sets_jurors_that_voted_on_the_second_most_voted_outcom
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
+        let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(CHARLIE).unwrap().status, JurorStatus::Tardy);
     });
 }
 
 #[test]
-fn get_resolution_outcome_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
+fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
@@ -248,7 +248,7 @@ fn get_resolution_outcome_punishes_tardy_jurors_that_failed_to_vote_a_second_tim
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         MarketCommons::push_market(DEFAULT_MARKET).unwrap();
         Court::appeal(Origin::signed(ALICE), 0).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
+        let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         let join_court_stake = 40000000000;
         let slash = join_court_stake / 5;
         assert_eq!(Balances::free_balance(Court::treasury_account_id()), INITIAL_BALANCE + slash);
@@ -258,7 +258,7 @@ fn get_resolution_outcome_punishes_tardy_jurors_that_failed_to_vote_a_second_tim
 }
 
 #[test]
-fn get_resolution_outcome_removes_requested_jurors_and_votes() {
+fn on_resolution_removes_requested_jurors_and_votes() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
@@ -269,7 +269,7 @@ fn get_resolution_outcome_removes_requested_jurors_and_votes() {
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
-        let _ = Court::get_resolution_outcome(&0, &DEFAULT_MARKET).unwrap();
+        let _ = Court::on_resolution(&0, &DEFAULT_MARKET).unwrap();
         assert_eq!(RequestedJurors::<Runtime>::iter().count(), 0);
         assert_eq!(Votes::<Runtime>::iter().count(), 0);
     });

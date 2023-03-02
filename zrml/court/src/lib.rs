@@ -563,7 +563,7 @@ mod pallet {
         // rewarded if sided on the most voted outcome but jurors that voted second most
         // voted outcome (winner of the losing majority) are placed as tardy instead of
         // being slashed.
-        fn get_resolution_outcome(
+        fn on_resolution(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
@@ -591,7 +591,7 @@ mod pallet {
             Ok(Some(first))
         }
 
-        fn maybe_pay(
+        fn exchange(
             _: &Self::MarketId,
             market: &MarketOf<T>,
             _: &OutcomeReport,

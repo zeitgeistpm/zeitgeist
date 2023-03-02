@@ -2510,13 +2510,11 @@ mod pallet {
             if resolved_outcome_option.is_none() {
                 resolved_outcome_option = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        T::Authorized::get_resolution_outcome(market_id, market)?
+                        T::Authorized::on_resolution(market_id, market)?
                     }
-                    MarketDisputeMechanism::Court => {
-                        T::Court::get_resolution_outcome(market_id, market)?
-                    }
+                    MarketDisputeMechanism::Court => T::Court::on_resolution(market_id, market)?,
                     MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::get_resolution_outcome(market_id, market)?
+                        T::SimpleDisputes::on_resolution(market_id, market)?
                     }
                 };
             }
@@ -2583,21 +2581,19 @@ mod pallet {
 
             let mut imbalance_left = <NegativeImbalanceOf<T>>::zero();
             if let Some(disputor) = correct_disputor {
-                // TODO: The disputor gets at most the outsider and oracle bond. Is okay?
                 CurrencyOf::<T>::resolve_creating(&disputor, overall_imbalance);
             } else {
-                // TODO: The MDMs get at most the slashed dispute bond. Is okay?
                 imbalance_left = overall_imbalance;
             }
 
             let remainder = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::maybe_pay(market_id, market, &resolved_outcome, imbalance_left)?
+                    T::Authorized::exchange(market_id, market, &resolved_outcome, imbalance_left)?
                 }
                 MarketDisputeMechanism::Court => {
-                    T::Court::maybe_pay(market_id, market, &resolved_outcome, imbalance_left)?
+                    T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?
                 }
-                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::maybe_pay(
+                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::exchange(
                     market_id,
                     market,
                     &resolved_outcome,
