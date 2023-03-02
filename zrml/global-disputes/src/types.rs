@@ -89,7 +89,7 @@ pub enum GdStatus<BlockNumber> {
     Active { add_outcome_end: BlockNumber, vote_end: BlockNumber },
     /// The global dispute is finished.
     Finished,
-    /// The global dispute was triggered to get destroyed.
+    /// The global dispute is destroyed.
     Destroyed,
 }
 
