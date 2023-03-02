@@ -104,4 +104,4 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
     });
 }
 
-// TODO test `reserve_outcome` functionality and API functionality
+// TODO test `suggest_outcome` functionality and API functionality

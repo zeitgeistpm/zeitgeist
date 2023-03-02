@@ -33,7 +33,7 @@ use sp_runtime::traits::{One, Saturating};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 benchmarks! {
-    reserve_outcome {
+    suggest_outcome {
         let d in 1..(T::MaxDisputes::get() - 1);
         let r in 1..63;
         let e in 1..63;

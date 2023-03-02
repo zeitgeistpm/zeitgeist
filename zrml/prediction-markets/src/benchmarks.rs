@@ -829,7 +829,7 @@ benchmarks! {
             let reserver: T::AccountId = account("Reserver", i, 0);
             <T as pallet::Config>::AssetManager::deposit(Asset::Ztg, &reserver, (u128::MAX).saturated_into())?;
             let market_id_number: u128 = market_id.saturated_into::<u128>();
-            let _ = zrml_simple_disputes::Call::<T>::reserve_outcome {
+            let _ = zrml_simple_disputes::Call::<T>::suggest_outcome {
                 market_id: market_id_number.saturated_into(),
                 outcome: OutcomeReport::Scalar(i.saturated_into()),
             }.dispatch_bypass_filter(RawOrigin::Signed(reserver.clone()).into())?;

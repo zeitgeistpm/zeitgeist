@@ -639,12 +639,12 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
         ));
         run_to_block(grace_period + 2);
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(0)
         ));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(1)
@@ -2635,7 +2635,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         run_to_block(dispute_at);
 
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(0)
@@ -2828,7 +2828,7 @@ fn it_resolves_a_disputed_market() {
         let dispute_at_0 = report_at + 1;
         run_to_block(dispute_at_0);
 
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
@@ -2837,7 +2837,7 @@ fn it_resolves_a_disputed_market() {
         let dispute_at_1 = report_at + 2;
         run_to_block(dispute_at_1);
 
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(0)
@@ -2846,7 +2846,7 @@ fn it_resolves_a_disputed_market() {
         let dispute_at_2 = report_at + 3;
         run_to_block(dispute_at_2);
 
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(EVE),
             0,
             OutcomeReport::Categorical(1)
@@ -3002,7 +3002,7 @@ fn start_global_dispute_works() {
                 Error::<Runtime>::MarketDisputeMechanismNotFailed
             );
 
-            assert_ok!(SimpleDisputes::reserve_outcome(
+            assert_ok!(SimpleDisputes::suggest_outcome(
                 Origin::signed(CHARLIE),
                 market_id,
                 OutcomeReport::Categorical(i.saturated_into()),
@@ -3629,7 +3629,7 @@ fn full_scalar_market_lifecycle() {
 
         // dispute
         assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Scalar(25)
@@ -4253,7 +4253,7 @@ fn outsider_reports_wrong_outcome() {
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         check_reserve(&EVE, DisputeBond::get());
 
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(0)
@@ -4412,7 +4412,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
@@ -4463,7 +4463,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
@@ -4514,12 +4514,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         ));
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(EVE),
             0,
             OutcomeReport::Categorical(1)
         ));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(0)
@@ -4574,12 +4574,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         ));
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(EVE),
             0,
             OutcomeReport::Categorical(1)
         ));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(0)
@@ -4639,12 +4639,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(EVE),
             0,
             OutcomeReport::Categorical(1)
         ));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(FRED),
             0,
             OutcomeReport::Categorical(0)
@@ -4710,12 +4710,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
 
         assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0,));
         // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(EVE),
             0,
             OutcomeReport::Categorical(1)
         ));
-        assert_ok!(SimpleDisputes::reserve_outcome(
+        assert_ok!(SimpleDisputes::suggest_outcome(
             Origin::signed(FRED),
             0,
             OutcomeReport::Categorical(0)
