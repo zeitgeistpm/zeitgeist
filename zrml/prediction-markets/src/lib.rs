@@ -2496,6 +2496,37 @@ mod pallet {
             market: &MarketOf<T>,
         ) -> Result<OutcomeReport, DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+
+            let resolved_outcome: OutcomeReport =
+                Self::get_resolved_outcome(market_id, market, &report.outcome)?;
+
+            let imbalance_left = Self::settle_bonds(market_id, market, &resolved_outcome, report)?;
+
+            let remainder = match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    T::Authorized::exchange(market_id, market, &resolved_outcome, imbalance_left)?
+                }
+                MarketDisputeMechanism::Court => {
+                    T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?
+                }
+                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::exchange(
+                    market_id,
+                    market,
+                    &resolved_outcome,
+                    imbalance_left,
+                )?,
+            };
+
+            T::Slash::on_unbalanced(remainder);
+
+            Ok(resolved_outcome)
+        }
+
+        fn get_resolved_outcome(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+            reported_outcome: &OutcomeReport,
+        ) -> Result<OutcomeReport, DispatchError> {
             let mut resolved_outcome_option = None;
 
             #[cfg(feature = "with-global-disputes")]
@@ -2519,15 +2550,19 @@ mod pallet {
                 };
             }
 
-            let resolved_outcome =
-                resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
+            Ok(resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone()))
+        }
 
-            // If the oracle reported right, return the OracleBond, otherwise slash it to
-            // pay the correct reporters.
+        fn settle_bonds(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+            resolved_outcome: &OutcomeReport,
+            report: &Report<T::AccountId, T::BlockNumber>,
+        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
             let report_by_oracle = report.by == market.oracle;
-            let is_correct = report.outcome == resolved_outcome;
+            let is_correct = &report.outcome == resolved_outcome;
 
             let unreserve_outsider = || -> DispatchResult {
                 if Self::is_outsider_bond_pending(market_id, market, true) {
@@ -2566,7 +2601,7 @@ mod pallet {
             }
 
             let mut correct_disputor = None;
-            if let Some(bond) = market.bonds.dispute.clone() {
+            if let Some(bond) = &market.bonds.dispute {
                 if !bond.is_settled {
                     if is_correct {
                         let imb = Self::slash_dispute_bond(market_id, None)?;
@@ -2574,7 +2609,7 @@ mod pallet {
                     } else {
                         // If the report outcome was wrong, the dispute was justified
                         Self::unreserve_dispute_bond(market_id)?;
-                        correct_disputor = Some(bond.who);
+                        correct_disputor = Some(bond.who.clone());
                     }
                 }
             }
@@ -2586,24 +2621,7 @@ mod pallet {
                 imbalance_left = overall_imbalance;
             }
 
-            let remainder = match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized => {
-                    T::Authorized::exchange(market_id, market, &resolved_outcome, imbalance_left)?
-                }
-                MarketDisputeMechanism::Court => {
-                    T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?
-                }
-                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::exchange(
-                    market_id,
-                    market,
-                    &resolved_outcome,
-                    imbalance_left,
-                )?,
-            };
-
-            T::Slash::on_unbalanced(remainder);
-
-            Ok(resolved_outcome)
+            Ok(imbalance_left)
         }
 
         pub fn on_resolution(
