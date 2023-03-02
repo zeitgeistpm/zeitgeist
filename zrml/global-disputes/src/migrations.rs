@@ -83,7 +83,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
 
-        // Look here https://github.com/paritytech/substrate/blob/7ba1ef526fbcc224d3bd446c83ee66a83cacec49/frame/assets/src/migration.rs#L69-L79
         let mut translated = 0u64;
         Outcomes::<T>::translate::<OldOutcomeInfo<BalanceOf<T>, OwnerInfoOf<T>>, _>(
             |_key1, _key2, old_value| {
