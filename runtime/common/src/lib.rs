@@ -378,11 +378,43 @@ macro_rules! impl_config_traits {
         }
 
         #[cfg(feature = "parachain")]
+        pub struct CustomSystemEventHandler;
+        #[cfg(feature = "parachain")]
+        impl cumulus_pallet_parachain_system::OnSystemEvent for CustomSystemEventHandler {
+            fn on_validation_data(data: &cumulus_primitives_core::PersistedValidationData) {
+                let _relay_parent_storage_root = ParachainSystem::validation_data()
+                    .expect("set in `set_validation_data`")
+                    .relay_parent_storage_root;
+                let relay_chain_state = ParachainSystem::relay_state_proof()
+                    .expect("set in `set_validation_data`");
+                let proof = cumulus_pallet_parachain_system::RelayChainStateProof::new(
+                    ParachainInfo::parachain_id().into(),
+                    data.relay_parent_storage_root,
+                    relay_chain_state,
+                ).expect("Invalid relay chain proof");
+
+                use cumulus_primitives_core::relay_chain::well_known_keys as relay_well_known_keys;
+                // relay_well_known_keys::CURRENT_BLOCK_NUMBER for the current relaychain block number
+                // relay_well_known_keys::ONE_EPOCH_AGO_RANDOMNESS for randomness from one epoch ago
+                // relay_well_known_keys::TWO_EPOCHS_AGO_RANDOMNESS for randomness from two epochs ago
+                // more on that here https://github.com/paritytech/substrate/blob/5abf6c8a015fac28d33967800da7c5c8d53002e3/frame/babe/src/randomness.rs#L27-L121
+                use frame_support::traits::Randomness;
+                let fallback: Option<[u8; 32]> = None;
+                let randomness: Option<[u8; 32]> = proof.read_entry::<sp_consensus_vrf::schnorrkel::Randomness>(
+                    relay_well_known_keys::CURRENT_BLOCK_RANDOMNESS,
+                    fallback,
+                ).ok();
+            }
+
+            fn on_validation_code_applied() {}
+        }
+
+        #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
             type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type DmpMessageHandler = DmpQueue;
             type Event = Event;
-            type OnSystemEvent = ();
+            type OnSystemEvent = CustomSystemEventHandler;
             type OutboundXcmpMessageSource = XcmpQueue;
             type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
             type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
