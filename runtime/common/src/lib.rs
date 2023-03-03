@@ -346,6 +346,9 @@ macro_rules! create_runtime_with_additional_pallets {
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
 
+            // Randomness (setup only for local VRF => Call excluded)
+            Randomness: pallet_randomness::{Pallet, Storage, Event<T>, Inherent} = 140,
+
             // Others
             $($additional_pallets)*
         );
@@ -808,6 +811,37 @@ macro_rules! impl_config_traits {
 
         impl pallet_randomness_collective_flip::Config for Runtime {}
 
+        #[cfg(feature = "parachain")]
+        pub struct BabeDataGetter;
+
+        #[cfg(feature = "parachain")]
+        impl pallet_randomness::GetBabeData<u64, Option<Hash>> for BabeDataGetter {
+            fn get_epoch_index() -> u64 {
+                0u64
+            }
+            fn get_epoch_randomness() -> Option<Hash> {
+                None
+            }
+        }
+
+        // We only intend to use local VRFs for court.
+        #[cfg(feature = "parachain")]
+        impl pallet_randomness::Config for Runtime {
+            type Event = Event;
+            // AddressMapping belongs to pallet_evm address mapping
+            type AddressMapping = ();
+            type Currency = Balances;
+            type BabeDataGetter = BabeDataGetter;
+            type VrfKeyLookup = AuthorMapping;
+            // disallow to request randomness as it is not required for local VRF
+            type Deposit = frame_support::traits::ConstU128<{ u128::MAX }>;
+            type MaxRandomWords = frame_support::traits::ConstU8<100>;
+            type MinBlockDelay = frame_support::traits::ConstU32<2>;
+            type MaxBlockDelay = frame_support::traits::ConstU32<2_000>;
+            type BlockExpirationDelay = frame_support::traits::ConstU32<10_000>;
+            type EpochExpirationDelay = frame_support::traits::ConstU64<10_000>;
+        }
+
         impl pallet_scheduler::Config for Runtime {
             type Event = Event;
             type Origin = Origin;
@@ -1221,6 +1255,7 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
+                            list_benchmark!(list, extra, pallet_randomness, Randomness);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
                         }
@@ -1300,6 +1335,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
+                            add_benchmark!(params, batches, pallet_randomness, Randomness);
 
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
@@ -1355,7 +1391,10 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "parachain")]
             impl session_keys_primitives::VrfApi<Block> for Runtime {
                 fn get_last_vrf_output() -> Option<<Block as BlockT>::Hash> {
-                    None
+                    if pallet_randomness::Pallet::<Self>::not_first_block().is_none() {
+						return None;
+					}
+					pallet_randomness::Pallet::<Self>::local_vrf_output()
                 }
                 fn vrf_key_lookup(
                     nimbus_id: nimbus_primitives::NimbusId

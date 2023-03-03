@@ -26,6 +26,7 @@ pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.
 pallet-treasury = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-utility = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-vesting = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+pallet-randomness = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 
 # Utility
 cfg-if = { version = "1.0.0" }
@@ -38,6 +39,7 @@ parachain = [
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
+    "pallet-randomness",
 ]
 std = [
     "cumulus-pallet-xcmp-queue?/std",
@@ -58,6 +60,7 @@ std = [
     "pallet-preimage/std",
     "pallet-proxy/std",
     "pallet-randomness-collective-flip/std",
+    "pallet-randomness?/std",
     "pallet-scheduler/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment-rpc-runtime-api/std",

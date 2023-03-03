@@ -367,6 +367,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "auto_impl"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7862e21c893d65a1650125d157eaeec691439379a1cee17ee49031b79236ada4"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -478,6 +490,7 @@ dependencies = [
  "pallet-parachain-staking",
  "pallet-preimage",
  "pallet-proxy",
+ "pallet-randomness",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-sudo",
@@ -1129,6 +1142,7 @@ dependencies = [
  "pallet-parachain-staking",
  "pallet-preimage",
  "pallet-proxy",
+ "pallet-randomness",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-timestamp",
@@ -2324,10 +2338,114 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethbloom"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11da94e443c60508eb62cf256243a64da87304c2802ac2528847f79d750007ef"
+dependencies = [
+ "crunchy",
+ "fixed-hash",
+ "impl-codec",
+ "impl-rlp",
+ "impl-serde",
+ "scale-info",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "ethereum"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23750149fe8834c0e24bb9adcbacbe06c45b9861f15df53e09f26cb7c4ab91ef"
+dependencies = [
+ "bytes",
+ "ethereum-types",
+ "hash-db",
+ "hash256-std-hasher",
+ "parity-scale-codec",
+ "rlp",
+ "rlp-derive",
+ "scale-info",
+ "serde",
+ "sha3",
+ "triehash",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2827b94c556145446fcce834ca86b7abf0c39a805883fe20e72c5bfdb5a0dc6"
+dependencies = [
+ "ethbloom",
+ "fixed-hash",
+ "impl-codec",
+ "impl-rlp",
+ "impl-serde",
+ "primitive-types",
+ "scale-info",
+ "uint",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
+
+[[package]]
+name = "evm"
+version = "0.35.0"
+source = "git+https://github.com/purestake/evm?branch=moonbeam-polkadot-v0.9.29#27ac63fadb6e716cfcc275b4ddf0aed5c0624b18"
+dependencies = [
+ "auto_impl",
+ "environmental",
+ "ethereum",
+ "evm-core",
+ "evm-gasometer",
+ "evm-runtime",
+ "log",
+ "parity-scale-codec",
+ "primitive-types",
+ "rlp",
+ "scale-info",
+ "serde",
+ "sha3",
+]
+
+[[package]]
+name = "evm-core"
+version = "0.35.0"
+source = "git+https://github.com/purestake/evm?branch=moonbeam-polkadot-v0.9.29#27ac63fadb6e716cfcc275b4ddf0aed5c0624b18"
+dependencies = [
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "serde",
+]
+
+[[package]]
+name = "evm-gasometer"
+version = "0.35.0"
+source = "git+https://github.com/purestake/evm?branch=moonbeam-polkadot-v0.9.29#27ac63fadb6e716cfcc275b4ddf0aed5c0624b18"
+dependencies = [
+ "environmental",
+ "evm-core",
+ "evm-runtime",
+ "primitive-types",
+]
+
+[[package]]
+name = "evm-runtime"
+version = "0.35.0"
+source = "git+https://github.com/purestake/evm?branch=moonbeam-polkadot-v0.9.29#27ac63fadb6e716cfcc275b4ddf0aed5c0624b18"
+dependencies = [
+ "auto_impl",
+ "environmental",
+ "evm-core",
+ "primitive-types",
+ "sha3",
+]
 
 [[package]]
 name = "exit-future"
@@ -2522,6 +2640,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9c384f161156f5260c24a097c56119f9be8c798586aecc13afbcbe7b7e26bf8"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "fp-evm"
+version = "3.0.0-dev"
+source = "git+https://github.com/zeitgeistpm/frontier?branch=moonbeam-polkadot-v0.9.29#3ba3d260ed0af02a063eb21ce7900c138726645c"
+dependencies = [
+ "evm",
+ "frame-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-std",
 ]
 
 [[package]]
@@ -3383,6 +3514,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba6a270039626615617f3f36d15fc827041df3b78c439da2cadfa47455a77f2f"
 dependencies = [
  "parity-scale-codec",
+]
+
+[[package]]
+name = "impl-rlp"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f28220f89297a075ddc7245cd538076ee98b01f2a9c23a53a4f1105d5a322808"
+dependencies = [
+ "rlp",
 ]
 
 [[package]]
@@ -5768,6 +5908,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm"
+version = "6.0.0-dev"
+source = "git+https://github.com/zeitgeistpm/frontier?branch=moonbeam-polkadot-v0.9.29#3ba3d260ed0af02a063eb21ce7900c138726645c"
+dependencies = [
+ "environmental",
+ "evm",
+ "fp-evm",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "log",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "primitive-types",
+ "rlp",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-gilt"
 version = "4.0.0-dev"
 source = "git+https://github.com/zeitgeistpm/substrate?branch=moonbeam-polkadot-v0.9.29#b7176298ae07e18077b13521e6e0ef678a557aa2"
@@ -6053,6 +6218,29 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-randomness"
+version = "0.1.0"
+source = "git+https://github.com/zeitgeistpm/moonbeam?tag=v0.27.2-a#cf8094af82c8324378f18ac4b4a647cc06705c33"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "log",
+ "nimbus-primitives",
+ "pallet-evm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "session-keys-primitives",
+ "sp-consensus-vrf",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -7970,6 +8158,7 @@ checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
 dependencies = [
  "fixed-hash",
  "impl-codec",
+ "impl-rlp",
  "impl-serde",
  "scale-info",
  "uint",
@@ -8470,6 +8659,27 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "rlp"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb919243f34364b6bd2fc10ef797edbfa75f33c252e7998527479c6d6b47e1ec"
+dependencies = [
+ "bytes",
+ "rustc-hex",
+]
+
+[[package]]
+name = "rlp-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -11414,6 +11624,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tiny-keccak"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
+dependencies = [
+ "crunchy",
+]
+
+[[package]]
 name = "tinyvec"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11658,6 +11877,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a36c5ca3911ed3c9a5416ee6c679042064b93fc637ded67e25f92e68d783891"
 dependencies = [
  "hash-db",
+]
+
+[[package]]
+name = "triehash"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1631b201eb031b563d2e85ca18ec8092508e262a3196ce9bd10a67ec87b9f5c"
+dependencies = [
+ "hash-db",
+ "rlp",
 ]
 
 [[package]]
@@ -12818,6 +13047,7 @@ dependencies = [
  "pallet-parachain-staking",
  "pallet-preimage",
  "pallet-proxy",
+ "pallet-randomness",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-timestamp",
