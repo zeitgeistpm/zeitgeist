@@ -379,11 +379,12 @@ mod pallet {
         /// Join to become a juror, who is able to get randomly selected
         /// for court cases according to the provided stake.
         /// The probability to get selected is higher the more funds are staked.
-        /// If the pool is full, the juror with the lowest stake is removed from the juror pool.
+        /// The `amount` of this call represents the total stake of the juror.
+        /// If the pool is full, the lowest staked juror is removed from the juror pool.
         ///
         /// # Arguments
         ///
-        /// - `amount`: The amount associated with the joining juror.
+        /// - `amount`: The total stake associated with the joining juror.
         ///
         /// # Weight
         ///
