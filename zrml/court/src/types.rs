@@ -17,6 +17,7 @@
 
 use zeitgeist_primitives::types::OutcomeReport;
 
+/// The general information about a particular juror.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -28,9 +29,12 @@ use zeitgeist_primitives::types::OutcomeReport;
     Eq,
 )]
 pub struct JurorInfo<Balance> {
+    /// The juror's amount in the stake weighted pool.
+    /// This amount is used to find a juror with a binary search on the pool.
     pub(crate) stake: Balance,
 }
 
+/// The information required to finish exiting the court as a juror.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -42,9 +46,14 @@ pub struct JurorInfo<Balance> {
     Eq,
 )]
 pub struct ExitRequest<MarketId> {
+    /// If the juror wants to exit the court 
+    /// but there are too many elements inside the `Draws` storage item,
+    /// the last storage query (market id) is stored here 
+    /// to continue the query in a second call to the `exit_court` extrinsic.
     pub(crate) last_market_id: Option<MarketId>,
 }
 
+/// All possible states of a vote.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -56,12 +65,17 @@ pub struct ExitRequest<MarketId> {
     Eq,
 )]
 pub enum Vote<Hash> {
+    /// The juror was randomly selected to vote in a specific court case.
     Drawn,
+    /// The juror casted a vote, only providing a hash, which meaning is unknown.
     Secret { secret: Hash },
+    /// The juror revealed her raw vote, letting anyone know what she voted.
     Revealed { secret: Hash, outcome: OutcomeReport, salt: Hash },
+    /// The juror was denounced, because she revealed her raw vote during the vote phase.
     Denounced { secret: Hash, outcome: OutcomeReport, salt: Hash },
 }
 
+/// The information about the lifecycle of a court case.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -73,12 +87,17 @@ pub enum Vote<Hash> {
     Eq,
 )]
 pub struct Periods<BlockNumber> {
+    /// The end block of the pre-vote period.
     pub(crate) pre_vote_end: BlockNumber,
+    /// The end block of the vote period.
     pub(crate) vote_end: BlockNumber,
+    /// The end block of the aggregation period.
     pub(crate) aggregation_end: BlockNumber,
+    /// The end block of the appeal period.
     pub(crate) appeal_end: BlockNumber,
 }
 
+/// The status of a court case.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -90,10 +109,15 @@ pub struct Periods<BlockNumber> {
     Eq,
 )]
 pub enum CourtStatus {
+    /// The court case has been started.
     Open,
+    /// The court case was closed, the winner outcome was determined.
+    /// `punished` indicates whether the tardy jurors were punished.
+    /// `reassigned` indicates whether the winning jurors got the funds from the loosers already.
     Closed { winner: OutcomeReport, punished: bool, reassigned: bool },
 }
 
+/// The information about an appeal for a court case.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -105,11 +129,15 @@ pub enum CourtStatus {
     Eq,
 )]
 pub struct AppealInfo<AccountId, Balance> {
+    /// The account which made the appeal.
     pub(crate) backer: AccountId,
+    /// The amount of funds which were locked for the appeal.
     pub(crate) bond: Balance,
+    /// The outcome which was appealed.
     pub(crate) appealed_outcome: OutcomeReport,
 }
 
+/// The information about a court case.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -121,8 +149,11 @@ pub struct AppealInfo<AccountId, Balance> {
     Eq,
 )]
 pub struct CourtInfo<BlockNumber, Appeals> {
+    /// The status of the court case.
     pub(crate) status: CourtStatus,
+    /// The list of all appeals.
     pub(crate) appeals: Appeals,
+    /// The information about the lifecycle of this court case.
     pub(crate) periods: Periods<BlockNumber>,
 }
 
@@ -148,6 +179,8 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     }
 }
 
+/// After a juror was randomly selected to vote in a court case, 
+/// this information is relevant to handle the post-selection process.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -159,12 +192,19 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     Eq,
 )]
 pub struct Draw<AccountId, Balance, Hash> {
+    /// The juror who was randomly selected.
     pub(crate) juror: AccountId,
+    /// The weight of the juror in this court case.
+    /// The higher the weight the more voice the juror has in the final winner decision.
     pub(crate) weight: u32,
+    /// The information about the vote state.
     pub(crate) vote: Vote<Hash>,
+    /// The amount of funds which can be slashed for this court case.
+    /// This is related to a multiple of `MinStake` to mitigate Sybil attacks.
     pub(crate) slashable: Balance,
 }
 
+/// All information related one item in the stake weighted juror pool.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -176,7 +216,12 @@ pub struct Draw<AccountId, Balance, Hash> {
     Eq,
 )]
 pub struct JurorPoolItem<AccountId, Balance> {
+    /// The key for the binary search to efficiently find the juror.
+    /// It has to be a unqiue key for each juror.
     pub(crate) stake: Balance,
+    /// The account which is the juror.
     pub(crate) juror: AccountId,
+    /// The actual slashed amount. This is useful to reduce the probability
+    /// of a juror to be selected again.
     pub(crate) slashed: Balance,
 }
