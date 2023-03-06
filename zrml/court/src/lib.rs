@@ -357,6 +357,8 @@ mod pallet {
         NeedsToBeLastAppeal,
         /// The random number generation failed.
         RandNumGenFailed,
+        /// The amount is too low to kick the lowest juror out of the stake-weighted pool.
+        AmountBelowLowestJuror,
     }
 
     #[pallet::hooks]
@@ -397,16 +399,20 @@ mod pallet {
             let mut jurors = JurorPool::<T>::get();
 
             if jurors.is_full() {
-                debug_assert!(
-                    jurors
-                        .first()
-                        .map(|pool_item| pool_item.stake)
-                        .unwrap_or_else(<BalanceOf<T>>::zero)
-                        <= jurors
-                            .last()
-                            .map(|pool_item| pool_item.stake)
-                            .unwrap_or_else(<BalanceOf<T>>::zero)
-                );
+                let lowest_juror = jurors
+                    .first()
+                    .map(|pool_item| pool_item.stake)
+                    .unwrap_or_else(<BalanceOf<T>>::zero);
+                debug_assert!({
+                    let sorted = jurors.clone();
+                    sorted.sort_by_key(|pool_item| pool_item.stake);
+                    jurors.len() == sorted.len()
+                        && jurors
+                            .iter()
+                            .zip(sorted.iter())
+                            .all(|(a, b)| lowest_juror <= a.stake && a == b)
+                });
+                ensure!(amount > lowest_juror, Error::<T>::AmountBelowLowestJuror);
                 // remove the lowest staked juror
                 jurors.remove(0);
             }

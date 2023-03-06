@@ -46,9 +46,9 @@ pub struct JurorInfo<Balance> {
     Eq,
 )]
 pub struct ExitRequest<MarketId> {
-    /// If the juror wants to exit the court 
+    /// If the juror wants to exit the court
     /// but there are too many elements inside the `Draws` storage item,
-    /// the last storage query (market id) is stored here 
+    /// the last storage query (market id) is stored here
     /// to continue the query in a second call to the `exit_court` extrinsic.
     pub(crate) last_market_id: Option<MarketId>,
 }
@@ -179,7 +179,7 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     }
 }
 
-/// After a juror was randomly selected to vote in a court case, 
+/// After a juror was randomly selected to vote in a court case,
 /// this information is relevant to handle the post-selection process.
 #[derive(
     parity_scale_codec::Decode,
