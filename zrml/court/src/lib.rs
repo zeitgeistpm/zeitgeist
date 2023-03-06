@@ -399,31 +399,34 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
-            let mut slashed = <BalanceOf<T>>::zero();
-            if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
+            let slashed = if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
                 let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake)
                     .ok_or(Error::<T>::JurorNeedsToExit)?;
-                slashed = pool_item.slashed;
+                let slashed = pool_item.slashed;
                 jurors.remove(index);
-            } else if jurors.is_full() {
-                let lowest_juror = jurors
-                    .first()
-                    .map(|pool_item| pool_item.stake)
-                    .unwrap_or_else(<BalanceOf<T>>::zero);
-                debug_assert!({
-                    let mut sorted = jurors.clone();
-                    sorted.sort_by_key(|pool_item| pool_item.stake);
-                    jurors.len() == sorted.len()
-                        && jurors
-                            .iter()
-                            .zip(sorted.iter())
-                            .all(|(a, b)| lowest_juror <= a.stake && a == b)
-                });
-                ensure!(amount > lowest_juror, Error::<T>::AmountBelowLowestJuror);
-                // remove the lowest staked juror
-                jurors.remove(0);
-            }
+                slashed
+            } else {
+                if jurors.is_full() {
+                    let lowest_juror = jurors
+                        .first()
+                        .map(|pool_item| pool_item.stake)
+                        .unwrap_or_else(<BalanceOf<T>>::zero);
+                    debug_assert!({
+                        let mut sorted = jurors.clone();
+                        sorted.sort_by_key(|pool_item| pool_item.stake);
+                        jurors.len() == sorted.len()
+                            && jurors
+                                .iter()
+                                .zip(sorted.iter())
+                                .all(|(a, b)| lowest_juror <= a.stake && a == b)
+                    });
+                    ensure!(amount > lowest_juror, Error::<T>::AmountBelowLowestJuror);
+                    // remove the lowest staked juror
+                    jurors.remove(0);
+                }
+                <BalanceOf<T>>::zero()
+            };
 
             match jurors.binary_search_by_key(&amount, |pool_item| pool_item.stake) {
                 // The reason for this error is that each amount has a clear juror
