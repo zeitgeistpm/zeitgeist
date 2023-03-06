@@ -1020,6 +1020,7 @@ mod pallet {
             for _ in 0..number {
                 insert_unused_random_number()?;
             }
+            debug_assert!(random_set.len() == number);
 
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
 
@@ -1389,8 +1390,9 @@ mod pallet {
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             for AppealInfo { backer, bond, appealed_outcome } in &court.appeals {
                 if resolved_outcome == appealed_outcome {
-                    let (imb, _) =
+                    let (imb, missing) =
                         T::Currency::slash_reserved_named(&Self::reserve_id(), backer, *bond);
+                    debug_assert!(missing.is_zero());
                     overall_imbalance.subsume(imb);
                 } else {
                     T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
