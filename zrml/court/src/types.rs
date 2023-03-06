@@ -17,23 +17,6 @@
 
 use zeitgeist_primitives::types::OutcomeReport;
 
-/// The general information about a particular juror.
-#[derive(
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
-    scale_info::TypeInfo,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-)]
-pub struct JurorInfo<Balance> {
-    /// The juror's amount in the stake weighted pool.
-    /// This amount is used to find a juror with a binary search on the pool.
-    pub(crate) stake: Balance,
-}
-
 /// The information required to finish exiting the court as a juror.
 #[derive(
     parity_scale_codec::Decode,
@@ -217,10 +200,10 @@ pub struct Draw<AccountId, Balance, Hash> {
 )]
 pub struct JurorPoolItem<AccountId, Balance> {
     /// The key for the binary search to efficiently find the juror.
-    /// It has to be a unqiue key for each juror.
-    pub(crate) stake: Balance,
     /// The account which is the juror.
     pub(crate) juror: AccountId,
+    /// The stake of the juror.
+    pub(crate) stake: Balance,
     /// The actual slashed amount. This is useful to reduce the probability
     /// of a juror to be selected again.
     pub(crate) slashed: Balance,
