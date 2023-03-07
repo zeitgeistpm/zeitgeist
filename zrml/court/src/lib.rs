@@ -41,7 +41,7 @@ pub use types::*;
 mod pallet {
     use crate::{
         weights::WeightInfoZeitgeist, AppealInfo, CourtInfo, CourtPalletApi, CourtStatus, Draw,
-        ExitRequest, JurorPoolItem, Periods, Vote,
+        ExitRequest, JurorInfo, JurorPoolItem, Periods, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -50,7 +50,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        ensure,
+        ensure, log,
         pallet_prelude::{Hooks, OptionQuery, StorageMap, StorageValue, ValueQuery, Weight},
         traits::{
             Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
@@ -195,6 +195,7 @@ mod pallet {
     pub(crate) type AccountIdLookupOf<T> =
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber, AppealsOf<T>>;
+    pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>>;
     pub(crate) type JurorPoolItemOf<T> = JurorPoolItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type JurorPoolOf<T> = BoundedVec<JurorPoolItemOf<T>, <T as Config>::MaxJurors>;
     pub(crate) type DrawOf<T> =
@@ -214,7 +215,8 @@ mod pallet {
 
     /// The general information about each juror.
     #[pallet::storage]
-    pub type Jurors<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, (), OptionQuery>;
+    pub type Jurors<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, JurorInfoOf<T>, OptionQuery>;
 
     /// If a juror wants to exit the court, this information is required for a multiblock execution.
     #[pallet::storage]
@@ -330,6 +332,9 @@ mod pallet {
         VoteAlreadyDenounced,
         /// A juror tried to denounce herself.
         SelfDenounceDisallowed,
+        /// In order to execute the binary search efficiently
+        /// the join amount must be unqiue for each juror.
+        AmountAlreadyUsed,
         /// The court is not in the closed state.
         CourtNotClosed,
         /// The jurors were already reassigned.
@@ -394,57 +399,58 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
-            match jurors.binary_search_by_key(&who, |pool_item| pool_item.juror.clone()) {
-                Ok(i) => {
-                    ensure!(amount > jurors[i].stake, Error::<T>::AmountBelowLastJoin);
-                    jurors[i].stake = amount;
+            let slashed = if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
+                ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
+                let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake)
+                    .ok_or(Error::<T>::JurorNeedsToExit)?;
+                let slashed = pool_item.slashed;
+                jurors.remove(index);
+                slashed
+            } else {
+                if jurors.is_full() {
+                    let lowest_juror = jurors
+                        .first()
+                        .map(|pool_item| pool_item.stake)
+                        .unwrap_or_else(<BalanceOf<T>>::zero);
+                    debug_assert!({
+                        let mut sorted = jurors.clone();
+                        sorted.sort_by_key(|pool_item| pool_item.stake);
+                        jurors.len() == sorted.len()
+                            && jurors
+                                .iter()
+                                .zip(sorted.iter())
+                                .all(|(a, b)| lowest_juror <= a.stake && a == b)
+                    });
+                    ensure!(amount > lowest_juror, Error::<T>::AmountBelowLowestJuror);
+                    // remove the lowest staked juror
+                    jurors.remove(0);
                 }
-                Err(i) => {
-                    ensure!(!<Jurors<T>>::contains_key(&who), Error::<T>::JurorNeedsToExit);
-                    if jurors.is_full() {
-                        let lowest_juror = jurors
-                            .first()
-                            .map(|pool_item| pool_item.stake)
-                            .unwrap_or_else(<BalanceOf<T>>::zero);
-                        debug_assert!({
-                            let mut sorted = jurors.clone();
-                            sorted.sort_by_key(|pool_item| pool_item.stake);
-                            jurors.len() == sorted.len()
-                                && jurors
-                                    .iter()
-                                    .zip(sorted.iter())
-                                    .all(|(a, b)| lowest_juror <= a.stake && a == b)
-                        });
-                        ensure!(amount > lowest_juror, Error::<T>::AmountBelowLowestJuror);
-                        // remove the lowest staked juror
-                        jurors.remove(0);
-                    }
+                <BalanceOf<T>>::zero()
+            };
 
-                    jurors
-                        .try_insert(
-                            i,
-                            JurorPoolItem {
-                                stake: amount,
-                                juror: who.clone(),
-                                slashed: <BalanceOf<T>>::zero(),
-                            },
-                        )
-                        .map_err(|_| {
-                            debug_assert!(
-                                false,
-                                "This should never happen, because we are removing the lowest \
-                                 staked juror above."
-                            );
-                            Error::<T>::MaxJurorsReached
-                        })?;
-                }
+            match jurors.binary_search_by_key(&amount, |pool_item| pool_item.stake) {
+                // The reason for this error is that each amount has a clear juror
+                // binary_search_by_key could otherwise return an index of an unwanted juror
+                // if there are multiple jurors with the same stake
+                Ok(_) => return Err(Error::<T>::AmountAlreadyUsed.into()),
+                Err(i) => jurors
+                    .try_insert(i, JurorPoolItem { stake: amount, juror: who.clone(), slashed })
+                    .map_err(|_| {
+                        debug_assert!(
+                            false,
+                            "This should never happen, because we are removing the lowest staked \
+                             juror above."
+                        );
+                        Error::<T>::MaxJurorsReached
+                    })?,
             };
 
             T::Currency::set_lock(T::CourtLockId::get(), &who, amount, WithdrawReasons::all());
 
             JurorPool::<T>::put(jurors);
 
-            <Jurors<T>>::insert(&who, ());
+            let juror_info = JurorInfoOf::<T> { stake: amount };
+            <Jurors<T>>::insert(&who, juror_info);
 
             Self::deposit_event(Event::JurorJoined { juror: who });
             Ok(())
@@ -462,11 +468,11 @@ mod pallet {
         pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            ensure!(<Jurors<T>>::contains_key(&who), Error::<T>::JurorDoesNotExists);
+            let prev_juror_info = <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExists)?;
 
             let mut jurors = JurorPool::<T>::get();
 
-            if let Some((index, _)) = Self::get_pool_item(&jurors, &who) {
+            if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake) {
                 jurors.remove(index);
                 <JurorPool<T>>::put(jurors);
             } else {
@@ -501,9 +507,9 @@ mod pallet {
 
             let juror = T::Lookup::lookup(juror)?;
 
-            ensure!(<Jurors<T>>::contains_key(&juror), Error::<T>::JurorDoesNotExists);
+            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
             ensure!(
-                Self::get_pool_item(&JurorPool::<T>::get(), &juror).is_none(),
+                Self::get_pool_item(&JurorPool::<T>::get(), prev_juror_info.stake).is_none(),
                 Error::<T>::JurorNotPreparedToExit
             );
 
@@ -623,7 +629,7 @@ mod pallet {
 
             ensure!(denouncer != juror, Error::<T>::SelfDenounceDisallowed);
 
-            ensure!(<Jurors<T>>::contains_key(&juror), Error::<T>::JurorDoesNotExists);
+            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -663,7 +669,7 @@ mod pallet {
             T::Currency::resolve_creating(&reward_pot, imbalance);
 
             let mut jurors = JurorPool::<T>::get();
-            if let Some((index, _)) = Self::get_pool_item(&jurors, &juror) {
+            if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake) {
                 jurors.remove(index);
                 <JurorPool<T>>::put(jurors);
             }
@@ -898,9 +904,18 @@ mod pallet {
                 );
                 T::Currency::resolve_creating(&reward_pot, imbalance);
 
-                debug_assert!(<Jurors<T>>::contains_key(ai), "Juror {:?} not found.", ai);
-                if let Some((index, _)) = Self::get_pool_item(&jurors, ai) {
-                    jurors.remove(index);
+                if let Some(prev_juror_info) = <Jurors<T>>::get(ai) {
+                    if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake) {
+                        jurors.remove(index);
+                    }
+                } else {
+                    log::warn!(
+                        "Juror {:?} not found in Jurors storage for vote aggregation. Market id \
+                         {:?}.",
+                        ai,
+                        market_id
+                    );
+                    debug_assert!(false);
                 }
             };
 
@@ -1099,11 +1114,11 @@ mod pallet {
 
         // Returns (index, pool_item) if the stake associated with the juror was found.
         // It returns None otherwise.
-        pub(crate) fn get_pool_item<'a, 'b>(
-            jurors: &'a [JurorPoolItemOf<T>],
-            juror: &'b T::AccountId,
-        ) -> Option<(usize, &'a JurorPoolItemOf<T>)> {
-            if let Ok(i) = jurors.binary_search_by_key(juror, |pool_item| pool_item.juror.clone()) {
+        pub(crate) fn get_pool_item(
+            jurors: &[JurorPoolItemOf<T>],
+            stake: BalanceOf<T>,
+        ) -> Option<(usize, &JurorPoolItemOf<T>)> {
+            if let Ok(i) = jurors.binary_search_by_key(&stake, |pool_item| pool_item.stake) {
                 return Some((i, &jurors[i]));
             }
             // this None case can happen when the lowest bonded juror was removed (`join_court`)
@@ -1199,13 +1214,13 @@ mod pallet {
                         juror
                     );
 
-                    debug_assert!(
-                        <Jurors<T>>::contains_key(juror),
-                        "Juror {:?} not found in Jurors storage.",
-                        juror
-                    );
-                    if let Some((index, _)) = Self::get_pool_item(&jurors, juror) {
-                        jurors[index].slashed = jurors[index].slashed.saturating_add(slash);
+                    if let Some(juror_info) = <Jurors<T>>::get(juror) {
+                        if let Some((index, _)) = Self::get_pool_item(&jurors, juror_info.stake) {
+                            jurors[index].slashed = jurors[index].slashed.saturating_add(slash);
+                        }
+                    } else {
+                        log::warn!("Juror {:?} not found in Jurors storage.", juror);
+                        debug_assert!(false);
                     }
                 }
             }

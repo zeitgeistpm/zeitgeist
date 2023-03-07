@@ -22,7 +22,7 @@ use crate::{
         Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
     },
-    Error, JurorPoolItem, Jurors, MarketOf,
+    Error, JurorInfo, JurorPoolItem, Jurors, MarketOf,
 };
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use pallet_balances::BalanceLock;
@@ -101,7 +101,7 @@ fn join_court_successfully_stores_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (ALICE, ()));
+        assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (ALICE, JurorInfo { stake: amount }));
     });
 }
 
