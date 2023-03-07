@@ -498,7 +498,6 @@ dependencies = [
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
- "sp-consensus-vrf",
  "sp-core",
  "sp-finality-grandpa",
  "sp-inherents",
@@ -1138,7 +1137,6 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
- "sp-consensus-vrf",
 ]
 
 [[package]]
@@ -12839,7 +12837,6 @@ dependencies = [
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
- "sp-consensus-vrf",
  "sp-core",
  "sp-finality-grandpa",
  "sp-inherents",
@@ -13069,6 +13066,24 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "zeitgeist-primitives",
+]
+
+[[package]]
+name = "zrml-relay-randomness"
+version = "0.3.8"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-consensus-vrf",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

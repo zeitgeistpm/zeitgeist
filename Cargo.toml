@@ -19,6 +19,7 @@ default-members = [
     "zrml/swaps/rpc",
     "zrml/swaps/runtime-api",
     "zrml/styx",
+    "zrml/relay-randomness",
 ]
 members = [
     "node",
@@ -44,6 +45,7 @@ members = [
     "zrml/swaps/rpc",
     "zrml/swaps/runtime-api",
     "zrml/styx",
+    "zrml/relay-randomness",
 ]
 resolver = "2"
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
