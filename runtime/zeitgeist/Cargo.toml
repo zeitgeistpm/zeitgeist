@@ -113,6 +113,7 @@ zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-dis
 zrml-styx = { default-features = false, path = "../../zrml/styx" }
 zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
+zrml-relay-randomness = { default-features = false, path = "../../zrml/relay-randomness", optional = true }
 
 [dev-dependencies]
 sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
@@ -143,6 +144,7 @@ parachain = [
     "pallet-parachain-staking",
     "polkadot-parachain",
     "session-keys-primitives",
+    "zrml-relay-randomness",
 
     # XCM
 
@@ -312,6 +314,7 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-styx/std",
     "zrml-swaps/std",
+    "zrml-relay-randomness/std",
 ]
 try-runtime = [
     "frame-executive/try-runtime",

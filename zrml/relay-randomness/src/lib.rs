@@ -39,8 +39,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + cumulus_pallet_parachain_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
         type SelfParaId: Get<ParaId>;
     }
 
@@ -51,11 +49,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    #[pallet::getter(fn last_randomness)]
     pub type RandomnessSource<T> = StorageValue<_, RandomnessOf<T>, ValueQuery>;
-
-    #[pallet::event]
-    pub enum Event<T: Config> {}
 
     #[pallet::error]
     pub enum Error<T> {}
@@ -96,10 +90,7 @@ impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for CustomSystemE
         let mut is_changed = false;
 
         use cumulus_primitives_core::relay_chain::well_known_keys as relay_well_known_keys;
-        // relay_well_known_keys::CURRENT_BLOCK_RANDOMNESS for the current relaychain block number
-        // relay_well_known_keys::ONE_EPOCH_AGO_RANDOMNESS for randomness from one epoch ago
-        // relay_well_known_keys::TWO_EPOCHS_AGO_RANDOMNESS for randomness from two epochs ago
-        // more on that here https://github.com/paritytech/substrate/blob/5abf6c8a015fac28d33967800da7c5c8d53002e3/frame/babe/src/randomness.rs#L27-L121
+        // https://github.com/paritytech/substrate/blob/5abf6c8a015fac28d33967800da7c5c8d53002e3/frame/babe/src/randomness.rs#L27-L121
         let fallback: Option<[u8; 32]> = None;
         let current_block_randomness: Option<[u8; 32]> = proof
             .read_entry::<sp_consensus_vrf::schnorrkel::Randomness>(
@@ -122,7 +113,7 @@ impl<T: Config> cumulus_pallet_parachain_system::OnSystemEvent for CustomSystemE
             randomness_source.one_epoch_ago_randomness = Some((r, block_number));
             is_changed = true;
         }
-		
+
         let two_epochs_ago_randomness: Option<[u8; 32]> = proof
             .read_entry::<sp_consensus_vrf::schnorrkel::Randomness>(
                 relay_well_known_keys::TWO_EPOCHS_AGO_RANDOMNESS,

@@ -346,6 +346,8 @@ macro_rules! create_runtime_with_additional_pallets {
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
 
+            RelayRandomness: zrml_relay_randomness::{Pallet, Storage} = 140,
+
             // Others
             $($additional_pallets)*
         );
@@ -382,12 +384,17 @@ macro_rules! impl_config_traits {
             type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type DmpMessageHandler = DmpQueue;
             type Event = Event;
-            type OnSystemEvent = zrml_relay_randomness::CustomSystemEventHandler;
+            type OnSystemEvent = zrml_relay_randomness::CustomSystemEventHandler<Runtime>;
             type OutboundXcmpMessageSource = XcmpQueue;
             type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
             type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl zrml_relay_randomness::Config for Runtime {
+            type SelfParaId = parachain_info::Pallet<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
