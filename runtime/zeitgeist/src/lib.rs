@@ -175,7 +175,6 @@ impl Contains<Call> for IsCallable {
             }
             // Membership is managed by the respective Membership instance
             Call::TechnicalCommittee(set_members { .. }) => false,
-            Call::Tokens(_) = false,
             // There should be no reason to force vested transfer.
             Call::Vesting(force_vested_transfer { .. }) => false,
             _ => true,
