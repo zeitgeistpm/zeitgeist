@@ -29,7 +29,7 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    crate::KUSAMA_PARACHAIN_ID,
+    crate::POLKADOT_PARACHAIN_ID,
     zeitgeist_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
@@ -138,7 +138,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
             generic_genesis(
                 additional_chain_spec_staging_zeitgeist(
                     #[cfg(feature = "parachain")]
-                    KUSAMA_PARACHAIN_ID.into(),
+                    POLKADOT_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_zeitgeist(),
                 wasm,
@@ -152,7 +152,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "kusama".into(),
-            parachain_id: KUSAMA_PARACHAIN_ID,
+            parachain_id: POLKADOT_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

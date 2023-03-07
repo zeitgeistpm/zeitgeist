@@ -90,10 +90,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 42,
+    spec_version: 43,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 19,
+    transaction_version: 20,
     state_version: 1,
 };
 
@@ -127,21 +127,8 @@ impl Contains<Call> for IsCallable {
             // Membership is managed by the respective Membership instance
             Call::AdvisoryCommittee(set_members { .. }) => false,
             // See "balance.set_balance"
-            Call::AssetManager(update_balance { .. }) => false,
-            Call::Balances(inner_call) => {
-                match inner_call {
-                    // Balances should not be set. All newly generated tokens be minted by well
-                    // known and approved processes, like staking. However, this could be used
-                    // in some cases to fund system accounts like the parachain sorveign account
-                    // in case something goes terribly wrong (like a hack that draws the funds
-                    // from such an account, see Maganta hack). Invoking this function one can
-                    // also easily mess up consistency in regards to reserved tokens and locks.
-                    set_balance { .. } => false,
-                    // There should be no reason to force an account to transfer funds.
-                    force_transfer { .. } => false,
-                    _ => true,
-                }
-            }
+            Call::AssetManager(_) => false,
+            Call::Balances(_) => false,
             // Membership is managed by the respective Membership instance
             Call::Council(set_members { .. }) => false,
             Call::Court(_) => false,
@@ -169,7 +156,9 @@ impl Contains<Call> for IsCallable {
                     // Cleaning up storage should be done by pallets or independent migrations.
                     kill_prefix { .. } => false,
                     // See "killPrefix"
-                    kill_storage { .. } => false,
+
+                    // kill_storage { .. } => false,
+
                     // A parachain uses ParachainSystem to enact and authorized a runtime upgrade.
                     // This ensure proper synchronization with the relay chain.
                     // Calling `setCode` will wreck the chain.
@@ -179,12 +168,14 @@ impl Contains<Call> for IsCallable {
                     // Setting the storage directly is a dangerous operation that can lead to an
                     // inconsistent state. There might be scenarios where this is helpful, however,
                     // a well reviewed migration is better suited for that.
-                    set_storage { .. } => false,
+
+                    // set_storage { .. } => false,
                     _ => true,
                 }
             }
             // Membership is managed by the respective Membership instance
             Call::TechnicalCommittee(set_members { .. }) => false,
+            Call::Tokens(_) = false,
             // There should be no reason to force vested transfer.
             Call::Vesting(force_vested_transfer { .. }) => false,
             _ => true,
