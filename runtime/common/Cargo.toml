@@ -18,6 +18,7 @@ pallet-multisig = { branch = "moonbeam-polkadot-v0.9.29", default-features = fal
 pallet-parachain-staking = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 pallet-preimage = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-proxy = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+pallet-randomness = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
@@ -26,7 +27,6 @@ pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.
 pallet-treasury = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-utility = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 pallet-vesting = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
-pallet-randomness = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 
 # Utility
 cfg-if = { version = "1.0.0" }

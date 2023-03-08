@@ -69,8 +69,8 @@ pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.29", default-feature
 pallet-author-mapping = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/nimbus", optional = true }
 pallet-parachain-staking = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
-session-keys-primitives = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 pallet-randomness = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
+session-keys-primitives = { branch = "rand-v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 
 # Polkadot
 
