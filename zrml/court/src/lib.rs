@@ -60,7 +60,8 @@ mod pallet {
         transactional, Blake2_128Concat, BoundedVec, PalletId,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+    use rand::{Rng, RngCore, SeedableRng};
+    use rand_chacha::ChaCha20Rng;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
         DispatchError, Percent, SaturatedConversion,
@@ -1167,8 +1168,9 @@ mod pallet {
             T::TreasuryPalletId::get().into_account_truncating()
         }
 
-        // Returns a pseudo random number generator implementation based on the seed
-        // provided by the `Config::Random` type and the `JurorsSelectionNonce` storage.
+        // Returns a cryptographically secure random number generator
+        // implementation based on the seed provided by the `Config::Random` type
+        // and the `JurorsSelectionNonce` storage.
         pub(crate) fn rng() -> impl RngCore {
             let nonce = <JurorsSelectionNonce<T>>::mutate(|n| {
                 let rslt = *n;
@@ -1177,10 +1179,8 @@ mod pallet {
             });
             let mut seed = [0; 32];
             let (random_hash, _) = T::Random::random(&nonce.to_le_bytes());
-            for (byte, el) in random_hash.as_ref().iter().copied().zip(seed.iter_mut()) {
-                *el = byte
-            }
-            StdRng::from_seed(seed)
+            seed.copy_from_slice(&random_hash.as_ref()[..32]);
+            ChaCha20Rng::from_seed(seed)
         }
 
         // Calculates the necessary number of jurors depending on the number of market appeals.
