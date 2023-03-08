@@ -825,8 +825,10 @@ macro_rules! impl_config_traits {
             }
         }
 
+        #[cfg(feature = "parachain")]
         pub struct DummyAddressMapping;
 
+        #[cfg(feature = "parachain")]
         impl<AccountId: From<sp_runtime::AccountId32>> pallet_randomness::AddressMapping<AccountId> for DummyAddressMapping {
             fn into_account_id(address: sp_core::H160) -> AccountId {
                 // Ethereum address mapping is not used for now as we only use local VRFs
