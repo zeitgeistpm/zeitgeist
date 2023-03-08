@@ -214,6 +214,12 @@ parameter_types! {
     pub const AnnouncementDepositBase: Balance = deposit(1, 8);
     pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
 
+    // Randomness
+    pub const MinBlockDelay: BlockNumber = 2;
+    pub const MaxBlockDelay: BlockNumber = 2_000;
+    pub const BlockExpirationDelay: BlockNumber = 10_000;
+    pub const EpochExpirationDelay: BlockNumber = 10_000;
+
     // Scheduler
     pub MaximumSchedulerWeight: Weight =
         Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
