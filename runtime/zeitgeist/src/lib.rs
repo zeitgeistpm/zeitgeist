@@ -112,14 +112,6 @@ impl Contains<Call> for IsCallable {
         use pallet_collective::Call::set_members;
         use pallet_vesting::Call::force_vested_transfer;
 
-        use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        };
-        use zrml_prediction_markets::Call::{
-            create_cpmm_market_and_deploy_assets, create_market, edit_market,
-        };
-
         #[allow(clippy::match_like_matches_macro)]
         match call {
             // Membership is managed by the respective Membership instance
@@ -133,21 +125,25 @@ impl Contains<Call> for IsCallable {
             #[cfg(feature = "parachain")]
             Call::DmpQueue(service_overweight { .. }) => false,
             Call::LiquidityMining(_) => false,
-            Call::PredictionMarkets(inner_call) => {
-                match inner_call {
-                    // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
-                        ..
-                    } => false,
-                    _ => true,
-                }
-            }
+            Call::ParachainStaking(_) => false,
+            Call::PredictionMarkets(_) => false,
+            // Call::PredictionMarkets(inner_call) => {
+            //     match inner_call {
+            //         // Disable Rikiddo markets
+            //         create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+            //         edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+            //         // Disable Court & SimpleDisputes dispute resolution mechanism
+            //         create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+            //         edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+            //         create_cpmm_market_and_deploy_assets {
+            //             dispute_mechanism: Court | SimpleDisputes,
+            //             ..
+            //         } => false,
+            //         _ => true,
+            //     }
+            // }
+            Call::Styx(_) => false,
+            Call::Swaps(_) => false,
             Call::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
