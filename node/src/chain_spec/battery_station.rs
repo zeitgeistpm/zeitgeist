@@ -160,6 +160,7 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
+            bad_blocks: None,
             parachain_id: BATTERY_STATION_PARACHAIN_ID,
         },
         #[cfg(not(feature = "parachain"))]
