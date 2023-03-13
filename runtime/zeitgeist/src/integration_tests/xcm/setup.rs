@@ -151,12 +151,12 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
 }
 
 pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
-    // Register KSM as foreign asset in the sibling parachain
+    // Register dot as foreign asset in the sibling parachain
     let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-        decimals: 12,
+        decimals: 10,
         name: "Polkadot".into(),
         symbol: "DOT".into(),
-        existential_deposit: 10_000_000_000, // 0.01
+        existential_deposit: 10_000_000_000, // 1
         location: Some(VersionedMultiLocation::V1(foreign_parent_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
@@ -170,8 +170,8 @@ pub(super) fn ztg(amount: Balance) -> Balance {
 }
 
 #[inline]
-pub(super) fn ksm(amount: Balance) -> Balance {
-    foreign(amount, 12)
+pub(super) fn dot(amount: Balance) -> Balance {
+    foreign(amount, 10)
 }
 
 #[inline]
