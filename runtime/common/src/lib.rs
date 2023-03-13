@@ -51,31 +51,12 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        #[cfg(feature = "parachain")]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                pallet_parachain_staking::migrations::MigrateAtStakeAutoCompound<Runtime>,
-                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
-                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            ),
-        >;
-
-        #[cfg(not(feature = "parachain"))]
-        pub type Executive = frame_executive::Executive<
-            Runtime,
-            Block,
-            frame_system::ChainContext<Runtime>,
-            Runtime,
-            AllPalletsWithSystem,
-            (
-                zrml_prediction_markets::migrations::UpdateMarketsForBaseAssetAndRecordBonds<Runtime>,
-                zrml_prediction_markets::migrations::AddFieldToAuthorityReport<Runtime>,
-            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
