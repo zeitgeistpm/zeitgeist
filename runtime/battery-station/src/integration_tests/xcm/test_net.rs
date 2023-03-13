@@ -62,7 +62,7 @@ decl_test_network! {
             // fails with: "error: arbitrary expressions aren't allowed in patterns"
 
             // Be sure to use `xcm_config::config::battery_station::ID`
-            (2050, Zeitgeist),
+            (2101, Zeitgeist),
             // Be sure to use `PARA_ID_SIBLING`
             (3000, Sibling),
         ],

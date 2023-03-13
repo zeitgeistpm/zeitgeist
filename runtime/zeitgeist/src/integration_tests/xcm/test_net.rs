@@ -62,7 +62,7 @@ decl_test_network! {
             // fails with: "error: arbitrary expressions aren't allowed in patterns"
 
             // Be sure to use `xcm_config::config::zeitgeist::ID`
-            (2101, Zeitgeist),
+            (2092, Zeitgeist),
             // Be sure to use `PARA_ID_SIBLING`
             (3000, Sibling),
         ],

@@ -24,7 +24,7 @@
     "tokenDecimals": 10,
     "tokenSymbol": "ZTG"
   },
-  "parachain_id": 2101,
+  "parachain_id": 2092,
   "relay_chain": "polkadot",
   "consensusEngine": null,
   "codeSubstitutes": {},

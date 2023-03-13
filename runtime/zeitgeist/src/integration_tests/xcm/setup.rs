@@ -154,8 +154,8 @@ pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
     // Register KSM as foreign asset in the sibling parachain
     let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
         decimals: 12,
-        name: "Kusama".into(),
-        symbol: "KSM".into(),
+        name: "Polkadot".into(),
+        symbol: "DOT".into(),
         existential_deposit: 10_000_000_000, // 0.01
         location: Some(VersionedMultiLocation::V1(foreign_parent_multilocation())),
         additional: additional_meta.unwrap_or_default(),
