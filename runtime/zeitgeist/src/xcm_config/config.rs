@@ -50,7 +50,7 @@ use zeitgeist_primitives::types::Asset;
 
 pub mod zeitgeist {
     #[cfg(test)]
-    pub const ID: u32 = 2101;
+    pub const ID: u32 = 2092;
     pub const KEY: &[u8] = &[0, 1];
 }
 

@@ -222,6 +222,8 @@ pub struct Extensions {
     pub parachain_id: u32,
     /// The relay chain of the Parachain.
     pub relay_chain: String,
+    /// Known bad block hashes.
+    pub bad_blocks: sc_client_api::BadBlocks<polkadot_primitives::v2::Block>,
 }
 
 #[cfg(feature = "parachain")]

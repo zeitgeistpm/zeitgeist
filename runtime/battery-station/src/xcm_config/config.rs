@@ -50,7 +50,7 @@ use zeitgeist_primitives::types::Asset;
 
 pub mod battery_station {
     #[cfg(test)]
-    pub const ID: u32 = 2050;
+    pub const ID: u32 = 2101;
     pub const KEY: &[u8] = &[0, 1];
 }
 
