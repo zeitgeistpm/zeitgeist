@@ -106,9 +106,7 @@ impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
         #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
-        use frame_system::Call::{
-            kill_prefix, set_code, set_code_without_checks,
-        };
+        use frame_system::Call::{kill_prefix, set_code, set_code_without_checks};
         use pallet_collective::Call::set_members;
         use pallet_vesting::Call::force_vested_transfer;
 
@@ -125,6 +123,7 @@ impl Contains<Call> for IsCallable {
             #[cfg(feature = "parachain")]
             Call::DmpQueue(service_overweight { .. }) => false,
             Call::LiquidityMining(_) => false,
+            #[cfg(feature = "parachain")]
             Call::ParachainStaking(_) => false,
             Call::PredictionMarkets(_) => false,
             // Call::PredictionMarkets(inner_call) => {
