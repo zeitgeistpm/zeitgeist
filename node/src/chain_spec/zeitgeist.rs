@@ -152,7 +152,8 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "kusama".into(),
-            parachain_id: KUSAMA_PARACHAIN_ID,
+            parachain_id: POLKADOT_PARACHAIN_ID,
+            bad_blocks: None,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
