@@ -23,14 +23,16 @@ use crate::{
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
         POOR_PAUL,
     },
-    AccountIdLookupOf, Error, Event, ExitRequests, JurorInfo, JurorInfoOf, JurorPool,
+    types::{Draw, Vote},
+    AccountIdLookupOf, Draws, Error, Event, ExitRequests, JurorInfo, JurorInfoOf, JurorPool,
     JurorPoolItem, JurorPoolOf, Jurors, MarketOf,
 };
 use frame_support::{assert_noop, assert_ok, traits::fungible::Balanced};
 use pallet_balances::BalanceLock;
+use rand::seq::SliceRandom;
 use zeitgeist_primitives::{
     constants::{
-        mock::{CourtLockId, MinJurorStake},
+        mock::{CourtLockId, IterationLimit, MinJurorStake},
         BASE,
     },
     traits::DisputeApi,
@@ -285,7 +287,6 @@ fn prepare_exit_court_removes_correct_jurors() {
         let max_accounts = JurorPoolOf::<Runtime>::bound();
         let mut rng = rand::thread_rng();
         let mut random_numbers: Vec<u32> = (0u32..max_accounts as u32).collect();
-        use rand::seq::SliceRandom;
         random_numbers.shuffle(&mut rng);
         let mut random_jurors = random_numbers.clone();
         random_jurors.shuffle(&mut rng);
@@ -369,6 +370,105 @@ fn exit_court_works() {
         );
         assert!(!ExitRequests::<Runtime>::contains_key(ALICE));
         assert!(Balances::locks(ALICE).is_empty());
+    });
+}
+
+#[test]
+fn exit_court_fails_juror_still_drawn() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+
+        let mut draws = <Draws<Runtime>>::get(0);
+        draws
+            .try_push(Draw { juror: ALICE, weight: 0u32, vote: Vote::Drawn, slashable: 0u128 })
+            .unwrap();
+        <Draws<Runtime>>::insert(0, draws);
+        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
+        assert_noop!(
+            Court::exit_court(Origin::signed(ALICE), alice_lookup),
+            Error::<Runtime>::JurorStillDrawn
+        );
+    });
+}
+
+#[test]
+fn exit_court_works_over_iteration_limit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+
+        let limit = IterationLimit::get();
+        for i in 0..(2 * limit) {
+            let mut draws = <Draws<Runtime>>::get(i as u128);
+            draws
+                .try_push(Draw {
+                    juror: CHARLIE,
+                    weight: 0u32,
+                    vote: Vote::Drawn,
+                    slashable: 0u128,
+                })
+                .unwrap();
+            <Draws<Runtime>>::insert(i as u128, draws);
+        }
+        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
+        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
+        System::assert_last_event(Event::JurorMayStillBeDrawn { juror: ALICE }.into());
+        let exit_request = <ExitRequests<Runtime>>::get(ALICE);
+
+        let last_query = <Draws<Runtime>>::iter().skip(limit as usize).next().unwrap().0;
+        assert_eq!(exit_request.unwrap().last_market_id, Some(last_query));
+
+        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
+        System::assert_last_event(Event::JurorExited { juror: ALICE }.into());
+    });
+}
+
+#[test]
+fn check_draws_iter_new_inserts_only_after_previous() {
+    ExtBuilder::default().build().execute_with(|| {
+        let limit = IterationLimit::get();
+        let excess = 2 * limit;
+        for i in 0..excess {
+            let mut draws = <Draws<Runtime>>::get(i as u128);
+            draws
+                .try_push(Draw {
+                    juror: CHARLIE,
+                    weight: 0u32,
+                    vote: Vote::Drawn,
+                    slashable: 0u128,
+                })
+                .unwrap();
+            <Draws<Runtime>>::insert(i as u128, draws);
+        }
+
+        let draws = <Draws<Runtime>>::iter().map(|(key, _)| key).collect::<Vec<_>>();
+
+        let mut numbers: Vec<u32> = (excess..(excess + limit)).collect();
+        let mut rng = rand::thread_rng();
+        numbers.shuffle(&mut rng);
+        for i in numbers {
+            let mut draws = <Draws<Runtime>>::get(i as u128);
+            draws
+                .try_push(Draw {
+                    juror: CHARLIE,
+                    weight: 0u32,
+                    vote: Vote::Drawn,
+                    slashable: 0u128,
+                })
+                .unwrap();
+            <Draws<Runtime>>::insert(i as u128, draws);
+        }
+
+        let first_key = <Draws<Runtime>>::iter().next().unwrap().0;
+        let hashed_key = <Draws<Runtime>>::hashed_key_for(first_key);
+        let new_draws = <Draws<Runtime>>::iter_from(hashed_key)
+            .map(|(key, _)| key)
+            .take(excess as usize)
+            .collect::<Vec<_>>();
+        assert_eq!(draws, new_draws);
     });
 }
 
