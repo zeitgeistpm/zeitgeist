@@ -22,7 +22,7 @@ use frame_support::{
     construct_runtime,
     pallet_prelude::{DispatchError, Weight},
     parameter_types,
-    traits::Everything,
+    traits::{Everything, Hooks},
     PalletId,
 };
 use sp_runtime::{
@@ -52,6 +52,7 @@ pub const FERDIE: AccountIdTest = 5;
 pub const GINA: AccountIdTest = 6;
 pub const HARRY: AccountIdTest = 7;
 pub const IAN: AccountIdTest = 8;
+pub const POOR_PAUL: AccountIdTest = 9;
 pub const INITIAL_BALANCE: u128 = 1000 * BASE;
 
 parameter_types! {
@@ -123,7 +124,7 @@ impl crate::Config for Runtime {
     type CourtAppealPeriod = CourtAppealPeriod;
     type DenounceSlashPercentage = DenounceSlashPercentage;
     type DisputeResolution = NoopResolution;
-    type Event = ();
+    type Event = Event;
     type IterationLimit = IterationLimit;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
@@ -149,7 +150,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type Call = Call;
     type DbWeight = ();
-    type Event = ();
+    type Event = Event;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -170,7 +171,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type Event = Event;
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -221,6 +222,32 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        t.into()
+        let mut t: sp_io::TestExternalities = t.into();
+        // required to assert for events
+        t.execute_with(|| System::set_block_number(1));
+        t
     }
+}
+
+pub fn run_to_block(n: BlockNumber) {
+    while System::block_number() < n {
+        Balances::on_finalize(System::block_number());
+        RandomnessCollectiveFlip::on_finalize(System::block_number());
+        Court::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+
+        // new block
+        let parent_block_hash = System::parent_hash();
+        let current_digest = System::digest();
+        System::initialize(&System::block_number(), &parent_block_hash, &current_digest);
+        System::on_initialize(System::block_number());
+        Court::on_initialize(System::block_number());
+        RandomnessCollectiveFlip::on_initialize(System::block_number());
+        Balances::on_initialize(System::block_number());
+    }
+}
+
+pub fn run_blocks(n: BlockNumber) {
+    run_to_block(System::block_number() + n);
 }

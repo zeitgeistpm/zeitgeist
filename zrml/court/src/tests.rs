@@ -19,15 +19,18 @@
 
 use crate::{
     mock::{
-        Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
-        System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
+        run_to_block, Balances, Court, ExtBuilder, MarketCommons, Origin, Runtime, System, ALICE,
+        BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE, POOR_PAUL,
     },
-    Error, JurorInfo, JurorPoolItem, Jurors, MarketOf,
+    Error, Event, JurorInfo, JurorPool, JurorPoolItem, Jurors, MarketOf, JurorPoolOf
 };
-use frame_support::{assert_noop, assert_ok, traits::Hooks};
+use frame_support::{assert_noop, assert_ok, traits::fungible::Balanced};
 use pallet_balances::BalanceLock;
 use zeitgeist_primitives::{
-    constants::{mock::CourtLockId, BASE},
+    constants::{
+        mock::{CourtLockId, MinJurorStake},
+        BASE,
+    },
     traits::DisputeApi,
     types::{
         AccountIdTest, Asset, Deadlines, Market, MarketBonds, MarketCreation,
@@ -97,11 +100,96 @@ fn prepare_exit_court_will_not_remove_an_unknown_juror() {
 }
 
 #[test]
-fn join_court_successfully_stores_a_juror() {
+fn join_court_successfully_stores_required_data() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
+        let alice_free_balance_before = Balances::free_balance(ALICE);
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        System::assert_last_event(Event::JurorJoined { juror: ALICE }.into());
         assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (ALICE, JurorInfo { stake: amount }));
+        assert_eq!(Balances::free_balance(ALICE), alice_free_balance_before);
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        assert_eq!(
+            JurorPool::<Runtime>::get().into_inner(),
+            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+        );
+    });
+}
+
+#[test]
+fn join_court_fails_below_min_juror_stake() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let amount = min - 1;
+        assert_noop!(
+            Court::join_court(Origin::signed(ALICE), amount),
+            Error::<Runtime>::BelowMinJurorStake
+        );
+    });
+}
+
+#[test]
+fn join_court_fails_insufficient_amount() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let amount = min + 1;
+        assert_noop!(
+            Court::join_court(Origin::signed(POOR_PAUL), amount),
+            Error::<Runtime>::InsufficientAmount
+        );
+    });
+}
+
+#[test]
+fn join_court_fails_amount_below_last_join() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let last_join_amount = 2 * min;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), last_join_amount));
+
+        assert_noop!(
+            Court::join_court(Origin::signed(ALICE), last_join_amount - 1),
+            Error::<Runtime>::AmountBelowLastJoin
+        );
+    });
+}
+
+#[test]
+fn join_court_fails_juror_needs_to_exit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let amount = 2 * min;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+
+        assert_noop!(
+            Court::join_court(Origin::signed(ALICE), amount + 1),
+            Error::<Runtime>::JurorNeedsToExit
+        );
+    });
+}
+
+#[test]
+fn join_court_fails_amount_below_lowest_juror() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let min_amount = 2 * min;
+
+        let max_accounts = JurorPoolOf::<Runtime>::bound();
+        let max_amount = min_amount + max_accounts as u128;
+        for i in 1..=max_accounts {
+            let amount = max_amount - i as u128;
+            let _ = Balances::deposit(&(i as u128), amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(i as u128), amount));
+        }
+
+        assert!(JurorPool::<Runtime>::get().is_full());
+        
+        assert_noop!(
+            Court::join_court(Origin::signed(0u128), min_amount - 1),
+            Error::<Runtime>::AmountBelowLowestJuror
+        );
     });
 }
 
@@ -132,7 +220,7 @@ fn get_resolution_outcome_denies_non_court_markets() {
 #[test]
 fn appeal_stores_jurors_that_should_vote() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(123);
+        run_to_block(123);
     });
 }
 
@@ -140,7 +228,7 @@ fn appeal_stores_jurors_that_should_vote() {
 #[test]
 fn get_resolution_outcome_awards_winners_and_slashes_losers() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
+        run_to_block(2);
         let amount_alice = 2 * BASE;
         let amount_bob = 3 * BASE;
         let amount_charlie = 4 * BASE;
@@ -154,7 +242,7 @@ fn get_resolution_outcome_awards_winners_and_slashes_losers() {
 #[test]
 fn get_resolution_outcome_decides_market_outcome_based_on_the_plurality() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
+        run_to_block(2);
         let amount_alice = 2 * BASE;
         let amount_bob = 3 * BASE;
         let amount_charlie = 4 * BASE;
@@ -168,7 +256,7 @@ fn get_resolution_outcome_decides_market_outcome_based_on_the_plurality() {
 #[test]
 fn random_jurors_returns_an_unique_different_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(123);
+        run_to_block(123);
 
         let mut rng = Court::rng();
         let random_jurors =
@@ -176,7 +264,7 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
-            setup_blocks(1);
+            run_blocks(1);
 
             let another_set_of_random_jurors =
                 Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
@@ -203,7 +291,7 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
 #[test]
 fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(123);
+        run_to_block(123);
         let mut rng = Court::rng();
         let random_jurors =
             Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
@@ -216,7 +304,7 @@ fn random_jurors_returns_a_subset_of_jurors() {
 #[test]
 fn vote_will_not_accept_unknown_accounts() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(123);
+        run_to_block(123);
         let amount_alice = 2 * BASE;
         let amount_bob = 3 * BASE;
         let amount_charlie = 4 * BASE;
@@ -229,18 +317,4 @@ fn vote_will_not_accept_unknown_accounts() {
         Court::join_court(Origin::signed(DAVE), amount_dave).unwrap();
         Court::on_dispute(&0, &DEFAULT_MARKET).unwrap();
     });
-}
-
-fn setup_blocks(num_blocks: u32) {
-    for _ in 0..num_blocks {
-        let current_block_number = System::block_number() + 1;
-        let parent_block_hash = System::parent_hash();
-        let current_digest = System::digest();
-
-        System::initialize(&current_block_number, &parent_block_hash, &current_digest);
-        RandomnessCollectiveFlip::on_initialize(current_block_number);
-        Court::on_initialize(current_block_number);
-        System::finalize();
-        System::set_block_number(current_block_number);
-    }
 }

@@ -431,7 +431,13 @@ mod pallet {
             match jurors.binary_search_by_key(&(amount, &who), |pool_item| {
                 (pool_item.stake, &pool_item.juror)
             }) {
-                Ok(_) => return Err(Error::<T>::JurorTwiceInPool.into()),
+                Ok(_) => {
+                    debug_assert!(
+                        false,
+                        "This should never happen, because we are removing the juror above."
+                    );
+                    return Err(Error::<T>::JurorTwiceInPool.into());
+                }
                 Err(i) => jurors
                     .try_insert(i, JurorPoolItem { stake: amount, juror: who.clone(), slashed })
                     .map_err(|_| {
