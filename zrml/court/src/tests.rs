@@ -19,10 +19,12 @@
 
 use crate::{
     mock::{
-        run_to_block, Balances, Court, ExtBuilder, MarketCommons, Origin, Runtime, System, ALICE,
-        BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE, POOR_PAUL,
+        run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, Origin, Runtime,
+        System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
+        POOR_PAUL,
     },
-    Error, Event, JurorInfo, JurorPool, JurorPoolItem, Jurors, MarketOf, JurorPoolOf
+    AccountIdLookupOf, Error, Event, ExitRequests, JurorInfo, JurorInfoOf, JurorPool,
+    JurorPoolItem, JurorPoolOf, Jurors, MarketOf,
 };
 use frame_support::{assert_noop, assert_ok, traits::fungible::Balanced};
 use pallet_balances::BalanceLock;
@@ -94,7 +96,7 @@ fn prepare_exit_court_will_not_remove_an_unknown_juror() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Court::prepare_exit_court(Origin::signed(ALICE)),
-            Error::<Runtime>::JurorDoesNotExists
+            Error::<Runtime>::JurorDoesNotExist
         );
     });
 }
@@ -113,6 +115,71 @@ fn join_court_successfully_stores_required_data() {
             JurorPool::<Runtime>::get().into_inner(),
             vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
         );
+    });
+}
+
+#[test]
+fn join_court_works_multiple_joins() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let amount = 2 * min;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        assert_eq!(
+            JurorPool::<Runtime>::get().into_inner(),
+            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+        );
+        assert_eq!(
+            Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
+            vec![(ALICE, JurorInfo { stake: amount })]
+        );
+
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
+        assert_eq!(
+            JurorPool::<Runtime>::get().into_inner(),
+            vec![
+                JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 },
+                JurorPoolItem { stake: amount, juror: BOB, slashed: 0 }
+            ]
+        );
+        assert_eq!(
+            Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
+            vec![(BOB, JurorInfo { stake: amount }), (ALICE, JurorInfo { stake: amount })]
+        );
+
+        let higher_amount = amount + 1;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), higher_amount));
+        assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(higher_amount)]);
+        assert_eq!(
+            JurorPool::<Runtime>::get().into_inner(),
+            vec![
+                JurorPoolItem { stake: amount, juror: BOB, slashed: 0 },
+                JurorPoolItem { stake: higher_amount, juror: ALICE, slashed: 0 },
+            ]
+        );
+        assert_eq!(
+            Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
+            vec![(BOB, JurorInfo { stake: amount }), (ALICE, JurorInfo { stake: higher_amount })]
+        );
+    });
+}
+
+#[test]
+fn join_court_saves_slashed_for_double_join() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let amount = 2 * min;
+
+        let slashed = min;
+        Jurors::<Runtime>::insert(ALICE, JurorInfo { stake: amount });
+        let juror_pool = vec![JurorPoolItem { stake: amount, juror: ALICE, slashed }];
+        JurorPool::<Runtime>::put::<JurorPoolOf<Runtime>>(juror_pool.try_into().unwrap());
+
+        let higher_amount = amount + 1;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), higher_amount));
+        assert_eq!(JurorPool::<Runtime>::get().into_inner()[0].slashed, slashed);
     });
 }
 
@@ -185,10 +252,147 @@ fn join_court_fails_amount_below_lowest_juror() {
         }
 
         assert!(JurorPool::<Runtime>::get().is_full());
-        
+
         assert_noop!(
             Court::join_court(Origin::signed(0u128), min_amount - 1),
             Error::<Runtime>::AmountBelowLowestJuror
+        );
+    });
+}
+
+#[test]
+fn prepare_exit_court_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_eq!(
+            JurorPool::<Runtime>::get().into_inner(),
+            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+        );
+
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        System::assert_last_event(Event::JurorPreparedExit { juror: ALICE }.into());
+        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
+    });
+}
+
+#[test]
+fn prepare_exit_court_removes_correct_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let min_amount = 2 * min;
+
+        let max_accounts = JurorPoolOf::<Runtime>::bound();
+        let mut rng = rand::thread_rng();
+        let mut random_numbers: Vec<u32> = (0u32..max_accounts as u32).collect();
+        use rand::seq::SliceRandom;
+        random_numbers.shuffle(&mut rng);
+        let mut random_jurors = random_numbers.clone();
+        random_jurors.shuffle(&mut rng);
+        let max_amount = min_amount + max_accounts as u128;
+        for i in random_numbers {
+            let amount = max_amount - i as u128;
+            let juror = random_jurors.remove(0) as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        }
+
+        // println!("JurorPool: {:?}", JurorPool::<Runtime>::get().into_inner());
+
+        for r in 0..max_accounts {
+            let len = JurorPool::<Runtime>::get().into_inner().len();
+            assert!(
+                JurorPool::<Runtime>::get().into_inner().iter().any(|item| item.juror == r as u128)
+            );
+            assert_ok!(Court::prepare_exit_court(Origin::signed(r as u128)));
+            assert_eq!(JurorPool::<Runtime>::get().into_inner().len(), len - 1);
+            JurorPool::<Runtime>::get().into_inner().iter().for_each(|item| {
+                assert_ne!(item.juror, r as u128);
+            });
+        }
+    });
+}
+
+#[test]
+fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_eq!(
+            JurorPool::<Runtime>::get().into_inner(),
+            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+        );
+
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
+
+        assert_noop!(
+            Court::prepare_exit_court(Origin::signed(ALICE)),
+            Error::<Runtime>::JurorAlreadyPreparedToExit
+        );
+    });
+}
+
+#[test]
+fn prepare_exit_court_fails_juror_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert!(
+            Jurors::<Runtime>::iter()
+                .collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>()
+                .is_empty()
+        );
+
+        assert_noop!(
+            Court::prepare_exit_court(Origin::signed(ALICE)),
+            Error::<Runtime>::JurorDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn exit_court_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
+        assert!(Jurors::<Runtime>::get(ALICE).is_some());
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
+        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
+        System::assert_last_event(Event::JurorExited { juror: ALICE }.into());
+        assert!(
+            Jurors::<Runtime>::iter()
+                .collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>()
+                .is_empty()
+        );
+        assert!(!ExitRequests::<Runtime>::contains_key(ALICE));
+        assert!(Balances::locks(ALICE).is_empty());
+    });
+}
+
+#[test]
+fn exit_court_fails_juror_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
+        assert_noop!(
+            Court::exit_court(Origin::signed(ALICE), alice_lookup),
+            Error::<Runtime>::JurorDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn exit_court_fails_juror_not_prepared_to_exit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = 2 * BASE;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+
+        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
+        assert_noop!(
+            Court::exit_court(Origin::signed(ALICE), alice_lookup),
+            Error::<Runtime>::JurorNotPreparedToExit
         );
     });
 }

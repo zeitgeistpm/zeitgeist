@@ -287,7 +287,7 @@ mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// An account id does not exist on the jurors storage.
-        JurorDoesNotExists,
+        JurorDoesNotExist,
         /// On dispute or resolution, someone tried to pass a non-court market type
         MarketDoesNotHaveCourtMechanism,
         /// The market is not in a state where it can be disputed.
@@ -473,7 +473,7 @@ mod pallet {
         pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            let prev_juror_info = <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExists)?;
+            let prev_juror_info = <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExist)?;
 
             let mut jurors = JurorPool::<T>::get();
 
@@ -512,7 +512,7 @@ mod pallet {
 
             let juror = T::Lookup::lookup(juror)?;
 
-            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
+            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
             ensure!(
                 Self::get_pool_item(&JurorPool::<T>::get(), prev_juror_info.stake, &juror)
                     .is_none(),
@@ -635,7 +635,7 @@ mod pallet {
 
             ensure!(denouncer != juror, Error::<T>::SelfDenounceDisallowed);
 
-            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExists)?;
+            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
