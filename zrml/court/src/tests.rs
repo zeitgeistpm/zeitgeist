@@ -22,7 +22,7 @@ use crate::{
         Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
     },
-    Error, JurorInfo, JurorPool, JurorPoolItem, Jurors, MarketOf
+    Error, JurorInfo, JurorPool, JurorPoolItem, Jurors, MarketOf,
 };
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use pallet_balances::BalanceLock;
@@ -175,6 +175,10 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
 
         let mut jurors = <JurorPool<Runtime>>::get();
         for pool_item in DEFAULT_SET_OF_JURORS.iter() {
+            <Jurors<Runtime>>::insert(
+                pool_item.juror,
+                JurorInfo { stake: pool_item.stake, active_lock: 0u128 },
+            );
             jurors.try_push(pool_item.clone()).unwrap();
         }
 
@@ -213,6 +217,10 @@ fn random_jurors_returns_a_subset_of_jurors() {
         setup_blocks(123);
         let mut jurors = <JurorPool<Runtime>>::get();
         for pool_item in DEFAULT_SET_OF_JURORS.iter() {
+            <Jurors<Runtime>>::insert(
+                pool_item.juror,
+                JurorInfo { stake: pool_item.stake, active_lock: 0u128 },
+            );
             jurors.try_push(pool_item.clone()).unwrap();
         }
 
