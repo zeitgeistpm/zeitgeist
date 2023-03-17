@@ -32,9 +32,9 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, AppealBondFactor, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
-        CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, IterationLimit,
-        MaxAppeals, MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
-        RedistributionPercentage, RequestInterval, TardySlashPercentage, BASE,
+        CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDraws,
+        MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
+        RequestInterval, TardySlashPercentage, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -123,8 +123,7 @@ impl crate::Config for Runtime {
     type CourtAppealPeriod = CourtAppealPeriod;
     type DenounceSlashPercentage = DenounceSlashPercentage;
     type DisputeResolution = NoopResolution;
-    type Event = ();
-    type IterationLimit = IterationLimit;
+    type Event = Event;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
     type MaxDraws = MaxDraws;
@@ -149,7 +148,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type Call = Call;
     type DbWeight = ();
-    type Event = ();
+    type Event = Event;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -170,7 +169,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type Event = Event;
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;

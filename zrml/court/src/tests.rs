@@ -22,7 +22,7 @@ use crate::{
         Balances, Court, ExtBuilder, MarketCommons, Origin, RandomnessCollectiveFlip, Runtime,
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
     },
-    Error, JurorInfo, JurorPoolItem, Jurors, MarketOf,
+    Error, JurorInfo, JurorPool, JurorPoolItem, Jurors, MarketOf
 };
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use pallet_balances::BalanceLock;
@@ -55,15 +55,15 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
 };
 
 const DEFAULT_SET_OF_JURORS: &[JurorPoolItem<AccountIdTest, u128>] = &[
-    JurorPoolItem { stake: 9, juror: HARRY, slashed: 0 },
-    JurorPoolItem { stake: 8, juror: IAN, slashed: 0 },
-    JurorPoolItem { stake: 7, juror: ALICE, slashed: 0 },
-    JurorPoolItem { stake: 6, juror: BOB, slashed: 0 },
-    JurorPoolItem { stake: 5, juror: CHARLIE, slashed: 0 },
-    JurorPoolItem { stake: 4, juror: DAVE, slashed: 0 },
-    JurorPoolItem { stake: 3, juror: EVE, slashed: 0 },
-    JurorPoolItem { stake: 2, juror: FERDIE, slashed: 0 },
-    JurorPoolItem { stake: 1, juror: GINA, slashed: 0 },
+    JurorPoolItem { stake: 9, juror: HARRY, total_slashable: 0 },
+    JurorPoolItem { stake: 8, juror: IAN, total_slashable: 0 },
+    JurorPoolItem { stake: 7, juror: ALICE, total_slashable: 0 },
+    JurorPoolItem { stake: 6, juror: BOB, total_slashable: 0 },
+    JurorPoolItem { stake: 5, juror: CHARLIE, total_slashable: 0 },
+    JurorPoolItem { stake: 4, juror: DAVE, total_slashable: 0 },
+    JurorPoolItem { stake: 3, juror: EVE, total_slashable: 0 },
+    JurorPoolItem { stake: 2, juror: FERDIE, total_slashable: 0 },
+    JurorPoolItem { stake: 1, juror: GINA, total_slashable: 0 },
 ];
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
@@ -91,7 +91,7 @@ fn prepare_exit_court_will_not_remove_an_unknown_juror() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Court::prepare_exit_court(Origin::signed(ALICE)),
-            Error::<Runtime>::JurorDoesNotExists
+            Error::<Runtime>::JurorDoesNotExist
         );
     });
 }
@@ -101,7 +101,10 @@ fn join_court_successfully_stores_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (ALICE, JurorInfo { stake: amount }));
+        assert_eq!(
+            Jurors::<Runtime>::iter().next().unwrap(),
+            (ALICE, JurorInfo { stake: amount, active_lock: 0u128 })
+        );
     });
 }
 
@@ -170,16 +173,20 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
 
+        let mut jurors = <JurorPool<Runtime>>::get();
+        for pool_item in DEFAULT_SET_OF_JURORS.iter() {
+            jurors.try_push(pool_item.clone()).unwrap();
+        }
+
         let mut rng = Court::rng();
-        let random_jurors =
-            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             setup_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
+                Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -204,9 +211,13 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
 fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
+        let mut jurors = <JurorPool<Runtime>>::get();
+        for pool_item in DEFAULT_SET_OF_JURORS.iter() {
+            jurors.try_push(pool_item.clone()).unwrap();
+        }
+
         let mut rng = Court::rng();
-        let random_jurors =
-            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
         for draw in random_jurors {
             assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.juror == draw.juror));
         }
