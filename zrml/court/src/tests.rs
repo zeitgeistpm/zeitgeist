@@ -508,7 +508,7 @@ fn get_resolution_outcome_awards_winners_and_slashes_losers() {
 }
 
 fn prepare_draws(market_id: &crate::MarketIdOf<Runtime>, outcomes_with_weights: Vec<(u128, u32)>) {
-    let mut draws = <Draws<Runtime>>::get(market_id);
+    let mut draws: crate::DrawsOf<Runtime> = vec![].try_into().unwrap();
     for (i, (outcome_index, weight)) in outcomes_with_weights.iter().enumerate() {
         // offset to not conflict with other jurors
         let offset_i = (i + 1000) as u128;
@@ -539,6 +539,14 @@ fn get_winner_works() {
         let draws = <Draws<Runtime>>::get(market_id);
         let winner = Court::get_winner(&draws.as_slice(), None).unwrap();
         assert_eq!(winner, OutcomeReport::Scalar(1002u128));
+
+        let outcomes_and_weights =
+            vec![(1000u128, 2), (1000u128, 4), (1001u128, 4), (1001u128, 3)];
+        prepare_draws(&market_id, outcomes_and_weights);
+
+        let draws = <Draws<Runtime>>::get(market_id);
+        let winner = Court::get_winner(&draws.as_slice(), None).unwrap();
+        assert_eq!(winner, OutcomeReport::Scalar(1001u128));
     });
 }
 

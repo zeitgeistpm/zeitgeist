@@ -1272,8 +1272,9 @@ mod pallet {
             let mut best_score = iter.next()?;
             let mut second_best_score = if let Some(second) = iter.next() {
                 if second.1 > best_score.1 {
+                    let new_second = best_score;
                     best_score = second;
-                    best_score
+                    new_second
                 } else {
                     second
                 }
