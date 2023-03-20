@@ -507,6 +507,40 @@ fn get_resolution_outcome_awards_winners_and_slashes_losers() {
     });
 }
 
+#[test]
+fn choose_multiple_weighted_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let necessary_jurors_weight = Court::necessary_jurors_weight(5usize);
+        let mut rng = Court::rng();
+        for i in 0..necessary_jurors_weight {
+            let amount = MinJurorStake::get() + i as u128;
+            let juror = i as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        }
+        let mut jurors = JurorPool::<Runtime>::get();
+        let random_jurors =
+            Court::choose_multiple_weighted(&mut jurors, necessary_jurors_weight, &mut rng)
+                .unwrap();
+        assert_eq!(
+            random_jurors.iter().map(|draw| draw.weight).sum::<u32>() as usize,
+            necessary_jurors_weight
+        );
+    });
+}
+
+#[test]
+fn check_necessary_jurors_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_eq!(Court::necessary_jurors_weight(0usize), 5usize);
+        assert_eq!(Court::necessary_jurors_weight(1usize), 11usize);
+        assert_eq!(Court::necessary_jurors_weight(2usize), 23usize);
+        assert_eq!(Court::necessary_jurors_weight(3usize), 47usize);
+        assert_eq!(Court::necessary_jurors_weight(4usize), 95usize);
+        assert_eq!(Court::necessary_jurors_weight(5usize), 191usize);
+    });
+}
+
 fn prepare_draws(market_id: &crate::MarketIdOf<Runtime>, outcomes_with_weights: Vec<(u128, u32)>) {
     let mut draws: crate::DrawsOf<Runtime> = vec![].try_into().unwrap();
     for (i, (outcome_index, weight)) in outcomes_with_weights.iter().enumerate() {
@@ -540,8 +574,7 @@ fn get_winner_works() {
         let winner = Court::get_winner(&draws.as_slice(), None).unwrap();
         assert_eq!(winner, OutcomeReport::Scalar(1002u128));
 
-        let outcomes_and_weights =
-            vec![(1000u128, 2), (1000u128, 4), (1001u128, 4), (1001u128, 3)];
+        let outcomes_and_weights = vec![(1000u128, 2), (1000u128, 4), (1001u128, 4), (1001u128, 3)];
         prepare_draws(&market_id, outcomes_and_weights);
 
         let draws = <Draws<Runtime>>::get(market_id);

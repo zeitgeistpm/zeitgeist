@@ -1087,16 +1087,16 @@ mod pallet {
             appeal_number: usize,
         ) -> Result<(), DispatchError> {
             let mut jurors: JurorPoolOf<T> = JurorPool::<T>::get();
-            let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
-            ensure!(jurors.len() >= necessary_jurors_number, Error::<T>::NotEnoughJurors);
+            let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
+            ensure!(jurors.len() >= necessary_jurors_weight, Error::<T>::NotEnoughJurors);
 
             let mut rng = Self::rng();
 
             let random_jurors =
-                Self::choose_multiple_weighted(&mut jurors, necessary_jurors_number, &mut rng)?;
+                Self::choose_multiple_weighted(&mut jurors, necessary_jurors_weight, &mut rng)?;
 
             // we allow at most MaxDraws jurors
-            // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
+            // look at `necessary_jurors_weight`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
             // MaxDraws should be 191 in this case
             debug_assert!(
                 random_jurors.len() <= T::MaxDraws::get() as usize,
@@ -1193,7 +1193,7 @@ mod pallet {
         }
 
         // Calculates the necessary number of jurors depending on the number of market appeals.
-        fn necessary_jurors_num(appeals_len: usize) -> usize {
+        pub(crate) fn necessary_jurors_weight(appeals_len: usize) -> usize {
             // 2^(appeals_len) * 5 + 2^(appeals_len) - 1
             // MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
             SUBSEQUENT_JURORS_FACTOR
@@ -1440,11 +1440,11 @@ mod pallet {
                 Some(court) => {
                     let appeals = &court.appeals;
                     let appeal_number = appeals.len().saturating_add(1);
-                    let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
+                    let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
                     let valid_period =
                         Self::check_appealable_market(market_id, &court, now).is_ok();
 
-                    if appeals.is_full() || (valid_period && (jurors_len < necessary_jurors_number))
+                    if appeals.is_full() || (valid_period && (jurors_len < necessary_jurors_weight))
                     {
                         has_failed = true;
                     }
@@ -1457,8 +1457,8 @@ mod pallet {
                     let during_dispute_duration =
                         report_block <= now && now < block_after_dispute_duration;
 
-                    let necessary_jurors_number = Self::necessary_jurors_num(0usize);
-                    if during_dispute_duration && jurors_len < necessary_jurors_number {
+                    let necessary_jurors_weight = Self::necessary_jurors_weight(0usize);
+                    if during_dispute_duration && jurors_len < necessary_jurors_weight {
                         has_failed = true;
                     }
                 }
