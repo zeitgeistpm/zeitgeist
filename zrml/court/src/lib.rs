@@ -1252,7 +1252,7 @@ mod pallet {
         // Returns the winner of the current court round.
         // If there is no element inside `draws`, returns `None`.
         // If the best two outcomes have the same score, returns the last court round winner.
-        fn get_winner(
+        pub(crate) fn get_winner(
             draws: &[DrawOf<T>],
             last_winner: Option<OutcomeReport>,
         ) -> Option<OutcomeReport> {
@@ -1283,8 +1283,8 @@ mod pallet {
 
             for el in iter {
                 if el.1 > best_score.1 {
-                    best_score = el;
                     second_best_score = best_score;
+                    best_score = el;
                 } else if el.1 > second_best_score.1 {
                     second_best_score = el;
                 }
@@ -1297,7 +1297,7 @@ mod pallet {
             Some(best_score.0.clone())
         }
 
-        fn get_latest_resolved_outcome(
+        pub(crate) fn get_latest_resolved_outcome(
             market_id: &MarketIdOf<T>,
         ) -> Result<OutcomeReport, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
