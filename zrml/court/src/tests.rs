@@ -23,16 +23,15 @@ use crate::{
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
         POOR_PAUL,
     },
-    types::{Draw, Vote},
-    AccountIdLookupOf, Draws, Error, Event, ExitRequests, JurorInfo, JurorInfoOf, JurorPool,
-    JurorPoolItem, JurorPoolOf, Jurors, MarketOf,
+    AccountIdLookupOf, Error, Event, JurorInfo, JurorInfoOf, JurorPool, JurorPoolItem, JurorPoolOf,
+    Jurors, MarketOf,
 };
 use frame_support::{assert_noop, assert_ok, traits::fungible::Balanced};
 use pallet_balances::BalanceLock;
 use rand::seq::SliceRandom;
 use zeitgeist_primitives::{
     constants::{
-        mock::{CourtLockId, IterationLimit, MinJurorStake},
+        mock::{CourtLockId, MinJurorStake},
         BASE,
     },
     traits::DisputeApi,
@@ -62,15 +61,15 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
 };
 
 const DEFAULT_SET_OF_JURORS: &[JurorPoolItem<AccountIdTest, u128>] = &[
-    JurorPoolItem { stake: 9, juror: HARRY, slashed: 0 },
-    JurorPoolItem { stake: 8, juror: IAN, slashed: 0 },
-    JurorPoolItem { stake: 7, juror: ALICE, slashed: 0 },
-    JurorPoolItem { stake: 6, juror: BOB, slashed: 0 },
-    JurorPoolItem { stake: 5, juror: CHARLIE, slashed: 0 },
-    JurorPoolItem { stake: 4, juror: DAVE, slashed: 0 },
-    JurorPoolItem { stake: 3, juror: EVE, slashed: 0 },
-    JurorPoolItem { stake: 2, juror: FERDIE, slashed: 0 },
-    JurorPoolItem { stake: 1, juror: GINA, slashed: 0 },
+    JurorPoolItem { stake: 9, juror: HARRY, total_slashable: 0 },
+    JurorPoolItem { stake: 8, juror: IAN, total_slashable: 0 },
+    JurorPoolItem { stake: 7, juror: ALICE, total_slashable: 0 },
+    JurorPoolItem { stake: 6, juror: BOB, total_slashable: 0 },
+    JurorPoolItem { stake: 5, juror: CHARLIE, total_slashable: 0 },
+    JurorPoolItem { stake: 4, juror: DAVE, total_slashable: 0 },
+    JurorPoolItem { stake: 3, juror: EVE, total_slashable: 0 },
+    JurorPoolItem { stake: 2, juror: FERDIE, total_slashable: 0 },
+    JurorPoolItem { stake: 1, juror: GINA, total_slashable: 0 },
 ];
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
@@ -110,12 +109,15 @@ fn join_court_successfully_stores_required_data() {
         let alice_free_balance_before = Balances::free_balance(ALICE);
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         System::assert_last_event(Event::JurorJoined { juror: ALICE }.into());
-        assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (ALICE, JurorInfo { stake: amount }));
+        assert_eq!(
+            Jurors::<Runtime>::iter().next().unwrap(),
+            (ALICE, JurorInfo { stake: amount, active_lock: 0u128 })
+        );
         assert_eq!(Balances::free_balance(ALICE), alice_free_balance_before);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
             JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+            vec![JurorPoolItem { stake: amount, juror: ALICE, total_slashable: 0 }]
         );
     });
 }
@@ -129,11 +131,11 @@ fn join_court_works_multiple_joins() {
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
             JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+            vec![JurorPoolItem { stake: amount, juror: ALICE, total_slashable: 0 }]
         );
         assert_eq!(
             Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
-            vec![(ALICE, JurorInfo { stake: amount })]
+            vec![(ALICE, JurorInfo { stake: amount, active_lock: 0u128 })]
         );
 
         assert_ok!(Court::join_court(Origin::signed(BOB), amount));
@@ -141,13 +143,16 @@ fn join_court_works_multiple_joins() {
         assert_eq!(
             JurorPool::<Runtime>::get().into_inner(),
             vec![
-                JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 },
-                JurorPoolItem { stake: amount, juror: BOB, slashed: 0 }
+                JurorPoolItem { stake: amount, juror: ALICE, total_slashable: 0 },
+                JurorPoolItem { stake: amount, juror: BOB, total_slashable: 0 }
             ]
         );
         assert_eq!(
             Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
-            vec![(BOB, JurorInfo { stake: amount }), (ALICE, JurorInfo { stake: amount })]
+            vec![
+                (BOB, JurorInfo { stake: amount, active_lock: 0u128 }),
+                (ALICE, JurorInfo { stake: amount, active_lock: 0u128 })
+            ]
         );
 
         let higher_amount = amount + 1;
@@ -157,31 +162,34 @@ fn join_court_works_multiple_joins() {
         assert_eq!(
             JurorPool::<Runtime>::get().into_inner(),
             vec![
-                JurorPoolItem { stake: amount, juror: BOB, slashed: 0 },
-                JurorPoolItem { stake: higher_amount, juror: ALICE, slashed: 0 },
+                JurorPoolItem { stake: amount, juror: BOB, total_slashable: 0 },
+                JurorPoolItem { stake: higher_amount, juror: ALICE, total_slashable: 0 },
             ]
         );
         assert_eq!(
             Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
-            vec![(BOB, JurorInfo { stake: amount }), (ALICE, JurorInfo { stake: higher_amount })]
+            vec![
+                (BOB, JurorInfo { stake: amount, active_lock: 0u128 }),
+                (ALICE, JurorInfo { stake: higher_amount, active_lock: 0u128 })
+            ]
         );
     });
 }
 
 #[test]
-fn join_court_saves_slashed_for_double_join() {
+fn join_court_saves_total_slashable_for_double_join() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let amount = 2 * min;
 
-        let slashed = min;
-        Jurors::<Runtime>::insert(ALICE, JurorInfo { stake: amount });
-        let juror_pool = vec![JurorPoolItem { stake: amount, juror: ALICE, slashed }];
+        let total_slashable = min;
+        Jurors::<Runtime>::insert(ALICE, JurorInfo { stake: amount, active_lock: 0u128 });
+        let juror_pool = vec![JurorPoolItem { stake: amount, juror: ALICE, total_slashable }];
         JurorPool::<Runtime>::put::<JurorPoolOf<Runtime>>(juror_pool.try_into().unwrap());
 
         let higher_amount = amount + 1;
         assert_ok!(Court::join_court(Origin::signed(ALICE), higher_amount));
-        assert_eq!(JurorPool::<Runtime>::get().into_inner()[0].slashed, slashed);
+        assert_eq!(JurorPool::<Runtime>::get().into_inner()[0].total_slashable, total_slashable);
     });
 }
 
@@ -269,7 +277,7 @@ fn prepare_exit_court_works() {
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(
             JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+            vec![JurorPoolItem { stake: amount, juror: ALICE, total_slashable: 0 }]
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
@@ -321,7 +329,7 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(
             JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, slashed: 0 }]
+            vec![JurorPoolItem { stake: amount, juror: ALICE, total_slashable: 0 }]
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
@@ -362,113 +370,15 @@ fn exit_court_works() {
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
         assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
-        System::assert_last_event(Event::JurorExited { juror: ALICE }.into());
+        System::assert_last_event(
+            Event::JurorExited { juror: ALICE, exit_amount: amount, active_lock: 0u128 }.into(),
+        );
         assert!(
             Jurors::<Runtime>::iter()
                 .collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>()
                 .is_empty()
         );
-        assert!(!ExitRequests::<Runtime>::contains_key(ALICE));
         assert!(Balances::locks(ALICE).is_empty());
-    });
-}
-
-#[test]
-fn exit_court_fails_juror_still_drawn() {
-    ExtBuilder::default().build().execute_with(|| {
-        let amount = 2 * BASE;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-
-        let mut draws = <Draws<Runtime>>::get(0);
-        draws
-            .try_push(Draw { juror: ALICE, weight: 0u32, vote: Vote::Drawn, slashable: 0u128 })
-            .unwrap();
-        <Draws<Runtime>>::insert(0, draws);
-        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
-        assert_noop!(
-            Court::exit_court(Origin::signed(ALICE), alice_lookup),
-            Error::<Runtime>::JurorStillDrawn
-        );
-    });
-}
-
-#[test]
-fn exit_court_works_over_iteration_limit() {
-    ExtBuilder::default().build().execute_with(|| {
-        let amount = 2 * BASE;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-
-        let limit = IterationLimit::get();
-        for i in 0..(2 * limit) {
-            let mut draws = <Draws<Runtime>>::get(i as u128);
-            draws
-                .try_push(Draw {
-                    juror: CHARLIE,
-                    weight: 0u32,
-                    vote: Vote::Drawn,
-                    slashable: 0u128,
-                })
-                .unwrap();
-            <Draws<Runtime>>::insert(i as u128, draws);
-        }
-        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE.into();
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
-        System::assert_last_event(Event::JurorMayStillBeDrawn { juror: ALICE }.into());
-        let exit_request = <ExitRequests<Runtime>>::get(ALICE);
-
-        let last_query = <Draws<Runtime>>::iter().skip(limit as usize).next().unwrap().0;
-        assert_eq!(exit_request.unwrap().last_market_id, Some(last_query));
-
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
-        System::assert_last_event(Event::JurorExited { juror: ALICE }.into());
-    });
-}
-
-#[test]
-fn check_draws_iter_new_inserts_only_after_previous() {
-    ExtBuilder::default().build().execute_with(|| {
-        let limit = IterationLimit::get();
-        let excess = 2 * limit;
-        for i in 0..excess {
-            let mut draws = <Draws<Runtime>>::get(i as u128);
-            draws
-                .try_push(Draw {
-                    juror: CHARLIE,
-                    weight: 0u32,
-                    vote: Vote::Drawn,
-                    slashable: 0u128,
-                })
-                .unwrap();
-            <Draws<Runtime>>::insert(i as u128, draws);
-        }
-
-        let draws = <Draws<Runtime>>::iter().map(|(key, _)| key).collect::<Vec<_>>();
-
-        let mut numbers: Vec<u32> = (excess..(excess + limit)).collect();
-        let mut rng = rand::thread_rng();
-        numbers.shuffle(&mut rng);
-        for i in numbers {
-            let mut draws = <Draws<Runtime>>::get(i as u128);
-            draws
-                .try_push(Draw {
-                    juror: CHARLIE,
-                    weight: 0u32,
-                    vote: Vote::Drawn,
-                    slashable: 0u128,
-                })
-                .unwrap();
-            <Draws<Runtime>>::insert(i as u128, draws);
-        }
-
-        let first_key = <Draws<Runtime>>::iter().next().unwrap().0;
-        let hashed_key = <Draws<Runtime>>::hashed_key_for(first_key);
-        let new_draws = <Draws<Runtime>>::iter_from(hashed_key)
-            .map(|(key, _)| key)
-            .take(excess as usize)
-            .collect::<Vec<_>>();
-        assert_eq!(draws, new_draws);
     });
 }
 
@@ -562,16 +472,24 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
 
+        let mut jurors = <JurorPool<Runtime>>::get();
+        for pool_item in DEFAULT_SET_OF_JURORS.iter() {
+            <Jurors<Runtime>>::insert(
+                pool_item.juror,
+                JurorInfo { stake: pool_item.stake, active_lock: 0u128 },
+            );
+            jurors.try_push(pool_item.clone()).unwrap();
+        }
+
         let mut rng = Court::rng();
-        let random_jurors =
-            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             run_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
+                Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -596,9 +514,17 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
 fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
+        let mut jurors = <JurorPool<Runtime>>::get();
+        for pool_item in DEFAULT_SET_OF_JURORS.iter() {
+            <Jurors<Runtime>>::insert(
+                pool_item.juror,
+                JurorInfo { stake: pool_item.stake, active_lock: 0u128 },
+            );
+            jurors.try_push(pool_item.clone()).unwrap();
+        }
+
         let mut rng = Court::rng();
-        let random_jurors =
-            Court::choose_multiple_weighted(DEFAULT_SET_OF_JURORS, 2, &mut rng).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
         for draw in random_jurors {
             assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.juror == draw.juror));
         }

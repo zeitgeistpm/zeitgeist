@@ -32,9 +32,9 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, AppealBondFactor, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
-        CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, IterationLimit,
-        MaxAppeals, MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
-        RedistributionPercentage, RequestInterval, TardySlashPercentage, BASE,
+        CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDraws,
+        MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
+        RequestInterval, TardySlashPercentage, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -125,7 +125,6 @@ impl crate::Config for Runtime {
     type DenounceSlashPercentage = DenounceSlashPercentage;
     type DisputeResolution = NoopResolution;
     type Event = Event;
-    type IterationLimit = IterationLimit;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
     type MaxDraws = MaxDraws;

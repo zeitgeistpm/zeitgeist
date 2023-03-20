@@ -32,25 +32,8 @@ pub struct JurorInfo<Balance> {
     /// The juror's amount in the stake weighted pool.
     /// This amount is used to find a juror with a binary search on the pool.
     pub(crate) stake: Balance,
-}
-
-/// The information required to finish exiting the court as a juror.
-#[derive(
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
-    scale_info::TypeInfo,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-)]
-pub struct ExitRequest<MarketId> {
-    /// If the juror wants to exit the court
-    /// but there are too many elements inside the `Draws` storage item,
-    /// the last storage query (market id) is stored here
-    /// to continue the query in a second call to the `exit_court` extrinsic.
-    pub(crate) last_market_id: Option<MarketId>,
+    /// The current amount of funds which are locked in courts.
+    pub(crate) active_lock: Balance,
 }
 
 /// All possible states of a vote.
@@ -221,7 +204,7 @@ pub struct JurorPoolItem<AccountId, Balance> {
     pub(crate) stake: Balance,
     /// The account which is the juror.
     pub(crate) juror: AccountId,
-    /// The actual slashed amount. This is useful to reduce the probability
+    /// The slashable amount for all random draws. This is useful to reduce the probability
     /// of a juror to be selected again.
-    pub(crate) slashed: Balance,
+    pub(crate) total_slashable: Balance,
 }

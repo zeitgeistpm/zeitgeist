@@ -27,7 +27,6 @@ parameter_types! {
     pub const CourtAppealPeriod: BlockNumber = 34;
     pub const CourtLockId: LockIdentifier = *b"zge/cloc";
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
-    pub const IterationLimit: u32 = 100;
     pub const MaxAppeals: u32 = 6;
     pub const MaxDraws: u32 = 191;
     pub const MaxJurors: u32 = 1000;

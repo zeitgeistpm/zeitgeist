@@ -41,7 +41,7 @@ pub use types::*;
 mod pallet {
     use crate::{
         weights::WeightInfoZeitgeist, AppealInfo, CourtInfo, CourtPalletApi, CourtStatus, Draw,
-        ExitRequest, JurorInfo, JurorPoolItem, Periods, Vote,
+        JurorInfo, JurorPoolItem, Periods, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -123,9 +123,6 @@ mod pallet {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        #[pallet::constant]
-        type IterationLimit: Get<u32>;
-
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
@@ -204,7 +201,6 @@ mod pallet {
     pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
     pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
-    pub(crate) type ExitRequestOf<T> = ExitRequest<MarketIdOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -218,11 +214,6 @@ mod pallet {
     #[pallet::storage]
     pub type Jurors<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, JurorInfoOf<T>, OptionQuery>;
-
-    /// If a juror wants to exit the court, this information is required for a multiblock execution.
-    #[pallet::storage]
-    pub type ExitRequests<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, ExitRequestOf<T>, OptionQuery>;
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]
@@ -253,10 +244,8 @@ mod pallet {
         JurorJoined { juror: T::AccountId },
         /// A juror prepared to exit the court.
         JurorPreparedExit { juror: T::AccountId },
-        /// A juror could potentially still be bonded in an active court case.
-        JurorMayStillBeDrawn { juror: T::AccountId },
         /// A juror has been removed from the court.
-        JurorExited { juror: T::AccountId },
+        JurorExited { juror: T::AccountId, exit_amount: BalanceOf<T>, active_lock: BalanceOf<T> },
         /// A juror has voted in a court.
         JurorVoted { market_id: MarketIdOf<T>, juror: T::AccountId, secret: T::Hash },
         /// A juror has revealed their vote.
@@ -316,8 +305,6 @@ mod pallet {
         BelowMinJurorStake,
         /// The maximum number of possible jurors has been reached.
         MaxJurorsReached,
-        /// In order to exit the court the juror must not be randomly selected in an active appeal.
-        JurorStillDrawn,
         /// In order to exit the court the juror has to exit
         /// the pool first with `prepare_exit_court`.
         JurorNotPreparedToExit,
@@ -399,13 +386,15 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
-            let slashed = if let Some(prev_juror_info) = <Jurors<T>>::get(&who) {
+            let (active_lock, total_slashable) = if let Some(prev_juror_info) =
+                <Jurors<T>>::get(&who)
+            {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
                 let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake, &who)
                     .ok_or(Error::<T>::JurorNeedsToExit)?;
-                let slashed = pool_item.slashed;
+                let total_slashable = pool_item.total_slashable;
                 jurors.remove(index);
-                slashed
+                (prev_juror_info.active_lock, total_slashable)
             } else {
                 if jurors.is_full() {
                     let lowest_juror = jurors
@@ -425,7 +414,7 @@ mod pallet {
                     // remove the lowest staked juror
                     jurors.remove(0);
                 }
-                <BalanceOf<T>>::zero()
+                (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero())
             };
 
             match jurors.binary_search_by_key(&(amount, &who), |pool_item| {
@@ -439,7 +428,10 @@ mod pallet {
                     return Err(Error::<T>::JurorTwiceInPool.into());
                 }
                 Err(i) => jurors
-                    .try_insert(i, JurorPoolItem { stake: amount, juror: who.clone(), slashed })
+                    .try_insert(
+                        i,
+                        JurorPoolItem { stake: amount, juror: who.clone(), total_slashable },
+                    )
                     .map_err(|_| {
                         debug_assert!(
                             false,
@@ -454,7 +446,7 @@ mod pallet {
 
             JurorPool::<T>::put(jurors);
 
-            let juror_info = JurorInfoOf::<T> { stake: amount };
+            let juror_info = JurorInfoOf::<T> { stake: amount, active_lock };
             <Jurors<T>>::insert(&who, juror_info);
 
             Self::deposit_event(Event::JurorJoined { juror: who });
@@ -491,10 +483,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Remove a juror from all courts.
-        /// This is only possible if the juror is not part of the pool anymore
-        /// (with `prepare_exit_court` or was denounced, did not reveal, did not vote)
-        /// and the juror is not bonded in active courts anymore.
+        /// Remove the juror stake from resolved courts.
         ///
         /// # Arguments
         ///
@@ -502,9 +491,7 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n * m)`, where `n` is the number of markets
-        /// which have active random selections in place, and `m` is the number of jurors
-        /// randomly selected for each market.
+        /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
         #[pallet::weight(1_000_000_000_000)]
         #[transactional]
         pub fn exit_court(origin: OriginFor<T>, juror: AccountIdLookupOf<T>) -> DispatchResult {
@@ -512,44 +499,33 @@ mod pallet {
 
             let juror = T::Lookup::lookup(juror)?;
 
-            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
+            let mut prev_juror_info =
+                <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
             ensure!(
                 Self::get_pool_item(&JurorPool::<T>::get(), prev_juror_info.stake, &juror)
                     .is_none(),
                 Error::<T>::JurorNotPreparedToExit
             );
 
-            let mut exit_request =
-                <ExitRequests<T>>::get(&juror).unwrap_or(ExitRequest { last_market_id: None });
-
-            let mut draws = {
-                if let Some(last) = exit_request.last_market_id {
-                    let hashed_market_id = <Draws<T>>::hashed_key_for(last);
-                    <Draws<T>>::iter_from(hashed_market_id)
-                } else {
-                    <Draws<T>>::iter()
-                }
-            };
-
-            // ensure not drawn for any market
-            for _ in 0..T::IterationLimit::get() {
-                if let Some((_market_id, ds)) = draws.next() {
-                    ensure!(!ds.iter().any(|d| d.juror == juror), Error::<T>::JurorStillDrawn);
-                } else {
-                    break;
-                }
-            }
-
-            if let Some((market_id, _)) = draws.next() {
-                exit_request.last_market_id = Some(market_id);
-                <ExitRequests<T>>::insert(&juror, exit_request);
-                Self::deposit_event(Event::JurorMayStillBeDrawn { juror });
-            } else {
+            let (exit_amount, active_lock) = if prev_juror_info.active_lock.is_zero() {
                 T::Currency::remove_lock(T::CourtLockId::get(), &juror);
                 Jurors::<T>::remove(&juror);
-                <ExitRequests<T>>::remove(&juror);
-                Self::deposit_event(Event::JurorExited { juror });
-            }
+                (prev_juror_info.stake, <BalanceOf<T>>::zero())
+            } else {
+                T::Currency::set_lock(
+                    T::CourtLockId::get(),
+                    &juror,
+                    prev_juror_info.active_lock,
+                    WithdrawReasons::all(),
+                );
+                let active_lock = prev_juror_info.active_lock;
+                let exit_amount = prev_juror_info.stake.saturating_sub(active_lock);
+                prev_juror_info.stake = active_lock;
+                Jurors::<T>::insert(&juror, prev_juror_info);
+                (exit_amount, active_lock)
+            };
+
+            Self::deposit_event(Event::JurorExited { juror, exit_amount, active_lock });
 
             Ok(())
         }
@@ -794,8 +770,7 @@ mod pallet {
                 Error::<T>::MaxAppealsReached
             })?;
 
-            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
-            Self::select_jurors(&market_id, jurors.as_slice(), appeal_number)?;
+            Self::select_jurors(&market_id, appeal_number)?;
 
             let last_resolve_at = court.periods.appeal_end;
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
@@ -983,6 +958,18 @@ mod pallet {
             let mut valid_winners_and_losers = Vec::with_capacity(draws.len());
 
             for draw in draws {
+                if let Some(mut juror_info) = <Jurors<T>>::get(&draw.juror) {
+                    juror_info.active_lock = juror_info.active_lock.saturating_sub(draw.slashable);
+                    <Jurors<T>>::insert(&draw.juror, juror_info);
+                } else {
+                    log::warn!(
+                        "Juror {:?} not found in Jurors storage for vote aggregation. Market id \
+                         {:?}.",
+                        draw.juror,
+                        market_id
+                    );
+                    debug_assert!(false);
+                }
                 if let Vote::Revealed { secret: _, outcome, salt: _ } = draw.vote {
                     valid_winners_and_losers.push((draw.juror, outcome, draw.slashable));
                 }
@@ -1009,14 +996,17 @@ mod pallet {
         T: Config,
     {
         pub(crate) fn choose_multiple_weighted<R: RngCore>(
-            jurors: &[JurorPoolItemOf<T>],
+            jurors: &mut JurorPoolOf<T>,
             number: usize,
             rng: &mut R,
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let total_weight = jurors
                 .iter()
                 .map(|pool_item| {
-                    pool_item.stake.saturating_sub(pool_item.slashed).saturated_into::<u128>()
+                    pool_item
+                        .stake
+                        .saturating_sub(pool_item.total_slashable)
+                        .saturated_into::<u128>()
                 })
                 .sum::<u128>();
 
@@ -1041,9 +1031,9 @@ mod pallet {
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
 
             let mut current_weight = 0u128;
-            for JurorPoolItem { stake, juror, slashed } in jurors {
+            for JurorPoolItem { stake, juror, total_slashable } in jurors.iter_mut() {
                 let lower_bound = current_weight;
-                let mut remainder = stake.saturating_sub(*slashed);
+                let mut remainder = stake.saturating_sub(*total_slashable);
                 let upper_bound = current_weight.saturating_add(remainder.saturated_into::<u128>());
 
                 // this always gets the lowest random number first and maybe removes it
@@ -1060,6 +1050,17 @@ mod pallet {
                         random_set.remove(random_number);
                     } else {
                         break;
+                    }
+                }
+
+                if let Some((_, draw_slashable)) = selections.get_mut(juror) {
+                    *total_slashable = total_slashable.saturating_add(*draw_slashable);
+                    if let Some(mut juror_info) = <Jurors<T>>::get(&*juror) {
+                        juror_info.active_lock =
+                            juror_info.active_lock.saturating_add(*draw_slashable);
+                        <Jurors<T>>::insert(juror, juror_info);
+                    } else {
+                        debug_assert!(false, "Juror should exist in the Jurors map");
                     }
                 }
 
@@ -1083,16 +1084,16 @@ mod pallet {
 
         pub(crate) fn select_jurors(
             market_id: &MarketIdOf<T>,
-            jurors: &[JurorPoolItemOf<T>],
             appeal_number: usize,
         ) -> Result<(), DispatchError> {
+            let mut jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             let necessary_jurors_number = Self::necessary_jurors_num(appeal_number);
             ensure!(jurors.len() >= necessary_jurors_number, Error::<T>::NotEnoughJurors);
 
             let mut rng = Self::rng();
 
             let random_jurors =
-                Self::choose_multiple_weighted(jurors, necessary_jurors_number, &mut rng)?;
+                Self::choose_multiple_weighted(&mut jurors, necessary_jurors_number, &mut rng)?;
 
             // we allow at most MaxDraws jurors
             // look at `necessary_jurors_num`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
@@ -1116,6 +1117,8 @@ mod pallet {
             );
             // new appeal round should have a fresh set of draws
             <Draws<T>>::insert(market_id, draws);
+            // modified total_slashable for each selected juror
+            <JurorPool<T>>::put(jurors);
 
             Ok(())
         }
@@ -1208,8 +1211,6 @@ mod pallet {
         ) {
             let mut total_incentives = <NegativeImbalanceOf<T>>::zero();
 
-            let mut jurors = JurorPool::<T>::get();
-
             let mut winners = Vec::with_capacity(valid_winners_and_losers.len());
             for (juror, outcome, slashable) in valid_winners_and_losers {
                 if outcome == winner_outcome {
@@ -1223,17 +1224,6 @@ mod pallet {
                         "Could not slash all of the amount for juror {:?}.",
                         juror
                     );
-
-                    if let Some(juror_info) = <Jurors<T>>::get(juror) {
-                        if let Some((index, _)) =
-                            Self::get_pool_item(&jurors, juror_info.stake, juror)
-                        {
-                            jurors[index].slashed = jurors[index].slashed.saturating_add(slash);
-                        }
-                    } else {
-                        log::warn!("Juror {:?} not found in Jurors storage.", juror);
-                        debug_assert!(false);
-                    }
                 }
             }
 
@@ -1257,8 +1247,6 @@ mod pallet {
                 let treasury_acc = Self::treasury_account_id();
                 T::Currency::resolve_creating(&treasury_acc, total_incentives);
             }
-
-            <JurorPool<T>>::put(jurors);
         }
 
         // Returns the winner of the current court round.
@@ -1348,9 +1336,8 @@ mod pallet {
 
             ensure!(!<Courts<T>>::contains_key(market_id), Error::<T>::CourtAlreadyExists);
 
-            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             let appeal_number = 0usize;
-            Self::select_jurors(market_id, jurors.as_slice(), appeal_number)?;
+            Self::select_jurors(market_id, appeal_number)?;
 
             let now = <frame_system::Pallet<T>>::block_number();
             let request_block = <RequestBlock<T>>::get();
