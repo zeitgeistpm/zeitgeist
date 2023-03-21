@@ -81,24 +81,22 @@ parameter_types! {
     pub const AppealBond: Balance = 2000 * BASE;
     /// `OutcomeBond` is increased by this factor after every new appeal.
     pub const AppealBondFactor: Balance = 2 * BASE;
-    /// Duration of a single court case.
-    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
     /// The time in which the jurors can cast their secret vote.
-    pub const CourtVotePeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
+    pub const CourtVotePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
     /// The time in which the jurors should reveal their secret vote.
-    pub const CourtAggregationPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
+    pub const CourtAggregationPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
     /// The time in which a court case can get appealed.
-    pub const CourtAppealPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    pub const CourtAppealPeriod: BlockNumber = BLOCKS_PER_DAY;
     /// The lock identifier for the court votes.
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
     /// The slash percentage if a secret vote gets revealed during the voting period.
     pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
     /// The maximum number of appeals until the court fails.
-    pub const MaxAppeals: u32 = 6;
+    pub const MaxAppeals: u32 = 4;
     /// The maximum number of randomly selected jurors for a dispute.
-    pub const MaxDraws: u32 = 191;
+    pub const MaxDraws: u32 = 47;
     /// The maximum number of jurors that can be registered.
     pub const MaxJurors: u32 = 10_000;
     /// The minimum stake a user needs to reserve to become a juror.

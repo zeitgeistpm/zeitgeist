@@ -1095,9 +1095,6 @@ mod pallet {
             let random_jurors =
                 Self::choose_multiple_weighted(&mut jurors, necessary_jurors_weight, &mut rng)?;
 
-            // we allow at most MaxDraws jurors
-            // look at `necessary_jurors_weight`: MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
-            // MaxDraws should be 191 in this case
             debug_assert!(
                 random_jurors.len() <= T::MaxDraws::get() as usize,
                 "The number of randomly selected jurors should be less than or equal to \
