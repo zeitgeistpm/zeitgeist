@@ -1,3 +1,21 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(feature = "mock")]
 
 pub use super::*;
@@ -59,6 +77,7 @@ parameter_types! {
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
     pub const MinSubsidyPeriod: Moment = 60_000;
     pub const OracleBond: Balance = 50 * CENT;
+    pub const OutsiderBond: Balance = 2 * OracleBond::get();
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
 }

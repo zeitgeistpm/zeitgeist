@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -42,46 +43,53 @@ use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals,
     types::{AccountId, Balance},
 };
-#[cfg(feature = "parachain")]
-use {
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
-    zeitgeist_runtime::DefaultBlocksPerRound,
-};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         // Common
-        pub(crate) const DEFAULT_COLLATOR_INFLATION_INFO: pallet_parachain_staking::InflationInfo<Balance> = {
-            let hours_per_year = 8766;
-            let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
-            let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
-            let rounds_per_year = millisecs_per_year / round_millisecs;
+        macro_rules! generate_inflation_config_function {
+            ($runtime:ident) => {
+                use sp_runtime::Perbill;
 
-            let annual_inflation = ztg::STAKING_PTD;
-            let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
-            let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
-            let round_inflation = Perbill::from_parts(round_inflation_parts as _);
+                pub(super) fn inflation_config(
+                    annual_inflation_min: Perbill,
+                    annual_inflation_ideal: Perbill,
+                    annual_inflation_max: Perbill,
+                    total_supply: zeitgeist_primitives::types::Balance
+                ) -> pallet_parachain_staking::inflation::InflationInfo<zeitgeist_primitives::types::Balance> {
+                    fn to_round_inflation(annual: pallet_parachain_staking::inflation::Range<Perbill>) -> pallet_parachain_staking::inflation::Range<Perbill> {
+                        use pallet_parachain_staking::inflation::{
+                            perbill_annual_to_perbill_round,
+                        };
+                        use $runtime::parachain_params::DefaultBlocksPerRound;
 
-            pallet_parachain_staking::InflationInfo {
-                annual: pallet_parachain_staking::Range {
-                    ideal: annual_inflation,
-                    max: annual_inflation,
-                    min: annual_inflation,
-                },
-                expect: pallet_parachain_staking::Range {
-                    ideal: expected_annual_amount,
-                    max: expected_annual_amount,
-                    min: expected_annual_amount,
-                },
-                round: pallet_parachain_staking::Range {
-                    ideal: round_inflation,
-                    min: round_inflation,
-                    max: round_inflation,
-                },
+                        perbill_annual_to_perbill_round(
+                            annual,
+                            // rounds per year
+                            u32::try_from(zeitgeist_primitives::constants::BLOCKS_PER_YEAR).unwrap() / DefaultBlocksPerRound::get()
+                        )
+                    }
+                    let annual = pallet_parachain_staking::inflation::Range {
+                        min: annual_inflation_min,
+                        ideal: annual_inflation_ideal,
+                        max: annual_inflation_max,
+                    };
+                    pallet_parachain_staking::inflation::InflationInfo {
+                        // staking expectations
+                        expect: pallet_parachain_staking::inflation::Range {
+                            min: Perbill::from_percent(5).mul_floor(total_supply),
+                            ideal: Perbill::from_percent(10).mul_floor(total_supply),
+                            max: Perbill::from_percent(15).mul_floor(total_supply),
+                        },
+                        // annual inflation
+                        annual,
+                        round: to_round_inflation(annual),
+                    }
+                }
             }
-        };
+        }
 
+        pub(crate) use generate_inflation_config_function;
         pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
     } else {
         pub type DummyChainSpec = sc_service::GenericChainSpec<()>;
@@ -116,7 +124,7 @@ macro_rules! generate_generic_genesis_function {
                 },
                 #[cfg(feature = "parachain")]
                 author_filter: $runtime::AuthorFilterConfig {
-                    eligible_count: EligibilityValue::new_unchecked(50),
+                    eligible_count: EligibilityValue::new_unchecked(1),
                 },
                 #[cfg(feature = "parachain")]
                 author_mapping: $runtime::AuthorMappingConfig {
@@ -135,8 +143,6 @@ macro_rules! generate_generic_genesis_function {
                     members: vec![].try_into().unwrap(),
                     phantom: Default::default(),
                 },
-                #[cfg(feature = "parachain")]
-                crowdloan: $runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
                 democracy: Default::default(),
                 #[cfg(not(feature = "parachain"))]
                 grandpa: $runtime::GrandpaConfig {

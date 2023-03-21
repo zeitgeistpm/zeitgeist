@@ -1,5 +1,6 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Centrifuge GmbH (centrifuge.io).
-// Copyright 2022 Forecasting Technologies LTD.
+//
 // This file is part of Zeitgeist.
 //
 // Zeitgeist is free software: you can redistribute it and/or modify it

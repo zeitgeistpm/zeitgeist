@@ -52,7 +52,7 @@ jobs:
         run: rustup show
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Checks
         run: ./scripts/tests/${{ matrix.scripts }}.sh
@@ -99,6 +99,7 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ runner.temp }}/zeitgeist-test-coverage.lcov
           fail_ci_if_error: true
           flags: tests

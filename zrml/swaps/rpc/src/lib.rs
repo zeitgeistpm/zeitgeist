@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -61,8 +62,8 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
-        at: Option<BlockHash>,
         with_fees: bool,
+        at: Option<BlockHash>,
     ) -> RpcResult<SerdeWrapper<Balance>>;
 
     #[method(name = "swaps_getSpotPrices")]
@@ -71,8 +72,8 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
-        blocks: Vec<BlockNumber>,
         with_fees: bool,
+        blocks: Vec<BlockNumber>,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
 }
 
@@ -162,8 +163,8 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
-        at: Option<<Block as BlockT>::Hash>,
         with_fees: bool,
+        at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<SerdeWrapper<Balance>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
@@ -183,8 +184,8 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
-        blocks: Vec<NumberFor<Block>>,
         with_fees: bool,
+        blocks: Vec<NumberFor<Block>>,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>> {
         let api = self.client.runtime_api();
         blocks

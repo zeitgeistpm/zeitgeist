@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -34,6 +35,7 @@ pub use frame_system::{
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
 pub use pallet_balances::Call as BalancesCall;
+use pallet_collective::EnsureProportionMoreThan;
 
 #[cfg(feature = "parachain")]
 pub use crate::parachain_params::*;
@@ -55,7 +57,6 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
-    frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -78,7 +79,6 @@ use sp_runtime::{
 use nimbus_primitives::CanAuthor;
 use sp_version::RuntimeVersion;
 
-#[cfg(feature = "parachain")]
 #[cfg(test)]
 pub mod integration_tests;
 #[cfg(feature = "parachain")]

@@ -68,7 +68,6 @@ nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.29", default-features = f
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/nimbus", optional = true }
 pallet-author-mapping = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/nimbus", optional = true }
-pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/crowdloan-rewards", optional = true }
 pallet-parachain-staking = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 session-keys-primitives = { tag = "v0.27.2-a", default-features = false, git = "https://github.com/zeitgeistpm/moonbeam", optional = true }
 
@@ -143,7 +142,6 @@ parachain = [
     "pallet-author-inherent",
     "pallet-author-mapping",
     "pallet-author-slot-filter",
-    "pallet-crowdloan-rewards",
     "pallet-parachain-staking",
     "polkadot-parachain",
     "session-keys-primitives",
@@ -186,7 +184,6 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-bounties/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
-    "pallet-crowdloan-rewards?/runtime-benchmarks",
     "pallet-democracy/runtime-benchmarks",
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
@@ -281,7 +278,6 @@ std = [
     "pallet-author-inherent?/std",
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",
-    "pallet-crowdloan-rewards?/std",
     "pallet-parachain-staking?/std",
     "session-keys-primitives?/std",
 
@@ -388,7 +384,6 @@ try-runtime = [
     "pallet-aura/try-runtime",
     "pallet-sudo/try-runtime",
     "pallet-xcm?/try-runtime",
-    "pallet-crowdloan-rewards?/try-runtime",
 
     # Cumulus
     "cumulus-pallet-parachain-system?/try-runtime",

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -36,14 +37,6 @@ parameter_types! {
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId.
     pub const CollatorDeposit: Balance = 2 * BASE;
-
-    // Crowdloan
-    pub const InitializationPayment: Perbill = Perbill::from_percent(30);
-    pub const Initialized: bool = false;
-    pub const MaxInitContributorsBatchSizes: u32 = 500;
-    pub const MinimumReward: Balance = 0;
-    pub const RelaySignaturesThreshold: Perbill = Perbill::from_percent(100);
-    pub const SignatureNetworkIdentifier:  &'static [u8] = b"zeitgeist-";
 
     // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();

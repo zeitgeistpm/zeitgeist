@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -29,7 +30,6 @@ pub struct AdditionalChainSpec {
     pub blocks_per_round: u32,
     pub candidates: Vec<(AccountId, NimbusId, Balance)>,
     pub collator_commission: Perbill,
-    pub crowdloan_fund_pot: Balance,
     pub inflation_info: InflationInfo<Balance>,
     pub nominations: Vec<(AccountId, AccountId, Balance, Percent)>,
     pub parachain_bond_reserve_percent: Percent,
