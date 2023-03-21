@@ -23,7 +23,7 @@ use crate::{
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
         POOR_PAUL,
     },
-    types::{Draw, Vote},
+    types::{CourtStatus, Draw, Vote},
     AccountIdLookupOf, AppealInfo, Courts, Draws, Error, Event, JurorInfo, JurorInfoOf, JurorPool,
     JurorPoolItem, JurorPoolOf, Jurors, MarketOf, RequestBlock,
 };
@@ -33,7 +33,10 @@ use rand::seq::SliceRandom;
 use sp_runtime::traits::{BlakeTwo256, Hash};
 use zeitgeist_primitives::{
     constants::{
-        mock::{CourtLockId, MinJurorStake},
+        mock::{
+            CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod, MaxAppeals,
+            MaxJurors, MinJurorStake, RequestInterval,
+        },
         BASE,
     },
     traits::DisputeApi,
@@ -67,7 +70,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
 
 fn initialize_court() -> crate::MarketIdOf<Runtime> {
     let now = <frame_system::Pallet<Runtime>>::block_number();
-    <RequestBlock<Runtime>>::put(now + 1);
+    <RequestBlock<Runtime>>::put(now + RequestInterval::get());
     let amount_alice = 2 * BASE;
     let amount_bob = 3 * BASE;
     let amount_charlie = 4 * BASE;
@@ -526,6 +529,121 @@ fn choose_multiple_weighted_works() {
             random_jurors.iter().map(|draw| draw.weight).sum::<u32>() as usize,
             necessary_jurors_weight
         );
+    });
+}
+
+#[test]
+fn select_jurors_updates_juror_total_slashable() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        for i in 0..MaxJurors::get() {
+            let amount = MinJurorStake::get() + i as u128;
+            let juror = (i + 1000) as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        }
+        // the last appeal is reserved for global dispute backing
+        let appeal_number = (MaxAppeals::get() - 1) as usize;
+        let mut court = Courts::<Runtime>::get(market_id).unwrap();
+        let mut number = 0u128;
+        while (number as usize) < appeal_number {
+            let appealed_outcome = OutcomeReport::Scalar(number);
+            court
+                .appeals
+                .try_push(AppealInfo {
+                    backer: number,
+                    bond: crate::default_appeal_bond::<Runtime>(court.appeals.len()),
+                    appealed_outcome,
+                })
+                .unwrap();
+            number += 1;
+        }
+        Courts::<Runtime>::insert(market_id, court);
+
+        let jurors = JurorPool::<Runtime>::get();
+        let total_slashable_before = jurors.iter().map(|juror| juror.total_slashable).sum::<u128>();
+
+        Court::select_jurors(&market_id, appeal_number).unwrap();
+
+        let draws = <Draws<Runtime>>::get(market_id);
+        let total_draw_slashable = draws.iter().map(|draw| draw.slashable).sum::<u128>();
+        let jurors = JurorPool::<Runtime>::get();
+        let total_slashable_after = jurors.iter().map(|juror| juror.total_slashable).sum::<u128>();
+        assert_ne!(total_slashable_before, total_slashable_after);
+        assert_eq!(total_slashable_before + total_draw_slashable, total_slashable_after);
+    });
+}
+
+#[test]
+fn on_dispute_creates_correct_court_info() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        let periods = court.periods;
+        let request_block = <RequestBlock<Runtime>>::get();
+        assert_eq!(periods.pre_vote_end, request_block);
+        assert_eq!(periods.vote_end, periods.pre_vote_end + CourtVotePeriod::get());
+        assert_eq!(periods.aggregation_end, periods.vote_end + CourtAggregationPeriod::get());
+        assert_eq!(periods.appeal_end, periods.aggregation_end + CourtAppealPeriod::get());
+        assert_eq!(court.status, CourtStatus::Open);
+        assert!(court.appeals.is_empty());
+    });
+}
+
+#[test]
+fn has_failed_returns_true_for_appealable_court_too_few_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        // force empty jurors pool
+        <JurorPool<Runtime>>::kill();
+        let market = MarketCommons::market(&market_id).unwrap();
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        let aggregation_end = court.periods.aggregation_end;
+        run_to_block(aggregation_end + 1);
+        assert!(Court::has_failed(&market_id, &market).unwrap());
+    });
+}
+
+#[test]
+fn has_failed_returns_true_for_appealable_court_appeals_full() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        let mut court = <Courts<Runtime>>::get(market_id).unwrap();
+        let mut number = 0u128;
+        while !court.appeals.is_full() {
+            let appealed_outcome = OutcomeReport::Scalar(number);
+            court
+                .appeals
+                .try_push(AppealInfo {
+                    backer: number,
+                    bond: crate::default_appeal_bond::<Runtime>(court.appeals.len()),
+                    appealed_outcome,
+                })
+                .unwrap();
+            number += 1;
+        }
+        <Courts<Runtime>>::insert(market_id, court);
+        assert!(Court::has_failed(&market_id, &market).unwrap());
+    });
+}
+
+#[test]
+fn has_failed_returns_true_for_uninitialized_court() {
+    ExtBuilder::default().build().execute_with(|| {
+        // force empty jurors pool
+        <JurorPool<Runtime>>::kill();
+        let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
+        let report_block = 42;
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.report = Some(Report { at: report_block, by: BOB, outcome: ORACLE_REPORT });
+            Ok(())
+        })
+        .unwrap();
+        let market = MarketCommons::market(&market_id).unwrap();
+        let block_after_dispute_duration = report_block + market.deadlines.dispute_duration;
+        run_to_block(block_after_dispute_duration - 1);
+        assert!(Court::has_failed(&market_id, &market).unwrap());
     });
 }
 

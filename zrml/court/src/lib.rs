@@ -1103,7 +1103,23 @@ mod pallet {
                 "The number of randomly selected jurors should be less than or equal to \
                  `MaxDraws`."
             );
-            let draws = <DrawsOf<T>>::truncate_from(random_jurors);
+            // keep in mind that the old draw likely contains different jurors
+            for old_draw in <Draws<T>>::get(market_id) {
+                if let Some(mut juror_info) = <Jurors<T>>::get(&old_draw.juror) {
+                    juror_info.active_lock =
+                        juror_info.active_lock.saturating_sub(old_draw.slashable);
+                    <Jurors<T>>::insert(&old_draw.juror, juror_info);
+                } else {
+                    log::warn!(
+                        "Juror {:?} not found in Jurors storage for vote aggregation. Market id \
+                         {:?}.",
+                        old_draw.juror,
+                        market_id
+                    );
+                    debug_assert!(false);
+                }
+            }
+            let new_draws = <DrawsOf<T>>::truncate_from(random_jurors);
             debug_assert!(
                 if appeal_number > 0 {
                     appeal_number == <Courts<T>>::get(market_id).unwrap().appeals.len()
@@ -1116,7 +1132,7 @@ mod pallet {
                  last Draws)."
             );
             // new appeal round should have a fresh set of draws
-            <Draws<T>>::insert(market_id, draws);
+            <Draws<T>>::insert(market_id, new_draws);
             // modified total_slashable for each selected juror
             <JurorPool<T>>::put(jurors);
 
@@ -1195,7 +1211,7 @@ mod pallet {
         // Calculates the necessary number of jurors depending on the number of market appeals.
         pub(crate) fn necessary_jurors_weight(appeals_len: usize) -> usize {
             // 2^(appeals_len) * 5 + 2^(appeals_len) - 1
-            // MaxAppeals (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
+            // MaxAppeals - 1 (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
             SUBSEQUENT_JURORS_FACTOR
                 .saturating_pow(appeals_len as u32)
                 .saturating_mul(INITIAL_JURORS_NUM)
