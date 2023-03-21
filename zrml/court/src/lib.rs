@@ -386,15 +386,15 @@ mod pallet {
 
             let mut jurors = JurorPool::<T>::get();
 
-            let (active_lock, total_slashable) = if let Some(prev_juror_info) =
+            let (active_lock, consumed_stake) = if let Some(prev_juror_info) =
                 <Jurors<T>>::get(&who)
             {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
                 let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake, &who)
                     .ok_or(Error::<T>::JurorNeedsToExit)?;
-                let total_slashable = pool_item.total_slashable;
+                let consumed_stake = pool_item.consumed_stake;
                 jurors.remove(index);
-                (prev_juror_info.active_lock, total_slashable)
+                (prev_juror_info.active_lock, consumed_stake)
             } else {
                 if jurors.is_full() {
                     let lowest_juror = jurors
@@ -430,7 +430,7 @@ mod pallet {
                 Err(i) => jurors
                     .try_insert(
                         i,
-                        JurorPoolItem { stake: amount, juror: who.clone(), total_slashable },
+                        JurorPoolItem { stake: amount, juror: who.clone(), consumed_stake },
                     )
                     .map_err(|_| {
                         debug_assert!(
@@ -1005,7 +1005,7 @@ mod pallet {
                 .map(|pool_item| {
                     pool_item
                         .stake
-                        .saturating_sub(pool_item.total_slashable)
+                        .saturating_sub(pool_item.consumed_stake)
                         .saturated_into::<u128>()
                 })
                 .sum::<u128>();
@@ -1031,9 +1031,9 @@ mod pallet {
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
 
             let mut current_weight = 0u128;
-            for JurorPoolItem { stake, juror, total_slashable } in jurors.iter_mut() {
+            for JurorPoolItem { stake, juror, consumed_stake } in jurors.iter_mut() {
                 let lower_bound = current_weight;
-                let mut remainder = stake.saturating_sub(*total_slashable);
+                let mut remainder = stake.saturating_sub(*consumed_stake);
                 let upper_bound = current_weight.saturating_add(remainder.saturated_into::<u128>());
 
                 // this always gets the lowest random number first and maybe removes it
@@ -1054,7 +1054,7 @@ mod pallet {
                 }
 
                 if let Some((_, draw_slashable)) = selections.get_mut(juror) {
-                    *total_slashable = total_slashable.saturating_add(*draw_slashable);
+                    *consumed_stake = consumed_stake.saturating_add(*draw_slashable);
                     if let Some(mut juror_info) = <Jurors<T>>::get(&*juror) {
                         juror_info.active_lock =
                             juror_info.active_lock.saturating_add(*draw_slashable);
@@ -1133,7 +1133,7 @@ mod pallet {
             );
             // new appeal round should have a fresh set of draws
             <Draws<T>>::insert(market_id, new_draws);
-            // modified total_slashable for each selected juror
+            // modified consumed_stake for each selected juror
             <JurorPool<T>>::put(jurors);
 
             Ok(())

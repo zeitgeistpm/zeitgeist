@@ -206,5 +206,5 @@ pub struct JurorPoolItem<AccountId, Balance> {
     pub(crate) juror: AccountId,
     /// The slashable amount for all random draws. This is useful to reduce the probability
     /// of a juror to be selected again.
-    pub(crate) total_slashable: Balance,
+    pub(crate) consumed_stake: Balance,
 }
