@@ -35,6 +35,7 @@ pub use frame_system::{
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
 pub use pallet_balances::Call as BalancesCall;
+use pallet_collective::EnsureProportionMoreThan;
 
 #[cfg(feature = "parachain")]
 pub use crate::parachain_params::*;
