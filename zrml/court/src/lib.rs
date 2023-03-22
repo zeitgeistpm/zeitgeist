@@ -299,8 +299,8 @@ mod pallet {
         NotInAppealPeriod,
         /// The court is already present for this market.
         CourtAlreadyExists,
-        /// The caller of this extrinsic must be a randomly selected juror.
-        OnlyDrawnJurorsCanVote,
+        /// The caller of this extrinsic needs to be drawn or in the secret vote state.
+        InvalidVoteState,
         /// The amount is below the minimum required stake.
         BelowMinJurorStake,
         /// The maximum number of possible jurors has been reached.
@@ -346,6 +346,8 @@ mod pallet {
         AmountBelowLowestJuror,
         /// This should not happen, because the juror account should only be once in a pool.
         JurorTwiceInPool,
+        /// The caller of this function is not part of the juror draws.
+        CallerNotInDraws,
     }
 
     #[pallet::hooks]
@@ -563,11 +565,11 @@ mod pallet {
                     // allow to override last vote
                     ensure!(
                         matches!(draws[index].vote, Vote::Drawn | Vote::Secret { secret: _ }),
-                        Error::<T>::OnlyDrawnJurorsCanVote
+                        Error::<T>::InvalidVoteState
                     );
                     (index, draws[index].clone())
                 }
-                None => return Err(Error::<T>::OnlyDrawnJurorsCanVote.into()),
+                None => return Err(Error::<T>::CallerNotInDraws.into()),
             };
 
             let vote = Vote::Secret { secret: secret_vote };

@@ -79,7 +79,7 @@ parameter_types! {
     /// Slashed in case the final outcome does match the appealed outcome for which the `AppealBond`
     /// was deposited.
     pub const AppealBond: Balance = 5 * BASE;
-    /// `OutcomeBond` is increased by this factor after every new appeal.
+    /// `AppealBond` is increased by this factor after every new appeal.
     pub const AppealBondFactor: Balance = 2 * BASE;
     /// Pallet identifier, mainly used for named balance reserves.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
