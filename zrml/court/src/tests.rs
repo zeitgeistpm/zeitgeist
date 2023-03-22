@@ -123,7 +123,7 @@ fn put_alice_in_draw(market_id: crate::MarketIdOf<Runtime>) {
     // trick a little bit to let alice be part of the ("random") selection
     let mut draws = <Draws<Runtime>>::get(market_id);
     assert!(!draws.is_empty());
-    draws[0] = Draw { juror: ALICE, weight: 101, vote: Vote::Drawn, slashable: 42u128 };
+    draws[0] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: 42u128 };
     <Draws<Runtime>>::insert(market_id, draws);
 }
 
@@ -988,7 +988,7 @@ fn denounce_vote_fails_if_juror_not_drawn() {
 fn denounce_vote_fails_if_invalid_reveal() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
-        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+        let (market_id, _, salt) = set_alice_after_vote(outcome);
 
         let invalid_outcome = OutcomeReport::Scalar(69u128);
         assert_noop!(
@@ -1058,6 +1058,68 @@ fn denounce_vote_fails_if_vote_already_denounced() {
 }
 
 #[test]
+fn appeal_overrides_last_draws() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let neccessary_juror_weight = Court::necessary_jurors_weight(1usize) as u32;
+        let draws = <Draws<Runtime>>::get(market_id);
+        let draws_total_weight = draws.iter().map(|draw| draw.weight).sum::<u32>();
+        assert_eq!(draws_total_weight, neccessary_juror_weight);
+    });
+}
+
+#[test]
+fn appeal_selects_jurors_after_appealed_outcome_fetch() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let last_appealed_outcome = <Courts<Runtime>>::get(market_id)
+            .unwrap()
+            .appeals
+            .last()
+            .unwrap()
+            .appealed_outcome
+            .clone();
+
+        let request_block = <RequestBlock<Runtime>>::get();
+        run_to_block(request_block + 1);
+        let outcome = OutcomeReport::Scalar(69u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, secret));
+
+        run_blocks(CourtVotePeriod::get() + 1);
+
+        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), market_id, outcome, salt));
+
+        run_blocks(CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let new_appealed_outcome = <Courts<Runtime>>::get(market_id)
+            .unwrap()
+            .appeals
+            .last()
+            .unwrap()
+            .appealed_outcome
+            .clone();
+
+        assert_ne!(last_appealed_outcome, new_appealed_outcome);
+    });
+}
+
+#[test]
 fn on_dispute_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
@@ -1115,10 +1177,10 @@ fn select_jurors_updates_juror_consumed_stake() {
         let jurors = JurorPool::<Runtime>::get();
         let consumed_stake_before = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
 
-        Court::select_jurors(&market_id, appeal_number).unwrap();
+        let old_draws = <Draws<Runtime>>::get(market_id);
+        let new_draws = Court::select_jurors(&market_id, old_draws, appeal_number).unwrap();
 
-        let draws = <Draws<Runtime>>::get(market_id);
-        let total_draw_slashable = draws.iter().map(|draw| draw.slashable).sum::<u128>();
+        let total_draw_slashable = new_draws.iter().map(|draw| draw.slashable).sum::<u128>();
         let jurors = JurorPool::<Runtime>::get();
         let consumed_stake_after = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
         assert_ne!(consumed_stake_before, consumed_stake_after);
@@ -1143,7 +1205,7 @@ fn select_jurors_reduces_active_lock_for_old_draw() {
             assert_eq!(juror_info.active_lock, draw.slashable);
         });
 
-        Court::select_jurors(&market_id, appeal_number).unwrap();
+        Court::select_jurors(&market_id, old_draws.clone(), appeal_number).unwrap();
 
         old_draws.iter().for_each(|draw| {
             let juror = draw.juror;
@@ -1308,7 +1370,8 @@ fn get_latest_resolved_outcome_selects_last_appealed_outcome_for_tie() {
             .unwrap();
         <Courts<Runtime>>::insert(market_id, court);
 
-        let latest = Court::get_latest_resolved_outcome(&market_id).unwrap();
+        let draws = <Draws<Runtime>>::get(market_id);
+        let latest = Court::get_latest_resolved_outcome(&market_id, draws.as_slice()).unwrap();
         assert_eq!(latest, appealed_outcome);
         assert!(latest != ORACLE_REPORT);
     });
@@ -1320,7 +1383,11 @@ fn get_latest_resolved_outcome_selects_oracle_report() {
         let market_id = initialize_court();
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.report.unwrap().outcome, ORACLE_REPORT);
-        assert_eq!(Court::get_latest_resolved_outcome(&market_id).unwrap(), ORACLE_REPORT);
+        let draws = <Draws<Runtime>>::get(market_id);
+        assert_eq!(
+            Court::get_latest_resolved_outcome(&market_id, draws.as_slice()).unwrap(),
+            ORACLE_REPORT
+        );
     });
 }
 

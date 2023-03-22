@@ -514,16 +514,18 @@ mod pallet {
                 Jurors::<T>::remove(&juror);
                 (prev_juror_info.stake, <BalanceOf<T>>::zero())
             } else {
+                let active_lock = prev_juror_info.active_lock;
+                let exit_amount = prev_juror_info.stake.saturating_sub(active_lock);
                 T::Currency::set_lock(
                     T::CourtLockId::get(),
                     &juror,
-                    prev_juror_info.active_lock,
+                    active_lock,
                     WithdrawReasons::all(),
                 );
-                let active_lock = prev_juror_info.active_lock;
-                let exit_amount = prev_juror_info.stake.saturating_sub(active_lock);
+
                 prev_juror_info.stake = active_lock;
                 Jurors::<T>::insert(&juror, prev_juror_info);
+
                 (exit_amount, active_lock)
             };
 
@@ -764,15 +766,18 @@ mod pallet {
             );
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
+
             // the outcome which would be resolved on is appealed (including oracle report)
-            let appealed_outcome = Self::get_latest_resolved_outcome(&market_id)?;
+            let old_draws = Draws::<T>::get(market_id);
+            let appealed_outcome =
+                Self::get_latest_resolved_outcome(&market_id, old_draws.as_slice())?;
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
             court.appeals.try_push(appeal_info).map_err(|_| {
                 debug_assert!(false, "Appeal bound is checked above.");
                 Error::<T>::MaxAppealsReached
             })?;
 
-            Self::select_jurors(&market_id, appeal_number)?;
+            let new_draws = Self::select_jurors(&market_id, old_draws, appeal_number)?;
 
             let last_resolve_at = court.periods.appeal_end;
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
@@ -796,6 +801,7 @@ mod pallet {
             T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
 
             <Courts<T>>::insert(market_id, court);
+            <Draws<T>>::insert(market_id, new_draws);
 
             let appeal_number = appeal_number as u32;
             Self::deposit_event(Event::MarketAppealed { market_id, appeal_number });
@@ -829,7 +835,9 @@ mod pallet {
             Self::check_appealable_market(&market_id, &court, now)?;
 
             // the outcome which would be resolved on is appealed (including oracle report)
-            let appealed_outcome = Self::get_latest_resolved_outcome(&market_id)?;
+            let old_draws = Draws::<T>::get(market_id);
+            let appealed_outcome =
+                Self::get_latest_resolved_outcome(&market_id, old_draws.as_slice())?;
 
             let bond = default_appeal_bond::<T>(appeal_number);
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
@@ -1086,8 +1094,9 @@ mod pallet {
 
         pub(crate) fn select_jurors(
             market_id: &MarketIdOf<T>,
+            last_draws: DrawsOf<T>,
             appeal_number: usize,
-        ) -> Result<(), DispatchError> {
+        ) -> Result<DrawsOf<T>, DispatchError> {
             let mut jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
             ensure!(jurors.len() >= necessary_jurors_weight, Error::<T>::NotEnoughJurors);
@@ -1103,7 +1112,7 @@ mod pallet {
                  `MaxDraws`."
             );
             // keep in mind that the old draw likely contains different jurors
-            for old_draw in <Draws<T>>::get(market_id) {
+            for old_draw in &last_draws {
                 if let Some(mut juror_info) = <Jurors<T>>::get(&old_draw.juror) {
                     juror_info.active_lock =
                         juror_info.active_lock.saturating_sub(old_draw.slashable);
@@ -1119,23 +1128,11 @@ mod pallet {
                 }
             }
             let new_draws = <DrawsOf<T>>::truncate_from(random_jurors);
-            debug_assert!(
-                if appeal_number > 0 {
-                    appeal_number == <Courts<T>>::get(market_id).unwrap().appeals.len()
-                } else {
-                    // for the first court round, we have no previous winner
-                    true
-                },
-                "Before the draws are overwritten, we need to ensure that the winner of the last \
-                 appeal round was determined with 'get_latest_resolved_outcome' (the data of the \
-                 last Draws)."
-            );
             // new appeal round should have a fresh set of draws
-            <Draws<T>>::insert(market_id, new_draws);
             // modified consumed_stake for each selected juror
             <JurorPool<T>>::put(jurors);
 
-            Ok(())
+            Ok(new_draws)
         }
 
         // Returns (index, pool_item) if the stake associated with the juror was found.
@@ -1315,6 +1312,7 @@ mod pallet {
 
         pub(crate) fn get_latest_resolved_outcome(
             market_id: &MarketIdOf<T>,
+            last_draws: &[DrawOf<T>],
         ) -> Result<OutcomeReport, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
@@ -1325,9 +1323,8 @@ mod pallet {
                 .unwrap_or(None);
             let report = market.report.as_ref().ok_or(Error::<T>::MarketReportNotFound)?;
             let oracle_outcome = report.outcome.clone();
-            let draws = Draws::<T>::get(market_id);
             let resolved_outcome =
-                Self::get_winner(draws.as_slice(), last_winner).unwrap_or(oracle_outcome);
+                Self::get_winner(last_draws, last_winner).unwrap_or(oracle_outcome);
             Ok(resolved_outcome)
         }
     }
@@ -1353,7 +1350,11 @@ mod pallet {
             ensure!(!<Courts<T>>::contains_key(market_id), Error::<T>::CourtAlreadyExists);
 
             let appeal_number = 0usize;
-            Self::select_jurors(market_id, appeal_number)?;
+            let new_draws = Self::select_jurors(
+                market_id,
+                <DrawsOf<T>>::truncate_from(Vec::new()),
+                appeal_number,
+            )?;
 
             let now = <frame_system::Pallet<T>>::block_number();
             let request_block = <RequestBlock<T>>::get();
@@ -1373,6 +1374,7 @@ mod pallet {
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(market_id, court.periods.appeal_end)?;
 
+            <Draws<T>>::insert(market_id, new_draws);
             <Courts<T>>::insert(market_id, court);
 
             Ok(())
@@ -1388,7 +1390,8 @@ mod pallet {
             );
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let resolved_outcome = Self::get_latest_resolved_outcome(market_id)?;
+            let draws = Draws::<T>::get(market_id);
+            let resolved_outcome = Self::get_latest_resolved_outcome(market_id, draws.as_slice())?;
             court.status = CourtStatus::Closed {
                 winner: resolved_outcome.clone(),
                 punished: false,
