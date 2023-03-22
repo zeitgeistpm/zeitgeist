@@ -910,6 +910,154 @@ fn denounce_vote_works() {
 }
 
 #[test]
+fn denounce_vote_fails_if_self_denounce() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(ALICE), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::SelfDenounceDisallowed
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_juror_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        <Jurors<Runtime>>::remove(ALICE);
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(BOB), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::JurorDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        <Courts<Runtime>>::remove(market_id);
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(BOB), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::CourtNotFound
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_not_in_voting_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        run_blocks(CourtVotePeriod::get() + 1);
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(BOB), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::NotInVotingPeriod
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_juror_not_drawn() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        <Draws<Runtime>>::mutate(market_id, |draws| {
+            draws.retain(|draw| draw.juror != ALICE);
+        });
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(BOB), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::JurorNotDrawn
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_invalid_reveal() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        let invalid_outcome = OutcomeReport::Scalar(69u128);
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(BOB), market_id, ALICE, invalid_outcome, salt),
+            Error::<Runtime>::InvalidReveal
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_juror_not_voted() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        <Draws<Runtime>>::mutate(market_id, |draws| {
+            draws.iter_mut().for_each(|draw| {
+                if draw.juror == ALICE {
+                    draw.vote = Vote::Drawn;
+                }
+            });
+        });
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(BOB), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::JurorNotVoted
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_vote_already_revealed() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        run_blocks(CourtVotePeriod::get() + 1);
+
+        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), market_id, outcome.clone(), salt));
+
+        assert_noop!(
+            Court::reveal_vote(Origin::signed(ALICE), market_id, outcome, salt),
+            Error::<Runtime>::VoteAlreadyRevealed
+        );
+    });
+}
+
+#[test]
+fn denounce_vote_fails_if_vote_already_denounced() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, salt) = set_alice_after_vote(outcome.clone());
+
+        assert_ok!(Court::denounce_vote(
+            Origin::signed(BOB),
+            market_id,
+            ALICE,
+            outcome.clone(),
+            salt
+        ));
+
+        assert_noop!(
+            Court::denounce_vote(Origin::signed(CHARLIE), market_id, ALICE, outcome, salt),
+            Error::<Runtime>::VoteAlreadyDenounced
+        );
+    });
+}
+
+#[test]
 fn on_dispute_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
@@ -930,28 +1078,6 @@ fn get_resolution_outcome_denies_non_court_markets() {
             Court::get_resolution_outcome(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
         );
-    });
-}
-
-#[test]
-fn appeal_stores_jurors_that_should_vote() {
-    ExtBuilder::default().build().execute_with(|| {
-        run_to_block(123);
-    });
-}
-
-// Alice is the winner, Bob is tardy and Charlie is the loser
-#[test]
-fn get_resolution_outcome_awards_winners_and_slashes_losers() {
-    ExtBuilder::default().build().execute_with(|| {
-        run_to_block(2);
-        let amount_alice = 2 * BASE;
-        let amount_bob = 3 * BASE;
-        let amount_charlie = 4 * BASE;
-        Court::join_court(Origin::signed(ALICE), amount_alice).unwrap();
-        Court::join_court(Origin::signed(BOB), amount_bob).unwrap();
-        Court::join_court(Origin::signed(CHARLIE), amount_charlie).unwrap();
-        MarketCommons::push_market(DEFAULT_MARKET).unwrap();
     });
 }
 
