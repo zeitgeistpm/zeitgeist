@@ -416,7 +416,6 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
-                .into_iter()
                 .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
                 .collect(),
         }

@@ -224,28 +224,30 @@ where
         blocks: Vec<NumberFor<Block>>,
     ) -> RpcResult<BTreeMap<NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>>> {
         let api = self.client.runtime_api();
-        let mut res = BTreeMap::new();
-        blocks.into_iter().try_for_each(|block| -> Result<(), CallError> {
-            let hash = BlockId::number(block);
-            let prices: Vec<(Asset<MarketId>, Balance)> = api
-                .get_all_spot_prices(&hash, &pool_id, with_fees)
-                .map_err(|e| {
-                    CallError::Custom(ErrorObject::owned(
-                        Error::RuntimeError.into(),
-                        "Unable to get_all_spot_prices.",
-                        Some(format!("{:?}", e)),
-                    ))
-                })?
-                .map_err(|e| {
-                    CallError::Custom(ErrorObject::owned(
-                        Error::RuntimeError.into(),
-                        "Unable to get_all_spot_prices. DispatchError",
-                        Some(format!("{:?}", e)),
-                    ))
-                })?;
-            res.insert(block, prices);
-            Ok(())
-        })?;
-        Ok(res)
+        Ok(blocks
+            .into_iter()
+            .map(
+                |block| -> Result<(NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>), CallError> {
+                    let hash = BlockId::number(block);
+                    let prices: Vec<(Asset<MarketId>, Balance)> = api
+                        .get_all_spot_prices(&hash, &pool_id, with_fees)
+                        .map_err(|e| {
+                            CallError::Custom(ErrorObject::owned(
+                                Error::RuntimeError.into(),
+                                "Unable to get_all_spot_prices: ApiError.",
+                                Some(format!("{:?}", e)),
+                            ))
+                        })?
+                        .map_err(|e| {
+                            CallError::Custom(ErrorObject::owned(
+                                Error::RuntimeError.into(),
+                                "Unable to get_all_spot_prices: DispatchError.",
+                                Some(format!("{:?}", e)),
+                            ))
+                        })?;
+                    Ok((block, prices))
+                },
+            )
+            .collect::<Result<BTreeMap<_, _>, _>>()?)
     }
 }

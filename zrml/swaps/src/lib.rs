@@ -1470,8 +1470,9 @@ mod pallet {
             }
         }
 
-        // Retunrs vector of pair of asset and units of base_asset
-        // required to buy one unit of given asset.
+        // Returns vector of pairs `(a, p)` where `a` ranges over all assets in the pool and `p` is
+        // the spot price of swapping the base asset for `a` (including swap fees if `with_fees` is
+        // `true`).
         pub fn get_all_spot_prices(
             pool_id: &PoolId,
             with_fees: bool,
