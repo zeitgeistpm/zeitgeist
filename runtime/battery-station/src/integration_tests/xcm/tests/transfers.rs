@@ -19,7 +19,7 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            roc, register_foreign_parent, register_foreign_ztg, sibling_parachain_account,
+            register_foreign_parent, register_foreign_ztg, roc, sibling_parachain_account,
             zeitgeist_parachain_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID,
             PARA_ID_SIBLING,
         },
