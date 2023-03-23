@@ -88,7 +88,6 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.17", default-features = false, optional = true }
 
 # XCM
-rococo-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 orml-asset-registry = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-unknown-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-xcm-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
@@ -96,6 +95,7 @@ orml-xtokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false,
 pallet-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 polkadot-runtime-parachains = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+rococo-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 xcm-builder = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 xcm-executor = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
