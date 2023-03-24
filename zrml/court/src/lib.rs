@@ -29,6 +29,7 @@ mod benchmarks;
 mod court_pallet_api;
 pub mod migrations;
 mod mock;
+mod mock_storage;
 mod tests;
 mod types;
 pub mod weights;
@@ -851,6 +852,8 @@ mod pallet {
 
             let last_resolve_at = court.periods.appeal_end;
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
+
+            <Courts<T>>::insert(market_id, court);
 
             Self::deposit_event(Event::GlobalDisputeBacked { market_id });
 

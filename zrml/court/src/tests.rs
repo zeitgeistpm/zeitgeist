@@ -23,6 +23,7 @@ use crate::{
         System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
         POOR_PAUL,
     },
+    mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote},
     AccountIdLookupOf, AppealInfo, Courts, Draws, Error, Event, JurorInfo, JurorInfoOf, JurorPool,
     JurorPoolItem, JurorPoolOf, Jurors, MarketOf, RequestBlock,
@@ -47,7 +48,7 @@ use zeitgeist_primitives::{
         ScoringRule,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_market_commons::{Error as MError, MarketCommonsPalletApi};
 
 const ORACLE_REPORT: OutcomeReport = OutcomeReport::Scalar(u128::MAX);
 
@@ -101,7 +102,7 @@ fn fill_juror_pool() {
     }
 }
 
-fn prepare_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
+fn fill_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
     let mut court = Courts::<Runtime>::get(market_id).unwrap();
     let mut number = 0u128;
     while (number as usize) < appeal_number {
@@ -1058,10 +1059,123 @@ fn denounce_vote_fails_if_vote_already_denounced() {
 }
 
 #[test]
+fn appeal_updates_periods() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        let old_request_block = <RequestBlock<Runtime>>::get();
+        let last_court = <Courts<Runtime>>::get(market_id).unwrap();
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+
+        let new_request_block = <RequestBlock<Runtime>>::get();
+        assert_eq!(old_request_block + RequestInterval::get(), new_request_block);
+
+        let pre_vote_end = new_request_block - now;
+        assert_eq!(court.periods.pre_vote_end, now + pre_vote_end);
+        assert_eq!(court.periods.vote_end, court.periods.pre_vote_end + CourtVotePeriod::get());
+        assert_eq!(
+            court.periods.aggregation_end,
+            court.periods.vote_end + CourtAggregationPeriod::get()
+        );
+        assert_eq!(
+            court.periods.appeal_end,
+            court.periods.aggregation_end + CourtAppealPeriod::get()
+        );
+
+        assert!(last_court.periods.pre_vote_end < court.periods.pre_vote_end);
+        assert!(last_court.periods.vote_end < court.periods.vote_end);
+        assert!(last_court.periods.aggregation_end < court.periods.aggregation_end);
+        assert!(last_court.periods.appeal_end < court.periods.appeal_end);
+    });
+}
+
+#[test]
+fn appeal_reserves_default_appeal_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        let bond = crate::default_appeal_bond::<Runtime>(1usize);
+        assert!(!bond.is_zero());
+        assert_eq!(free_charlie_after, free_charlie_before - bond);
+        assert_eq!(Balances::reserved_balance(CHARLIE), bond);
+    });
+}
+
+#[test]
+fn appeal_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        System::assert_last_event(Event::MarketAppealed { market_id, appeal_number: 1u32 }.into());
+    });
+}
+
+#[test]
+fn appeal_shifts_auto_resolve() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        let resolve_at_0 = <Courts<Runtime>>::get(market_id).unwrap().periods.appeal_end;
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let resolve_at_1 = <Courts<Runtime>>::get(market_id).unwrap().periods.appeal_end;
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
+        assert_ne!(resolve_at_0, resolve_at_1);
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![]);
+    });
+}
+
+#[test]
 fn appeal_overrides_last_draws() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        let last_draws = <Draws<Runtime>>::get(market_id);
+        assert!(!last_draws.len().is_zero());
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let draws = <Draws<Runtime>>::get(market_id);
+        assert_ne!(draws, last_draws);
+    });
+}
+
+#[test]
+fn appeal_draws_total_weight_is_correct() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        let last_draws = <Draws<Runtime>>::get(market_id);
+        let last_draws_total_weight = last_draws.iter().map(|draw| draw.weight).sum::<u32>();
+        assert_eq!(last_draws_total_weight, Court::necessary_jurors_weight(0usize) as u32);
 
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
@@ -1075,7 +1189,7 @@ fn appeal_overrides_last_draws() {
 }
 
 #[test]
-fn appeal_selects_jurors_after_appealed_outcome_fetch() {
+fn appeal_get_latest_resolved_outcome_changes() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
@@ -1101,7 +1215,7 @@ fn appeal_selects_jurors_after_appealed_outcome_fetch() {
 
         run_blocks(CourtVotePeriod::get() + 1);
 
-        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), market_id, outcome, salt));
+        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), market_id, outcome.clone(), salt));
 
         run_blocks(CourtAggregationPeriod::get() + 1);
 
@@ -1115,7 +1229,211 @@ fn appeal_selects_jurors_after_appealed_outcome_fetch() {
             .appealed_outcome
             .clone();
 
+        // if the new appealed outcome were the last appealed outcome,
+        // then the wrong appealed outcome was added in `appeal`
+        assert_eq!(new_appealed_outcome, outcome);
         assert_ne!(last_appealed_outcome, new_appealed_outcome);
+    });
+}
+
+#[test]
+fn appeal_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(Court::appeal(Origin::signed(CHARLIE), 0), Error::<Runtime>::CourtNotFound);
+    });
+}
+
+#[test]
+fn appeal_fails_if_insufficient_amount() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_noop!(
+            Court::appeal(Origin::signed(POOR_PAUL), market_id),
+            Error::<Runtime>::InsufficientAmount
+        );
+    });
+}
+
+#[test]
+fn appeal_fails_if_only_global_dispute_appeal_allowed() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_noop!(
+            Court::appeal(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::OnlyGlobalDisputeAppealAllowed
+        );
+    });
+}
+
+#[test]
+fn check_appealable_market_fails_if_market_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        MarketCommons::remove_market(&market_id).unwrap();
+
+        assert_noop!(
+            Court::check_appealable_market(&0, &court, now),
+            MError::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn check_appealable_market_fails_if_dispute_mechanism_wrong() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+            Ok(())
+        })
+        .unwrap();
+
+        assert_noop!(
+            Court::check_appealable_market(&0, &court, now),
+            Error::<Runtime>::MarketDoesNotHaveCourtMechanism
+        );
+    });
+}
+
+#[test]
+fn check_appealable_market_fails_if_not_in_appeal_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get());
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+
+        assert_noop!(
+            Court::check_appealable_market(&0, &court, now),
+            Error::<Runtime>::NotInAppealPeriod
+        );
+    });
+}
+
+#[test]
+fn back_global_dispute_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Court::back_global_dispute(Origin::signed(CHARLIE), 0),
+            Error::<Runtime>::CourtNotFound
+        );
+    });
+}
+
+#[test]
+fn back_global_dispute_fails_if_needs_to_be_last_appeal() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_noop!(
+            Court::back_global_dispute(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::NeedsToBeLastAppeal
+        );
+    });
+}
+
+#[test]
+fn back_global_dispute_reserves_default_appeal_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
+
+        let default_appeal_bond = crate::default_appeal_bond::<Runtime>(MaxAppeals::get() as usize);
+        assert_ok!(Court::back_global_dispute(Origin::signed(CHARLIE), market_id));
+        assert_eq!(Balances::reserved_balance(&CHARLIE), default_appeal_bond);
+    });
+}
+
+#[test]
+fn back_global_dispute_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
+
+        assert_ok!(Court::back_global_dispute(Origin::signed(CHARLIE), market_id));
+
+        System::assert_last_event(Event::GlobalDisputeBacked { market_id }.into());
+    });
+}
+
+#[test]
+fn back_global_dispute_removes_auto_resolve() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        let resolve_at = court.periods.appeal_end;
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), vec![market_id]);
+
+        assert_ok!(Court::back_global_dispute(Origin::signed(CHARLIE), market_id));
+
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), vec![]);
+    });
+}
+
+#[test]
+fn back_global_dispute_adds_last_appeal() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
+
+        let last_draws = <Draws<Runtime>>::get(market_id);
+        let appealed_outcome =
+            Court::get_latest_resolved_outcome(&market_id, last_draws.as_slice()).unwrap();
+
+        assert_ok!(Court::back_global_dispute(Origin::signed(CHARLIE), market_id));
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert!(court.appeals.is_full());
+
+        let last_appeal = court.appeals.last().unwrap();
+        assert_eq!(last_appeal.appealed_outcome, appealed_outcome);
     });
 }
 
@@ -1172,7 +1490,7 @@ fn select_jurors_updates_juror_consumed_stake() {
         fill_juror_pool();
         // the last appeal is reserved for global dispute backing
         let appeal_number = (MaxAppeals::get() - 1) as usize;
-        prepare_appeals(&market_id, appeal_number);
+        fill_appeals(&market_id, appeal_number);
 
         let jurors = JurorPool::<Runtime>::get();
         let consumed_stake_before = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
@@ -1194,7 +1512,7 @@ fn select_jurors_reduces_active_lock_for_old_draw() {
         let market_id = initialize_court();
         fill_juror_pool();
         let appeal_number = 1usize;
-        prepare_appeals(&market_id, appeal_number);
+        fill_appeals(&market_id, appeal_number);
 
         let old_draws = <Draws<Runtime>>::get(market_id);
         assert!(!old_draws.is_empty());
@@ -1251,21 +1569,9 @@ fn has_failed_returns_true_for_appealable_court_appeals_full() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = initialize_court();
         let market = MarketCommons::market(&market_id).unwrap();
-        let mut court = <Courts<Runtime>>::get(market_id).unwrap();
-        let mut number = 0u128;
-        while !court.appeals.is_full() {
-            let appealed_outcome = OutcomeReport::Scalar(number);
-            court
-                .appeals
-                .try_push(AppealInfo {
-                    backer: number,
-                    bond: crate::default_appeal_bond::<Runtime>(court.appeals.len()),
-                    appealed_outcome,
-                })
-                .unwrap();
-            number += 1;
-        }
-        <Courts<Runtime>>::insert(market_id, court);
+
+        fill_appeals(&market_id, MaxAppeals::get() as usize);
+
         assert!(Court::has_failed(&market_id, &market).unwrap());
     });
 }

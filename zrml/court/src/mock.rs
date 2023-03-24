@@ -17,7 +17,7 @@
 
 #![cfg(test)]
 
-use crate::{self as zrml_court};
+use crate::{self as zrml_court, mock_storage::pallet as mock_storage};
 use frame_support::{
     construct_runtime,
     pallet_prelude::{DispatchError, Weight},
@@ -72,13 +72,19 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        // Just a mock storage for testing.
+        MockStorage: mock_storage::{Storage},
     }
 );
 
-// NoopResolution implements DisputeResolutionApi with no-ops.
-pub struct NoopResolution;
+// MockResolution implements DisputeResolutionApi with no-ops.
+pub struct MockResolution;
 
-impl DisputeResolutionApi for NoopResolution {
+impl mock_storage::Config for Runtime {
+    type MarketCommons = MarketCommons;
+}
+
+impl DisputeResolutionApi for MockResolution {
     type AccountId = AccountIdTest;
     type Balance = Balance;
     type BlockNumber = BlockNumber;
@@ -99,18 +105,28 @@ impl DisputeResolutionApi for NoopResolution {
     }
 
     fn add_auto_resolve(
-        _market_id: &Self::MarketId,
-        _resolve_at: Self::BlockNumber,
+        market_id: &Self::MarketId,
+        resolve_at: Self::BlockNumber,
     ) -> Result<u32, DispatchError> {
-        Ok(0u32)
+        let ids_len = <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::try_mutate(
+            resolve_at,
+            |ids| -> Result<u32, DispatchError> {
+                ids.try_push(*market_id).map_err(|_| DispatchError::Other("Storage Overflow"))?;
+                Ok(ids.len() as u32)
+            },
+        )?;
+        Ok(ids_len)
     }
 
-    fn auto_resolve_exists(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> bool {
-        false
+    fn auto_resolve_exists(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> bool {
+        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::get(resolve_at).contains(market_id)
     }
 
-    fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
-        0u32
+    fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
+        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
+            ids.retain(|id| id != market_id);
+            ids.len() as u32
+        })
     }
 }
 
@@ -123,7 +139,7 @@ impl crate::Config for Runtime {
     type CourtAggregationPeriod = CourtAggregationPeriod;
     type CourtAppealPeriod = CourtAppealPeriod;
     type DenounceSlashPercentage = DenounceSlashPercentage;
-    type DisputeResolution = NoopResolution;
+    type DisputeResolution = MockResolution;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
