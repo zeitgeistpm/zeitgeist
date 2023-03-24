@@ -37,7 +37,8 @@ use zeitgeist_primitives::{
     constants::{
         mock::{
             CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod,
-            DenounceSlashPercentage, MaxAppeals, MaxJurors, MinJurorStake, RequestInterval,
+            DenounceSlashPercentage, MaxAppeals, MaxJurors, MinJurorStake,
+            RedistributionPercentage, RequestInterval, TardySlashPercentage,
         },
         BASE,
     },
@@ -1434,6 +1435,652 @@ fn back_global_dispute_adds_last_appeal() {
 
         let last_appeal = court.appeals.last().unwrap();
         assert_eq!(last_appeal.appealed_outcome, appealed_outcome);
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Court::punish_tardy_jurors(Origin::signed(CHARLIE), 0),
+            Error::<Runtime>::CourtNotFound
+        );
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_fails_if_court_not_closed() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_noop!(
+            Court::punish_tardy_jurors(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::CourtNotClosed
+        );
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_fails_if_tardy_jurors_already_punished() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        assert_noop!(
+            Court::punish_tardy_jurors(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::TardyJurorsAlreadyPunished
+        );
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        System::assert_last_event(Event::TardyJurorsPunished { market_id }.into());
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_updates_court_status() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert_eq!(court.status, CourtStatus::Open);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let resolution_outcome =
+            Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert_eq!(
+            court.status,
+            CourtStatus::Closed {
+                winner: resolution_outcome.clone(),
+                reassigned: false,
+                punished: false
+            }
+        );
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert_eq!(
+            court.status,
+            CourtStatus::Closed { winner: resolution_outcome, reassigned: false, punished: true }
+        );
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_slashes_tardy_jurors_only() {
+    ExtBuilder::default().build().execute_with(|| {
+        fill_juror_pool();
+        let market_id = initialize_court();
+
+        let amount = MinJurorStake::get() * 100;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(Origin::signed(EVE), amount));
+
+        let outcome = OutcomeReport::Scalar(42u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        let draws: crate::DrawsOf<Runtime> = vec![
+            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() },
+            Draw {
+                juror: BOB,
+                weight: 1,
+                vote: Vote::Secret { secret },
+                slashable: 2 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: CHARLIE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                slashable: 3 * MinJurorStake::get(),
+            },
+            Draw { juror: DAVE, weight: 1, vote: Vote::Drawn, slashable: 4 * MinJurorStake::get() },
+            Draw {
+                juror: EVE,
+                weight: 1,
+                vote: Vote::Denounced { secret, outcome, salt },
+                slashable: 5 * MinJurorStake::get(),
+            },
+        ]
+        .try_into()
+        .unwrap();
+        let old_draws = draws.clone();
+        <Draws<Runtime>>::insert(market_id, draws);
+
+        run_to_block(<RequestBlock<Runtime>>::get() + 1);
+
+        run_blocks(
+            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
+        );
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+
+        let free_alice_before = Balances::free_balance(&ALICE);
+        let free_bob_before = Balances::free_balance(&BOB);
+        let free_charlie_before = Balances::free_balance(&CHARLIE);
+        let free_dave_before = Balances::free_balance(&DAVE);
+        let free_eve_before = Balances::free_balance(&EVE);
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let free_alice_after = Balances::free_balance(&ALICE);
+        assert_ne!(free_alice_after, free_alice_before);
+        assert_eq!(
+            free_alice_after,
+            free_alice_before - TardySlashPercentage::get() * old_draws[ALICE as usize].slashable
+        );
+
+        let free_bob_after = Balances::free_balance(&BOB);
+        assert_ne!(free_bob_after, free_bob_before);
+        assert_eq!(
+            free_bob_after,
+            free_bob_before - TardySlashPercentage::get() * old_draws[BOB as usize].slashable
+        );
+
+        let free_charlie_after = Balances::free_balance(&CHARLIE);
+        assert_eq!(free_charlie_after, free_charlie_before);
+
+        let free_dave_after = Balances::free_balance(&DAVE);
+        assert_ne!(free_dave_after, free_dave_before);
+        assert_eq!(
+            free_dave_after,
+            free_dave_before - TardySlashPercentage::get() * old_draws[DAVE as usize].slashable
+        );
+
+        let free_eve_after = Balances::free_balance(&EVE);
+        assert_eq!(free_eve_after, free_eve_before);
+    });
+}
+
+#[test]
+fn punish_tardy_jurors_removes_tardy_jurors_from_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        fill_juror_pool();
+        let market_id = initialize_court();
+
+        let amount = MinJurorStake::get() * 100;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+
+        let outcome = OutcomeReport::Scalar(42u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        let draws: crate::DrawsOf<Runtime> = vec![
+            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() },
+            Draw {
+                juror: BOB,
+                weight: 1,
+                vote: Vote::Secret { secret },
+                slashable: 2 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: CHARLIE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                slashable: 3 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: DAVE,
+                weight: 1,
+                vote: Vote::Denounced { secret, outcome, salt },
+                slashable: 4 * MinJurorStake::get(),
+            },
+        ]
+        .try_into()
+        .unwrap();
+        <Draws<Runtime>>::insert(market_id, draws);
+
+        run_to_block(<RequestBlock<Runtime>>::get() + 1);
+
+        run_blocks(
+            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
+        );
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let pool = <JurorPool<Runtime>>::get();
+        assert!(!pool.clone().into_inner().iter().any(|pool_item| pool_item.juror == ALICE));
+        assert!(!pool.clone().into_inner().iter().any(|pool_item| pool_item.juror == BOB));
+        assert!(pool.clone().into_inner().iter().any(|pool_item| pool_item.juror == CHARLIE));
+        assert!(pool.into_inner().iter().any(|pool_item| pool_item.juror == DAVE));
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Court::reassign_juror_stakes(Origin::signed(EVE), 0),
+            Error::<Runtime>::CourtNotFound
+        );
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_fails_if_tardy_jurors_not_punished() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        assert_noop!(
+            Court::reassign_juror_stakes(Origin::signed(EVE), market_id),
+            Error::<Runtime>::PunishTardyJurorsFirst
+        );
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+        System::assert_last_event(Event::JurorStakesReassigned { market_id }.into());
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_fails_if_juror_stakes_already_reassigned() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+        assert_noop!(
+            Court::reassign_juror_stakes(Origin::signed(EVE), market_id),
+            Error::<Runtime>::JurorStakesAlreadyReassigned
+        );
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_updates_court_status() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let resolution_outcome =
+            Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert_eq!(
+            court.status,
+            CourtStatus::Closed {
+                winner: resolution_outcome.clone(),
+                punished: true,
+                reassigned: false
+            }
+        );
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert_eq!(
+            court.status,
+            CourtStatus::Closed { winner: resolution_outcome, punished: true, reassigned: true }
+        );
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_removes_draws() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let draws = <Draws<Runtime>>::get(market_id);
+        assert!(!draws.is_empty());
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+
+        let draws = <Draws<Runtime>>::get(market_id);
+        assert!(draws.is_empty());
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_fails_if_court_not_closed() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        assert_noop!(
+            Court::reassign_juror_stakes(Origin::signed(EVE), market_id),
+            Error::<Runtime>::CourtNotClosed
+        );
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_decreases_active_lock() {
+    ExtBuilder::default().build().execute_with(|| {
+        fill_juror_pool();
+        let market_id = initialize_court();
+
+        let amount = MinJurorStake::get() * 100;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+
+        let outcome = OutcomeReport::Scalar(42u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        let alice_slashable = MinJurorStake::get();
+        <Jurors<Runtime>>::mutate(ALICE, |juror_info| {
+            if let Some(ref mut info) = juror_info {
+                info.active_lock = alice_slashable;
+            }
+        });
+        let bob_slashable = 2 * MinJurorStake::get();
+        <Jurors<Runtime>>::mutate(BOB, |juror_info| {
+            if let Some(ref mut juror_info) = juror_info {
+                juror_info.active_lock = bob_slashable;
+            }
+        });
+        let charlie_slashable = 3 * MinJurorStake::get();
+        <Jurors<Runtime>>::mutate(CHARLIE, |juror_info| {
+            if let Some(ref mut juror_info) = juror_info {
+                juror_info.active_lock = charlie_slashable;
+            }
+        });
+        let dave_slashable = 4 * MinJurorStake::get();
+        <Jurors<Runtime>>::mutate(DAVE, |juror_info| {
+            if let Some(ref mut juror_info) = juror_info {
+                juror_info.active_lock = dave_slashable;
+            }
+        });
+
+        let draws: crate::DrawsOf<Runtime> = vec![
+            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: alice_slashable },
+            Draw { juror: BOB, weight: 1, vote: Vote::Secret { secret }, slashable: bob_slashable },
+            Draw {
+                juror: CHARLIE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                slashable: charlie_slashable,
+            },
+            Draw {
+                juror: DAVE,
+                weight: 1,
+                vote: Vote::Denounced { secret, outcome, salt },
+                slashable: dave_slashable,
+            },
+        ]
+        .try_into()
+        .unwrap();
+        <Draws<Runtime>>::insert(market_id, draws);
+
+        run_to_block(<RequestBlock<Runtime>>::get() + 1);
+
+        run_blocks(
+            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
+        );
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+        assert!(<Jurors<Runtime>>::get(ALICE).unwrap().active_lock.is_zero());
+        assert!(<Jurors<Runtime>>::get(BOB).unwrap().active_lock.is_zero());
+        assert!(<Jurors<Runtime>>::get(CHARLIE).unwrap().active_lock.is_zero());
+        assert!(<Jurors<Runtime>>::get(DAVE).unwrap().active_lock.is_zero());
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
+    ExtBuilder::default().build().execute_with(|| {
+        fill_juror_pool();
+        let market_id = initialize_court();
+
+        let amount = MinJurorStake::get() * 100;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+
+        let outcome = OutcomeReport::Scalar(42u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        let wrong_outcome_0 = OutcomeReport::Scalar(69u128);
+        let wrong_outcome_1 = OutcomeReport::Scalar(56u128);
+
+        let draws: crate::DrawsOf<Runtime> = vec![
+            Draw {
+                juror: ALICE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                slashable: MinJurorStake::get(),
+            },
+            Draw {
+                juror: BOB,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: wrong_outcome_0, salt },
+                slashable: 2 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: CHARLIE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                slashable: 3 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: DAVE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: wrong_outcome_1, salt },
+                slashable: 4 * MinJurorStake::get(),
+            },
+        ]
+        .try_into()
+        .unwrap();
+        let last_draws = draws.clone();
+        <Draws<Runtime>>::insert(market_id, draws);
+
+        run_to_block(<RequestBlock<Runtime>>::get() + 1);
+
+        run_blocks(
+            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
+        );
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let resolution_outcome =
+            Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        assert_eq!(resolution_outcome, outcome);
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+        let free_dave_before = Balances::free_balance(DAVE);
+
+        let reward_pot = Court::reward_pot(&market_id);
+        let tardy_or_denounced_value = 5 * MinJurorStake::get();
+        let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+
+        let bob_slashed = RedistributionPercentage::get() * last_draws[BOB as usize].slashable;
+        let dave_slashed = RedistributionPercentage::get() * last_draws[DAVE as usize].slashable;
+        let slashed = bob_slashed + dave_slashed + tardy_or_denounced_value;
+        let free_alice_after = Balances::free_balance(ALICE);
+        assert_eq!(free_alice_after, free_alice_before + slashed / 2);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        assert_eq!(free_bob_after, free_bob_before - bob_slashed);
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        assert_eq!(free_charlie_after, free_charlie_before + slashed / 2);
+
+        let free_dave_after = Balances::free_balance(DAVE);
+        assert_eq!(free_dave_after, free_dave_before - dave_slashed);
+
+        assert!(Balances::free_balance(&reward_pot).is_zero());
+    });
+}
+
+#[test]
+fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
+    ExtBuilder::default().build().execute_with(|| {
+        fill_juror_pool();
+        let market_id = initialize_court();
+
+        let amount = MinJurorStake::get() * 100;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+
+        let outcome = OutcomeReport::Scalar(42u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        let wrong_outcome_0 = OutcomeReport::Scalar(69u128);
+        let wrong_outcome_1 = OutcomeReport::Scalar(56u128);
+
+        let draws: crate::DrawsOf<Runtime> = vec![
+            Draw {
+                juror: ALICE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: wrong_outcome_1.clone(), salt },
+                slashable: MinJurorStake::get(),
+            },
+            Draw {
+                juror: BOB,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: wrong_outcome_0.clone(), salt },
+                slashable: 2 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: CHARLIE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: wrong_outcome_0, salt },
+                slashable: 3 * MinJurorStake::get(),
+            },
+            Draw {
+                juror: DAVE,
+                weight: 1,
+                vote: Vote::Revealed { secret, outcome: wrong_outcome_1, salt },
+                slashable: 4 * MinJurorStake::get(),
+            },
+        ]
+        .try_into()
+        .unwrap();
+        let last_draws = draws.clone();
+        <Draws<Runtime>>::insert(market_id, draws);
+
+        run_to_block(<RequestBlock<Runtime>>::get() + 1);
+
+        run_blocks(
+            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
+        );
+
+        let mut court = <Courts<Runtime>>::get(market_id).unwrap();
+        court.status = CourtStatus::Closed { winner: outcome, punished: false, reassigned: false };
+        <Courts<Runtime>>::insert(market_id, court);
+
+        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+        let free_dave_before = Balances::free_balance(DAVE);
+
+        let treasury_account = Court::treasury_account_id();
+        let free_treasury_before = Balances::free_balance(&treasury_account);
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+
+        let alice_slashed = RedistributionPercentage::get() * last_draws[ALICE as usize].slashable;
+        let bob_slashed = RedistributionPercentage::get() * last_draws[BOB as usize].slashable;
+        let charlie_slashed =
+            RedistributionPercentage::get() * last_draws[CHARLIE as usize].slashable;
+        let dave_slashed = RedistributionPercentage::get() * last_draws[DAVE as usize].slashable;
+
+        let slashed = bob_slashed + dave_slashed + alice_slashed + charlie_slashed;
+
+        let free_alice_after = Balances::free_balance(ALICE);
+        assert_eq!(free_alice_after, free_alice_before - alice_slashed);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        assert_eq!(free_bob_after, free_bob_before - bob_slashed);
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        assert_eq!(free_charlie_after, free_charlie_before - charlie_slashed);
+
+        let free_dave_after = Balances::free_balance(DAVE);
+        assert_eq!(free_dave_after, free_dave_before - dave_slashed);
+
+        assert_eq!(Balances::free_balance(&treasury_account), free_treasury_before + slashed);
     });
 }
 

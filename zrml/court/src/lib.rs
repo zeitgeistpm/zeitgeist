@@ -323,8 +323,8 @@ mod pallet {
         SelfDenounceDisallowed,
         /// The court is not in the closed state.
         CourtNotClosed,
-        /// The jurors were already reassigned.
-        JurorsAlreadyReassigned,
+        /// The juror stakes were already reassigned.
+        JurorStakesAlreadyReassigned,
         /// The tardy jurors were already punished.
         TardyJurorsAlreadyPunished,
         /// Punish the tardy jurors first.
@@ -959,7 +959,7 @@ mod pallet {
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
                 CourtStatus::Closed { winner, punished, reassigned } => {
-                    ensure!(!reassigned, Error::<T>::JurorsAlreadyReassigned);
+                    ensure!(!reassigned, Error::<T>::JurorStakesAlreadyReassigned);
                     ensure!(punished, Error::<T>::PunishTardyJurorsFirst);
                     winner
                 }
