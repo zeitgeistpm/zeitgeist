@@ -1383,7 +1383,7 @@ mod pallet {
             Ok(())
         }
 
-        fn get_resolution_outcome(
+        fn on_resolution(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
@@ -1405,7 +1405,7 @@ mod pallet {
             Ok(Some(resolved_outcome))
         }
 
-        fn maybe_pay(
+        fn exchange(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
             resolved_outcome: &OutcomeReport,

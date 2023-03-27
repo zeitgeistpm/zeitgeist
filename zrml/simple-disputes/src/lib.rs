@@ -185,13 +185,13 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::reserve_outcome(
+        #[pallet::weight(T::WeightInfo::suggest_outcome(
             T::MaxDisputes::get(),
             CacheSize::get(),
             CacheSize::get(),
         ))]
         #[transactional]
-        pub fn reserve_outcome(
+        pub fn suggest_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
@@ -231,7 +231,7 @@ mod pallet {
 
             Self::deposit_event(Event::OutcomeReserved { market_id, dispute: market_dispute });
 
-            Ok((Some(T::WeightInfo::reserve_outcome(num_disputes, r, e))).into())
+            Ok((Some(T::WeightInfo::suggest_outcome(num_disputes, r, e))).into())
         }
     }
 
@@ -305,7 +305,7 @@ mod pallet {
             Ok(())
         }
 
-        fn get_resolution_outcome(
+        fn on_resolution(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
@@ -326,7 +326,7 @@ mod pallet {
             Ok(Some(last_dispute.outcome.clone()))
         }
 
-        fn maybe_pay(
+        fn exchange(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
             resolved_outcome: &OutcomeReport,

@@ -157,15 +157,15 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
 }
 
 #[test]
-fn get_resolution_outcome_fails_if_no_report_was_submitted() {
+fn on_resolution_fails_if_no_report_was_submitted() {
     ExtBuilder::default().build().execute_with(|| {
-        let report = Authorized::get_resolution_outcome(&0, &market_mock::<Runtime>()).unwrap();
+        let report = Authorized::on_resolution(&0, &market_mock::<Runtime>()).unwrap();
         assert!(report.is_none());
     });
 }
 
 #[test]
-fn get_resolution_outcome_removes_stored_outcomes() {
+fn on_resolution_removes_stored_outcomes() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
@@ -174,13 +174,13 @@ fn get_resolution_outcome_removes_stored_outcomes() {
             0,
             OutcomeReport::Scalar(2)
         ));
-        assert_ok!(Authorized::get_resolution_outcome(&0, &market));
+        assert_ok!(Authorized::on_resolution(&0, &market));
         assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0), None);
     });
 }
 
 #[test]
-fn get_resolution_outcome_returns_the_reported_outcome() {
+fn on_resolution_returns_the_reported_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
@@ -195,10 +195,7 @@ fn get_resolution_outcome_returns_the_reported_outcome() {
             0,
             OutcomeReport::Scalar(2)
         ));
-        assert_eq!(
-            Authorized::get_resolution_outcome(&0, &market).unwrap(),
-            Some(OutcomeReport::Scalar(2))
-        );
+        assert_eq!(Authorized::on_resolution(&0, &market).unwrap(), Some(OutcomeReport::Scalar(2)));
     });
 }
 

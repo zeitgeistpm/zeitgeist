@@ -45,7 +45,7 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_simple_disputes (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn reserve_outcome(d: u32, r: u32, e: u32) -> Weight;
+    fn suggest_outcome(d: u32, r: u32, e: u32) -> Weight;
 }
 
 /// Weight functions for zrml_simple_disputes (automatically generated)
@@ -55,7 +55,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: SimpleDisputes Disputes (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:2 w:2)
-    fn reserve_outcome(d: u32, r: u32, e: u32) -> Weight {
+    fn suggest_outcome(d: u32, r: u32, e: u32) -> Weight {
         Weight::from_ref_time(400_160_000)
             // Standard Error: 1_302_000
             .saturating_add(Weight::from_ref_time(3_511_000).saturating_mul(d.into()))

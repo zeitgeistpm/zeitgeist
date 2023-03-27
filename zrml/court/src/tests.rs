@@ -2097,12 +2097,12 @@ fn on_dispute_denies_non_court_markets() {
 }
 
 #[test]
-fn get_resolution_outcome_denies_non_court_markets() {
+fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         assert_noop!(
-            Court::get_resolution_outcome(&0, &market),
+            Court::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
         );
     });
