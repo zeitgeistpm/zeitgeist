@@ -401,18 +401,15 @@ mod pallet {
             ensure!(gd_info.status == GdStatus::Finished, Error::<T>::UnfinishedGlobalDispute);
 
             let winning_outcome: Option<OutcomeInfoOf<T>> =
-                <Outcomes<T>>::get(market_id, &gd_info.winner_outcome);
+                <Outcomes<T>>::take(market_id, &gd_info.winner_outcome);
             let mut owners_len = 0u32;
             // move the winning outcome info to GlobalDisputesInfo before it gets drained
             if let Some(outcome_info) = winning_outcome {
                 if let Possession::Shared { owners } = &outcome_info.possession {
                     owners_len = owners.len() as u32;
                 }
-                // storage write is needed here in case,
-                // that the first call to purge_outcomes
-                // doesn't save the owners of the winning outcome
-                // saving this information is required to reward the winners
-                // this can happen if there are more than RemoveKeysLimit keys to remove
+                // storage write is needed in case to save the owners
+                // of the winning outcome before they are drained
                 gd_info.outcome_info = outcome_info;
                 <GlobalDisputesInfo<T>>::insert(market_id, gd_info);
             }
