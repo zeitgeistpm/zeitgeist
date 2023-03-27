@@ -332,10 +332,6 @@ mod pallet {
             let market_status = market.status;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
-            if Self::is_dispute_bond_pending(&market_id, &market, false) {
-                Self::unreserve_dispute_bond(&market_id)?;
-            }
-
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
@@ -2058,6 +2054,9 @@ mod pallet {
             }
             if Self::is_outsider_bond_pending(market_id, market, false) {
                 Self::slash_outsider_bond(market_id, None)?;
+            }
+            if Self::is_dispute_bond_pending(market_id, market, false) {
+                Self::slash_dispute_bond(market_id, None)?;
             }
             Ok(())
         }
