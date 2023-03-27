@@ -303,7 +303,7 @@ mod pallet {
                 &owner,
                 &reward_account,
                 voting_outcome_fee,
-                ExistenceRequirement::AllowDeath,
+                ExistenceRequirement::KeepAlive,
             )?;
 
             let possession = Possession::Paid { owner: owner.clone(), fee: voting_outcome_fee };
@@ -350,12 +350,13 @@ mod pallet {
             {
                 match outcome_info.possession {
                     Possession::Paid { owner, fee } => {
-                        T::Currency::transfer(
+                        let res = T::Currency::transfer(
                             &Self::reward_account(&market_id),
                             &owner,
                             fee,
                             ExistenceRequirement::AllowDeath,
-                        )?;
+                        );
+                        debug_assert!(res.is_ok());
                     }
                     Possession::Shared { owners } => {
                         owners_len = owners_len.saturating_add(owners.len() as u32);
@@ -857,11 +858,15 @@ mod pallet {
         fn destroy_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| {
                 let mut raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
-                raw_gd_info.status = GdStatus::Destroyed;
+                
+                // in case the global dispute is already finished nothing needs to be done
                 if let GdStatus::Active { add_outcome_end: _, vote_end } = raw_gd_info.status {
                     T::DisputeResolution::remove_auto_resolve(market_id, vote_end);
+
+                    raw_gd_info.status = GdStatus::Destroyed;
+                    *gd_info = Some(raw_gd_info.clone());
                 }
-                *gd_info = Some(raw_gd_info.clone());
+                
                 Ok(())
             })
         }
