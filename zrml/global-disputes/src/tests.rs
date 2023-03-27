@@ -177,12 +177,7 @@ fn start_global_dispute_works() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        let initial_items = vec![
-            InitialItem { outcome: OutcomeReport::Scalar(0), owner: ALICE, amount: SETUP_AMOUNT },
-            InitialItem { outcome: OutcomeReport::Scalar(20), owner: ALICE, amount: SETUP_AMOUNT },
-            InitialItem { outcome: OutcomeReport::Scalar(40), owner: ALICE, amount: SETUP_AMOUNT },
-            InitialItem { outcome: OutcomeReport::Scalar(60), owner: ALICE, amount: SETUP_AMOUNT },
-        ];
+        let initial_items = get_initial_items();
         assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         let outcome_info = OutcomeInfo {
@@ -251,12 +246,7 @@ fn start_global_dispute_fails_if_already_exists() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, &market);
 
-        let initial_items = vec![
-            InitialItem { outcome: OutcomeReport::Scalar(0), owner: ALICE, amount: SETUP_AMOUNT },
-            InitialItem { outcome: OutcomeReport::Scalar(20), owner: ALICE, amount: SETUP_AMOUNT },
-            InitialItem { outcome: OutcomeReport::Scalar(40), owner: ALICE, amount: SETUP_AMOUNT },
-            InitialItem { outcome: OutcomeReport::Scalar(60), owner: ALICE, amount: SETUP_AMOUNT },
-        ];
+        let initial_items = get_initial_items();
         GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()).unwrap();
         assert_eq!(
             GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
