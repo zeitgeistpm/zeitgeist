@@ -122,8 +122,12 @@ impl<Balance: Saturating, OwnerInfo: Default> OldWinnerInfo<Balance, OwnerInfo> 
     }
 }
 
+/// An initial vote outcome item with the outcome owner and the initial vote amount.
 pub struct InitialItem<AccountId, Balance> {
+    /// The outcome which is added as initial global dispute vote possibility.
     pub outcome: OutcomeReport,
+    /// The owner of the outcome. This account is rewarded in case the outcome is the winning one.
     pub owner: AccountId,
+    /// The vote amount at the start of the global dispute.
     pub amount: Balance,
 }
