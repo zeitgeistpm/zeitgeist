@@ -18,6 +18,8 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 mod benchmarks;
 mod global_disputes_pallet_api;
 pub mod migrations;
@@ -36,6 +38,7 @@ pub type InitialItemOf<T> = crate::types::InitialItem<AccountIdOf<T>, BalanceOf<
 #[frame_support::pallet]
 mod pallet {
     use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi, InitialItemOf};
+    use alloc::collections::BTreeSet;
     use core::marker::PhantomData;
     use frame_support::{
         ensure, log,
@@ -807,7 +810,18 @@ mod pallet {
                 Error::<T>::GlobalDisputeAlreadyExists
             );
 
-            ensure!(initial_items.len() >= 2, Error::<T>::AtLeastTwoOutcomesRequired);
+            let mut outcome_set = BTreeSet::new();
+            // insert returns true if the outcome is already present
+            let outcome_count = initial_items
+                .iter()
+                .map(|item| &item.outcome)
+                .filter(|outcome| outcome_set.insert(outcome.clone()))
+                .take(2) // Limit the iterator to at most two unique outcomes
+                .count();
+
+            if outcome_count < 2 {
+                return Err(Error::<T>::AtLeastTwoOutcomesRequired.into());
+            }
 
             for InitialItem { outcome, owner, amount } in initial_items {
                 ensure!(market.matches_outcome_report(outcome), Error::<T>::OutcomeMismatch);
