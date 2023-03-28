@@ -222,7 +222,7 @@ mod pallet {
         /// Sender tried to vote with an amount below a defined minimum.
         AmountTooLow,
         /// To start a global dispute, at least two outcomes are required.
-        AtLeastTwoOutcomesRequired,
+        AtLeastTwoUniqueOutcomesRequired,
         /// The global dispute status is invalid for this operation.
         InvalidGlobalDisputeStatus,
         /// Sender does not have enough funds for the vote on an outcome.
@@ -815,12 +815,13 @@ mod pallet {
             let outcome_count = initial_items
                 .iter()
                 .map(|item| &item.outcome)
+                // insert returns true if the outcome was not already present (unqiue)
                 .filter(|outcome| outcome_set.insert(outcome.clone()))
                 .take(2) // Limit the iterator to at most two unique outcomes
                 .count();
 
             if outcome_count < 2 {
-                return Err(Error::<T>::AtLeastTwoOutcomesRequired.into());
+                return Err(Error::<T>::AtLeastTwoUniqueOutcomesRequired.into());
             }
 
             for InitialItem { outcome, owner, amount } in initial_items {

@@ -36,7 +36,8 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// - `initial_items` - The initial vote options (outcome, owner, amount)
     /// to add to the global dispute. One initial item consists of the vote outcome,
     ///  the owner of the outcome who is rewarded in case of a win,
-    /// and the initial vote amount for this outcome. It is not required to add any initial items.
+    /// and the initial vote amount for this outcome.
+    /// It is required to add at least two unique outcomes.
     /// In case of a duplicated outcome, the owner and amount is added to the pre-existing outcome.
     fn start_global_dispute(
         market_id: &MarketId,
