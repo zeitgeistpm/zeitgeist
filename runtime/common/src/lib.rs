@@ -145,14 +145,25 @@ macro_rules! decl_common_types {
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
         >;
 
-        // Advisory committee vote proportions
-        // At least 50%
-        type EnsureRootOrHalfAdvisoryCommittee = EitherOfDiverse<
+        // Advisory Committee vote proportions
+        // More than 33%
+        type EnsureRootOrMoreThanOneThirdAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
-            EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 3>,
         >;
 
-        // Technical committee vote proportions
+        // More than 50%
+        type EnsureRootOrMoreThanHalfAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 1, 2>,
+        >;
+
+        // More than 66%
+        type EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionMoreThan<AccountId, AdvisoryCommitteeInstance, 2, 3>,
+        >;
+
         // At least 66%
         type EnsureRootOrTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
@@ -932,7 +943,7 @@ macro_rules! impl_config_traits {
         impl parachain_info::Config for Runtime {}
 
         impl zrml_authorized::Config for Runtime {
-            type AuthorizedDisputeResolutionOrigin = EnsureRootOrHalfAdvisoryCommittee;
+            type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
@@ -992,13 +1003,10 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-            type ApproveOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
-            >;
+            type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type Authorized = Authorized;
             type Court = Court;
-            type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+            type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
@@ -1025,11 +1033,8 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
-            type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type RequestEditOrigin = EitherOfDiverse<
-                EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
-            >;
+            type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
+            type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
