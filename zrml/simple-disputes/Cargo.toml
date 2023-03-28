@@ -7,7 +7,6 @@ parity-scale-codec = { default-features = false, features = ["derive", "max-enco
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-zrml-global-disputes = { default-features = false, path = "../global-disputes", optional = true }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
@@ -36,9 +35,6 @@ std = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
-]
-with-global-disputes = [
-    "zrml-global-disputes",
 ]
 
 [package]

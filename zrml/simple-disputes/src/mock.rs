@@ -40,12 +40,6 @@ use zeitgeist_primitives::{
     },
 };
 
-#[cfg(feature = "with-global-disputes")]
-use zeitgeist_primitives::constants::mock::{
-    GlobalDisputeLockId, GlobalDisputesPalletId, MaxGlobalDisputeVotes, MaxOwners,
-    MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
-};
-
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
@@ -60,26 +54,6 @@ ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 
-#[cfg(feature = "with-global-disputes")]
-construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
-        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-    }
-);
-
-#[cfg(not(feature = "with-global-disputes"))]
 construct_runtime!(
     pub enum Runtime
     where
@@ -142,27 +116,10 @@ impl crate::Config for Runtime {
     type OutcomeBond = OutcomeBond;
     type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = NoopResolution;
-    #[cfg(feature = "with-global-disputes")]
-    type GlobalDisputes = GlobalDisputes;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
-}
-
-#[cfg(feature = "with-global-disputes")]
-impl zrml_global_disputes::Config for Runtime {
-    type Event = ();
-    type MarketCommons = MarketCommons;
-    type Currency = Balances;
-    type GlobalDisputeLockId = GlobalDisputeLockId;
-    type GlobalDisputesPalletId = GlobalDisputesPalletId;
-    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
-    type MaxOwners = MaxOwners;
-    type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
-    type RemoveKeysLimit = RemoveKeysLimit;
-    type VotingOutcomeFee = VotingOutcomeFee;
-    type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
