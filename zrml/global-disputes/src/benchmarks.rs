@@ -74,10 +74,15 @@ benchmarks! {
         deposit::<T>(&caller);
 
         let mut initial_items: Vec<crate::InitialItemOf<T>> = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: outcome.clone(),
+            owner: caller.clone(),
+            amount: 1_000_000_000u128.saturated_into(),
+        });
         for i in 1..=o {
             let owner = account("outcomes_owner", i, 0);
             initial_items.push(InitialItem {
-                outcome: outcome.clone(),
+                outcome: OutcomeReport::Scalar(i.saturated_into()),
                 owner,
                 amount: 1_000_000_000u128.saturated_into(),
             });

@@ -263,9 +263,14 @@ fn start_global_dispute_fails_if_max_owner_reached() {
         Markets::<Runtime>::insert(market_id, &market);
 
         let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
         for i in 0..MaxOwners::get() + 1 {
             initial_items.push(InitialItem {
-                outcome: OutcomeReport::Scalar(0),
+                outcome: OutcomeReport::Scalar(42),
                 owner: i.into(),
                 amount: SETUP_AMOUNT,
             });
