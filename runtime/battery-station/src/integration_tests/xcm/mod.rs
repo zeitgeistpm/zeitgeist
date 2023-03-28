@@ -1,4 +1,5 @@
 // Copyright 2022 Forecasting Technologies LTD.
+//
 // This file is part of Zeitgeist.
 //
 // Zeitgeist is free software: you can redistribute it and/or modify it

@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -22,10 +23,10 @@ use sp_runtime::Perbill;
 /// Total ZTG amount for community incentives.
 pub const COMMUNITY_INCENTIVES: u128 = 2_000_000;
 
-/// Total ZTG amount for collators
+/// Total ZTG amount for collators.
 pub const COLLATORS: u128 = 0;
 
-/// Total ZTG amount for liquidity mining
+/// Total ZTG amount for liquidity mining.
 pub const LIQUIDITY_MINING: u128 = 0;
 
 /// Total ZTG amount for parachain lease.
@@ -46,10 +47,19 @@ pub const TEAM_AND_ADVISORS: u128 = 15_000_000;
 /// Total ZTG amount for Zeitgesit foundation.
 pub const ZEITGEIST_FOUNDATION: u128 = 22_000_000;
 
+/// Total ZTG amount at genesis.
+pub const TOTAL_INITIAL_ZTG: u128 = COMMUNITY_INCENTIVES
+    + PARACHAIN_LEASE
+    + PUBLIC_SALE
+    + SEED_SALE
+    + STRATEGIC_SALE
+    + TEAM_AND_ADVISORS
+    + ZEITGEIST_FOUNDATION;
+
 // Inflation
 
-/// Perthousand liquidity mining inflation. 2%
-pub const LIQUIDITY_MINING_PTD: Perbill = Perbill::from_perthousand(20);
+/// Perthousand liquidity mining inflation. 0%
+pub const LIQUIDITY_MINING_PTD: Perbill = Perbill::from_perthousand(0);
 
-/// Perthousand collator staking inflation. 1.5%
-pub const STAKING_PTD: Perbill = Perbill::from_perthousand(15);
+/// Perthousand collator staking inflation. 5%
+pub const STAKING_PTD: Perbill = Perbill::from_perthousand(50);

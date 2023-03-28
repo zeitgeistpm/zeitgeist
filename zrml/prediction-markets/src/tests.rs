@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies Ltd.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -618,7 +619,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
 }
 
 #[test]
-fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
+fn admin_destroy_market_correctly_slashes_dispute_bonds() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
         simple_create_categorical_market(
@@ -673,9 +674,7 @@ fn admin_destroy_market_correctly_unreserves_dispute_bonds() {
         );
         assert_eq!(
             Balances::free_balance(CHARLIE),
-            balance_free_before_charlie
-                + DisputeBond::get()
-                + zrml_simple_disputes::default_outcome_bond::<Runtime>(0)
+            balance_free_before_charlie + zrml_simple_disputes::default_outcome_bond::<Runtime>(0)
         );
         assert_eq!(
             Balances::free_balance(DAVE),
