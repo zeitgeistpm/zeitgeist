@@ -1489,16 +1489,40 @@ mod pallet {
             Ok(has_failed)
         }
 
-        fn on_global_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
+        fn on_global_dispute(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
+            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
+
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketReportNotFound)?;
+            let oracle_outcome = &report.outcome;
+
+            let gd_outcomes = court
+                .appeals
+                .iter()
+                // oracle outcome is added by pm pallet
+                .filter(|a| &a.appealed_outcome != oracle_outcome)
+                .map(|a| {
+                    (
+                        a.appealed_outcome.clone(),
+                        // we have no better global dispute outcome owner
+                        Self::treasury_account_id(),
+                        // initial vote amount
+                        <BalanceOf<T>>::zero(),
+                    )
+                })
+                .collect::<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>>();
+
             <Draws<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
 
-            Ok(Vec::new())
+            Ok(gd_outcomes)
         }
 
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
