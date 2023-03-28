@@ -234,7 +234,7 @@ fn start_global_dispute_fails_if_less_than_two_outcomes() {
         }];
         assert_eq!(
             GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
-            Err(Error::<Runtime>::AtLeastTwoOutcomesRequired.into())
+            Err(Error::<Runtime>::AtLeastTwoUniqueOutcomesRequired.into())
         );
     });
 }
