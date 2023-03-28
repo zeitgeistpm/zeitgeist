@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -33,12 +34,14 @@ use zeitgeist_primitives::{
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
+    super::{generate_inflation_config_function, Extensions},
     crate::BATTERY_STATION_PARACHAIN_ID,
     battery_station_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
     },
+    zeitgeist_primitives::constants::ztg::STAKING_PTD,
+    zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
 
 cfg_if::cfg_if! {
@@ -67,7 +70,12 @@ fn additional_chain_spec_staging_battery_station(
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
         )],
         collator_commission: DefaultCollatorCommission::get(),
-        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
+        inflation_info: inflation_config(
+            STAKING_PTD * Perbill::from_percent(40),
+            STAKING_PTD * Perbill::from_percent(70),
+            STAKING_PTD,
+            TOTAL_INITIAL_ZTG * BASE,
+        ),
         nominations: vec![],
         parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
         parachain_id,
@@ -92,7 +100,7 @@ fn endowed_accounts_staging_battery_station() -> Vec<EndowedAccountWithBalance> 
     vec![
         // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
         EndowedAccountWithBalance(
-            hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+            root_key_staging_battery_station(),
             DEFAULT_INITIAL_BALANCE_BATTERY_STATION,
         ),
         // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
@@ -113,7 +121,6 @@ fn root_key_staging_battery_station() -> AccountId {
     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
 }
 
-#[inline]
 pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     battery_station_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
@@ -124,6 +131,9 @@ generate_generic_genesis_function!(
         key: Some(root_key_staging_battery_station()),
     },
 );
+
+#[cfg(feature = "parachain")]
+generate_inflation_config_function!(battery_station_runtime);
 
 pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, String> {
     let wasm = get_wasm()?;
