@@ -1473,7 +1473,7 @@ fn punish_tardy_jurors_fails_if_tardy_jurors_already_punished() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1493,7 +1493,7 @@ fn punish_tardy_jurors_emits_event() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1513,8 +1513,7 @@ fn punish_tardy_jurors_updates_court_status() {
         assert_eq!(court.status, CourtStatus::Open);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let resolution_outcome =
-            Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
 
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         assert_eq!(
@@ -1587,7 +1586,7 @@ fn punish_tardy_jurors_slashes_tardy_jurors_only() {
         );
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap();
 
         let free_alice_before = Balances::free_balance(&ALICE);
         let free_bob_before = Balances::free_balance(&BOB);
@@ -1674,7 +1673,7 @@ fn punish_tardy_jurors_removes_tardy_jurors_from_pool() {
         );
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1701,7 +1700,7 @@ fn reassign_juror_stakes_fails_if_tardy_jurors_not_punished() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = initialize_court();
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap();
         assert_noop!(
             Court::reassign_juror_stakes(Origin::signed(EVE), market_id),
             Error::<Runtime>::PunishTardyJurorsFirst
@@ -1718,7 +1717,7 @@ fn reassign_juror_stakes_emits_event() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap().unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1736,7 +1735,7 @@ fn reassign_juror_stakes_fails_if_juror_stakes_already_reassigned() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap().unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1757,8 +1756,7 @@ fn reassign_juror_stakes_updates_court_status() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let resolution_outcome =
-            Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1791,7 +1789,7 @@ fn reassign_juror_stakes_removes_draws() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap().unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1884,7 +1882,7 @@ fn reassign_juror_stakes_decreases_active_lock() {
         );
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::get_resolution_outcome(&market_id, &market).unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap();
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
 
@@ -1953,8 +1951,7 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
         );
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let resolution_outcome =
-            Court::get_resolution_outcome(&market_id, &market).unwrap().unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
         assert_eq!(resolution_outcome, outcome);
 
         assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
