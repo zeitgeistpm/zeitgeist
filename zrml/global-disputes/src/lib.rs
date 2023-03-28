@@ -814,9 +814,8 @@ mod pallet {
             // insert returns true if the outcome is already present
             let outcome_count = initial_items
                 .iter()
-                .map(|item| &item.outcome)
                 // insert returns true if the outcome was not already present (unqiue)
-                .filter(|outcome| outcome_set.insert(outcome.clone()))
+                .filter(|item| outcome_set.insert(item.outcome.clone()))
                 .take(2) // Limit the iterator to at most two unique outcomes
                 .count();
 
