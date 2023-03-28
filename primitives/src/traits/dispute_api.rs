@@ -16,10 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+extern crate alloc;
+
 use crate::{
     outcome_report::OutcomeReport,
     types::{Asset, Market},
 };
+use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
@@ -33,6 +36,9 @@ type MarketOfDisputeApi<T> = Market<
     <T as DisputeApi>::Moment,
     Asset<<T as DisputeApi>::MarketId>,
 >;
+
+type GlobalDisputeItemOfDisputeApi<T> =
+    (OutcomeReport, <T as DisputeApi>::AccountId, <T as DisputeApi>::Balance);
 
 pub trait DisputeApi {
     type AccountId;
@@ -103,10 +109,13 @@ pub trait DisputeApi {
 
     /// Called, when a global dispute is started.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
+    ///
+    /// # Returns
+    /// Returns the initial vote outcomes with initial vote value and owner of the vote.
     fn on_global_dispute(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
-    ) -> DispatchResult;
+    ) -> Result<Vec<GlobalDisputeItemOfDisputeApi<Self>>, DispatchError>;
 
     /// Allow the API consumer to clear storage items of the dispute mechanism.
     /// This may be called, when the dispute mechanism is no longer needed.

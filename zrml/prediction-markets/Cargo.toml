@@ -92,7 +92,6 @@ try-runtime = [
 ]
 with-global-disputes = [
     "zrml-global-disputes",
-    "zrml-simple-disputes/with-global-disputes",
 ]
 
 [package]

@@ -13120,7 +13120,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
- "zrml-global-disputes",
  "zrml-market-commons",
 ]
 

@@ -1489,7 +1489,7 @@ mod pallet {
             Ok(has_failed)
         }
 
-        fn on_global_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn on_global_dispute(market_id: &Self::MarketId, market: &MarketOf<T>) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
@@ -1498,7 +1498,7 @@ mod pallet {
             <Draws<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
 
-            Ok(())
+            Ok(Vec::new())
         }
 
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {

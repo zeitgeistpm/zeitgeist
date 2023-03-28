@@ -1435,6 +1435,8 @@ mod pallet {
                     Error::<T>::GlobalDisputeAlreadyStarted
                 );
 
+                let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+
                 let has_failed = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
                         T::Authorized::has_failed(&market_id, &market)?
@@ -1446,7 +1448,7 @@ mod pallet {
                 };
                 ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-                match market.dispute_mechanism {
+                let initial_vote_outcomes = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
                         T::Authorized::on_global_dispute(&market_id, &market)?
                     }
@@ -1458,6 +1460,19 @@ mod pallet {
                     }
                 };
 
+                T::GlobalDisputes::push_voting_outcome(
+                    &market_id,
+                    report.outcome.clone(),
+                    &report.by,
+                    <BalanceOf<T>>::zero(),
+                )?;
+
+                // push vote outcomes other than the report outcome
+                for (outcome, owner, bond) in initial_vote_outcomes {
+                    T::GlobalDisputes::push_voting_outcome(&market_id, outcome, &owner, bond)?;
+                }
+
+                // TODO(#372): Allow court with global disputes.
                 // ensure, that global disputes controls the resolution now
                 // it does not end after the dispute period now, but after the global dispute end
 

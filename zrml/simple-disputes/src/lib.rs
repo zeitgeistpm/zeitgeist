@@ -54,15 +54,11 @@ mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::currency::NamedMultiReservableCurrency;
-    #[cfg(feature = "with-global-disputes")]
-    use sp_runtime::traits::Zero;
     use sp_runtime::{
         traits::{CheckedDiv, Saturating},
         DispatchError, SaturatedConversion,
     };
 
-    #[cfg(feature = "with-global-disputes")]
-    use zrml_global_disputes::GlobalDisputesPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[pallet::config]
@@ -93,14 +89,6 @@ mod pallet {
         /// dispute.
         #[pallet::constant]
         type OutcomeFactor: Get<BalanceOf<Self>>;
-
-        /// See [`GlobalDisputesPalletApi`].
-        #[cfg(feature = "with-global-disputes")]
-        type GlobalDisputes: GlobalDisputesPalletApi<
-            MarketIdOf<Self>,
-            Self::AccountId,
-            BalanceOf<Self>,
-        >;
 
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
@@ -405,29 +393,22 @@ mod pallet {
             Ok(disputes.len() == T::MaxDisputes::get() as usize)
         }
 
-        fn on_global_dispute(_market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn on_global_dispute(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
-            #[cfg(feature = "with-global-disputes")]
-            {
-                let disputes = <Disputes<T>>::get(_market_id);
-                // add report outcome to voting choices
-                if let Some(report) = &market.report {
-                    T::GlobalDisputes::push_voting_outcome(
-                        _market_id,
-                        report.outcome.clone(),
-                        &report.by,
-                        <BalanceOf<T>>::zero(),
-                    )?;
-                }
 
-                for MarketDispute { at: _, by, outcome, bond } in disputes.iter() {
-                    T::GlobalDisputes::push_voting_outcome(_market_id, outcome.clone(), by, *bond)?;
-                }
+            let mut gd_outcomes: Vec<(OutcomeReport, Self::AccountId, Self::Balance)> = Vec::new();
+
+            for MarketDispute { at: _, by, outcome, bond } in <Disputes<T>>::get(market_id).iter() {
+                gd_outcomes.push((outcome.clone(), by.clone(), *bond));
             }
-            Ok(())
+
+            Ok(gd_outcomes)
         }
 
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {

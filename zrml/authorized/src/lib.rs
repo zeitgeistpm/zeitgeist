@@ -35,6 +35,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, AuthorizedPalletApi};
+    use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::{DispatchResult, DispatchResultWithPostInfo},
@@ -260,13 +261,16 @@ mod pallet {
             Ok(false)
         }
 
-        fn on_global_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn on_global_dispute(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
-            Ok(())
+            Ok(Vec::new())
         }
 
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
