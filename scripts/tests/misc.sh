@@ -18,7 +18,7 @@ test_package_with_feature primitives std $rustflags
 
 no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
 
-cargo test --package zeitgeist-runtime --lib -- --nocapture
+cargo +nightly-2022-09-24 test --package zeitgeist-runtime --lib -- --nocapture
 
 # TODO(#848): Delete when feature "with-global-dispute" is removed
 cargo test -p zrml-prediction-markets --features with-global-disputes,parachain
