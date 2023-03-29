@@ -91,8 +91,6 @@ parameter_types! {
     pub const CourtAppealPeriod: BlockNumber = BLOCKS_PER_DAY;
     /// The court lock identifier.
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
-    /// The slash percentage if a secret vote gets revealed during the voting period.
-    pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 4;
     /// The maximum number of randomly selected jurors for a dispute.
@@ -101,12 +99,8 @@ parameter_types! {
     pub const MaxJurors: u32 = 10_000;
     /// The minimum stake a user needs to reserve to become a juror.
     pub const MinJurorStake: Balance = 1000 * BASE;
-    /// The percentage that is slashed if a juror did not vote for the plurality outcome.
-    pub const RedistributionPercentage: Percent = Percent::from_percent(10);
     /// The interval for requesting multiple court votes at once.
     pub const RequestInterval: BlockNumber = 7 * BLOCKS_PER_DAY;
-    /// The percentage that is being slashed from the juror's stake.
-    pub const TardySlashPercentage: Percent = Percent::from_percent(20);
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.

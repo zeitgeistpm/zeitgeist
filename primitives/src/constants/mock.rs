@@ -25,7 +25,6 @@ use crate::{
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
-use sp_runtime::Percent;
 
 // Authorized
 parameter_types! {
@@ -43,13 +42,10 @@ parameter_types! {
     pub const CourtAggregationPeriod: BlockNumber = 32;
     pub const CourtAppealPeriod: BlockNumber = 16;
     pub const CourtLockId: LockIdentifier = *b"zge/cloc";
-    pub const DenounceSlashPercentage: Percent = Percent::from_percent(100);
     pub const MaxAppeals: u32 = 4;
     pub const MaxDraws: u32 = 191;
     pub const MaxJurors: u32 = 1000;
     pub const MinJurorStake: Balance = 50 * CENT;
-    pub const RedistributionPercentage: Percent = Percent::from_percent(10);
-    pub const TardySlashPercentage: Percent = Percent::from_percent(20);
 }
 
 // Global disputes parameters

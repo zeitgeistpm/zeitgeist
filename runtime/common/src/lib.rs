@@ -954,7 +954,6 @@ macro_rules! impl_config_traits {
             type CourtLockId = CourtLockId;
             type CourtPalletId = CourtPalletId;
             type Currency = Balances;
-            type DenounceSlashPercentage = DenounceSlashPercentage;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type MarketCommons = MarketCommons;
@@ -963,9 +962,7 @@ macro_rules! impl_config_traits {
             type MaxJurors = MaxJurors;
             type MinJurorStake = MinJurorStake;
             type Random = RandomnessCollectiveFlip;
-            type RedistributionPercentage = RedistributionPercentage;
             type RequestInterval = RequestInterval;
-            type TardySlashPercentage = TardySlashPercentage;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }

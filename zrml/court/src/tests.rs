@@ -38,8 +38,7 @@ use zeitgeist_primitives::{
     constants::{
         mock::{
             AppealBond, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod,
-            DenounceSlashPercentage, MaxAppeals, MaxJurors, MinJurorStake,
-            RedistributionPercentage, RequestInterval, TardySlashPercentage,
+            MaxAppeals, MaxJurors, MinJurorStake, RequestInterval,
         },
         BASE,
     },
@@ -903,7 +902,7 @@ fn denounce_vote_works() {
         });
 
         let free_alice_after = Balances::free_balance(ALICE);
-        let slash = DenounceSlashPercentage::get() * old_draws[0].slashable;
+        let slash = old_draws[0].slashable;
         assert!(!slash.is_zero());
         assert_eq!(free_alice_after, free_alice_before - slash);
 
@@ -1598,27 +1597,18 @@ fn punish_tardy_jurors_slashes_tardy_jurors_only() {
 
         let free_alice_after = Balances::free_balance(&ALICE);
         assert_ne!(free_alice_after, free_alice_before);
-        assert_eq!(
-            free_alice_after,
-            free_alice_before - TardySlashPercentage::get() * old_draws[ALICE as usize].slashable
-        );
+        assert_eq!(free_alice_after, free_alice_before - old_draws[ALICE as usize].slashable);
 
         let free_bob_after = Balances::free_balance(&BOB);
         assert_ne!(free_bob_after, free_bob_before);
-        assert_eq!(
-            free_bob_after,
-            free_bob_before - TardySlashPercentage::get() * old_draws[BOB as usize].slashable
-        );
+        assert_eq!(free_bob_after, free_bob_before - old_draws[BOB as usize].slashable);
 
         let free_charlie_after = Balances::free_balance(&CHARLIE);
         assert_eq!(free_charlie_after, free_charlie_before);
 
         let free_dave_after = Balances::free_balance(&DAVE);
         assert_ne!(free_dave_after, free_dave_before);
-        assert_eq!(
-            free_dave_after,
-            free_dave_before - TardySlashPercentage::get() * old_draws[DAVE as usize].slashable
-        );
+        assert_eq!(free_dave_after, free_dave_before - old_draws[DAVE as usize].slashable);
 
         let free_eve_after = Balances::free_balance(&EVE);
         assert_eq!(free_eve_after, free_eve_before);
@@ -1967,8 +1957,8 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
 
         assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
 
-        let bob_slashed = RedistributionPercentage::get() * last_draws[BOB as usize].slashable;
-        let dave_slashed = RedistributionPercentage::get() * last_draws[DAVE as usize].slashable;
+        let bob_slashed = last_draws[BOB as usize].slashable;
+        let dave_slashed = last_draws[DAVE as usize].slashable;
         let slashed = bob_slashed + dave_slashed + tardy_or_denounced_value;
         let free_alice_after = Balances::free_balance(ALICE);
         assert_eq!(free_alice_after, free_alice_before + slashed / 2);
@@ -2058,11 +2048,10 @@ fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
 
         assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
 
-        let alice_slashed = RedistributionPercentage::get() * last_draws[ALICE as usize].slashable;
-        let bob_slashed = RedistributionPercentage::get() * last_draws[BOB as usize].slashable;
-        let charlie_slashed =
-            RedistributionPercentage::get() * last_draws[CHARLIE as usize].slashable;
-        let dave_slashed = RedistributionPercentage::get() * last_draws[DAVE as usize].slashable;
+        let alice_slashed = last_draws[ALICE as usize].slashable;
+        let bob_slashed = last_draws[BOB as usize].slashable;
+        let charlie_slashed = last_draws[CHARLIE as usize].slashable;
+        let dave_slashed = last_draws[DAVE as usize].slashable;
 
         let slashed = bob_slashed + dave_slashed + alice_slashed + charlie_slashed;
 

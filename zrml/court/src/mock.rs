@@ -32,10 +32,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AppealBond, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
-        CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDraws,
-        MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
-        RequestInterval, TardySlashPercentage, BASE,
+        AppealBond, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId,
+        CourtPalletId, CourtVotePeriod, MaxAppeals, MaxDraws, MaxJurors, MaxReserves,
+        MinJurorStake, MinimumPeriod, PmPalletId, RequestInterval, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -138,7 +137,6 @@ impl crate::Config for Runtime {
     type CourtVotePeriod = CourtVotePeriod;
     type CourtAggregationPeriod = CourtAggregationPeriod;
     type CourtAppealPeriod = CourtAppealPeriod;
-    type DenounceSlashPercentage = DenounceSlashPercentage;
     type DisputeResolution = MockResolution;
     type Event = Event;
     type MarketCommons = MarketCommons;
@@ -148,9 +146,7 @@ impl crate::Config for Runtime {
     type MinJurorStake = MinJurorStake;
     type CourtPalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
-    type RedistributionPercentage = RedistributionPercentage;
     type RequestInterval = RequestInterval;
-    type TardySlashPercentage = TardySlashPercentage;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

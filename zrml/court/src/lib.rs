@@ -66,7 +66,7 @@ mod pallet {
     use rand_chacha::ChaCha20Rng;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
-        DispatchError, Percent, SaturatedConversion,
+        DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
@@ -105,10 +105,6 @@ mod pallet {
         type Currency: Currency<Self::AccountId>
             + NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>
             + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
-
-        /// The slash percentage if a secret vote gets revealed during the voting period.
-        #[pallet::constant]
-        type DenounceSlashPercentage: Get<Percent>;
 
         /// The functionality to allow controlling the markets resolution time.
         type DisputeResolution: DisputeResolutionApi<
@@ -149,14 +145,6 @@ mod pallet {
         /// The interval for requesting multiple court votes at once.
         #[pallet::constant]
         type RequestInterval: Get<Self::BlockNumber>;
-
-        /// The percentage that is slashed if a juror did not vote for the plurality outcome.
-        #[pallet::constant]
-        type RedistributionPercentage: Get<Percent>;
-
-        /// The percentage that is being slashed from the juror's stake in case she is tardy.
-        #[pallet::constant]
-        type TardySlashPercentage: Get<Percent>;
 
         /// Slashed funds are send to the treasury
         #[pallet::constant]
@@ -649,8 +637,7 @@ mod pallet {
             };
 
             let reward_pot = Self::reward_pot(&market_id);
-            let slash = T::DenounceSlashPercentage::get() * draw.slashable;
-            let (imbalance, missing) = T::Currency::slash(&juror, slash);
+            let (imbalance, missing) = T::Currency::slash(&juror, draw.slashable);
             debug_assert!(missing.is_zero(), "Could not slash all of the amount.");
             T::Currency::resolve_creating(&reward_pot, imbalance);
 
@@ -888,8 +875,7 @@ mod pallet {
             let mut jurors = JurorPool::<T>::get();
             let reward_pot = Self::reward_pot(&market_id);
             let mut slash_and_remove_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
-                let slash = T::TardySlashPercentage::get() * slashable;
-                let (imbalance, missing) = T::Currency::slash(ai, slash);
+                let (imbalance, missing) = T::Currency::slash(ai, slashable);
                 debug_assert!(
                     missing.is_zero(),
                     "Could not slash all of the amount for juror {:?}.",
@@ -1230,8 +1216,7 @@ mod pallet {
                 if outcome == winner_outcome {
                     winners.push(juror);
                 } else {
-                    let slash = T::RedistributionPercentage::get() * *slashable;
-                    let (imb, missing) = T::Currency::slash(juror, slash);
+                    let (imb, missing) = T::Currency::slash(juror, *slashable);
                     total_incentives.subsume(imb);
                     debug_assert!(
                         missing.is_zero(),
