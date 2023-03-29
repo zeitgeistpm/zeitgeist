@@ -77,13 +77,9 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The required base bond in order to get an appeal initiated.
+        /// This bond increases exponentially with the number of appeals.
         #[pallet::constant]
         type AppealBond: Get<BalanceOf<Self>>;
-
-        /// The additional amount of currency that must be bonded when creating a subsequent
-        /// appeal.
-        #[pallet::constant]
-        type AppealBondFactor: Get<BalanceOf<Self>>;
 
         /// The time in which the jurors can cast their secret vote.
         #[pallet::constant]
@@ -177,6 +173,8 @@ mod pallet {
     // Weight used to increase the number of jurors for subsequent appeals
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
+    // Basis used to increase the bond for subsequent appeals of the same market
+    const APPEAL_BOND_BASIS: u32 = 2;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
@@ -1545,8 +1543,8 @@ mod pallet {
     where
         T: Config,
     {
-        T::AppealBond::get().saturating_add(
-            T::AppealBondFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
+        T::AppealBond::get().saturating_mul(
+            (APPEAL_BOND_BASIS.saturating_pow(n as u32)).saturated_into::<BalanceOf<T>>(),
         )
     }
 }

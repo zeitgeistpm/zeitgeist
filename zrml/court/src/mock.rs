@@ -32,7 +32,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AppealBond, AppealBondFactor, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
+        AppealBond, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod,
         CourtLockId, CourtPalletId, CourtVotePeriod, DenounceSlashPercentage, MaxAppeals, MaxDraws,
         MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId, RedistributionPercentage,
         RequestInterval, TardySlashPercentage, BASE,
@@ -133,7 +133,6 @@ impl DisputeResolutionApi for MockResolution {
 
 impl crate::Config for Runtime {
     type AppealBond = AppealBond;
-    type AppealBondFactor = AppealBondFactor;
     type CourtLockId = CourtLockId;
     type Currency = Balances;
     type CourtVotePeriod = CourtVotePeriod;

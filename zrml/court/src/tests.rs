@@ -37,7 +37,7 @@ use test_case::test_case;
 use zeitgeist_primitives::{
     constants::{
         mock::{
-            CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod,
+            AppealBond, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod,
             DenounceSlashPercentage, MaxAppeals, MaxJurors, MinJurorStake,
             RedistributionPercentage, RequestInterval, TardySlashPercentage,
         },
@@ -2247,6 +2247,17 @@ fn check_necessary_jurors_weight() {
         assert_eq!(Court::necessary_jurors_weight(1usize), 11usize);
         assert_eq!(Court::necessary_jurors_weight(2usize), 23usize);
         assert_eq!(Court::necessary_jurors_weight(3usize), 47usize);
+    });
+}
+
+#[test]
+fn check_appeal_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        let appeal_bond = AppealBond::get();
+        assert_eq!(crate::default_appeal_bond::<Runtime>(0usize), appeal_bond);
+        assert_eq!(crate::default_appeal_bond::<Runtime>(1usize), 2 * appeal_bond);
+        assert_eq!(crate::default_appeal_bond::<Runtime>(2usize), 4 * appeal_bond);
+        assert_eq!(crate::default_appeal_bond::<Runtime>(3usize), 8 * appeal_bond);
     });
 }
 
