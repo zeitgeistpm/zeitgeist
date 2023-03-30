@@ -121,6 +121,7 @@ mod pallet {
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
+            Currency = Self::Currency,
         >;
 
         /// The maximum number of appeals until the court fails.
@@ -603,7 +604,7 @@ mod pallet {
 
             ensure!(denouncer != juror, Error::<T>::SelfDenounceDisallowed);
 
-            let prev_juror_info = <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
+            ensure!(<Jurors<T>>::contains_key(&juror), Error::<T>::JurorDoesNotExist);
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -640,12 +641,6 @@ mod pallet {
             let (imbalance, missing) = T::Currency::slash(&juror, draw.slashable);
             debug_assert!(missing.is_zero(), "Could not slash all of the amount.");
             T::Currency::resolve_creating(&reward_pot, imbalance);
-
-            let mut jurors = JurorPool::<T>::get();
-            if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake, &juror) {
-                jurors.remove(index);
-                <JurorPool<T>>::put(jurors);
-            }
 
             let raw_vote = Vote::Denounced { secret, outcome: outcome.clone(), salt };
             draws[index] = Draw { juror: juror.clone(), vote: raw_vote, ..draw };
@@ -872,9 +867,8 @@ mod pallet {
                 _ => return Err(Error::<T>::CourtNotClosed.into()),
             };
 
-            let mut jurors = JurorPool::<T>::get();
             let reward_pot = Self::reward_pot(&market_id);
-            let mut slash_and_remove_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
+            let slash_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
                 let (imbalance, missing) = T::Currency::slash(ai, slashable);
                 debug_assert!(
                     missing.is_zero(),
@@ -882,31 +876,15 @@ mod pallet {
                     ai
                 );
                 T::Currency::resolve_creating(&reward_pot, imbalance);
-
-                if let Some(prev_juror_info) = <Jurors<T>>::get(ai) {
-                    if let Some((index, _)) =
-                        Self::get_pool_item(&jurors, prev_juror_info.stake, ai)
-                    {
-                        jurors.remove(index);
-                    }
-                } else {
-                    log::warn!(
-                        "Juror {:?} not found in Jurors storage for vote aggregation. Market id \
-                         {:?}.",
-                        ai,
-                        market_id
-                    );
-                    debug_assert!(false);
-                }
             };
 
             for draw in Draws::<T>::get(market_id).iter() {
                 match draw.vote {
                     Vote::Drawn => {
-                        slash_and_remove_juror(&draw.juror, draw.slashable);
+                        slash_juror(&draw.juror, draw.slashable);
                     }
                     Vote::Secret { secret: _ } => {
-                        slash_and_remove_juror(&draw.juror, draw.slashable);
+                        slash_juror(&draw.juror, draw.slashable);
                     }
                     // denounce extrinsic already punished the juror
                     Vote::Denounced { secret: _, outcome: _, salt: _ } => (),
@@ -916,7 +894,6 @@ mod pallet {
 
             court.status = CourtStatus::Closed { winner, reassigned: false, punished: true };
             <Courts<T>>::insert(market_id, court);
-            <JurorPool<T>>::put(jurors);
 
             Self::deposit_event(Event::TardyJurorsPunished { market_id });
 
@@ -1187,6 +1164,11 @@ mod pallet {
                 rslt
             });
             let mut seed = [0; 32];
+            debug_assert!(
+                !<frame_system::Pallet<T>>::block_number().is_zero(),
+                "When testing with the randomness of the collective flip pallet it produces a \
+                 underflow (block number substraction by one) panic if the block number is zero."
+            );
             let (random_hash, _) = T::Random::random(&nonce.to_le_bytes());
             seed.copy_from_slice(&random_hash.as_ref()[..32]);
             ChaCha20Rng::from_seed(seed)

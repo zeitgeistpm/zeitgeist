@@ -96,7 +96,7 @@ parameter_types! {
     /// The maximum number of randomly selected jurors for a dispute.
     pub const MaxDraws: u32 = 47;
     /// The maximum number of jurors that can be registered.
-    pub const MaxJurors: u32 = 10_000;
+    pub const MaxJurors: u32 = 1_000;
     /// The minimum stake a user needs to reserve to become a juror.
     pub const MinJurorStake: Balance = 1000 * BASE;
     /// The interval for requesting multiple court votes at once.

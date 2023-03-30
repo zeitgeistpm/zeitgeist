@@ -1277,6 +1277,25 @@ fn appeal_fails_if_only_global_dispute_appeal_allowed() {
 }
 
 #[test]
+fn appeal_last_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
+
+        fill_appeals(&market_id, (MaxAppeals::get() - 2) as usize);
+
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        assert_noop!(
+            Court::appeal(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::OnlyGlobalDisputeAppealAllowed
+        );
+    });
+}
+
+#[test]
 fn check_appealable_market_fails_if_market_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let now = <frame_system::Pallet<Runtime>>::block_number();
