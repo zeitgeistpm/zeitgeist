@@ -199,6 +199,7 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     /// The pool of jurors who can get randomly selected according to their stake.
+    /// The pool is sorted by stake in ascending order [min, ..., max].
     #[pallet::storage]
     pub type JurorPool<T: Config> = StorageValue<_, JurorPoolOf<T>, ValueQuery>;
 
