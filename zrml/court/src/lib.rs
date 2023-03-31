@@ -451,7 +451,9 @@ mod pallet {
         }
 
         /// Prepare as a juror to exit the court.
-        /// For this the juror has to be removed from the stake-weighted pool first before the exit.
+        /// When this is called the juror is not anymore able to get drawn for new cases.
+        /// The juror gets removed from the stake-weighted pool. 
+        /// After that the juror can exit the court.
         /// Returns an error if the juror is already not part of the pool anymore.
         ///
         /// # Weight
@@ -471,8 +473,7 @@ mod pallet {
                 <JurorPool<T>>::put(jurors);
             } else {
                 // this error can happen if the lowest bonded juror was removed
-                // it can also happen when juror was denounced,
-                // did not vote or reveal
+                // or if the current extrinsic was already called before
                 return Err(Error::<T>::JurorAlreadyPreparedToExit.into());
             }
 
@@ -480,7 +481,10 @@ mod pallet {
             Ok(())
         }
 
-        /// Remove the juror stake from resolved courts.
+        /// Exit the court.
+        /// The stake which is not locked by any court case is unlocked.
+        /// `prepare_exit_court` must be called before 
+        /// to remove the juror from the stake-weighted pool.
         ///
         /// # Arguments
         ///
