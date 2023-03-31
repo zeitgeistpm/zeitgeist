@@ -719,7 +719,7 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let appeal_number = court.appeals.len().saturating_add(1);
-            let bond = default_appeal_bond::<T>(appeal_number);
+            let bond = get_appeal_bond::<T>(appeal_number);
             ensure!(T::Currency::can_reserve(&who, bond), Error::<T>::AppealBondExceedsBalance);
             ensure!(
                 appeal_number < <AppealsOf<T>>::bound(),
@@ -799,7 +799,7 @@ mod pallet {
             let appealed_outcome =
                 Self::get_latest_resolved_outcome(&market_id, old_draws.as_slice())?;
 
-            let bond = default_appeal_bond::<T>(appeal_number);
+            let bond = get_appeal_bond::<T>(appeal_number);
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
 
             court.appeals.try_push(appeal_info).map_err(|_| {
@@ -1482,7 +1482,7 @@ mod pallet {
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_appeal_bond<T>(n: usize) -> BalanceOf<T>
+    pub fn get_appeal_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {

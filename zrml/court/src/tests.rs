@@ -112,7 +112,7 @@ fn fill_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
             .appeals
             .try_push(AppealInfo {
                 backer: number,
-                bond: crate::default_appeal_bond::<Runtime>(court.appeals.len()),
+                bond: crate::get_appeal_bond::<Runtime>(court.appeals.len()),
                 appealed_outcome,
             })
             .unwrap();
@@ -1091,7 +1091,7 @@ fn appeal_updates_periods() {
 }
 
 #[test]
-fn appeal_reserves_default_appeal_bond() {
+fn appeal_reserves_get_appeal_bond() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
@@ -1102,7 +1102,7 @@ fn appeal_reserves_default_appeal_bond() {
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
 
         let free_charlie_after = Balances::free_balance(CHARLIE);
-        let bond = crate::default_appeal_bond::<Runtime>(1usize);
+        let bond = crate::get_appeal_bond::<Runtime>(1usize);
         assert!(!bond.is_zero());
         assert_eq!(free_charlie_after, free_charlie_before - bond);
         assert_eq!(Balances::reserved_balance(CHARLIE), bond);
@@ -1375,7 +1375,7 @@ fn back_global_dispute_fails_if_needs_to_be_last_appeal() {
 }
 
 #[test]
-fn back_global_dispute_reserves_default_appeal_bond() {
+fn back_global_dispute_reserves_get_appeal_bond() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
@@ -1384,9 +1384,9 @@ fn back_global_dispute_reserves_default_appeal_bond() {
 
         fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
 
-        let default_appeal_bond = crate::default_appeal_bond::<Runtime>(MaxAppeals::get() as usize);
+        let get_appeal_bond = crate::get_appeal_bond::<Runtime>(MaxAppeals::get() as usize);
         assert_ok!(Court::back_global_dispute(Origin::signed(CHARLIE), market_id));
-        assert_eq!(Balances::reserved_balance(&CHARLIE), default_appeal_bond);
+        assert_eq!(Balances::reserved_balance(&CHARLIE), get_appeal_bond);
     });
 }
 
@@ -2072,10 +2072,10 @@ fn check_necessary_jurors_weight() {
 fn check_appeal_bond() {
     ExtBuilder::default().build().execute_with(|| {
         let appeal_bond = AppealBond::get();
-        assert_eq!(crate::default_appeal_bond::<Runtime>(0usize), appeal_bond);
-        assert_eq!(crate::default_appeal_bond::<Runtime>(1usize), 2 * appeal_bond);
-        assert_eq!(crate::default_appeal_bond::<Runtime>(2usize), 4 * appeal_bond);
-        assert_eq!(crate::default_appeal_bond::<Runtime>(3usize), 8 * appeal_bond);
+        assert_eq!(crate::get_appeal_bond::<Runtime>(0usize), appeal_bond);
+        assert_eq!(crate::get_appeal_bond::<Runtime>(1usize), 2 * appeal_bond);
+        assert_eq!(crate::get_appeal_bond::<Runtime>(2usize), 4 * appeal_bond);
+        assert_eq!(crate::get_appeal_bond::<Runtime>(3usize), 8 * appeal_bond);
     });
 }
 
@@ -2144,7 +2144,7 @@ fn get_latest_resolved_outcome_selects_last_appealed_outcome_for_tie() {
             .appeals
             .try_push(AppealInfo {
                 backer: CHARLIE,
-                bond: crate::default_appeal_bond::<Runtime>(1usize),
+                bond: crate::get_appeal_bond::<Runtime>(1usize),
                 appealed_outcome: appealed_outcome.clone(),
             })
             .unwrap();

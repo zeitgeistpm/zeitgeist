@@ -345,7 +345,7 @@ benchmarks! {
         for i in 0..a {
             let appeal_info = AppealInfo {
                 backer: account("backer", i, 0),
-                bond: crate::default_appeal_bond::<T>(i as usize),
+                bond: crate::get_appeal_bond::<T>(i as usize),
                 appealed_outcome: OutcomeReport::Scalar(0u128),
             };
             court.appeals.try_push(appeal_info).unwrap();
@@ -418,7 +418,7 @@ benchmarks! {
         for i in 0..(T::MaxAppeals::get() - 1) {
             let appeal_info = AppealInfo {
                 backer: account("backer", i, 0),
-                bond: crate::default_appeal_bond::<T>(i as usize),
+                bond: crate::get_appeal_bond::<T>(i as usize),
                 appealed_outcome: OutcomeReport::Scalar(0u128),
             };
             court.appeals.try_push(appeal_info).unwrap();
