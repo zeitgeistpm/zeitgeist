@@ -291,13 +291,13 @@ fn join_court_fails_below_min_juror_stake() {
 }
 
 #[test]
-fn join_court_fails_insufficient_amount() {
+fn join_court_fails_if_amount_exceeds_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let amount = min + 1;
         assert_noop!(
             Court::join_court(Origin::signed(POOR_PAUL), amount),
-            Error::<Runtime>::InsufficientAmount
+            Error::<Runtime>::AmountExceedsBalance
         );
     });
 }
@@ -1238,7 +1238,7 @@ fn appeal_fails_if_court_not_found() {
 }
 
 #[test]
-fn appeal_fails_if_insufficient_amount() {
+fn appeal_fails_if_appeal_bond_exceeds_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
@@ -1247,7 +1247,7 @@ fn appeal_fails_if_insufficient_amount() {
 
         assert_noop!(
             Court::appeal(Origin::signed(POOR_PAUL), market_id),
-            Error::<Runtime>::InsufficientAmount
+            Error::<Runtime>::AppealBondExceedsBalance
         );
     });
 }
