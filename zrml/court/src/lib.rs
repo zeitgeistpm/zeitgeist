@@ -39,7 +39,7 @@ pub use types::*;
 mod pallet {
     use crate::{
         weights::WeightInfoZeitgeist, AppealInfo, CommitmentMatcher, CourtInfo, CourtPalletApi,
-        CourtStatus, Draw, JurorInfo, JurorPoolItem, RoundTiming, Vote,
+        CourtStatus, Draw, JurorInfo, JurorPoolItem, RawCommitment, RoundTiming, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -191,6 +191,8 @@ mod pallet {
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
     pub(crate) type CommitmentMatcherOf<T> =
         CommitmentMatcher<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
+    pub(crate) type RawCommitmentOf<T> =
+        RawCommitment<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -632,25 +634,10 @@ mod pallet {
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
-            let commitment = match draw.vote {
-                Vote::Secret { commitment } => {
-                    let commitment_matcher = CommitmentMatcher {
-                        commitment,
-                        juror: juror.clone(),
-                        outcome: outcome.clone(),
-                        salt,
-                    };
-                    Self::is_valid(commitment_matcher)?;
-                    commitment
-                }
-                Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
-                Vote::Revealed { commitment: _, outcome: _, salt: _ } => {
-                    return Err(Error::<T>::VoteAlreadyRevealed.into());
-                }
-                Vote::Denounced { commitment: _, outcome: _, salt: _ } => {
-                    return Err(Error::<T>::VoteAlreadyDenounced.into());
-                }
-            };
+            let raw_commmitment =
+                RawCommitment { juror: juror.clone(), outcome: outcome.clone(), salt };
+
+            let commitment = Self::get_hashed_commitment(draw.vote, raw_commmitment)?;
 
             let reward_pot = Self::reward_pot(&market_id);
             let (imbalance, missing) = T::Currency::slash(&juror, draw.slashable);
@@ -708,25 +695,10 @@ mod pallet {
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
-            let commitment = match draw.vote {
-                Vote::Secret { commitment } => {
-                    let commitment_matcher = CommitmentMatcher {
-                        commitment,
-                        juror: who.clone(),
-                        outcome: outcome.clone(),
-                        salt,
-                    };
-                    Self::is_valid(commitment_matcher)?;
-                    commitment
-                }
-                Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
-                Vote::Revealed { commitment: _, outcome: _, salt: _ } => {
-                    return Err(Error::<T>::VoteAlreadyRevealed.into());
-                }
-                Vote::Denounced { commitment: _, outcome: _, salt: _ } => {
-                    return Err(Error::<T>::VoteAlreadyDenounced.into());
-                }
-            };
+            let raw_commitment =
+                RawCommitment { juror: who.clone(), outcome: outcome.clone(), salt };
+
+            let commitment = Self::get_hashed_commitment(draw.vote, raw_commitment)?;
 
             let raw_vote = Vote::Revealed { commitment, outcome: outcome.clone(), salt };
             draws[index] = Draw { juror: who.clone(), vote: raw_vote, ..draw };
@@ -1311,13 +1283,38 @@ mod pallet {
             // salt can be reproduced only be the juror address
             // with knowing market_id and appeal number
             // so even if the salt is forgotten it can be reproduced only by the juror
-            let CommitmentMatcher { commitment, juror, outcome, salt } = commitment_matcher;
+            let CommitmentMatcher {
+                hashed: commitment,
+                raw: RawCommitment { juror, outcome, salt },
+            } = commitment_matcher;
+
             ensure!(
                 commitment == T::Hashing::hash_of(&(juror, outcome, salt)),
                 Error::<T>::InvalidReveal
             );
 
             Ok(())
+        }
+
+        pub(crate) fn get_hashed_commitment(
+            vote: Vote<T::Hash>,
+            raw_commitment: RawCommitmentOf<T>,
+        ) -> Result<T::Hash, DispatchError> {
+            match vote {
+                Vote::Secret { commitment } => {
+                    let commitment_matcher =
+                        CommitmentMatcher { hashed: commitment, raw: raw_commitment };
+                    Self::is_valid(commitment_matcher)?;
+                    Ok(commitment)
+                }
+                Vote::Drawn => Err(Error::<T>::JurorNotVoted.into()),
+                Vote::Revealed { commitment: _, outcome: _, salt: _ } => {
+                    Err(Error::<T>::VoteAlreadyRevealed.into())
+                }
+                Vote::Denounced { commitment: _, outcome: _, salt: _ } => {
+                    Err(Error::<T>::VoteAlreadyDenounced.into())
+                }
+            }
         }
     }
 

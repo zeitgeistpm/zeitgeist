@@ -36,11 +36,15 @@ pub struct JurorInfo<Balance> {
     pub(crate) active_lock: Balance,
 }
 
-pub struct CommitmentMatcher<AccountId, Hash> {
-    pub(crate) commitment: Hash,
+pub struct RawCommitment<AccountId, Hash> {
     pub(crate) juror: AccountId,
     pub(crate) outcome: OutcomeReport,
     pub(crate) salt: Hash,
+}
+
+pub struct CommitmentMatcher<AccountId, Hash> {
+    pub(crate) hashed: Hash,
+    pub(crate) raw: RawCommitment<AccountId, Hash>,
 }
 
 /// All possible states of a vote.
