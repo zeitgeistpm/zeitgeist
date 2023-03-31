@@ -43,7 +43,7 @@ pub use types::*;
 mod pallet {
     use crate::{
         weights::WeightInfoZeitgeist, AppealInfo, CourtInfo, CourtPalletApi, CourtStatus, Draw,
-        JurorInfo, JurorPoolItem, Periods, Vote,
+        JurorInfo, JurorPoolItem, RoundTiming, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -766,15 +766,14 @@ mod pallet {
 
             let request_block = <RequestBlock<T>>::get();
             debug_assert!(request_block >= now, "Request block must be greater than now.");
-            let pre_vote_end = request_block.saturating_sub(now);
-            let periods = Periods {
-                pre_vote_end,
-                vote_end: T::CourtVotePeriod::get(),
-                aggregation_end: T::CourtAggregationPeriod::get(),
-                appeal_end: T::CourtAppealPeriod::get(),
+            let round_timing = RoundTiming {
+                pre_vote_end: request_block,
+                vote_period: T::CourtVotePeriod::get(),
+                aggregation_period: T::CourtAggregationPeriod::get(),
+                appeal_period: T::CourtAppealPeriod::get(),
             };
             // sets periods one after the other from now
-            court.update_periods(periods, now);
+            court.update_periods(round_timing);
             let new_resolve_at = court.periods.appeal_end;
             debug_assert!(new_resolve_at != last_resolve_at);
             let _ids_len_1 =
@@ -811,7 +810,7 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let appeal_number = court.appeals.len().saturating_add(1);
-            ensure!(appeal_number == T::MaxAppeals::get(), Error::<T>::NeedsToBeLastAppeal);
+            ensure!(appeal_number as u32 == T::MaxAppeals::get(), Error::<T>::NeedsToBeLastAppeal);
 
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
@@ -1328,17 +1327,15 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
             let request_block = <RequestBlock<T>>::get();
             debug_assert!(request_block >= now, "Request block must be greater than now.");
-            let pre_vote_end = request_block.saturating_sub(now);
-
-            let periods = Periods {
-                pre_vote_end,
-                vote_end: T::CourtVotePeriod::get(),
-                aggregation_end: T::CourtAggregationPeriod::get(),
-                appeal_end: T::CourtAppealPeriod::get(),
+            let round_timing = RoundTiming {
+                pre_vote_end: request_block,
+                vote_period: T::CourtVotePeriod::get(),
+                aggregation_period: T::CourtAggregationPeriod::get(),
+                appeal_period: T::CourtAppealPeriod::get(),
             };
 
             // sets periods one after the other from now
-            let court = CourtInfo::new(now, periods);
+            let court = CourtInfo::new(round_timing);
 
             let _ids_len =
                 T::DisputeResolution::add_auto_resolve(market_id, court.periods.appeal_end)?;

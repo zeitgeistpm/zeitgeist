@@ -140,25 +140,33 @@ pub struct CourtInfo<BlockNumber, Appeals> {
     pub(crate) periods: Periods<BlockNumber>,
 }
 
+pub struct RoundTiming<BlockNumber> {
+    pub(crate) pre_vote_end: BlockNumber,
+    pub(crate) vote_period: BlockNumber,
+    pub(crate) aggregation_period: BlockNumber,
+    pub(crate) appeal_period: BlockNumber,
+}
+
 impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     CourtInfo<BlockNumber, Appeals>
 {
-    pub fn new(now: BlockNumber, periods: Periods<BlockNumber>) -> Self {
-        let pre_vote_end = now.saturating_add(periods.pre_vote_end);
-        let vote_end = pre_vote_end.saturating_add(periods.vote_end);
-        let aggregation_end = vote_end.saturating_add(periods.aggregation_end);
-        let appeal_end = aggregation_end.saturating_add(periods.appeal_end);
+    pub fn new(round_timing: RoundTiming<BlockNumber>) -> Self {
+        let pre_vote_end = round_timing.pre_vote_end;
+        let vote_end = pre_vote_end.saturating_add(round_timing.vote_period);
+        let aggregation_end = vote_end.saturating_add(round_timing.aggregation_period);
+        let appeal_end = aggregation_end.saturating_add(round_timing.appeal_period);
         let periods = Periods { pre_vote_end, vote_end, aggregation_end, appeal_end };
         let status = CourtStatus::Open;
         Self { status, appeals: Default::default(), periods }
     }
 
-    pub fn update_periods(&mut self, periods: Periods<BlockNumber>, now: BlockNumber) {
-        self.periods.pre_vote_end = now.saturating_add(periods.pre_vote_end);
-        self.periods.vote_end = self.periods.pre_vote_end.saturating_add(periods.vote_end);
+    pub fn update_periods(&mut self, round_timing: RoundTiming<BlockNumber>) {
+        self.periods.pre_vote_end = round_timing.pre_vote_end;
+        self.periods.vote_end = self.periods.pre_vote_end.saturating_add(round_timing.vote_period);
         self.periods.aggregation_end =
-            self.periods.vote_end.saturating_add(periods.aggregation_end);
-        self.periods.appeal_end = self.periods.aggregation_end.saturating_add(periods.appeal_end);
+            self.periods.vote_end.saturating_add(round_timing.aggregation_period);
+        self.periods.appeal_end =
+            self.periods.aggregation_end.saturating_add(round_timing.appeal_period);
     }
 }
 

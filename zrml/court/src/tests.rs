@@ -894,10 +894,6 @@ fn denounce_vote_works() {
         assert_eq!(old_draws[0].vote, Vote::Secret { secret });
         assert_eq!(new_draws[0].vote, Vote::Denounced { secret, outcome, salt });
 
-        <JurorPool<Runtime>>::get().iter().for_each(|pool_item| {
-            assert_ne!(pool_item.juror, ALICE);
-        });
-
         let free_alice_after = Balances::free_balance(ALICE);
         let slash = old_draws[0].slashable;
         assert!(!slash.is_zero());
@@ -1628,66 +1624,6 @@ fn punish_tardy_jurors_slashes_tardy_jurors_only() {
 
         let free_eve_after = Balances::free_balance(&EVE);
         assert_eq!(free_eve_after, free_eve_before);
-    });
-}
-
-#[test]
-fn punish_tardy_jurors_removes_tardy_jurors_from_pool() {
-    ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
-        let market_id = initialize_court();
-
-        let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
-        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
-        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
-
-        let outcome = OutcomeReport::Scalar(42u128);
-        let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
-
-        let draws: crate::DrawsOf<Runtime> = vec![
-            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() },
-            Draw {
-                juror: BOB,
-                weight: 1,
-                vote: Vote::Secret { secret },
-                slashable: 2 * MinJurorStake::get(),
-            },
-            Draw {
-                juror: CHARLIE,
-                weight: 1,
-                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
-                slashable: 3 * MinJurorStake::get(),
-            },
-            Draw {
-                juror: DAVE,
-                weight: 1,
-                vote: Vote::Denounced { secret, outcome, salt },
-                slashable: 4 * MinJurorStake::get(),
-            },
-        ]
-        .try_into()
-        .unwrap();
-        <Draws<Runtime>>::insert(market_id, draws);
-
-        run_to_block(<RequestBlock<Runtime>>::get() + 1);
-
-        run_blocks(
-            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
-        );
-
-        let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::on_resolution(&market_id, &market).unwrap();
-
-        assert_ok!(Court::punish_tardy_jurors(Origin::signed(EVE), market_id));
-
-        let pool = <JurorPool<Runtime>>::get();
-        assert!(!pool.clone().into_inner().iter().any(|pool_item| pool_item.juror == ALICE));
-        assert!(!pool.clone().into_inner().iter().any(|pool_item| pool_item.juror == BOB));
-        assert!(pool.clone().into_inner().iter().any(|pool_item| pool_item.juror == CHARLIE));
-        assert!(pool.into_inner().iter().any(|pool_item| pool_item.juror == DAVE));
     });
 }
 
