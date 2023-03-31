@@ -207,10 +207,9 @@ pub struct Draw<AccountId, Balance, Hash> {
     Eq,
 )]
 pub struct JurorPoolItem<AccountId, Balance> {
-    /// The key for the binary search to efficiently find the juror.
-    /// It has to be a unqiue key for each juror.
+    /// The amount of funds associated to a juror in order to get selected for a court case.
     pub(crate) stake: Balance,
-    /// The account which is the juror.
+    /// The account which is the juror that might be selected in court cases.
     pub(crate) juror: AccountId,
     /// The slashable amount for all random draws. This is useful to reduce the probability
     /// of a juror to be selected again.
