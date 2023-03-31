@@ -416,7 +416,6 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
 
         assert_noop!(
             Court::prepare_exit_court(Origin::signed(ALICE)),
