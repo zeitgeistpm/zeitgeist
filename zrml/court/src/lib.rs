@@ -323,7 +323,7 @@ mod pallet {
         MarketReportNotFound,
         /// The caller has not enough funds to join the court with the specified amount.
         InsufficientAmount,
-        /// After the first join of the court the amount has to be higher than the last join.
+        /// After the first join of the court the amount has to be higher than the current stake.
         AmountBelowLastJoin,
         /// The maximum number of normal appeals is reached. So only allow to back a global dispute.
         OnlyGlobalDisputeAppealAllowed,
