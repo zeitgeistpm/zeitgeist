@@ -391,8 +391,6 @@ fn prepare_exit_court_removes_correct_jurors() {
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
 
-        // println!("JurorPool: {:?}", JurorPool::<Runtime>::get().into_inner());
-
         for r in 0..max_accounts {
             let len = JurorPool::<Runtime>::get().into_inner().len();
             assert!(
