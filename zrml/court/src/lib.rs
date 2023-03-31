@@ -908,10 +908,37 @@ mod pallet {
     where
         T: Config,
     {
-        pub(crate) fn choose_multiple_weighted<R: RngCore>(
+        pub(crate) fn get_n_random_numbers(
+            n: usize,
+            max: u128,
+        ) -> Result<BTreeSet<u128>, DispatchError> {
+            let mut rng = Self::rng();
+
+            let mut random_set = BTreeSet::new();
+            let mut insert_unused_random_number = || -> DispatchResult {
+                let mut count = 0u8;
+                // this loop is to make sure we don't insert the same random number twice
+                while !random_set.insert(rng.gen_range(0u128..=max)) {
+                    count = count.saturating_add(1u8);
+                    if count >= 3u8 {
+                        return Err(Error::<T>::RandNumGenFailed.into());
+                    }
+                }
+                Ok(())
+            };
+
+            for _ in 0..n {
+                insert_unused_random_number()?;
+            }
+
+            debug_assert!(random_set.len() == n);
+
+            Ok(random_set)
+        }
+
+        pub(crate) fn choose_multiple_weighted(
             jurors: &mut JurorPoolOf<T>,
             number: usize,
-            rng: &mut R,
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let total_weight = jurors
                 .iter()
@@ -923,23 +950,7 @@ mod pallet {
                 })
                 .sum::<u128>();
 
-            let mut random_set = BTreeSet::new();
-            let mut insert_unused_random_number = || -> DispatchResult {
-                let mut count = 0u8;
-                // this loop is to make sure we don't insert the same random number twice
-                while !random_set.insert(rng.gen_range(0u128..=total_weight)) {
-                    count = count.saturating_add(1u8);
-                    if count >= 3u8 {
-                        return Err(Error::<T>::RandNumGenFailed.into());
-                    }
-                }
-                Ok(())
-            };
-
-            for _ in 0..number {
-                insert_unused_random_number()?;
-            }
-            debug_assert!(random_set.len() == number);
+            let mut random_set = Self::get_n_random_numbers(number, total_weight)?;
 
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
 
@@ -1004,10 +1015,8 @@ mod pallet {
             let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
             ensure!(jurors.len() >= necessary_jurors_weight, Error::<T>::NotEnoughJurors);
 
-            let mut rng = Self::rng();
-
             let random_jurors =
-                Self::choose_multiple_weighted(&mut jurors, necessary_jurors_weight, &mut rng)?;
+                Self::choose_multiple_weighted(&mut jurors, necessary_jurors_weight)?;
 
             debug_assert!(
                 random_jurors.len() <= T::MaxDraws::get() as usize,

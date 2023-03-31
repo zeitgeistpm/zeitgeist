@@ -1930,7 +1930,6 @@ fn on_resolution_denies_non_court_markets() {
 fn choose_multiple_weighted_works() {
     ExtBuilder::default().build().execute_with(|| {
         let necessary_jurors_weight = Court::necessary_jurors_weight(5usize);
-        let mut rng = Court::rng();
         for i in 0..necessary_jurors_weight {
             let amount = MinJurorStake::get() + i as u128;
             let juror = i as u128;
@@ -1939,8 +1938,7 @@ fn choose_multiple_weighted_works() {
         }
         let mut jurors = JurorPool::<Runtime>::get();
         let random_jurors =
-            Court::choose_multiple_weighted(&mut jurors, necessary_jurors_weight, &mut rng)
-                .unwrap();
+            Court::choose_multiple_weighted(&mut jurors, necessary_jurors_weight).unwrap();
         assert_eq!(
             random_jurors.iter().map(|draw| draw.weight).sum::<u32>() as usize,
             necessary_jurors_weight
@@ -2187,15 +2185,14 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
             jurors.try_push(pool_item.clone()).unwrap();
         }
 
-        let mut rng = Court::rng();
-        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 3, &mut rng).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 3).unwrap();
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             run_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::choose_multiple_weighted(&mut jurors, 3, &mut rng).unwrap();
+                Court::choose_multiple_weighted(&mut jurors, 3).unwrap();
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -2229,8 +2226,7 @@ fn random_jurors_returns_a_subset_of_jurors() {
             jurors.try_push(pool_item.clone()).unwrap();
         }
 
-        let mut rng = Court::rng();
-        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 2, &mut rng).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 2).unwrap();
         for draw in random_jurors {
             assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.juror == draw.juror));
         }
