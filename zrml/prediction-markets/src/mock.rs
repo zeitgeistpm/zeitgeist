@@ -294,6 +294,7 @@ impl zrml_court::Config for Runtime {
     type CourtPalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RequestInterval = RequestInterval;
+    type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }

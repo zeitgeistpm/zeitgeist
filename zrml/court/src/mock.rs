@@ -20,12 +20,13 @@
 
 use crate::{self as zrml_court, mock_storage::pallet as mock_storage};
 use frame_support::{
-    construct_runtime,
+    construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
     parameter_types,
-    traits::{Everything, Hooks},
+    traits::{Everything, Hooks, NeverEnsureOrigin},
     PalletId,
 };
+use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -33,7 +34,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId,
-        CourtPalletId, CourtVotePeriod, MaxAppeals, MaxDraws, MaxJurors, MaxReserves,
+        CourtPalletId, CourtVotePeriod, MaxAppeals, MaxApprovals, MaxDraws, MaxJurors, MaxReserves,
         MinJurorStake, MinimumPeriod, PmPalletId, RequestInterval, BASE,
     },
     traits::DisputeResolutionApi,
@@ -54,6 +55,11 @@ pub const HARRY: AccountIdTest = 7;
 pub const IAN: AccountIdTest = 8;
 pub const POOR_PAUL: AccountIdTest = 9;
 pub const INITIAL_BALANCE: u128 = 1000 * BASE;
+pub const SUDO: AccountIdTest = 69;
+
+ord_parameter_types! {
+    pub const Sudo: AccountIdTest = SUDO;
+}
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
@@ -72,6 +78,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
         // Just a mock storage for testing.
         MockStorage: mock_storage::{Storage},
     }
@@ -147,6 +154,7 @@ impl crate::Config for Runtime {
     type CourtPalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type RequestInterval = RequestInterval;
+    type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
@@ -203,6 +211,25 @@ impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
     type Moment = Moment;
     type OnTimestampSet = ();
+    type WeightInfo = ();
+}
+
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Burn = ();
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ();
+    type ProposalBondMinimum = ();
+    type ProposalBondMaximum = ();
+    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type SpendFunds = ();
+    type SpendOrigin = NeverEnsureOrigin<Balance>;
+    type SpendPeriod = ();
     type WeightInfo = ();
 }
 
