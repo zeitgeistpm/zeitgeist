@@ -445,7 +445,7 @@ mod pallet {
         }
 
         /// Prepare as a juror to exit the court.
-        /// For this the juror has to be removed from the stake weighted pool first before the exit.
+        /// For this the juror has to be removed from the stake-weighted pool first before the exit.
         /// Returns an error if the juror is already not part of the pool anymore.
         ///
         /// # Weight
