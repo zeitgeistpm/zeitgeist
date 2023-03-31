@@ -864,8 +864,8 @@ mod pallet {
                     <Jurors<T>>::insert(&draw.juror, juror_info);
                 } else {
                     log::warn!(
-                        "Juror {:?} not found in Jurors storage for vote aggregation. Market id \
-                         {:?}.",
+                        "Juror {:?} not found in Jurors storage (reassign_juror_stakes). Market \
+                         id {:?}.",
                         draw.juror,
                         market_id
                     );
@@ -1031,8 +1031,7 @@ mod pallet {
                     <Jurors<T>>::insert(&old_draw.juror, juror_info);
                 } else {
                     log::warn!(
-                        "Juror {:?} not found in Jurors storage for vote aggregation. Market id \
-                         {:?}.",
+                        "Juror {:?} not found in Jurors storage (select_jurors). Market id {:?}.",
                         old_draw.juror,
                         market_id
                     );
