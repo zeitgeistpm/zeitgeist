@@ -187,7 +187,7 @@ pub struct Draw<AccountId, Balance, Hash> {
     pub(crate) slashable: Balance,
 }
 
-/// All information related one item in the stake weighted juror pool.
+/// All information related to one item in the stake weighted juror pool.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
