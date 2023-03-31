@@ -325,7 +325,7 @@ mod pallet {
         /// The report of the market was not found.
         MarketReportNotFound,
         /// The caller has not enough funds to join the court with the specified amount.
-        InsufficientAmount,
+        AmountExceedsBalance,
         /// After the first join of the court the amount has to be higher than the current stake.
         AmountBelowLastJoin,
         /// The maximum number of normal appeals is reached. So only allow to back a global dispute.
@@ -340,6 +340,8 @@ mod pallet {
         JurorTwiceInPool,
         /// The caller of this function is not part of the juror draws.
         CallerNotInDraws,
+        /// The callers balance is lower than the appeal bond.
+        AppealBondExceedsBalance,
     }
 
     #[pallet::hooks]
@@ -376,7 +378,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
             let free_balance = T::Currency::free_balance(&who);
-            ensure!(amount <= free_balance, Error::<T>::InsufficientAmount);
+            ensure!(amount <= free_balance, Error::<T>::AmountExceedsBalance);
 
             let mut jurors = JurorPool::<T>::get();
 
@@ -744,7 +746,7 @@ mod pallet {
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let appeal_number = court.appeals.len().saturating_add(1);
             let bond = default_appeal_bond::<T>(appeal_number);
-            ensure!(T::Currency::can_reserve(&who, bond), Error::<T>::InsufficientAmount);
+            ensure!(T::Currency::can_reserve(&who, bond), Error::<T>::AppealBondExceedsBalance);
             ensure!(
                 appeal_number < <AppealsOf<T>>::bound(),
                 Error::<T>::OnlyGlobalDisputeAppealAllowed
