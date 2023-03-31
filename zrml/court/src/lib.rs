@@ -1104,7 +1104,7 @@ mod pallet {
             Ok(new_draws)
         }
 
-        // Returns (index, pool_item) if the stake associated with the juror was found.
+        // Returns (index, pool_item) if the pool item is part of the juror pool.
         // It returns None otherwise.
         pub(crate) fn get_pool_item<'a>(
             jurors: &'a [JurorPoolItemOf<T>],
