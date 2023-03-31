@@ -452,7 +452,7 @@ mod pallet {
 
         /// Prepare as a juror to exit the court.
         /// When this is called the juror is not anymore able to get drawn for new cases.
-        /// The juror gets removed from the stake-weighted pool. 
+        /// The juror gets removed from the stake-weighted pool.
         /// After that the juror can exit the court.
         /// Returns an error if the juror is already not part of the pool anymore.
         ///
@@ -483,7 +483,7 @@ mod pallet {
 
         /// Exit the court.
         /// The stake which is not locked by any court case is unlocked.
-        /// `prepare_exit_court` must be called before 
+        /// `prepare_exit_court` must be called before
         /// to remove the juror from the stake-weighted pool.
         ///
         /// # Arguments
@@ -1121,7 +1121,7 @@ mod pallet {
             }) {
                 return Some((i, &jurors[i]));
             }
-            // this None case can happen whenever the juror decided to leave the court 
+            // this None case can happen whenever the juror decided to leave the court
             // or was kicked out of the juror pool because of the lowest stake
             None
         }
