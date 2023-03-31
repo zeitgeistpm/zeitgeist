@@ -811,7 +811,7 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let appeal_number = court.appeals.len().saturating_add(1);
-            ensure!(appeal_number == <AppealsOf<T>>::bound(), Error::<T>::NeedsToBeLastAppeal);
+            ensure!(appeal_number == T::MaxAppeals::get(), Error::<T>::NeedsToBeLastAppeal);
 
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
