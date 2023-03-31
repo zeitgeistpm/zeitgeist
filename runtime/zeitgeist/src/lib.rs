@@ -100,7 +100,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
+// Currently disables Rikiddo and creation of markets using SimpleDisputes
 // dispute mechanism.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
@@ -115,8 +115,7 @@ impl Contains<Call> for IsCallable {
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            MarketDisputeMechanism::SimpleDisputes, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{
             create_cpmm_market_and_deploy_assets, create_market, edit_market,
@@ -144,7 +143,6 @@ impl Contains<Call> for IsCallable {
             }
             // Membership is managed by the respective Membership instance
             Call::Council(set_members { .. }) => false,
-            Call::Court(_) => false,
             #[cfg(feature = "parachain")]
             Call::DmpQueue(service_overweight { .. }) => false,
             Call::LiquidityMining(_) => false,
@@ -153,11 +151,11 @@ impl Contains<Call> for IsCallable {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                    // Disable SimpleDisputes dispute resolution mechanism
+                    create_market { dispute_mechanism: SimpleDisputes, .. } => false,
+                    edit_market { dispute_mechanism: SimpleDisputes, .. } => false,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
+                        dispute_mechanism: SimpleDisputes,
                         ..
                     } => false,
                     _ => true,
