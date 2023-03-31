@@ -1116,9 +1116,8 @@ mod pallet {
             }) {
                 return Some((i, &jurors[i]));
             }
-            // this None case can happen when the lowest bonded juror was removed (`join_court`)
-            // it can also happen when juror was denounced,
-            // did not vote or reveal or when the juror decided to leave the court
+            // this None case can happen whenever the juror decided to leave the court 
+            // or was kicked out of the juror pool because of the lowest stake
             None
         }
 
