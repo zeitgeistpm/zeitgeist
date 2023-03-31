@@ -38,8 +38,8 @@ pub use types::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        weights::WeightInfoZeitgeist, AppealInfo, CourtInfo, CourtPalletApi, CourtStatus, Draw,
-        JurorInfo, JurorPoolItem, RoundTiming, Vote,
+        weights::WeightInfoZeitgeist, AppealInfo, CommitmentMatcher, CourtInfo, CourtPalletApi,
+        CourtStatus, Draw, JurorInfo, JurorPoolItem, RoundTiming, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -189,6 +189,8 @@ mod pallet {
     pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
     pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
+    pub(crate) type CommitmentMatcherOf<T> =
+        CommitmentMatcher<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -632,10 +634,13 @@ mod pallet {
 
             let commitment = match draw.vote {
                 Vote::Secret { commitment } => {
-                    ensure!(
-                        commitment == T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt)),
-                        Error::<T>::InvalidReveal
-                    );
+                    let commitment_matcher = CommitmentMatcher {
+                        commitment,
+                        juror: juror.clone(),
+                        outcome: outcome.clone(),
+                        salt,
+                    };
+                    Self::is_valid(commitment_matcher)?;
                     commitment
                 }
                 Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
@@ -705,15 +710,13 @@ mod pallet {
 
             let commitment = match draw.vote {
                 Vote::Secret { commitment } => {
-                    // market id and current appeal number is part of salt generation
-                    // salt should be signed by the juror (market_id ++ appeal number)
-                    // salt can be reproduced only be the juror address
-                    // with knowing market_id and appeal number
-                    // so even if the salt is forgotten it can be reproduced only by the juror
-                    ensure!(
-                        commitment == T::Hashing::hash_of(&(who.clone(), outcome.clone(), salt)),
-                        Error::<T>::InvalidReveal
-                    );
+                    let commitment_matcher = CommitmentMatcher {
+                        commitment,
+                        juror: who.clone(),
+                        outcome: outcome.clone(),
+                        salt,
+                    };
+                    Self::is_valid(commitment_matcher)?;
                     commitment
                 }
                 Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
@@ -1300,6 +1303,21 @@ mod pallet {
             let resolved_outcome =
                 Self::get_winner(last_draws, last_winner).unwrap_or(oracle_outcome);
             Ok(resolved_outcome)
+        }
+
+        pub(crate) fn is_valid(commitment_matcher: CommitmentMatcherOf<T>) -> DispatchResult {
+            // market id and current appeal number is part of salt generation
+            // salt should be signed by the juror (market_id ++ appeal number)
+            // salt can be reproduced only be the juror address
+            // with knowing market_id and appeal number
+            // so even if the salt is forgotten it can be reproduced only by the juror
+            let CommitmentMatcher { commitment, juror, outcome, salt } = commitment_matcher;
+            ensure!(
+                commitment == T::Hashing::hash_of(&(juror, outcome, salt)),
+                Error::<T>::InvalidReveal
+            );
+
+            Ok(())
         }
     }
 

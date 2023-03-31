@@ -36,6 +36,13 @@ pub struct JurorInfo<Balance> {
     pub(crate) active_lock: Balance,
 }
 
+pub struct CommitmentMatcher<AccountId, Hash> {
+    pub(crate) commitment: Hash,
+    pub(crate) juror: AccountId,
+    pub(crate) outcome: OutcomeReport,
+    pub(crate) salt: Hash,
+}
+
 /// All possible states of a vote.
 #[derive(
     parity_scale_codec::Decode,
