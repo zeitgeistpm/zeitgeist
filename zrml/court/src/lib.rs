@@ -260,8 +260,6 @@ mod pallet {
         MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u32 },
         /// The juror stakes have been reassigned.
         JurorStakesReassigned { market_id: MarketIdOf<T> },
-        /// The tardy jurors have been punished.
-        TardyJurorsPunished { market_id: MarketIdOf<T> },
         /// The global dispute backing was successful.
         GlobalDisputeBacked { market_id: MarketIdOf<T> },
     }
@@ -315,12 +313,8 @@ mod pallet {
         SelfDenounceDisallowed,
         /// The court is not in the closed state.
         CourtNotClosed,
-        /// The juror stakes were already reassigned.
-        JurorStakesAlreadyReassigned,
-        /// The tardy jurors were already punished.
-        TardyJurorsAlreadyPunished,
-        /// Punish the tardy jurors first.
-        PunishTardyJurorsFirst,
+        /// The juror stakes of the court already got reassigned.
+        CourtAlreadyReassigned,
         /// There are not enough jurors in the pool.
         NotEnoughJurors,
         /// The report of the market was not found.
@@ -825,68 +819,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Punish all tardy jurors for the given court associated to the market id.
-        /// This needs to be called before `reassign_juror_stakes`.
-        ///
-        /// # Arguments
-        ///
-        /// - `market_id`: The identifier of the court.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(n)`, where `n` is the number of randomly selected jurors for this court.
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn punish_tardy_jurors(
-            origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            ensure_signed(origin)?;
-
-            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let winner = match court.status {
-                CourtStatus::Closed { winner, punished, reassigned: _ } => {
-                    ensure!(!punished, Error::<T>::TardyJurorsAlreadyPunished);
-                    winner
-                }
-                _ => return Err(Error::<T>::CourtNotClosed.into()),
-            };
-
-            let reward_pot = Self::reward_pot(&market_id);
-            let slash_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
-                let (imbalance, missing) = T::Currency::slash(ai, slashable);
-                debug_assert!(
-                    missing.is_zero(),
-                    "Could not slash all of the amount for juror {:?}.",
-                    ai
-                );
-                T::Currency::resolve_creating(&reward_pot, imbalance);
-            };
-
-            for draw in Draws::<T>::get(market_id).iter() {
-                match draw.vote {
-                    Vote::Drawn => {
-                        slash_juror(&draw.juror, draw.slashable);
-                    }
-                    Vote::Secret { commitment: _ } => {
-                        slash_juror(&draw.juror, draw.slashable);
-                    }
-                    // denounce extrinsic already punished the juror
-                    Vote::Denounced { commitment: _, outcome: _, salt: _ } => (),
-                    Vote::Revealed { commitment: _, outcome: _, salt: _ } => (),
-                }
-            }
-
-            court.status = CourtStatus::Closed { winner, reassigned: false, punished: true };
-            <Courts<T>>::insert(market_id, court);
-
-            Self::deposit_event(Event::TardyJurorsPunished { market_id });
-
-            Ok(())
-        }
-
-        /// After the court is closed (resolution happened) and the tardy jurors have been punished,
-        /// the juror stakes can get reassigned.
+        /// After the court is closed (resolution happened) the juror stakes can get reassigned.
         ///
         /// # Arguments
         ///
@@ -905,15 +838,23 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let winner = match court.status {
-                CourtStatus::Closed { winner, punished, reassigned } => {
-                    ensure!(!reassigned, Error::<T>::JurorStakesAlreadyReassigned);
-                    ensure!(punished, Error::<T>::PunishTardyJurorsFirst);
-                    winner
-                }
+                CourtStatus::Closed { winner } => winner,
+                CourtStatus::Reassigned => return Err(Error::<T>::CourtAlreadyReassigned.into()),
                 _ => return Err(Error::<T>::CourtNotClosed.into()),
             };
 
             let draws = Draws::<T>::get(market_id);
+
+            let reward_pot = Self::reward_pot(&market_id);
+            let slash_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
+                let (imbalance, missing) = T::Currency::slash(ai, slashable);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount for juror {:?}.",
+                    ai
+                );
+                T::Currency::resolve_creating(&reward_pot, imbalance);
+            };
 
             let mut valid_winners_and_losers = Vec::with_capacity(draws.len());
 
@@ -930,8 +871,19 @@ mod pallet {
                     );
                     debug_assert!(false);
                 }
-                if let Vote::Revealed { commitment: _, outcome, salt: _ } = draw.vote {
-                    valid_winners_and_losers.push((draw.juror, outcome, draw.slashable));
+
+                match draw.vote {
+                    Vote::Drawn => {
+                        slash_juror(&draw.juror, draw.slashable);
+                    }
+                    Vote::Secret { commitment: _ } => {
+                        slash_juror(&draw.juror, draw.slashable);
+                    }
+                    // denounce extrinsic already punished the juror
+                    Vote::Denounced { commitment: _, outcome: _, salt: _ } => (),
+                    Vote::Revealed { commitment: _, outcome, salt: _ } => {
+                        valid_winners_and_losers.push((draw.juror, outcome, draw.slashable));
+                    }
                 }
             }
 
@@ -941,8 +893,9 @@ mod pallet {
                 &winner,
             );
 
-            court.status = CourtStatus::Closed { winner, punished: true, reassigned: true };
+            court.status = CourtStatus::Reassigned;
             <Courts<T>>::insert(market_id, court);
+
             <Draws<T>>::remove(market_id);
 
             Self::deposit_event(Event::JurorStakesReassigned { market_id });
@@ -1380,11 +1333,7 @@ mod pallet {
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let draws = Draws::<T>::get(market_id);
             let resolved_outcome = Self::get_latest_resolved_outcome(market_id, draws.as_slice())?;
-            court.status = CourtStatus::Closed {
-                winner: resolved_outcome.clone(),
-                punished: false,
-                reassigned: false,
-            };
+            court.status = CourtStatus::Closed { winner: resolved_outcome.clone() };
             <Courts<T>>::insert(market_id, court);
 
             Ok(Some(resolved_outcome))

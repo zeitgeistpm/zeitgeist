@@ -451,27 +451,6 @@ benchmarks! {
         <frame_system::Pallet<T>>::set_block_number(aggregation_end + 1u64.saturated_into::<T::BlockNumber>());
     }: _(RawOrigin::Signed(caller), market_id)
 
-
-    punish_tardy_jurors {
-        let d in 1..T::MaxDraws::get();
-
-        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
-        fill_pool::<T>(necessary_jurors_weight as u32)?;
-
-        let caller: T::AccountId = whitelisted_caller();
-        let market_id = setup_court::<T>()?;
-
-        let mut court = <Courts<T>>::get(market_id).unwrap();
-        court.status = CourtStatus::Closed {
-            winner: OutcomeReport::Scalar(0u128),
-            punished: false,
-            reassigned: false,
-        };
-        <Courts<T>>::insert(market_id, court);
-
-        fill_draws::<T>(market_id, d)?;
-    }: _(RawOrigin::Signed(caller), market_id)
-
     reassign_juror_stakes {
         let d in 1..T::MaxDraws::get();
 
@@ -483,11 +462,7 @@ benchmarks! {
 
         let mut court = <Courts<T>>::get(market_id).unwrap();
         let winner_outcome = OutcomeReport::Scalar(0u128);
-        court.status = CourtStatus::Closed {
-            winner: winner_outcome.clone(),
-            punished: true,
-            reassigned: false,
-        };
+        court.status = CourtStatus::Closed { winner: winner_outcome.clone() };
         <Courts<T>>::insert(market_id, court);
 
         let salt = Default::default();

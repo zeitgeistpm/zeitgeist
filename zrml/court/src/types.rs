@@ -106,9 +106,9 @@ pub enum CourtStatus {
     /// The court case has been started.
     Open,
     /// The court case was closed, the winner outcome was determined.
-    /// `punished` indicates whether the tardy jurors were punished.
-    /// `reassigned` indicates if the winning jurors got the funds from the losers already.
-    Closed { winner: OutcomeReport, punished: bool, reassigned: bool },
+    Closed { winner: OutcomeReport },
+    /// The juror stakes from the court were reassigned
+    Reassigned,
 }
 
 /// The information about an appeal for a court case.
