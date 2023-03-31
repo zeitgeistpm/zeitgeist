@@ -159,12 +159,12 @@ mod pallet {
     }
 
     // Number of draws for an initial market dispute.
-    const INITIAL_JURORS_NUM: usize = 5;
+    const INITIAL_DRAWS_NUM: usize = 5;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent appeals
     // of the same market
-    const SUBSEQUENT_JURORS_FACTOR: usize = 2;
+    const APPEAL_BASIS: usize = 2;
     // Basis used to increase the bond for subsequent appeals of the same market
     const APPEAL_BOND_BASIS: u32 = 2;
 
@@ -1182,16 +1182,14 @@ mod pallet {
             ChaCha20Rng::from_seed(seed)
         }
 
-        // Calculates the necessary number of jurors depending on the number of market appeals.
+        // Calculates the necessary number of draws depending on the number of market appeals.
         pub(crate) fn necessary_jurors_weight(appeals_len: usize) -> usize {
             // 2^(appeals_len) * 5 + 2^(appeals_len) - 1
-            // MaxAppeals - 1 (= 5) example: 2^5 * 5 + 2^5 - 1 = 191
-            SUBSEQUENT_JURORS_FACTOR
+            // MaxAppeals - 1 (= 3) example: 2^3 * 5 + 2^3 - 1 = 47
+            APPEAL_BASIS
                 .saturating_pow(appeals_len as u32)
-                .saturating_mul(INITIAL_JURORS_NUM)
-                .saturating_add(
-                    SUBSEQUENT_JURORS_FACTOR.saturating_pow(appeals_len as u32).saturating_sub(1),
-                )
+                .saturating_mul(INITIAL_DRAWS_NUM)
+                .saturating_add(APPEAL_BASIS.saturating_pow(appeals_len as u32).saturating_sub(1))
         }
 
         fn slash_losers_to_award_winners(
