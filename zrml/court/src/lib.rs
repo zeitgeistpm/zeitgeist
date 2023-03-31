@@ -155,7 +155,7 @@ mod pallet {
         type WeightInfo: WeightInfoZeitgeist;
     }
 
-    // Number of jurors for an initial market dispute
+    // Number of draws for an initial market dispute.
     const INITIAL_JURORS_NUM: usize = 5;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
