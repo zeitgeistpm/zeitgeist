@@ -266,7 +266,7 @@ mod pallet {
     pub enum Error<T> {
         /// An account id does not exist on the jurors storage.
         JurorDoesNotExist,
-        /// On dispute or resolution, someone tried to pass a non-court market type
+        /// On dispute or resolution, someone tried to pass a non-court market type.
         MarketDoesNotHaveCourtMechanism,
         /// The market is not in a state where it can be disputed.
         MarketIsNotDisputed,
