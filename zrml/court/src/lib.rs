@@ -143,7 +143,7 @@ mod pallet {
         /// Randomness source
         type Random: Randomness<Self::Hash, Self::BlockNumber>;
 
-        /// The interval for requesting multiple court votes at once.
+        /// The global interval which schedules the start of new court vote periods.
         #[pallet::constant]
         type RequestInterval: Get<Self::BlockNumber>;
 
