@@ -825,7 +825,8 @@ mod pallet {
             Ok(())
         }
 
-        /// After the court is closed (resolution happened), the tardy jurors can get punished.
+        /// Punish all tardy jurors for the given court associated to the market id.
+        /// This needs to be called before `reassign_juror_stakes`.
         ///
         /// # Arguments
         ///
