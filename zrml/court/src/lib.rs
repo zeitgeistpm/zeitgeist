@@ -56,7 +56,7 @@ mod pallet {
         pallet_prelude::{Hooks, OptionQuery, StorageMap, StorageValue, ValueQuery, Weight},
         traits::{
             Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
-            NamedReservableCurrency, Randomness, ReservableCurrency, StorageVersion,
+            NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
             WithdrawReasons,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId,
@@ -146,6 +146,9 @@ mod pallet {
         /// The interval for requesting multiple court votes at once.
         #[pallet::constant]
         type RequestInterval: Get<Self::BlockNumber>;
+
+        /// Handler for slashed funds.
+        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
         /// Slashed funds are send to the treasury
         #[pallet::constant]
@@ -1224,8 +1227,7 @@ mod pallet {
                 }
             } else {
                 // if there are no winners reward the treasury
-                let treasury_acc = Self::treasury_account_id();
-                T::Currency::resolve_creating(&treasury_acc, total_incentives);
+                T::Slash::on_unbalanced(total_incentives);
             }
         }
 
