@@ -963,6 +963,7 @@ macro_rules! impl_config_traits {
             type MinJurorStake = MinJurorStake;
             type Random = RandomnessCollectiveFlip;
             type RequestInterval = RequestInterval;
+            type Slash = Treasury;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }

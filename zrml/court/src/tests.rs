@@ -147,10 +147,10 @@ fn set_alice_after_vote(
     run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
     let salt = <Runtime as frame_system::Config>::Hash::default();
-    let secret = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
-    assert_ok!(Court::vote(Origin::signed(ALICE), market_id, secret));
+    let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
+    assert_ok!(Court::vote(Origin::signed(ALICE), market_id, commitment));
 
-    (market_id, secret, salt)
+    (market_id, commitment, salt)
 }
 
 const DEFAULT_SET_OF_JURORS: &[JurorPoolItem<AccountIdTest, u128>] = &[
@@ -531,9 +531,9 @@ fn vote_works() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, secret));
-        System::assert_last_event(Event::JurorVoted { juror: ALICE, market_id, secret }.into());
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
+        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, commitment));
+        System::assert_last_event(Event::JurorVoted { juror: ALICE, market_id, commitment }.into());
 
         let new_draws = <Draws<Runtime>>::get(market_id);
         assert_eq!(old_draws[1..], new_draws[1..]);
@@ -541,7 +541,7 @@ fn vote_works() {
         assert_eq!(old_draws[0].weight, new_draws[0].weight);
         assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
         assert_eq!(old_draws[0].vote, Vote::Drawn);
-        assert_eq!(new_draws[0].vote, Vote::Secret { secret });
+        assert_eq!(new_draws[0].vote, Vote::Secret { commitment });
     });
 }
 
@@ -560,14 +560,14 @@ fn vote_overwrite_works() {
 
         let wrong_outcome = OutcomeReport::Scalar(69u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let wrong_secret = BlakeTwo256::hash_of(&(ALICE, wrong_outcome, salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, wrong_secret));
+        let wrong_commitment = BlakeTwo256::hash_of(&(ALICE, wrong_outcome, salt));
+        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, wrong_commitment));
 
         run_blocks(1);
 
         let right_outcome = OutcomeReport::Scalar(42u128);
-        let new_secret = BlakeTwo256::hash_of(&(ALICE, right_outcome, salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, new_secret));
+        let new_commitment = BlakeTwo256::hash_of(&(ALICE, right_outcome, salt));
+        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, new_commitment));
     });
 }
 
@@ -575,9 +575,9 @@ fn vote_overwrite_works() {
 fn vote_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let secret = <Runtime as frame_system::Config>::Hash::default();
+        let commitment = <Runtime as frame_system::Config>::Hash::default();
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), market_id, secret),
+            Court::vote(Origin::signed(ALICE), market_id, commitment),
             Error::<Runtime>::CourtNotFound
         );
     });
@@ -585,14 +585,14 @@ fn vote_fails_if_court_not_found() {
 
 #[test_case(
     Vote::Revealed {
-        secret: <Runtime as frame_system::Config>::Hash::default(),
+        commitment: <Runtime as frame_system::Config>::Hash::default(),
         outcome: OutcomeReport::Scalar(1u128),
         salt: <Runtime as frame_system::Config>::Hash::default(),
     }; "revealed"
 )]
 #[test_case(
     Vote::Denounced {
-        secret: <Runtime as frame_system::Config>::Hash::default(),
+        commitment: <Runtime as frame_system::Config>::Hash::default(),
         outcome: OutcomeReport::Scalar(1u128),
         salt: <Runtime as frame_system::Config>::Hash::default(),
     }; "denounced"
@@ -614,9 +614,9 @@ fn vote_fails_if_vote_state_incorrect(vote: crate::Vote<<Runtime as frame_system
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), market_id, secret),
+            Court::vote(Origin::signed(ALICE), market_id, commitment),
             Error::<Runtime>::InvalidVoteState
         );
     });
@@ -636,9 +636,9 @@ fn vote_fails_if_caller_not_in_draws() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), market_id, secret),
+            Court::vote(Origin::signed(ALICE), market_id, commitment),
             Error::<Runtime>::CallerNotInDraws
         );
     });
@@ -659,9 +659,9 @@ fn vote_fails_if_not_in_voting_period() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), market_id, secret),
+            Court::vote(Origin::signed(ALICE), market_id, commitment),
             Error::<Runtime>::NotInVotingPeriod
         );
     });
@@ -682,8 +682,8 @@ fn reveal_vote_works() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, secret));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, commitment));
 
         let old_draws = <Draws<Runtime>>::get(market_id);
 
@@ -700,8 +700,8 @@ fn reveal_vote_works() {
         assert_eq!(old_draws[0].juror, new_draws[0].juror);
         assert_eq!(old_draws[0].weight, new_draws[0].weight);
         assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
-        assert_eq!(old_draws[0].vote, Vote::Secret { secret });
-        assert_eq!(new_draws[0].vote, Vote::Revealed { secret, outcome, salt });
+        assert_eq!(old_draws[0].vote, Vote::Secret { commitment });
+        assert_eq!(new_draws[0].vote, Vote::Revealed { commitment, outcome, salt });
     });
 }
 
@@ -855,7 +855,7 @@ fn reveal_vote_fails_if_already_denounced() {
 fn denounce_vote_works() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
-        let (market_id, secret, salt) = set_alice_after_vote(outcome.clone());
+        let (market_id, commitment, salt) = set_alice_after_vote(outcome.clone());
 
         let old_draws = <Draws<Runtime>>::get(market_id);
         assert!(
@@ -891,8 +891,8 @@ fn denounce_vote_works() {
         assert_eq!(old_draws[0].juror, new_draws[0].juror);
         assert_eq!(old_draws[0].weight, new_draws[0].weight);
         assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
-        assert_eq!(old_draws[0].vote, Vote::Secret { secret });
-        assert_eq!(new_draws[0].vote, Vote::Denounced { secret, outcome, salt });
+        assert_eq!(old_draws[0].vote, Vote::Secret { commitment });
+        assert_eq!(new_draws[0].vote, Vote::Denounced { commitment, outcome, salt });
 
         let free_alice_after = Balances::free_balance(ALICE);
         let slash = old_draws[0].slashable;
@@ -1204,8 +1204,8 @@ fn appeal_get_latest_resolved_outcome_changes() {
         run_to_block(request_block + 1);
         let outcome = OutcomeReport::Scalar(69u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, secret));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        assert_ok!(Court::vote(Origin::signed(ALICE), market_id, commitment));
 
         run_blocks(CourtVotePeriod::get() + 1);
 
@@ -1561,27 +1561,27 @@ fn punish_tardy_jurors_slashes_tardy_jurors_only() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
 
         let draws: crate::DrawsOf<Runtime> = vec![
             Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() },
             Draw {
                 juror: BOB,
                 weight: 1,
-                vote: Vote::Secret { secret },
+                vote: Vote::Secret { commitment },
                 slashable: 2 * MinJurorStake::get(),
             },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
                 slashable: 3 * MinJurorStake::get(),
             },
             Draw { juror: DAVE, weight: 1, vote: Vote::Drawn, slashable: 4 * MinJurorStake::get() },
             Draw {
                 juror: EVE,
                 weight: 1,
-                vote: Vote::Denounced { secret, outcome, salt },
+                vote: Vote::Denounced { commitment, outcome, salt },
                 slashable: 5 * MinJurorStake::get(),
             },
         ]
@@ -1770,7 +1770,7 @@ fn reassign_juror_stakes_decreases_active_lock() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
 
         let alice_slashable = MinJurorStake::get();
         <Jurors<Runtime>>::mutate(ALICE, |juror_info| {
@@ -1799,17 +1799,22 @@ fn reassign_juror_stakes_decreases_active_lock() {
 
         let draws: crate::DrawsOf<Runtime> = vec![
             Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: alice_slashable },
-            Draw { juror: BOB, weight: 1, vote: Vote::Secret { secret }, slashable: bob_slashable },
+            Draw {
+                juror: BOB,
+                weight: 1,
+                vote: Vote::Secret { commitment },
+                slashable: bob_slashable,
+            },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
                 slashable: charlie_slashable,
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
-                vote: Vote::Denounced { secret, outcome, salt },
+                vote: Vote::Denounced { commitment, outcome, salt },
                 slashable: dave_slashable,
             },
         ]
@@ -1850,7 +1855,7 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
 
         let wrong_outcome_0 = OutcomeReport::Scalar(69u128);
         let wrong_outcome_1 = OutcomeReport::Scalar(56u128);
@@ -1859,25 +1864,25 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
             Draw {
                 juror: ALICE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
                 slashable: MinJurorStake::get(),
             },
             Draw {
                 juror: BOB,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: wrong_outcome_0, salt },
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome_0, salt },
                 slashable: 2 * MinJurorStake::get(),
             },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
                 slashable: 3 * MinJurorStake::get(),
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: wrong_outcome_1, salt },
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome_1, salt },
                 slashable: 4 * MinJurorStake::get(),
             },
         ]
@@ -1942,7 +1947,7 @@ fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
-        let secret = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
 
         let wrong_outcome_0 = OutcomeReport::Scalar(69u128);
         let wrong_outcome_1 = OutcomeReport::Scalar(56u128);
@@ -1951,25 +1956,25 @@ fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
             Draw {
                 juror: ALICE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: wrong_outcome_1.clone(), salt },
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome_1.clone(), salt },
                 slashable: MinJurorStake::get(),
             },
             Draw {
                 juror: BOB,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: wrong_outcome_0.clone(), salt },
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome_0.clone(), salt },
                 slashable: 2 * MinJurorStake::get(),
             },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: wrong_outcome_0, salt },
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome_0, salt },
                 slashable: 3 * MinJurorStake::get(),
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
-                vote: Vote::Revealed { secret, outcome: wrong_outcome_1, salt },
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome_1, salt },
                 slashable: 4 * MinJurorStake::get(),
             },
         ]
@@ -2210,12 +2215,12 @@ fn prepare_draws(market_id: &crate::MarketIdOf<Runtime>, outcomes_with_weights: 
         let juror = offset_i as u128;
         let salt = BlakeTwo256::hash_of(&offset_i);
         let outcome = OutcomeReport::Scalar(*outcome_index);
-        let secret = BlakeTwo256::hash_of(&(juror, outcome.clone(), salt));
+        let commitment = BlakeTwo256::hash_of(&(juror, outcome.clone(), salt));
         draws
             .try_push(Draw {
                 juror,
                 weight: *weight,
-                vote: Vote::Revealed { secret, outcome, salt },
+                vote: Vote::Revealed { commitment, outcome, salt },
                 slashable: 0u128,
             })
             .unwrap();

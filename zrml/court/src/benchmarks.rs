@@ -242,8 +242,8 @@ benchmarks! {
 
         <frame_system::Pallet<T>>::set_block_number(pre_vote_end + 1u64.saturated_into::<T::BlockNumber>());
 
-        let secret_vote = Default::default();
-    }: _(RawOrigin::Signed(caller), market_id, secret_vote)
+        let commitment_vote = Default::default();
+    }: _(RawOrigin::Signed(caller), market_id, commitment_vote)
 
     denounce_vote {
         let d in 1..T::MaxDraws::get();
@@ -268,13 +268,13 @@ benchmarks! {
             active_lock: T::MinJurorStake::get(),
         });
         let denounced_juror_unlookup = T::Lookup::unlookup(denounced_juror.clone());
-        let secret = T::Hashing::hash_of(&(denounced_juror.clone(), outcome.clone(), salt));
+        let commitment = T::Hashing::hash_of(&(denounced_juror.clone(), outcome.clone(), salt));
 
         let mut draws = <Draws<T>>::get(market_id);
         let draws_len = draws.len();
         draws[draws_len.saturating_sub(1usize)] = Draw {
             juror: denounced_juror,
-            vote: Vote::Secret { secret },
+            vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
         };
@@ -303,13 +303,13 @@ benchmarks! {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
         });
-        let secret = T::Hashing::hash_of(&(caller.clone(), outcome.clone(), salt));
+        let commitment = T::Hashing::hash_of(&(caller.clone(), outcome.clone(), salt));
 
         let mut draws = <Draws<T>>::get(market_id);
         let draws_len = draws.len();
         draws[draws_len.saturating_sub(1usize)] = Draw {
             juror: caller.clone(),
-            vote: Vote::Secret { secret },
+            vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
         };
@@ -364,11 +364,11 @@ benchmarks! {
                 active_lock: T::MinJurorStake::get(),
             });
             let outcome = OutcomeReport::Scalar(i as u128);
-            let secret = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
+            let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
             let draw =
                 Draw {
                     juror,
-                    vote: Vote::Revealed { secret, outcome, salt },
+                    vote: Vote::Revealed { commitment, outcome, salt },
                     weight: 1u32,
                     slashable: <BalanceOf<T>>::zero()
                 };
@@ -436,11 +436,11 @@ benchmarks! {
                 active_lock: T::MinJurorStake::get(),
             });
             let outcome = OutcomeReport::Scalar(i as u128);
-            let secret = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
+            let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
             let draw =
                 Draw {
                     juror,
-                    vote: Vote::Revealed { secret, outcome, salt },
+                    vote: Vote::Revealed { commitment, outcome, salt },
                     weight: 1u32,
                     slashable: T::MinJurorStake::get(),
                 };
@@ -501,11 +501,11 @@ benchmarks! {
                 active_lock: T::MinJurorStake::get(),
             });
             let outcome = winner_outcome.clone();
-            let secret = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
+            let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
             let draw =
                 Draw {
                     juror,
-                    vote: Vote::Revealed { secret, outcome, salt },
+                    vote: Vote::Revealed { commitment, outcome, salt },
                     weight: 1u32,
                     slashable: T::MinJurorStake::get(),
                 };

@@ -51,11 +51,11 @@ pub enum Vote<Hash> {
     /// The juror was randomly selected to vote in a specific court case.
     Drawn,
     /// The juror casted a vote, only providing a hash, which meaning is unknown.
-    Secret { secret: Hash },
+    Secret { commitment: Hash },
     /// The juror revealed her raw vote, letting anyone know what she voted.
-    Revealed { secret: Hash, outcome: OutcomeReport, salt: Hash },
+    Revealed { commitment: Hash, outcome: OutcomeReport, salt: Hash },
     /// The juror was denounced, because she revealed her raw vote during the vote phase.
-    Denounced { secret: Hash, outcome: OutcomeReport, salt: Hash },
+    Denounced { commitment: Hash, outcome: OutcomeReport, salt: Hash },
 }
 
 /// The information about the lifecycle of a court case.

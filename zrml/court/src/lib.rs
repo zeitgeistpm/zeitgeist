@@ -77,11 +77,11 @@ mod pallet {
         #[pallet::constant]
         type AppealBond: Get<BalanceOf<Self>>;
 
-        /// The time in which the jurors can cast their secret vote.
+        /// The time in which the jurors can cast their commitment vote.
         #[pallet::constant]
         type CourtVotePeriod: Get<Self::BlockNumber>;
 
-        /// The time in which the jurors should reveal their secret vote.
+        /// The time in which the jurors should reveal their commitment vote.
         #[pallet::constant]
         type CourtAggregationPeriod: Get<Self::BlockNumber>;
 
@@ -236,7 +236,7 @@ mod pallet {
         /// A juror has been removed from the court.
         JurorExited { juror: T::AccountId, exit_amount: BalanceOf<T>, active_lock: BalanceOf<T> },
         /// A juror has voted in a court.
-        JurorVoted { market_id: MarketIdOf<T>, juror: T::AccountId, secret: T::Hash },
+        JurorVoted { market_id: MarketIdOf<T>, juror: T::AccountId, commitment: T::Hash },
         /// A juror has revealed their vote.
         JurorRevealedVote {
             juror: T::AccountId,
@@ -272,9 +272,9 @@ mod pallet {
         MarketIsNotDisputed,
         /// Only jurors can reveal their votes.
         OnlyJurorsCanReveal,
-        /// The vote is not secret.
+        /// The vote is not commitment.
         VoteAlreadyRevealed,
-        /// The outcome and salt reveal do not match the secret vote.
+        /// The outcome and salt reveal do not match the commitment vote.
         InvalidReveal,
         /// No court for this market id was found.
         CourtNotFound,
@@ -288,7 +288,7 @@ mod pallet {
         NotInAppealPeriod,
         /// The court is already present for this market.
         CourtAlreadyExists,
-        /// The caller of this extrinsic needs to be drawn or in the secret vote state.
+        /// The caller of this extrinsic needs to be drawn or in the commitment vote state.
         InvalidVoteState,
         /// The amount is below the minimum required stake.
         BelowMinJurorStake,
@@ -303,7 +303,7 @@ mod pallet {
         JurorNeedsToExit,
         /// The juror was not randomly selected for the court.
         JurorNotDrawn,
-        /// The juror was drawn but did not manage to secretly vote within the court.
+        /// The juror was drawn but did not manage to commitmently vote within the court.
         JurorNotVoted,
         /// The juror was already denounced. This action can only happen once.
         VoteAlreadyDenounced,
@@ -534,7 +534,7 @@ mod pallet {
         /// # Arguments
         ///
         /// - `market_id`: The identifier of the court.
-        /// - `secret_vote`: A hash which consists of `juror ++ outcome ++ salt`.
+        /// - `commitment_vote`: A hash which consists of `juror ++ outcome ++ salt`.
         ///
         /// # Weight
         ///
@@ -545,7 +545,7 @@ mod pallet {
         pub fn vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            secret_vote: T::Hash,
+            commitment_vote: T::Hash,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -561,7 +561,7 @@ mod pallet {
                 Some(index) => {
                     // allow to override last vote
                     ensure!(
-                        matches!(draws[index].vote, Vote::Drawn | Vote::Secret { secret: _ }),
+                        matches!(draws[index].vote, Vote::Drawn | Vote::Secret { commitment: _ }),
                         Error::<T>::InvalidVoteState
                     );
                     (index, draws[index].clone())
@@ -569,25 +569,29 @@ mod pallet {
                 None => return Err(Error::<T>::CallerNotInDraws.into()),
             };
 
-            let vote = Vote::Secret { secret: secret_vote };
+            let vote = Vote::Secret { commitment: commitment_vote };
             draws[index] = Draw { juror: who.clone(), vote, ..draw };
 
             <Draws<T>>::insert(market_id, draws);
 
-            Self::deposit_event(Event::JurorVoted { juror: who, market_id, secret: secret_vote });
+            Self::deposit_event(Event::JurorVoted {
+                juror: who,
+                market_id,
+                commitment: commitment_vote,
+            });
             Ok(())
         }
 
-        /// Denounce a juror during the voting period for which the secret vote is known.
+        /// Denounce a juror during the voting period for which the commitment vote is known.
         /// This is useful to punish the behaviour that jurors reveal
-        /// their secrets before the voting period ends.
-        /// A check of `secret_hash == hash(juror ++ outcome ++ salt)` is performed for validation.
+        /// their commitments before the voting period ends.
+        /// A check of `commitment_hash == hash(juror ++ outcome ++ salt)` is performed for validation.
         ///
         /// # Arguments
         ///
         /// - `market_id`: The identifier of the court.
-        /// - `juror`: The juror whose secret vote might be known.
-        /// - `outcome`: The raw vote outcome which should match with the secret of the juror.
+        /// - `juror`: The juror whose commitment vote might be known.
+        /// - `outcome`: The raw vote outcome which should match with the commitment of the juror.
         /// - `salt`: The hash which is used to proof that the juror did reveal
         /// her vote during the voting period.
         ///
@@ -626,19 +630,19 @@ mod pallet {
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
-            let secret = match draw.vote {
-                Vote::Secret { secret } => {
+            let commitment = match draw.vote {
+                Vote::Secret { commitment } => {
                     ensure!(
-                        secret == T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt)),
+                        commitment == T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt)),
                         Error::<T>::InvalidReveal
                     );
-                    secret
+                    commitment
                 }
                 Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
-                Vote::Revealed { secret: _, outcome: _, salt: _ } => {
+                Vote::Revealed { commitment: _, outcome: _, salt: _ } => {
                     return Err(Error::<T>::VoteAlreadyRevealed.into());
                 }
-                Vote::Denounced { secret: _, outcome: _, salt: _ } => {
+                Vote::Denounced { commitment: _, outcome: _, salt: _ } => {
                     return Err(Error::<T>::VoteAlreadyDenounced.into());
                 }
             };
@@ -648,7 +652,7 @@ mod pallet {
             debug_assert!(missing.is_zero(), "Could not slash all of the amount.");
             T::Currency::resolve_creating(&reward_pot, imbalance);
 
-            let raw_vote = Vote::Denounced { secret, outcome: outcome.clone(), salt };
+            let raw_vote = Vote::Denounced { commitment, outcome: outcome.clone(), salt };
             draws[index] = Draw { juror: juror.clone(), vote: raw_vote, ..draw };
             <Draws<T>>::insert(market_id, draws);
 
@@ -662,13 +666,13 @@ mod pallet {
             Ok(())
         }
 
-        /// Reveal the secret vote of the caller juror.
-        /// A check of `secret_hash == hash(juror ++ outcome ++ salt)` is performed for validation.
+        /// Reveal the commitment vote of the caller juror.
+        /// A check of `commitment_hash == hash(juror ++ outcome ++ salt)` is performed for validation.
         ///
         /// # Arguments
         ///
         /// - `market_id`: The identifier of the court.
-        /// - `outcome`: The raw vote outcome which should match with the secret of the juror.
+        /// - `outcome`: The raw vote outcome which should match with the commitment of the juror.
         /// - `salt`: The hash which is used for the validation.
         ///
         /// # Weight
@@ -699,29 +703,29 @@ mod pallet {
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
             };
 
-            let secret = match draw.vote {
-                Vote::Secret { secret } => {
+            let commitment = match draw.vote {
+                Vote::Secret { commitment } => {
                     // market id and current appeal number is part of salt generation
                     // salt should be signed by the juror (market_id ++ appeal number)
                     // salt can be reproduced only be the juror address
                     // with knowing market_id and appeal number
                     // so even if the salt is forgotten it can be reproduced only by the juror
                     ensure!(
-                        secret == T::Hashing::hash_of(&(who.clone(), outcome.clone(), salt)),
+                        commitment == T::Hashing::hash_of(&(who.clone(), outcome.clone(), salt)),
                         Error::<T>::InvalidReveal
                     );
-                    secret
+                    commitment
                 }
                 Vote::Drawn => return Err(Error::<T>::JurorNotVoted.into()),
-                Vote::Revealed { secret: _, outcome: _, salt: _ } => {
+                Vote::Revealed { commitment: _, outcome: _, salt: _ } => {
                     return Err(Error::<T>::VoteAlreadyRevealed.into());
                 }
-                Vote::Denounced { secret: _, outcome: _, salt: _ } => {
+                Vote::Denounced { commitment: _, outcome: _, salt: _ } => {
                     return Err(Error::<T>::VoteAlreadyDenounced.into());
                 }
             };
 
-            let raw_vote = Vote::Revealed { secret, outcome: outcome.clone(), salt };
+            let raw_vote = Vote::Revealed { commitment, outcome: outcome.clone(), salt };
             draws[index] = Draw { juror: who.clone(), vote: raw_vote, ..draw };
             <Draws<T>>::insert(market_id, draws);
 
@@ -888,12 +892,12 @@ mod pallet {
                     Vote::Drawn => {
                         slash_juror(&draw.juror, draw.slashable);
                     }
-                    Vote::Secret { secret: _ } => {
+                    Vote::Secret { commitment: _ } => {
                         slash_juror(&draw.juror, draw.slashable);
                     }
                     // denounce extrinsic already punished the juror
-                    Vote::Denounced { secret: _, outcome: _, salt: _ } => (),
-                    Vote::Revealed { secret: _, outcome: _, salt: _ } => (),
+                    Vote::Denounced { commitment: _, outcome: _, salt: _ } => (),
+                    Vote::Revealed { commitment: _, outcome: _, salt: _ } => (),
                 }
             }
 
@@ -950,7 +954,7 @@ mod pallet {
                     );
                     debug_assert!(false);
                 }
-                if let Vote::Revealed { secret: _, outcome, salt: _ } = draw.vote {
+                if let Vote::Revealed { commitment: _, outcome, salt: _ } = draw.vote {
                     valid_winners_and_losers.push((draw.juror, outcome, draw.slashable));
                 }
             }
@@ -1241,7 +1245,7 @@ mod pallet {
             let mut scores = BTreeMap::<OutcomeReport, u32>::new();
 
             for draw in draws {
-                if let Vote::Revealed { secret: _, outcome, salt: _ } = &draw.vote {
+                if let Vote::Revealed { commitment: _, outcome, salt: _ } = &draw.vote {
                     if let Some(el) = scores.get_mut(outcome) {
                         *el = el.saturating_add(draw.weight);
                     } else {
