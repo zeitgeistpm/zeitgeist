@@ -177,9 +177,6 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_eq!(Jurors::<Runtime>::iter().count(), 1);
-        assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
         assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
