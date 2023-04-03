@@ -260,8 +260,6 @@ mod pallet {
         MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u32 },
         /// The juror stakes have been reassigned.
         JurorStakesReassigned { market_id: MarketIdOf<T> },
-        /// The global dispute backing was successful.
-        GlobalDisputeBacked { market_id: MarketIdOf<T> },
     }
 
     #[pallet::error]
@@ -323,10 +321,6 @@ mod pallet {
         AmountExceedsBalance,
         /// After the first join of the court the amount has to be higher than the current stake.
         AmountBelowLastJoin,
-        /// The maximum number of normal appeals is reached. So only allow to back a global dispute.
-        OnlyGlobalDisputeAppealAllowed,
-        /// In order to back a global dispute, it has to be the last appeal (MaxAppeals reached).
-        NeedsToBeLastAppeal,
         /// The random number generation failed.
         RandNumGenFailed,
         /// The amount is too low to kick the lowest juror out of the stake-weighted pool.
@@ -702,7 +696,8 @@ mod pallet {
             Ok(())
         }
 
-        /// Trigger an appeal for a court.
+        /// Trigger an appeal for a court. The last appeal does not trigger a new court round
+        /// but instead it marks the court mechanism for this market as failed.
         ///
         /// # Arguments
         ///
@@ -719,12 +714,9 @@ mod pallet {
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let appeal_number = court.appeals.len().saturating_add(1);
+            ensure!(appeal_number <= T::MaxAppeals::get() as usize, Error::<T>::MaxAppealsReached);
             let bond = get_appeal_bond::<T>(appeal_number);
             ensure!(T::Currency::can_reserve(&who, bond), Error::<T>::AppealBondExceedsBalance);
-            ensure!(
-                appeal_number < <AppealsOf<T>>::bound(),
-                Error::<T>::OnlyGlobalDisputeAppealAllowed
-            );
             let now = <frame_system::Pallet<T>>::block_number();
             Self::check_appealable_market(&market_id, &court, now)?;
 
@@ -738,83 +730,36 @@ mod pallet {
                 Error::<T>::MaxAppealsReached
             })?;
 
-            let new_draws = Self::select_jurors(&market_id, old_draws, appeal_number)?;
-
             let last_resolve_at = court.periods.appeal_end;
-            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
-            let request_block = <RequestBlock<T>>::get();
-            debug_assert!(request_block >= now, "Request block must be greater than now.");
-            let round_timing = RoundTiming {
-                pre_vote_end: request_block,
-                vote_period: T::CourtVotePeriod::get(),
-                aggregation_period: T::CourtAggregationPeriod::get(),
-                appeal_period: T::CourtAppealPeriod::get(),
-            };
-            // sets periods one after the other from now
-            court.update_periods(round_timing);
-            let new_resolve_at = court.periods.appeal_end;
-            debug_assert!(new_resolve_at != last_resolve_at);
-            let _ids_len_1 =
-                T::DisputeResolution::add_auto_resolve(&market_id, court.periods.appeal_end)?;
+            // if appeal_number == MaxAppeals, then don't start a new appeal round
+            if appeal_number < T::MaxAppeals::get() as usize {
+                let new_draws = Self::select_jurors(&market_id, old_draws, appeal_number)?;
+                let request_block = <RequestBlock<T>>::get();
+                debug_assert!(request_block >= now, "Request block must be greater than now.");
+                let round_timing = RoundTiming {
+                    pre_vote_end: request_block,
+                    vote_period: T::CourtVotePeriod::get(),
+                    aggregation_period: T::CourtAggregationPeriod::get(),
+                    appeal_period: T::CourtAppealPeriod::get(),
+                };
+                // sets periods one after the other from now
+                court.update_periods(round_timing);
+                let new_resolve_at = court.periods.appeal_end;
+                debug_assert!(new_resolve_at != last_resolve_at);
+                let _ids_len_1 =
+                    T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?;
+                <Draws<T>>::insert(market_id, new_draws);
+            }
+
+            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
             T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
 
             <Courts<T>>::insert(market_id, court);
-            <Draws<T>>::insert(market_id, new_draws);
 
             let appeal_number = appeal_number as u32;
             Self::deposit_event(Event::MarketAppealed { market_id, appeal_number });
-
-            Ok(())
-        }
-
-        /// Back the global dispute to allow the market to be resolved
-        /// if the last appeal outcome is disagreed on.
-        ///
-        /// # Arguments
-        ///
-        /// - `market_id`: The identifier of the court.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(1)`
-        #[pallet::weight(1_000_000_000_000)]
-        #[transactional]
-        pub fn back_global_dispute(
-            origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-
-            let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            let appeal_number = court.appeals.len().saturating_add(1);
-            ensure!(appeal_number as u32 == T::MaxAppeals::get(), Error::<T>::NeedsToBeLastAppeal);
-
-            let now = <frame_system::Pallet<T>>::block_number();
-            Self::check_appealable_market(&market_id, &court, now)?;
-
-            // the outcome which would be resolved on is appealed (including oracle report)
-            let old_draws = Draws::<T>::get(market_id);
-            let appealed_outcome =
-                Self::get_latest_resolved_outcome(&market_id, old_draws.as_slice())?;
-
-            let bond = get_appeal_bond::<T>(appeal_number);
-            let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_outcome };
-
-            court.appeals.try_push(appeal_info).map_err(|_| {
-                debug_assert!(false, "Appeal bound is checked above.");
-                Error::<T>::MaxAppealsReached
-            })?;
-
-            T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
-
-            let last_resolve_at = court.periods.appeal_end;
-            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
-
-            <Courts<T>>::insert(market_id, court);
-
-            Self::deposit_event(Event::GlobalDisputeBacked { market_id });
 
             Ok(())
         }
@@ -1007,6 +952,7 @@ mod pallet {
                     if Self::in_range(*random_number, lower_bound, upper_bound) {
                         let lock_added = unconsumed.min(T::MinJurorStake::get());
                         unconsumed = unconsumed.saturating_sub(lock_added);
+
                         Self::update_selections(selections, juror, lock_added);
                         random_set.remove(random_number);
                     } else {

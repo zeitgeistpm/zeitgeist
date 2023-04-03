@@ -394,63 +394,6 @@ benchmarks! {
         assert_eq!(court.periods.appeal_end, new_resolve_at);
     }
 
-    back_global_dispute {
-        let d in 1..T::MaxDraws::get();
-        let r in 0..62;
-
-        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
-        fill_pool::<T>(necessary_jurors_weight as u32)?;
-
-        let caller: T::AccountId = whitelisted_caller();
-        deposit::<T>(&caller);
-        let market_id = setup_court::<T>()?;
-
-        let mut court = <Courts<T>>::get(market_id).unwrap();
-        let appeal_end = court.periods.appeal_end;
-        for i in 0..r {
-            let market_id_i = i.saturated_into::<crate::MarketIdOf<T>>();
-            T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
-        }
-
-        T::DisputeResolution::add_auto_resolve(&market_id, appeal_end).unwrap();
-
-        let aggregation_end = court.periods.aggregation_end;
-        for i in 0..(T::MaxAppeals::get() - 1) {
-            let appeal_info = AppealInfo {
-                backer: account("backer", i, 0),
-                bond: crate::get_appeal_bond::<T>(i as usize),
-                appealed_outcome: OutcomeReport::Scalar(0u128),
-            };
-            court.appeals.try_push(appeal_info).unwrap();
-        }
-        <Courts<T>>::insert(market_id, court);
-
-        let salt = Default::default();
-        // remove last random selections of on_dispute
-        <Draws<T>>::remove(market_id);
-        let mut draws = <Draws<T>>::get(market_id);
-        for i in 0..d {
-            let juror: T::AccountId = account("juror", i, 0);
-            <Jurors<T>>::insert(&juror, JurorInfo {
-                stake: T::MinJurorStake::get(),
-                active_lock: T::MinJurorStake::get(),
-            });
-            let outcome = OutcomeReport::Scalar(i as u128);
-            let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
-            let draw =
-                Draw {
-                    juror,
-                    vote: Vote::Revealed { commitment, outcome, salt },
-                    weight: 1u32,
-                    slashable: T::MinJurorStake::get(),
-                };
-            draws.try_push(draw).unwrap();
-        }
-        <Draws<T>>::insert(market_id, draws);
-
-        <frame_system::Pallet<T>>::set_block_number(aggregation_end + 1u64.saturated_into::<T::BlockNumber>());
-    }: _(RawOrigin::Signed(caller), market_id)
-
     reassign_juror_stakes {
         let d in 1..T::MaxDraws::get();
 
