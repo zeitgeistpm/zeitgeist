@@ -331,6 +331,8 @@ mod pallet {
         CallerNotInDraws,
         /// The callers balance is lower than the appeal bond.
         AppealBondExceedsBalance,
+        /// The outcome does not match the market outcome type.
+        OutcomeMismatch,
     }
 
     #[pallet::hooks]
@@ -602,6 +604,9 @@ mod pallet {
         ) -> DispatchResult {
             let denouncer = ensure_signed(origin)?;
 
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
+
             let juror = T::Lookup::lookup(juror)?;
 
             ensure!(denouncer != juror, Error::<T>::SelfDenounceDisallowed);
@@ -669,6 +674,9 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
+
             ensure!(<Jurors<T>>::get(&who).is_some(), Error::<T>::OnlyJurorsCanReveal);
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -734,7 +742,7 @@ mod pallet {
 
             // if appeal_number == MaxAppeals, then don't start a new appeal round
             if appeal_number < T::MaxAppeals::get() as usize {
-                let new_draws = Self::select_jurors(&market_id, old_draws, appeal_number)?;
+                let new_draws = Self::select_jurors(appeal_number)?;
                 let request_block = <RequestBlock<T>>::get();
                 debug_assert!(request_block >= now, "Request block must be greater than now.");
                 let round_timing = RoundTiming {
@@ -751,6 +759,8 @@ mod pallet {
                     T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?;
                 <Draws<T>>::insert(market_id, new_draws);
             }
+
+            Self::unlock_jurors_from_last_draw(&market_id, old_draws);
 
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
@@ -901,7 +911,7 @@ mod pallet {
             selections: &BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
         ) -> BalanceOf<T> {
             if let Some((_, total_lock_added)) = selections.get(juror) {
-                if let Some(mut juror_info) = <Jurors<T>>::get(&*juror) {
+                if let Some(mut juror_info) = <Jurors<T>>::get(juror) {
                     juror_info.active_lock =
                         juror_info.active_lock.saturating_add(*total_lock_added);
                     <Jurors<T>>::insert(juror, juror_info);
@@ -998,11 +1008,26 @@ mod pallet {
             Ok(Self::convert_selections_to_draws(selections))
         }
 
-        pub(crate) fn select_jurors(
-            market_id: &MarketIdOf<T>,
-            last_draws: DrawsOf<T>,
-            appeal_number: usize,
-        ) -> Result<DrawsOf<T>, DispatchError> {
+        fn unlock_jurors_from_last_draw(market_id: &MarketIdOf<T>, last_draws: DrawsOf<T>) {
+            // keep in mind that the old draw likely contains different jurors
+            for old_draw in last_draws {
+                if let Some(mut juror_info) = <Jurors<T>>::get(&old_draw.juror) {
+                    juror_info.active_lock =
+                        juror_info.active_lock.saturating_sub(old_draw.slashable);
+                    <Jurors<T>>::insert(&old_draw.juror, juror_info);
+                } else {
+                    log::warn!(
+                        "Juror {:?} not found in Jurors storage (unlock_jurors_from_last_draw). \
+                         Market id {:?}.",
+                        old_draw.juror,
+                        market_id
+                    );
+                    debug_assert!(false);
+                }
+            }
+        }
+
+        pub(crate) fn select_jurors(appeal_number: usize) -> Result<DrawsOf<T>, DispatchError> {
             let mut jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
             ensure!(jurors.len() >= necessary_jurors_weight, Error::<T>::NotEnoughJurors);
@@ -1015,21 +1040,6 @@ mod pallet {
                 "The number of randomly selected jurors should be less than or equal to \
                  `MaxDraws`."
             );
-            // keep in mind that the old draw likely contains different jurors
-            for old_draw in &last_draws {
-                if let Some(mut juror_info) = <Jurors<T>>::get(&old_draw.juror) {
-                    juror_info.active_lock =
-                        juror_info.active_lock.saturating_sub(old_draw.slashable);
-                    <Jurors<T>>::insert(&old_draw.juror, juror_info);
-                } else {
-                    log::warn!(
-                        "Juror {:?} not found in Jurors storage (select_jurors). Market id {:?}.",
-                        old_draw.juror,
-                        market_id
-                    );
-                    debug_assert!(false);
-                }
-            }
             let new_draws = <DrawsOf<T>>::truncate_from(random_jurors);
             // new appeal round should have a fresh set of draws
             // modified consumed_stake for each selected juror
@@ -1293,11 +1303,7 @@ mod pallet {
             ensure!(!<Courts<T>>::contains_key(market_id), Error::<T>::CourtAlreadyExists);
 
             let appeal_number = 0usize;
-            let new_draws = Self::select_jurors(
-                market_id,
-                <DrawsOf<T>>::truncate_from(Vec::new()),
-                appeal_number,
-            )?;
+            let new_draws = Self::select_jurors(appeal_number)?;
 
             let now = <frame_system::Pallet<T>>::block_number();
             let request_block = <RequestBlock<T>>::get();

@@ -121,12 +121,14 @@ fn fill_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
     Courts::<Runtime>::insert(market_id, court);
 }
 
-fn put_alice_in_draw(market_id: crate::MarketIdOf<Runtime>) {
+fn put_alice_in_draw(market_id: crate::MarketIdOf<Runtime>, stake: crate::BalanceOf<Runtime>) {
     // trick a little bit to let alice be part of the ("random") selection
     let mut draws = <Draws<Runtime>>::get(market_id);
     assert!(!draws.is_empty());
-    draws[0] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: 42u128 };
+    let slashable = MinJurorStake::get();
+    draws[0] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
     <Draws<Runtime>>::insert(market_id, draws);
+    <Jurors<Runtime>>::insert(ALICE, JurorInfo { stake, active_lock: slashable });
 }
 
 fn set_alice_after_vote(
@@ -142,7 +144,7 @@ fn set_alice_after_vote(
     let amount = MinJurorStake::get() * 100;
     assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-    put_alice_in_draw(market_id);
+    put_alice_in_draw(market_id, amount);
 
     run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
@@ -524,7 +526,7 @@ fn vote_works() {
         let amount = MinJurorStake::get() * 100;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        put_alice_in_draw(market_id);
+        put_alice_in_draw(market_id, amount);
         let old_draws = <Draws<Runtime>>::get(market_id);
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
@@ -554,7 +556,7 @@ fn vote_overwrite_works() {
         let amount = MinJurorStake::get() * 100;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        put_alice_in_draw(market_id);
+        put_alice_in_draw(market_id, amount);
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
@@ -653,7 +655,7 @@ fn vote_fails_if_not_in_voting_period() {
         let amount = MinJurorStake::get() * 100;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        put_alice_in_draw(market_id);
+        put_alice_in_draw(market_id, amount);
 
         run_to_block(<RequestBlock<Runtime>>::get() + CourtVotePeriod::get() + 1);
 
@@ -676,7 +678,7 @@ fn reveal_vote_works() {
         let amount = MinJurorStake::get() * 100;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        put_alice_in_draw(market_id);
+        put_alice_in_draw(market_id, amount);
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
@@ -1882,8 +1884,7 @@ fn select_jurors_updates_juror_consumed_stake() {
         let jurors = JurorPool::<Runtime>::get();
         let consumed_stake_before = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
 
-        let old_draws = <Draws<Runtime>>::get(market_id);
-        let new_draws = Court::select_jurors(&market_id, old_draws, appeal_number).unwrap();
+        let new_draws = Court::select_jurors(appeal_number).unwrap();
 
         let total_draw_slashable = new_draws.iter().map(|draw| draw.slashable).sum::<u128>();
         let jurors = JurorPool::<Runtime>::get();
@@ -1894,29 +1895,33 @@ fn select_jurors_updates_juror_consumed_stake() {
 }
 
 #[test]
-fn select_jurors_reduces_active_lock_for_old_draw() {
+fn appeal_reduces_active_lock_from_old_draws() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = initialize_court();
-        fill_juror_pool();
-        let appeal_number = 1usize;
-        fill_appeals(&market_id, appeal_number);
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, _) = set_alice_after_vote(outcome);
 
         let old_draws = <Draws<Runtime>>::get(market_id);
         assert!(!old_draws.is_empty());
         old_draws.iter().for_each(|draw| {
             let juror = draw.juror;
             let juror_info = <Jurors<Runtime>>::get(juror).unwrap();
-            assert_ne!(juror_info.active_lock, 0);
+            assert_ne!(draw.slashable, 0);
             assert_eq!(juror_info.active_lock, draw.slashable);
         });
 
-        Court::select_jurors(&market_id, old_draws.clone(), appeal_number).unwrap();
+        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
+        assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
+
+        let new_draws = <Draws<Runtime>>::get(market_id);
         old_draws.iter().for_each(|draw| {
             let juror = draw.juror;
             let juror_info = <Jurors<Runtime>>::get(juror).unwrap();
-            assert_ne!(juror_info.active_lock, draw.slashable);
-            assert_eq!(juror_info.active_lock, 0);
+            if let Some(new_draw) = new_draws.iter().find(|new_draw| new_draw.juror == juror) {
+                assert_eq!(new_draw.slashable, juror_info.active_lock);
+            } else {
+                assert_eq!(juror_info.active_lock, 0);
+            }
         });
     });
 }
