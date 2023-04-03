@@ -230,12 +230,14 @@ fn join_court_works_multiple_joins() {
                 JurorPoolItem { stake: amount, juror: BOB, consumed_stake: 0 }
             ]
         );
+        assert_eq!(Jurors::<Runtime>::iter().count(), 2);
         assert_eq!(
-            Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
-            vec![
-                (BOB, JurorInfo { stake: amount, active_lock: 0u128 }),
-                (ALICE, JurorInfo { stake: amount, active_lock: 0u128 })
-            ]
+            Jurors::<Runtime>::get(ALICE).unwrap(),
+            JurorInfo { stake: amount, active_lock: 0u128 }
+        );
+        assert_eq!(
+            Jurors::<Runtime>::get(BOB).unwrap(),
+            JurorInfo { stake: amount, active_lock: 0u128 }
         );
 
         let higher_amount = amount + 1;
@@ -249,12 +251,14 @@ fn join_court_works_multiple_joins() {
                 JurorPoolItem { stake: higher_amount, juror: ALICE, consumed_stake: 0 },
             ]
         );
+        assert_eq!(Jurors::<Runtime>::iter().count(), 2);
         assert_eq!(
-            Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
-            vec![
-                (BOB, JurorInfo { stake: amount, active_lock: 0u128 }),
-                (ALICE, JurorInfo { stake: higher_amount, active_lock: 0u128 })
-            ]
+            Jurors::<Runtime>::get(BOB).unwrap(),
+            JurorInfo { stake: amount, active_lock: 0u128 }
+        );
+        assert_eq!(
+            Jurors::<Runtime>::get(ALICE).unwrap(),
+            JurorInfo { stake: higher_amount, active_lock: 0u128 }
         );
     });
 }
