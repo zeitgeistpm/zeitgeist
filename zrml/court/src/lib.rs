@@ -819,7 +819,9 @@ mod pallet {
             Ok(())
         }
 
-        /// After the court is closed (resolution happened) the juror stakes can get reassigned.
+        /// The juror stakes get reassigned according to the plurality decision of the jurors.
+        /// The losing jurors get slashed and pay for the winning jurors.
+        /// The tardy jurors get slashed.
         ///
         /// # Arguments
         ///
