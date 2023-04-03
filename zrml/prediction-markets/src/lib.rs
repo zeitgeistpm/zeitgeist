@@ -2621,7 +2621,7 @@ mod pallet {
                 }
             }
 
-            let mut correct_disputor = None;
+
             if let Some(bond) = &market.bonds.dispute {
                 if !bond.is_settled {
                     if is_correct {
@@ -2630,19 +2630,13 @@ mod pallet {
                     } else {
                         // If the report outcome was wrong, the dispute was justified
                         Self::unreserve_dispute_bond(market_id)?;
-                        correct_disputor = Some(bond.who.clone());
+                        CurrencyOf::<T>::resolve_creating(&bond.who, overall_imbalance);
+                        overall_imbalance = NegativeImbalanceOf::<T>::zero();
                     }
                 }
             }
 
-            let mut imbalance_left = <NegativeImbalanceOf<T>>::zero();
-            if let Some(disputor) = correct_disputor {
-                CurrencyOf::<T>::resolve_creating(&disputor, overall_imbalance);
-            } else {
-                imbalance_left = overall_imbalance;
-            }
-
-            Ok(imbalance_left)
+            Ok(overall_imbalance)
         }
 
         pub fn on_resolution(
