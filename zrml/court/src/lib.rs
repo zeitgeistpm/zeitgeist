@@ -955,14 +955,15 @@ mod pallet {
             juror: &T::AccountId,
             selections: &BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
         ) -> BalanceOf<T> {
-            if let Some((_, draw_lock)) = selections.get(juror) {
+            if let Some((_, total_lock_added)) = selections.get(juror) {
                 if let Some(mut juror_info) = <Jurors<T>>::get(&*juror) {
-                    juror_info.active_lock = juror_info.active_lock.saturating_add(*draw_lock);
+                    juror_info.active_lock =
+                        juror_info.active_lock.saturating_add(*total_lock_added);
                     <Jurors<T>>::insert(juror, juror_info);
                 } else {
                     debug_assert!(false, "Juror should exist in the Jurors map");
                 }
-                return *draw_lock;
+                return *total_lock_added;
             }
 
             <BalanceOf<T>>::zero()
@@ -997,15 +998,16 @@ mod pallet {
             let mut current_weight = 0u128;
             for JurorPoolItem { stake, juror, consumed_stake } in jurors.iter_mut() {
                 let lower_bound = current_weight;
-                let mut remainder = stake.saturating_sub(*consumed_stake);
-                let upper_bound = current_weight.saturating_add(remainder.saturated_into::<u128>());
+                let mut unconsumed = stake.saturating_sub(*consumed_stake);
+                let upper_bound =
+                    current_weight.saturating_add(unconsumed.saturated_into::<u128>());
 
                 // this always gets the lowest random number first and maybe removes it
                 for random_number in random_set.clone().iter() {
                     if Self::in_range(*random_number, lower_bound, upper_bound) {
-                        let lock_added = remainder.min(T::MinJurorStake::get());
+                        let lock_added = unconsumed.min(T::MinJurorStake::get());
+                        unconsumed = unconsumed.saturating_sub(lock_added);
                         Self::update_selections(selections, juror, lock_added);
-                        remainder = remainder.saturating_sub(lock_added);
                         random_set.remove(random_number);
                     } else {
                         break;
