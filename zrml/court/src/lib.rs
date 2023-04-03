@@ -938,11 +938,8 @@ mod pallet {
             Ok(random_set)
         }
 
-        pub(crate) fn choose_multiple_weighted(
-            jurors: &mut JurorPoolOf<T>,
-            number: usize,
-        ) -> Result<Vec<DrawOf<T>>, DispatchError> {
-            let total_weight = jurors
+        fn calculate_total_weight(jurors: &JurorPoolOf<T>) -> u128 {
+            jurors
                 .iter()
                 .map(|pool_item| {
                     pool_item
@@ -950,12 +947,53 @@ mod pallet {
                         .saturating_sub(pool_item.consumed_stake)
                         .saturated_into::<u128>()
                 })
-                .sum::<u128>();
+                .sum::<u128>()
+        }
 
-            let mut random_set = Self::get_n_random_numbers(number, total_weight)?;
+        /// Returns the added active lock amount.
+        fn update_active_lock(
+            juror: &T::AccountId,
+            selections: &BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+        ) -> BalanceOf<T> {
+            if let Some((_, draw_lock)) = selections.get(juror) {
+                if let Some(mut juror_info) = <Jurors<T>>::get(&*juror) {
+                    juror_info.active_lock = juror_info.active_lock.saturating_add(*draw_lock);
+                    <Jurors<T>>::insert(juror, juror_info);
+                } else {
+                    debug_assert!(false, "Juror should exist in the Jurors map");
+                }
+                return *draw_lock;
+            }
 
-            let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
+            <BalanceOf<T>>::zero()
+        }
 
+        fn in_range(random_number: u128, lower_bound: u128, upper_bound: u128) -> bool {
+            debug_assert!(lower_bound <= upper_bound);
+            if lower_bound <= random_number && random_number < upper_bound {
+                return true;
+            }
+            false
+        }
+
+        fn update_selections(
+            selections: &mut BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+            juror: &T::AccountId,
+            lock: BalanceOf<T>,
+        ) {
+            if let Some((weight, prev_lock)) = selections.get_mut(juror) {
+                *weight = weight.saturating_add(1);
+                *prev_lock = prev_lock.saturating_add(lock);
+            } else {
+                selections.insert(juror.clone(), (1, lock));
+            }
+        }
+
+        fn process_juror_pool(
+            jurors: &mut JurorPoolOf<T>,
+            random_set: &mut BTreeSet<u128>,
+            selections: &mut BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+        ) {
             let mut current_weight = 0u128;
             for JurorPoolItem { stake, juror, consumed_stake } in jurors.iter_mut() {
                 let lower_bound = current_weight;
@@ -964,31 +1002,18 @@ mod pallet {
 
                 // this always gets the lowest random number first and maybe removes it
                 for random_number in random_set.clone().iter() {
-                    if &lower_bound <= random_number && random_number < &upper_bound {
-                        let slashable = remainder.min(T::MinJurorStake::get());
-                        if let Some((weight, all_slashable)) = selections.get_mut(juror) {
-                            *weight = weight.saturating_add(1);
-                            *all_slashable = all_slashable.saturating_add(slashable);
-                        } else {
-                            selections.insert(juror.clone(), (1, slashable));
-                        }
-                        remainder = remainder.saturating_sub(slashable);
+                    if Self::in_range(*random_number, lower_bound, upper_bound) {
+                        let lock_added = remainder.min(T::MinJurorStake::get());
+                        Self::update_selections(selections, juror, lock_added);
+                        remainder = remainder.saturating_sub(lock_added);
                         random_set.remove(random_number);
                     } else {
                         break;
                     }
                 }
 
-                if let Some((_, draw_slashable)) = selections.get_mut(juror) {
-                    *consumed_stake = consumed_stake.saturating_add(*draw_slashable);
-                    if let Some(mut juror_info) = <Jurors<T>>::get(&*juror) {
-                        juror_info.active_lock =
-                            juror_info.active_lock.saturating_add(*draw_slashable);
-                        <Jurors<T>>::insert(juror, juror_info);
-                    } else {
-                        debug_assert!(false, "Juror should exist in the Jurors map");
-                    }
-                }
+                let total_lock_added = Self::update_active_lock(juror, selections);
+                *consumed_stake = consumed_stake.saturating_add(total_lock_added);
 
                 if random_set.is_empty() {
                     break;
@@ -996,8 +1021,12 @@ mod pallet {
 
                 current_weight = upper_bound;
             }
+        }
 
-            Ok(selections
+        fn convert_selections_to_draws(
+            selections: BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+        ) -> Vec<DrawOf<T>> {
+            selections
                 .into_iter()
                 .map(|(juror, (weight, slashable))| Draw {
                     juror,
@@ -1005,7 +1034,20 @@ mod pallet {
                     vote: Vote::Drawn,
                     slashable,
                 })
-                .collect())
+                .collect()
+        }
+
+        pub(crate) fn choose_multiple_weighted(
+            jurors: &mut JurorPoolOf<T>,
+            number: usize,
+        ) -> Result<Vec<DrawOf<T>>, DispatchError> {
+            let total_weight = Self::calculate_total_weight(jurors);
+            let mut random_set = Self::get_n_random_numbers(number, total_weight)?;
+            let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
+
+            Self::process_juror_pool(jurors, &mut random_set, &mut selections);
+
+            Ok(Self::convert_selections_to_draws(selections))
         }
 
         pub(crate) fn select_jurors(
