@@ -865,6 +865,8 @@ mod pallet {
     where
         T: Config,
     {
+        // Get `n` unique and ordered random numbers from the random number generator.
+        // If the generator returns three times the same number in a row, an error is returned.
         pub(crate) fn get_n_random_numbers(
             n: usize,
             max: u128,
@@ -893,7 +895,9 @@ mod pallet {
             Ok(random_set)
         }
 
-        fn calculate_total_weight(jurors: &JurorPoolOf<T>) -> u128 {
+        // Get the sum of the unconsumed stake from all jurors in the pool.
+        // The unconsumed stake is the stake that was not already locked in previous courts.
+        fn get_unconsumed_stake(jurors: &JurorPoolOf<T>) -> u128 {
             jurors
                 .iter()
                 .map(|pool_item| {
@@ -905,7 +909,8 @@ mod pallet {
                 .sum::<u128>()
         }
 
-        /// Returns the added active lock amount.
+        // Returns the added active lock amount.
+        // The added active lock amount is noted in the Jurors map.
         fn update_active_lock(
             juror: &T::AccountId,
             selections: &BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
@@ -924,14 +929,21 @@ mod pallet {
             <BalanceOf<T>>::zero()
         }
 
-        fn in_range(random_number: u128, lower_bound: u128, upper_bound: u128) -> bool {
+        // Returns true, if `n` is greater or equal to `lower_bound` and less than `upper_bound`.
+        // Returns false, otherwise.
+        fn in_range(n: u128, lower_bound: u128, upper_bound: u128) -> bool {
             debug_assert!(lower_bound <= upper_bound);
-            if lower_bound <= random_number && random_number < upper_bound {
+            if lower_bound <= n && n < upper_bound {
                 return true;
             }
             false
         }
 
+        // Updates the `selections` map for the juror and the lock amount.
+        // If `juror` does not already exist in `selections`,
+        // the vote weight is set to 1 and the lock amount is initially set.
+        // For each call on the same juror, the vote weight is incremented by one
+        // and the lock amount is added to the previous amount.
         fn update_selections(
             selections: &mut BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
             juror: &T::AccountId,
@@ -945,6 +957,9 @@ mod pallet {
             }
         }
 
+        // Match the random numbers to select some jurors from the pool.
+        // The active lock (and consumed stake) of the selected jurors
+        // is increased by the random selection weight.
         fn process_juror_pool(
             jurors: &mut JurorPoolOf<T>,
             random_set: &mut BTreeSet<u128>,
@@ -981,6 +996,7 @@ mod pallet {
             }
         }
 
+        // Converts the `selections` map into a vector of `Draw` structs.
         fn convert_selections_to_draws(
             selections: BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
         ) -> Vec<DrawOf<T>> {
@@ -995,11 +1011,14 @@ mod pallet {
                 .collect()
         }
 
+        // Choose `number` of jurors from the pool randomly
+        // according to the weighted stake of the jurors.
+        // Return the random draws.
         pub(crate) fn choose_multiple_weighted(
             jurors: &mut JurorPoolOf<T>,
             number: usize,
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
-            let total_weight = Self::calculate_total_weight(jurors);
+            let total_weight = Self::get_unconsumed_stake(jurors);
             let mut random_set = Self::get_n_random_numbers(number, total_weight)?;
             let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
 
@@ -1008,6 +1027,8 @@ mod pallet {
             Ok(Self::convert_selections_to_draws(selections))
         }
 
+        // Reduce the active lock of the jurors from the last draw.
+        // This is useful so that the jurors can thaw their non-locked stake.
         fn unlock_jurors_from_last_draw(market_id: &MarketIdOf<T>, last_draws: DrawsOf<T>) {
             // keep in mind that the old draw likely contains different jurors
             for old_draw in last_draws {
@@ -1027,6 +1048,13 @@ mod pallet {
             }
         }
 
+        // Selects the jurors for the next round.
+        // The `consumed_stake` in `JurorPool` and `active_lock` in `Jurors` is increased
+        // equally according to the weight inside the `new_draws`.
+        // With increasing `consumed_stake` the probability to get selected
+        // in further court rounds shrinks.
+        //
+        // Returns the new draws.
         pub(crate) fn select_jurors(appeal_number: usize) -> Result<DrawsOf<T>, DispatchError> {
             let mut jurors: JurorPoolOf<T> = JurorPool::<T>::get();
             let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
@@ -1065,6 +1093,8 @@ mod pallet {
             None
         }
 
+        // Returns OK if the market is in a valid state to be appealed.
+        // Returns an error otherwise.
         pub(crate) fn check_appealable_market(
             market_id: &MarketIdOf<T>,
             court: &CourtOf<T>,
@@ -1091,11 +1121,13 @@ mod pallet {
             T::CourtPalletId::get().0
         }
 
+        /// The account ID which is used to reward the correct jurors.
         #[inline]
         pub fn reward_pot(market_id: &MarketIdOf<T>) -> T::AccountId {
             T::CourtPalletId::get().into_sub_account_truncating(market_id)
         }
 
+        /// The account ID of the treasury.
         #[inline]
         pub(crate) fn treasury_account_id() -> T::AccountId {
             T::TreasuryPalletId::get().into_account_truncating()
@@ -1131,6 +1163,7 @@ mod pallet {
                 .saturating_add(APPEAL_BASIS.saturating_pow(appeals_len as u32).saturating_sub(1))
         }
 
+        // Slash the losers and use the slashed amount plus the reward pot to reward the winners.
         fn slash_losers_to_award_winners(
             market_id: &MarketIdOf<T>,
             valid_winners_and_losers: &[(T::AccountId, OutcomeReport, BalanceOf<T>)],
@@ -1223,6 +1256,8 @@ mod pallet {
             Some(best_score.0.clone())
         }
 
+        // Returns the outcome, on which the market would resolve
+        // if the current court round is the final (not appealed) court round.
         pub(crate) fn get_latest_resolved_outcome(
             market_id: &MarketIdOf<T>,
             last_draws: &[DrawOf<T>],
@@ -1241,6 +1276,7 @@ mod pallet {
             Ok(resolved_outcome)
         }
 
+        // Check if the (juror, outcome, salt) combination matches the secret hash of the vote.
         pub(crate) fn is_valid(commitment_matcher: CommitmentMatcherOf<T>) -> DispatchResult {
             // market id and current appeal number is part of salt generation
             // salt should be signed by the juror (market_id ++ appeal number)
@@ -1260,6 +1296,9 @@ mod pallet {
             Ok(())
         }
 
+        // Convert the raw commitment to a hashed commitment,
+        // and check if it matches with the secret hash of the vote.
+        // Otherwise return an error.
         pub(crate) fn get_hashed_commitment(
             vote: Vote<T::Hash>,
             raw_commitment: RawCommitmentOf<T>,
