@@ -305,7 +305,7 @@ mod pallet {
         JurorNotDrawn,
         /// The juror was drawn but did not manage to commitmently vote within the court.
         JurorNotVoted,
-        /// The juror was already denounced. This action can only happen once.
+        /// The juror was already denounced.
         VoteAlreadyDenounced,
         /// A juror tried to denounce herself.
         SelfDenounceDisallowed,
