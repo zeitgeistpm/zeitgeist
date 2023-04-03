@@ -37,10 +37,10 @@ parameter_types! {
     pub const AppealBond: Balance = 5 * BASE;
     pub const AppealBondFactor: Balance = 2 * BASE;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-    pub const RequestInterval: BlockNumber = 50;
-    pub const CourtVotePeriod: BlockNumber = 32;
-    pub const CourtAggregationPeriod: BlockNumber = 32;
-    pub const CourtAppealPeriod: BlockNumber = 16;
+    pub const RequestInterval: BlockNumber = 15;
+    pub const CourtVotePeriod: BlockNumber = 3;
+    pub const CourtAggregationPeriod: BlockNumber = 4;
+    pub const CourtAppealPeriod: BlockNumber = 5;
     pub const CourtLockId: LockIdentifier = *b"zge/cloc";
     pub const MaxAppeals: u32 = 4;
     pub const MaxDraws: u32 = 47;

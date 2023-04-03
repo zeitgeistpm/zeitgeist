@@ -1060,7 +1060,6 @@ fn appeal_updates_periods() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
 
-        let old_request_block = <RequestBlock<Runtime>>::get();
         let last_court = <Courts<Runtime>>::get(market_id).unwrap();
 
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
@@ -1070,10 +1069,8 @@ fn appeal_updates_periods() {
         let now = <frame_system::Pallet<Runtime>>::block_number();
         let court = <Courts<Runtime>>::get(market_id).unwrap();
 
-        let new_request_block = <RequestBlock<Runtime>>::get();
-        assert_eq!(old_request_block + RequestInterval::get(), new_request_block);
-
-        let pre_vote_end = new_request_block - now;
+        let request_block = <RequestBlock<Runtime>>::get();
+        let pre_vote_end = request_block - now;
         assert_eq!(court.periods.pre_vote_end, now + pre_vote_end);
         assert_eq!(court.periods.vote_end, court.periods.pre_vote_end + CourtVotePeriod::get());
         assert_eq!(
