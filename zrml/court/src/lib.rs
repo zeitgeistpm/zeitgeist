@@ -258,7 +258,10 @@ mod pallet {
         },
         /// A market has been appealed.
         MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u32 },
-        /// The juror stakes have been reassigned.
+        /// The juror stakes have been reassigned. The losing jurors have been slashed.
+        /// The winning jurors have been rewarded by the losers.
+        /// The losing jurors are those, who did not vote,
+        /// were denounced or did not reveal their vote.
         JurorStakesReassigned { market_id: MarketIdOf<T> },
     }
 
