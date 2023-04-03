@@ -52,17 +52,6 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        #[cfg(feature = "parachain")]
-        pub type Executive = frame_executive::Executive<
-            Runtime,
-            Block,
-            frame_system::ChainContext<Runtime>,
-            Runtime,
-            AllPalletsWithSystem,
-            zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
-        >;
-
-        #[cfg(not(feature = "parachain"))]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
