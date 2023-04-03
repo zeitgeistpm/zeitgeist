@@ -234,7 +234,7 @@ mod pallet {
         T: Config,
     {
         /// A juror has been added to the court.
-        JurorJoined { juror: T::AccountId },
+        JurorJoined { juror: T::AccountId, stake: BalanceOf<T> },
         /// A juror prepared to exit the court.
         JurorPreparedExit { juror: T::AccountId },
         /// A juror has been removed from the court.
@@ -436,7 +436,7 @@ mod pallet {
             let juror_info = JurorInfoOf::<T> { stake: amount, active_lock };
             <Jurors<T>>::insert(&who, juror_info);
 
-            Self::deposit_event(Event::JurorJoined { juror: who });
+            Self::deposit_event(Event::JurorJoined { juror: who, stake: amount });
             Ok(())
         }
 

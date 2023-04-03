@@ -194,7 +194,7 @@ fn join_court_successfully_stores_required_data() {
         let amount = 2 * BASE;
         let alice_free_balance_before = Balances::free_balance(ALICE);
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        System::assert_last_event(Event::JurorJoined { juror: ALICE }.into());
+        System::assert_last_event(Event::JurorJoined { juror: ALICE, stake: amount }.into());
         assert_eq!(
             Jurors::<Runtime>::iter().next().unwrap(),
             (ALICE, JurorInfo { stake: amount, active_lock: 0u128 })
