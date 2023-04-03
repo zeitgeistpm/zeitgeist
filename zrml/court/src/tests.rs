@@ -104,6 +104,7 @@ fn fill_juror_pool() {
 }
 
 fn fill_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
+    assert!(appeal_number <= MaxAppeals::get() as usize);
     let mut court = Courts::<Runtime>::get(market_id).unwrap();
     let mut number = 0u128;
     while (number as usize) < appeal_number {
