@@ -572,6 +572,11 @@ fn vote_overwrite_works() {
         let right_outcome = OutcomeReport::Scalar(42u128);
         let new_commitment = BlakeTwo256::hash_of(&(ALICE, right_outcome, salt));
         assert_ok!(Court::vote(Origin::signed(ALICE), market_id, new_commitment));
+        assert_ne!(wrong_commitment, new_commitment);
+        assert_eq!(
+            <Draws<Runtime>>::get(market_id)[0].vote,
+            Vote::Secret { commitment: new_commitment }
+        );
     });
 }
 
