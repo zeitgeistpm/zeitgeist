@@ -26,8 +26,8 @@ use crate::{
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote},
-    AccountIdLookupOf, AppealInfo, Courts, Draws, Error, Event, JurorInfo, JurorInfoOf, JurorPool,
-    JurorPoolItem, JurorPoolOf, Jurors, MarketOf, RequestBlock,
+    AppealInfo, Courts, Draws, Error, Event, JurorInfo, JurorInfoOf, JurorPool, JurorPoolItem,
+    JurorPoolOf, Jurors, MarketOf, RequestBlock,
 };
 use frame_support::{assert_noop, assert_ok, traits::fungible::Balanced};
 use pallet_balances::BalanceLock;
@@ -471,8 +471,7 @@ fn exit_court_works_without_active_lock() {
         assert!(Jurors::<Runtime>::get(ALICE).is_some());
 
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
-        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE;
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
+        assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         System::assert_last_event(
             Event::JurorExited { juror: ALICE, exit_amount: amount, active_lock: 0u128 }.into(),
         );
@@ -499,8 +498,7 @@ fn exit_court_works_with_active_lock() {
         <Jurors<Runtime>>::insert(ALICE, JurorInfo { stake: amount, active_lock });
 
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
-        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE;
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), alice_lookup));
+        assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         System::assert_last_event(
             Event::JurorExited { juror: ALICE, exit_amount: amount - active_lock, active_lock }
                 .into(),
@@ -516,9 +514,8 @@ fn exit_court_works_with_active_lock() {
 #[test]
 fn exit_court_fails_juror_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
-        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE;
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE), alice_lookup),
+            Court::exit_court(Origin::signed(ALICE), ALICE),
             Error::<Runtime>::JurorDoesNotExist
         );
     });
@@ -530,9 +527,8 @@ fn exit_court_fails_juror_not_prepared_to_exit() {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        let alice_lookup: AccountIdLookupOf<Runtime> = ALICE;
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE), alice_lookup),
+            Court::exit_court(Origin::signed(ALICE), ALICE),
             Error::<Runtime>::JurorNotPreparedToExit
         );
     });
