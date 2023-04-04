@@ -381,21 +381,14 @@ fn prepare_exit_court_removes_correct_jurors() {
         let min = MinJurorStake::get();
         let min_amount = 2 * min;
 
-        let max_accounts = JurorPoolOf::<Runtime>::bound();
-        let mut rng = rand::thread_rng();
-        let mut random_numbers: Vec<u32> = (0u32..max_accounts as u32).collect();
-        random_numbers.shuffle(&mut rng);
-        let mut random_jurors = random_numbers.clone();
-        random_jurors.shuffle(&mut rng);
-        let max_amount = min_amount + max_accounts as u128;
-        for i in random_numbers {
-            let amount = max_amount - i as u128;
-            let juror = random_jurors.remove(0) as u128;
+        for i in 0..JurorPoolOf::<Runtime>::bound() {
+            let amount = min_amount + i as u128;
+            let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
 
-        for r in 0..max_accounts {
+        for r in 0..JurorPoolOf::<Runtime>::bound() {
             let len = JurorPool::<Runtime>::get().into_inner().len();
             assert!(
                 JurorPool::<Runtime>::get().into_inner().iter().any(|item| item.juror == r as u128)
@@ -405,6 +398,32 @@ fn prepare_exit_court_removes_correct_jurors() {
             JurorPool::<Runtime>::get().into_inner().iter().for_each(|item| {
                 assert_ne!(item.juror, r as u128);
             });
+        }
+    });
+}
+
+#[test]
+fn join_court_binary_search_sorted_insert_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let min_amount = 2 * min;
+
+        let max_accounts = JurorPoolOf::<Runtime>::bound();
+        let mut rng = rand::thread_rng();
+        let mut random_numbers: Vec<u32> = (0u32..max_accounts as u32).collect();
+        random_numbers.shuffle(&mut rng);
+        let max_amount = min_amount + max_accounts as u128;
+        for i in random_numbers {
+            let amount = max_amount - i as u128;
+            let juror = i as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        }
+
+        let mut last_stake = 0;
+        for pool_item in JurorPool::<Runtime>::get().into_inner().iter() {
+            assert!(pool_item.stake >= last_stake);
+            last_stake = pool_item.stake;
         }
     });
 }
