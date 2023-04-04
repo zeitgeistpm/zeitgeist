@@ -953,10 +953,12 @@ fn denounce_vote_works() {
         let free_alice_after = Balances::free_balance(ALICE);
         let slash = old_draws[0].slashable;
         assert!(!slash.is_zero());
-        assert_eq!(free_alice_after, free_alice_before - slash);
+        // slash happens in `reassign_juror_stakes`
+        // see `reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners`
+        assert_eq!(free_alice_after, free_alice_before);
 
         let pot_balance_after = Balances::free_balance(&Court::reward_pot(&market_id));
-        assert_eq!(pot_balance_after, pot_balance_before + slash);
+        assert_eq!(pot_balance_after, pot_balance_before);
     });
 }
 
@@ -1497,20 +1499,19 @@ fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
         assert_eq!(free_bob_after, free_bob_before - old_draws[BOB as usize].slashable);
 
         let free_charlie_after = Balances::free_balance(&CHARLIE);
-        assert_eq!(
-            free_charlie_after,
-            free_charlie_before
-                + old_draws[ALICE as usize].slashable
-                + old_draws[BOB as usize].slashable
-                + old_draws[DAVE as usize].slashable
-        );
+        let full_slashes = old_draws[ALICE as usize].slashable
+            + old_draws[BOB as usize].slashable
+            + old_draws[DAVE as usize].slashable
+            + old_draws[EVE as usize].slashable;
+        assert_eq!(free_charlie_after, free_charlie_before + full_slashes);
 
         let free_dave_after = Balances::free_balance(&DAVE);
         assert_ne!(free_dave_after, free_dave_before);
         assert_eq!(free_dave_after, free_dave_before - old_draws[DAVE as usize].slashable);
 
         let free_eve_after = Balances::free_balance(&EVE);
-        assert_eq!(free_eve_after, free_eve_before);
+        assert_ne!(free_eve_after, free_eve_before);
+        assert_eq!(free_eve_after, free_eve_before - old_draws[EVE as usize].slashable);
     });
 }
 

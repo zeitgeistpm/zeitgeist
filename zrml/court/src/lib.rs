@@ -635,11 +635,7 @@ mod pallet {
 
             let commitment = Self::get_hashed_commitment(draw.vote, raw_commmitment)?;
 
-            let reward_pot = Self::reward_pot(&market_id);
-            let (imbalance, missing) = T::Currency::slash(&juror, draw.slashable);
-            debug_assert!(missing.is_zero(), "Could not slash all of the amount.");
-            T::Currency::resolve_creating(&reward_pot, imbalance);
-
+            // slash for the misbehaviour happens in reassign_juror_stakes
             let raw_vote = Vote::Denounced { commitment, outcome: outcome.clone(), salt };
             draws[index] = Draw { juror: juror.clone(), vote: raw_vote, ..draw };
             <Draws<T>>::insert(market_id, draws);
@@ -779,7 +775,7 @@ mod pallet {
 
         /// The juror stakes get reassigned according to the plurality decision of the jurors.
         /// The losing jurors get slashed and pay for the winning jurors.
-        /// The tardy jurors get slashed.
+        /// The tardy or denounced jurors get slashed.
         ///
         /// # Arguments
         ///
@@ -833,14 +829,11 @@ mod pallet {
                 }
 
                 match draw.vote {
-                    Vote::Drawn => {
+                    Vote::Drawn
+                    | Vote::Secret { commitment: _ }
+                    | Vote::Denounced { commitment: _, outcome: _, salt: _ } => {
                         slash_juror(&draw.juror, draw.slashable);
                     }
-                    Vote::Secret { commitment: _ } => {
-                        slash_juror(&draw.juror, draw.slashable);
-                    }
-                    // denounce extrinsic already punished the juror
-                    Vote::Denounced { commitment: _, outcome: _, salt: _ } => (),
                     Vote::Revealed { commitment: _, outcome, salt: _ } => {
                         valid_winners_and_losers.push((draw.juror, outcome, draw.slashable));
                     }
