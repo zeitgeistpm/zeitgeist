@@ -566,6 +566,10 @@ fn vote_overwrite_works() {
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let wrong_commitment = BlakeTwo256::hash_of(&(ALICE, wrong_outcome, salt));
         assert_ok!(Court::vote(Origin::signed(ALICE), market_id, wrong_commitment));
+        assert_eq!(
+            <Draws<Runtime>>::get(market_id)[0].vote,
+            Vote::Secret { commitment: wrong_commitment }
+        );
 
         run_blocks(1);
 
