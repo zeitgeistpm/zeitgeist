@@ -1949,6 +1949,24 @@ fn select_jurors_updates_juror_consumed_stake() {
     });
 }
 
+#[test_case(0usize; "first")]
+#[test_case(1usize; "second")]
+#[test_case(2usize; "third")]
+#[test_case(3usize; "fourth")]
+fn select_jurors_fails_if_not_enough_jurors(appeal_number: usize) {
+    ExtBuilder::default().build().execute_with(|| {
+        let necessary_jurors_weight = Court::necessary_jurors_weight(appeal_number);
+        for i in 0..(necessary_jurors_weight - 1usize) {
+            let amount = MinJurorStake::get() + i as u128;
+            let juror = (i + 1000) as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        }
+
+        assert_noop!(Court::select_jurors(appeal_number), Error::<Runtime>::NotEnoughJurors);
+    });
+}
+
 #[test]
 fn appeal_reduces_active_lock_from_old_draws() {
     ExtBuilder::default().build().execute_with(|| {
@@ -2156,7 +2174,7 @@ fn get_latest_resolved_outcome_selects_oracle_report() {
 }
 
 #[test]
-fn random_jurors_returns_an_unique_different_subset_of_jurors() {
+fn random_jurors_returns_a_unique_different_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
 
