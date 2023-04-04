@@ -487,8 +487,6 @@ fn exit_court_works_with_active_lock() {
         let amount = 3 * active_lock;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert!(!JurorPool::<Runtime>::get().into_inner().is_empty());
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
 
         assert_eq!(
             <Jurors<Runtime>>::get(ALICE).unwrap(),
@@ -498,6 +496,10 @@ fn exit_court_works_with_active_lock() {
         <Jurors<Runtime>>::insert(ALICE, JurorInfo { stake: amount, active_lock });
 
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+
+        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
+
         assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         System::assert_last_event(
             Event::JurorExited { juror: ALICE, exit_amount: amount - active_lock, active_lock }
