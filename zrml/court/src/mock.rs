@@ -75,7 +75,6 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
@@ -152,7 +151,7 @@ impl crate::Config for Runtime {
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
     type CourtPalletId = CourtPalletId;
-    type Random = RandomnessCollectiveFlip;
+    type Random = MockStorage;
     type RequestInterval = RequestInterval;
     type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
@@ -197,8 +196,6 @@ impl pallet_balances::Config for Runtime {
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
-
-impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
@@ -270,7 +267,6 @@ impl ExtBuilder {
 pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
         Balances::on_finalize(System::block_number());
-        RandomnessCollectiveFlip::on_finalize(System::block_number());
         Court::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
@@ -281,7 +277,6 @@ pub fn run_to_block(n: BlockNumber) {
         System::initialize(&System::block_number(), &parent_block_hash, &current_digest);
         System::on_initialize(System::block_number());
         Court::on_initialize(System::block_number());
-        RandomnessCollectiveFlip::on_initialize(System::block_number());
         Balances::on_initialize(System::block_number());
     }
 }

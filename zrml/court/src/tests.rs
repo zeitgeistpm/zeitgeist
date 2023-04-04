@@ -1263,6 +1263,9 @@ fn appeal_get_latest_resolved_outcome_changes() {
         let outcome = OutcomeReport::Scalar(69u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        // cheat a little to get alice in the draw for the new appeal
+        put_alice_in_draw(market_id, MinJurorStake::get());
         assert_ok!(Court::vote(Origin::signed(ALICE), market_id, commitment));
 
         run_blocks(CourtVotePeriod::get() + 1);
@@ -2174,7 +2177,7 @@ fn get_latest_resolved_outcome_selects_oracle_report() {
 }
 
 #[test]
-fn random_jurors_returns_a_unique_different_subset_of_jurors() {
+fn choose_multiple_weighted_returns_different_jurors_with_other_seed() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
 
@@ -2187,31 +2190,46 @@ fn random_jurors_returns_a_unique_different_subset_of_jurors() {
             jurors.try_push(pool_item.clone()).unwrap();
         }
 
-        let random_jurors = Court::choose_multiple_weighted(&mut jurors, 3).unwrap();
-        let mut at_least_one_set_is_different = false;
+        let nonce_0 = 42u64;
+        <crate::JurorsSelectionNonce<Runtime>>::put(nonce_0);
+        // randomness is mocked and purely based on the nonce
+        // thus a different nonce will result in a different seed (disregarding hash collisions)
+        let first_random_seed = Court::get_random_seed(nonce_0);
+        let first_random_list = Court::choose_multiple_weighted(&mut jurors, 3).unwrap();
 
-        for _ in 0..100 {
-            run_blocks(1);
+        run_blocks(1);
 
-            let another_set_of_random_jurors =
-                Court::choose_multiple_weighted(&mut jurors, 3).unwrap();
-            let mut iter = another_set_of_random_jurors.iter();
+        let nonce_1 = 69u64;
+        <crate::JurorsSelectionNonce<Runtime>>::put(nonce_1);
+        let second_random_seed = Court::get_random_seed(nonce_1);
 
-            if let Some(juror) = iter.next() {
-                at_least_one_set_is_different = random_jurors.iter().all(|el| el != juror);
-            } else {
-                continue;
-            }
-            for juror in iter {
-                at_least_one_set_is_different &= random_jurors.iter().all(|el| el != juror);
-            }
+        assert_ne!(first_random_seed, second_random_seed);
+        let second_random_list = Court::choose_multiple_weighted(&mut jurors, 3).unwrap();
 
-            if at_least_one_set_is_different {
-                break;
-            }
+        // the two lists contain different jurors
+        for juror in &first_random_list {
+            assert!(second_random_list.iter().all(|el| el != juror));
         }
+    });
+}
 
-        assert!(at_least_one_set_is_different);
+#[test]
+fn get_random_seed_returns_equal_seeds_with_equal_nonce() {
+    ExtBuilder::default().build().execute_with(|| {
+        run_to_block(123);
+
+        // this is useful to check that the random seed only depends on the nonce
+        // the same nonce always results in the same seed for testing deterministic
+        let nonce = 42u64;
+        <crate::JurorsSelectionNonce<Runtime>>::put(nonce);
+        let first_random_seed = Court::get_random_seed(nonce);
+
+        run_blocks(1);
+
+        <crate::JurorsSelectionNonce<Runtime>>::put(nonce);
+        let second_random_seed = Court::get_random_seed(nonce);
+
+        assert_eq!(first_random_seed, second_random_seed);
     });
 }
 

@@ -18,6 +18,10 @@
 #![cfg(test)]
 #![allow(dead_code)]
 
+pub use pallet::*;
+use parity_scale_codec::Encode;
+use sp_runtime::traits::Hash;
+
 #[frame_support::pallet]
 pub(crate) mod pallet {
     use core::marker::PhantomData;
@@ -49,4 +53,13 @@ pub(crate) mod pallet {
         BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
+}
+
+impl<T: Config> frame_support::traits::Randomness<T::Hash, T::BlockNumber> for Pallet<T> {
+    fn random(subject: &[u8]) -> (T::Hash, T::BlockNumber) {
+        let block_number = <frame_system::Pallet<T>>::block_number();
+        let seed = subject.using_encoded(T::Hashing::hash);
+
+        (seed, block_number)
+    }
 }

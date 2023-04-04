@@ -1129,6 +1129,19 @@ mod pallet {
             T::TreasuryPalletId::get().into_account_truncating()
         }
 
+        // Get a random seed based on a nonce.
+        pub(crate) fn get_random_seed(nonce: u64) -> [u8; 32] {
+            debug_assert!(
+                !<frame_system::Pallet<T>>::block_number().is_zero(),
+                "When testing with the randomness of the collective flip pallet it produces a \
+                 underflow (block number substraction by one) panic if the block number is zero."
+            );
+            let mut seed = [0; 32];
+            let (random_hash, _) = T::Random::random(&nonce.to_le_bytes());
+            seed.copy_from_slice(&random_hash.as_ref()[..32]);
+            seed
+        }
+
         // Returns a cryptographically secure random number generator
         // implementation based on the seed provided by the `Config::Random` type
         // and the `JurorsSelectionNonce` storage.
@@ -1138,15 +1151,8 @@ mod pallet {
                 *n = n.wrapping_add(1);
                 rslt
             });
-            let mut seed = [0; 32];
-            debug_assert!(
-                !<frame_system::Pallet<T>>::block_number().is_zero(),
-                "When testing with the randomness of the collective flip pallet it produces a \
-                 underflow (block number substraction by one) panic if the block number is zero."
-            );
-            let (random_hash, _) = T::Random::random(&nonce.to_le_bytes());
-            seed.copy_from_slice(&random_hash.as_ref()[..32]);
-            ChaCha20Rng::from_seed(seed)
+            let random_seed = Self::get_random_seed(nonce);
+            ChaCha20Rng::from_seed(random_seed)
         }
 
         // Calculates the necessary number of draws depending on the number of market appeals.

@@ -13,7 +13,6 @@ zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
-pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
 pallet-treasury = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
 sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
