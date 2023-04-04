@@ -528,7 +528,15 @@ fn vote_works() {
         let amount = MinJurorStake::get() * 100;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        put_alice_in_draw(market_id, amount);
+        // trick a little bit to let alice be part of the ("random") selection
+        let mut draws = <Draws<Runtime>>::get(market_id);
+        assert_eq!(draws.len(), 5usize);
+        let slashable = MinJurorStake::get();
+        let alice_index = 3usize;
+        draws[alice_index] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
+        <Draws<Runtime>>::insert(market_id, draws);
+        <Jurors<Runtime>>::insert(ALICE, JurorInfo { stake: amount, active_lock: slashable });
+
         let old_draws = <Draws<Runtime>>::get(market_id);
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
@@ -540,12 +548,18 @@ fn vote_works() {
         System::assert_last_event(Event::JurorVoted { juror: ALICE, market_id, commitment }.into());
 
         let new_draws = <Draws<Runtime>>::get(market_id);
-        assert_eq!(old_draws[1..], new_draws[1..]);
-        assert_eq!(old_draws[0].juror, new_draws[0].juror);
-        assert_eq!(old_draws[0].weight, new_draws[0].weight);
-        assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
-        assert_eq!(old_draws[0].vote, Vote::Drawn);
-        assert_eq!(new_draws[0].vote, Vote::Secret { commitment });
+        for (i, (old_draw, new_draw)) in old_draws.iter().zip(new_draws.iter()).enumerate() {
+            if i == alice_index {
+                continue;
+            } else {
+                assert_eq!(old_draw, new_draw);
+            }
+        }
+        assert_eq!(old_draws[alice_index].juror, new_draws[alice_index].juror);
+        assert_eq!(old_draws[alice_index].weight, new_draws[alice_index].weight);
+        assert_eq!(old_draws[alice_index].slashable, new_draws[alice_index].slashable);
+        assert_eq!(old_draws[alice_index].vote, Vote::Drawn);
+        assert_eq!(new_draws[alice_index].vote, Vote::Secret { commitment });
     });
 }
 
@@ -689,7 +703,14 @@ fn reveal_vote_works() {
         let amount = MinJurorStake::get() * 100;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
-        put_alice_in_draw(market_id, amount);
+        // trick a little bit to let alice be part of the ("random") selection
+        let mut draws = <Draws<Runtime>>::get(market_id);
+        assert_eq!(draws.len(), 5usize);
+        let slashable = MinJurorStake::get();
+        let alice_index = 3usize;
+        draws[alice_index] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
+        <Draws<Runtime>>::insert(market_id, draws);
+        <Jurors<Runtime>>::insert(ALICE, JurorInfo { stake: amount, active_lock: slashable });
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
@@ -709,12 +730,17 @@ fn reveal_vote_works() {
         );
 
         let new_draws = <Draws<Runtime>>::get(market_id);
-        assert_eq!(old_draws[1..], new_draws[1..]);
-        assert_eq!(old_draws[0].juror, new_draws[0].juror);
-        assert_eq!(old_draws[0].weight, new_draws[0].weight);
-        assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
-        assert_eq!(old_draws[0].vote, Vote::Secret { commitment });
-        assert_eq!(new_draws[0].vote, Vote::Revealed { commitment, outcome, salt });
+        for (i, (old_draw, new_draw)) in old_draws.iter().zip(new_draws.iter()).enumerate() {
+            if i == alice_index {
+                continue;
+            }
+            assert_eq!(old_draw, new_draw);
+        }
+        assert_eq!(old_draws[alice_index].juror, new_draws[alice_index].juror);
+        assert_eq!(old_draws[alice_index].weight, new_draws[alice_index].weight);
+        assert_eq!(old_draws[alice_index].slashable, new_draws[alice_index].slashable);
+        assert_eq!(old_draws[alice_index].vote, Vote::Secret { commitment });
+        assert_eq!(new_draws[alice_index].vote, Vote::Revealed { commitment, outcome, salt });
     });
 }
 
