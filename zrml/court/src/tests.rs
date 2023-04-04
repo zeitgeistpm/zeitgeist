@@ -1126,16 +1126,19 @@ fn appeal_updates_periods() {
         let court = <Courts<Runtime>>::get(market_id).unwrap();
 
         let request_block = <RequestBlock<Runtime>>::get();
-        let pre_vote_end = request_block - now;
-        assert_eq!(court.periods.pre_vote_end, now + pre_vote_end);
-        assert_eq!(court.periods.vote_end, court.periods.pre_vote_end + CourtVotePeriod::get());
+        assert!(now < request_block);
+        assert_eq!(court.periods.pre_vote_end, request_block);
+        assert_eq!(court.periods.vote_end, request_block + CourtVotePeriod::get());
         assert_eq!(
             court.periods.aggregation_end,
-            court.periods.vote_end + CourtAggregationPeriod::get()
+            request_block + CourtVotePeriod::get() + CourtAggregationPeriod::get()
         );
         assert_eq!(
             court.periods.appeal_end,
-            court.periods.aggregation_end + CourtAppealPeriod::get()
+            request_block
+                + CourtVotePeriod::get()
+                + CourtAggregationPeriod::get()
+                + CourtAppealPeriod::get()
         );
 
         assert!(last_court.periods.pre_vote_end < court.periods.pre_vote_end);
