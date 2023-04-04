@@ -549,7 +549,7 @@ mod pallet {
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             ensure!(
-                court.periods.pre_vote_end < now && now <= court.periods.vote_end,
+                court.cycle_ends.pre_vote < now && now <= court.cycle_ends.vote,
                 Error::<T>::NotInVotingPeriod
             );
 
@@ -620,7 +620,7 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
             // ensure in vote period
             ensure!(
-                court.periods.pre_vote_end < now && now <= court.periods.vote_end,
+                court.cycle_ends.pre_vote < now && now <= court.cycle_ends.vote,
                 Error::<T>::NotInVotingPeriod
             );
 
@@ -680,7 +680,7 @@ mod pallet {
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let now = <frame_system::Pallet<T>>::block_number();
             ensure!(
-                court.periods.vote_end < now && now <= court.periods.aggregation_end,
+                court.cycle_ends.vote < now && now <= court.cycle_ends.aggregation,
                 Error::<T>::NotInAggregationPeriod
             );
 
@@ -737,7 +737,7 @@ mod pallet {
                 Error::<T>::MaxAppealsReached
             })?;
 
-            let last_resolve_at = court.periods.appeal_end;
+            let last_resolve_at = court.cycle_ends.appeal;
 
             // if appeal_number == MaxAppeals, then don't start a new appeal round
             if appeal_number < T::MaxAppeals::get() as usize {
@@ -745,14 +745,14 @@ mod pallet {
                 let request_block = <RequestBlock<T>>::get();
                 debug_assert!(request_block >= now, "Request block must be greater than now.");
                 let round_timing = RoundTiming {
-                    pre_vote_end: request_block,
+                    pre_vote: request_block,
                     vote_period: T::CourtVotePeriod::get(),
                     aggregation_period: T::CourtAggregationPeriod::get(),
                     appeal_period: T::CourtAppealPeriod::get(),
                 };
-                // sets periods one after the other from now
-                court.update_periods(round_timing);
-                let new_resolve_at = court.periods.appeal_end;
+                // sets cycle_ends one after the other from now
+                court.update_lifecycle(round_timing);
+                let new_resolve_at = court.cycle_ends.appeal;
                 debug_assert!(new_resolve_at != last_resolve_at);
                 let _ids_len_1 =
                     T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?;
@@ -1104,7 +1104,7 @@ mod pallet {
             );
 
             ensure!(
-                court.periods.aggregation_end < now && now <= court.periods.appeal_end,
+                court.cycle_ends.aggregation < now && now <= court.cycle_ends.appeal,
                 Error::<T>::NotInAppealPeriod
             );
 
@@ -1344,17 +1344,17 @@ mod pallet {
             let request_block = <RequestBlock<T>>::get();
             debug_assert!(request_block >= now, "Request block must be greater than now.");
             let round_timing = RoundTiming {
-                pre_vote_end: request_block,
+                pre_vote: request_block,
                 vote_period: T::CourtVotePeriod::get(),
                 aggregation_period: T::CourtAggregationPeriod::get(),
                 appeal_period: T::CourtAppealPeriod::get(),
             };
 
-            // sets periods one after the other from now
+            // sets cycle_ends one after the other from now
             let court = CourtInfo::new(round_timing);
 
             let _ids_len =
-                T::DisputeResolution::add_auto_resolve(market_id, court.periods.appeal_end)?;
+                T::DisputeResolution::add_auto_resolve(market_id, court.cycle_ends.appeal)?;
 
             <Draws<T>>::insert(market_id, new_draws);
             <Courts<T>>::insert(market_id, court);
@@ -1416,7 +1416,7 @@ mod pallet {
             );
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            Ok(Some(court.periods.appeal_end))
+            Ok(Some(court.cycle_ends.appeal))
         }
 
         fn has_failed(

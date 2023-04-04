@@ -80,15 +80,15 @@ pub enum Vote<Hash> {
     PartialEq,
     Eq,
 )]
-pub struct Periods<BlockNumber> {
+pub struct CycleEnds<BlockNumber> {
     /// The end block of the pre-vote period.
-    pub(crate) pre_vote_end: BlockNumber,
+    pub(crate) pre_vote: BlockNumber,
     /// The end block of the vote period.
-    pub(crate) vote_end: BlockNumber,
+    pub(crate) vote: BlockNumber,
     /// The end block of the aggregation period.
-    pub(crate) aggregation_end: BlockNumber,
+    pub(crate) aggregation: BlockNumber,
     /// The end block of the appeal period.
-    pub(crate) appeal_end: BlockNumber,
+    pub(crate) appeal: BlockNumber,
 }
 
 /// The status of a court case.
@@ -148,11 +148,11 @@ pub struct CourtInfo<BlockNumber, Appeals> {
     /// The list of all appeals.
     pub(crate) appeals: Appeals,
     /// The information about the lifecycle of this court case.
-    pub(crate) periods: Periods<BlockNumber>,
+    pub(crate) cycle_ends: CycleEnds<BlockNumber>,
 }
 
 pub struct RoundTiming<BlockNumber> {
-    pub(crate) pre_vote_end: BlockNumber,
+    pub(crate) pre_vote: BlockNumber,
     pub(crate) vote_period: BlockNumber,
     pub(crate) aggregation_period: BlockNumber,
     pub(crate) appeal_period: BlockNumber,
@@ -162,22 +162,22 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     CourtInfo<BlockNumber, Appeals>
 {
     pub fn new(round_timing: RoundTiming<BlockNumber>) -> Self {
-        let pre_vote_end = round_timing.pre_vote_end;
-        let vote_end = pre_vote_end.saturating_add(round_timing.vote_period);
-        let aggregation_end = vote_end.saturating_add(round_timing.aggregation_period);
-        let appeal_end = aggregation_end.saturating_add(round_timing.appeal_period);
-        let periods = Periods { pre_vote_end, vote_end, aggregation_end, appeal_end };
+        let pre_vote = round_timing.pre_vote;
+        let vote = pre_vote.saturating_add(round_timing.vote_period);
+        let aggregation = vote.saturating_add(round_timing.aggregation_period);
+        let appeal = aggregation.saturating_add(round_timing.appeal_period);
+        let cycle_ends = CycleEnds { pre_vote, vote, aggregation, appeal };
         let status = CourtStatus::Open;
-        Self { status, appeals: Default::default(), periods }
+        Self { status, appeals: Default::default(), cycle_ends }
     }
 
-    pub fn update_periods(&mut self, round_timing: RoundTiming<BlockNumber>) {
-        self.periods.pre_vote_end = round_timing.pre_vote_end;
-        self.periods.vote_end = self.periods.pre_vote_end.saturating_add(round_timing.vote_period);
-        self.periods.aggregation_end =
-            self.periods.vote_end.saturating_add(round_timing.aggregation_period);
-        self.periods.appeal_end =
-            self.periods.aggregation_end.saturating_add(round_timing.appeal_period);
+    pub fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {
+        self.cycle_ends.pre_vote = round_timing.pre_vote;
+        self.cycle_ends.vote = self.cycle_ends.pre_vote.saturating_add(round_timing.vote_period);
+        self.cycle_ends.aggregation =
+            self.cycle_ends.vote.saturating_add(round_timing.aggregation_period);
+        self.cycle_ends.appeal =
+            self.cycle_ends.aggregation.saturating_add(round_timing.appeal_period);
     }
 }
 

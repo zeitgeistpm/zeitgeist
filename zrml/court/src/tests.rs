@@ -1111,7 +1111,7 @@ fn denounce_vote_fails_if_vote_already_denounced() {
 }
 
 #[test]
-fn appeal_updates_periods() {
+fn appeal_updates_cycle_ends() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
@@ -1127,24 +1127,24 @@ fn appeal_updates_periods() {
 
         let request_block = <RequestBlock<Runtime>>::get();
         assert!(now < request_block);
-        assert_eq!(court.periods.pre_vote_end, request_block);
-        assert_eq!(court.periods.vote_end, request_block + CourtVotePeriod::get());
+        assert_eq!(court.cycle_ends.pre_vote, request_block);
+        assert_eq!(court.cycle_ends.vote, request_block + CourtVotePeriod::get());
         assert_eq!(
-            court.periods.aggregation_end,
+            court.cycle_ends.aggregation,
             request_block + CourtVotePeriod::get() + CourtAggregationPeriod::get()
         );
         assert_eq!(
-            court.periods.appeal_end,
+            court.cycle_ends.appeal,
             request_block
                 + CourtVotePeriod::get()
                 + CourtAggregationPeriod::get()
                 + CourtAppealPeriod::get()
         );
 
-        assert!(last_court.periods.pre_vote_end < court.periods.pre_vote_end);
-        assert!(last_court.periods.vote_end < court.periods.vote_end);
-        assert!(last_court.periods.aggregation_end < court.periods.aggregation_end);
-        assert!(last_court.periods.appeal_end < court.periods.appeal_end);
+        assert!(last_court.cycle_ends.pre_vote < court.cycle_ends.pre_vote);
+        assert!(last_court.cycle_ends.vote < court.cycle_ends.vote);
+        assert!(last_court.cycle_ends.aggregation < court.cycle_ends.aggregation);
+        assert!(last_court.cycle_ends.appeal < court.cycle_ends.appeal);
     });
 }
 
@@ -1187,14 +1187,14 @@ fn appeal_shifts_auto_resolve() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (market_id, _, _) = set_alice_after_vote(outcome);
 
-        let resolve_at_0 = <Courts<Runtime>>::get(market_id).unwrap().periods.appeal_end;
+        let resolve_at_0 = <Courts<Runtime>>::get(market_id).unwrap().cycle_ends.appeal;
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
 
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
 
-        let resolve_at_1 = <Courts<Runtime>>::get(market_id).unwrap().periods.appeal_end;
+        let resolve_at_1 = <Courts<Runtime>>::get(market_id).unwrap().cycle_ends.appeal;
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
         assert_ne!(resolve_at_0, resolve_at_1);
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![]);
@@ -1399,7 +1399,7 @@ fn appeal_last_appeal_just_removes_auto_resolve() {
         fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
 
         let court = <Courts<Runtime>>::get(market_id).unwrap();
-        let resolve_at = court.periods.appeal_end;
+        let resolve_at = court.cycle_ends.appeal;
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), vec![market_id]);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
@@ -1986,12 +1986,12 @@ fn on_dispute_creates_correct_court_info() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = initialize_court();
         let court = <Courts<Runtime>>::get(market_id).unwrap();
-        let periods = court.periods;
+        let cycle_ends = court.cycle_ends;
         let request_block = <RequestBlock<Runtime>>::get();
-        assert_eq!(periods.pre_vote_end, request_block);
-        assert_eq!(periods.vote_end, periods.pre_vote_end + CourtVotePeriod::get());
-        assert_eq!(periods.aggregation_end, periods.vote_end + CourtAggregationPeriod::get());
-        assert_eq!(periods.appeal_end, periods.aggregation_end + CourtAppealPeriod::get());
+        assert_eq!(cycle_ends.pre_vote, request_block);
+        assert_eq!(cycle_ends.vote, cycle_ends.pre_vote + CourtVotePeriod::get());
+        assert_eq!(cycle_ends.aggregation, cycle_ends.vote + CourtAggregationPeriod::get());
+        assert_eq!(cycle_ends.appeal, cycle_ends.aggregation + CourtAppealPeriod::get());
         assert_eq!(court.status, CourtStatus::Open);
         assert!(court.appeals.is_empty());
     });
@@ -2005,8 +2005,8 @@ fn has_failed_returns_true_for_appealable_court_too_few_jurors() {
         <JurorPool<Runtime>>::kill();
         let market = MarketCommons::market(&market_id).unwrap();
         let court = <Courts<Runtime>>::get(market_id).unwrap();
-        let aggregation_end = court.periods.aggregation_end;
-        run_to_block(aggregation_end + 1);
+        let aggregation = court.cycle_ends.aggregation;
+        run_to_block(aggregation + 1);
         assert!(Court::has_failed(&market_id, &market).unwrap());
     });
 }

@@ -226,7 +226,7 @@ benchmarks! {
         let market_id = setup_court::<T>()?;
 
         let court = <Courts<T>>::get(market_id).unwrap();
-        let pre_vote_end = court.periods.pre_vote_end;
+        let pre_vote = court.periods.pre_vote;
 
         fill_draws::<T>(market_id, d)?;
 
@@ -240,7 +240,7 @@ benchmarks! {
         };
         <Draws<T>>::insert(market_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(pre_vote_end + 1u64.saturated_into::<T::BlockNumber>());
+        <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
 
         let commitment_vote = Default::default();
     }: _(RawOrigin::Signed(caller), market_id, commitment_vote)
@@ -255,7 +255,7 @@ benchmarks! {
         let market_id = setup_court::<T>()?;
 
         let court = <Courts<T>>::get(market_id).unwrap();
-        let pre_vote_end = court.periods.pre_vote_end;
+        let pre_vote = court.periods.pre_vote;
 
         fill_draws::<T>(market_id, d)?;
 
@@ -280,7 +280,7 @@ benchmarks! {
         };
         <Draws<T>>::insert(market_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(pre_vote_end + 1u64.saturated_into::<T::BlockNumber>());
+        <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
     }: _(RawOrigin::Signed(caller), market_id, denounced_juror_unlookup, outcome, salt)
 
     reveal_vote {
@@ -292,7 +292,7 @@ benchmarks! {
         let market_id = setup_court::<T>()?;
 
         let court = <Courts<T>>::get(market_id).unwrap();
-        let vote_end = court.periods.vote_end;
+        let vote = court.periods.vote;
 
         fill_draws::<T>(market_id, d)?;
 
@@ -315,7 +315,7 @@ benchmarks! {
         };
         <Draws<T>>::insert(market_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(vote_end + 1u64.saturated_into::<T::BlockNumber>());
+        <frame_system::Pallet<T>>::set_block_number(vote + 1u64.saturated_into::<T::BlockNumber>());
     }: _(RawOrigin::Signed(caller), market_id, outcome, salt)
 
     appeal {
@@ -334,14 +334,14 @@ benchmarks! {
         let market_id = setup_court::<T>()?;
 
         let mut court = <Courts<T>>::get(market_id).unwrap();
-        let appeal_end = court.periods.appeal_end;
+        let appeal = court.periods.appeal;
         for i in 0..r {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
-            T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
+            T::DisputeResolution::add_auto_resolve(&market_id_i, appeal).unwrap();
         }
-        T::DisputeResolution::add_auto_resolve(&market_id, appeal_end).unwrap();
+        T::DisputeResolution::add_auto_resolve(&market_id, appeal).unwrap();
 
-        let aggregation_end = court.periods.aggregation_end;
+        let aggregation = court.periods.aggregation;
         for i in 0..a {
             let appeal_info = AppealInfo {
                 backer: account("backer", i, 0),
@@ -376,7 +376,7 @@ benchmarks! {
         }
         <Draws<T>>::insert(market_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(aggregation_end + 1u64.saturated_into::<T::BlockNumber>());
+        <frame_system::Pallet<T>>::set_block_number(aggregation + 1u64.saturated_into::<T::BlockNumber>());
         let now = <frame_system::Pallet<T>>::block_number();
         <RequestBlock<T>>::put(now + 1u64.saturated_into::<T::BlockNumber>());
 
@@ -391,7 +391,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), market_id)
     verify {
         let court = <Courts<T>>::get(market_id).unwrap();
-        assert_eq!(court.periods.appeal_end, new_resolve_at);
+        assert_eq!(court.periods.appeal, new_resolve_at);
     }
 
     reassign_juror_stakes {
