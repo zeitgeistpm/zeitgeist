@@ -828,6 +828,23 @@ fn reveal_vote_fails_for_invalid_reveal() {
 }
 
 #[test]
+fn reveal_vote_fails_for_invalid_salt() {
+    ExtBuilder::default().build().execute_with(|| {
+        let outcome = OutcomeReport::Scalar(42u128);
+        let (market_id, _, correct_salt) = set_alice_after_vote(outcome.clone());
+
+        run_blocks(CourtVotePeriod::get() + 1);
+
+        let incorrect_salt: <Runtime as frame_system::Config>::Hash = [42; 32].into();
+        assert_ne!(correct_salt, incorrect_salt);
+        assert_noop!(
+            Court::reveal_vote(Origin::signed(ALICE), market_id, outcome, incorrect_salt),
+            Error::<Runtime>::InvalidReveal
+        );
+    });
+}
+
+#[test]
 fn reveal_vote_fails_if_juror_not_voted() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
