@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 
+extern crate alloc;
 use crate::{
     mock::{
         run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, Origin, Runtime,
@@ -26,11 +27,15 @@ use crate::{
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote},
-    AppealInfo, Courts, Draws, Error, Event, JurorInfo, JurorInfoOf, JurorPool, JurorPoolItem,
-    JurorPoolOf, Jurors, MarketOf, RequestBlock,
+    AppealInfo, BalanceOf, Courts, Draws, Error, Event, JurorInfo, JurorInfoOf, JurorPool,
+    JurorPoolItem, JurorPoolOf, Jurors, MarketIdOf, MarketOf, NegativeImbalanceOf, RequestBlock,
 };
-use frame_support::{assert_noop, assert_ok, traits::fungible::Balanced};
-use pallet_balances::BalanceLock;
+use alloc::collections::BTreeMap;
+use frame_support::{
+    assert_noop, assert_ok,
+    traits::{fungible::Balanced, tokens::imbalance::Imbalance, Currency, NamedReservableCurrency},
+};
+use pallet_balances::{BalanceLock, NegativeImbalance};
 use rand::seq::SliceRandom;
 use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
 use test_case::test_case;
@@ -71,7 +76,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     bonds: MarketBonds { creation: None, oracle: None, outsider: None, dispute: None },
 };
 
-fn initialize_court() -> crate::MarketIdOf<Runtime> {
+fn initialize_court() -> MarketIdOf<Runtime> {
     let now = <frame_system::Pallet<Runtime>>::block_number();
     <RequestBlock<Runtime>>::put(now + RequestInterval::get());
     let amount_alice = 2 * BASE;
@@ -103,7 +108,7 @@ fn fill_juror_pool() {
     }
 }
 
-fn fill_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
+fn fill_appeals(market_id: &MarketIdOf<Runtime>, appeal_number: usize) {
     assert!(appeal_number <= MaxAppeals::get() as usize);
     let mut court = Courts::<Runtime>::get(market_id).unwrap();
     let mut number = 0u128;
@@ -122,7 +127,7 @@ fn fill_appeals(market_id: &crate::MarketIdOf<Runtime>, appeal_number: usize) {
     Courts::<Runtime>::insert(market_id, court);
 }
 
-fn put_alice_in_draw(market_id: crate::MarketIdOf<Runtime>, stake: crate::BalanceOf<Runtime>) {
+fn put_alice_in_draw(market_id: MarketIdOf<Runtime>, stake: BalanceOf<Runtime>) {
     // trick a little bit to let alice be part of the ("random") selection
     let mut draws = <Draws<Runtime>>::get(market_id);
     assert!(!draws.is_empty());
@@ -135,7 +140,7 @@ fn put_alice_in_draw(market_id: crate::MarketIdOf<Runtime>, stake: crate::Balanc
 fn set_alice_after_vote(
     outcome: OutcomeReport,
 ) -> (
-    crate::MarketIdOf<Runtime>,
+    MarketIdOf<Runtime>,
     <Runtime as frame_system::Config>::Hash,
     <Runtime as frame_system::Config>::Hash,
 ) {
@@ -1916,6 +1921,29 @@ fn on_dispute_denies_non_court_markets() {
 }
 
 #[test]
+fn on_resolution_sets_court_status() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.report.as_ref().unwrap().outcome, ORACLE_REPORT);
+
+        assert_eq!(Court::on_resolution(&market_id, &market), Ok(Some(ORACLE_REPORT)));
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        assert_eq!(court.status, CourtStatus::Closed { winner: ORACLE_REPORT });
+    });
+}
+
+#[test]
+fn on_resolution_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
+        let market = MarketCommons::market(&market_id).unwrap();
+
+        assert_noop!(Court::on_resolution(&market_id, &market), Error::<Runtime>::CourtNotFound);
+    });
+}
+
+#[test]
 fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
@@ -1924,6 +1952,190 @@ fn on_resolution_denies_non_court_markets() {
             Court::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
         );
+    });
+}
+
+#[test]
+fn exchange_fails_if_non_court_markets() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        assert_noop!(
+            Court::exchange(&0, &market, &ORACLE_REPORT, NegativeImbalance::<Runtime>::zero()),
+            Error::<Runtime>::MarketDoesNotHaveCourtMechanism
+        );
+    });
+}
+
+#[test]
+fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+
+        let resolved_outcome = OutcomeReport::Scalar(1);
+        let other_outcome = OutcomeReport::Scalar(2);
+
+        let mut court = <Courts<Runtime>>::get(market_id).unwrap();
+        let mut free_balances_before = BTreeMap::new();
+        let mut number = 0u128;
+        let mut slashed_bonds = <BalanceOf<Runtime>>::zero();
+        while (number as usize) < MaxAppeals::get() as usize {
+            let bond = crate::get_appeal_bond::<Runtime>(court.appeals.len());
+            let appealed_outcome = if number % 2 == 0 {
+                // The appeals are not justified,
+                // because the appealed outcomes are equal to the resolved outcome.
+                // it is punished to appeal the right outcome
+                slashed_bonds += bond;
+                resolved_outcome.clone()
+            } else {
+                other_outcome.clone()
+            };
+
+            let backer = number;
+            let _ = Balances::deposit(&backer, bond).unwrap();
+            assert_ok!(Balances::reserve_named(&Court::reserve_id(), &backer, bond));
+            let free_balance = Balances::free_balance(&backer);
+            free_balances_before.insert(backer, free_balance);
+            court.appeals.try_push(AppealInfo { backer, bond, appealed_outcome }).unwrap();
+            number += 1;
+        }
+        Courts::<Runtime>::insert(market_id, court);
+
+        let imbalance: NegativeImbalanceOf<Runtime> =
+            <pallet_balances::Pallet<Runtime> as Currency<crate::AccountIdOf<Runtime>>>::issue(
+                42_000_000_000,
+            );
+        let prev_balance = imbalance.peek();
+        let imb_remainder =
+            Court::exchange(&market_id, &market, &resolved_outcome, imbalance).unwrap();
+        assert_eq!(imb_remainder.peek(), prev_balance + slashed_bonds);
+
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        let appeals = court.appeals;
+        for AppealInfo { backer, bond, appealed_outcome } in appeals {
+            assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &backer), 0);
+            let free_balance_after = Balances::free_balance(&backer);
+            let free_balance_before = free_balances_before.get(&backer).unwrap();
+
+            if appealed_outcome == resolved_outcome {
+                assert_eq!(free_balance_after, *free_balance_before);
+            } else {
+                assert_eq!(free_balance_after, *free_balance_before + bond);
+            }
+        }
+    });
+}
+
+#[test]
+fn get_auto_resolve_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        let appeal_end = court.cycle_ends.appeal;
+        assert_eq!(Court::get_auto_resolve(&market_id, &market).unwrap(), Some(appeal_end));
+    });
+}
+
+#[test]
+fn get_auto_resolve_fails_if_wrong_dispute_mechanism() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        assert_noop!(
+            Court::get_auto_resolve(&0, &market),
+            Error::<Runtime>::MarketDoesNotHaveCourtMechanism
+        );
+    });
+}
+
+#[test]
+fn get_auto_resolve_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market = DEFAULT_MARKET;
+        assert_noop!(Court::get_auto_resolve(&0, &market), Error::<Runtime>::CourtNotFound);
+    });
+}
+
+#[test]
+fn on_global_dispute_removes_court() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert!(<Courts<Runtime>>::contains_key(market_id));
+        assert_ok!(Court::on_global_dispute(&market_id, &market));
+        assert!(!<Courts<Runtime>>::contains_key(market_id));
+    });
+}
+
+#[test]
+fn on_global_dispute_removes_draws() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert!(<Draws<Runtime>>::contains_key(market_id));
+        assert_ok!(Court::on_global_dispute(&market_id, &market));
+        assert!(!<Draws<Runtime>>::contains_key(market_id));
+    });
+}
+
+#[test]
+fn on_global_dispute_fails_if_wrong_dispute_mechanism() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        assert_noop!(
+            Court::on_global_dispute(&0, &market),
+            Error::<Runtime>::MarketDoesNotHaveCourtMechanism
+        );
+    });
+}
+
+#[test]
+fn on_global_dispute_fails_if_court_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market = DEFAULT_MARKET;
+        assert_noop!(Court::on_global_dispute(&0, &market), Error::<Runtime>::CourtNotFound);
+    });
+}
+
+#[test]
+fn on_global_dispute_fails_if_market_report_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.report = None;
+            Ok(())
+        })
+        .unwrap();
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_noop!(
+            Court::on_global_dispute(&market_id, &market),
+            Error::<Runtime>::MarketReportNotFound
+        );
+    });
+}
+
+#[test]
+fn on_global_dispute_returns_appealed_outcomes() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        let mut court = <Courts<Runtime>>::get(market_id).unwrap();
+        let mut gd_outcomes = Vec::new();
+
+        let initial_vote_amount = <BalanceOf<Runtime>>::zero();
+        let treasury_account = Court::treasury_account_id();
+        for number in 0..MaxAppeals::get() {
+            let appealed_outcome = OutcomeReport::Scalar(number as u128);
+            let backer = number as u128;
+            let bond = crate::get_appeal_bond::<Runtime>(court.appeals.len());
+            gd_outcomes.push((appealed_outcome.clone(), treasury_account, initial_vote_amount));
+            court.appeals.try_push(AppealInfo { backer, bond, appealed_outcome }).unwrap();
+        }
+        Courts::<Runtime>::insert(market_id, court);
+        assert_eq!(Court::on_global_dispute(&market_id, &market).unwrap(), gd_outcomes);
     });
 }
 
@@ -2036,6 +2248,50 @@ fn on_dispute_creates_correct_court_info() {
 }
 
 #[test]
+fn on_dispute_fails_if_court_already_exists() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_noop!(Court::on_dispute(&market_id, &market), Error::<Runtime>::CourtAlreadyExists);
+    });
+}
+
+#[test]
+fn on_dispute_inserts_draws() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let draws = <Draws<Runtime>>::get(market_id);
+        assert_eq!(
+            draws[0],
+            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() }
+        );
+        assert_eq!(
+            draws[1],
+            Draw { juror: BOB, weight: 2, vote: Vote::Drawn, slashable: 2 * MinJurorStake::get() }
+        );
+        assert_eq!(
+            draws[2],
+            Draw { juror: DAVE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() }
+        );
+        assert_eq!(
+            draws[3],
+            Draw { juror: EVE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() }
+        );
+        assert_eq!(draws.len(), 4usize);
+    });
+}
+
+#[test]
+fn on_dispute_adds_auto_resolve() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = initialize_court();
+        let court = <Courts<Runtime>>::get(market_id).unwrap();
+        let resolve_at = court.cycle_ends.appeal;
+        assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), vec![market_id]);
+    });
+}
+
+#[test]
 fn has_failed_returns_true_for_appealable_court_too_few_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = initialize_court();
@@ -2101,7 +2357,7 @@ fn check_appeal_bond() {
     });
 }
 
-fn prepare_draws(market_id: &crate::MarketIdOf<Runtime>, outcomes_with_weights: Vec<(u128, u32)>) {
+fn prepare_draws(market_id: &MarketIdOf<Runtime>, outcomes_with_weights: Vec<(u128, u32)>) {
     let mut draws: crate::DrawsOf<Runtime> = vec![].try_into().unwrap();
     for (i, (outcome_index, weight)) in outcomes_with_weights.iter().enumerate() {
         // offset to not conflict with other jurors

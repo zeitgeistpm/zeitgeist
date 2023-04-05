@@ -757,9 +757,8 @@ mod pallet {
                 let _ids_len_1 =
                     T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?;
                 <Draws<T>>::insert(market_id, new_draws);
+                Self::unlock_jurors_from_last_draw(&market_id, old_draws);
             }
-
-            Self::unlock_jurors_from_last_draw(&market_id, old_draws);
 
             let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
@@ -1380,6 +1379,7 @@ mod pallet {
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
             let draws = Draws::<T>::get(market_id);
             let resolved_outcome = Self::get_latest_resolved_outcome(market_id, draws.as_slice())?;
+            Self::unlock_jurors_from_last_draw(market_id, draws);
             court.status = CourtStatus::Closed { winner: resolved_outcome.clone() };
             <Courts<T>>::insert(market_id, court);
 
@@ -1499,6 +1499,8 @@ mod pallet {
                 })
                 .collect::<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>>();
 
+            let old_draws = Draws::<T>::get(market_id);
+            Self::unlock_jurors_from_last_draw(market_id, old_draws);
             <Draws<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
 
@@ -1511,6 +1513,8 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
+            let old_draws = Draws::<T>::get(market_id);
+            Self::unlock_jurors_from_last_draw(market_id, old_draws);
             <Draws<T>>::remove(market_id);
             <Courts<T>>::remove(market_id);
 
