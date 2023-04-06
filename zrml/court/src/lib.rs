@@ -49,7 +49,10 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure, log,
-        pallet_prelude::{Hooks, OptionQuery, StorageMap, StorageValue, ValueQuery, Weight},
+        pallet_prelude::{
+            ConstU32, DispatchResultWithPostInfo, Hooks, OptionQuery, StorageMap, StorageValue,
+            ValueQuery, Weight,
+        },
         traits::{
             Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
             NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
@@ -193,6 +196,7 @@ mod pallet {
         CommitmentMatcher<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
     pub(crate) type RawCommitmentOf<T> =
         RawCommitment<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
+    pub type CacheSize = ConstU32<64>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -366,9 +370,12 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::join_court(T::MaxJurors::get()))]
         #[transactional]
-        pub fn join_court(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+        pub fn join_court(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
             let free_balance = T::Currency::free_balance(&who);
@@ -434,13 +441,15 @@ mod pallet {
 
             T::Currency::set_lock(T::CourtLockId::get(), &who, amount, WithdrawReasons::all());
 
+            let jurors_len = jurors.len() as u32;
             JurorPool::<T>::put(jurors);
 
             let juror_info = JurorInfoOf::<T> { stake: amount, active_lock };
             <Jurors<T>>::insert(&who, juror_info);
 
             Self::deposit_event(Event::JurorJoined { juror: who, stake: amount });
-            Ok(())
+
+            Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
         }
 
         /// Prepare as a juror to exit the court.
@@ -452,15 +461,15 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::prepare_exit_court(T::MaxJurors::get()))]
         #[transactional]
-        pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResult {
+        pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let prev_juror_info = <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExist)?;
 
             let mut jurors = JurorPool::<T>::get();
-
+            let jurors_len = jurors.len() as u32;
             if let Some((index, _)) = Self::get_pool_item(&jurors, prev_juror_info.stake, &who) {
                 jurors.remove(index);
                 <JurorPool<T>>::put(jurors);
@@ -471,7 +480,8 @@ mod pallet {
             }
 
             Self::deposit_event(Event::JurorPreparedExit { juror: who });
-            Ok(())
+
+            Ok(Some(T::WeightInfo::prepare_exit_court(jurors_len)).into())
         }
 
         /// Exit the court.
@@ -486,25 +496,36 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(
+            T::WeightInfo::exit_court_set(T::MaxJurors::get())
+            .max(T::WeightInfo::exit_court_remove(T::MaxJurors::get()))
+        )]
         #[transactional]
-        pub fn exit_court(origin: OriginFor<T>, juror: AccountIdLookupOf<T>) -> DispatchResult {
+        pub fn exit_court(
+            origin: OriginFor<T>,
+            juror: AccountIdLookupOf<T>,
+        ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
             let juror = T::Lookup::lookup(juror)?;
 
             let mut prev_juror_info =
                 <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
+            let jurors = JurorPool::<T>::get();
+            let jurors_len = jurors.len() as u32;
             ensure!(
-                Self::get_pool_item(&JurorPool::<T>::get(), prev_juror_info.stake, &juror)
-                    .is_none(),
+                Self::get_pool_item(&jurors, prev_juror_info.stake, &juror).is_none(),
                 Error::<T>::JurorNotPreparedToExit
             );
 
-            let (exit_amount, active_lock) = if prev_juror_info.active_lock.is_zero() {
+            let (exit_amount, active_lock, weight) = if prev_juror_info.active_lock.is_zero() {
                 T::Currency::remove_lock(T::CourtLockId::get(), &juror);
                 Jurors::<T>::remove(&juror);
-                (prev_juror_info.stake, <BalanceOf<T>>::zero())
+                (
+                    prev_juror_info.stake,
+                    <BalanceOf<T>>::zero(),
+                    T::WeightInfo::exit_court_remove(jurors_len),
+                )
             } else {
                 let active_lock = prev_juror_info.active_lock;
                 let exit_amount = prev_juror_info.stake.saturating_sub(active_lock);
@@ -518,12 +539,12 @@ mod pallet {
                 prev_juror_info.stake = active_lock;
                 Jurors::<T>::insert(&juror, prev_juror_info);
 
-                (exit_amount, active_lock)
+                (exit_amount, active_lock, T::WeightInfo::exit_court_set(jurors_len))
             };
 
             Self::deposit_event(Event::JurorExited { juror, exit_amount, active_lock });
 
-            Ok(())
+            Ok(Some(weight).into())
         }
 
         /// Vote as a randomly selected juror for a specific court case.
@@ -537,13 +558,13 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
         /// in the list of random selections (draws).
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::vote(T::MaxDraws::get()))]
         #[transactional]
         pub fn vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             commitment_vote: T::Hash,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
@@ -569,6 +590,8 @@ mod pallet {
             let vote = Vote::Secret { commitment: commitment_vote };
             draws[index] = Draw { juror: who.clone(), vote, ..draw };
 
+            let draws_len = draws.len() as u32;
+
             <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::JurorVoted {
@@ -576,7 +599,8 @@ mod pallet {
                 market_id,
                 commitment: commitment_vote,
             });
-            Ok(())
+
+            Ok(Some(T::WeightInfo::vote(draws_len)).into())
         }
 
         /// Denounce a juror during the voting period for which the commitment vote is known.
@@ -596,7 +620,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
         /// in the list of random selections (draws).
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::denounce_vote(T::MaxDraws::get()))]
         #[transactional]
         pub fn denounce_vote(
             origin: OriginFor<T>,
@@ -604,7 +628,7 @@ mod pallet {
             juror: AccountIdLookupOf<T>,
             outcome: OutcomeReport,
             salt: T::Hash,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let denouncer = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -625,6 +649,7 @@ mod pallet {
             );
 
             let mut draws = <Draws<T>>::get(market_id);
+            let draws_len = draws.len() as u32;
             let (index, draw) = match draws.iter().position(|draw| draw.juror == juror) {
                 Some(index) => (index, draws[index].clone()),
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
@@ -647,7 +672,8 @@ mod pallet {
                 outcome,
                 salt,
             });
-            Ok(())
+
+            Ok(Some(T::WeightInfo::denounce_vote(draws_len)).into())
         }
 
         /// Reveal the commitment vote of the caller juror.
@@ -663,14 +689,14 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors
         /// in the list of random selections (draws).
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::reveal_vote(T::MaxDraws::get()))]
         #[transactional]
         pub fn reveal_vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
             salt: T::Hash,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -685,6 +711,7 @@ mod pallet {
             );
 
             let mut draws = <Draws<T>>::get(market_id);
+            let draws_len = draws.len() as u32;
             let (index, draw) = match draws.iter().position(|draw| draw.juror == who) {
                 Some(index) => (index, draws[index].clone()),
                 None => return Err(Error::<T>::JurorNotDrawn.into()),
@@ -700,7 +727,8 @@ mod pallet {
             <Draws<T>>::insert(market_id, draws);
 
             Self::deposit_event(Event::JurorRevealedVote { juror: who, market_id, outcome, salt });
-            Ok(())
+
+            Ok(Some(T::WeightInfo::reveal_vote(draws_len)).into())
         }
 
         /// Trigger an appeal for a court. The last appeal does not trigger a new court round
@@ -714,9 +742,16 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of jurors.
         /// It depends heavily on `choose_multiple_weighted` of `select_jurors`.
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::appeal(
+            T::MaxJurors::get(),
+            T::MaxAppeals::get(),
+            CacheSize::get(),
+        ))]
         #[transactional]
-        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn appeal(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
@@ -739,6 +774,9 @@ mod pallet {
 
             let last_resolve_at = court.cycle_ends.appeal;
 
+            // used for benchmarking, juror pool is queried inside `select_jurors`
+            let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0) as u32;
+
             // if appeal_number == MaxAppeals, then don't start a new appeal round
             if appeal_number < T::MaxAppeals::get() as usize {
                 let new_draws = Self::select_jurors(appeal_number)?;
@@ -754,13 +792,14 @@ mod pallet {
                 court.update_lifecycle(round_timing);
                 let new_resolve_at = court.cycle_ends.appeal;
                 debug_assert!(new_resolve_at != last_resolve_at);
+                // TODO benchmark component missing
                 let _ids_len_1 =
                     T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?;
                 <Draws<T>>::insert(market_id, new_draws);
                 Self::unlock_jurors_from_last_draw(&market_id, old_draws);
             }
 
-            let _ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
+            let ids_len_0 = T::DisputeResolution::remove_auto_resolve(&market_id, last_resolve_at);
 
             T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
 
@@ -769,7 +808,7 @@ mod pallet {
             let appeal_number = appeal_number as u32;
             Self::deposit_event(Event::MarketAppealed { market_id, appeal_number });
 
-            Ok(())
+            Ok(Some(T::WeightInfo::appeal(jurors_len, appeal_number, ids_len_0)).into())
         }
 
         /// The juror stakes get reassigned according to the plurality decision of the jurors.
@@ -783,12 +822,12 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of randomly selected jurors for this court.
-        #[pallet::weight(1_000_000_000_000)]
+        #[pallet::weight(T::WeightInfo::reassign_juror_stakes(T::MaxDraws::get()))]
         #[transactional]
         pub fn reassign_juror_stakes(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
             let mut court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
@@ -799,6 +838,7 @@ mod pallet {
             };
 
             let draws = Draws::<T>::get(market_id);
+            let draws_len = draws.len() as u32;
 
             let reward_pot = Self::reward_pot(&market_id);
             let slash_juror = |ai: &T::AccountId, slashable: BalanceOf<T>| {
@@ -852,7 +892,7 @@ mod pallet {
 
             Self::deposit_event(Event::JurorStakesReassigned { market_id });
 
-            Ok(())
+            Ok(Some(T::WeightInfo::reassign_juror_stakes(draws_len)).into())
         }
     }
 

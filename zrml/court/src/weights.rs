@@ -53,7 +53,6 @@ pub trait WeightInfoZeitgeist {
     fn denounce_vote(d: u32) -> Weight;
     fn reveal_vote(d: u32) -> Weight;
     fn appeal(d: u32, a: u32, r: u32) -> Weight;
-    fn punish_tardy_jurors(d: u32) -> Weight;
     fn reassign_juror_stakes(d: u32) -> Weight;
 }
 
@@ -149,18 +148,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((28_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(8))
             .saturating_add(T::DbWeight::get().writes((28_u64).saturating_mul(a.into())))
-    }
-    // Storage: Court Courts (r:1 w:1)
-    // Storage: Court Draws (r:1 w:0)
-    // Storage: System Account (r:2 w:2)
-    fn punish_tardy_jurors(d: u32) -> Weight {
-        Weight::from_ref_time(42_725_000)
-            // Standard Error: 4_000
-            .saturating_add(Weight::from_ref_time(15_689_000).saturating_mul(d.into()))
-            .saturating_add(T::DbWeight::get().reads(3))
-            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(d.into())))
-            .saturating_add(T::DbWeight::get().writes(2))
-            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(d.into())))
     }
     // Storage: Court Courts (r:1 w:1)
     // Storage: Court Draws (r:1 w:1)
