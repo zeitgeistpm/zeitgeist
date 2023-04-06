@@ -2051,14 +2051,6 @@ fn get_auto_resolve_fails_if_wrong_dispute_mechanism() {
 }
 
 #[test]
-fn get_auto_resolve_fails_if_court_not_found() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market = DEFAULT_MARKET;
-        assert_noop!(Court::get_auto_resolve(&0, &market), Error::<Runtime>::CourtNotFound);
-    });
-}
-
-#[test]
 fn on_global_dispute_removes_court() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = initialize_court();
