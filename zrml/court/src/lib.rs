@@ -28,7 +28,7 @@ pub mod migrations;
 mod mock;
 mod mock_storage;
 mod tests;
-mod types;
+pub mod types;
 pub mod weights;
 
 pub use court_pallet_api::CourtPalletApi;
@@ -1103,7 +1103,7 @@ mod pallet {
             );
 
             ensure!(
-                court.cycle_ends.aggregation < now && now <= court.cycle_ends.appeal,
+                court.cycle_ends.aggregation < now && now < court.cycle_ends.appeal,
                 Error::<T>::NotInAppealPeriod
             );
 
@@ -1421,8 +1421,7 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            let court = <Courts<T>>::get(market_id).ok_or(Error::<T>::CourtNotFound)?;
-            Ok(Some(court.cycle_ends.appeal))
+            Ok(<Courts<T>>::get(market_id).map(|court| court.cycle_ends.appeal))
         }
 
         fn has_failed(

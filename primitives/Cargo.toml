@@ -28,7 +28,6 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
 ]
-with-global-disputes = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

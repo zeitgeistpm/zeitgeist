@@ -853,20 +853,14 @@ benchmarks! {
         let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
         <frame_system::Pallet<T>>::set_block_number(current_block);
 
-        #[cfg(feature = "with-global-disputes")]
-        {
-            let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
-            // the complexity depends on MarketIdsPerDisputeBlock at the current block
-            // this is because a variable number of market ids need to be decoded from the storage
-            MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);
-        }
+        let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
+        // the complexity depends on MarketIdsPerDisputeBlock at the current block
+        // this is because a variable number of market ids need to be decoded from the storage
+        MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);
 
         let call = Call::<T>::start_global_dispute { market_id };
     }: {
-        #[cfg(feature = "with-global-disputes")]
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
-        #[cfg(not(feature = "with-global-disputes"))]
-        let _ = call.dispatch_bypass_filter(RawOrigin::Signed(caller).into());
     }
 
     dispute_authorized {

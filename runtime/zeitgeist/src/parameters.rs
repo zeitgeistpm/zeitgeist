@@ -374,7 +374,6 @@ parameter_types! {
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
 }
 
-#[cfg(feature = "with-global-disputes")]
 parameter_types! {
     // Global Disputes
     /// Vote lock identifier, mainly used for the LockableCurrency on the native token.

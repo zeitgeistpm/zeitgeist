@@ -104,7 +104,7 @@ common-runtime = { default-features = false, path = "../common" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../../zrml/authorized" }
 zrml-court = { default-features = false, path = "../../zrml/court" }
-zrml-global-disputes = { default-features = false, path = "../../zrml/global-disputes", optional = true }
+zrml-global-disputes = { default-features = false, path = "../../zrml/global-disputes" }
 zrml-liquidity-mining = { default-features = false, path = "../../zrml/liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../../zrml/market-commons" }
 zrml-prediction-markets = { default-features = false, path = "../../zrml/prediction-markets" }
@@ -308,7 +308,7 @@ std = [
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
-    "zrml-global-disputes?/std",
+    "zrml-global-disputes/std",
     "zrml-swaps-runtime-api/std",
     "zrml-styx/std",
     "zrml-swaps/std",
@@ -359,7 +359,7 @@ try-runtime = [
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
-    "zrml-global-disputes?/try-runtime",
+    "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
 
@@ -381,11 +381,6 @@ try-runtime = [
     "cumulus-pallet-xcm?/try-runtime",
     "cumulus-pallet-xcmp-queue?/try-runtime",
     "parachain-info?/try-runtime",
-]
-with-global-disputes = [
-    "zrml-global-disputes",
-    "common-runtime/with-global-disputes",
-    "zrml-prediction-markets/with-global-disputes",
 ]
 
 [package]

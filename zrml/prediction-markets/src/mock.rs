@@ -56,7 +56,6 @@ use zeitgeist_primitives::{
     },
 };
 
-#[cfg(feature = "with-global-disputes")]
 use zeitgeist_primitives::constants::mock::{
     GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
     MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
@@ -86,7 +85,6 @@ parameter_types! {
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
-#[cfg(feature = "with-global-disputes")]
 construct_runtime!(
     pub enum Runtime
     where
@@ -113,32 +111,6 @@ construct_runtime!(
     }
 );
 
-#[cfg(not(feature = "with-global-disputes"))]
-construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Court: zrml_court::{Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
-        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
-        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
-    }
-);
-
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
@@ -151,9 +123,7 @@ impl crate::Config for Runtime {
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type Event = Event;
-    #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
-    #[cfg(feature = "with-global-disputes")]
     type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
@@ -341,7 +311,6 @@ impl zrml_simple_disputes::Config for Runtime {
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
-#[cfg(feature = "with-global-disputes")]
 impl zrml_global_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
@@ -478,11 +447,13 @@ impl ExtBuilder {
 pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
         Balances::on_finalize(System::block_number());
+        Court::on_finalize(System::block_number());
         PredictionMarkets::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
         PredictionMarkets::on_initialize(System::block_number());
+        Court::on_initialize(System::block_number());
         Balances::on_initialize(System::block_number());
     }
 }

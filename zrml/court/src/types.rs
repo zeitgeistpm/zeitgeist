@@ -31,20 +31,20 @@ use zeitgeist_primitives::types::OutcomeReport;
 pub struct JurorInfo<Balance> {
     /// The juror's amount in the stake weighted pool.
     /// This amount is used to find a juror with a binary search on the pool.
-    pub(crate) stake: Balance,
+    pub stake: Balance,
     /// The current amount of funds which are locked in courts.
-    pub(crate) active_lock: Balance,
+    pub active_lock: Balance,
 }
 
 pub struct RawCommitment<AccountId, Hash> {
-    pub(crate) juror: AccountId,
-    pub(crate) outcome: OutcomeReport,
-    pub(crate) salt: Hash,
+    pub juror: AccountId,
+    pub outcome: OutcomeReport,
+    pub salt: Hash,
 }
 
 pub struct CommitmentMatcher<AccountId, Hash> {
-    pub(crate) hashed: Hash,
-    pub(crate) raw: RawCommitment<AccountId, Hash>,
+    pub hashed: Hash,
+    pub raw: RawCommitment<AccountId, Hash>,
 }
 
 /// All possible states of a vote.
@@ -82,13 +82,13 @@ pub enum Vote<Hash> {
 )]
 pub struct CycleEnds<BlockNumber> {
     /// The end block of the pre-vote period.
-    pub(crate) pre_vote: BlockNumber,
+    pub pre_vote: BlockNumber,
     /// The end block of the vote period.
-    pub(crate) vote: BlockNumber,
+    pub vote: BlockNumber,
     /// The end block of the aggregation period.
-    pub(crate) aggregation: BlockNumber,
+    pub aggregation: BlockNumber,
     /// The end block of the appeal period.
-    pub(crate) appeal: BlockNumber,
+    pub appeal: BlockNumber,
 }
 
 /// The status of a court case.
@@ -124,11 +124,11 @@ pub enum CourtStatus {
 )]
 pub struct AppealInfo<AccountId, Balance> {
     /// The account which made the appeal.
-    pub(crate) backer: AccountId,
+    pub backer: AccountId,
     /// The amount of funds which were locked for the appeal.
-    pub(crate) bond: Balance,
+    pub bond: Balance,
     /// The outcome which was appealed.
-    pub(crate) appealed_outcome: OutcomeReport,
+    pub appealed_outcome: OutcomeReport,
 }
 
 /// The information about a court case.
@@ -144,18 +144,18 @@ pub struct AppealInfo<AccountId, Balance> {
 )]
 pub struct CourtInfo<BlockNumber, Appeals> {
     /// The status of the court case.
-    pub(crate) status: CourtStatus,
+    pub status: CourtStatus,
     /// The list of all appeals.
-    pub(crate) appeals: Appeals,
+    pub appeals: Appeals,
     /// The information about the lifecycle of this court case.
-    pub(crate) cycle_ends: CycleEnds<BlockNumber>,
+    pub cycle_ends: CycleEnds<BlockNumber>,
 }
 
 pub struct RoundTiming<BlockNumber> {
-    pub(crate) pre_vote: BlockNumber,
-    pub(crate) vote_period: BlockNumber,
-    pub(crate) aggregation_period: BlockNumber,
-    pub(crate) appeal_period: BlockNumber,
+    pub pre_vote: BlockNumber,
+    pub vote_period: BlockNumber,
+    pub aggregation_period: BlockNumber,
+    pub appeal_period: BlockNumber,
 }
 
 impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
@@ -195,15 +195,15 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
 )]
 pub struct Draw<AccountId, Balance, Hash> {
     /// The juror who was randomly selected.
-    pub(crate) juror: AccountId,
+    pub juror: AccountId,
     /// The weight of the juror in this court case.
     /// The higher the weight the more voice the juror has in the final winner decision.
-    pub(crate) weight: u32,
+    pub weight: u32,
     /// The information about the vote state.
-    pub(crate) vote: Vote<Hash>,
+    pub vote: Vote<Hash>,
     /// The amount of funds which can be slashed for this court case.
     /// This is related to a multiple of `MinStake` to mitigate Sybil attacks.
-    pub(crate) slashable: Balance,
+    pub slashable: Balance,
 }
 
 /// All information related to one item in the stake weighted juror pool.
@@ -219,10 +219,10 @@ pub struct Draw<AccountId, Balance, Hash> {
 )]
 pub struct JurorPoolItem<AccountId, Balance> {
     /// The amount of funds associated to a juror in order to get selected for a court case.
-    pub(crate) stake: Balance,
+    pub stake: Balance,
     /// The account which is the juror that might be selected in court cases.
-    pub(crate) juror: AccountId,
+    pub juror: AccountId,
     /// The consumed amount of the stake for all draws. This is useful to reduce the probability
     /// of a juror to be selected again.
-    pub(crate) consumed_stake: Balance,
+    pub consumed_stake: Balance,
 }
