@@ -50,8 +50,8 @@ mod pallet {
         dispatch::DispatchResult,
         ensure, log,
         pallet_prelude::{
-            ConstU32, DispatchResultWithPostInfo, Hooks, OptionQuery, StorageMap, StorageValue,
-            ValueQuery, Weight,
+            ConstU32, DispatchResultWithPostInfo, EnsureOrigin, Hooks, OptionQuery, StorageMap,
+            StorageValue, ValueQuery, Weight,
         },
         traits::{
             Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
@@ -60,12 +60,16 @@ mod pallet {
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use rand::{Rng, RngCore, SeedableRng};
     use rand_chacha::ChaCha20Rng;
+    use sp_arithmetic::{per_things::Perquintill, traits::One};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
-        DispatchError, SaturatedConversion,
+        DispatchError, Perbill, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
@@ -79,6 +83,9 @@ mod pallet {
         /// This bond increases exponentially with the number of appeals.
         #[pallet::constant]
         type AppealBond: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
+        type BlocksPerYear: Get<Self::BlockNumber>;
 
         /// The time in which the jurors can cast their commitment vote.
         #[pallet::constant]
@@ -116,6 +123,9 @@ mod pallet {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        #[pallet::constant]
+        type InflationPeriod: Get<Self::BlockNumber>;
+
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
@@ -138,6 +148,9 @@ mod pallet {
         /// The minimum stake a user needs to reserve to become a juror.
         #[pallet::constant]
         type MinJurorStake: Get<BalanceOf<Self>>;
+
+        /// The origin for monetary governance
+        type MonetaryGovernanceOrigin: EnsureOrigin<Self::Origin>;
 
         /// Randomness source
         type Random: Randomness<Self::Hash, Self::BlockNumber>;
@@ -184,7 +197,7 @@ mod pallet {
     pub(crate) type AccountIdLookupOf<T> =
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber, AppealsOf<T>>;
-    pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>>;
+    pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>, BlockNumberFor<T>>;
     pub(crate) type JurorPoolItemOf<T> = JurorPoolItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type JurorPoolOf<T> = BoundedVec<JurorPoolItemOf<T>, <T as Config>::MaxJurors>;
     pub(crate) type DrawOf<T> =
@@ -231,6 +244,15 @@ mod pallet {
     #[pallet::storage]
     pub type RequestBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
+    #[pallet::type_value]
+    pub fn DefaultInflation<T: Config>() -> Perbill {
+        Perbill::from_perthousand(20u32)
+    }
+
+    /// The current inflation rate.
+    #[pallet::storage]
+    pub type YearlyInflation<T: Config> = StorageValue<_, Perbill, ValueQuery, DefaultInflation<T>>;
+
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
@@ -238,13 +260,26 @@ mod pallet {
         T: Config,
     {
         /// A juror has been added to the court.
-        JurorJoined { juror: T::AccountId, stake: BalanceOf<T> },
+        JurorJoined {
+            juror: T::AccountId,
+            stake: BalanceOf<T>,
+        },
         /// A juror prepared to exit the court.
-        JurorPreparedExit { juror: T::AccountId },
+        JurorPreparedExit {
+            juror: T::AccountId,
+        },
         /// A juror has been removed from the court.
-        JurorExited { juror: T::AccountId, exit_amount: BalanceOf<T>, active_lock: BalanceOf<T> },
+        JurorExited {
+            juror: T::AccountId,
+            exit_amount: BalanceOf<T>,
+            active_lock: BalanceOf<T>,
+        },
         /// A juror has voted in a court.
-        JurorVoted { market_id: MarketIdOf<T>, juror: T::AccountId, commitment: T::Hash },
+        JurorVoted {
+            market_id: MarketIdOf<T>,
+            juror: T::AccountId,
+            commitment: T::Hash,
+        },
         /// A juror has revealed their vote.
         JurorRevealedVote {
             juror: T::AccountId,
@@ -261,12 +296,21 @@ mod pallet {
             salt: T::Hash,
         },
         /// A market has been appealed.
-        MarketAppealed { market_id: MarketIdOf<T>, appeal_number: u32 },
+        MarketAppealed {
+            market_id: MarketIdOf<T>,
+            appeal_number: u32,
+        },
+        MintedInCourt {
+            juror: T::AccountId,
+            amount: BalanceOf<T>,
+        },
         /// The juror stakes have been reassigned. The losing jurors have been slashed.
         /// The winning jurors have been rewarded by the losers.
         /// The losing jurors are those, who did not vote,
         /// were denounced or did not reveal their vote.
-        JurorStakesReassigned { market_id: MarketIdOf<T> },
+        JurorStakesReassigned {
+            market_id: MarketIdOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -340,12 +384,18 @@ mod pallet {
         AppealBondExceedsBalance,
         /// The outcome does not match the market outcome type.
         OutcomeMismatch,
+        /// The juror should at least wait one inflation period after the funds can be unstaked.
+        /// Otherwise hopping in and out for inflation rewards is possible.
+        WaitFullInflationPeriod,
+        /// The `prepare_exit_at` field is not present.
+        PrepareExitAtNotPresent,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = Weight::zero();
+            total_weight = total_weight.saturating_add(Self::handle_inflation(now));
             if now >= <RequestBlock<T>>::get() {
                 let future_request = now.saturating_add(T::RequestInterval::get());
                 <RequestBlock<T>>::put(future_request);
@@ -389,13 +439,17 @@ mod pallet {
                 ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
                 let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake, &who)
                     .ok_or(Error::<T>::JurorNeedsToExit)?;
+                debug_assert!(
+                    prev_juror_info.prepare_exit_at.is_none(),
+                    "If the pool item is found, the prepare_exit_at could have never been written."
+                );
                 let consumed_stake = pool_item.consumed_stake;
                 jurors.remove(index);
                 (prev_juror_info.active_lock, consumed_stake)
             } else {
                 if jurors.is_full() {
-                    let lowest_juror = jurors
-                        .first()
+                    let lowest_item = jurors.first();
+                    let lowest_stake = lowest_item
                         .map(|pool_item| pool_item.stake)
                         .unwrap_or_else(<BalanceOf<T>>::zero);
                     debug_assert!({
@@ -405,9 +459,16 @@ mod pallet {
                             && jurors
                                 .iter()
                                 .zip(sorted.iter())
-                                .all(|(a, b)| lowest_juror <= a.stake && a == b)
+                                .all(|(a, b)| lowest_stake <= a.stake && a == b)
                     });
-                    ensure!(amount > lowest_juror, Error::<T>::AmountBelowLowestJuror);
+                    ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
+                    lowest_item.map(|pool_item| {
+                        if let Some(mut lowest_juror_info) = <Jurors<T>>::get(&pool_item.juror) {
+                            let now = <frame_system::Pallet<T>>::block_number();
+                            lowest_juror_info.prepare_exit_at = Some(now);
+                            <Jurors<T>>::insert(&pool_item.juror, lowest_juror_info);
+                        }
+                    });
                     // remove the lowest staked juror
                     jurors.remove(0);
                 }
@@ -444,7 +505,7 @@ mod pallet {
             let jurors_len = jurors.len() as u32;
             JurorPool::<T>::put(jurors);
 
-            let juror_info = JurorInfoOf::<T> { stake: amount, active_lock };
+            let juror_info = JurorInfoOf::<T> { stake: amount, active_lock, prepare_exit_at: None };
             <Jurors<T>>::insert(&who, juror_info);
 
             Self::deposit_event(Event::JurorJoined { juror: who, stake: amount });
@@ -466,7 +527,8 @@ mod pallet {
         pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let prev_juror_info = <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExist)?;
+            let mut prev_juror_info =
+                <Jurors<T>>::get(&who).ok_or(Error::<T>::JurorDoesNotExist)?;
 
             let mut jurors = JurorPool::<T>::get();
             let jurors_len = jurors.len() as u32;
@@ -478,6 +540,10 @@ mod pallet {
                 // or if the current extrinsic was already called before
                 return Err(Error::<T>::JurorAlreadyPreparedToExit.into());
             }
+
+            let now = <frame_system::Pallet<T>>::block_number();
+            prev_juror_info.prepare_exit_at = Some(now);
+            <Jurors<T>>::insert(&who, prev_juror_info);
 
             Self::deposit_event(Event::JurorPreparedExit { juror: who });
 
@@ -511,11 +577,20 @@ mod pallet {
 
             let mut prev_juror_info =
                 <Jurors<T>>::get(&juror).ok_or(Error::<T>::JurorDoesNotExist)?;
+
             let jurors = JurorPool::<T>::get();
             let jurors_len = jurors.len() as u32;
             ensure!(
                 Self::get_pool_item(&jurors, prev_juror_info.stake, &juror).is_none(),
                 Error::<T>::JurorNotPreparedToExit
+            );
+
+            let now = <frame_system::Pallet<T>>::block_number();
+            let prepare_exit_at =
+                prev_juror_info.prepare_exit_at.ok_or(Error::<T>::PrepareExitAtNotPresent)?;
+            ensure!(
+                now.saturating_sub(prepare_exit_at) >= T::InflationPeriod::get(),
+                Error::<T>::WaitFullInflationPeriod
             );
 
             let (exit_amount, active_lock, weight) = if prev_juror_info.active_lock.is_zero() {
@@ -894,12 +969,61 @@ mod pallet {
 
             Ok(Some(T::WeightInfo::reassign_juror_stakes(draws_len)).into())
         }
+
+        // TODO
+        #[pallet::weight(5000)]
+        #[transactional]
+        pub fn set_inflation(origin: OriginFor<T>, inflation: Perbill) -> DispatchResult {
+            T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
+
+            <YearlyInflation<T>>::put(inflation);
+
+            Ok(())
+        }
     }
 
     impl<T> Pallet<T>
     where
         T: Config,
     {
+        // Handle the external incentivisation of the court system.
+        pub(crate) fn handle_inflation(now: T::BlockNumber) -> Weight {
+            let inflation_period = T::InflationPeriod::get();
+            if (now % inflation_period).is_zero() {
+                let yearly_inflation_rate = <YearlyInflation<T>>::get();
+                let yearly_inflation_amount = yearly_inflation_rate * T::Currency::total_issuance();
+                let blocks_per_year = T::BlocksPerYear::get()
+                    .saturated_into::<u128>()
+                    .saturated_into::<BalanceOf<T>>();
+                let issue_per_block = yearly_inflation_amount / blocks_per_year.max(One::one());
+
+                let inflation_period_mint = issue_per_block.saturating_mul(
+                    inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>(),
+                );
+
+                let jurors = <JurorPool<T>>::get();
+                let total_stake = jurors.iter().fold(0u128, |acc, pool_item| {
+                    acc.saturating_add(pool_item.stake.saturated_into::<u128>())
+                });
+                for JurorPoolItem { stake, juror, .. } in jurors {
+                    let share =
+                        Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
+                    let mint = share * inflation_period_mint.saturated_into::<u128>();
+                    if let Ok(imb) = T::Currency::deposit_into_existing(
+                        &juror,
+                        mint.saturated_into::<BalanceOf<T>>(),
+                    ) {
+                        Self::deposit_event(Event::MintedInCourt {
+                            juror: juror.clone(),
+                            amount: imb.peek(),
+                        });
+                    }
+                }
+            }
+            // TODO: add weight
+            Weight::zero()
+        }
+
         // Get `n` unique and ordered random numbers from the random number generator.
         // If the generator returns three times the same number in a row, an error is returned.
         pub(crate) fn get_n_random_numbers(

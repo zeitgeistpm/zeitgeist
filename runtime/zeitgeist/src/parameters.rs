@@ -81,6 +81,8 @@ parameter_types! {
     /// Slashed in case the final outcome does match the appealed outcome for which the `AppealBond`
     /// was deposited.
     pub const AppealBond: Balance = 2000 * BASE;
+    /// The blocks per year required to calculate the yearly inflation for court incentivisation.
+    pub const BlocksPerYear: BlockNumber = BLOCKS_PER_YEAR;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
     /// The time in which the jurors can cast their secret vote.
@@ -91,6 +93,8 @@ parameter_types! {
     pub const CourtAppealPeriod: BlockNumber = BLOCKS_PER_DAY;
     /// The lock identifier for the court votes.
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
+    /// The time in which the inflation is periodically issued.
+    pub const InflationPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 4;
     /// The maximum number of randomly selected jurors for a dispute.

@@ -33,9 +33,10 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AppealBond, BlockHashCount, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId,
-        CourtPalletId, CourtVotePeriod, MaxAppeals, MaxApprovals, MaxDraws, MaxJurors, MaxReserves,
-        MinJurorStake, MinimumPeriod, PmPalletId, RequestInterval, BASE,
+        AppealBond, BlockHashCount, BlocksPerYear, CourtAggregationPeriod, CourtAppealPeriod,
+        CourtLockId, CourtPalletId, CourtVotePeriod, InflationPeriod, MaxAppeals, MaxApprovals,
+        MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
+        RequestInterval, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -138,6 +139,7 @@ impl DisputeResolutionApi for MockResolution {
 
 impl crate::Config for Runtime {
     type AppealBond = AppealBond;
+    type BlocksPerYear = BlocksPerYear;
     type CourtLockId = CourtLockId;
     type Currency = Balances;
     type CourtVotePeriod = CourtVotePeriod;
@@ -145,11 +147,13 @@ impl crate::Config for Runtime {
     type CourtAppealPeriod = CourtAppealPeriod;
     type DisputeResolution = MockResolution;
     type Event = Event;
+    type InflationPeriod = InflationPeriod;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
     type MaxDraws = MaxDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
+    type MonetaryGovernanceOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type CourtPalletId = CourtPalletId;
     type Random = MockStorage;
     type RequestInterval = RequestInterval;

@@ -947,6 +947,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;
+            type BlocksPerYear = BlocksPerYear;
             type CourtVotePeriod = CourtVotePeriod;
             type CourtAggregationPeriod = CourtAggregationPeriod;
             type CourtAppealPeriod = CourtAppealPeriod;
@@ -955,6 +956,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
+            type InflationPeriod = InflationPeriod;
             type MarketCommons = MarketCommons;
             type MaxAppeals = MaxAppeals;
             type MaxDraws = MaxDraws;

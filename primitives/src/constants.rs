@@ -30,11 +30,11 @@ use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
 // Definitions for time
-pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100;
-pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
+pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100; // 2_629_800
+pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24; // 7_200
 pub const MILLISECS_PER_BLOCK: u32 = 12000;
-pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
+pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber); // 5
+pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 300
 
 // Definitions for currency
 pub const BASE: u128 = 10_000_000_000;

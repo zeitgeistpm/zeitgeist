@@ -99,7 +99,7 @@ where
         let stake = max_amount - BalanceOf::<T>::from(i);
         <Jurors<T>>::insert(
             juror.clone(),
-            JurorInfo { stake, active_lock: <BalanceOf<T>>::zero() },
+            JurorInfo { stake, active_lock: <BalanceOf<T>>::zero(), prepare_exit_at: None },
         );
         let consumed_stake = BalanceOf::<T>::zero();
         let pool_item = JurorPoolItem { stake, juror: juror.clone(), consumed_stake };
@@ -151,7 +151,11 @@ where
         deposit::<T>(&juror);
         <Jurors<T>>::insert(
             &juror,
-            JurorInfo { stake: T::MinJurorStake::get(), active_lock: T::MinJurorStake::get() },
+            JurorInfo {
+                stake: T::MinJurorStake::get(),
+                active_lock: T::MinJurorStake::get(),
+                prepare_exit_at: None,
+            },
         );
         let draw =
             Draw { juror, vote: Vote::Drawn, weight: 1u32, slashable: T::MinJurorStake::get() };
@@ -192,6 +196,8 @@ benchmarks! {
         join_with_min_stake::<T>(&caller)?;
 
         Court::<T>::prepare_exit_court(RawOrigin::Signed(caller.clone()).into())?;
+        let now = <frame_system::Pallet<T>>::block_number();
+        <frame_system::Pallet<T>>::set_block_number(now + T::InflationPeriod::get());
 
         <Jurors<T>>::mutate(caller.clone(), |prev_juror_info| {
             prev_juror_info.as_mut().unwrap().active_lock = <BalanceOf<T>>::zero();
@@ -209,6 +215,8 @@ benchmarks! {
         join_with_min_stake::<T>(&caller)?;
 
         Court::<T>::prepare_exit_court(RawOrigin::Signed(caller.clone()).into())?;
+        let now = <frame_system::Pallet<T>>::block_number();
+        <frame_system::Pallet<T>>::set_block_number(now + T::InflationPeriod::get());
 
         <Jurors<T>>::mutate(caller.clone(), |prev_juror_info| {
             prev_juror_info.as_mut().unwrap().active_lock = T::MinJurorStake::get();
@@ -266,6 +274,7 @@ benchmarks! {
         <Jurors<T>>::insert(&denounced_juror, JurorInfo {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
+            prepare_exit_at: None,
         });
         let denounced_juror_unlookup = T::Lookup::unlookup(denounced_juror.clone());
         let commitment = T::Hashing::hash_of(&(denounced_juror.clone(), outcome.clone(), salt));
@@ -302,6 +311,7 @@ benchmarks! {
         <Jurors<T>>::insert(&caller, JurorInfo {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
+            prepare_exit_at: None,
         });
         let commitment = T::Hashing::hash_of(&(caller.clone(), outcome.clone(), salt));
 
@@ -362,6 +372,7 @@ benchmarks! {
             <Jurors<T>>::insert(&juror, JurorInfo {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
+                prepare_exit_at: None,
             });
             let outcome = OutcomeReport::Scalar(i as u128);
             let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
@@ -417,6 +428,7 @@ benchmarks! {
             <Jurors<T>>::insert(&juror, JurorInfo {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
+                prepare_exit_at: None,
             });
             let outcome = winner_outcome.clone();
             let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));

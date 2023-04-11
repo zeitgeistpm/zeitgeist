@@ -28,12 +28,14 @@ use zeitgeist_primitives::types::OutcomeReport;
     PartialEq,
     Eq,
 )]
-pub struct JurorInfo<Balance> {
+pub struct JurorInfo<Balance, BlockNumber> {
     /// The juror's amount in the stake weighted pool.
     /// This amount is used to find a juror with a binary search on the pool.
     pub stake: Balance,
     /// The current amount of funds which are locked in courts.
     pub active_lock: Balance,
+    /// The block number when a juror exit from court was requested.
+    pub prepare_exit_at: Option<BlockNumber>,
 }
 
 pub struct RawCommitment<AccountId, Hash> {

@@ -36,6 +36,7 @@ parameter_types! {
 parameter_types! {
     pub const AppealBond: Balance = 5 * BASE;
     pub const AppealBondFactor: Balance = 2 * BASE;
+    pub const BlocksPerYear: BlockNumber = 100;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
     pub const RequestInterval: BlockNumber = 15;
     pub const CourtVotePeriod: BlockNumber = 3;
@@ -46,6 +47,7 @@ parameter_types! {
     pub const MaxDraws: u32 = 47;
     pub const MaxJurors: u32 = 1_000;
     pub const MinJurorStake: Balance = 50 * CENT;
+    pub const InflationPeriod: BlockNumber = 20;
 }
 
 // Global disputes parameters
