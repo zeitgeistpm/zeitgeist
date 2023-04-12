@@ -1809,7 +1809,7 @@ mod pallet {
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_market_status, new_outcome\]
+        /// A market has been disputed \[market_id, new_market_status\]
         MarketDisputed(MarketIdOf<T>, MarketStatus),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
