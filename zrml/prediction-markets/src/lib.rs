@@ -2621,7 +2621,6 @@ mod pallet {
                 }
             }
 
-
             if let Some(bond) = &market.bonds.dispute {
                 if !bond.is_settled {
                     if is_correct {
