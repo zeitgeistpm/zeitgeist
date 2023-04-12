@@ -113,11 +113,11 @@ impl DisputeResolutionApi for NoopResolution {
 impl crate::Config for Runtime {
     type AssetManager = AssetManager;
     type Event = ();
-    type OutcomeBond = OutcomeBond;
-    type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = NoopResolution;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
+    type OutcomeBond = OutcomeBond;
+    type OutcomeFactor = OutcomeFactor;
     type PalletId = SimpleDisputesPalletId;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
