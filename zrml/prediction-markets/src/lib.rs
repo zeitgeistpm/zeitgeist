@@ -2221,6 +2221,7 @@ mod pallet {
             Ok((ids_len, mdm_len))
         }
 
+        /// The dispute mechanism is intended to clear its own storage here.
         fn clear_dispute_mechanism(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
             match market.dispute_mechanism {
