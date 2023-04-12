@@ -2486,6 +2486,8 @@ mod pallet {
             }
         }
 
+        /// Handle a market resolution, which is currently in the reported state.
+        /// Returns the resolved outcome of a market, which is the reported outcome.
         fn resolve_reported_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2506,6 +2508,8 @@ mod pallet {
             Ok(report.outcome.clone())
         }
 
+        /// Handle a market resolution, which is currently in the disputed state.
+        /// Returns the resolved outcome of a market.
         fn resolve_disputed_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2537,6 +2541,7 @@ mod pallet {
             Ok(resolved_outcome)
         }
 
+        /// Get the outcome the market should resolve to.
         fn get_resolved_outcome(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2568,6 +2573,7 @@ mod pallet {
             Ok(resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone()))
         }
 
+        /// Manage the outstanding bonds (oracle, outsider, dispute) of the market.
         fn settle_bonds(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
