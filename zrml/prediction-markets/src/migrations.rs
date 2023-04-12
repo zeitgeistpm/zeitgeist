@@ -457,9 +457,7 @@ where
 
         // important drain disputes storage item from prediction markets pallet
         for (market_id, old_disputes) in crate::Disputes::<T>::drain() {
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1,1));
             if let Ok(market) = <zrml_market_commons::Pallet<T>>::market(&market_id) {
                 match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => continue,
