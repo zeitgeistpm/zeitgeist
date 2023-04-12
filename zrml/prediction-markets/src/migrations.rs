@@ -491,10 +491,8 @@ where
                 }
 
                 // switch to new reserve identifier for simple disputes
-                let sd_pallet_id = zeitgeist_primitives::constants::SD_PALLET_ID;
-                let sd_reserve_id = sd_pallet_id.0;
-                let pm_pallet_id = zeitgeist_primitives::constants::PM_PALLET_ID;
-                let pm_reserve_id = pm_pallet_id.0;
+                let sd_reserve_id = <zrml_simple_disputes::Pallet<T>>::reserve_id();
+                let pm_reserve_id = <crate::Pallet<T>>::reserve_id();
 
                 // charge weight defensivly for unreserve_named
                 // https://github.com/open-web3-stack/open-runtime-module-library/blob/24f0a8b6e04e1078f70d0437fb816337cdf4f64c/tokens/src/lib.rs#L1516-L1547
