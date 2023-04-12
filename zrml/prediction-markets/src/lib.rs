@@ -64,9 +64,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-            MarketPeriod, MarketStatus, MarketType, MultiHash, OldMarketDispute, OutcomeReport,
-            Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OldMarketDispute, OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -1448,7 +1448,7 @@ mod pallet {
                 };
                 ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-                let initial_vote_outcomes = match market.dispute_mechanism {
+                let gd_items = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
                         T::Authorized::on_global_dispute(&market_id, &market)?
                     }
@@ -1468,8 +1468,13 @@ mod pallet {
                 )?;
 
                 // push vote outcomes other than the report outcome
-                for (outcome, owner, bond) in initial_vote_outcomes {
-                    T::GlobalDisputes::push_voting_outcome(&market_id, outcome, &owner, bond)?;
+                for GlobalDisputeItem { outcome, owner, initial_vote_amount } in gd_items {
+                    T::GlobalDisputes::push_voting_outcome(
+                        &market_id,
+                        outcome,
+                        &owner,
+                        initial_vote_amount,
+                    )?;
                 }
 
                 // TODO(#372): Allow court with global disputes.
