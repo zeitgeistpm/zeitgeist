@@ -962,6 +962,7 @@ macro_rules! impl_config_traits {
             type MaxDraws = MaxDraws;
             type MaxJurors = MaxJurors;
             type MinJurorStake = MinJurorStake;
+            type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type Random = RandomnessCollectiveFlip;
             type RequestInterval = RequestInterval;
             type Slash = Treasury;

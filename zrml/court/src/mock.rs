@@ -26,7 +26,7 @@ use frame_support::{
     traits::{Everything, Hooks, NeverEnsureOrigin},
     PalletId,
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -153,7 +153,7 @@ impl crate::Config for Runtime {
     type MaxDraws = MaxDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
-    type MonetaryGovernanceOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type CourtPalletId = CourtPalletId;
     type Random = MockStorage;
     type RequestInterval = RequestInterval;

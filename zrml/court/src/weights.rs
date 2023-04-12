@@ -54,6 +54,8 @@ pub trait WeightInfoZeitgeist {
     fn reveal_vote(d: u32) -> Weight;
     fn appeal(d: u32, a: u32, r: u32) -> Weight;
     fn reassign_juror_stakes(d: u32) -> Weight;
+    fn set_inflation() -> Weight;
+    fn handle_inflation(j: u32) -> Weight;
 }
 
 /// Weight functions for zrml_court (automatically generated)
@@ -161,5 +163,20 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(d.into())))
             .saturating_add(T::DbWeight::get().writes(2))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(d.into())))
+    }
+    // Storage: Court YearlyInflation (r:0 w:1)
+    fn set_inflation() -> Weight {
+        Weight::from_ref_time(6_000_000).saturating_add(T::DbWeight::get().writes(1))
+    }
+    // Storage: Court YearlyInflation (r:1 w:0)
+    // Storage: Court JurorPool (r:1 w:0)
+    // Storage: System Account (r:1 w:1)
+    fn handle_inflation(j: u32) -> Weight {
+        Weight::from_ref_time(0)
+            // Standard Error: 4_000
+            .saturating_add(Weight::from_ref_time(13_075_000).saturating_mul(j.into()))
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(j.into())))
+            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(j.into())))
     }
 }

@@ -2557,3 +2557,40 @@ fn random_jurors_returns_a_subset_of_jurors() {
         }
     });
 }
+
+#[test]
+fn handle_inflation_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut jurors = <JurorPool<Runtime>>::get();
+        let mut free_balances_before = BTreeMap::new();
+        let jurors_list = vec![1000, 10_000, 100_000, 1_000_000, 10_000_000];
+        for number in jurors_list.iter() {
+            let stake = *number;
+            let juror = *number;
+            let _ = Balances::deposit(&juror, stake).unwrap();
+            free_balances_before.insert(juror, stake);
+            jurors.try_push(JurorPoolItem { stake, juror, consumed_stake: 0 }).unwrap();
+        }
+        <JurorPool<Runtime>>::put(jurors.clone());
+
+        let inflation_period = InflationPeriod::get();
+        run_to_block(inflation_period);
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        Court::handle_inflation(now);
+
+        let free_balance_after_0 = Balances::free_balance(jurors_list[0]);
+        assert_eq!(free_balance_after_0 - free_balances_before[&jurors_list[0]], 43_286_841);
+
+        let free_balance_after_1 = Balances::free_balance(jurors_list[1]);
+        assert_eq!(free_balance_after_1 - free_balances_before[&jurors_list[1]], 432_868_409);
+
+        let free_balance_after_2 = Balances::free_balance(jurors_list[2]);
+        assert_eq!(free_balance_after_2 - free_balances_before[&jurors_list[2]], 4_328_684_088);
+
+        let free_balance_after_3 = Balances::free_balance(jurors_list[3]);
+        assert_eq!(free_balance_after_3 - free_balances_before[&jurors_list[3]], 43_286_840_884);
+
+        let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
+        assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 432_868_408_838);
+    });
+}

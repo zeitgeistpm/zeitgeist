@@ -32,6 +32,7 @@ use alloc::vec;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::{Currency, Get};
 use frame_system::RawOrigin;
+use sp_arithmetic::Perbill;
 use sp_runtime::{
     traits::{Bounded, Hash, Saturating, StaticLookup, Zero},
     SaturatedConversion,
@@ -97,6 +98,7 @@ where
     for i in 0..number {
         let juror: T::AccountId = account("juror", i, 0);
         let stake = max_amount - BalanceOf::<T>::from(i);
+        let _ = T::Currency::deposit_creating(&juror, stake);
         <Jurors<T>>::insert(
             juror.clone(),
             JurorInfo { stake, active_lock: <BalanceOf<T>>::zero(), prepare_exit_at: None },
@@ -443,6 +445,20 @@ benchmarks! {
         }
         <Draws<T>>::insert(market_id, draws);
     }: _(RawOrigin::Signed(caller), market_id)
+
+    set_inflation {
+        let inflation = Perbill::from_percent(10);
+    }: _(RawOrigin::Root, inflation)
+
+    handle_inflation {
+        let j in 1..T::MaxJurors::get();
+        fill_pool::<T>(j)?;
+
+        <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get());
+        let now = <frame_system::Pallet<T>>::block_number();
+    }: {
+        Court::<T>::handle_inflation(now);
+    }
 
     impl_benchmark_test_suite!(
         Court,

@@ -38,14 +38,21 @@ pub struct JurorInfo<Balance, BlockNumber> {
     pub prepare_exit_at: Option<BlockNumber>,
 }
 
+/// The raw information behind the secret hash of a juror's vote.
 pub struct RawCommitment<AccountId, Hash> {
+    /// The juror's account id.
     pub juror: AccountId,
+    /// The outcome which the juror voted for.
     pub outcome: OutcomeReport,
+    /// The salt which was used to hash the vote.
     pub salt: Hash,
 }
 
+/// The raw information which is hashed to create the secret hash of a juror's vote.
 pub struct CommitmentMatcher<AccountId, Hash> {
+    /// The juror's hashed commitment
     pub hashed: Hash,
+    /// The raw commitment which is intended to lead to the hashed commitment.
     pub raw: RawCommitment<AccountId, Hash>,
 }
 
@@ -153,10 +160,15 @@ pub struct CourtInfo<BlockNumber, Appeals> {
     pub cycle_ends: CycleEnds<BlockNumber>,
 }
 
+/// The timing information about a court case.
 pub struct RoundTiming<BlockNumber> {
-    pub pre_vote: BlockNumber,
+    /// The end block of the pre-vote period.
+    pub pre_vote_end: BlockNumber,
+    /// The block duration for votes.
     pub vote_period: BlockNumber,
+    /// The block duration for revealing votes.
     pub aggregation_period: BlockNumber,
+    /// The block duration for appeals.
     pub appeal_period: BlockNumber,
 }
 
@@ -164,7 +176,7 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     CourtInfo<BlockNumber, Appeals>
 {
     pub fn new(round_timing: RoundTiming<BlockNumber>) -> Self {
-        let pre_vote = round_timing.pre_vote;
+        let pre_vote = round_timing.pre_vote_end;
         let vote = pre_vote.saturating_add(round_timing.vote_period);
         let aggregation = vote.saturating_add(round_timing.aggregation_period);
         let appeal = aggregation.saturating_add(round_timing.appeal_period);
@@ -174,7 +186,7 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     }
 
     pub fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {
-        self.cycle_ends.pre_vote = round_timing.pre_vote;
+        self.cycle_ends.pre_vote = round_timing.pre_vote_end;
         self.cycle_ends.vote = self.cycle_ends.pre_vote.saturating_add(round_timing.vote_period);
         self.cycle_ends.aggregation =
             self.cycle_ends.vote.saturating_add(round_timing.aggregation_period);

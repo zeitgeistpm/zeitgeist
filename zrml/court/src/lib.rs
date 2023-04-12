@@ -245,13 +245,14 @@ mod pallet {
     pub type RequestBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn DefaultInflation<T: Config>() -> Perbill {
+    pub fn DefaultYearlyInflation<T: Config>() -> Perbill {
         Perbill::from_perthousand(20u32)
     }
 
     /// The current inflation rate.
     #[pallet::storage]
-    pub type YearlyInflation<T: Config> = StorageValue<_, Perbill, ValueQuery, DefaultInflation<T>>;
+    pub type YearlyInflation<T: Config> =
+        StorageValue<_, Perbill, ValueQuery, DefaultYearlyInflation<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -396,10 +397,11 @@ mod pallet {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = Weight::zero();
             total_weight = total_weight.saturating_add(Self::handle_inflation(now));
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             if now >= <RequestBlock<T>>::get() {
                 let future_request = now.saturating_add(T::RequestInterval::get());
                 <RequestBlock<T>>::put(future_request);
-                total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             }
             total_weight
         }
@@ -462,13 +464,13 @@ mod pallet {
                                 .all(|(a, b)| lowest_stake <= a.stake && a == b)
                     });
                     ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
-                    lowest_item.map(|pool_item| {
+                    if let Some(pool_item) = lowest_item {
                         if let Some(mut lowest_juror_info) = <Jurors<T>>::get(&pool_item.juror) {
                             let now = <frame_system::Pallet<T>>::block_number();
                             lowest_juror_info.prepare_exit_at = Some(now);
                             <Jurors<T>>::insert(&pool_item.juror, lowest_juror_info);
                         }
-                    });
+                    }
                     // remove the lowest staked juror
                     jurors.remove(0);
                 }
@@ -858,7 +860,7 @@ mod pallet {
                 let request_block = <RequestBlock<T>>::get();
                 debug_assert!(request_block >= now, "Request block must be greater than now.");
                 let round_timing = RoundTiming {
-                    pre_vote: request_block,
+                    pre_vote_end: request_block,
                     vote_period: T::CourtVotePeriod::get(),
                     aggregation_period: T::CourtAggregationPeriod::get(),
                     appeal_period: T::CourtAppealPeriod::get(),
@@ -970,8 +972,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::reassign_juror_stakes(draws_len)).into())
         }
 
-        // TODO
-        #[pallet::weight(5000)]
+        #[pallet::weight(T::WeightInfo::set_inflation())]
         #[transactional]
         pub fn set_inflation(origin: OriginFor<T>, inflation: Perbill) -> DispatchResult {
             T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
@@ -1002,6 +1003,7 @@ mod pallet {
                 );
 
                 let jurors = <JurorPool<T>>::get();
+                let jurors_len = jurors.len() as u32;
                 let total_stake = jurors.iter().fold(0u128, |acc, pool_item| {
                     acc.saturating_add(pool_item.stake.saturated_into::<u128>())
                 });
@@ -1019,8 +1021,10 @@ mod pallet {
                         });
                     }
                 }
+
+                return T::WeightInfo::handle_inflation(jurors_len);
             }
-            // TODO: add weight
+
             Weight::zero()
         }
 
@@ -1513,7 +1517,7 @@ mod pallet {
             let request_block = <RequestBlock<T>>::get();
             debug_assert!(request_block >= now, "Request block must be greater than now.");
             let round_timing = RoundTiming {
-                pre_vote: request_block,
+                pre_vote_end: request_block,
                 vote_period: T::CourtVotePeriod::get(),
                 aggregation_period: T::CourtAggregationPeriod::get(),
                 appeal_period: T::CourtAppealPeriod::get(),
