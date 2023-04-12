@@ -405,6 +405,10 @@ mod pallet {
             }
             total_weight
         }
+
+        fn integrity_test() {
+            assert!(!T::BlocksPerYear::get().is_zero(), "Blocks per year assumption changed.");
+        }
     }
 
     #[pallet::call]
@@ -996,6 +1000,7 @@ mod pallet {
                 let blocks_per_year = T::BlocksPerYear::get()
                     .saturated_into::<u128>()
                     .saturated_into::<BalanceOf<T>>();
+                debug_assert!(!T::BlocksPerYear::get().is_zero());
                 let issue_per_block = yearly_inflation_amount / blocks_per_year.max(One::one());
 
                 let inflation_period_mint = issue_per_block.saturating_mul(
