@@ -49,7 +49,7 @@ use zeitgeist_primitives::{
     },
     traits::DisputeApi,
     types::{
-        AccountIdTest, Asset, Deadlines, Market, MarketBonds, MarketCreation,
+        AccountIdTest, Asset, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
         MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report,
         ScoringRule,
     },
@@ -2163,7 +2163,11 @@ fn on_global_dispute_returns_appealed_outcomes() {
             let appealed_outcome = OutcomeReport::Scalar(number as u128);
             let backer = number as u128;
             let bond = crate::get_appeal_bond::<Runtime>(court.appeals.len());
-            gd_outcomes.push((appealed_outcome.clone(), treasury_account, initial_vote_amount));
+            gd_outcomes.push(GlobalDisputeItem {
+                outcome: appealed_outcome.clone(),
+                owner: treasury_account,
+                initial_vote_amount,
+            });
             court.appeals.try_push(AppealInfo { backer, bond, appealed_outcome }).unwrap();
         }
         Courts::<Runtime>::insert(market_id, court);

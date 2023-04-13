@@ -1663,15 +1663,15 @@ mod pallet {
                 // oracle outcome is added by pm pallet
                 .filter(|a| &a.appealed_outcome != oracle_outcome)
                 .map(|a| {
-                    (
-                        a.appealed_outcome.clone(),
+                    GlobalDisputeItem {
+                        outcome: a.appealed_outcome.clone(),
                         // we have no better global dispute outcome owner
-                        Self::treasury_account_id(),
+                        owner: Self::treasury_account_id(),
                         // initial vote amount
-                        <BalanceOf<T>>::zero(),
-                    )
+                        initial_vote_amount: <BalanceOf<T>>::zero(),
+                    }
                 })
-                .collect::<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>>();
+                .collect::<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>();
 
             let old_draws = Draws::<T>::get(market_id);
             Self::unlock_jurors_from_last_draw(market_id, old_draws);
