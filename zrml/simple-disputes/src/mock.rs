@@ -61,8 +61,8 @@ construct_runtime!(
         NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
@@ -113,11 +113,11 @@ impl DisputeResolutionApi for NoopResolution {
 impl crate::Config for Runtime {
     type AssetManager = AssetManager;
     type Event = ();
-    type OutcomeBond = OutcomeBond;
-    type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = NoopResolution;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
+    type OutcomeBond = OutcomeBond;
+    type OutcomeFactor = OutcomeFactor;
     type PalletId = SimpleDisputesPalletId;
     type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }

@@ -64,9 +64,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-            MarketPeriod, MarketStatus, MarketType, MultiHash, OldMarketDispute, OutcomeReport,
-            Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OldMarketDispute, OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     use zrml_global_disputes::GlobalDisputesPalletApi;
@@ -1448,7 +1448,7 @@ mod pallet {
             };
             ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-            let initial_vote_outcomes = match market.dispute_mechanism {
+            let gd_items = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_global_dispute(&market_id, &market)?
                 }
@@ -1466,8 +1466,13 @@ mod pallet {
             )?;
 
             // push vote outcomes other than the report outcome
-            for (outcome, owner, bond) in initial_vote_outcomes {
-                T::GlobalDisputes::push_voting_outcome(&market_id, outcome, &owner, bond)?;
+            for GlobalDisputeItem { outcome, owner, initial_vote_amount } in gd_items {
+                T::GlobalDisputes::push_voting_outcome(
+                    &market_id,
+                    outcome,
+                    &owner,
+                    initial_vote_amount,
+                )?;
             }
 
             // TODO(#372): Allow court with global disputes.
@@ -1799,7 +1804,7 @@ mod pallet {
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_market_status, new_outcome\]
+        /// A market has been disputed \[market_id, new_market_status\]
         MarketDisputed(MarketIdOf<T>, MarketStatus),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
@@ -2211,6 +2216,7 @@ mod pallet {
             Ok((ids_len, mdm_len))
         }
 
+        /// The dispute mechanism is intended to clear its own storage here.
         fn clear_dispute_mechanism(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
             match market.dispute_mechanism {
@@ -2475,6 +2481,8 @@ mod pallet {
             }
         }
 
+        /// Handle a market resolution, which is currently in the reported state.
+        /// Returns the resolved outcome of a market, which is the reported outcome.
         fn resolve_reported_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2495,6 +2503,8 @@ mod pallet {
             Ok(report.outcome.clone())
         }
 
+        /// Handle a market resolution, which is currently in the disputed state.
+        /// Returns the resolved outcome of a market.
         fn resolve_disputed_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2526,6 +2536,7 @@ mod pallet {
             Ok(resolved_outcome)
         }
 
+        /// Get the outcome the market should resolve to.
         fn get_resolved_outcome(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2556,6 +2567,7 @@ mod pallet {
             Ok(resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone()))
         }
 
+        /// Manage the outstanding bonds (oracle, outsider, dispute) of the market.
         fn settle_bonds(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2603,7 +2615,6 @@ mod pallet {
                 }
             }
 
-            let mut correct_disputor = None;
             if let Some(bond) = &market.bonds.dispute {
                 if !bond.is_settled {
                     if is_correct {
@@ -2612,19 +2623,13 @@ mod pallet {
                     } else {
                         // If the report outcome was wrong, the dispute was justified
                         Self::unreserve_dispute_bond(market_id)?;
-                        correct_disputor = Some(bond.who.clone());
+                        CurrencyOf::<T>::resolve_creating(&bond.who, overall_imbalance);
+                        overall_imbalance = NegativeImbalanceOf::<T>::zero();
                     }
                 }
             }
 
-            let mut imbalance_left = <NegativeImbalanceOf<T>>::zero();
-            if let Some(disputor) = correct_disputor {
-                CurrencyOf::<T>::resolve_creating(&disputor, overall_imbalance);
-            } else {
-                imbalance_left = overall_imbalance;
-            }
-
-            Ok(imbalance_left)
+            Ok(overall_imbalance)
         }
 
         pub fn on_resolution(

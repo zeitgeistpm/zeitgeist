@@ -73,7 +73,9 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
-        types::{Asset, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        types::{
+            Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -1644,7 +1646,7 @@ mod pallet {
         fn on_global_dispute(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
+        ) -> Result<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism

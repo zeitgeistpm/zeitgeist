@@ -33,7 +33,8 @@ pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeResolutionApi, ZeitgeistAssetManager},
     types::{
-        Asset, Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport, Report,
+        Asset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
+        OutcomeReport, Report,
     },
 };
 
@@ -396,19 +397,20 @@ mod pallet {
         fn on_global_dispute(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Vec<(OutcomeReport, Self::AccountId, Self::Balance)>, DispatchError> {
+        ) -> Result<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
 
-            let mut gd_outcomes: Vec<(OutcomeReport, Self::AccountId, Self::Balance)> = Vec::new();
-
-            for MarketDispute { at: _, by, outcome, bond } in <Disputes<T>>::get(market_id).iter() {
-                gd_outcomes.push((outcome.clone(), by.clone(), *bond));
-            }
-
-            Ok(gd_outcomes)
+            Ok(<Disputes<T>>::get(market_id)
+                .iter()
+                .map(|dispute| GlobalDisputeItem {
+                    outcome: dispute.outcome.clone(),
+                    owner: dispute.by.clone(),
+                    initial_vote_amount: dispute.bond,
+                })
+                .collect())
         }
 
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {

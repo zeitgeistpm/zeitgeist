@@ -177,6 +177,17 @@ pub enum MarketCreation {
     Advised,
 }
 
+/// Defines a global dispute item for the initialisation of a global dispute.
+pub struct GlobalDisputeItem<AccountId, Balance> {
+    /// The account that already paid somehow for the outcome.
+    pub owner: AccountId,
+    /// The outcome that was already paid for
+    /// and should be added as vote outcome inside global disputes.
+    pub outcome: OutcomeReport,
+    /// The initial amount added in the global dispute vote system initially for the outcome.
+    pub initial_vote_amount: Balance,
+}
+
 // TODO to remove, when Disputes storage item is removed
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OldMarketDispute<AccountId, BlockNumber> {
