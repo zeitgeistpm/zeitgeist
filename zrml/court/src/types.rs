@@ -28,7 +28,7 @@ use zeitgeist_primitives::types::OutcomeReport;
     PartialEq,
     Eq,
 )]
-pub struct JurorInfo<Balance, BlockNumber> {
+pub struct JurorInfo<Balance, BlockNumber, Delegations> {
     /// The juror's amount in the stake weighted pool.
     /// This amount is used to find a juror with a binary search on the pool.
     pub stake: Balance,
@@ -36,6 +36,7 @@ pub struct JurorInfo<Balance, BlockNumber> {
     pub active_lock: Balance,
     /// The block number when a juror exit from court was requested.
     pub prepare_exit_at: Option<BlockNumber>,
+    pub delegations: Delegations,
 }
 
 /// The raw information behind the secret hash of a juror's vote.
@@ -67,7 +68,9 @@ pub struct CommitmentMatcher<AccountId, Hash> {
     PartialEq,
     Eq,
 )]
-pub enum Vote<Hash> {
+pub enum Vote<Hash, DelegatedStakes> {
+    /// The juror delegated stake to other jurors.
+    Delegated { delegated_stakes: DelegatedStakes },
     /// The juror was randomly selected to vote in a specific court case.
     Drawn,
     /// The juror casted a vote, only providing a hash, which meaning is unknown.
@@ -207,14 +210,14 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     PartialEq,
     Eq,
 )]
-pub struct Draw<AccountId, Balance, Hash> {
+pub struct Draw<AccountId, Balance, Hash, DelegatedStakes> {
     /// The juror who was randomly selected.
     pub juror: AccountId,
     /// The weight of the juror in this court case.
     /// The higher the weight the more voice the juror has in the final winner decision.
     pub weight: u32,
     /// The information about the vote state.
-    pub vote: Vote<Hash>,
+    pub vote: Vote<Hash, DelegatedStakes>,
     /// The amount of funds which can be slashed for this court case.
     /// This is related to a multiple of `MinStake` to mitigate Sybil attacks.
     pub slashable: Balance,
@@ -239,4 +242,50 @@ pub struct JurorPoolItem<AccountId, Balance> {
     /// The consumed amount of the stake for all draws. This is useful to reduce the probability
     /// of a juror to be selected again.
     pub consumed_stake: Balance,
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub struct SelectionValue<Balance, DelegatedStakes> {
+    pub weight: u32,
+    pub slashable: Balance,
+    pub delegated_stakes: DelegatedStakes,
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub enum SelectionAdd<AccountId, Balance> {
+    SelfStake { lock: Balance },
+    DelegationStake { delegated_juror: AccountId, lock: Balance },
+    DelegationWeight,
+}
+
+pub struct SelfInfo<Balance> {
+    pub slashable: Balance,
+    pub outcome: OutcomeReport,
+}
+
+pub struct JurorVoteWithStakes<AccountId, Balance> {
+    pub self_info: Option<SelfInfo<Balance>>,
+    // many delegators can have delegated to the same juror
+    // that's why the value is a vector and should be sorted (binary search by key)
+    // the key is the delegator account
+    // the value is the delegated stake
+    pub delegations: Vec<(AccountId, Balance)>,
 }

@@ -39,7 +39,8 @@ pub use types::*;
 mod pallet {
     use crate::{
         weights::WeightInfoZeitgeist, AppealInfo, CommitmentMatcher, CourtInfo, CourtPalletApi,
-        CourtStatus, Draw, JurorInfo, JurorPoolItem, RawCommitment, RoundTiming, Vote,
+        CourtStatus, Draw, JurorInfo, JurorPoolItem, JurorVoteWithStakes, RawCommitment,
+        RoundTiming, SelectionAdd, SelectionValue, SelfInfo, Vote,
     };
     use alloc::{
         collections::{BTreeMap, BTreeSet},
@@ -68,7 +69,7 @@ mod pallet {
     use rand_chacha::ChaCha20Rng;
     use sp_arithmetic::{per_things::Perquintill, traits::One};
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
+        traits::{AccountIdConversion, Hash, Saturating, StaticLookup, Zero},
         DispatchError, Perbill, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -143,6 +144,9 @@ mod pallet {
         #[pallet::constant]
         type MaxDraws: Get<u32>;
 
+        #[pallet::constant]
+        type MaxDelegations: Get<u32>;
+
         /// The maximum number of jurors that can be registered.
         #[pallet::constant]
         type MaxJurors: Get<u32>;
@@ -196,23 +200,26 @@ mod pallet {
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
     >;
+    pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type AccountIdLookupOf<T> =
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber, AppealsOf<T>>;
-    pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>, BlockNumberFor<T>>;
+    pub(crate) type DelegatedStakesOf<T> =
+        BoundedVec<(AccountIdOf<T>, BalanceOf<T>), <T as Config>::MaxDelegations>;
+    pub(crate) type SelectionValueOf<T> = SelectionValue<BalanceOf<T>, DelegatedStakesOf<T>>;
+    pub(crate) type DelegationsOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxDelegations>;
+    pub(crate) type VoteOf<T> = Vote<HashOf<T>, DelegatedStakesOf<T>>;
+    pub(crate) type JurorVoteWithStakesOf<T> = JurorVoteWithStakes<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type JurorInfoOf<T> = JurorInfo<BalanceOf<T>, BlockNumberFor<T>, DelegationsOf<T>>;
     pub(crate) type JurorPoolItemOf<T> = JurorPoolItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type JurorPoolOf<T> = BoundedVec<JurorPoolItemOf<T>, <T as Config>::MaxJurors>;
-    pub(crate) type DrawOf<T> =
-        Draw<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::Hash>;
+    pub(crate) type DrawOf<T> = Draw<AccountIdOf<T>, BalanceOf<T>, HashOf<T>, DelegatedStakesOf<T>>;
     pub(crate) type DrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxDraws>;
     pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
-    pub(crate) type CommitmentMatcherOf<T> =
-        CommitmentMatcher<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
-    pub(crate) type RawCommitmentOf<T> =
-        RawCommitment<AccountIdOf<T>, <T as frame_system::Config>::Hash>;
+    pub(crate) type CommitmentMatcherOf<T> = CommitmentMatcher<AccountIdOf<T>, HashOf<T>>;
+    pub(crate) type RawCommitmentOf<T> = RawCommitment<AccountIdOf<T>, HashOf<T>>;
     pub type CacheSize = ConstU32<64>;
-
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
@@ -392,6 +399,8 @@ mod pallet {
         WaitFullInflationPeriod,
         /// The `prepare_exit_at` field is not present.
         PrepareExitAtNotPresent,
+        MaxDelegationsReached,
+        JurorDelegated,
     }
 
     #[pallet::hooks]
@@ -433,11 +442,18 @@ mod pallet {
         pub fn join_court(
             origin: OriginFor<T>,
             amount: BalanceOf<T>,
+            delegations: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
             let free_balance = T::Currency::free_balance(&who);
             ensure!(amount <= free_balance, Error::<T>::AmountExceedsBalance);
+
+            // TODO what happens if you delegate to your own account?
+            // TODO Should we allow that you delegate the same account twice?
+            // TODO No, because it takes resources!
+            let delegations: DelegationsOf<T> =
+                delegations.try_into().map_err(|_| Error::<T>::MaxDelegationsReached)?;
 
             let mut jurors = JurorPool::<T>::get();
 
@@ -513,7 +529,10 @@ mod pallet {
             let jurors_len = jurors.len() as u32;
             JurorPool::<T>::put(jurors);
 
-            let juror_info = JurorInfoOf::<T> { stake: amount, active_lock, prepare_exit_at: None };
+            // TODO: the juror should be still accountable for the last delegations (if drawn)
+            // TODO: with this you override the last delegations with new delegations
+            let juror_info =
+                JurorInfoOf::<T> { stake: amount, active_lock, prepare_exit_at: None, delegations };
             <Jurors<T>>::insert(&who, juror_info);
 
             Self::deposit_event(Event::JurorJoined { juror: who, stake: amount });
@@ -934,7 +953,8 @@ mod pallet {
                 T::Currency::resolve_creating(&reward_pot, imbalance);
             };
 
-            let mut valid_winners_and_losers = Vec::with_capacity(draws.len());
+            // map delegated jurors to own_slashable, outcome and Vec<(delegator, delegator_stake)>
+            let mut jurors_to_stakes = BTreeMap::<T::AccountId, JurorVoteWithStakesOf<T>>::new();
 
             for draw in draws {
                 if let Some(mut juror_info) = <Jurors<T>>::get(&draw.juror) {
@@ -957,16 +977,35 @@ mod pallet {
                         slash_juror(&draw.juror, draw.slashable);
                     }
                     Vote::Revealed { commitment: _, outcome, salt: _ } => {
-                        valid_winners_and_losers.push((draw.juror, outcome, draw.slashable));
+                        jurors_to_stakes
+                            .entry(draw.juror)
+                            .or_insert(JurorVoteWithStakes { self_info: None, delegations: vec![] })
+                            .self_info = Some(SelfInfo { slashable: draw.slashable, outcome });
+                    }
+                    Vote::Delegated { delegated_stakes } => {
+                        let delegator = draw.juror;
+                        for (j, delegated_stake) in delegated_stakes {
+                            let delegations = &mut jurors_to_stakes
+                                .entry(j)
+                                .or_insert(JurorVoteWithStakes {
+                                    self_info: None,
+                                    delegations: vec![],
+                                })
+                                .delegations;
+                            match delegations.binary_search_by_key(&delegator, |(d, _)| d.clone()) {
+                                Ok(i) => {
+                                    delegations[i].1.saturating_add(delegated_stake);
+                                }
+                                Err(i) => {
+                                    delegations.insert(i, (delegator.clone(), delegated_stake));
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            Self::slash_losers_to_award_winners(
-                &market_id,
-                valid_winners_and_losers.as_slice(),
-                &winner,
-            );
+            Self::slash_losers_to_award_winners(&market_id, jurors_to_stakes, &winner);
 
             court.status = CourtStatus::Reassigned;
             <Courts<T>>::insert(market_id, court);
@@ -1083,9 +1122,14 @@ mod pallet {
         // The added active lock amount is noted in the Jurors map.
         fn update_active_lock(
             juror: &T::AccountId,
-            selections: &BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+            selections: &BTreeMap<T::AccountId, SelectionValueOf<T>>,
         ) -> BalanceOf<T> {
-            if let Some((_, total_lock_added)) = selections.get(juror) {
+            if let Some(SelectionValue {
+                weight: _,
+                slashable: total_lock_added,
+                delegated_stakes: _,
+            }) = selections.get(juror)
+            {
                 if let Some(mut juror_info) = <Jurors<T>>::get(juror) {
                     juror_info.active_lock =
                         juror_info.active_lock.saturating_add(*total_lock_added);
@@ -1109,21 +1153,100 @@ mod pallet {
             false
         }
 
+        fn add_delegated_juror(
+            delegated_stakes: &mut DelegatedStakesOf<T>,
+            delegated_juror: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) {
+            match delegated_stakes.binary_search_by_key(&delegated_juror, |(j, _)| j) {
+                Ok(index) => {
+                    (*delegated_stakes)[index].1 = delegated_stakes[index].1.saturating_add(amount);
+                }
+                Err(index) => {
+                    let _ = (*delegated_stakes)
+                        .try_insert(index, (delegated_juror.clone(), amount))
+                        .map_err(|_| {
+                            debug_assert!(
+                                false,
+                                "BoundedVec insertion should not fail, because the length of \
+                                 jurors is ensured for delegations."
+                            );
+                        });
+                }
+            }
+        }
+
         // Updates the `selections` map for the juror and the lock amount.
         // If `juror` does not already exist in `selections`,
         // the vote weight is set to 1 and the lock amount is initially set.
         // For each call on the same juror, the vote weight is incremented by one
         // and the lock amount is added to the previous amount.
         fn update_selections(
-            selections: &mut BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+            selections: &mut BTreeMap<T::AccountId, SelectionValueOf<T>>,
             juror: &T::AccountId,
-            lock: BalanceOf<T>,
+            sel_add: SelectionAdd<AccountIdOf<T>, BalanceOf<T>>,
         ) {
-            if let Some((weight, prev_lock)) = selections.get_mut(juror) {
-                *weight = weight.saturating_add(1);
-                *prev_lock = prev_lock.saturating_add(lock);
+            if let Some(SelectionValue { weight, slashable, delegated_stakes }) =
+                selections.get_mut(juror)
+            {
+                match sel_add {
+                    SelectionAdd::SelfStake { lock } => {
+                        *weight = weight.saturating_add(1);
+                        *slashable = slashable.saturating_add(lock);
+                    }
+                    SelectionAdd::DelegationStake { delegated_juror, lock } => {
+                        *slashable = slashable.saturating_add(lock);
+                        let delegated_stakes_before = delegated_stakes.clone();
+                        Self::add_delegated_juror(delegated_stakes, &delegated_juror, lock);
+                        debug_assert!(
+                            delegated_stakes_before
+                                .iter()
+                                .find(|(j, _)| j == &delegated_juror)
+                                .map_or(<BalanceOf<T>>::zero(), |(_, amount)| *amount)
+                                + lock
+                                == delegated_stakes
+                                    .iter()
+                                    .find(|(j, _)| j == &delegated_juror)
+                                    .map(|(_, amount)| *amount)
+                                    .unwrap(),
+                            "Delegated juror stake should contain the updated amount."
+                        );
+                    }
+                    SelectionAdd::DelegationWeight => {
+                        *weight = weight.saturating_add(1);
+                    }
+                };
             } else {
-                selections.insert(juror.clone(), (1, lock));
+                match sel_add {
+                    SelectionAdd::SelfStake { lock } => {
+                        selections.insert(
+                            juror.clone(),
+                            SelectionValue {
+                                weight: 1,
+                                slashable: lock,
+                                delegated_stakes: Default::default(),
+                            },
+                        );
+                    }
+                    SelectionAdd::DelegationStake { delegated_juror, lock } => {
+                        let mut delegated_stakes = DelegatedStakesOf::<T>::default();
+                        Self::add_delegated_juror(&mut delegated_stakes, &delegated_juror, lock);
+                        selections.insert(
+                            juror.clone(),
+                            SelectionValue { weight: 0, slashable: lock, delegated_stakes },
+                        );
+                    }
+                    SelectionAdd::DelegationWeight => {
+                        selections.insert(
+                            juror.clone(),
+                            SelectionValue {
+                                weight: 1,
+                                slashable: <BalanceOf<T>>::zero(),
+                                delegated_stakes: Default::default(),
+                            },
+                        );
+                    }
+                };
             }
         }
 
@@ -1133,7 +1256,7 @@ mod pallet {
         fn process_juror_pool(
             jurors: &mut JurorPoolOf<T>,
             random_set: &mut BTreeSet<u128>,
-            selections: &mut BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+            selections: &mut BTreeMap<T::AccountId, SelectionValueOf<T>>,
         ) {
             let mut current_weight = 0u128;
             for JurorPoolItem { stake, juror, consumed_stake } in jurors.iter_mut() {
@@ -1141,6 +1264,7 @@ mod pallet {
                 let mut unconsumed = stake.saturating_sub(*consumed_stake);
                 let upper_bound =
                     current_weight.saturating_add(unconsumed.saturated_into::<u128>());
+                let mut selection_count = 0usize;
 
                 // this always gets the lowest random number first and maybe removes it
                 for random_number in random_set.clone().iter() {
@@ -1148,8 +1272,34 @@ mod pallet {
                         let lock_added = unconsumed.min(T::MinJurorStake::get());
                         unconsumed = unconsumed.saturating_sub(lock_added);
 
-                        Self::update_selections(selections, juror, lock_added);
+                        let delegations = <Jurors<T>>::get(juror.clone())
+                            .map_or(vec![], |juror_info| juror_info.delegations.into_inner());
+                        if delegations.is_empty() {
+                            let sel_add = SelectionAdd::SelfStake { lock: lock_added };
+                            Self::update_selections(selections, juror, sel_add);
+                        } else {
+                            let sel_add = SelectionAdd::DelegationWeight;
+                            debug_assert!(!delegations.is_empty());
+                            let delegation_index = selection_count % delegations.len();
+                            let delegated_juror = match delegations.get(delegation_index) {
+                                Some(delegated_juror) => delegated_juror,
+                                None => {
+                                    log::error!("Delegation with modulo index should exist!");
+                                    debug_assert!(false);
+                                    &juror
+                                }
+                            };
+                            Self::update_selections(selections, &delegated_juror, sel_add);
+
+                            let sel_add = SelectionAdd::DelegationStake {
+                                delegated_juror: delegated_juror.clone(),
+                                lock: lock_added,
+                            };
+                            Self::update_selections(selections, juror, sel_add);
+                        }
+
                         random_set.remove(random_number);
+                        selection_count = selection_count.saturating_add(1usize);
                     } else {
                         break;
                     }
@@ -1168,14 +1318,22 @@ mod pallet {
 
         // Converts the `selections` map into a vector of `Draw` structs.
         fn convert_selections_to_draws(
-            selections: BTreeMap<T::AccountId, (u32, BalanceOf<T>)>,
+            selections: BTreeMap<T::AccountId, SelectionValueOf<T>>,
         ) -> Vec<DrawOf<T>> {
             selections
                 .into_iter()
-                .map(|(juror, (weight, slashable))| Draw {
+                .map(|(juror, SelectionValue { weight, slashable, delegated_stakes })| Draw {
                     juror,
                     weight,
-                    vote: Vote::Drawn,
+                    vote: if !delegated_stakes.is_empty() {
+                        debug_assert!(
+                            weight.is_zero(),
+                            "Jurors who delegated shouldn't have voting weight."
+                        );
+                        Vote::Delegated { delegated_stakes }
+                    } else {
+                        Vote::Drawn
+                    },
                     slashable,
                 })
                 .collect()
@@ -1190,7 +1348,7 @@ mod pallet {
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let total_weight = Self::get_unconsumed_stake(jurors);
             let mut random_set = Self::get_n_random_numbers(number, total_weight)?;
-            let mut selections = BTreeMap::<T::AccountId, (u32, BalanceOf<T>)>::new();
+            let mut selections = BTreeMap::<T::AccountId, SelectionValueOf<T>>::new();
 
             Self::process_juror_pool(jurors, &mut random_set, &mut selections);
 
@@ -1342,23 +1500,60 @@ mod pallet {
         // Slash the losers and use the slashed amount plus the reward pot to reward the winners.
         fn slash_losers_to_award_winners(
             market_id: &MarketIdOf<T>,
-            valid_winners_and_losers: &[(T::AccountId, OutcomeReport, BalanceOf<T>)],
+            jurors_to_stakes: BTreeMap<T::AccountId, JurorVoteWithStakesOf<T>>,
             winner_outcome: &OutcomeReport,
         ) {
             let mut total_incentives = <NegativeImbalanceOf<T>>::zero();
 
-            let mut winners = Vec::with_capacity(valid_winners_and_losers.len());
-            for (juror, outcome, slashable) in valid_winners_and_losers {
-                if outcome == winner_outcome {
-                    winners.push(juror);
-                } else {
-                    let (imb, missing) = T::Currency::slash(juror, *slashable);
-                    total_incentives.subsume(imb);
-                    debug_assert!(
-                        missing.is_zero(),
-                        "Could not slash all of the amount for juror {:?}.",
-                        juror
-                    );
+            let slash_all_delegators =
+                |delegations: &Vec<(T::AccountId, BalanceOf<T>)>| -> NegativeImbalanceOf<T> {
+                    let mut total_imb = <NegativeImbalanceOf<T>>::zero();
+                    for (delegator, d_slashable) in delegations.iter() {
+                        let (imb, missing) = T::Currency::slash(delegator, *d_slashable);
+                        total_imb.subsume(imb);
+                        debug_assert!(
+                            missing.is_zero(),
+                            "Could not slash all of the amount for delegator {:?}.",
+                            delegator
+                        );
+                    }
+                    total_imb
+                };
+
+            let mut total_winner_stake = BalanceOf::<T>::zero();
+            let mut winners = Vec::<(T::AccountId, BalanceOf<T>)>::new();
+            for (juror, JurorVoteWithStakes { self_info, delegations }) in jurors_to_stakes.iter() {
+                match self_info {
+                    Some(SelfInfo { slashable, outcome }) => {
+                        if outcome == winner_outcome {
+                            winners.push((juror.clone(), *slashable));
+                            total_winner_stake = total_winner_stake.saturating_add(*slashable);
+
+                            winners.extend(delegations.clone());
+                            let total_delegation_stake = delegations
+                                .iter()
+                                .fold(BalanceOf::<T>::zero(), |acc, (_, delegator_stake)| {
+                                    acc.saturating_add(*delegator_stake)
+                                });
+                            total_winner_stake =
+                                total_winner_stake.saturating_add(total_delegation_stake);
+                        } else {
+                            let (imb, missing) = T::Currency::slash(juror, *slashable);
+                            total_incentives.subsume(imb);
+                            debug_assert!(
+                                missing.is_zero(),
+                                "Could not slash all of the amount for juror {:?}.",
+                                juror
+                            );
+
+                            let imb = slash_all_delegators(&delegations);
+                            total_incentives.subsume(imb);
+                        }
+                    }
+                    None => {
+                        let imb = slash_all_delegators(&delegations);
+                        total_incentives.subsume(imb);
+                    }
                 }
             }
 
@@ -1369,15 +1564,19 @@ mod pallet {
             debug_assert!(missing.is_zero(), "Could not slash all of the amount for reward pot.");
             total_incentives.subsume(imb);
 
-            if let Some(reward_per_each) =
-                total_incentives.peek().checked_div(&winners.len().saturated_into())
-            {
-                for juror in winners {
-                    let (actual_reward, leftover) = total_incentives.split(reward_per_each);
-                    total_incentives = leftover;
-                    T::Currency::resolve_creating(juror, actual_reward);
-                }
-            } else {
+            let total_reward = total_incentives.peek();
+            for (winner, risked_amount) in winners {
+                let r = risked_amount.saturated_into::<u128>();
+                let t = total_winner_stake.saturated_into::<u128>();
+                let share = Perquintill::from_rational(r, t);
+                let reward_per_each = (share * total_reward.saturated_into::<u128>())
+                    .saturated_into::<BalanceOf<T>>();
+                let (actual_reward, leftover) = total_incentives.split(reward_per_each);
+                total_incentives = leftover;
+                T::Currency::resolve_creating(&winner, actual_reward);
+            }
+
+            if !total_incentives.peek().is_zero() {
                 // if there are no winners reward the treasury
                 T::Slash::on_unbalanced(total_incentives);
             }
@@ -1476,7 +1675,7 @@ mod pallet {
         // and check if it matches with the secret hash of the vote.
         // Otherwise return an error.
         pub(crate) fn get_hashed_commitment(
-            vote: Vote<T::Hash>,
+            vote: VoteOf<T>,
             raw_commitment: RawCommitmentOf<T>,
         ) -> Result<T::Hash, DispatchError> {
             match vote {
@@ -1487,6 +1686,7 @@ mod pallet {
                     Ok(commitment)
                 }
                 Vote::Drawn => Err(Error::<T>::JurorNotVoted.into()),
+                Vote::Delegated { delegated_stakes: _ } => Err(Error::<T>::JurorDelegated.into()),
                 Vote::Revealed { commitment: _, outcome: _, salt: _ } => {
                     Err(Error::<T>::VoteAlreadyRevealed.into())
                 }
