@@ -101,7 +101,12 @@ where
         let _ = T::Currency::deposit_creating(&juror, stake);
         <Jurors<T>>::insert(
             juror.clone(),
-            JurorInfo { stake, active_lock: <BalanceOf<T>>::zero(), prepare_exit_at: None },
+            JurorInfo {
+                stake,
+                active_lock: <BalanceOf<T>>::zero(),
+                prepare_exit_at: None,
+                delegations: Default::default(),
+            },
         );
         let consumed_stake = BalanceOf::<T>::zero();
         let pool_item = JurorPoolItem { stake, juror: juror.clone(), consumed_stake };
@@ -157,6 +162,7 @@ where
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
+                delegations: Default::default(),
             },
         );
         let draw =
@@ -277,6 +283,7 @@ benchmarks! {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
             prepare_exit_at: None,
+            delegations: Default::default(),
         });
         let denounced_juror_unlookup = T::Lookup::unlookup(denounced_juror.clone());
         let commitment = T::Hashing::hash_of(&(denounced_juror.clone(), outcome.clone(), salt));
@@ -314,6 +321,7 @@ benchmarks! {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
             prepare_exit_at: None,
+            delegations: Default::default(),
         });
         let commitment = T::Hashing::hash_of(&(caller.clone(), outcome.clone(), salt));
 
@@ -375,6 +383,7 @@ benchmarks! {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
+                delegations: Default::default(),
             });
             let outcome = OutcomeReport::Scalar(i as u128);
             let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
@@ -431,6 +440,7 @@ benchmarks! {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
+                delegations: Default::default(),
             });
             let outcome = winner_outcome.clone();
             let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
