@@ -44,6 +44,7 @@ parameter_types! {
     pub const CourtAppealPeriod: BlockNumber = 5;
     pub const CourtLockId: LockIdentifier = *b"zge/cloc";
     pub const MaxAppeals: u32 = 4;
+    pub const MaxDelegations: u32 = 5;
     pub const MaxDraws: u32 = 47;
     pub const MaxJurors: u32 = 1_000;
     pub const MinJurorStake: Balance = 50 * CENT;

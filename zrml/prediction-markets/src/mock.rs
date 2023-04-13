@@ -42,8 +42,8 @@ use zeitgeist_primitives::{
         CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtPalletId,
         CourtVotePeriod, ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
         InflationPeriod, LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets,
-        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxDraws, MaxEditReasonLen, MaxGracePeriod,
-        MaxInRatio, MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
+        MaxCategories, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxDraws, MaxEditReasonLen,
+        MaxGracePeriod, MaxInRatio, MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
         MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
         MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinLiquidity,
         MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
@@ -260,6 +260,7 @@ impl zrml_court::Config for Runtime {
     type InflationPeriod = InflationPeriod;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
+    type MaxDelegations = MaxDelegations;
     type MaxDraws = MaxDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;

@@ -959,6 +959,7 @@ macro_rules! impl_config_traits {
             type InflationPeriod = InflationPeriod;
             type MarketCommons = MarketCommons;
             type MaxAppeals = MaxAppeals;
+            type MaxDelegations = MaxDelegations;
             type MaxDraws = MaxDraws;
             type MaxJurors = MaxJurors;
             type MinJurorStake = MinJurorStake;

@@ -97,6 +97,8 @@ parameter_types! {
     pub const InflationPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 4;
+    /// The maximum number of delegations per juror account.
+    pub const MaxDelegations: u32 = 5;
     /// The maximum number of randomly selected jurors for a dispute.
     pub const MaxDraws: u32 = 47;
     /// The maximum number of jurors that can be registered.

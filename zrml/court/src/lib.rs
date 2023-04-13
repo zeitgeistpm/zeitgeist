@@ -22,6 +22,50 @@
 
 extern crate alloc;
 
+use crate::{
+    weights::WeightInfoZeitgeist, AppealInfo, CommitmentMatcher, CourtInfo, CourtStatus, Draw,
+    JurorInfo, JurorPoolItem, JurorVoteWithStakes, RawCommitment, RoundTiming, SelectionAdd,
+    SelectionValue, SelfInfo, Vote,
+};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec,
+    vec::Vec,
+};
+use core::marker::PhantomData;
+use frame_support::{
+    dispatch::DispatchResult,
+    ensure, log,
+    pallet_prelude::{
+        ConstU32, DispatchResultWithPostInfo, EnsureOrigin, Hooks, OptionQuery, StorageMap,
+        StorageValue, ValueQuery, Weight,
+    },
+    traits::{
+        Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
+        NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
+        WithdrawReasons,
+    },
+    transactional, Blake2_128Concat, BoundedVec, PalletId,
+};
+use frame_system::{
+    ensure_signed,
+    pallet_prelude::{BlockNumberFor, OriginFor},
+};
+use rand::{Rng, RngCore, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use sp_arithmetic::{per_things::Perquintill, traits::One};
+use sp_runtime::{
+    traits::{AccountIdConversion, Hash, Saturating, StaticLookup, Zero},
+    DispatchError, Perbill, SaturatedConversion,
+};
+use zeitgeist_primitives::{
+    traits::{DisputeApi, DisputeResolutionApi},
+    types::{
+        Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+    },
+};
+use zrml_market_commons::MarketCommonsPalletApi;
+
 mod benchmarks;
 mod court_pallet_api;
 pub mod migrations;
@@ -37,48 +81,7 @@ pub use types::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{
-        weights::WeightInfoZeitgeist, AppealInfo, CommitmentMatcher, CourtInfo, CourtPalletApi,
-        CourtStatus, Draw, JurorInfo, JurorPoolItem, JurorVoteWithStakes, RawCommitment,
-        RoundTiming, SelectionAdd, SelectionValue, SelfInfo, Vote,
-    };
-    use alloc::{
-        collections::{BTreeMap, BTreeSet},
-        vec::Vec,
-    };
-    use core::marker::PhantomData;
-    use frame_support::{
-        dispatch::DispatchResult,
-        ensure, log,
-        pallet_prelude::{
-            ConstU32, DispatchResultWithPostInfo, EnsureOrigin, Hooks, OptionQuery, StorageMap,
-            StorageValue, ValueQuery, Weight,
-        },
-        traits::{
-            Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
-            NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
-            WithdrawReasons,
-        },
-        transactional, Blake2_128Concat, BoundedVec, PalletId,
-    };
-    use frame_system::{
-        ensure_signed,
-        pallet_prelude::{BlockNumberFor, OriginFor},
-    };
-    use rand::{Rng, RngCore, SeedableRng};
-    use rand_chacha::ChaCha20Rng;
-    use sp_arithmetic::{per_things::Perquintill, traits::One};
-    use sp_runtime::{
-        traits::{AccountIdConversion, Hash, Saturating, StaticLookup, Zero},
-        DispatchError, Perbill, SaturatedConversion,
-    };
-    use zeitgeist_primitives::{
-        traits::{DisputeApi, DisputeResolutionApi},
-        types::{
-            Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
-        },
-    };
-    use zrml_market_commons::MarketCommonsPalletApi;
+    use super::*;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -305,6 +308,12 @@ mod pallet {
             outcome: OutcomeReport,
             salt: T::Hash,
         },
+        /// A delegator has delegated their stake to jurors.
+        DelegatedToJurors {
+            delegator: T::AccountId,
+            amount: BalanceOf<T>,
+            delegated_jurors: Vec<T::AccountId>,
+        },
         /// A market has been appealed.
         MarketAppealed {
             market_id: MarketIdOf<T>,
@@ -401,6 +410,8 @@ mod pallet {
         PrepareExitAtNotPresent,
         MaxDelegationsReached,
         JurorDelegated,
+        SelfDelegationNotAllowed,
+        IdenticalDelegationsNotAllowed,
     }
 
     #[pallet::hooks]
@@ -442,100 +453,43 @@ mod pallet {
         pub fn join_court(
             origin: OriginFor<T>,
             amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+
+            let jurors_len = Self::do_join_court(&who, amount, Default::default())?;
+
+            Self::deposit_event(Event::JurorJoined { juror: who, stake: amount });
+
+            Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
+        }
+
+        #[pallet::weight(T::WeightInfo::join_court(T::MaxJurors::get()))]
+        #[transactional]
+        pub fn delegate(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
             delegations: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
-            let free_balance = T::Currency::free_balance(&who);
-            ensure!(amount <= free_balance, Error::<T>::AmountExceedsBalance);
 
-            // TODO what happens if you delegate to your own account?
-            // TODO Should we allow that you delegate the same account twice?
-            // TODO No, because it takes resources!
-            let delegations: DelegationsOf<T> =
-                delegations.try_into().map_err(|_| Error::<T>::MaxDelegationsReached)?;
+            let mut sorted_delegations: DelegationsOf<T> =
+                delegations.clone().try_into().map_err(|_| Error::<T>::MaxDelegationsReached)?;
+            // ensure all elements are different
+            sorted_delegations.sort();
+            let has_duplicates = sorted_delegations
+                .iter()
+                .zip(sorted_delegations.iter().skip(1))
+                .any(|(x, y)| x == y);
+            ensure!(!has_duplicates, Error::<T>::IdenticalDelegationsNotAllowed);
+            ensure!(!sorted_delegations.contains(&who), Error::<T>::SelfDelegationNotAllowed);
 
-            let mut jurors = JurorPool::<T>::get();
+            let jurors_len = Self::do_join_court(&who, amount, sorted_delegations)?;
 
-            let (active_lock, consumed_stake) = if let Some(prev_juror_info) =
-                <Jurors<T>>::get(&who)
-            {
-                ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
-                let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake, &who)
-                    .ok_or(Error::<T>::JurorNeedsToExit)?;
-                debug_assert!(
-                    prev_juror_info.prepare_exit_at.is_none(),
-                    "If the pool item is found, the prepare_exit_at could have never been written."
-                );
-                let consumed_stake = pool_item.consumed_stake;
-                jurors.remove(index);
-                (prev_juror_info.active_lock, consumed_stake)
-            } else {
-                if jurors.is_full() {
-                    let lowest_item = jurors.first();
-                    let lowest_stake = lowest_item
-                        .map(|pool_item| pool_item.stake)
-                        .unwrap_or_else(<BalanceOf<T>>::zero);
-                    debug_assert!({
-                        let mut sorted = jurors.clone();
-                        sorted.sort_by_key(|pool_item| (pool_item.stake, pool_item.juror.clone()));
-                        jurors.len() == sorted.len()
-                            && jurors
-                                .iter()
-                                .zip(sorted.iter())
-                                .all(|(a, b)| lowest_stake <= a.stake && a == b)
-                    });
-                    ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
-                    if let Some(pool_item) = lowest_item {
-                        if let Some(mut lowest_juror_info) = <Jurors<T>>::get(&pool_item.juror) {
-                            let now = <frame_system::Pallet<T>>::block_number();
-                            lowest_juror_info.prepare_exit_at = Some(now);
-                            <Jurors<T>>::insert(&pool_item.juror, lowest_juror_info);
-                        }
-                    }
-                    // remove the lowest staked juror
-                    jurors.remove(0);
-                }
-                (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero())
-            };
-
-            match jurors.binary_search_by_key(&(amount, &who), |pool_item| {
-                (pool_item.stake, &pool_item.juror)
-            }) {
-                Ok(_) => {
-                    debug_assert!(
-                        false,
-                        "This should never happen, because we are removing the juror above."
-                    );
-                    return Err(Error::<T>::JurorTwiceInPool.into());
-                }
-                Err(i) => jurors
-                    .try_insert(
-                        i,
-                        JurorPoolItem { stake: amount, juror: who.clone(), consumed_stake },
-                    )
-                    .map_err(|_| {
-                        debug_assert!(
-                            false,
-                            "This should never happen, because we are removing the lowest staked \
-                             juror above."
-                        );
-                        Error::<T>::MaxJurorsReached
-                    })?,
-            };
-
-            T::Currency::set_lock(T::CourtLockId::get(), &who, amount, WithdrawReasons::all());
-
-            let jurors_len = jurors.len() as u32;
-            JurorPool::<T>::put(jurors);
-
-            // TODO: the juror should be still accountable for the last delegations (if drawn)
-            // TODO: with this you override the last delegations with new delegations
-            let juror_info =
-                JurorInfoOf::<T> { stake: amount, active_lock, prepare_exit_at: None, delegations };
-            <Jurors<T>>::insert(&who, juror_info);
-
-            Self::deposit_event(Event::JurorJoined { juror: who, stake: amount });
+            Self::deposit_event(Event::DelegatedToJurors {
+                delegator: who,
+                amount,
+                delegated_jurors: delegations,
+            });
 
             Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
         }
@@ -992,8 +946,16 @@ mod pallet {
                                     delegations: vec![],
                                 })
                                 .delegations;
+                            // future-proof binary search by key
+                            // because many delegators can back one juror
+                            // we might want to fastly find elements later on
                             match delegations.binary_search_by_key(&delegator, |(d, _)| d.clone()) {
                                 Ok(i) => {
+                                    debug_assert!(
+                                        false,
+                                        "Delegator {:?} already in delegations.",
+                                        delegator
+                                    );
                                     delegations[i].1.saturating_add(delegated_stake);
                                 }
                                 Err(i) => {
@@ -1250,6 +1212,68 @@ mod pallet {
             }
         }
 
+        fn get_valid_delegated_juror(
+            delegations: &[T::AccountId],
+            random_number: u128,
+        ) -> Option<T::AccountId> {
+            let jurors: JurorPoolOf<T> = JurorPool::<T>::get();
+            let mut delegated_juror = None;
+
+            for count in 0..delegations.len() {
+                let delegation_index = (random_number.saturating_add(count as u128)
+                    % delegations.len() as u128) as usize;
+                delegated_juror = match delegations.get(delegation_index) {
+                    Some(del_j) => Some(del_j.clone()),
+                    None => {
+                        log::error!("Delegation with modulo index should exist!");
+                        debug_assert!(false);
+                        None
+                    }
+                };
+
+                if let Some(del_j) = &delegated_juror {
+                    if let Some(delegated_juror_info) = <Jurors<T>>::get(del_j) {
+                        if Self::get_pool_item(&jurors, delegated_juror_info.stake, del_j).is_some()
+                        {
+                            delegated_juror = Some(del_j.clone());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            delegated_juror
+        }
+
+        fn add_to_selections(
+            selections: &mut BTreeMap<T::AccountId, SelectionValueOf<T>>,
+            juror: T::AccountId,
+            lock_added: BalanceOf<T>,
+            random_number: u128,
+        ) {
+            let delegations = <Jurors<T>>::get(juror.clone())
+                .map_or(vec![], |juror_info| juror_info.delegations.into_inner());
+            if delegations.is_empty() {
+                let sel_add = SelectionAdd::SelfStake { lock: lock_added };
+                Self::update_selections(selections, &juror, sel_add);
+            } else {
+                let sel_add = SelectionAdd::DelegationWeight;
+                debug_assert!(!delegations.is_empty());
+
+                let delegated_juror =
+                    Self::get_valid_delegated_juror(delegations.as_slice(), random_number)
+                        .unwrap_or_else(|| juror.clone());
+
+                Self::update_selections(selections, &delegated_juror, sel_add);
+
+                let sel_add = SelectionAdd::DelegationStake {
+                    delegated_juror: delegated_juror.clone(),
+                    lock: lock_added,
+                };
+                Self::update_selections(selections, &juror, sel_add);
+            }
+        }
+
         // Match the random numbers to select some jurors from the pool.
         // The active lock (and consumed stake) of the selected jurors
         // is increased by the random selection weight.
@@ -1259,12 +1283,12 @@ mod pallet {
             selections: &mut BTreeMap<T::AccountId, SelectionValueOf<T>>,
         ) {
             let mut current_weight = 0u128;
+
             for JurorPoolItem { stake, juror, consumed_stake } in jurors.iter_mut() {
                 let lower_bound = current_weight;
                 let mut unconsumed = stake.saturating_sub(*consumed_stake);
                 let upper_bound =
                     current_weight.saturating_add(unconsumed.saturated_into::<u128>());
-                let mut selection_count = 0usize;
 
                 // this always gets the lowest random number first and maybe removes it
                 for random_number in random_set.clone().iter() {
@@ -1272,34 +1296,14 @@ mod pallet {
                         let lock_added = unconsumed.min(T::MinJurorStake::get());
                         unconsumed = unconsumed.saturating_sub(lock_added);
 
-                        let delegations = <Jurors<T>>::get(juror.clone())
-                            .map_or(vec![], |juror_info| juror_info.delegations.into_inner());
-                        if delegations.is_empty() {
-                            let sel_add = SelectionAdd::SelfStake { lock: lock_added };
-                            Self::update_selections(selections, juror, sel_add);
-                        } else {
-                            let sel_add = SelectionAdd::DelegationWeight;
-                            debug_assert!(!delegations.is_empty());
-                            let delegation_index = selection_count % delegations.len();
-                            let delegated_juror = match delegations.get(delegation_index) {
-                                Some(delegated_juror) => delegated_juror,
-                                None => {
-                                    log::error!("Delegation with modulo index should exist!");
-                                    debug_assert!(false);
-                                    &juror
-                                }
-                            };
-                            Self::update_selections(selections, &delegated_juror, sel_add);
-
-                            let sel_add = SelectionAdd::DelegationStake {
-                                delegated_juror: delegated_juror.clone(),
-                                lock: lock_added,
-                            };
-                            Self::update_selections(selections, juror, sel_add);
-                        }
+                        Self::add_to_selections(
+                            selections,
+                            juror.clone(),
+                            lock_added,
+                            *random_number,
+                        );
 
                         random_set.remove(random_number);
-                        selection_count = selection_count.saturating_add(1usize);
                     } else {
                         break;
                     }
@@ -1546,12 +1550,12 @@ mod pallet {
                                 juror
                             );
 
-                            let imb = slash_all_delegators(&delegations);
+                            let imb = slash_all_delegators(delegations);
                             total_incentives.subsume(imb);
                         }
                     }
                     None => {
-                        let imb = slash_all_delegators(&delegations);
+                        let imb = slash_all_delegators(delegations);
                         total_incentives.subsume(imb);
                     }
                 }
@@ -1906,5 +1910,92 @@ mod pallet {
         T::AppealBond::get().saturating_mul(
             (APPEAL_BOND_BASIS.saturating_pow(n as u32)).saturated_into::<BalanceOf<T>>(),
         )
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    fn do_join_court(
+        who: &T::AccountId,
+        amount: BalanceOf<T>,
+        delegations: DelegationsOf<T>,
+    ) -> Result<u32, DispatchError> {
+        ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
+        let free_balance = T::Currency::free_balance(who);
+        ensure!(amount <= free_balance, Error::<T>::AmountExceedsBalance);
+
+        let mut jurors = JurorPool::<T>::get();
+
+        let (active_lock, consumed_stake) = if let Some(prev_juror_info) = <Jurors<T>>::get(who) {
+            ensure!(amount > prev_juror_info.stake, Error::<T>::AmountBelowLastJoin);
+            let (index, pool_item) = Self::get_pool_item(&jurors, prev_juror_info.stake, who)
+                .ok_or(Error::<T>::JurorNeedsToExit)?;
+            debug_assert!(
+                prev_juror_info.prepare_exit_at.is_none(),
+                "If the pool item is found, the prepare_exit_at could have never been written."
+            );
+            let consumed_stake = pool_item.consumed_stake;
+            jurors.remove(index);
+            (prev_juror_info.active_lock, consumed_stake)
+        } else {
+            if jurors.is_full() {
+                let lowest_item = jurors.first();
+                let lowest_stake = lowest_item
+                    .map(|pool_item| pool_item.stake)
+                    .unwrap_or_else(<BalanceOf<T>>::zero);
+                debug_assert!({
+                    let mut sorted = jurors.clone();
+                    sorted.sort_by_key(|pool_item| (pool_item.stake, pool_item.juror.clone()));
+                    jurors.len() == sorted.len()
+                        && jurors
+                            .iter()
+                            .zip(sorted.iter())
+                            .all(|(a, b)| lowest_stake <= a.stake && a == b)
+                });
+                ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
+                if let Some(pool_item) = lowest_item {
+                    if let Some(mut lowest_juror_info) = <Jurors<T>>::get(&pool_item.juror) {
+                        let now = <frame_system::Pallet<T>>::block_number();
+                        lowest_juror_info.prepare_exit_at = Some(now);
+                        <Jurors<T>>::insert(&pool_item.juror, lowest_juror_info);
+                    }
+                }
+                // remove the lowest staked juror
+                jurors.remove(0);
+            }
+            (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero())
+        };
+
+        match jurors
+            .binary_search_by_key(&(amount, who), |pool_item| (pool_item.stake, &pool_item.juror))
+        {
+            Ok(_) => {
+                debug_assert!(
+                    false,
+                    "This should never happen, because we are removing the juror above."
+                );
+                return Err(Error::<T>::JurorTwiceInPool.into());
+            }
+            Err(i) => jurors
+                .try_insert(i, JurorPoolItem { stake: amount, juror: who.clone(), consumed_stake })
+                .map_err(|_| {
+                    debug_assert!(
+                        false,
+                        "This should never happen, because we are removing the lowest staked \
+                         juror above."
+                    );
+                    Error::<T>::MaxJurorsReached
+                })?,
+        };
+
+        T::Currency::set_lock(T::CourtLockId::get(), who, amount, WithdrawReasons::all());
+
+        let jurors_len = jurors.len() as u32;
+        JurorPool::<T>::put(jurors);
+
+        let juror_info =
+            JurorInfoOf::<T> { stake: amount, active_lock, prepare_exit_at: None, delegations };
+        <Jurors<T>>::insert(who, juror_info);
+
+        Ok(jurors_len)
     }
 }

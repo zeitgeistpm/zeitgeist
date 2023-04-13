@@ -136,7 +136,12 @@ fn put_alice_in_draw(market_id: MarketIdOf<Runtime>, stake: BalanceOf<Runtime>) 
     <Draws<Runtime>>::insert(market_id, draws);
     <Jurors<Runtime>>::insert(
         ALICE,
-        JurorInfo { stake, active_lock: slashable, prepare_exit_at: None },
+        JurorInfo {
+            stake,
+            active_lock: slashable,
+            prepare_exit_at: None,
+            delegations: Default::default(),
+        },
     );
 }
 
@@ -203,7 +208,15 @@ fn join_court_successfully_stores_required_data() {
         System::assert_last_event(Event::JurorJoined { juror: ALICE, stake: amount }.into());
         assert_eq!(
             Jurors::<Runtime>::iter().next().unwrap(),
-            (ALICE, JurorInfo { stake: amount, active_lock: 0u128, prepare_exit_at: None })
+            (
+                ALICE,
+                JurorInfo {
+                    stake: amount,
+                    active_lock: 0u128,
+                    prepare_exit_at: None,
+                    delegations: Default::default()
+                }
+            )
         );
         assert_eq!(Balances::free_balance(ALICE), alice_free_balance_before);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
@@ -227,7 +240,15 @@ fn join_court_works_multiple_joins() {
         );
         assert_eq!(
             Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
-            vec![(ALICE, JurorInfo { stake: amount, active_lock: 0u128, prepare_exit_at: None })]
+            vec![(
+                ALICE,
+                JurorInfo {
+                    stake: amount,
+                    active_lock: 0u128,
+                    prepare_exit_at: None,
+                    delegations: Default::default()
+                }
+            )]
         );
 
         assert_ok!(Court::join_court(Origin::signed(BOB), amount));
@@ -242,11 +263,21 @@ fn join_court_works_multiple_joins() {
         assert_eq!(Jurors::<Runtime>::iter().count(), 2);
         assert_eq!(
             Jurors::<Runtime>::get(ALICE).unwrap(),
-            JurorInfo { stake: amount, active_lock: 0u128, prepare_exit_at: None }
+            JurorInfo {
+                stake: amount,
+                active_lock: 0u128,
+                prepare_exit_at: None,
+                delegations: Default::default()
+            }
         );
         assert_eq!(
             Jurors::<Runtime>::get(BOB).unwrap(),
-            JurorInfo { stake: amount, active_lock: 0u128, prepare_exit_at: None }
+            JurorInfo {
+                stake: amount,
+                active_lock: 0u128,
+                prepare_exit_at: None,
+                delegations: Default::default()
+            }
         );
 
         let higher_amount = amount + 1;
@@ -263,11 +294,21 @@ fn join_court_works_multiple_joins() {
         assert_eq!(Jurors::<Runtime>::iter().count(), 2);
         assert_eq!(
             Jurors::<Runtime>::get(BOB).unwrap(),
-            JurorInfo { stake: amount, active_lock: 0u128, prepare_exit_at: None }
+            JurorInfo {
+                stake: amount,
+                active_lock: 0u128,
+                prepare_exit_at: None,
+                delegations: Default::default()
+            }
         );
         assert_eq!(
             Jurors::<Runtime>::get(ALICE).unwrap(),
-            JurorInfo { stake: higher_amount, active_lock: 0u128, prepare_exit_at: None }
+            JurorInfo {
+                stake: higher_amount,
+                active_lock: 0u128,
+                prepare_exit_at: None,
+                delegations: Default::default()
+            }
         );
     });
 }
@@ -282,7 +323,12 @@ fn join_court_saves_consumed_stake_and_active_lock_for_double_join() {
         let active_lock = min + 1;
         Jurors::<Runtime>::insert(
             ALICE,
-            JurorInfo { stake: amount, active_lock, prepare_exit_at: None },
+            JurorInfo {
+                stake: amount,
+                active_lock,
+                prepare_exit_at: None,
+                delegations: Default::default(),
+            },
         );
         let juror_pool = vec![JurorPoolItem { stake: amount, juror: ALICE, consumed_stake }];
         JurorPool::<Runtime>::put::<JurorPoolOf<Runtime>>(juror_pool.try_into().unwrap());
@@ -504,12 +550,22 @@ fn exit_court_works_with_active_lock() {
 
         assert_eq!(
             <Jurors<Runtime>>::get(ALICE).unwrap(),
-            JurorInfo { stake: amount, active_lock: 0, prepare_exit_at: None }
+            JurorInfo {
+                stake: amount,
+                active_lock: 0,
+                prepare_exit_at: None,
+                delegations: Default::default()
+            }
         );
         // assume that `choose_multiple_weighted` has set the active_lock
         <Jurors<Runtime>>::insert(
             ALICE,
-            JurorInfo { stake: amount, active_lock, prepare_exit_at: None },
+            JurorInfo {
+                stake: amount,
+                active_lock,
+                prepare_exit_at: None,
+                delegations: Default::default(),
+            },
         );
 
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
@@ -527,7 +583,12 @@ fn exit_court_works_with_active_lock() {
         );
         assert_eq!(
             Jurors::<Runtime>::get(ALICE).unwrap(),
-            JurorInfo { stake: active_lock, active_lock, prepare_exit_at: Some(now) }
+            JurorInfo {
+                stake: active_lock,
+                active_lock,
+                prepare_exit_at: Some(now),
+                delegations: Default::default()
+            }
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(active_lock)]);
     });
@@ -593,7 +654,12 @@ fn vote_works() {
         <Draws<Runtime>>::insert(market_id, draws);
         <Jurors<Runtime>>::insert(
             ALICE,
-            JurorInfo { stake: amount, active_lock: slashable, prepare_exit_at: None },
+            JurorInfo {
+                stake: amount,
+                active_lock: slashable,
+                prepare_exit_at: None,
+                delegations: Default::default(),
+            },
         );
 
         let old_draws = <Draws<Runtime>>::get(market_id);
@@ -683,7 +749,9 @@ fn vote_fails_if_court_not_found() {
         salt: <Runtime as frame_system::Config>::Hash::default(),
     }; "denounced"
 )]
-fn vote_fails_if_vote_state_incorrect(vote: crate::Vote<<Runtime as frame_system::Config>::Hash>) {
+fn vote_fails_if_vote_state_incorrect(
+    vote: crate::Vote<<Runtime as frame_system::Config>::Hash, crate::DelegatedStakesOf<Runtime>>,
+) {
     ExtBuilder::default().build().execute_with(|| {
         fill_juror_pool();
         let market_id = initialize_court();
@@ -771,7 +839,12 @@ fn reveal_vote_works() {
         <Draws<Runtime>>::insert(market_id, draws);
         <Jurors<Runtime>>::insert(
             ALICE,
-            JurorInfo { stake: amount, active_lock: slashable, prepare_exit_at: None },
+            JurorInfo {
+                stake: amount,
+                active_lock: slashable,
+                prepare_exit_at: None,
+                delegations: Default::default(),
+            },
         );
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
@@ -2494,7 +2567,12 @@ fn choose_multiple_weighted_returns_different_jurors_with_other_seed() {
         for pool_item in DEFAULT_SET_OF_JURORS.iter() {
             <Jurors<Runtime>>::insert(
                 pool_item.juror,
-                JurorInfo { stake: pool_item.stake, active_lock: 0u128, prepare_exit_at: None },
+                JurorInfo {
+                    stake: pool_item.stake,
+                    active_lock: 0u128,
+                    prepare_exit_at: None,
+                    delegations: Default::default(),
+                },
             );
             jurors.try_push(pool_item.clone()).unwrap();
         }
@@ -2550,7 +2628,12 @@ fn random_jurors_returns_a_subset_of_jurors() {
         for pool_item in DEFAULT_SET_OF_JURORS.iter() {
             <Jurors<Runtime>>::insert(
                 pool_item.juror,
-                JurorInfo { stake: pool_item.stake, active_lock: 0u128, prepare_exit_at: None },
+                JurorInfo {
+                    stake: pool_item.stake,
+                    active_lock: 0u128,
+                    prepare_exit_at: None,
+                    delegations: Default::default(),
+                },
             );
             jurors.try_push(pool_item.clone()).unwrap();
         }

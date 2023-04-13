@@ -35,7 +35,7 @@ use zeitgeist_primitives::{
     constants::mock::{
         AppealBond, BlockHashCount, BlocksPerYear, CourtAggregationPeriod, CourtAppealPeriod,
         CourtLockId, CourtPalletId, CourtVotePeriod, InflationPeriod, MaxAppeals, MaxApprovals,
-        MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
+        MaxDelegations, MaxDraws, MaxJurors, MaxReserves, MinJurorStake, MinimumPeriod, PmPalletId,
         RequestInterval, BASE,
     },
     traits::DisputeResolutionApi,
@@ -150,6 +150,7 @@ impl crate::Config for Runtime {
     type InflationPeriod = InflationPeriod;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
+    type MaxDelegations = MaxDelegations;
     type MaxDraws = MaxDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
