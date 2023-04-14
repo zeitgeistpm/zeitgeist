@@ -42,13 +42,13 @@ use zeitgeist_primitives::{
         CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtPalletId,
         CourtVotePeriod, ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
         InflationPeriod, LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets,
-        MaxCategories, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxDraws, MaxEditReasonLen,
+        MaxCategories, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
         MaxGracePeriod, MaxInRatio, MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinLiquidity,
-        MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval, SimpleDisputesPalletId,
-        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
+        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval,
+        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -261,7 +261,7 @@ impl zrml_court::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
     type MaxDelegations = MaxDelegations;
-    type MaxDraws = MaxDraws;
+    type MaxSelectedDraws = MaxSelectedDraws;
     type MaxJurors = MaxJurors;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;

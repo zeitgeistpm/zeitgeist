@@ -960,7 +960,7 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type MaxAppeals = MaxAppeals;
             type MaxDelegations = MaxDelegations;
-            type MaxDraws = MaxDraws;
+            type MaxSelectedDraws = MaxSelectedDraws;
             type MaxJurors = MaxJurors;
             type MinJurorStake = MinJurorStake;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;

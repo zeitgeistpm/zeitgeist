@@ -100,7 +100,7 @@ parameter_types! {
     /// The maximum number of delegations per juror account.
     pub const MaxDelegations: u32 = 5;
     /// The maximum number of randomly selected jurors for a dispute.
-    pub const MaxDraws: u32 = 47;
+    pub const MaxSelectedDraws: u32 = 47;
     /// The maximum number of jurors that can be registered.
     pub const MaxJurors: u32 = 1_000;
     /// The minimum stake a user needs to reserve to become a juror.

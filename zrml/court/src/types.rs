@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use zeitgeist_primitives::types::OutcomeReport;
 /// The general information about a particular juror.
 #[derive(
@@ -36,7 +36,7 @@ pub struct JurorInfo<Balance, BlockNumber, Delegations> {
     pub active_lock: Balance,
     /// The block number when a juror exit from court was requested.
     pub prepare_exit_at: Option<BlockNumber>,
-    pub delegations: Delegations,
+    pub delegations: Option<Delegations>,
 }
 
 /// The raw information behind the secret hash of a juror's vote.
@@ -288,4 +288,14 @@ pub struct JurorVoteWithStakes<AccountId, Balance> {
     // the key is the delegator account
     // the value is the delegated stake
     pub delegations: Vec<(AccountId, Balance)>,
+}
+
+impl<AccountId, Balance> Default for JurorVoteWithStakes<AccountId, Balance> {
+    fn default() -> Self {
+        JurorVoteWithStakes { self_info: None, delegations: vec![] }
+    }
+}
+
+pub enum SelectionError {
+    NoValidDelegatedJuror,
 }

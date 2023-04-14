@@ -40,8 +40,8 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::traits::{AccountIdConversion, Hash, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{
-        MaxAppeals, MaxDraws, MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        MaxAppeals, MaxSelectedDraws, MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond,
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::Swaps as SwapsPalletApi,
     types::{
@@ -3002,8 +3002,8 @@ fn it_resolves_a_disputed_court_market() {
         run_to_block(vote_start);
 
         // overwrite draws to disregard randomness
-        zrml_court::Draws::<Runtime>::remove(market_id);
-        let mut draws = zrml_court::Draws::<Runtime>::get(market_id);
+        zrml_court::SelectedDraws::<Runtime>::remove(market_id);
+        let mut draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
         for juror in &[juror_0, juror_1, juror_2, juror_3, juror_4, juror_5] {
             draws
                 .try_push(Draw {
@@ -3015,7 +3015,7 @@ fn it_resolves_a_disputed_court_market() {
                 .unwrap();
         }
         let old_draws = draws.clone();
-        zrml_court::Draws::<Runtime>::insert(market_id, draws);
+        zrml_court::SelectedDraws::<Runtime>::insert(market_id, draws);
 
         let salt = <Runtime as frame_system::Config>::Hash::default();
 
@@ -3133,7 +3133,7 @@ fn simulate_appeal_cycle(market_id: MarketId) {
 
     let wrong_outcome = OutcomeReport::Categorical(1);
 
-    let draws = zrml_court::Draws::<Runtime>::get(market_id);
+    let draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
     for draw in &draws {
         let commitment = BlakeTwo256::hash_of(&(draw.juror, wrong_outcome.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(draw.juror), market_id, commitment));
@@ -3165,7 +3165,7 @@ fn simulate_appeal_cycle(market_id: MarketId) {
 fn it_appeals_a_court_market_to_global_dispute() {
     let test = |base_asset: Asset<MarketId>| {
         let mut free_before = BTreeMap::new();
-        let jurors = 1000..(1000 + MaxDraws::get() as u128);
+        let jurors = 1000..(1000 + MaxSelectedDraws::get() as u128);
         for j in jurors {
             let amount = MinJurorStake::get() + j as u128;
             assert_ok!(AssetManager::deposit(Asset::Ztg, &j, amount + SENTINEL_AMOUNT));

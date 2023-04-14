@@ -25,8 +25,8 @@
 extern crate alloc;
 use crate::{
     types::{CourtStatus, Draw, JurorInfo, JurorPoolItem, Vote},
-    AppealInfo, BalanceOf, Call, Config, Courts, Draws, JurorPool, Jurors, MarketOf,
-    Pallet as Court, Pallet, RequestBlock,
+    AppealInfo, BalanceOf, Call, Config, Courts, JurorPool, Jurors, MarketOf, Pallet as Court,
+    Pallet, RequestBlock, SelectedDraws,
 };
 use alloc::vec;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
@@ -151,8 +151,8 @@ where
     T: Config,
 {
     // remove last random selections of on_dispute
-    <Draws<T>>::remove(market_id);
-    let mut draws = <Draws<T>>::get(market_id);
+    <SelectedDraws<T>>::remove(market_id);
+    let mut draws = <SelectedDraws<T>>::get(market_id);
     for i in 0..number {
         let juror = account("juror", i, 0);
         deposit::<T>(&juror);
@@ -169,7 +169,7 @@ where
             Draw { juror, vote: Vote::Drawn, weight: 1u32, slashable: T::MinJurorStake::get() };
         draws.try_push(draw).unwrap();
     }
-    <Draws<T>>::insert(market_id, draws);
+    <SelectedDraws<T>>::insert(market_id, draws);
     Ok(())
 }
 
@@ -196,10 +196,6 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller))
 
     exit_court_remove {
-        let j in 0..(T::MaxJurors::get() - 1);
-
-        fill_pool::<T>(j)?;
-
         let caller: T::AccountId = whitelisted_caller();
         join_with_min_stake::<T>(&caller)?;
 
@@ -215,10 +211,6 @@ benchmarks! {
     }: exit_court(RawOrigin::Signed(caller), juror)
 
     exit_court_set {
-        let j in 0..(T::MaxJurors::get() - 1);
-
-        fill_pool::<T>(j)?;
-
         let caller: T::AccountId = whitelisted_caller();
         join_with_min_stake::<T>(&caller)?;
 
@@ -234,7 +226,7 @@ benchmarks! {
     }: exit_court(RawOrigin::Signed(caller), juror)
 
     vote {
-        let d in 1..T::MaxDraws::get();
+        let d in 1..T::MaxSelectedDraws::get();
 
         fill_pool::<T>(T::MaxJurors::get() - 1)?;
 
@@ -246,7 +238,7 @@ benchmarks! {
 
         fill_draws::<T>(market_id, d)?;
 
-        let mut draws = <Draws<T>>::get(market_id);
+        let mut draws = <SelectedDraws<T>>::get(market_id);
         let draws_len = draws.len();
         draws[draws_len.saturating_sub(1usize)] = Draw {
             juror: caller.clone(),
@@ -254,7 +246,7 @@ benchmarks! {
             weight: 1u32,
             slashable: <BalanceOf<T>>::zero()
         };
-        <Draws<T>>::insert(market_id, draws);
+        <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
 
@@ -262,7 +254,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), market_id, commitment_vote)
 
     denounce_vote {
-        let d in 1..T::MaxDraws::get();
+        let d in 1..T::MaxSelectedDraws::get();
 
         let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
         fill_pool::<T>(necessary_jurors_weight as u32)?;
@@ -288,7 +280,7 @@ benchmarks! {
         let denounced_juror_unlookup = T::Lookup::unlookup(denounced_juror.clone());
         let commitment = T::Hashing::hash_of(&(denounced_juror.clone(), outcome.clone(), salt));
 
-        let mut draws = <Draws<T>>::get(market_id);
+        let mut draws = <SelectedDraws<T>>::get(market_id);
         let draws_len = draws.len();
         draws[draws_len.saturating_sub(1usize)] = Draw {
             juror: denounced_juror,
@@ -296,13 +288,13 @@ benchmarks! {
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
         };
-        <Draws<T>>::insert(market_id, draws);
+        <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
     }: _(RawOrigin::Signed(caller), market_id, denounced_juror_unlookup, outcome, salt)
 
     reveal_vote {
-        let d in 1..T::MaxDraws::get();
+        let d in 1..T::MaxSelectedDraws::get();
 
         fill_pool::<T>(T::MaxJurors::get() - 1)?;
 
@@ -325,7 +317,7 @@ benchmarks! {
         });
         let commitment = T::Hashing::hash_of(&(caller.clone(), outcome.clone(), salt));
 
-        let mut draws = <Draws<T>>::get(market_id);
+        let mut draws = <SelectedDraws<T>>::get(market_id);
         let draws_len = draws.len();
         draws[draws_len.saturating_sub(1usize)] = Draw {
             juror: caller.clone(),
@@ -333,7 +325,7 @@ benchmarks! {
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
         };
-        <Draws<T>>::insert(market_id, draws);
+        <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(vote_end + 1u64.saturated_into::<T::BlockNumber>());
     }: _(RawOrigin::Signed(caller), market_id, outcome, salt)
@@ -374,8 +366,8 @@ benchmarks! {
 
         let salt = Default::default();
         // remove last random selections of on_dispute
-        <Draws<T>>::remove(market_id);
-        let mut draws = <Draws<T>>::get(market_id);
+        <SelectedDraws<T>>::remove(market_id);
+        let mut draws = <SelectedDraws<T>>::get(market_id);
         let draws_len = Court::<T>::necessary_jurors_weight(a as usize) as u32;
         for i in 0..draws_len {
             let juror: T::AccountId = account("juror", i, 0);
@@ -396,7 +388,7 @@ benchmarks! {
                 };
             draws.try_push(draw).unwrap();
         }
-        <Draws<T>>::insert(market_id, draws);
+        <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(aggregation + 1u64.saturated_into::<T::BlockNumber>());
         let now = <frame_system::Pallet<T>>::block_number();
@@ -417,7 +409,7 @@ benchmarks! {
     }
 
     reassign_juror_stakes {
-        let d in 1..T::MaxDraws::get();
+        let d in 1..T::MaxSelectedDraws::get();
 
         let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
         fill_pool::<T>(necessary_jurors_weight as u32)?;
@@ -432,8 +424,8 @@ benchmarks! {
 
         let salt = Default::default();
         // remove last random selections of on_dispute
-        <Draws<T>>::remove(market_id);
-        let mut draws = <Draws<T>>::get(market_id);
+        <SelectedDraws<T>>::remove(market_id);
+        let mut draws = <SelectedDraws<T>>::get(market_id);
         for i in 0..d {
             let juror: T::AccountId = account("juror", i, 0);
             <Jurors<T>>::insert(&juror, JurorInfo {
@@ -453,7 +445,7 @@ benchmarks! {
                 };
             draws.try_push(draw).unwrap();
         }
-        <Draws<T>>::insert(market_id, draws);
+        <SelectedDraws<T>>::insert(market_id, draws);
     }: _(RawOrigin::Signed(caller), market_id)
 
     set_inflation {
