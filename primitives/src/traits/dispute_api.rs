@@ -55,6 +55,9 @@ pub trait DisputeApi {
     /// associated pallet. **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     fn on_dispute(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 
+    /// Return the weight of the `on_dispute` function.
+    fn on_dispute_weight() -> Weight;
+
     /// Manage market resolution of a disputed market.
     ///
     /// **Should** only be called if the market was disputed before resolving. **May** assume that

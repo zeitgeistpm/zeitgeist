@@ -52,7 +52,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
+        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery, Weight},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -561,6 +561,10 @@ mod pallet {
             Ok(())
         }
 
+        fn on_dispute_weight() -> Weight {
+            Weight::zero()
+        }
+
         // Set jurors that sided on the second most voted outcome as tardy. Jurors are only
         // rewarded if sided on the most voted outcome but jurors that voted second most
         // voted outcome (winner of the losing majority) are placed as tardy instead of
@@ -681,4 +685,36 @@ mod pallet {
         T::AccountId,
         (T::BlockNumber, OutcomeReport),
     >;
+}
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>() -> MarketOf<T>
+where
+    T: crate::Config,
+{
+    use frame_support::traits::Get;
+    use sp_runtime::traits::AccountIdConversion;
+    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
+
+    zeitgeist_primitives::types::Market {
+        base_asset: Asset::Ztg,
+        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: T::PalletId::get().into_account_truncating(),
+        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Court,
+        metadata: Default::default(),
+        oracle: T::PalletId::get().into_account_truncating(),
+        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        deadlines: zeitgeist_primitives::types::Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 1_u32.into(),
+        },
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
+    }
 }

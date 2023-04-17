@@ -48,6 +48,7 @@ use frame_support::{traits::Get, weights::Weight};
 pub trait WeightInfoZeitgeist {
     fn authorize_market_outcome_first_report(m: u32) -> Weight;
     fn authorize_market_outcome_existing_report() -> Weight;
+    fn on_dispute_weight() -> Weight;
 }
 
 /// Weight functions for zrml_authorized (automatically generated)
@@ -69,5 +70,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         Weight::from_ref_time(30_850_000)
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn on_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
     }
 }

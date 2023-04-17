@@ -40,7 +40,7 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResult, DispatchResultWithPostInfo},
         ensure,
-        pallet_prelude::{ConstU32, EnsureOrigin, OptionQuery, StorageMap},
+        pallet_prelude::{ConstU32, EnsureOrigin, OptionQuery, StorageMap, Weight},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
@@ -214,6 +214,11 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
             Ok(())
+        }
+
+        fn on_dispute_weight() -> Weight {
+            // TODO T::WeightInfo::on_dispute_weight()
+            Weight::zero()
         }
 
         fn on_resolution(

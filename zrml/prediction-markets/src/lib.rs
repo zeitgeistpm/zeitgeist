@@ -64,13 +64,16 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
-            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, MultiHash, OldMarketDispute, OutcomeReport,
+            Report, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
-    use zrml_global_disputes::GlobalDisputesPalletApi;
+    use {
+        zeitgeist_primitives::types::GlobalDisputeItem,
+        zrml_global_disputes::GlobalDisputesPalletApi,
+    };
 
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -613,7 +616,13 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized())]
+        #[pallet::weight(
+            T::WeightInfo::dispute_authorized().saturating_add(
+                T::Court::on_dispute_weight().saturating_add(
+                    T::SimpleDisputes::on_dispute_weight()
+                )
+            )
+        )]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -624,16 +633,22 @@ mod pallet {
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
 
-            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-            match market.dispute_mechanism {
+            let overweight = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::on_dispute(&market_id, &market)?
+                    T::Authorized::on_dispute(&market_id, &market)?;
+                    T::Court::on_dispute_weight()
+                        .saturating_add(T::SimpleDisputes::on_dispute_weight())
                 }
-                MarketDisputeMechanism::Court => T::Court::on_dispute(&market_id, &market)?,
+                MarketDisputeMechanism::Court => {
+                    T::Court::on_dispute(&market_id, &market)?;
+                    T::Authorized::on_dispute_weight()
+                        .saturating_add(T::SimpleDisputes::on_dispute_weight())
+                }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_dispute(&market_id, &market)?
+                    T::SimpleDisputes::on_dispute(&market_id, &market)?;
+                    T::Court::on_dispute_weight().saturating_add(T::Authorized::on_dispute_weight())
                 }
-            }
+            };
 
             let dispute_bond = T::DisputeBond::get();
 
@@ -647,7 +662,12 @@ mod pallet {
 
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
 
-            Ok((Some(T::WeightInfo::dispute_authorized())).into())
+            let full_weight = T::WeightInfo::dispute_authorized().saturating_add(
+                T::Court::on_dispute_weight()
+                    .saturating_add(T::SimpleDisputes::on_dispute_weight()),
+            );
+
+            Ok((Some(full_weight.saturating_sub(overweight))).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified

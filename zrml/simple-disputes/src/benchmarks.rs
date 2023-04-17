@@ -22,7 +22,6 @@
 #![allow(clippy::type_complexity)]
 #![cfg(feature = "runtime-benchmarks")]
 
-#[cfg(test)]
 use crate::Pallet as SimpleDisputes;
 
 use super::*;
@@ -82,6 +81,14 @@ benchmarks! {
         let bond = default_outcome_bond::<T>(T::MaxDisputes::get() as usize);
         T::AssetManager::deposit(Asset::Ztg, &caller, bond).unwrap();
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome)
+
+    on_dispute_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        SimpleDisputes::<T>::on_dispute(&market_id, &market).unwrap();
+    }
 
     impl_benchmark_test_suite!(
         SimpleDisputes,

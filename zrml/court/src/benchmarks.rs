@@ -22,14 +22,13 @@
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
-#[cfg(test)]
-use crate::Pallet as Court;
-use crate::{BalanceOf, Call, Config, CurrencyOf, Pallet};
+use crate::{market_mock, BalanceOf, Call, Config, CurrencyOf, Pallet as Court, Pallet};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
-use zeitgeist_primitives::types::OutcomeReport;
+use zeitgeist_primitives::{traits::DisputeApi, types::OutcomeReport};
+use zrml_market_commons::MarketCommonsPalletApi;
 
 fn deposit<T>(caller: &T::AccountId)
 where
@@ -65,6 +64,14 @@ benchmarks! {
         let outcome = OutcomeReport::Scalar(u128::MAX);
         deposit_and_join_court::<T>(&caller);
     }: _(RawOrigin::Signed(caller), market_id, outcome)
+
+    on_dispute_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        Court::<T>::on_dispute(&market_id, &market).unwrap();
+    }
 
     impl_benchmark_test_suite!(
         Court,

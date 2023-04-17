@@ -22,9 +22,7 @@
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
-#[cfg(test)]
-use crate::Pallet as Authorized;
-use crate::{market_mock, AuthorizedOutcomeReports, Call, Config, Pallet};
+use crate::{market_mock, AuthorizedOutcomeReports, Call, Config, Pallet as Authorized, Pallet};
 use frame_benchmarking::benchmarks;
 use frame_support::{
     dispatch::UnfilteredDispatchable,
@@ -32,7 +30,7 @@ use frame_support::{
 };
 use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::{
-    traits::DisputeResolutionApi,
+    traits::{DisputeApi, DisputeResolutionApi},
     types::{AuthorityReport, OutcomeReport},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -94,6 +92,14 @@ benchmarks! {
     } verify {
         let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(1) };
         assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
+    }
+
+    on_dispute_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        Authorized::<T>::on_dispute(&market_id, &market).unwrap();
     }
 
     impl_benchmark_test_suite!(

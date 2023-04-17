@@ -46,6 +46,7 @@ use frame_support::{traits::Get, weights::Weight};
 /// zrml_simple_disputes (automatically generated)
 pub trait WeightInfoZeitgeist {
     fn suggest_outcome(d: u32, r: u32, e: u32) -> Weight;
+    fn on_dispute_weight() -> Weight;
 }
 
 /// Weight functions for zrml_simple_disputes (automatically generated)
@@ -65,5 +66,9 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(Weight::from_ref_time(311_000).saturating_mul(e.into()))
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(4))
+    }
+
+    fn on_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
     }
 }

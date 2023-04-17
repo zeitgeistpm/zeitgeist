@@ -48,7 +48,7 @@ mod pallet {
         dispatch::DispatchResult,
         ensure,
         pallet_prelude::{
-            Blake2_128Concat, ConstU32, DispatchResultWithPostInfo, StorageMap, ValueQuery,
+            Blake2_128Concat, ConstU32, DispatchResultWithPostInfo, StorageMap, ValueQuery, Weight,
         },
         traits::{Currency, Get, Hooks, Imbalance, IsType, NamedReservableCurrency},
         transactional, BoundedVec, PalletId,
@@ -293,6 +293,10 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
             );
             Ok(())
+        }
+
+        fn on_dispute_weight() -> Weight {
+            Weight::zero()
         }
 
         fn on_resolution(
