@@ -296,7 +296,7 @@ mod pallet {
         }
 
         fn on_dispute_weight() -> Weight {
-            Weight::zero()
+            T::WeightInfo::on_dispute_weight()
         }
 
         fn on_resolution(

@@ -562,7 +562,7 @@ mod pallet {
         }
 
         fn on_dispute_weight() -> Weight {
-            Weight::zero()
+            T::WeightInfo::on_dispute_weight()
         }
 
         // Set jurors that sided on the second most voted outcome as tardy. Jurors are only
