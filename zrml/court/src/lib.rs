@@ -68,8 +68,8 @@ mod pallet {
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
         types::{
-            Asset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
-            OutcomeReport,
+            Asset, GlobalDisputeItem, MDMWeight, Market, MarketDispute, MarketDisputeMechanism,
+            MarketStatus, OutcomeReport,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -96,6 +96,14 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
+    pub(crate) type MDMWeightOf<T> = MDMWeight<
+        MarketIdOf<T>,
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
@@ -561,7 +569,7 @@ mod pallet {
             Ok(())
         }
 
-        fn on_dispute_weight() -> Weight {
+        fn on_dispute_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
             T::WeightInfo::on_dispute_weight()
         }
 
@@ -597,6 +605,10 @@ mod pallet {
             Ok(Some(first))
         }
 
+        fn on_resolution_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+            T::WeightInfo::on_resolution_weight()
+        }
+
         fn exchange(
             _: &Self::MarketId,
             market: &MarketOf<T>,
@@ -611,6 +623,10 @@ mod pallet {
             Ok(overall_imbalance)
         }
 
+        fn exchange_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+            T::WeightInfo::exchange_weight()
+        }
+
         fn get_auto_resolve(
             _: &Self::MarketId,
             market: &MarketOf<T>,
@@ -622,12 +638,20 @@ mod pallet {
             Ok(None)
         }
 
+        fn get_auto_resolve_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+            T::WeightInfo::get_auto_resolve_weight()
+        }
+
         fn has_failed(_: &Self::MarketId, market: &MarketOf<T>) -> Result<bool, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
             Ok(false)
+        }
+
+        fn has_failed_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+            T::WeightInfo::has_failed_weight()
         }
 
         fn on_global_dispute(
@@ -641,6 +665,10 @@ mod pallet {
             Ok(Vec::new())
         }
 
+        fn on_global_dispute_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+            T::WeightInfo::on_global_dispute_weight()
+        }
+
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
@@ -649,6 +677,10 @@ mod pallet {
             let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
             let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
             Ok(())
+        }
+
+        fn clear_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+            T::WeightInfo::clear_weight()
         }
     }
 

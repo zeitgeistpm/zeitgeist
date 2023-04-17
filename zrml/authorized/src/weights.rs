@@ -49,6 +49,12 @@ pub trait WeightInfoZeitgeist {
     fn authorize_market_outcome_first_report(m: u32) -> Weight;
     fn authorize_market_outcome_existing_report() -> Weight;
     fn on_dispute_weight() -> Weight;
+    fn on_resolution_weight() -> Weight;
+    fn exchange_weight() -> Weight;
+    fn get_auto_resolve_weight() -> Weight;
+    fn has_failed_weight() -> Weight;
+    fn on_global_dispute_weight() -> Weight;
+    fn clear_weight() -> Weight;
 }
 
 /// Weight functions for zrml_authorized (automatically generated)
@@ -72,6 +78,24 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(1))
     }
     fn on_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn on_resolution_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn exchange_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn get_auto_resolve_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn has_failed_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn on_global_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn clear_weight() -> Weight {
         Weight::from_ref_time(0)
     }
 }

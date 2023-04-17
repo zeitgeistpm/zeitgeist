@@ -33,8 +33,8 @@ pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeResolutionApi, ZeitgeistAssetManager},
     types::{
-        Asset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
-        OutcomeReport, Report,
+        Asset, GlobalDisputeItem, MDMWeight, Market, MarketDispute, MarketDisputeMechanism,
+        MarketStatus, OutcomeReport, Report,
     },
 };
 
@@ -118,6 +118,14 @@ mod pallet {
     pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
+    pub(crate) type MDMWeightOf<T> = MDMWeight<
+        MarketIdOf<T>,
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
@@ -295,7 +303,7 @@ mod pallet {
             Ok(())
         }
 
-        fn on_dispute_weight() -> Weight {
+        fn on_dispute_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
             T::WeightInfo::on_dispute_weight()
         }
 
@@ -318,6 +326,16 @@ mod pallet {
             };
 
             Ok(Some(last_dispute.outcome.clone()))
+        }
+
+        fn on_resolution_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+            match mdm_info {
+                MDMWeight::SimpleDisputes { market_id, market: _ } => {
+                    let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
+                    T::WeightInfo::on_resolution_weight(disputes_len)
+                }
+                _ => T::WeightInfo::on_resolution_weight(T::MaxDisputes::get()),
+            }
         }
 
         fn exchange(
@@ -374,6 +392,16 @@ mod pallet {
             Ok(overall_imbalance)
         }
 
+        fn exchange_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+            match mdm_info {
+                MDMWeight::SimpleDisputes { market_id, market: _ } => {
+                    let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
+                    T::WeightInfo::exchange_weight(disputes_len)
+                }
+                _ => T::WeightInfo::exchange_weight(T::MaxDisputes::get()),
+            }
+        }
+
         fn get_auto_resolve(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
@@ -386,6 +414,16 @@ mod pallet {
             Ok(Self::get_auto_resolve(disputes.as_slice(), market))
         }
 
+        fn get_auto_resolve_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+            match mdm_info {
+                MDMWeight::SimpleDisputes { market_id, market: _ } => {
+                    let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
+                    T::WeightInfo::get_auto_resolve_weight(disputes_len)
+                }
+                _ => T::WeightInfo::get_auto_resolve_weight(T::MaxDisputes::get()),
+            }
+        }
+
         fn has_failed(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
@@ -396,6 +434,16 @@ mod pallet {
             );
             let disputes = <Disputes<T>>::get(market_id);
             Ok(disputes.len() == T::MaxDisputes::get() as usize)
+        }
+
+        fn has_failed_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+            match mdm_info {
+                MDMWeight::SimpleDisputes { market_id, market: _ } => {
+                    let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
+                    T::WeightInfo::has_failed_weight(disputes_len)
+                }
+                _ => T::WeightInfo::has_failed_weight(T::MaxDisputes::get()),
+            }
         }
 
         fn on_global_dispute(
@@ -417,6 +465,16 @@ mod pallet {
                 .collect())
         }
 
+        fn on_global_dispute_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+            match mdm_info {
+                MDMWeight::SimpleDisputes { market_id, market: _ } => {
+                    let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
+                    T::WeightInfo::on_global_dispute_weight(disputes_len)
+                }
+                _ => T::WeightInfo::on_global_dispute_weight(T::MaxDisputes::get()),
+            }
+        }
+
         fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
@@ -435,6 +493,16 @@ mod pallet {
                 }
             }
             Ok(())
+        }
+
+        fn clear_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+            match mdm_info {
+                MDMWeight::SimpleDisputes { market_id, market: _ } => {
+                    let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
+                    T::WeightInfo::clear_weight(disputes_len)
+                }
+                _ => T::WeightInfo::clear_weight(T::MaxDisputes::get()),
+            }
         }
     }
 

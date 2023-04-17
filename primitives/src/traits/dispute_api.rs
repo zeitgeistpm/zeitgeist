@@ -20,7 +20,7 @@ extern crate alloc;
 
 use crate::{
     outcome_report::OutcomeReport,
-    types::{Asset, GlobalDisputeItem, Market},
+    types::{Asset, GlobalDisputeItem, MDMWeight, Market},
 };
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
@@ -30,6 +30,15 @@ use sp_runtime::DispatchError;
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
 // type aliases in traits.
 type MarketOfDisputeApi<T> = Market<
+    <T as DisputeApi>::AccountId,
+    <T as DisputeApi>::Balance,
+    <T as DisputeApi>::BlockNumber,
+    <T as DisputeApi>::Moment,
+    Asset<<T as DisputeApi>::MarketId>,
+>;
+
+type MDMWeightOf<T> = MDMWeight<
+    <T as DisputeApi>::MarketId,
     <T as DisputeApi>::AccountId,
     <T as DisputeApi>::Balance,
     <T as DisputeApi>::BlockNumber,
@@ -56,7 +65,7 @@ pub trait DisputeApi {
     fn on_dispute(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 
     /// Return the weight of the `on_dispute` function.
-    fn on_dispute_weight() -> Weight;
+    fn on_dispute_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
 
     /// Manage market resolution of a disputed market.
     ///
@@ -71,6 +80,9 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
+
+    /// Return the weight of the `on_resolution` function.
+    fn on_resolution_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
 
     /// Allow the transfer of funds from the API caller to the API consumer and back.
     /// This can be based on the final resolution outcome of the market.
@@ -91,6 +103,9 @@ pub trait DisputeApi {
         amount: Self::NegativeImbalance,
     ) -> Result<Self::NegativeImbalance, DispatchError>;
 
+    /// Return the weight of the `exchange` function.
+    fn exchange_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+
     /// Query the future resolution block of a disputed market.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     ///
@@ -102,6 +117,9 @@ pub trait DisputeApi {
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 
+    /// Return the weight of the `get_auto_resolve` function.
+    fn get_auto_resolve_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+
     /// Returns `true` if the market dispute mechanism
     /// was unable to come to a conclusion.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
@@ -109,6 +127,9 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<bool, DispatchError>;
+
+    /// Return the weight of the `has_failed` function.
+    fn has_failed_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
 
     /// Called, when a global dispute is started.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
@@ -120,10 +141,16 @@ pub trait DisputeApi {
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<Vec<GlobalDisputeItemOfDisputeApi<Self>>, DispatchError>;
 
+    /// Return the weight of the `on_global_dispute` function.
+    fn on_global_dispute_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+
     /// Allow the API consumer to clear storage items of the dispute mechanism.
     /// This may be called, when the dispute mechanism is no longer needed.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     fn clear(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
+
+    /// Return the weight of the `clear` function.
+    fn clear_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
 }
 
 type MarketOfDisputeResolutionApi<T> = Market<
