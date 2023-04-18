@@ -224,7 +224,7 @@ mod pallet {
             Ok(())
         }
 
-        fn on_dispute_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn on_dispute_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::on_dispute_weight()
         }
 
@@ -240,7 +240,7 @@ mod pallet {
             Ok(report.map(|r| r.outcome))
         }
 
-        fn on_resolution_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn on_resolution_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::on_resolution_weight()
         }
 
@@ -258,7 +258,7 @@ mod pallet {
             Ok(overall_imbalance)
         }
 
-        fn exchange_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn exchange_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::exchange_weight()
         }
 
@@ -273,7 +273,7 @@ mod pallet {
             Ok(Self::get_auto_resolve(market_id))
         }
 
-        fn get_auto_resolve_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn get_auto_resolve_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::get_auto_resolve_weight()
         }
 
@@ -286,7 +286,7 @@ mod pallet {
             Ok(false)
         }
 
-        fn has_failed_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn has_failed_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::has_failed_weight()
         }
 
@@ -302,7 +302,7 @@ mod pallet {
             Ok(Vec::new())
         }
 
-        fn on_global_dispute_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn on_global_dispute_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::on_global_dispute_weight()
         }
 
@@ -316,7 +316,7 @@ mod pallet {
             Ok(())
         }
 
-        fn clear_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn clear_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::clear_weight()
         }
     }

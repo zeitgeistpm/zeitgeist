@@ -65,7 +65,7 @@ pub trait DisputeApi {
     fn on_dispute(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 
     /// Return the weight of the `on_dispute` function.
-    fn on_dispute_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn on_dispute_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 
     /// Manage market resolution of a disputed market.
     ///
@@ -82,7 +82,7 @@ pub trait DisputeApi {
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 
     /// Return the weight of the `on_resolution` function.
-    fn on_resolution_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn on_resolution_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 
     /// Allow the transfer of funds from the API caller to the API consumer and back.
     /// This can be based on the final resolution outcome of the market.
@@ -104,7 +104,7 @@ pub trait DisputeApi {
     ) -> Result<Self::NegativeImbalance, DispatchError>;
 
     /// Return the weight of the `exchange` function.
-    fn exchange_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn exchange_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 
     /// Query the future resolution block of a disputed market.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
@@ -118,7 +118,7 @@ pub trait DisputeApi {
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 
     /// Return the weight of the `get_auto_resolve` function.
-    fn get_auto_resolve_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn get_auto_resolve_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 
     /// Returns `true` if the market dispute mechanism
     /// was unable to come to a conclusion.
@@ -129,7 +129,7 @@ pub trait DisputeApi {
     ) -> Result<bool, DispatchError>;
 
     /// Return the weight of the `has_failed` function.
-    fn has_failed_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn has_failed_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 
     /// Called, when a global dispute is started.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
@@ -142,7 +142,7 @@ pub trait DisputeApi {
     ) -> Result<Vec<GlobalDisputeItemOfDisputeApi<Self>>, DispatchError>;
 
     /// Return the weight of the `on_global_dispute` function.
-    fn on_global_dispute_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn on_global_dispute_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 
     /// Allow the API consumer to clear storage items of the dispute mechanism.
     /// This may be called, when the dispute mechanism is no longer needed.
@@ -150,7 +150,7 @@ pub trait DisputeApi {
     fn clear(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
 
     /// Return the weight of the `clear` function.
-    fn clear_weight(mdm_info: &MDMWeightOf<Self>) -> Weight;
+    fn clear_weight(mdm_info: MDMWeightOf<Self>) -> Weight;
 }
 
 type MarketOfDisputeResolutionApi<T> = Market<

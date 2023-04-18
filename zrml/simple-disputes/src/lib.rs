@@ -303,7 +303,7 @@ mod pallet {
             Ok(())
         }
 
-        fn on_dispute_weight(_mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn on_dispute_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
             T::WeightInfo::on_dispute_weight()
         }
 
@@ -328,7 +328,7 @@ mod pallet {
             Ok(Some(last_dispute.outcome.clone()))
         }
 
-        fn on_resolution_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn on_resolution_weight(mdm_info: MDMWeightOf<T>) -> Weight {
             match mdm_info {
                 MDMWeight::SimpleDisputes { market_id, market: _ } => {
                     let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
@@ -392,7 +392,7 @@ mod pallet {
             Ok(overall_imbalance)
         }
 
-        fn exchange_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn exchange_weight(mdm_info: MDMWeightOf<T>) -> Weight {
             match mdm_info {
                 MDMWeight::SimpleDisputes { market_id, market: _ } => {
                     let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
@@ -414,7 +414,7 @@ mod pallet {
             Ok(Self::get_auto_resolve(disputes.as_slice(), market))
         }
 
-        fn get_auto_resolve_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn get_auto_resolve_weight(mdm_info: MDMWeightOf<T>) -> Weight {
             match mdm_info {
                 MDMWeight::SimpleDisputes { market_id, market: _ } => {
                     let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
@@ -436,7 +436,7 @@ mod pallet {
             Ok(disputes.len() == T::MaxDisputes::get() as usize)
         }
 
-        fn has_failed_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn has_failed_weight(mdm_info: MDMWeightOf<T>) -> Weight {
             match mdm_info {
                 MDMWeight::SimpleDisputes { market_id, market: _ } => {
                     let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
@@ -465,7 +465,7 @@ mod pallet {
                 .collect())
         }
 
-        fn on_global_dispute_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn on_global_dispute_weight(mdm_info: MDMWeightOf<T>) -> Weight {
             match mdm_info {
                 MDMWeight::SimpleDisputes { market_id, market: _ } => {
                     let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
@@ -495,7 +495,7 @@ mod pallet {
             Ok(())
         }
 
-        fn clear_weight(mdm_info: &MDMWeightOf<T>) -> Weight {
+        fn clear_weight(mdm_info: MDMWeightOf<T>) -> Weight {
             match mdm_info {
                 MDMWeight::SimpleDisputes { market_id, market: _ } => {
                     let disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;

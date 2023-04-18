@@ -618,8 +618,8 @@ mod pallet {
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
         #[pallet::weight(
             T::WeightInfo::dispute_authorized().saturating_add(
-                T::Court::on_dispute_weight(&MDMWeight::Default).saturating_add(
-                    T::SimpleDisputes::on_dispute_weight(&MDMWeight::Default)
+                T::Court::on_dispute_weight(MDMWeight::Default).saturating_add(
+                    T::SimpleDisputes::on_dispute_weight(MDMWeight::Default)
                 )
             )
         )]
@@ -636,8 +636,8 @@ mod pallet {
             let overweight = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&market_id, &market)?;
-                    T::Court::on_dispute_weight(&MDMWeight::Court).saturating_add(
-                        T::SimpleDisputes::on_dispute_weight(&MDMWeight::SimpleDisputes {
+                    T::Court::on_dispute_weight(MDMWeight::Court).saturating_add(
+                        T::SimpleDisputes::on_dispute_weight(MDMWeight::SimpleDisputes {
                             market_id,
                             market: market.clone(),
                         }),
@@ -645,8 +645,8 @@ mod pallet {
                 }
                 MarketDisputeMechanism::Court => {
                     T::Court::on_dispute(&market_id, &market)?;
-                    T::Authorized::on_dispute_weight(&MDMWeight::Authorized).saturating_add(
-                        T::SimpleDisputes::on_dispute_weight(&MDMWeight::SimpleDisputes {
+                    T::Authorized::on_dispute_weight(MDMWeight::Authorized).saturating_add(
+                        T::SimpleDisputes::on_dispute_weight(MDMWeight::SimpleDisputes {
                             market_id,
                             market: market.clone(),
                         }),
@@ -654,8 +654,8 @@ mod pallet {
                 }
                 MarketDisputeMechanism::SimpleDisputes => {
                     T::SimpleDisputes::on_dispute(&market_id, &market)?;
-                    T::Court::on_dispute_weight(&MDMWeight::Court)
-                        .saturating_add(T::Authorized::on_dispute_weight(&MDMWeight::Authorized))
+                    T::Court::on_dispute_weight(MDMWeight::Court)
+                        .saturating_add(T::Authorized::on_dispute_weight(MDMWeight::Authorized))
                 }
             };
 
@@ -672,8 +672,8 @@ mod pallet {
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
 
             let full_weight = T::WeightInfo::dispute_authorized().saturating_add(
-                T::Court::on_dispute_weight(&MDMWeight::Court).saturating_add(
-                    T::SimpleDisputes::on_dispute_weight(&MDMWeight::SimpleDisputes {
+                T::Court::on_dispute_weight(MDMWeight::Court).saturating_add(
+                    T::SimpleDisputes::on_dispute_weight(MDMWeight::SimpleDisputes {
                         market_id,
                         market,
                     }),
@@ -2555,33 +2555,51 @@ mod pallet {
         fn resolve_disputed_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<(OutcomeReport, Weight), DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            let mut weight = Weight::zero();
 
-            let resolved_outcome: OutcomeReport =
+            let (resolved_outcome, w): (OutcomeReport, Weight) =
                 Self::get_resolved_outcome(market_id, market, &report.outcome)?;
+            weight = weight.saturating_add(w);
 
             let imbalance_left = Self::settle_bonds(market_id, market, &resolved_outcome, report)?;
 
-            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             let remainder = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::exchange(market_id, market, &resolved_outcome, imbalance_left)?
+                    let remainder = T::Authorized::exchange(
+                        market_id,
+                        market,
+                        &resolved_outcome,
+                        imbalance_left,
+                    )?;
+                    weight = weight
+                        .saturating_add(T::Authorized::exchange_weight(MDMWeight::Authorized));
+                    remainder
                 }
                 MarketDisputeMechanism::Court => {
-                    T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?
+                    let remainder =
+                        T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?;
+                    weight = weight.saturating_add(T::Court::exchange_weight(MDMWeight::Court));
+                    remainder
                 }
-                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::exchange(
-                    market_id,
-                    market,
-                    &resolved_outcome,
-                    imbalance_left,
-                )?,
+                MarketDisputeMechanism::SimpleDisputes => {
+                    let remainder = T::SimpleDisputes::exchange(
+                        market_id,
+                        market,
+                        &resolved_outcome,
+                        imbalance_left,
+                    )?;
+                    weight = weight.saturating_add(T::SimpleDisputes::exchange_weight(
+                        MDMWeight::SimpleDisputes { market_id: *market_id, market: market.clone() },
+                    ));
+                    remainder
+                }
             };
 
             T::Slash::on_unbalanced(remainder);
 
-            Ok(resolved_outcome)
+            Ok((resolved_outcome, weight))
         }
 
         /// Get the outcome the market should resolve to.
@@ -2589,31 +2607,46 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             reported_outcome: &OutcomeReport,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<(OutcomeReport, Weight), DispatchError> {
             let mut resolved_outcome_option = None;
+            let mut weight = Weight::zero();
 
             #[cfg(feature = "with-global-disputes")]
             if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
                 resolved_outcome_option = Some(o);
             }
 
-            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-
             // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
             // the oracle's report.
             if resolved_outcome_option.is_none() {
                 resolved_outcome_option = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
+                        weight = weight.saturating_add(T::Authorized::on_resolution_weight(
+                            MDMWeight::Authorized,
+                        ));
                         T::Authorized::on_resolution(market_id, market)?
                     }
-                    MarketDisputeMechanism::Court => T::Court::on_resolution(market_id, market)?,
+                    MarketDisputeMechanism::Court => {
+                        weight =
+                            weight.saturating_add(T::Court::on_resolution_weight(MDMWeight::Court));
+                        T::Court::on_resolution(market_id, market)?
+                    }
                     MarketDisputeMechanism::SimpleDisputes => {
+                        weight = weight.saturating_add(T::SimpleDisputes::on_resolution_weight(
+                            MDMWeight::SimpleDisputes {
+                                market_id: *market_id,
+                                market: market.clone(),
+                            },
+                        ));
                         T::SimpleDisputes::on_resolution(market_id, market)?
                     }
                 };
             }
 
-            Ok(resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone()))
+            let resolved_outcome =
+                resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone());
+
+            Ok((resolved_outcome, weight))
         }
 
         /// Manage the outstanding bonds (oracle, outsider, dispute) of the market.
@@ -2693,7 +2726,12 @@ mod pallet {
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
-                MarketStatus::Disputed => Self::resolve_disputed_market(market_id, market)?,
+                MarketStatus::Disputed => {
+                    let (resolved_outcome, weight) =
+                        Self::resolve_disputed_market(market_id, market)?;
+                    total_weight = total_weight.saturating_add(weight);
+                    resolved_outcome
+                }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
