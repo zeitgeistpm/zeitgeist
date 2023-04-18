@@ -18,7 +18,7 @@
 
 use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
-    KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
+    POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
@@ -347,7 +347,7 @@ where
         Arc::new(move |hash, data| network.announce_block(hash, data))
     };
 
-    let relay_chain_slot_duration = KUSAMA_BLOCK_DURATION;
+    let relay_chain_slot_duration = POLKADOT_BLOCK_DURATION;
 
     if collator {
         let parachain_consensus = build_consensus(
