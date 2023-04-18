@@ -122,12 +122,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
                     if let Some(first_dispute) = old_disputes.first() {
                         let OldMarketDispute { at: _, by, outcome: _ } = first_dispute;
                         dispute_bond = Some(Bond::new(by.clone(), T::DisputeBond::get()));
-                    } else {
-                        log::warn!(
-                            "MoveDataToSimpleDisputes: Could not find first dispute for market id \
-                             {:?}",
-                            market_id
-                        );
                     }
                 }
 
@@ -417,8 +411,8 @@ use frame_support::dispatch::EncodeLike;
 use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::types::{MarketDispute, OldMarketDispute};
 
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 7;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 8;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 6;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 7;
 
 #[cfg(feature = "try-runtime")]
 type OldDisputesOf<T> = frame_support::BoundedVec<
@@ -503,7 +497,9 @@ where
                     &old_dispute.by,
                 );
                 if reserved_balance < bond.saturated_into::<u128>().saturated_into() {
-                    log::error!(
+                    // warns for battery station market id 386
+                    // https://discord.com/channels/737780518313000960/817041223201587230/958682619413934151
+                    log::warn!(
                         "MoveDataToSimpleDisputes: Could not unreserve {:?} for {:?} because \
                          reserved balance is only {:?}. Market id: {:?}",
                         bond,
