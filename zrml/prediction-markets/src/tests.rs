@@ -2698,6 +2698,170 @@ fn dispute_fails_disputed_already() {
 }
 
 #[test]
+fn dispute_fails_if_market_not_reported() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        // no report happening here...
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        assert_noop!(
+            PredictionMarkets::dispute(Origin::signed(CHARLIE), 0),
+            Error::<Runtime>::InvalidMarketStatus,
+        );
+    });
+}
+
+#[test]
+fn dispute_reserves_dispute_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+        let reserved_charlie = Balances::reserved_balance(CHARLIE);
+        assert_eq!(reserved_charlie, 0);
+
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        assert_eq!(free_charlie_before - free_charlie_after, DisputeBond::get());
+
+        let reserved_charlie = Balances::reserved_balance(CHARLIE);
+        assert_eq!(reserved_charlie, DisputeBond::get());
+    });
+}
+
+#[test]
+fn dispute_updates_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Reported);
+        assert_eq!(market.bonds.dispute, None);
+
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+        assert_eq!(
+            market.bonds.dispute,
+            Some(Bond { who: CHARLIE, value: DisputeBond::get(), is_settled: false })
+        );
+    });
+}
+
+#[test]
+fn dispute_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized,
+            ScoringRule::CPMM,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0,));
+
+        System::assert_last_event(
+            Event::MarketDisputed(0u32.into(), MarketStatus::Disputed).into(),
+        );
+    });
+}
+
+#[test]
 fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;

@@ -2603,7 +2603,7 @@ mod pallet {
         }
 
         /// Get the outcome the market should resolve to.
-        fn get_resolved_outcome(
+        pub(crate) fn get_resolved_outcome(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             reported_outcome: &OutcomeReport,
