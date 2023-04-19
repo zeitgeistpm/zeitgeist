@@ -463,10 +463,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
         }
 
-        #[pallet::weight({
-            let delegations_len = delegations.len() as u32;
-            T::WeightInfo::delegate(T::MaxJurors::get(), delegations_len)
-        })]
+        #[pallet::weight(T::WeightInfo::delegate(T::MaxJurors::get(), delegations.len() as u32))]
         #[transactional]
         pub fn delegate(
             origin: OriginFor<T>,
