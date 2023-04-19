@@ -292,7 +292,7 @@ macro_rules! create_runtime {
 
                 // Third-party
                 AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
-                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
+                Tokens: orml_tokens::{Call, Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
