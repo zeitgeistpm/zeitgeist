@@ -46,6 +46,7 @@ use frame_support::{traits::Get, weights::Weight};
 /// zrml_court (automatically generated)
 pub trait WeightInfoZeitgeist {
     fn join_court(j: u32) -> Weight;
+    fn delegate(j: u32, d: u32) -> Weight;
     fn prepare_exit_court(j: u32) -> Weight;
     fn exit_court_remove() -> Weight;
     fn exit_court_set() -> Weight;
@@ -56,6 +57,7 @@ pub trait WeightInfoZeitgeist {
     fn reassign_juror_stakes(d: u32) -> Weight;
     fn set_inflation() -> Weight;
     fn handle_inflation(j: u32) -> Weight;
+    fn select_jurors(a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_court (automatically generated)
@@ -69,6 +71,19 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             // Standard Error: 0
             .saturating_add(Weight::from_ref_time(56_000).saturating_mul(j.into()))
             .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().writes(3))
+    }
+    // Storage: Court JurorPool (r:1 w:1)
+    // Storage: Court Jurors (r:6 w:1)
+    // Storage: Balances Locks (r:1 w:1)
+    fn delegate(j: u32, d: u32) -> Weight {
+        Weight::from_ref_time(38_291_000)
+            // Standard Error: 0
+            .saturating_add(Weight::from_ref_time(133_000).saturating_mul(j.into()))
+            // Standard Error: 70_000
+            .saturating_add(Weight::from_ref_time(2_632_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(d.into())))
             .saturating_add(T::DbWeight::get().writes(3))
     }
     // Storage: Court Jurors (r:1 w:0)
@@ -174,5 +189,17 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(j.into())))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(j.into())))
+    }
+    // Storage: Court JurorPool (r:1 w:1)
+    // Storage: Court JurorsSelectionNonce (r:1 w:1)
+    // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
+    // Storage: Court Jurors (r:5 w:5)
+    fn select_jurors(a: u32) -> Weight {
+        Weight::from_ref_time(87_684_000)
+            // Standard Error: 1_545_000
+            .saturating_add(Weight::from_ref_time(240_196_000).saturating_mul(a.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().reads((18_u64).saturating_mul(a.into())))
+            .saturating_add(T::DbWeight::get().writes((18_u64).saturating_mul(a.into())))
     }
 }

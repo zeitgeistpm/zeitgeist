@@ -28,7 +28,7 @@ use crate::{
     AppealInfo, BalanceOf, Call, Config, Courts, JurorPool, Jurors, MarketOf, Pallet as Court,
     Pallet, RequestBlock, SelectedDraws,
 };
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::{Currency, Get};
 use frame_system::RawOrigin;
@@ -188,6 +188,26 @@ benchmarks! {
         let new_stake = T::MinJurorStake::get()
             .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
     }: _(RawOrigin::Signed(caller), new_stake)
+
+    delegate {
+        // start with higher value to allow delegations on existing jurors
+        let j in 10..(T::MaxJurors::get() - 1);
+        let d in 1..T::MaxDelegations::get();
+
+        fill_pool::<T>(j)?;
+
+        let caller: T::AccountId = whitelisted_caller();
+        join_with_min_stake::<T>(&caller)?;
+
+        let juror_pool = <JurorPool<T>>::get();
+        let mut delegations = Vec::<T::AccountId>::new();
+        juror_pool.iter()
+            .filter(|pool_item| pool_item.juror != caller).take(d as usize)
+            .for_each(|pool_item| delegations.push(pool_item.juror.clone()));
+
+        let new_stake = T::MinJurorStake::get()
+            .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
+    }: _(RawOrigin::Signed(caller), new_stake, delegations)
 
     prepare_exit_court {
         let j in 0..(T::MaxJurors::get() - 1);
@@ -471,6 +491,13 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
     }: {
         Court::<T>::handle_inflation(now);
+    }
+
+    select_jurors {
+        let a in 0..T::MaxAppeals::get();
+        fill_pool::<T>(T::MaxJurors::get())?;
+    }: {
+        let _ = Court::<T>::select_jurors(a as usize).unwrap();
     }
 
     impl_benchmark_test_suite!(

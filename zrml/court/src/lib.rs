@@ -463,8 +463,10 @@ mod pallet {
             Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
         }
 
-        // TODO benchmark
-        #[pallet::weight(T::WeightInfo::join_court(T::MaxJurors::get()))]
+        #[pallet::weight({
+            let delegations_len = delegations.len() as u32;
+            T::WeightInfo::delegate(T::MaxJurors::get(), delegations_len)
+        })]
         #[transactional]
         pub fn delegate(
             origin: OriginFor<T>,
@@ -474,6 +476,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
 
             ensure!(!delegations.is_empty(), Error::<T>::NoDelegations);
+            let delegations_len = delegations.len() as u32;
             let mut sorted_delegations: DelegationsOf<T> =
                 delegations.clone().try_into().map_err(|_| Error::<T>::MaxDelegationsReached)?;
 
@@ -503,7 +506,7 @@ mod pallet {
                 delegated_jurors: delegations,
             });
 
-            Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
+            Ok(Some(T::WeightInfo::delegate(jurors_len, delegations_len)).into())
         }
 
         /// Prepare as a juror to exit the court.
@@ -1409,7 +1412,6 @@ mod pallet {
             }
         }
 
-        // TODO benchmark select_jurors explicitly for future comparisons
         // Selects the jurors for the next round.
         // The `consumed_stake` in `JurorPool` and `active_lock` in `Jurors` is increased
         // equally according to the weight inside the `new_draws`.
