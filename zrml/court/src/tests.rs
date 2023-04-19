@@ -37,7 +37,10 @@ use frame_support::{
 };
 use pallet_balances::{BalanceLock, NegativeImbalance};
 use rand::seq::SliceRandom;
-use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
+use sp_runtime::{
+    traits::{BlakeTwo256, Hash, Zero},
+    Perquintill,
+};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::{
@@ -649,7 +652,8 @@ fn vote_works() {
         let mut draws = <SelectedDraws<Runtime>>::get(market_id);
         assert_eq!(draws.len(), 5usize);
         let slashable = MinJurorStake::get();
-        let alice_index = 3usize;
+        let alice_index =
+            draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
         draws[alice_index] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
         <SelectedDraws<Runtime>>::insert(market_id, draws);
         <Jurors<Runtime>>::insert(
@@ -834,7 +838,8 @@ fn reveal_vote_works() {
         let mut draws = <SelectedDraws<Runtime>>::get(market_id);
         assert_eq!(draws.len(), 5usize);
         let slashable = MinJurorStake::get();
-        let alice_index = 3usize;
+        let alice_index =
+            draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
         draws[alice_index] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
         <SelectedDraws<Runtime>>::insert(market_id, draws);
         <Jurors<Runtime>>::insert(
@@ -1857,30 +1862,35 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
         let wrong_outcome_0 = OutcomeReport::Scalar(69u128);
         let wrong_outcome_1 = OutcomeReport::Scalar(56u128);
 
+        let alice_slashable = MinJurorStake::get();
+        let bob_slashable = 2 * MinJurorStake::get();
+        let charlie_slashable = 3 * MinJurorStake::get();
+        let dave_slashable = 4 * MinJurorStake::get();
+
         let draws: crate::SelectedDrawsOf<Runtime> = vec![
             Draw {
                 juror: ALICE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
-                slashable: MinJurorStake::get(),
+                slashable: alice_slashable,
             },
             Draw {
                 juror: BOB,
                 weight: 1,
                 vote: Vote::Revealed { commitment, outcome: wrong_outcome_0, salt },
-                slashable: 2 * MinJurorStake::get(),
+                slashable: bob_slashable,
             },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
-                slashable: 3 * MinJurorStake::get(),
+                slashable: charlie_slashable,
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, outcome: wrong_outcome_1, salt },
-                slashable: 4 * MinJurorStake::get(),
+                slashable: dave_slashable,
             },
         ]
         .try_into()
@@ -1912,14 +1922,19 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
         let bob_slashed = last_draws[BOB as usize].slashable;
         let dave_slashed = last_draws[DAVE as usize].slashable;
         let slashed = bob_slashed + dave_slashed + tardy_or_denounced_value;
+
+        let winners_risked_amount = charlie_slashable + alice_slashable;
+
+        let alice_share = Perquintill::from_rational(alice_slashable, winners_risked_amount);
         let free_alice_after = Balances::free_balance(ALICE);
-        assert_eq!(free_alice_after, free_alice_before + slashed / 2);
+        assert_eq!(free_alice_after, free_alice_before + alice_share * slashed);
 
         let free_bob_after = Balances::free_balance(BOB);
         assert_eq!(free_bob_after, free_bob_before - bob_slashed);
 
+        let charlie_share = Perquintill::from_rational(charlie_slashable, winners_risked_amount);
         let free_charlie_after = Balances::free_balance(CHARLIE);
-        assert_eq!(free_charlie_after, free_charlie_before + slashed / 2);
+        assert_eq!(free_charlie_after, free_charlie_before + charlie_share * slashed);
 
         let free_dave_after = Balances::free_balance(DAVE);
         assert_eq!(free_dave_after, free_dave_before - dave_slashed);

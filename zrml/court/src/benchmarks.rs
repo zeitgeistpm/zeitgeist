@@ -167,7 +167,10 @@ where
         );
         let draw =
             Draw { juror, vote: Vote::Drawn, weight: 1u32, slashable: T::MinJurorStake::get() };
-        draws.try_push(draw).unwrap();
+        let index = draws
+            .binary_search_by_key(&draw.juror, |draw| draw.juror.clone())
+            .unwrap_or_else(|j| j);
+        draws.try_insert(index, draw).unwrap();
     }
     <SelectedDraws<T>>::insert(market_id, draws);
     Ok(())
@@ -240,12 +243,15 @@ benchmarks! {
 
         let mut draws = <SelectedDraws<T>>::get(market_id);
         let draws_len = draws.len();
-        draws[draws_len.saturating_sub(1usize)] = Draw {
+        draws.remove(0);
+        let draw = Draw {
             juror: caller.clone(),
             vote: Vote::Drawn,
             weight: 1u32,
-            slashable: <BalanceOf<T>>::zero()
+            slashable: <BalanceOf<T>>::zero(),
         };
+        let index = draws.binary_search_by_key(&caller, |draw| draw.juror.clone()).unwrap_or_else(|j| j);
+        draws.try_insert(index, draw).unwrap();
         <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
@@ -281,13 +287,16 @@ benchmarks! {
         let commitment = T::Hashing::hash_of(&(denounced_juror.clone(), outcome.clone(), salt));
 
         let mut draws = <SelectedDraws<T>>::get(market_id);
+        draws.remove(0);
         let draws_len = draws.len();
-        draws[draws_len.saturating_sub(1usize)] = Draw {
+        let index = draws.binary_search_by_key(&denounced_juror, |draw| draw.juror.clone()).unwrap_or_else(|j| j);
+        let draw = Draw {
             juror: denounced_juror,
             vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
         };
+        draws.try_insert(index, draw).unwrap();
         <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
@@ -319,12 +328,14 @@ benchmarks! {
 
         let mut draws = <SelectedDraws<T>>::get(market_id);
         let draws_len = draws.len();
-        draws[draws_len.saturating_sub(1usize)] = Draw {
+        draws.remove(0);
+        let index = draws.binary_search_by_key(&caller, |draw| draw.juror.clone()).unwrap_or_else(|j| j);
+        draws.try_insert(index, Draw {
             juror: caller.clone(),
             vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
-        };
+        }).unwrap();
         <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(vote_end + 1u64.saturated_into::<T::BlockNumber>());

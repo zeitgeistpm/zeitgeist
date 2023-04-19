@@ -1425,16 +1425,21 @@ mod pallet {
             ensure!(jurors_len >= necessary_jurors_weight, Error::<T>::NotEnoughJurors);
 
             let random_jurors = Self::choose_multiple_weighted(necessary_jurors_weight)?;
-            debug_assert!(
-                random_jurors.windows(2).all(|window| window[0].juror <= window[1].juror),
-                "The vector is not sorted by the juror field"
-            );
 
             debug_assert!(
                 random_jurors.len() <= T::MaxSelectedDraws::get() as usize,
                 "The number of randomly selected jurors should be less than or equal to \
                  `MaxSelectedDraws`."
             );
+
+            debug_assert!({
+                // proove that random jurors is sorted by juror account id
+                // this is helpful to use binary search later on
+                let prev = random_jurors.clone();
+                let mut sorted = random_jurors.clone();
+                sorted.sort_by_key(|draw| draw.juror.clone());
+                prev.len() == sorted.len() && prev.iter().zip(sorted.iter()).all(|(a, b)| a == b)
+            });
 
             // TODO what is the maximum number of draws with delegations? It is using necessary_jurors_weight (the number of atoms / draw weight) for the last round
             // new appeal round should have a fresh set of draws
