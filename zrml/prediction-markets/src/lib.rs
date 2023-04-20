@@ -66,7 +66,8 @@ mod pallet {
         types::{
             Asset, Bond, Deadlines, MDMWeight, Market, MarketBonds, MarketCreation,
             MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
+            ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -2555,13 +2556,14 @@ mod pallet {
         fn resolve_disputed_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) -> Result<(OutcomeReport, Weight), DispatchError> {
+        ) -> Result<ResultWithWeightInfo<OutcomeReport>, DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             let mut weight = Weight::zero();
 
-            let (resolved_outcome, w): (OutcomeReport, Weight) =
+            let res: ResultWithWeightInfo<OutcomeReport> =
                 Self::get_resolved_outcome(market_id, market, &report.outcome)?;
-            weight = weight.saturating_add(w);
+            let resolved_outcome = res.result;
+            weight = weight.saturating_add(res.weight);
 
             let imbalance_left = Self::settle_bonds(market_id, market, &resolved_outcome, report)?;
 
@@ -2599,7 +2601,9 @@ mod pallet {
 
             T::Slash::on_unbalanced(remainder);
 
-            Ok((resolved_outcome, weight))
+            let res = ResultWithWeightInfo { result: resolved_outcome, weight };
+
+            Ok(res)
         }
 
         /// Get the outcome the market should resolve to.
@@ -2607,7 +2611,7 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             reported_outcome: &OutcomeReport,
-        ) -> Result<(OutcomeReport, Weight), DispatchError> {
+        ) -> Result<ResultWithWeightInfo<OutcomeReport>, DispatchError> {
             let mut resolved_outcome_option = None;
             let mut weight = Weight::zero();
 
@@ -2646,7 +2650,9 @@ mod pallet {
             let resolved_outcome =
                 resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone());
 
-            Ok((resolved_outcome, weight))
+            let res = ResultWithWeightInfo { result: resolved_outcome, weight };
+
+            Ok(res)
         }
 
         /// Manage the outstanding bonds (oracle, outsider, dispute) of the market.
@@ -2727,10 +2733,9 @@ mod pallet {
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
                 MarketStatus::Disputed => {
-                    let (resolved_outcome, weight) =
-                        Self::resolve_disputed_market(market_id, market)?;
-                    total_weight = total_weight.saturating_add(weight);
-                    resolved_outcome
+                    let res = Self::resolve_disputed_market(market_id, market)?;
+                    total_weight = total_weight.saturating_add(res.weight);
+                    res.result
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
