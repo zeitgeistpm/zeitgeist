@@ -110,12 +110,7 @@ benchmarks! {
         let market = market_mock::<T>();
         T::MarketCommons::push_market(market.clone()).unwrap();
 
-        frame_system::Pallet::<T>::set_block_number(42u32.into());
-
-        let now = frame_system::Pallet::<T>::block_number();
-        let resolve_at = now.saturating_add(T::CorrectionPeriod::get());
-
-        let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(0) };
+        let report = AuthorityReport { resolve_at: 0u32.into(), outcome: OutcomeReport::Scalar(0) };
         AuthorizedOutcomeReports::<T>::insert(market_id, report);
     }: {
         Authorized::<T>::on_resolution(&market_id, &market).unwrap();
