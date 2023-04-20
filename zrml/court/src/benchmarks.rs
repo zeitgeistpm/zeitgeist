@@ -212,8 +212,9 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), new_stake)
 
     delegate {
-        // start with higher value to allow delegations on existing jurors
-        let j in 10..(T::MaxJurors::get() - 1);
+        // jurors greater or equal to MaxDelegations, 
+        // because we can not delegate to a non-existent juror
+        let j in T::MaxDelegations::get()..(T::MaxJurors::get() - 1);
         let d in 1..T::MaxDelegations::get();
 
         fill_pool::<T>(j)?;
@@ -463,8 +464,8 @@ benchmarks! {
     }
 
     reassign_juror_stakes {
-        // start with 5 jurors to fill the max number of delegations
-        let d in 5..T::MaxSelectedDraws::get();
+        let d in T::MaxDelegations::get()..T::MaxSelectedDraws::get();
+        debug_assert!(T::MaxDelegations::get() < T::MaxSelectedDraws::get());
 
         // just to initialize the court
         let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
@@ -493,7 +494,7 @@ benchmarks! {
                 prepare_exit_at: None,
                 delegations: Default::default(),
             });
-            let draw = if i < 5 {
+            let draw = if i < T::MaxDelegations::get() {
                 delegated_stakes.try_push((juror.clone(), T::MinJurorStake::get())).unwrap();
 
                 let outcome = if i % 2 == 0 {

@@ -241,6 +241,9 @@ mod pallet {
     #[pallet::storage]
     pub type JurorsSelectionNonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
+    // TODO make everything independent from the concept of market ids. 
+    // TODO so that the integration of this pallet elsewhere is easier
+
     /// The randomly selected jurors with their vote.
     #[pallet::storage]
     pub type SelectedDraws<T: Config> =
@@ -406,11 +409,17 @@ mod pallet {
         WaitFullInflationPeriod,
         /// The `prepare_exit_at` field is not present.
         PrepareExitAtNotPresent,
+        /// The maximum number of delegations is reached for this account.
         MaxDelegationsReached,
+        /// The juror decided to be a delegator.
         JurorDelegated,
+        /// A delegation to the own account is not possible.
         SelfDelegationNotAllowed,
+        /// The set of delegations has to be distinct.
         IdenticalDelegationsNotAllowed,
+        /// The call to `delegate` is not valid if no delegations are provided.
         NoDelegations,
+        /// The set of delegations should contain only valid and active juror accounts.
         DelegatedToInvalidJuror,
     }
 
@@ -463,6 +472,20 @@ mod pallet {
             Ok(Some(T::WeightInfo::join_court(jurors_len)).into())
         }
 
+        /// Join the court to become a delegator.
+        /// The `amount` of this call represents the total stake of the delegator.
+        /// If the one of the delegated jurors is selected for a court case,
+        /// the caller delegates the vote power to the drawn delegated juror.
+        /// The delegator gets slashed or rewarded according to the delegated jurors decisions.
+        /// 
+        /// # Arguments
+        /// 
+        /// - `amount`: The total stake associated with the joining delegator.
+        /// - `delegations`: The list of jurors to delegate the vote power to.
+        /// 
+        /// # Weight
+        /// 
+        /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
         #[pallet::weight(T::WeightInfo::delegate(T::MaxJurors::get(), delegations.len() as u32))]
         #[transactional]
         pub fn delegate(
@@ -1451,6 +1474,7 @@ mod pallet {
             // It is using necessary_jurors_weight (the number of atoms / draw weight)
             // for the last round times two because each delegator
             // could potentially add one juror account to the selections
+            
             // new appeal round should have a fresh set of draws
             Ok(<SelectedDrawsOf<T>>::truncate_from(random_jurors))
         }
