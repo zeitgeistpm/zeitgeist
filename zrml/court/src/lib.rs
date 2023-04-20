@@ -684,6 +684,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             juror: AccountIdLookupOf<T>,
+            // TODO: use generic item for votes => court should be a decentralized decision machine
             outcome: OutcomeReport,
             salt: T::Hash,
         ) -> DispatchResultWithPostInfo {
@@ -756,6 +757,7 @@ mod pallet {
         pub fn reveal_vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            // TODO: use generic item for votes => court should be a decentralized decision machine
             outcome: OutcomeReport,
             salt: T::Hash,
         ) -> DispatchResultWithPostInfo {
@@ -1425,6 +1427,11 @@ mod pallet {
 
             let random_jurors = Self::choose_multiple_weighted(necessary_jurors_weight)?;
 
+            // keep in mind that the number of draws is at maximum necessary_jurors_weight * 2
+            // because with delegations each juror draw weight
+            // could delegate an additional juror in addition to the delegator itself
+            debug_assert!(random_jurors.len() <= 2 * necessary_jurors_weight as usize);
+            // ensure that we don't truncate some of the selections
             debug_assert!(
                 random_jurors.len() <= T::MaxSelectedDraws::get() as usize,
                 "The number of randomly selected jurors should be less than or equal to \
@@ -1440,7 +1447,10 @@ mod pallet {
                 prev.len() == sorted.len() && prev.iter().zip(sorted.iter()).all(|(a, b)| a == b)
             });
 
-            // TODO what is the maximum number of draws with delegations? It is using necessary_jurors_weight (the number of atoms / draw weight) for the last round
+            // what is the maximum number of draws with delegations?
+            // It is using necessary_jurors_weight (the number of atoms / draw weight)
+            // for the last round times two because each delegator
+            // could potentially add one juror account to the selections
             // new appeal round should have a fresh set of draws
             Ok(<SelectedDrawsOf<T>>::truncate_from(random_jurors))
         }

@@ -25,8 +25,8 @@
 extern crate alloc;
 use crate::{
     types::{CourtStatus, Draw, JurorInfo, JurorPoolItem, Vote},
-    AppealInfo, BalanceOf, Call, Config, Courts, JurorPool, Jurors, MarketOf, Pallet as Court,
-    Pallet, RequestBlock, SelectedDraws,
+    AppealInfo, BalanceOf, Call, Config, Courts, DelegatedStakesOf, JurorPool, Jurors, MarketOf,
+    Pallet as Court, Pallet, RequestBlock, SelectedDraws,
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
@@ -119,6 +119,28 @@ where
     }
     <JurorPool<T>>::put(jurors);
     Ok(())
+}
+
+// assume always worst case for delegations (MaxDelegations),
+// because delegations are individual to each juror
+fn fill_delegations<T>()
+where
+    T: Config,
+{
+    let jurors = <JurorPool<T>>::get();
+    debug_assert!(jurors.len() >= T::MaxDelegations::get() as usize);
+    let mut jurors_iter = jurors.iter();
+    let mut delegated_jurors = vec![];
+    for _ in 0..T::MaxDelegations::get() {
+        let delegated_juror = jurors_iter.next().unwrap().juror.clone();
+        delegated_jurors.push(delegated_juror);
+    }
+    for pool_item in jurors_iter {
+        let juror = &pool_item.juror;
+        let mut j = <Jurors<T>>::get(juror).unwrap();
+        j.delegations = Some(delegated_jurors.clone().try_into().unwrap());
+        <Jurors<T>>::insert(juror, j);
+    }
 }
 
 fn join_with_min_stake<T>(caller: &T::AccountId) -> Result<(), &'static str>
@@ -371,6 +393,7 @@ benchmarks! {
         let necessary_jurors_weight = Court::<T>::necessary_jurors_weight((T::MaxAppeals::get() - 1) as usize);
         debug_assert!(necessary_jurors_weight == 47usize);
         fill_pool::<T>(j)?;
+        fill_delegations::<T>();
 
         let caller: T::AccountId = whitelisted_caller();
         deposit::<T>(&caller);
@@ -440,8 +463,10 @@ benchmarks! {
     }
 
     reassign_juror_stakes {
-        let d in 1..T::MaxSelectedDraws::get();
+        // start with 5 jurors to fill the max number of delegations
+        let d in 5..T::MaxSelectedDraws::get();
 
+        // just to initialize the court
         let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
         fill_pool::<T>(necessary_jurors_weight as u32)?;
 
@@ -450,6 +475,7 @@ benchmarks! {
 
         let mut court = <Courts<T>>::get(market_id).unwrap();
         let winner_outcome = OutcomeReport::Scalar(0u128);
+        let wrong_outcome = OutcomeReport::Scalar(1u128);
         court.status = CourtStatus::Closed { winner: winner_outcome.clone() };
         <Courts<T>>::insert(market_id, court);
 
@@ -457,23 +483,39 @@ benchmarks! {
         // remove last random selections of on_dispute
         <SelectedDraws<T>>::remove(market_id);
         let mut draws = <SelectedDraws<T>>::get(market_id);
+        let mut delegated_stakes: DelegatedStakesOf<T> = Default::default();
         for i in 0..d {
             let juror: T::AccountId = account("juror", i, 0);
+            deposit::<T>(&juror);
             <Jurors<T>>::insert(&juror, JurorInfo {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
                 delegations: Default::default(),
             });
-            let outcome = winner_outcome.clone();
-            let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
-            let draw =
+            let draw = if i < 5 {
+                delegated_stakes.try_push((juror.clone(), T::MinJurorStake::get())).unwrap();
+
+                let outcome = if i % 2 == 0 {
+                    wrong_outcome.clone()
+                } else {
+                    winner_outcome.clone()
+                };
+                let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
                 Draw {
                     juror,
                     vote: Vote::Revealed { commitment, outcome, salt },
                     weight: 1u32,
                     slashable: T::MinJurorStake::get(),
-                };
+                }
+            } else {
+                Draw {
+                    juror,
+                    vote: Vote::Delegated { delegated_stakes: delegated_stakes.clone() },
+                    weight: 1u32,
+                    slashable: T::MinJurorStake::get(),
+                }
+            };
             draws.try_push(draw).unwrap();
         }
         <SelectedDraws<T>>::insert(market_id, draws);
@@ -494,8 +536,10 @@ benchmarks! {
     }
 
     select_jurors {
-        let a in 0..T::MaxAppeals::get();
+        let a in 0..(T::MaxAppeals::get() - 1);
         fill_pool::<T>(T::MaxJurors::get())?;
+
+        fill_delegations::<T>();
     }: {
         let _ = Court::<T>::select_jurors(a as usize).unwrap();
     }

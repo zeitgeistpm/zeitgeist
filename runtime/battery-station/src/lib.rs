@@ -104,17 +104,33 @@ pub struct IsCallable;
 // Currently disables Rikiddo.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
-        use zeitgeist_primitives::types::ScoringRule::RikiddoSigmoidFeeMarketEma;
-        use zrml_prediction_markets::Call::{create_market, edit_market};
+        use zeitgeist_primitives::types::{
+            MarketDisputeMechanism::SimpleDisputes, ScoringRule::RikiddoSigmoidFeeMarketEma,
+        };
+        use zrml_prediction_markets::Call::{
+            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+        };
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
             Call::LiquidityMining(_) => false,
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
-                    // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    // Disable Rikiddo and SimpleDisputes markets
+                    create_market {
+                        scoring_rule: RikiddoSigmoidFeeMarketEma,
+                        dispute_mechanism: SimpleDisputes,
+                        ..
+                    } => false,
+                    edit_market {
+                        scoring_rule: RikiddoSigmoidFeeMarketEma,
+                        dispute_mechanism: SimpleDisputes,
+                        ..
+                    } => false,
+                    create_cpmm_market_and_deploy_assets {
+                        dispute_mechanism: SimpleDisputes,
+                        ..
+                    } => false,
                     _ => true,
                 }
             }
