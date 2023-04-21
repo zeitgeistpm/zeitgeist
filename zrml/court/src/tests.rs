@@ -1944,6 +1944,149 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
 }
 
 #[test]
+fn reassign_juror_stakes_works_for_delegations() {
+    ExtBuilder::default().build().execute_with(|| {
+        fill_juror_pool();
+        let market_id = initialize_court();
+
+        let amount = MinJurorStake::get() * 100;
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(Origin::signed(EVE), amount));
+
+        let outcome = OutcomeReport::Scalar(42u128);
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+        let commitment = BlakeTwo256::hash_of(&(ALICE, outcome.clone(), salt));
+
+        let wrong_outcome = OutcomeReport::Scalar(69u128);
+
+        let alice_slashable = MinJurorStake::get();
+        let bob_slashable = 2 * MinJurorStake::get();
+        let charlie_slashable = 3 * MinJurorStake::get();
+        let dave_slashable = 3 * MinJurorStake::get();
+        let eve_slashable = 5 * MinJurorStake::get();
+
+        let delegated_stakes_charlie: crate::DelegatedStakesOf<Runtime> =
+            vec![(ALICE, 2 * MinJurorStake::get()), (BOB, MinJurorStake::get())]
+                .try_into()
+                .unwrap();
+
+        let delegated_stakes_dave: crate::DelegatedStakesOf<Runtime> =
+            vec![(ALICE, 2 * MinJurorStake::get()), (BOB, MinJurorStake::get())]
+                .try_into()
+                .unwrap();
+
+        let draws: crate::SelectedDrawsOf<Runtime> = vec![
+            Draw {
+                juror: ALICE,
+                weight: 1,
+                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                slashable: alice_slashable,
+            },
+            Draw {
+                juror: EVE,
+                weight: 1,
+                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                slashable: eve_slashable,
+            },
+            Draw {
+                juror: BOB,
+                weight: 1,
+                vote: Vote::Revealed { commitment, outcome: wrong_outcome, salt },
+                slashable: bob_slashable,
+            },
+            Draw {
+                juror: CHARLIE,
+                weight: 1,
+                vote: Vote::Delegated { delegated_stakes: delegated_stakes_charlie.clone() },
+                slashable: charlie_slashable,
+            },
+            Draw {
+                juror: DAVE,
+                weight: 1,
+                vote: Vote::Delegated { delegated_stakes: delegated_stakes_dave.clone() },
+                slashable: dave_slashable,
+            },
+        ]
+        .try_into()
+        .unwrap();
+        let last_draws = draws.clone();
+        <SelectedDraws<Runtime>>::insert(market_id, draws);
+
+        run_to_block(<RequestBlock<Runtime>>::get() + 1);
+
+        run_blocks(
+            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
+        );
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        assert_eq!(resolution_outcome, outcome);
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+        let free_dave_before = Balances::free_balance(DAVE);
+        let free_eve_before = Balances::free_balance(EVE);
+
+        let reward_pot = Court::reward_pot(&market_id);
+        let tardy_or_denounced_value = 5 * MinJurorStake::get();
+        let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
+
+        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
+
+        let bob_slashed = last_draws.iter().find(|draw| draw.juror == BOB).unwrap().slashable;
+        let charlie_delegated_bob_slashed =
+            delegated_stakes_charlie.iter().find(|(acc, _)| *acc == BOB).unwrap().1;
+        let dave_delegated_bob_slashed =
+            delegated_stakes_dave.iter().find(|(acc, _)| *acc == BOB).unwrap().1;
+        let slashed = bob_slashed
+            + charlie_delegated_bob_slashed
+            + dave_delegated_bob_slashed
+            + tardy_or_denounced_value;
+
+        let charlie_delegated_alice_slashable =
+            delegated_stakes_charlie.iter().find(|(acc, _)| *acc == ALICE).unwrap().1;
+        let dave_delegated_alice_slashable =
+            delegated_stakes_dave.iter().find(|(acc, _)| *acc == ALICE).unwrap().1;
+        let winners_risked_amount = charlie_delegated_alice_slashable
+            + dave_delegated_alice_slashable
+            + alice_slashable
+            + eve_slashable;
+
+        let alice_share = Perquintill::from_rational(alice_slashable, winners_risked_amount);
+        let free_alice_after = Balances::free_balance(ALICE);
+        assert_eq!(free_alice_after, free_alice_before + alice_share * slashed);
+
+        let eve_share = Perquintill::from_rational(eve_slashable, winners_risked_amount);
+        let free_eve_after = Balances::free_balance(EVE);
+        assert_eq!(free_eve_after, free_eve_before + eve_share * slashed);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        assert_eq!(free_bob_after, free_bob_before - bob_slashed);
+
+        let charlie_share =
+            Perquintill::from_rational(charlie_delegated_alice_slashable, winners_risked_amount);
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        let charlie_rewarded = charlie_share * slashed;
+        assert_eq!(
+            free_charlie_after,
+            free_charlie_before + charlie_rewarded - charlie_delegated_bob_slashed
+        );
+
+        let dave_share =
+            Perquintill::from_rational(dave_delegated_alice_slashable, winners_risked_amount);
+        let free_dave_after = Balances::free_balance(DAVE);
+        let dave_rewarded = dave_share * slashed;
+        assert_eq!(free_dave_after, free_dave_before + dave_rewarded - dave_delegated_bob_slashed);
+
+        assert!(Balances::free_balance(&reward_pot).is_zero());
+    });
+}
+
+#[test]
 fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
     ExtBuilder::default().build().execute_with(|| {
         fill_juror_pool();

@@ -241,7 +241,7 @@ mod pallet {
     #[pallet::storage]
     pub type JurorsSelectionNonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 
-    // TODO make everything independent from the concept of market ids. 
+    // TODO make everything independent from the concept of market ids.
     // TODO so that the integration of this pallet elsewhere is easier
 
     /// The randomly selected jurors with their vote.
@@ -477,14 +477,14 @@ mod pallet {
         /// If the one of the delegated jurors is selected for a court case,
         /// the caller delegates the vote power to the drawn delegated juror.
         /// The delegator gets slashed or rewarded according to the delegated jurors decisions.
-        /// 
+        ///
         /// # Arguments
-        /// 
+        ///
         /// - `amount`: The total stake associated with the joining delegator.
         /// - `delegations`: The list of jurors to delegate the vote power to.
-        /// 
+        ///
         /// # Weight
-        /// 
+        ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
         #[pallet::weight(T::WeightInfo::delegate(T::MaxJurors::get(), delegations.len() as u32))]
         #[transactional]
@@ -971,27 +971,32 @@ mod pallet {
                             Some(SelfInfo { slashable: draw.slashable, outcome });
                     }
                     Vote::Delegated { delegated_stakes } => {
+                        // TODO: test delegate and rewarding
                         let delegator = draw.juror;
                         for (j, delegated_stake) in delegated_stakes {
                             // fill the delegations for each juror
                             // [(juror_0, [(delegator_0, delegator_stake_0), ...]),
                             // (juror_1, [(delegator_42, delegator_stake_42), ...]), ...]
-                            let delegations =
-                                &mut jurors_to_stakes.entry(j).or_default().delegations;
+                            let jurors_to_stakes_entry = jurors_to_stakes.entry(j);
+                            let juror_vote_with_stakes = jurors_to_stakes_entry.or_default();
+
                             // future-proof binary search by key
                             // because many delegators can back one juror
                             // we might want to fastly find elements later on
-                            match delegations.binary_search_by_key(&delegator, |(d, _)| d.clone()) {
+                            match juror_vote_with_stakes
+                                .delegations
+                                .binary_search_by_key(&delegator, |(d, _)| d.clone())
+                            {
                                 Ok(i) => {
-                                    debug_assert!(
-                                        false,
-                                        "Delegator {:?} already in delegations.",
-                                        delegator
-                                    );
-                                    delegations[i].1.saturating_add(delegated_stake);
+                                    juror_vote_with_stakes.delegations[i].1 =
+                                        juror_vote_with_stakes.delegations[i]
+                                            .1
+                                            .saturating_add(delegated_stake);
                                 }
                                 Err(i) => {
-                                    delegations.insert(i, (delegator.clone(), delegated_stake));
+                                    juror_vote_with_stakes
+                                        .delegations
+                                        .insert(i, (delegator.clone(), delegated_stake));
                                 }
                             }
                         }
@@ -1389,6 +1394,14 @@ mod pallet {
                             weight.is_zero(),
                             "Jurors who delegated shouldn't have voting weight."
                         );
+                        debug_assert!(
+                            delegated_stakes
+                                .clone()
+                                .into_iter()
+                                .fold(Zero::zero(), |acc: BalanceOf<T>, (_, stake)| acc
+                                    .saturating_add(stake))
+                                == slashable
+                        );
                         Vote::Delegated { delegated_stakes }
                     } else {
                         Vote::Drawn
@@ -1474,7 +1487,7 @@ mod pallet {
             // It is using necessary_jurors_weight (the number of atoms / draw weight)
             // for the last round times two because each delegator
             // could potentially add one juror account to the selections
-            
+
             // new appeal round should have a fresh set of draws
             Ok(<SelectedDrawsOf<T>>::truncate_from(random_jurors))
         }

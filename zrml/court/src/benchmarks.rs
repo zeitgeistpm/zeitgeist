@@ -212,7 +212,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), new_stake)
 
     delegate {
-        // jurors greater or equal to MaxDelegations, 
+        // jurors greater or equal to MaxDelegations,
         // because we can not delegate to a non-existent juror
         let j in T::MaxDelegations::get()..(T::MaxJurors::get() - 1);
         let d in 1..T::MaxDelegations::get();
