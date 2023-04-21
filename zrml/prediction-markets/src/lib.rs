@@ -64,10 +64,9 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Bond, Deadlines, MDMWeight, Market, MarketBonds, MarketCreation,
-            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, MultiHash, OldMarketDispute, OutcomeReport,
+            Report, ResultWithWeightInfo, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     #[cfg(feature = "with-global-disputes")]
@@ -76,6 +75,7 @@ mod pallet {
         zrml_global_disputes::GlobalDisputesPalletApi,
     };
 
+    use zeitgeist_primitives::traits::DisputeMaxWeightApi;
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -619,8 +619,8 @@ mod pallet {
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
         #[pallet::weight(
             T::WeightInfo::dispute_authorized().saturating_add(
-                T::Court::on_dispute_weight(MDMWeight::Default).saturating_add(
-                    T::SimpleDisputes::on_dispute_weight(MDMWeight::Default)
+                T::Court::on_dispute_max_weight().saturating_add(
+                    T::SimpleDisputes::on_dispute_max_weight()
                 )
             )
         )]
@@ -637,26 +637,18 @@ mod pallet {
             let overweight = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&market_id, &market)?;
-                    T::Court::on_dispute_weight(MDMWeight::Court).saturating_add(
-                        T::SimpleDisputes::on_dispute_weight(MDMWeight::SimpleDisputes {
-                            market_id,
-                            market: market.clone(),
-                        }),
-                    )
+                    T::Court::on_dispute_max_weight()
+                        .saturating_add(T::SimpleDisputes::on_dispute_max_weight())
                 }
                 MarketDisputeMechanism::Court => {
                     T::Court::on_dispute(&market_id, &market)?;
-                    T::Authorized::on_dispute_weight(MDMWeight::Authorized).saturating_add(
-                        T::SimpleDisputes::on_dispute_weight(MDMWeight::SimpleDisputes {
-                            market_id,
-                            market: market.clone(),
-                        }),
-                    )
+                    T::Authorized::on_dispute_max_weight()
+                        .saturating_add(T::SimpleDisputes::on_dispute_max_weight())
                 }
                 MarketDisputeMechanism::SimpleDisputes => {
                     T::SimpleDisputes::on_dispute(&market_id, &market)?;
-                    T::Court::on_dispute_weight(MDMWeight::Court)
-                        .saturating_add(T::Authorized::on_dispute_weight(MDMWeight::Authorized))
+                    T::Court::on_dispute_max_weight()
+                        .saturating_add(T::Authorized::on_dispute_max_weight())
                 }
             };
 
@@ -673,12 +665,8 @@ mod pallet {
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
 
             let full_weight = T::WeightInfo::dispute_authorized().saturating_add(
-                T::Court::on_dispute_weight(MDMWeight::Court).saturating_add(
-                    T::SimpleDisputes::on_dispute_weight(MDMWeight::SimpleDisputes {
-                        market_id,
-                        market,
-                    }),
-                ),
+                T::Court::on_dispute_max_weight()
+                    .saturating_add(T::SimpleDisputes::on_dispute_max_weight()),
             );
 
             Ok((Some(full_weight.saturating_sub(overweight))).into())
@@ -1473,7 +1461,7 @@ mod pallet {
 
                 // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
 
-                let has_failed = match market.dispute_mechanism {
+                let res_0 = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
                         T::Authorized::has_failed(&market_id, &market)?
                     }
@@ -1482,9 +1470,10 @@ mod pallet {
                         T::SimpleDisputes::has_failed(&market_id, &market)?
                     }
                 };
+                let has_failed = res_0.result;
                 ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-                let gd_items = match market.dispute_mechanism {
+                let res_1 = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
                         T::Authorized::on_global_dispute(&market_id, &market)?
                     }
@@ -1495,6 +1484,8 @@ mod pallet {
                         T::SimpleDisputes::on_global_dispute(&market_id, &market)?
                     }
                 };
+
+                let gd_items = res_1.result;
 
                 T::GlobalDisputes::push_voting_outcome(
                     &market_id,
@@ -1701,7 +1692,7 @@ mod pallet {
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
 
         /// See [`DisputeApi`].
-        type SimpleDisputes: DisputeApi<
+        type SimpleDisputes: zrml_simple_disputes::SimpleDisputesPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
             NegativeImbalance = NegativeImbalanceOf<Self>,
@@ -2238,17 +2229,18 @@ mod pallet {
                 }
                 MarketStatus::Disputed => {
                     // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-                    let auto_resolve_block_opt = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized => {
-                            T::Authorized::get_auto_resolve(market_id, &market)?
-                        }
-                        MarketDisputeMechanism::Court => {
-                            T::Court::get_auto_resolve(market_id, &market)?
-                        }
-                        MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::get_auto_resolve(market_id, &market)?
-                        }
-                    };
+                    let ResultWithWeightInfo { result: auto_resolve_block_opt, weight: _ } =
+                        match market.dispute_mechanism {
+                            MarketDisputeMechanism::Authorized => {
+                                T::Authorized::get_auto_resolve(market_id, &market)?
+                            }
+                            MarketDisputeMechanism::Court => {
+                                T::Court::get_auto_resolve(market_id, &market)?
+                            }
+                            MarketDisputeMechanism::SimpleDisputes => {
+                                T::SimpleDisputes::get_auto_resolve(market_id, &market)?
+                            }
+                        };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
                         let ids_len = remove_auto_resolve::<T>(market_id, auto_resolve_block);
                         (ids_len, 0u32)
@@ -2569,32 +2561,32 @@ mod pallet {
 
             let remainder = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    let remainder = T::Authorized::exchange(
+                    let res = T::Authorized::exchange(
                         market_id,
                         market,
                         &resolved_outcome,
                         imbalance_left,
                     )?;
-                    weight = weight
-                        .saturating_add(T::Authorized::exchange_weight(MDMWeight::Authorized));
+                    let remainder = res.result;
+                    weight = weight.saturating_add(res.weight);
                     remainder
                 }
                 MarketDisputeMechanism::Court => {
-                    let remainder =
+                    let res =
                         T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?;
-                    weight = weight.saturating_add(T::Court::exchange_weight(MDMWeight::Court));
+                    let remainder = res.result;
+                    weight = weight.saturating_add(res.weight);
                     remainder
                 }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    let remainder = T::SimpleDisputes::exchange(
+                    let res = T::SimpleDisputes::exchange(
                         market_id,
                         market,
                         &resolved_outcome,
                         imbalance_left,
                     )?;
-                    weight = weight.saturating_add(T::SimpleDisputes::exchange_weight(
-                        MDMWeight::SimpleDisputes { market_id: *market_id, market: market.clone() },
-                    ));
+                    let remainder = res.result;
+                    weight = weight.saturating_add(res.weight);
                     remainder
                 }
             };
@@ -2625,24 +2617,19 @@ mod pallet {
             if resolved_outcome_option.is_none() {
                 resolved_outcome_option = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        weight = weight.saturating_add(T::Authorized::on_resolution_weight(
-                            MDMWeight::Authorized,
-                        ));
-                        T::Authorized::on_resolution(market_id, market)?
+                        let res = T::Authorized::on_resolution(market_id, market)?;
+                        weight = weight.saturating_add(res.weight);
+                        res.result
                     }
                     MarketDisputeMechanism::Court => {
-                        weight =
-                            weight.saturating_add(T::Court::on_resolution_weight(MDMWeight::Court));
-                        T::Court::on_resolution(market_id, market)?
+                        let res = T::Court::on_resolution(market_id, market)?;
+                        weight = weight.saturating_add(res.weight);
+                        res.result
                     }
                     MarketDisputeMechanism::SimpleDisputes => {
-                        weight = weight.saturating_add(T::SimpleDisputes::on_resolution_weight(
-                            MDMWeight::SimpleDisputes {
-                                market_id: *market_id,
-                                market: market.clone(),
-                            },
-                        ));
-                        T::SimpleDisputes::on_resolution(market_id, market)?
+                        let res = T::SimpleDisputes::on_resolution(market_id, market)?;
+                        weight = weight.saturating_add(res.weight);
+                        res.result
                     }
                 };
             }

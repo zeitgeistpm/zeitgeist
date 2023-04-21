@@ -66,10 +66,10 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        traits::{DisputeApi, DisputeResolutionApi},
+        traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
         types::{
-            Asset, GlobalDisputeItem, MDMWeight, Market, MarketDispute, MarketDisputeMechanism,
-            MarketStatus, OutcomeReport,
+            Asset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
+            OutcomeReport, ResultWithWeightInfo,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -96,14 +96,6 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        Asset<MarketIdOf<T>>,
-    >;
-    pub(crate) type MDMWeightOf<T> = MDMWeight<
-        MarketIdOf<T>,
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
@@ -548,6 +540,39 @@ mod pallet {
         }
     }
 
+    impl<T> DisputeMaxWeightApi for Pallet<T>
+    where
+        T: Config,
+    {
+        fn on_dispute_max_weight() -> Weight {
+            T::WeightInfo::on_dispute_weight()
+        }
+
+        fn on_resolution_max_weight() -> Weight {
+            T::WeightInfo::on_resolution_weight()
+        }
+
+        fn exchange_max_weight() -> Weight {
+            T::WeightInfo::exchange_weight()
+        }
+
+        fn get_auto_resolve_max_weight() -> Weight {
+            T::WeightInfo::get_auto_resolve_weight()
+        }
+
+        fn has_failed_max_weight() -> Weight {
+            T::WeightInfo::has_failed_weight()
+        }
+
+        fn on_global_dispute_max_weight() -> Weight {
+            T::WeightInfo::on_global_dispute_weight()
+        }
+
+        fn clear_max_weight() -> Weight {
+            T::WeightInfo::clear_weight()
+        }
+    }
+
     impl<T> DisputeApi for Pallet<T>
     where
         T: Config,
@@ -560,17 +585,19 @@ mod pallet {
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
-        fn on_dispute(_: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn on_dispute(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            Ok(())
-        }
+            let res =
+                ResultWithWeightInfo { result: (), weight: T::WeightInfo::on_dispute_weight() };
 
-        fn on_dispute_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::on_dispute_weight()
+            Ok(res)
         }
 
         // Set jurors that sided on the second most voted outcome as tardy. Jurors are only
@@ -580,7 +607,7 @@ mod pallet {
         fn on_resolution(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Option<OutcomeReport>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
@@ -602,11 +629,13 @@ mod pallet {
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
             let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
             let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
-            Ok(Some(first))
-        }
 
-        fn on_resolution_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::on_resolution_weight()
+            let res = ResultWithWeightInfo {
+                result: Some(first),
+                weight: T::WeightInfo::on_resolution_weight(),
+            };
+
+            Ok(res)
         }
 
         fn exchange(
@@ -614,73 +643,86 @@ mod pallet {
             market: &MarketOf<T>,
             _: &OutcomeReport,
             overall_imbalance: NegativeImbalanceOf<T>,
-        ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<NegativeImbalanceOf<T>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
             // TODO all funds to treasury?
-            Ok(overall_imbalance)
-        }
 
-        fn exchange_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::exchange_weight()
+            let res = ResultWithWeightInfo {
+                result: overall_imbalance,
+                weight: T::WeightInfo::exchange_weight(),
+            };
+            Ok(res)
         }
 
         fn get_auto_resolve(
             _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            Ok(None)
+
+            let res = ResultWithWeightInfo {
+                result: None,
+                weight: T::WeightInfo::get_auto_resolve_weight(),
+            };
+
+            Ok(res)
         }
 
-        fn get_auto_resolve_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::get_auto_resolve_weight()
-        }
-
-        fn has_failed(_: &Self::MarketId, market: &MarketOf<T>) -> Result<bool, DispatchError> {
+        fn has_failed(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            Ok(false)
-        }
 
-        fn has_failed_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::has_failed_weight()
+            let res =
+                ResultWithWeightInfo { result: false, weight: T::WeightInfo::has_failed_weight() };
+
+            Ok(res)
         }
 
         fn on_global_dispute(
             _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>, DispatchError> {
+        ) -> Result<
+            ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
+            DispatchError,
+        > {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            Ok(Vec::new())
+
+            let res = ResultWithWeightInfo {
+                result: Vec::new(),
+                weight: T::WeightInfo::on_global_dispute_weight(),
+            };
+
+            Ok(res)
         }
 
-        fn on_global_dispute_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::on_global_dispute_weight()
-        }
-
-        fn clear(market_id: &Self::MarketId, market: &MarketOf<T>) -> DispatchResult {
+        fn clear(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
             let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
             let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
-            Ok(())
-        }
 
-        fn clear_weight(_mdm_info: MDMWeightOf<T>) -> Weight {
-            T::WeightInfo::clear_weight()
+            let res = ResultWithWeightInfo { result: (), weight: T::WeightInfo::clear_weight() };
+
+            Ok(res)
         }
     }
 

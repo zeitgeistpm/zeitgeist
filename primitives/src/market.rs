@@ -204,18 +204,6 @@ pub struct MarketDispute<AccountId, BlockNumber, Balance> {
     pub bond: Balance,
 }
 
-#[derive(Default)]
-pub enum MDMWeight<MarketId, AccountId, Balance, BlockNumber, Moment, Asset> {
-    Authorized,
-    Court,
-    SimpleDisputes {
-        market_id: MarketId,
-        market: Market<AccountId, Balance, BlockNumber, Moment, Asset>,
-    },
-    #[default]
-    Default,
-}
-
 /// How a market should resolve disputes
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketDisputeMechanism {
