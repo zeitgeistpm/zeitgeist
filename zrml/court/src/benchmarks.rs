@@ -214,7 +214,7 @@ benchmarks! {
     delegate {
         // jurors greater or equal to MaxDelegations,
         // because we can not delegate to a non-existent juror
-        let j in T::MaxDelegations::get()..(T::MaxJurors::get() - 1);
+        let j in 5..(T::MaxJurors::get() - 1);
         let d in 1..T::MaxDelegations::get();
 
         fill_pool::<T>(j)?;
@@ -464,7 +464,7 @@ benchmarks! {
     }
 
     reassign_juror_stakes {
-        let d in T::MaxDelegations::get()..T::MaxSelectedDraws::get();
+        let d in 5..T::MaxSelectedDraws::get();
         debug_assert!(T::MaxDelegations::get() < T::MaxSelectedDraws::get());
 
         // just to initialize the court

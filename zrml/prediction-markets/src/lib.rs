@@ -1423,7 +1423,10 @@ mod pallet {
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             ensure!(
-                matches!(market.dispute_mechanism, MarketDisputeMechanism::Court),
+                matches!(
+                    market.dispute_mechanism,
+                    MarketDisputeMechanism::Court | MarketDisputeMechanism::SimpleDisputes
+                ),
                 Error::<T>::InvalidDisputeMechanism
             );
 
