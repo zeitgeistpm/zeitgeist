@@ -971,7 +971,6 @@ mod pallet {
                             Some(SelfInfo { slashable: draw.slashable, outcome });
                     }
                     Vote::Delegated { delegated_stakes } => {
-                        // TODO: test delegate and rewarding
                         let delegator = draw.juror;
                         for (j, delegated_stake) in delegated_stakes {
                             // fill the delegations for each juror
