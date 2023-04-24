@@ -24,14 +24,13 @@
 
 extern crate alloc;
 use crate::{
-    market_mock,
     types::{CourtStatus, Draw, JurorInfo, JurorPoolItem, Vote},
     AppealInfo, BalanceOf, Call, Config, Courts, DelegatedStakesOf, JurorPool, Jurors, MarketOf,
     Pallet as Court, Pallet, RequestBlock, SelectedDraws,
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::traits::{Currency, Get};
+use frame_support::traits::{Currency, Get, NamedReservableCurrency};
 use frame_system::RawOrigin;
 use sp_arithmetic::Perbill;
 use sp_runtime::{
@@ -197,6 +196,21 @@ where
     }
     <SelectedDraws<T>>::insert(market_id, draws);
     Ok(())
+}
+
+fn apply_revealed_draws<T>(market_id: crate::MarketIdOf<T>)
+where
+    T: Config,
+{
+    let winner_outcome = OutcomeReport::Scalar(0u128);
+    let mut draws = <SelectedDraws<T>>::get(market_id);
+    // change draws to have revealed votes
+    for draw in draws.iter_mut() {
+        let salt = Default::default();
+        let commitment = T::Hashing::hash_of(&(draw.juror.clone(), winner_outcome.clone(), salt));
+        draw.vote = Vote::Revealed { commitment, outcome: winner_outcome.clone(), salt };
+    }
+    <SelectedDraws<T>>::insert(market_id, draws);
 }
 
 benchmarks! {
@@ -546,12 +560,147 @@ benchmarks! {
         let _ = Court::<T>::select_jurors(a as usize).unwrap();
     }
 
-    on_dispute_weight {
+    on_dispute {
+        let j in 5..T::MaxJurors::get();
+        let r in 0..62;
+
+        let now = <frame_system::Pallet<T>>::block_number();
+        let pre_vote_end = now + 1u64.saturated_into::<T::BlockNumber>();
+        <RequestBlock<T>>::put(pre_vote_end);
+
+        let appeal_end = pre_vote_end
+            + T::CourtVotePeriod::get()
+            + T::CourtAggregationPeriod::get()
+            + T::CourtAppealPeriod::get();
+
+        for i in 0..r {
+            let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
+            T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
+        }
+
+        fill_pool::<T>(j)?;
+
         let market_id = 0u32.into();
-        let market = market_mock::<T>();
+        let market = get_market::<T>();
         T::MarketCommons::push_market(market.clone()).unwrap();
     }: {
         Court::<T>::on_dispute(&market_id, &market).unwrap();
+    }
+
+    on_resolution {
+        let j in 5..T::MaxJurors::get();
+        let d in 1..T::MaxSelectedDraws::get();
+
+        fill_pool::<T>(j)?;
+
+        let market_id = setup_court::<T>()?;
+        let market = get_market::<T>();
+
+        fill_draws::<T>(market_id, d)?;
+
+        let winner_outcome = OutcomeReport::Scalar(0u128);
+        let mut draws = <SelectedDraws<T>>::get(market_id);
+        // change draws to have revealed votes
+        for draw in draws.iter_mut() {
+            let salt = Default::default();
+            let commitment = T::Hashing::hash_of(&(draw.juror.clone(), winner_outcome.clone(), salt));
+            draw.vote = Vote::Revealed {
+                commitment,
+                outcome: winner_outcome.clone(),
+                salt,
+            };
+        }
+        <SelectedDraws<T>>::insert(market_id, draws);
+    }: {
+        Court::<T>::on_resolution(&market_id, &market).unwrap();
+    }
+
+    exchange {
+        let a in 0..T::MaxAppeals::get();
+
+        fill_pool::<T>(5)?;
+        let market_id = setup_court::<T>()?;
+        let market = get_market::<T>();
+
+        let mut court = <Courts<T>>::get(market_id).unwrap();
+
+        let resolved_outcome = OutcomeReport::Scalar(0u128);
+        for i in 0..a {
+            let backer = account("backer", i, 0);
+            let bond = T::MinJurorStake::get();
+            let _ = T::Currency::deposit_creating(&backer, bond);
+            T::Currency::reserve_named(&Court::<T>::reserve_id(), &backer, bond).unwrap();
+            let appeal_info = AppealInfo {
+                backer,
+                bond,
+                appealed_outcome: resolved_outcome.clone(),
+            };
+            court.appeals.try_push(appeal_info).unwrap();
+        }
+        <Courts<T>>::insert(market_id, court);
+    }: {
+        Court::<T>::exchange(&market_id, &market, &resolved_outcome, Default::default()).unwrap();
+    }
+
+    get_auto_resolve {
+        fill_pool::<T>(5)?;
+        let market_id = setup_court::<T>()?;
+        let market = get_market::<T>();
+    }: {
+        Court::<T>::get_auto_resolve(&market_id, &market).unwrap();
+    }
+
+    has_failed {
+        fill_pool::<T>(5)?;
+        let market_id = setup_court::<T>()?;
+        let market = get_market::<T>();
+    }: {
+        Court::<T>::has_failed(&market_id, &market).unwrap();
+    }
+
+    on_global_dispute {
+        let a in 0..T::MaxAppeals::get();
+        let d in 1..T::MaxSelectedDraws::get();
+
+        fill_pool::<T>(5)?;
+        let market_id = setup_court::<T>()?;
+        let market = get_market::<T>();
+
+        fill_draws::<T>(market_id, d)?;
+        apply_revealed_draws::<T>(market_id);
+
+        let resolved_outcome = OutcomeReport::Scalar(0u128);
+
+        let mut court = <Courts<T>>::get(market_id).unwrap();
+        for i in 0..a {
+            let backer = account("backer", i, 0);
+            let bond = T::MinJurorStake::get();
+            let _ = T::Currency::deposit_creating(&backer, bond);
+            T::Currency::reserve_named(&Court::<T>::reserve_id(), &backer, bond).unwrap();
+            let appeal_info = AppealInfo {
+                backer,
+                bond,
+                appealed_outcome: resolved_outcome.clone(),
+            };
+            court.appeals.try_push(appeal_info).unwrap();
+        }
+        <Courts<T>>::insert(market_id, court);
+    }: {
+        Court::<T>::on_global_dispute(&market_id, &market).unwrap();
+    }
+
+    clear {
+        let d in 1..T::MaxSelectedDraws::get();
+
+        fill_pool::<T>(5)?;
+
+        let market_id = setup_court::<T>()?;
+        let market = get_market::<T>();
+
+        fill_draws::<T>(market_id, d)?;
+        apply_revealed_draws::<T>(market_id);
+    }: {
+        Court::<T>::clear(&market_id, &market).unwrap();
     }
 
     impl_benchmark_test_suite!(

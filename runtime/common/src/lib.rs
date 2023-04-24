@@ -954,6 +954,7 @@ macro_rules! impl_config_traits {
             type RequestInterval = RequestInterval;
             type Slash = Treasury;
             type TreasuryPalletId = TreasuryPalletId;
+            type VoteItem = zeitgeist_primitives::types::VoteItem;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }
 
