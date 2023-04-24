@@ -88,7 +88,6 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.17", default-features = false, optional = true }
 
 # XCM
-kusama-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 orml-asset-registry = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-unknown-tokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-xcm-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
@@ -96,6 +95,7 @@ orml-xtokens = { branch = "moonbeam-polkadot-v0.9.29", default-features = false,
 pallet-xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 polkadot-runtime-parachains = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+rococo-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 xcm = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 xcm-builder = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 xcm-executor = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
@@ -148,14 +148,14 @@ parachain = [
 
     # XCM
 
-    "kusama-runtime",
-    "polkadot-primitives",
-    "polkadot-runtime-parachains",
     "orml-asset-registry",
     "orml-unknown-tokens",
     "orml-xcm-support",
     "orml-xtokens",
     "pallet-xcm",
+    "polkadot-primitives",
+    "polkadot-runtime-parachains",
+    "rococo-runtime",
     "xcm-builder",
     "xcm-executor",
     "xcm",
@@ -173,7 +173,6 @@ runtime-benchmarks = [
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
     "hex-literal",
-    "kusama-runtime?/runtime-benchmarks",
     "orml-asset-registry?/runtime-benchmarks",
     "orml-tokens/runtime-benchmarks",
     "orml-benchmarking",
@@ -198,6 +197,7 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm?/runtime-benchmarks",
     "pallet-parachain-staking?/runtime-benchmarks",
+    "rococo-runtime?/runtime-benchmarks",
     "nimbus-primitives?/runtime-benchmarks",
     "session-keys-primitives?/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
@@ -295,14 +295,14 @@ std = [
 
     # XCM
 
-    "kusama-runtime?/std",
-    "polkadot-primitives?/std",
-    "polkadot-runtime-parachains?/std",
     "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
     "orml-xtokens?/std",
     "pallet-xcm?/std",
+    "polkadot-primitives?/std",
+    "polkadot-runtime-parachains?/std",
+    "rococo-runtime?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",

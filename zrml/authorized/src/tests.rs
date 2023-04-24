@@ -160,7 +160,7 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
 #[test]
 fn on_resolution_fails_if_no_report_was_submitted() {
     ExtBuilder::default().build().execute_with(|| {
-        let report = Authorized::on_resolution(&0, &market_mock::<Runtime>()).unwrap();
+        let report = Authorized::on_resolution(&0, &market_mock::<Runtime>()).unwrap().result;
         assert!(report.is_none());
     });
 }
@@ -196,7 +196,10 @@ fn on_resolution_returns_the_reported_outcome() {
             0,
             OutcomeReport::Scalar(2)
         ));
-        assert_eq!(Authorized::on_resolution(&0, &market).unwrap(), Some(OutcomeReport::Scalar(2)));
+        assert_eq!(
+            Authorized::on_resolution(&0, &market).unwrap().result,
+            Some(OutcomeReport::Scalar(2))
+        );
     });
 }
 
@@ -241,7 +244,7 @@ fn get_auto_resolve_works() {
         ));
         let now = frame_system::Pallet::<Runtime>::block_number();
         let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
-        assert_eq!(Authorized::get_auto_resolve(&0, &market).unwrap(), Some(resolve_at),);
+        assert_eq!(Authorized::get_auto_resolve(&0, &market).unwrap().result, Some(resolve_at),);
     });
 }
 
@@ -249,6 +252,6 @@ fn get_auto_resolve_works() {
 fn get_auto_resolve_returns_none_without_market_storage() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>();
-        assert_eq!(Authorized::get_auto_resolve(&0, &market).unwrap(), None,);
+        assert_eq!(Authorized::get_auto_resolve(&0, &market).unwrap().result, None,);
     });
 }

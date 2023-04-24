@@ -58,6 +58,13 @@ pub trait WeightInfoZeitgeist {
     fn set_inflation() -> Weight;
     fn handle_inflation(j: u32) -> Weight;
     fn select_jurors(a: u32) -> Weight;
+    fn on_dispute_weight() -> Weight;
+    fn on_resolution_weight() -> Weight;
+    fn exchange_weight() -> Weight;
+    fn get_auto_resolve_weight() -> Weight;
+    fn has_failed_weight() -> Weight;
+    fn on_global_dispute_weight() -> Weight;
+    fn clear_weight() -> Weight;
 }
 
 /// Weight functions for zrml_court (automatically generated)
@@ -203,5 +210,26 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((12_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(4))
             .saturating_add(T::DbWeight::get().writes((12_u64).saturating_mul(a.into())))
+    }
+    fn on_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn on_resolution_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn exchange_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn get_auto_resolve_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn has_failed_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn on_global_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    fn clear_weight() -> Weight {
+        Weight::from_ref_time(0)
     }
 }

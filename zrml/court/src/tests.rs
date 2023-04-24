@@ -1680,7 +1680,7 @@ fn reassign_juror_stakes_emits_event() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
         assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
         System::assert_last_event(Event::JurorStakesReassigned { market_id }.into());
@@ -1696,7 +1696,7 @@ fn reassign_juror_stakes_fails_if_juror_stakes_already_reassigned() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
         assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), market_id));
 
@@ -1716,7 +1716,7 @@ fn reassign_juror_stakes_updates_court_status() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         assert_eq!(court.status, CourtStatus::Closed { winner: resolution_outcome });
@@ -1737,7 +1737,7 @@ fn reassign_juror_stakes_removes_draws() {
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let _ = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
         let draws = <SelectedDraws<Runtime>>::get(market_id);
         assert!(!draws.is_empty());
@@ -1905,7 +1905,7 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
         );
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
         assert_eq!(resolution_outcome, outcome);
 
         let free_alice_before = Balances::free_balance(ALICE);
@@ -2022,7 +2022,7 @@ fn reassign_juror_stakes_works_for_delegations() {
         );
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().unwrap();
+        let resolution_outcome = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
         assert_eq!(resolution_outcome, outcome);
 
         let free_alice_before = Balances::free_balance(ALICE);
@@ -2198,7 +2198,7 @@ fn on_resolution_sets_court_status() {
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.report.as_ref().unwrap().outcome, ORACLE_REPORT);
 
-        assert_eq!(Court::on_resolution(&market_id, &market), Ok(Some(ORACLE_REPORT)));
+        assert_eq!(Court::on_resolution(&market_id, &market).unwrap().result, Some(ORACLE_REPORT));
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         assert_eq!(court.status, CourtStatus::Closed { winner: ORACLE_REPORT });
     });
@@ -2280,7 +2280,7 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
         let prev_balance = imbalance.peek();
         let imb_remainder =
             Court::exchange(&market_id, &market, &resolved_outcome, imbalance).unwrap();
-        assert_eq!(imb_remainder.peek(), prev_balance + slashed_bonds);
+        assert_eq!(imb_remainder.result.peek(), prev_balance + slashed_bonds);
 
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         let appeals = court.appeals;
@@ -2305,7 +2305,7 @@ fn get_auto_resolve_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         let appeal_end = court.cycle_ends.appeal;
-        assert_eq!(Court::get_auto_resolve(&market_id, &market).unwrap(), Some(appeal_end));
+        assert_eq!(Court::get_auto_resolve(&market_id, &market).unwrap().result, Some(appeal_end));
     });
 }
 
@@ -2402,7 +2402,7 @@ fn on_global_dispute_returns_appealed_outcomes() {
             court.appeals.try_push(AppealInfo { backer, bond, appealed_outcome }).unwrap();
         }
         Courts::<Runtime>::insert(market_id, court);
-        assert_eq!(Court::on_global_dispute(&market_id, &market).unwrap(), gd_outcomes);
+        assert_eq!(Court::on_global_dispute(&market_id, &market).unwrap().result, gd_outcomes);
     });
 }
 
@@ -2566,7 +2566,7 @@ fn has_failed_returns_true_for_appealable_court_too_few_jurors() {
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         let aggregation = court.cycle_ends.aggregation;
         run_to_block(aggregation + 1);
-        assert!(Court::has_failed(&market_id, &market).unwrap());
+        assert!(Court::has_failed(&market_id, &market).unwrap().result);
     });
 }
 
@@ -2578,7 +2578,7 @@ fn has_failed_returns_true_for_appealable_court_appeals_full() {
 
         fill_appeals(&market_id, MaxAppeals::get() as usize);
 
-        assert!(Court::has_failed(&market_id, &market).unwrap());
+        assert!(Court::has_failed(&market_id, &market).unwrap().result);
     });
 }
 
@@ -2597,7 +2597,7 @@ fn has_failed_returns_true_for_uninitialized_court() {
         let market = MarketCommons::market(&market_id).unwrap();
         let block_after_dispute_duration = report_block + market.deadlines.dispute_duration;
         run_to_block(block_after_dispute_duration - 1);
-        assert!(Court::has_failed(&market_id, &market).unwrap());
+        assert!(Court::has_failed(&market_id, &market).unwrap().result);
     });
 }
 

@@ -46,6 +46,13 @@ use frame_support::{traits::Get, weights::Weight};
 /// zrml_simple_disputes (automatically generated)
 pub trait WeightInfoZeitgeist {
     fn suggest_outcome(d: u32, r: u32, e: u32) -> Weight;
+    fn on_dispute_weight() -> Weight;
+    fn on_resolution_weight(d: u32) -> Weight;
+    fn exchange_weight(d: u32) -> Weight;
+    fn get_auto_resolve_weight(d: u32) -> Weight;
+    fn has_failed_weight(d: u32) -> Weight;
+    fn on_global_dispute_weight(d: u32) -> Weight;
+    fn clear_weight(d: u32) -> Weight;
 }
 
 /// Weight functions for zrml_simple_disputes (automatically generated)
@@ -65,5 +72,61 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(Weight::from_ref_time(311_000).saturating_mul(e.into()))
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(4))
+    }
+
+    fn on_dispute_weight() -> Weight {
+        Weight::from_ref_time(0)
+    }
+    // Storage: SimpleDisputes Disputes (r:1 w:0)
+    fn on_resolution_weight(d: u32) -> Weight {
+        Weight::from_ref_time(5_464_000)
+            // Standard Error: 3_000
+            .saturating_add(Weight::from_ref_time(210_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+    }
+    // Storage: SimpleDisputes Disputes (r:1 w:1)
+    // Storage: Balances Reserves (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    fn exchange_weight(d: u32) -> Weight {
+        Weight::from_ref_time(18_573_000)
+            // Standard Error: 14_000
+            .saturating_add(Weight::from_ref_time(19_710_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(d.into())))
+            .saturating_add(T::DbWeight::get().writes(1))
+            .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(d.into())))
+    }
+    // Storage: SimpleDisputes Disputes (r:1 w:0)
+    fn get_auto_resolve_weight(d: u32) -> Weight {
+        Weight::from_ref_time(5_535_000)
+            // Standard Error: 3_000
+            .saturating_add(Weight::from_ref_time(145_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+    }
+    // Storage: SimpleDisputes Disputes (r:1 w:0)
+    fn has_failed_weight(d: u32) -> Weight {
+        Weight::from_ref_time(5_685_000)
+            // Standard Error: 2_000
+            .saturating_add(Weight::from_ref_time(117_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+    }
+    // Storage: SimpleDisputes Disputes (r:1 w:0)
+    fn on_global_dispute_weight(d: u32) -> Weight {
+        Weight::from_ref_time(5_815_000)
+            // Standard Error: 2_000
+            .saturating_add(Weight::from_ref_time(66_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+    }
+    // Storage: SimpleDisputes Disputes (r:1 w:1)
+    // Storage: Balances Reserves (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    fn clear_weight(d: u32) -> Weight {
+        Weight::from_ref_time(15_958_000)
+            // Standard Error: 17_000
+            .saturating_add(Weight::from_ref_time(13_085_000).saturating_mul(d.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(d.into())))
+            .saturating_add(T::DbWeight::get().writes(1))
+            .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(d.into())))
     }
 }

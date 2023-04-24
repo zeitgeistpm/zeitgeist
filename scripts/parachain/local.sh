@@ -7,7 +7,7 @@
 set -euxo pipefail
 
 PARACHAIN_CHAIN=dev
-PARACHAIN_ID=2050
+PARACHAIN_ID=2101
 POLKADOT_BRANCH=release-v0.9.11
 POLKADOT_DIR="target/polkadot"
 RELAYCHAIN_CHAIN=rococo-local

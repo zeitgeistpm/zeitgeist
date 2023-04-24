@@ -62,15 +62,17 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
-        traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
+        traits::{
+            DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
+        },
         types::{
             Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
             MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil,
+            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
+            ScoringRule, SubsidyUntil,
         },
     };
     use zrml_global_disputes::GlobalDisputesPalletApi;
-
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -612,7 +614,13 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized())]
+        #[pallet::weight(
+            T::WeightInfo::dispute_authorized().saturating_add(
+                T::Court::on_dispute_max_weight().saturating_add(
+                    T::SimpleDisputes::on_dispute_max_weight()
+                )
+            )
+        )]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -623,16 +631,23 @@ mod pallet {
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
 
-            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-            match market.dispute_mechanism {
+            let overweight = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::on_dispute(&market_id, &market)?
+                    T::Authorized::on_dispute(&market_id, &market)?;
+                    T::Court::on_dispute_max_weight()
+                        .saturating_add(T::SimpleDisputes::on_dispute_max_weight())
                 }
-                MarketDisputeMechanism::Court => T::Court::on_dispute(&market_id, &market)?,
+                MarketDisputeMechanism::Court => {
+                    T::Court::on_dispute(&market_id, &market)?;
+                    T::Authorized::on_dispute_max_weight()
+                        .saturating_add(T::SimpleDisputes::on_dispute_max_weight())
+                }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_dispute(&market_id, &market)?
+                    T::SimpleDisputes::on_dispute(&market_id, &market)?;
+                    T::Court::on_dispute_max_weight()
+                        .saturating_add(T::Authorized::on_dispute_max_weight())
                 }
-            }
+            };
 
             let dispute_bond = T::DisputeBond::get();
 
@@ -646,7 +661,12 @@ mod pallet {
 
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
 
-            Ok((Some(T::WeightInfo::dispute_authorized())).into())
+            let full_weight = T::WeightInfo::dispute_authorized().saturating_add(
+                T::Court::on_dispute_max_weight()
+                    .saturating_add(T::SimpleDisputes::on_dispute_max_weight()),
+            );
+
+            Ok((Some(full_weight.saturating_sub(overweight))).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -1437,7 +1457,7 @@ mod pallet {
 
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
-            let has_failed = match market.dispute_mechanism {
+            let res_0 = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::has_failed(&market_id, &market)?
                 }
@@ -1446,9 +1466,10 @@ mod pallet {
                     T::SimpleDisputes::has_failed(&market_id, &market)?
                 }
             };
+            let has_failed = res_0.result;
             ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-            let gd_items = match market.dispute_mechanism {
+            let res_1 = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_global_dispute(&market_id, &market)?
                 }
@@ -1465,6 +1486,8 @@ mod pallet {
                 <BalanceOf<T>>::zero(),
             )?;
 
+            let gd_items = res_1.result;
+
             // push vote outcomes other than the report outcome
             for GlobalDisputeItem { outcome, owner, initial_vote_amount } in gd_items {
                 T::GlobalDisputes::push_voting_outcome(
@@ -1475,10 +1498,8 @@ mod pallet {
                 )?;
             }
 
-            // TODO(#372): Allow court with global disputes.
             // ensure, that global disputes controls the resolution now
             // it does not end after the dispute period now, but after the global dispute end
-
             // ignore first of tuple because we always have max disputes
             let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
 
@@ -1657,7 +1678,7 @@ mod pallet {
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
 
         /// See [`DisputeApi`].
-        type SimpleDisputes: DisputeApi<
+        type SimpleDisputes: zrml_simple_disputes::SimpleDisputesPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
             NegativeImbalance = NegativeImbalanceOf<Self>,
@@ -2192,17 +2213,18 @@ mod pallet {
                 }
                 MarketStatus::Disputed => {
                     // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-                    let auto_resolve_block_opt = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized => {
-                            T::Authorized::get_auto_resolve(market_id, &market)?
-                        }
-                        MarketDisputeMechanism::Court => {
-                            T::Court::get_auto_resolve(market_id, &market)?
-                        }
-                        MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::get_auto_resolve(market_id, &market)?
-                        }
-                    };
+                    let ResultWithWeightInfo { result: auto_resolve_block_opt, weight: _ } =
+                        match market.dispute_mechanism {
+                            MarketDisputeMechanism::Authorized => {
+                                T::Authorized::get_auto_resolve(market_id, &market)?
+                            }
+                            MarketDisputeMechanism::Court => {
+                                T::Court::get_auto_resolve(market_id, &market)?
+                            }
+                            MarketDisputeMechanism::SimpleDisputes => {
+                                T::SimpleDisputes::get_auto_resolve(market_id, &market)?
+                            }
+                        };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
                         let ids_len = remove_auto_resolve::<T>(market_id, auto_resolve_block);
                         (ids_len, 0u32)
@@ -2219,6 +2241,8 @@ mod pallet {
         /// The dispute mechanism is intended to clear its own storage here.
         fn clear_dispute_mechanism(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+
+            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
             match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => T::Authorized::clear(market_id, &market)?,
                 MarketDisputeMechanism::Court => T::Court::clear(market_id, &market)?,
@@ -2508,63 +2532,97 @@ mod pallet {
         fn resolve_disputed_market(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<OutcomeReport>, DispatchError> {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            let mut weight = Weight::zero();
 
-            let resolved_outcome: OutcomeReport =
+            let res: ResultWithWeightInfo<OutcomeReport> =
                 Self::get_resolved_outcome(market_id, market, &report.outcome)?;
+            let resolved_outcome = res.result;
+            weight = weight.saturating_add(res.weight);
 
             let imbalance_left = Self::settle_bonds(market_id, market, &resolved_outcome, report)?;
 
             let remainder = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
-                    T::Authorized::exchange(market_id, market, &resolved_outcome, imbalance_left)?
+                    let res = T::Authorized::exchange(
+                        market_id,
+                        market,
+                        &resolved_outcome,
+                        imbalance_left,
+                    )?;
+                    let remainder = res.result;
+                    weight = weight.saturating_add(res.weight);
+                    remainder
                 }
                 MarketDisputeMechanism::Court => {
-                    T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?
+                    let res =
+                        T::Court::exchange(market_id, market, &resolved_outcome, imbalance_left)?;
+                    let remainder = res.result;
+                    weight = weight.saturating_add(res.weight);
+                    remainder
                 }
-                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::exchange(
-                    market_id,
-                    market,
-                    &resolved_outcome,
-                    imbalance_left,
-                )?,
+                MarketDisputeMechanism::SimpleDisputes => {
+                    let res = T::SimpleDisputes::exchange(
+                        market_id,
+                        market,
+                        &resolved_outcome,
+                        imbalance_left,
+                    )?;
+                    let remainder = res.result;
+                    weight = weight.saturating_add(res.weight);
+                    remainder
+                }
             };
 
             T::Slash::on_unbalanced(remainder);
 
-            Ok(resolved_outcome)
+            let res = ResultWithWeightInfo { result: resolved_outcome, weight };
+
+            Ok(res)
         }
 
         /// Get the outcome the market should resolve to.
-        fn get_resolved_outcome(
+        pub(crate) fn get_resolved_outcome(
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             reported_outcome: &OutcomeReport,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<OutcomeReport>, DispatchError> {
             let mut resolved_outcome_option = None;
+            let mut weight = Weight::zero();
 
             if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
                 resolved_outcome_option = Some(o);
             }
-
-            // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
 
             // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
             // the oracle's report.
             if resolved_outcome_option.is_none() {
                 resolved_outcome_option = match market.dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
-                        T::Authorized::on_resolution(market_id, market)?
+                        let res = T::Authorized::on_resolution(market_id, market)?;
+                        weight = weight.saturating_add(res.weight);
+                        res.result
                     }
-                    MarketDisputeMechanism::Court => T::Court::on_resolution(market_id, market)?,
+                    MarketDisputeMechanism::Court => {
+                        let res = T::Court::on_resolution(market_id, market)?;
+                        weight = weight.saturating_add(res.weight);
+                        res.result
+                    }
                     MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::on_resolution(market_id, market)?
+                        let res = T::SimpleDisputes::on_resolution(market_id, market)?;
+                        weight = weight.saturating_add(res.weight);
+                        res.result
                     }
                 };
             }
 
-            Ok(resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone()))
+            let resolved_outcome =
+                resolved_outcome_option.unwrap_or_else(|| reported_outcome.clone());
+
+            let res = ResultWithWeightInfo { result: resolved_outcome, weight };
+
+            Ok(res)
         }
 
         /// Manage the outstanding bonds (oracle, outsider, dispute) of the market.
@@ -2644,7 +2702,11 @@ mod pallet {
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => Self::resolve_reported_market(market_id, market)?,
-                MarketStatus::Disputed => Self::resolve_disputed_market(market_id, market)?,
+                MarketStatus::Disputed => {
+                    let res = Self::resolve_disputed_market(market_id, market)?;
+                    total_weight = total_weight.saturating_add(res.weight);
+                    res.result
+                }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;

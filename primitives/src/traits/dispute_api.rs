@@ -20,10 +20,10 @@ extern crate alloc;
 
 use crate::{
     outcome_report::OutcomeReport,
-    types::{Asset, GlobalDisputeItem, Market},
+    types::{Asset, GlobalDisputeItem, Market, ResultWithWeightInfo},
 };
 use alloc::vec::Vec;
-use frame_support::{dispatch::DispatchResult, pallet_prelude::Weight};
+use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::DispatchError;
 
@@ -53,7 +53,10 @@ pub trait DisputeApi {
     ///
     /// Further interaction with the dispute API (if necessary) **should** happen through an
     /// associated pallet. **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
-    fn on_dispute(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
+    fn on_dispute(
+        market_id: &Self::MarketId,
+        market: &MarketOfDisputeApi<Self>,
+    ) -> Result<ResultWithWeightInfo<()>, DispatchError>;
 
     /// Manage market resolution of a disputed market.
     ///
@@ -67,7 +70,7 @@ pub trait DisputeApi {
     fn on_resolution(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
-    ) -> Result<Option<OutcomeReport>, DispatchError>;
+    ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError>;
 
     /// Allow the transfer of funds from the API caller to the API consumer and back.
     /// This can be based on the final resolution outcome of the market.
@@ -86,9 +89,7 @@ pub trait DisputeApi {
         market: &MarketOfDisputeApi<Self>,
         resolved_outcome: &OutcomeReport,
         amount: Self::NegativeImbalance,
-    ) -> Result<Self::NegativeImbalance, DispatchError>;
-
-    /// Query the future resolution block of a disputed market.
+    ) -> Result<ResultWithWeightInfo<Self::NegativeImbalance>, DispatchError>;
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     ///
     /// # Returns
@@ -97,7 +98,7 @@ pub trait DisputeApi {
     fn get_auto_resolve(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
-    ) -> Result<Option<Self::BlockNumber>, DispatchError>;
+    ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError>;
 
     /// Returns `true` if the market dispute mechanism
     /// was unable to come to a conclusion.
@@ -105,7 +106,7 @@ pub trait DisputeApi {
     fn has_failed(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
-    ) -> Result<bool, DispatchError>;
+    ) -> Result<ResultWithWeightInfo<bool>, DispatchError>;
 
     /// Called, when a global dispute is started.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
@@ -115,12 +116,33 @@ pub trait DisputeApi {
     fn on_global_dispute(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
-    ) -> Result<Vec<GlobalDisputeItemOfDisputeApi<Self>>, DispatchError>;
+    ) -> Result<ResultWithWeightInfo<Vec<GlobalDisputeItemOfDisputeApi<Self>>>, DispatchError>;
 
     /// Allow the API consumer to clear storage items of the dispute mechanism.
     /// This may be called, when the dispute mechanism is no longer needed.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
-    fn clear(market_id: &Self::MarketId, market: &MarketOfDisputeApi<Self>) -> DispatchResult;
+    fn clear(
+        market_id: &Self::MarketId,
+        market: &MarketOfDisputeApi<Self>,
+    ) -> Result<ResultWithWeightInfo<()>, DispatchError>;
+}
+
+pub trait DisputeMaxWeightApi {
+    /// Return the max weight of the `on_dispute` function.
+    fn on_dispute_max_weight() -> Weight;
+    /// Return the max weight of the `on_resolution` function.
+    fn on_resolution_max_weight() -> Weight;
+    /// Return the max weight of the `exchange` function.
+    fn exchange_max_weight() -> Weight;
+    /// Query the future resolution block of a disputed market.
+    /// Return the max weight of the `get_auto_resolve` function.
+    fn get_auto_resolve_max_weight() -> Weight;
+    /// Return the max weight of the `has_failed` function.
+    fn has_failed_max_weight() -> Weight;
+    /// Return the max weight of the `on_global_dispute` function.
+    fn on_global_dispute_max_weight() -> Weight;
+    /// Return the max weight of the `clear` function.
+    fn clear_max_weight() -> Weight;
 }
 
 type MarketOfDisputeResolutionApi<T> = Market<

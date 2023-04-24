@@ -24,6 +24,7 @@
 
 extern crate alloc;
 use crate::{
+    market_mock,
     types::{CourtStatus, Draw, JurorInfo, JurorPoolItem, Vote},
     AppealInfo, BalanceOf, Call, Config, Courts, DelegatedStakesOf, JurorPool, Jurors, MarketOf,
     Pallet as Court, Pallet, RequestBlock, SelectedDraws,
@@ -543,6 +544,14 @@ benchmarks! {
         fill_delegations::<T>();
     }: {
         let _ = Court::<T>::select_jurors(a as usize).unwrap();
+    }
+
+    on_dispute_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        Court::<T>::on_dispute(&market_id, &market).unwrap();
     }
 
     impl_benchmark_test_suite!(
