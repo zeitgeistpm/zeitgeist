@@ -112,7 +112,7 @@ mod pallet {
 
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_THRESHOLD: u128 = CENT;
-    const MIN_BALANCE: u128 = CENT;
+    pub(crate) const MIN_BALANCE: u128 = CENT;
     const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
 
     #[pallet::call]
@@ -823,10 +823,6 @@ mod pallet {
         /// The minimum amount of assets in a pool.
         type MinAssets: Get<u16>;
 
-        /// The minimum amount of liqudity required to bootstrap a pool.
-        #[pallet::constant]
-        type MinLiquidity: Get<BalanceOf<Self>>;
-
         /// The minimum amount of subsidy required to state transit a market into active state.
         /// Must be greater than 0, but can be arbitrarily close to 0.
         #[pallet::constant]
@@ -882,7 +878,7 @@ mod pallet {
         BelowMinimumWeight,
         /// Some funds could not be transferred due to a too low balance.
         InsufficientBalance,
-        /// Liquidity provided to new CPMM pool is less than `MinLiquidity`.
+        /// Liquidity provided to new CPMM pool is less than the minimum allowed balance.
         InsufficientLiquidity,
         /// The market was not started since the subsidy goal was not reached.
         InsufficientSubsidy,
@@ -1687,7 +1683,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `who`: The account that is the creator of the pool. Must have enough
-        ///     funds for each of the assets to cover the `MinLiqudity`.
+        ///     funds for each of the assets to cover the `amount`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
         /// * `market_id`: The market id of the market the pool belongs to.
@@ -1729,10 +1725,18 @@ mod pallet {
                 match scoring_rule {
                     ScoringRule::CPMM => {
                         ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
-                        ensure!(
-                            amount_unwrapped >= T::MinLiquidity::get(),
-                            Error::<T>::InsufficientLiquidity
-                        );
+                        // `amount` must be larger than all minimum balances. As we deposit `amount`
+                        // liquidity shares, we must also ensure that `amount` is larger than the
+                        // existential deposit of the liquidity shares.
+                        let min_balance = assets
+                            .iter()
+                            .map(|asset| Self::min_balance(*asset))
+                            .max()
+                            .ok_or(Error::<T>::TooFewAssets)?
+                            .max(T::AssetManager::minimum_balance(Self::pool_shares_id(
+                                next_pool_id,
+                            )));
+                        ensure!(amount_unwrapped >= min_balance, Error::<T>::InsufficientLiquidity);
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                         ensure!(
                             swap_fee_unwrapped <= T::MaxSwapFee::get(),
