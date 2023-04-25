@@ -41,7 +41,7 @@ use zeitgeist_primitives::{
     traits::DisputeResolutionApi,
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
-        Moment, UncheckedExtrinsicTest,
+        Moment, UncheckedExtrinsicTest, VoteItem,
     },
 };
 
@@ -160,6 +160,7 @@ impl crate::Config for Runtime {
     type RequestInterval = RequestInterval;
     type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
+    type VoteItem = VoteItem;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 

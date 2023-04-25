@@ -208,7 +208,7 @@ where
     for draw in draws.iter_mut() {
         let salt = Default::default();
         let commitment = T::Hashing::hash_of(&(draw.juror.clone(), winner_outcome.clone(), salt));
-        draw.vote = Vote::Revealed { commitment, outcome: winner_outcome.clone(), salt };
+        draw.vote = Vote::Revealed { commitment, vote_item: winner_outcome.clone().into(), salt };
     }
     <SelectedDraws<T>>::insert(market_id, draws);
 }
@@ -358,7 +358,7 @@ benchmarks! {
         <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
-    }: _(RawOrigin::Signed(caller), market_id, denounced_juror_unlookup, outcome, salt)
+    }: _(RawOrigin::Signed(caller), market_id, denounced_juror_unlookup, outcome.into(), salt)
 
     reveal_vote {
         let d in 1..T::MaxSelectedDraws::get();
@@ -397,7 +397,7 @@ benchmarks! {
         <SelectedDraws<T>>::insert(market_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(vote_end + 1u64.saturated_into::<T::BlockNumber>());
-    }: _(RawOrigin::Signed(caller), market_id, outcome, salt)
+    }: _(RawOrigin::Signed(caller), market_id, outcome.into(), salt)
 
     appeal {
         // from 47 because in the last appeal round we need at least 47 jurors
@@ -428,7 +428,7 @@ benchmarks! {
             let appeal_info = AppealInfo {
                 backer: account("backer", i, 0),
                 bond: crate::get_appeal_bond::<T>(i as usize),
-                appealed_outcome: OutcomeReport::Scalar(0u128),
+                appealed_vote_item: OutcomeReport::Scalar(0u128).into(),
             };
             court.appeals.try_push(appeal_info).unwrap();
         }
@@ -447,12 +447,12 @@ benchmarks! {
                 prepare_exit_at: None,
                 delegations: Default::default(),
             });
-            let outcome = OutcomeReport::Scalar(i as u128);
-            let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
+            let vote_item: T::VoteItem = OutcomeReport::Scalar(i as u128).into();
+            let commitment = T::Hashing::hash_of(&(juror.clone(), vote_item.clone(), salt));
             let draw =
                 Draw {
                     juror,
-                    vote: Vote::Revealed { commitment, outcome, salt },
+                    vote: Vote::Revealed { commitment, vote_item, salt },
                     weight: 1u32,
                     slashable: <BalanceOf<T>>::zero()
                 };
@@ -492,7 +492,7 @@ benchmarks! {
         let mut court = <Courts<T>>::get(market_id).unwrap();
         let winner_outcome = OutcomeReport::Scalar(0u128);
         let wrong_outcome = OutcomeReport::Scalar(1u128);
-        court.status = CourtStatus::Closed { winner: winner_outcome.clone() };
+        court.status = CourtStatus::Closed { winner: winner_outcome.clone().into() };
         <Courts<T>>::insert(market_id, court);
 
         let salt = Default::default();
@@ -512,15 +512,15 @@ benchmarks! {
             let draw = if i < T::MaxDelegations::get() {
                 delegated_stakes.try_push((juror.clone(), T::MinJurorStake::get())).unwrap();
 
-                let outcome = if i % 2 == 0 {
-                    wrong_outcome.clone()
+                let vote_item: T::VoteItem = if i % 2 == 0 {
+                    wrong_outcome.clone().into()
                 } else {
-                    winner_outcome.clone()
+                    winner_outcome.clone().into()
                 };
-                let commitment = T::Hashing::hash_of(&(juror.clone(), outcome.clone(), salt));
+                let commitment = T::Hashing::hash_of(&(juror.clone(), vote_item.clone(), salt));
                 Draw {
                     juror,
-                    vote: Vote::Revealed { commitment, outcome, salt },
+                    vote: Vote::Revealed { commitment, vote_item, salt },
                     weight: 1u32,
                     slashable: T::MinJurorStake::get(),
                 }
@@ -588,10 +588,9 @@ benchmarks! {
     }
 
     on_resolution {
-        let j in 5..T::MaxJurors::get();
         let d in 1..T::MaxSelectedDraws::get();
 
-        fill_pool::<T>(j)?;
+        fill_pool::<T>(5)?;
 
         let market_id = setup_court::<T>()?;
         let market = get_market::<T>();
@@ -606,7 +605,7 @@ benchmarks! {
             let commitment = T::Hashing::hash_of(&(draw.juror.clone(), winner_outcome.clone(), salt));
             draw.vote = Vote::Revealed {
                 commitment,
-                outcome: winner_outcome.clone(),
+                vote_item: winner_outcome.clone().into(),
                 salt,
             };
         }
@@ -633,7 +632,7 @@ benchmarks! {
             let appeal_info = AppealInfo {
                 backer,
                 bond,
-                appealed_outcome: resolved_outcome.clone(),
+                appealed_vote_item: resolved_outcome.clone().into(),
             };
             court.appeals.try_push(appeal_info).unwrap();
         }
@@ -680,7 +679,7 @@ benchmarks! {
             let appeal_info = AppealInfo {
                 backer,
                 bond,
-                appealed_outcome: resolved_outcome.clone(),
+                appealed_vote_item: resolved_outcome.clone().into(),
             };
             court.appeals.try_push(appeal_info).unwrap();
         }

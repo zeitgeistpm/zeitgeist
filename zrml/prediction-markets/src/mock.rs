@@ -53,6 +53,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        VoteItem,
     },
 };
 
@@ -270,6 +271,7 @@ impl zrml_court::Config for Runtime {
     type RequestInterval = RequestInterval;
     type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
+    type VoteItem = VoteItem;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }
 

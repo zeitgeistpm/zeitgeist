@@ -116,13 +116,14 @@ fn fill_appeals(market_id: &MarketIdOf<Runtime>, appeal_number: usize) {
     let mut court = Courts::<Runtime>::get(market_id).unwrap();
     let mut number = 0u128;
     while (number as usize) < appeal_number {
-        let appealed_outcome = OutcomeReport::Scalar(number);
+        let appealed_vote_item: <Runtime as crate::Config>::VoteItem =
+            OutcomeReport::Scalar(number);
         court
             .appeals
             .try_push(AppealInfo {
                 backer: number,
                 bond: crate::get_appeal_bond::<Runtime>(court.appeals.len()),
-                appealed_outcome,
+                appealed_vote_item,
             })
             .unwrap();
         number += 1;
@@ -742,19 +743,23 @@ fn vote_fails_if_court_not_found() {
 #[test_case(
     Vote::Revealed {
         commitment: <Runtime as frame_system::Config>::Hash::default(),
-        outcome: OutcomeReport::Scalar(1u128),
+        vote_item: OutcomeReport::Scalar(1u128),
         salt: <Runtime as frame_system::Config>::Hash::default(),
     }; "revealed"
 )]
 #[test_case(
     Vote::Denounced {
         commitment: <Runtime as frame_system::Config>::Hash::default(),
-        outcome: OutcomeReport::Scalar(1u128),
+        vote_item: OutcomeReport::Scalar(1u128),
         salt: <Runtime as frame_system::Config>::Hash::default(),
     }; "denounced"
 )]
 fn vote_fails_if_vote_state_incorrect(
-    vote: crate::Vote<<Runtime as frame_system::Config>::Hash, crate::DelegatedStakesOf<Runtime>>,
+    vote: crate::Vote<
+        <Runtime as frame_system::Config>::Hash,
+        crate::DelegatedStakesOf<Runtime>,
+        <Runtime as crate::Config>::VoteItem,
+    >,
 ) {
     ExtBuilder::default().build().execute_with(|| {
         fill_juror_pool();
@@ -865,7 +870,7 @@ fn reveal_vote_works() {
 
         assert_ok!(Court::reveal_vote(Origin::signed(ALICE), market_id, outcome.clone(), salt,));
         System::assert_last_event(
-            Event::JurorRevealedVote { juror: ALICE, market_id, outcome: outcome.clone(), salt }
+            Event::JurorRevealedVote { juror: ALICE, market_id, vote_item: outcome.clone(), salt }
                 .into(),
         );
 
@@ -880,7 +885,10 @@ fn reveal_vote_works() {
         assert_eq!(old_draws[alice_index].weight, new_draws[alice_index].weight);
         assert_eq!(old_draws[alice_index].slashable, new_draws[alice_index].slashable);
         assert_eq!(old_draws[alice_index].vote, Vote::Secret { commitment });
-        assert_eq!(new_draws[alice_index].vote, Vote::Revealed { commitment, outcome, salt });
+        assert_eq!(
+            new_draws[alice_index].vote,
+            Vote::Revealed { commitment, vote_item: outcome, salt }
+        );
     });
 }
 
@@ -1075,7 +1083,7 @@ fn denounce_vote_works() {
                 denouncer: BOB,
                 juror: ALICE,
                 market_id,
-                outcome: outcome.clone(),
+                vote_item: outcome.clone(),
                 salt,
             }
             .into(),
@@ -1088,7 +1096,7 @@ fn denounce_vote_works() {
         assert_eq!(old_draws[0].weight, new_draws[0].weight);
         assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
         assert_eq!(old_draws[0].vote, Vote::Secret { commitment });
-        assert_eq!(new_draws[0].vote, Vote::Denounced { commitment, outcome, salt });
+        assert_eq!(new_draws[0].vote, Vote::Denounced { commitment, vote_item: outcome, salt });
 
         let free_alice_after = Balances::free_balance(ALICE);
         let slash = old_draws[0].slashable;
@@ -1390,12 +1398,12 @@ fn appeal_get_latest_resolved_outcome_changes() {
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
 
-        let last_appealed_outcome = <Courts<Runtime>>::get(market_id)
+        let last_appealed_vote_item = <Courts<Runtime>>::get(market_id)
             .unwrap()
             .appeals
             .last()
             .unwrap()
-            .appealed_outcome
+            .appealed_vote_item
             .clone();
 
         let request_block = <RequestBlock<Runtime>>::get();
@@ -1416,18 +1424,18 @@ fn appeal_get_latest_resolved_outcome_changes() {
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
 
-        let new_appealed_outcome = <Courts<Runtime>>::get(market_id)
+        let new_appealed_vote_item = <Courts<Runtime>>::get(market_id)
             .unwrap()
             .appeals
             .last()
             .unwrap()
-            .appealed_outcome
+            .appealed_vote_item
             .clone();
 
         // if the new appealed outcome were the last appealed outcome,
         // then the wrong appealed outcome was added in `appeal`
-        assert_eq!(new_appealed_outcome, outcome);
-        assert_ne!(last_appealed_outcome, new_appealed_outcome);
+        assert_eq!(new_appealed_vote_item, outcome);
+        assert_ne!(last_appealed_vote_item, new_appealed_vote_item);
     });
 }
 
@@ -1562,7 +1570,7 @@ fn appeal_adds_last_appeal() {
         fill_appeals(&market_id, (MaxAppeals::get() - 1) as usize);
 
         let last_draws = <SelectedDraws<Runtime>>::get(market_id);
-        let appealed_outcome =
+        let appealed_vote_item =
             Court::get_latest_resolved_outcome(&market_id, last_draws.as_slice()).unwrap();
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), market_id));
@@ -1571,7 +1579,7 @@ fn appeal_adds_last_appeal() {
         assert!(court.appeals.is_full());
 
         let last_appeal = court.appeals.last().unwrap();
-        assert_eq!(last_appeal.appealed_outcome, appealed_outcome);
+        assert_eq!(last_appeal.appealed_vote_item, appealed_vote_item);
     });
 }
 
@@ -1603,14 +1611,14 @@ fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: outcome.clone(), salt },
                 slashable: 3 * MinJurorStake::get(),
             },
             Draw { juror: DAVE, weight: 1, vote: Vote::Drawn, slashable: 4 * MinJurorStake::get() },
             Draw {
                 juror: EVE,
                 weight: 1,
-                vote: Vote::Denounced { commitment, outcome, salt },
+                vote: Vote::Denounced { commitment, vote_item: outcome, salt },
                 slashable: 5 * MinJurorStake::get(),
             },
         ]
@@ -1812,13 +1820,13 @@ fn reassign_juror_stakes_decreases_active_lock() {
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: outcome.clone(), salt },
                 slashable: charlie_slashable,
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
-                vote: Vote::Denounced { commitment, outcome, salt },
+                vote: Vote::Denounced { commitment, vote_item: outcome, salt },
                 slashable: dave_slashable,
             },
         ]
@@ -1871,25 +1879,25 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
             Draw {
                 juror: ALICE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: outcome.clone(), salt },
                 slashable: alice_slashable,
             },
             Draw {
                 juror: BOB,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome_0, salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome_0, salt },
                 slashable: bob_slashable,
             },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: outcome.clone(), salt },
                 slashable: charlie_slashable,
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome_1, salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome_1, salt },
                 slashable: dave_slashable,
             },
         ]
@@ -1982,19 +1990,19 @@ fn reassign_juror_stakes_works_for_delegations() {
             Draw {
                 juror: ALICE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: outcome.clone(), salt },
                 slashable: alice_slashable,
             },
             Draw {
                 juror: EVE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: outcome.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: outcome.clone(), salt },
                 slashable: eve_slashable,
             },
             Draw {
                 juror: BOB,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome, salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome, salt },
                 slashable: bob_slashable,
             },
             Draw {
@@ -2109,25 +2117,25 @@ fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
             Draw {
                 juror: ALICE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome_1.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome_1.clone(), salt },
                 slashable: MinJurorStake::get(),
             },
             Draw {
                 juror: BOB,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome_0.clone(), salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome_0.clone(), salt },
                 slashable: 2 * MinJurorStake::get(),
             },
             Draw {
                 juror: CHARLIE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome_0, salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome_0, salt },
                 slashable: 3 * MinJurorStake::get(),
             },
             Draw {
                 juror: DAVE,
                 weight: 1,
-                vote: Vote::Revealed { commitment, outcome: wrong_outcome_1, salt },
+                vote: Vote::Revealed { commitment, vote_item: wrong_outcome_1, salt },
                 slashable: 4 * MinJurorStake::get(),
             },
         ]
@@ -2253,7 +2261,7 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
         let mut slashed_bonds = <BalanceOf<Runtime>>::zero();
         while (number as usize) < MaxAppeals::get() as usize {
             let bond = crate::get_appeal_bond::<Runtime>(court.appeals.len());
-            let appealed_outcome = if number % 2 == 0 {
+            let appealed_vote_item = if number % 2 == 0 {
                 // The appeals are not justified,
                 // because the appealed outcomes are equal to the resolved outcome.
                 // it is punished to appeal the right outcome
@@ -2268,7 +2276,7 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
             assert_ok!(Balances::reserve_named(&Court::reserve_id(), &backer, bond));
             let free_balance = Balances::free_balance(&backer);
             free_balances_before.insert(backer, free_balance);
-            court.appeals.try_push(AppealInfo { backer, bond, appealed_outcome }).unwrap();
+            court.appeals.try_push(AppealInfo { backer, bond, appealed_vote_item }).unwrap();
             number += 1;
         }
         Courts::<Runtime>::insert(market_id, court);
@@ -2284,12 +2292,12 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
 
         let court = <Courts<Runtime>>::get(market_id).unwrap();
         let appeals = court.appeals;
-        for AppealInfo { backer, bond, appealed_outcome } in appeals {
+        for AppealInfo { backer, bond, appealed_vote_item } in appeals {
             assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &backer), 0);
             let free_balance_after = Balances::free_balance(&backer);
             let free_balance_before = free_balances_before.get(&backer).unwrap();
 
-            if appealed_outcome == resolved_outcome {
+            if appealed_vote_item == resolved_outcome {
                 assert_eq!(free_balance_after, *free_balance_before);
             } else {
                 assert_eq!(free_balance_after, *free_balance_before + bond);
@@ -2391,15 +2399,16 @@ fn on_global_dispute_returns_appealed_outcomes() {
         let initial_vote_amount = <BalanceOf<Runtime>>::zero();
         let treasury_account = Court::treasury_account_id();
         for number in 0..MaxAppeals::get() {
-            let appealed_outcome = OutcomeReport::Scalar(number as u128);
+            let appealed_vote_item: <Runtime as crate::Config>::VoteItem =
+                OutcomeReport::Scalar(number as u128);
             let backer = number as u128;
             let bond = crate::get_appeal_bond::<Runtime>(court.appeals.len());
             gd_outcomes.push(GlobalDisputeItem {
-                outcome: appealed_outcome.clone(),
+                outcome: appealed_vote_item.clone(),
                 owner: treasury_account,
                 initial_vote_amount,
             });
-            court.appeals.try_push(AppealInfo { backer, bond, appealed_outcome }).unwrap();
+            court.appeals.try_push(AppealInfo { backer, bond, appealed_vote_item }).unwrap();
         }
         Courts::<Runtime>::insert(market_id, court);
         assert_eq!(Court::on_global_dispute(&market_id, &market).unwrap().result, gd_outcomes);
@@ -2629,13 +2638,13 @@ fn prepare_draws(market_id: &MarketIdOf<Runtime>, outcomes_with_weights: Vec<(u1
         let offset_i = (i + 1000) as u128;
         let juror = offset_i as u128;
         let salt = BlakeTwo256::hash_of(&offset_i);
-        let outcome = OutcomeReport::Scalar(*outcome_index);
-        let commitment = BlakeTwo256::hash_of(&(juror, outcome.clone(), salt));
+        let vote_item: <Runtime as crate::Config>::VoteItem = OutcomeReport::Scalar(*outcome_index);
+        let commitment = BlakeTwo256::hash_of(&(juror, vote_item.clone(), salt));
         draws
             .try_push(Draw {
                 juror,
                 weight: *weight,
-                vote: Vote::Revealed { commitment, outcome, salt },
+                vote: Vote::Revealed { commitment, vote_item, salt },
                 slashable: 0u128,
             })
             .unwrap();
@@ -2681,21 +2690,22 @@ fn get_latest_resolved_outcome_selects_last_appealed_outcome_for_tie() {
         let mut court = <Courts<Runtime>>::get(market_id).unwrap();
         // create a tie of two best outcomes
         let weights = vec![(1000u128, 42), (1001u128, 42)];
-        let appealed_outcome = OutcomeReport::Scalar(weights.len() as u128);
+        let appealed_vote_item: <Runtime as crate::Config>::VoteItem =
+            OutcomeReport::Scalar(weights.len() as u128);
         prepare_draws(&market_id, weights);
         court
             .appeals
             .try_push(AppealInfo {
                 backer: CHARLIE,
                 bond: crate::get_appeal_bond::<Runtime>(1usize),
-                appealed_outcome: appealed_outcome.clone(),
+                appealed_vote_item: appealed_vote_item.clone(),
             })
             .unwrap();
         <Courts<Runtime>>::insert(market_id, court);
 
         let draws = <SelectedDraws<Runtime>>::get(market_id);
         let latest = Court::get_latest_resolved_outcome(&market_id, draws.as_slice()).unwrap();
-        assert_eq!(latest, appealed_outcome);
+        assert_eq!(latest, appealed_vote_item);
         assert!(latest != ORACLE_REPORT);
     });
 }
