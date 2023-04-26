@@ -48,6 +48,8 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
+const LIQUIDITY: u128 = 100 * BASE;
+
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
@@ -85,7 +87,7 @@ fn generate_assets<T: Config>(
     let asset_amount_unwrapped: BalanceOf<T> = {
         match asset_amount {
             Some(ac) => ac,
-            _ => T::MinLiquidity::get(),
+            _ => LIQUIDITY.saturated_into(),
         }
     };
 
@@ -130,7 +132,7 @@ fn initialize_pool<T: Config>(
         market_id,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
-        if scoring_rule == ScoringRule::CPMM { Some(T::MinLiquidity::get()) } else { None },
+        if scoring_rule == ScoringRule::CPMM { Some(LIQUIDITY.saturated_into()) } else { None },
         if scoring_rule == ScoringRule::CPMM { some_weights } else { None },
     )
     .unwrap();
@@ -569,12 +571,12 @@ benchmarks! {
         let (pool_id, ..) = bench_create_pool::<T>(
             caller.clone(),
             Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()),
+            Some((2u128 * LIQUIDITY).saturated_into()),
             ScoringRule::CPMM,
             false,
             None,
         );
-        let pool_amount = T::MinLiquidity::get() / 2u32.into();
+        let pool_amount = (LIQUIDITY / 2u128).saturated_into();
         let min_assets_out = vec![0u32.into(); a as usize];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, min_assets_out)
 
@@ -607,7 +609,7 @@ benchmarks! {
             None,
         );
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
-        let pool_amount = T::MinLiquidity::get();
+        let pool_amount = LIQUIDITY.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, pool_amount)
 
     pool_exit_with_exact_pool_amount {
@@ -631,13 +633,13 @@ benchmarks! {
         let (pool_id, ..) = bench_create_pool::<T>(
             caller.clone(),
             Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()),
+            Some((2u128 * LIQUIDITY).saturated_into()),
             ScoringRule::CPMM,
             false,
             None,
         );
-        let pool_amount = T::MinLiquidity::get();
-        let max_assets_in = vec![T::MinLiquidity::get(); a as usize];
+        let pool_amount = LIQUIDITY.saturated_into();
+        let max_assets_in = vec![LIQUIDITY.saturated_into(); a as usize];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, max_assets_in)
 
     pool_join_subsidy {
@@ -658,7 +660,7 @@ benchmarks! {
         let (pool_id, assets, ..) = bench_create_pool::<T>(
             caller.clone(),
             Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()),
+            Some((2u128 * LIQUIDITY).saturated_into()),
             ScoringRule::CPMM,
             false,
             None,
@@ -673,13 +675,13 @@ benchmarks! {
         let (pool_id, assets, ..) = bench_create_pool::<T>(
             caller.clone(),
             Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()),
+            Some((2u128 * LIQUIDITY).saturated_into()),
             ScoringRule::CPMM,
             false,
             None,
         );
         let pool_amount = BASE.saturated_into();
-        let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
+        let max_asset_amount: BalanceOf<T> = LIQUIDITY.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
     clean_up_pool_categorical_without_reward_distribution {
@@ -718,7 +720,7 @@ benchmarks! {
         // `math::calc_out_given_in`). To get these values, we use the following parameters:
         // amount_in = 1/3 * balance_in, weight_in = 1, weight_out = 2.
         let asset_count = T::MaxAssets::get();
-        let balance: BalanceOf<T> = T::MinLiquidity::get();
+        let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
         let asset_amount_in: BalanceOf<T> = bmul(
             balance.saturated_into(),
             T::MaxInRatio::get().saturated_into(),
@@ -784,7 +786,7 @@ benchmarks! {
         // `math::calc_in_given_out`). To get these values, we use the following parameters:
         // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
         let asset_count = T::MaxAssets::get();
-        let balance: BalanceOf<T> = T::MinLiquidity::get();
+        let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
         let asset_amount_out: BalanceOf<T> = bmul(
             balance.saturated_into(),
             T::MaxOutRatio::get().saturated_into(),
