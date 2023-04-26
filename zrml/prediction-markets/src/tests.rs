@@ -3178,25 +3178,27 @@ fn it_resolves_a_disputed_court_market() {
 
         // outcome_0 is the plurality decision => right outcome
         let outcome_0 = OutcomeReport::Categorical(0);
+        let vote_item_0 = VoteItem::Outcome(outcome_0.clone());
         // outcome_1 is the wrong outcome
         let outcome_1 = OutcomeReport::Categorical(1);
+        let vote_item_1 = VoteItem::Outcome(outcome_1);
 
-        let commitment_0 = BlakeTwo256::hash_of(&(juror_0, outcome_0.clone(), salt));
+        let commitment_0 = BlakeTwo256::hash_of(&(juror_0, vote_item_0.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(juror_0), market_id, commitment_0));
 
         // juror_1 votes for non-plurality outcome => slashed later
-        let commitment_1 = BlakeTwo256::hash_of(&(juror_1, outcome_1.clone(), salt));
+        let commitment_1 = BlakeTwo256::hash_of(&(juror_1, vote_item_1.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(juror_1), market_id, commitment_1));
 
-        let commitment_2 = BlakeTwo256::hash_of(&(juror_2, outcome_0.clone(), salt));
+        let commitment_2 = BlakeTwo256::hash_of(&(juror_2, vote_item_0.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(juror_2), market_id, commitment_2));
 
-        let commitment_3 = BlakeTwo256::hash_of(&(juror_3, outcome_0.clone(), salt));
+        let commitment_3 = BlakeTwo256::hash_of(&(juror_3, vote_item_0.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(juror_3), market_id, commitment_3));
 
         // juror_4 fails to vote in time
 
-        let commitment_5 = BlakeTwo256::hash_of(&(juror_5, outcome_0.clone(), salt));
+        let commitment_5 = BlakeTwo256::hash_of(&(juror_5, vote_item_0.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(juror_5), market_id, commitment_5));
 
         // juror_3 is denounced by juror_0 => slashed later
@@ -3204,30 +3206,40 @@ fn it_resolves_a_disputed_court_market() {
             Origin::signed(juror_0),
             market_id,
             juror_3,
-            outcome_0.clone(),
+            vote_item_0.clone(),
             salt
         ));
 
         let aggregation_start = court.cycle_ends.vote + 1;
         run_to_block(aggregation_start);
 
-        assert_ok!(Court::reveal_vote(Origin::signed(juror_0), market_id, outcome_0.clone(), salt));
-        assert_ok!(Court::reveal_vote(Origin::signed(juror_1), market_id, outcome_1, salt));
+        assert_ok!(Court::reveal_vote(
+            Origin::signed(juror_0),
+            market_id,
+            vote_item_0.clone(),
+            salt
+        ));
+        assert_ok!(Court::reveal_vote(Origin::signed(juror_1), market_id, vote_item_1, salt));
 
         let wrong_salt = BlakeTwo256::hash_of(&69);
         assert_noop!(
-            Court::reveal_vote(Origin::signed(juror_2), market_id, outcome_0.clone(), wrong_salt),
+            Court::reveal_vote(Origin::signed(juror_2), market_id, vote_item_0.clone(), wrong_salt),
             CError::<Runtime>::InvalidReveal
         );
-        assert_ok!(Court::reveal_vote(Origin::signed(juror_2), market_id, outcome_0.clone(), salt));
+        assert_ok!(Court::reveal_vote(
+            Origin::signed(juror_2),
+            market_id,
+            vote_item_0.clone(),
+            salt
+        ));
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(juror_3), market_id, outcome_0.clone(), salt),
+            Court::reveal_vote(Origin::signed(juror_3), market_id, vote_item_0.clone(), salt),
             CError::<Runtime>::VoteAlreadyDenounced
         );
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(juror_4), market_id, outcome_0.clone(), salt),
+            Court::reveal_vote(Origin::signed(juror_4), market_id, vote_item_0.clone(), salt),
             CError::<Runtime>::JurorNotVoted
         );
 
@@ -3241,9 +3253,9 @@ fn it_resolves_a_disputed_court_market() {
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        assert_eq!(market_after.resolved_outcome, Some(outcome_0.clone()));
+        assert_eq!(market_after.resolved_outcome, Some(outcome_0));
         let court_after = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
-        assert_eq!(court_after.status, CourtStatus::Closed { winner: outcome_0 });
+        assert_eq!(court_after.status, CourtStatus::Closed { winner: vote_item_0 });
 
         let free_juror_0_before = Balances::free_balance(&juror_0);
         let free_juror_1_before = Balances::free_balance(&juror_1);
@@ -3311,10 +3323,11 @@ fn simulate_appeal_cycle(market_id: MarketId) {
     let salt = <Runtime as frame_system::Config>::Hash::default();
 
     let wrong_outcome = OutcomeReport::Categorical(1);
+    let wrong_vote_item = VoteItem::Outcome(wrong_outcome.clone());
 
     let draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
     for draw in &draws {
-        let commitment = BlakeTwo256::hash_of(&(draw.juror, wrong_outcome.clone(), salt));
+        let commitment = BlakeTwo256::hash_of(&(draw.juror, wrong_vote_item.clone(), salt));
         assert_ok!(Court::vote(Origin::signed(draw.juror), market_id, commitment));
     }
 
@@ -3325,7 +3338,7 @@ fn simulate_appeal_cycle(market_id: MarketId) {
         assert_ok!(Court::reveal_vote(
             Origin::signed(draw.juror),
             market_id,
-            wrong_outcome.clone(),
+            wrong_vote_item.clone(),
             salt,
         ));
     }

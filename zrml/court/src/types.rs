@@ -16,6 +16,60 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 extern crate alloc;
 use alloc::{vec, vec::Vec};
+use zeitgeist_primitives::types::OutcomeReport;
+
+pub type CourtId = u128;
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub enum CourtVoteItem {
+    Outcome,
+    Binary,
+}
+
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Ord,
+    PartialOrd,
+)]
+pub enum VoteItem {
+    Outcome(OutcomeReport),
+    Binary(bool),
+}
+
+impl VoteItem {
+    pub fn into_outcome(self) -> Option<OutcomeReport> {
+        match self {
+            Self::Outcome(report) => Some(report),
+            _ => None,
+        }
+    }
+}
+
+impl VoteItem {
+    pub fn is_outcome(&self) -> bool {
+        matches!(self, Self::Outcome(_))
+    }
+
+    pub fn is_binary(&self) -> bool {
+        matches!(self, Self::Binary(_))
+    }
+}
 
 /// The general information about a particular juror.
 #[derive(
@@ -40,7 +94,7 @@ pub struct JurorInfo<Balance, BlockNumber, Delegations> {
 }
 
 /// The raw information behind the secret hash of a juror's vote.
-pub struct RawCommitment<AccountId, Hash, VoteItem> {
+pub struct RawCommitment<AccountId, Hash> {
     /// The juror's account id.
     pub juror: AccountId,
     /// The vote item which the juror voted for.
@@ -50,11 +104,11 @@ pub struct RawCommitment<AccountId, Hash, VoteItem> {
 }
 
 /// The raw information which is hashed to create the secret hash of a juror's vote.
-pub struct CommitmentMatcher<AccountId, Hash, VoteItem> {
+pub struct CommitmentMatcher<AccountId, Hash> {
     /// The juror's hashed commitment
     pub hashed: Hash,
     /// The raw commitment which is intended to lead to the hashed commitment.
-    pub raw: RawCommitment<AccountId, Hash, VoteItem>,
+    pub raw: RawCommitment<AccountId, Hash>,
 }
 
 /// All possible states of a vote.
@@ -68,7 +122,7 @@ pub struct CommitmentMatcher<AccountId, Hash, VoteItem> {
     PartialEq,
     Eq,
 )]
-pub enum Vote<Hash, DelegatedStakes, VoteItem> {
+pub enum Vote<Hash, DelegatedStakes> {
     /// The juror delegated stake to other jurors.
     Delegated { delegated_stakes: DelegatedStakes },
     /// The juror was randomly selected to vote in a specific court case.
@@ -114,7 +168,7 @@ pub struct CycleEnds<BlockNumber> {
     PartialEq,
     Eq,
 )]
-pub enum CourtStatus<VoteItem> {
+pub enum CourtStatus {
     /// The court case has been started.
     Open,
     /// The court case was closed, the winner vote item was determined.
@@ -134,7 +188,7 @@ pub enum CourtStatus<VoteItem> {
     PartialEq,
     Eq,
 )]
-pub struct AppealInfo<AccountId, Balance, VoteItem> {
+pub struct AppealInfo<AccountId, Balance> {
     /// The account which made the appeal.
     pub backer: AccountId,
     /// The amount of funds which were locked for the appeal.
@@ -154,13 +208,14 @@ pub struct AppealInfo<AccountId, Balance, VoteItem> {
     PartialEq,
     Eq,
 )]
-pub struct CourtInfo<BlockNumber, Appeals, VoteItem> {
+pub struct CourtInfo<BlockNumber, Appeals> {
     /// The status of the court case.
-    pub status: CourtStatus<VoteItem>,
+    pub status: CourtStatus,
     /// The list of all appeals.
     pub appeals: Appeals,
     /// The information about the lifecycle of this court case.
     pub cycle_ends: CycleEnds<BlockNumber>,
+    pub court_vote_item: CourtVoteItem,
 }
 
 /// The timing information about a court case.
@@ -175,17 +230,17 @@ pub struct RoundTiming<BlockNumber> {
     pub appeal_period: BlockNumber,
 }
 
-impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default, VoteItem>
-    CourtInfo<BlockNumber, Appeals, VoteItem>
+impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
+    CourtInfo<BlockNumber, Appeals>
 {
-    pub fn new(round_timing: RoundTiming<BlockNumber>) -> Self {
+    pub fn new(round_timing: RoundTiming<BlockNumber>, court_vote_item: CourtVoteItem) -> Self {
         let pre_vote = round_timing.pre_vote_end;
         let vote = pre_vote.saturating_add(round_timing.vote_period);
         let aggregation = vote.saturating_add(round_timing.aggregation_period);
         let appeal = aggregation.saturating_add(round_timing.appeal_period);
         let cycle_ends = CycleEnds { pre_vote, vote, aggregation, appeal };
         let status = CourtStatus::Open;
-        Self { status, appeals: Default::default(), cycle_ends }
+        Self { status, appeals: Default::default(), cycle_ends, court_vote_item }
     }
 
     pub fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {
@@ -210,14 +265,14 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default, VoteI
     PartialEq,
     Eq,
 )]
-pub struct Draw<AccountId, Balance, Hash, DelegatedStakes, VoteItem> {
+pub struct Draw<AccountId, Balance, Hash, DelegatedStakes> {
     /// The juror who was randomly selected.
     pub juror: AccountId,
     /// The weight of the juror in this court case.
     /// The higher the weight the more voice the juror has in the final winner decision.
     pub weight: u32,
     /// The information about the vote state.
-    pub vote: Vote<Hash, DelegatedStakes, VoteItem>,
+    pub vote: Vote<Hash, DelegatedStakes>,
     /// The amount of funds which can be slashed for this court case.
     /// This is related to a multiple of `MinStake` to mitigate Sybil attacks.
     pub slashable: Balance,
@@ -276,13 +331,13 @@ pub enum SelectionAdd<AccountId, Balance> {
     DelegationWeight,
 }
 
-pub struct SelfInfo<Balance, VoteItem> {
+pub struct SelfInfo<Balance> {
     pub slashable: Balance,
     pub vote_item: VoteItem,
 }
 
-pub struct JurorVoteWithStakes<AccountId, Balance, VoteItem> {
-    pub self_info: Option<SelfInfo<Balance, VoteItem>>,
+pub struct JurorVoteWithStakes<AccountId, Balance> {
+    pub self_info: Option<SelfInfo<Balance>>,
     // many delegators can have delegated to the same juror
     // that's why the value is a vector and should be sorted (binary search by key)
     // the key is the delegator account
@@ -290,7 +345,7 @@ pub struct JurorVoteWithStakes<AccountId, Balance, VoteItem> {
     pub delegations: Vec<(AccountId, Balance)>,
 }
 
-impl<AccountId, Balance, VoteItem> Default for JurorVoteWithStakes<AccountId, Balance, VoteItem> {
+impl<AccountId, Balance> Default for JurorVoteWithStakes<AccountId, Balance> {
     fn default() -> Self {
         JurorVoteWithStakes { self_info: None, delegations: vec![] }
     }

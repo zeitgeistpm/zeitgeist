@@ -931,8 +931,56 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 
+        use zrml_court::Error as CourtError;
+        use zrml_court::types::VoteItem;
+        use zrml_court::traits::{VoteCheckApi, AppealCheckApi, DefaultWinnerApi};
+        use frame_support::ensure;
+        use zrml_market_commons::MarketCommonsPalletApi;
+
+        pub struct AppealCheck;
+        impl AppealCheckApi for AppealCheck {
+            type MarketId = MarketId;
+
+            fn pre_appeal(market_id: &Self::MarketId) -> Result<(), sp_runtime::DispatchError> {
+                let market = MarketCommons::market(market_id)?;
+                ensure!(market.status == MarketStatus::Disputed, CourtError::<Runtime>::MarketIsNotDisputed);
+                ensure!(
+                    market.dispute_mechanism == MarketDisputeMechanism::Court,
+                    CourtError::<Runtime>::MarketDoesNotHaveCourtMechanism
+                );
+                Ok(())
+            }
+        }
+
+        pub struct VoteCheck;
+        impl VoteCheckApi for VoteCheck {
+            type MarketId = MarketId;
+
+            fn pre_validate(market_id: &Self::MarketId, vote_item: VoteItem) -> Result<(), sp_runtime::DispatchError> {
+                let market = MarketCommons::market(&market_id)?;
+                ensure!(
+                    market.matches_outcome_report(&vote_item.clone().into_outcome().unwrap()),
+                    CourtError::<Runtime>::OutcomeMismatch
+                );
+                Ok(())
+            }
+        }
+
+        pub struct DefaultWinner;
+        impl DefaultWinnerApi for DefaultWinner {
+            type MarketId = MarketId;
+
+            fn default_winner(market_id: &Self::MarketId) -> Result<VoteItem, sp_runtime::DispatchError> {
+                let market = MarketCommons::market(market_id)?;
+                let report = market.report.as_ref().ok_or(CourtError::<Runtime>::MarketReportNotFound)?;
+                let vote_item = VoteItem::Outcome(report.outcome.clone());
+                Ok(vote_item)
+            }
+        }
+
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;
+            type AppealCheck = AppealCheck;
             type BlocksPerYear = BlocksPerYear;
             type CourtVotePeriod = CourtVotePeriod;
             type CourtAggregationPeriod = CourtAggregationPeriod;
@@ -940,6 +988,7 @@ macro_rules! impl_config_traits {
             type CourtLockId = CourtLockId;
             type CourtPalletId = CourtPalletId;
             type Currency = Balances;
+            type DefaultWinner = DefaultWinner;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type Event = Event;
             type InflationPeriod = InflationPeriod;
@@ -954,7 +1003,7 @@ macro_rules! impl_config_traits {
             type RequestInterval = RequestInterval;
             type Slash = Treasury;
             type TreasuryPalletId = TreasuryPalletId;
-            type VoteItem = zeitgeist_primitives::types::VoteItem;
+            type VoteCheck = VoteCheck;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }
 

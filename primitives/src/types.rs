@@ -168,5 +168,3 @@ pub struct XcmMetadata {
     /// Should be updated regularly.
     pub fee_factor: Option<Balance>,
 }
-
-pub type VoteItem = OutcomeReport;
