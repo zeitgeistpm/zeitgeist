@@ -1471,9 +1471,30 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
         }
 
-        // The minimum allowed balance in a liquidity pool.
+        // The minimum allowed balance of `asset` in a liquidity pool.
         pub(crate) fn min_balance(asset: Asset<MarketIdOf<T>>) -> BalanceOf<T> {
             T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
+        }
+
+        // Returns the minimum allowed balance allowed for a pool with id `pool_id` containing
+        // `assets`.
+        //
+        // The minimum allowed balance is the maximum of all minimum allowed balances of assets
+        // contained in the pool, _including_ the pool shares asset. This ensures that none of the
+        // accounts involved are slashed when a pool is created with the minimum amount.
+        //
+        // **Should** only be called if `assets` is non-empty. Note that there need not exist a pool
+        // with the specified `pool_id`.
+        pub(crate) fn min_balance_of_pool(
+            pool_id: PoolId,
+            assets: &[Asset<MarketIdOf<T>>],
+        ) -> BalanceOf<T> {
+            assets
+                .iter()
+                .map(|asset| Self::min_balance(*asset))
+                .max()
+                .unwrap_or_else(|| MIN_BALANCE.saturated_into())
+                .max(Self::min_balance(Self::pool_shares_id(pool_id)))
         }
 
         fn ensure_minimum_liquidity_shares(
@@ -1728,15 +1749,10 @@ mod pallet {
                         // `amount` must be larger than all minimum balances. As we deposit `amount`
                         // liquidity shares, we must also ensure that `amount` is larger than the
                         // existential deposit of the liquidity shares.
-                        let min_balance = assets
-                            .iter()
-                            .map(|asset| Self::min_balance(*asset))
-                            .max()
-                            .ok_or(Error::<T>::TooFewAssets)?
-                            .max(T::AssetManager::minimum_balance(Self::pool_shares_id(
-                                next_pool_id,
-                            )));
-                        ensure!(amount_unwrapped >= min_balance, Error::<T>::InsufficientLiquidity);
+                        ensure!(
+                            amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
+                            Error::<T>::InsufficientLiquidity
+                        );
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                         ensure!(
                             swap_fee_unwrapped <= T::MaxSwapFee::get(),

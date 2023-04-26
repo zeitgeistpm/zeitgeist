@@ -2381,7 +2381,7 @@ fn create_pool_fails_on_insufficient_liquidity() {
         });
         // Only got one type of tokens in the pool, so we can sample the minimum balance using one
         // asset.
-        let min_balance = Swaps::min_balance(ASSET_A);
+        let min_balance = Swaps::min_balance_of_pool(0, ASSETS.as_ref());
         assert_noop!(
             Swaps::create_pool(
                 BOB,
@@ -2395,6 +2395,36 @@ fn create_pool_fails_on_insufficient_liquidity() {
             ),
             crate::Error::<Runtime>::InsufficientLiquidity,
         );
+    });
+}
+
+#[test]
+fn create_pool_succeeds_on_min_liquidity() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        // Only got one type of tokens in the pool, so we can sample the minimum balance using one
+        // asset.
+        let min_balance = Swaps::min_balance_of_pool(0, ASSETS.as_ref());
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.to_vec(),
+            *ASSETS.last().unwrap(),
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(min_balance),
+            Some(vec!(_2, _2, _2, _2)),
+        ));
+        assert_all_parameters(
+            [0; 4],
+            0,
+            [min_balance, min_balance, min_balance, min_balance],
+            min_balance,
+        );
+        let pool_shares_id = Swaps::pool_shares_id(0);
+        assert_eq!(Currencies::free_balance(pool_shares_id, &BOB), min_balance);
     });
 }
 
