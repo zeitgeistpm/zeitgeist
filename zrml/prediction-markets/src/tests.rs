@@ -3323,7 +3323,7 @@ fn simulate_appeal_cycle(market_id: MarketId) {
     let salt = <Runtime as frame_system::Config>::Hash::default();
 
     let wrong_outcome = OutcomeReport::Categorical(1);
-    let wrong_vote_item = VoteItem::Outcome(wrong_outcome.clone());
+    let wrong_vote_item = VoteItem::Outcome(wrong_outcome);
 
     let draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
     for draw in &draws {

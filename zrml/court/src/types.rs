@@ -18,8 +18,10 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use zeitgeist_primitives::types::OutcomeReport;
 
+/// The type of the court identifier.
 pub type CourtId = u128;
 
+/// The different court vote types. This can be extended to allow different decision making options.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -35,6 +37,8 @@ pub enum CourtVoteItem {
     Binary,
 }
 
+/// The different court vote types with their raw values.
+/// This can be extended to allow different decision making options.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -52,6 +56,7 @@ pub enum VoteItem {
     Binary(bool),
 }
 
+/// Simple implementations to handle vote items easily.
 impl VoteItem {
     pub fn into_outcome(self) -> Option<OutcomeReport> {
         match self {
@@ -59,9 +64,7 @@ impl VoteItem {
             _ => None,
         }
     }
-}
 
-impl VoteItem {
     pub fn is_outcome(&self) -> bool {
         matches!(self, Self::Outcome(_))
     }
@@ -299,6 +302,7 @@ pub struct JurorPoolItem<AccountId, Balance> {
     pub consumed_stake: Balance,
 }
 
+/// The information about an internal selected draw of a juror or delegator.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -310,11 +314,16 @@ pub struct JurorPoolItem<AccountId, Balance> {
     Eq,
 )]
 pub struct SelectionValue<Balance, DelegatedStakes> {
+    /// The overall weight of the juror or delegator for a specific selected draw.
     pub weight: u32,
+    /// The amount that can be slashed for this selected draw.
     pub slashable: Balance,
+    /// The different portions of stake distributed over multiple jurors.
+    /// The sum of all delegated stakes should be equal to `slashable`.
     pub delegated_stakes: DelegatedStakes,
 }
 
+/// The type to add one weight to the selected draws.
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -326,17 +335,26 @@ pub struct SelectionValue<Balance, DelegatedStakes> {
     Eq,
 )]
 pub enum SelectionAdd<AccountId, Balance> {
+    /// The variant to add an active juror, who is not a delegator.
     SelfStake { lock: Balance },
+    /// The variant to decide that a delegator is added
+    /// to the selected draws and locks stake on a delegated juror.
     DelegationStake { delegated_juror: AccountId, lock: Balance },
+    /// The variant to know that one weight for the delegation to the delegated juror is added.
     DelegationWeight,
 }
 
+/// The information about an active juror who voted for a court.
 pub struct SelfInfo<Balance> {
+    /// The slashable amount of the juror herself.
     pub slashable: Balance,
+    /// The item for which the juror voted.
     pub vote_item: VoteItem,
 }
 
 pub struct JurorVoteWithStakes<AccountId, Balance> {
+    /// An optional information about an active juror herself, who was selected and voted.
+    /// This could be None, because delegators could have delegated to a juror who failed to vote.
     pub self_info: Option<SelfInfo<Balance>>,
     // many delegators can have delegated to the same juror
     // that's why the value is a vector and should be sorted (binary search by key)
@@ -351,6 +369,7 @@ impl<AccountId, Balance> Default for JurorVoteWithStakes<AccountId, Balance> {
     }
 }
 
+/// An internal error type to determine how the selection of draws fails.
 pub enum SelectionError {
     NoValidDelegatedJuror,
 }
