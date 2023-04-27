@@ -2379,8 +2379,6 @@ fn create_pool_fails_on_insufficient_liquidity() {
         ASSETS.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, _100);
         });
-        // Only got one type of tokens in the pool, so we can sample the minimum balance using one
-        // asset.
         let min_balance = Swaps::min_balance_of_pool(0, ASSETS.as_ref());
         assert_noop!(
             Swaps::create_pool(

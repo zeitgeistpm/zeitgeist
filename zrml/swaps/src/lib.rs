@@ -112,7 +112,7 @@ mod pallet {
 
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_THRESHOLD: u128 = CENT;
-    pub(crate) const MIN_BALANCE: u128 = CENT;
+    const MIN_BALANCE: u128 = CENT;
     const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
 
     #[pallet::call]
