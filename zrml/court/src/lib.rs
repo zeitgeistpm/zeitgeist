@@ -25,9 +25,9 @@ extern crate alloc;
 use crate::{
     traits::{AppealCheckApi, DefaultWinnerApi, VoteCheckApi},
     weights::WeightInfoZeitgeist,
-    AppealInfo, CommitmentMatcher, CourtId, CourtInfo, CourtStatus, CourtVoteItem, Draw, JurorInfo,
-    JurorPoolItem, JurorVoteWithStakes, RawCommitment, RoundTiming, SelectionAdd, SelectionError,
-    SelectionValue, SelfInfo, Vote, VoteItem,
+    AppealInfo, CommitmentMatcher, CourtId, CourtInfo, CourtStatus, Draw, JurorInfo, JurorPoolItem,
+    JurorVoteWithStakes, RawCommitment, RoundTiming, SelectionAdd, SelectionError, SelectionValue,
+    SelfInfo, Vote, VoteItem, VoteItemType,
 };
 use alloc::{
     collections::{BTreeMap, BTreeSet},
@@ -46,7 +46,7 @@ use frame_support::{
         NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
         WithdrawReasons,
     },
-    transactional, Blake2_128Concat, BoundedVec, PalletId,
+    transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
 };
 use frame_system::{
     ensure_signed,
@@ -84,8 +84,6 @@ pub use types::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use frame_support::Twox64Concat;
-
     use super::*;
 
     #[pallet::config]
@@ -239,7 +237,7 @@ mod pallet {
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
     pub(crate) type CommitmentMatcherOf<T> = CommitmentMatcher<AccountIdOf<T>, HashOf<T>>;
     pub(crate) type RawCommitmentOf<T> = RawCommitment<AccountIdOf<T>, HashOf<T>>;
-    pub type CacheSize = ConstU32<64>;
+    pub(crate) type CacheSize = ConstU32<64>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -341,6 +339,8 @@ mod pallet {
         /// The losing jurors are those, who did not vote,
         /// were denounced or did not reveal their vote.
         JurorStakesReassigned { court_id: CourtId },
+        /// The yearly inflation rate has been set.
+        InflationSet { inflation: Perbill },
     }
 
     #[pallet::error]
@@ -391,7 +391,7 @@ mod pallet {
         /// The juror stakes of the court already got reassigned.
         CourtAlreadyReassigned,
         /// There are not enough jurors in the pool.
-        NotEnoughJurors,
+        NotEnoughJurorsStake,
         /// The report of the market was not found.
         MarketReportNotFound,
         /// The maximum number of court ids is reached.
@@ -956,7 +956,7 @@ mod pallet {
             let winner = match court.status {
                 CourtStatus::Closed { winner } => winner,
                 CourtStatus::Reassigned => return Err(Error::<T>::CourtAlreadyReassigned.into()),
-                _ => return Err(Error::<T>::CourtNotClosed.into()),
+                CourtStatus::Open => return Err(Error::<T>::CourtNotClosed.into()),
             };
 
             let draws = SelectedDraws::<T>::get(court_id);
@@ -976,20 +976,7 @@ mod pallet {
             // map delegated jurors to own_slashable, vote item and Vec<(delegator, delegator_stake)>
             let mut jurors_to_stakes = BTreeMap::<T::AccountId, JurorVoteWithStakesOf<T>>::new();
 
-            for draw in draws {
-                if let Some(mut juror_info) = <Jurors<T>>::get(&draw.juror) {
-                    juror_info.active_lock = juror_info.active_lock.saturating_sub(draw.slashable);
-                    <Jurors<T>>::insert(&draw.juror, juror_info);
-                } else {
-                    log::warn!(
-                        "Juror {:?} not found in Jurors storage (reassign_juror_stakes). Court id \
-                         {:?}.",
-                        draw.juror,
-                        court_id
-                    );
-                    debug_assert!(false);
-                }
-
+            let mut handle_vote = |draw: DrawOf<T>| {
                 match draw.vote {
                     Vote::Drawn
                     | Vote::Secret { commitment: _ }
@@ -1031,6 +1018,23 @@ mod pallet {
                         }
                     }
                 }
+            };
+
+            for draw in draws {
+                if let Some(mut juror_info) = <Jurors<T>>::get(&draw.juror) {
+                    juror_info.active_lock = juror_info.active_lock.saturating_sub(draw.slashable);
+                    <Jurors<T>>::insert(&draw.juror, juror_info);
+                } else {
+                    log::warn!(
+                        "Juror {:?} not found in Jurors storage (reassign_juror_stakes). Court id \
+                         {:?}.",
+                        draw.juror,
+                        court_id
+                    );
+                    debug_assert!(false);
+                }
+
+                handle_vote(draw);
             }
 
             Self::slash_losers_to_award_winners(court_id, jurors_to_stakes, &winner);
@@ -1061,6 +1065,8 @@ mod pallet {
             T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
 
             <YearlyInflation<T>>::put(inflation);
+
+            Self::deposit_event(Event::InflationSet { inflation });
 
             Ok(())
         }
@@ -1458,14 +1464,14 @@ mod pallet {
         // according to the weighted stake of the jurors.
         // Return the random draws.
         pub(crate) fn choose_multiple_weighted(
-            number: usize,
+            draw_weight: usize,
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let mut jurors = <JurorPool<T>>::get();
-            let total_weight = Self::get_unconsumed_stake_sum(jurors.as_slice());
-            let required_weight =
-                (number as u128).saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
-            ensure!(total_weight >= required_weight, Error::<T>::NotEnoughJurors);
-            let random_set = Self::get_n_random_numbers(number, total_weight)?;
+            let jurors_unconsumed_stake = Self::get_unconsumed_stake_sum(jurors.as_slice());
+            let required_stake = (draw_weight as u128)
+                .saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
+            ensure!(jurors_unconsumed_stake >= required_stake, Error::<T>::NotEnoughJurorsStake);
+            let random_set = Self::get_n_random_numbers(draw_weight, jurors_unconsumed_stake)?;
             let selections = Self::get_selections(&mut jurors, random_set);
             <JurorPool<T>>::put(jurors);
 
@@ -1503,20 +1509,13 @@ mod pallet {
         pub(crate) fn select_jurors(
             appeal_number: usize,
         ) -> Result<SelectedDrawsOf<T>, DispatchError> {
-            let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
-            let random_jurors = Self::choose_multiple_weighted(necessary_jurors_weight)?;
+            let necessary_draws_weight = Self::necessary_draws_weight(appeal_number);
+            let random_jurors = Self::choose_multiple_weighted(necessary_draws_weight)?;
 
-            // keep in mind that the number of draws is at maximum necessary_jurors_weight * 2
+            // keep in mind that the number of draws is at maximum necessary_draws_weight * 2
             // because with delegations each juror draw weight
             // could delegate an additional juror in addition to the delegator itself
-            debug_assert!(random_jurors.len() <= 2 * necessary_jurors_weight as usize);
-            // ensure that we don't truncate some of the selections
-            debug_assert!(
-                random_jurors.len() <= T::MaxSelectedDraws::get() as usize,
-                "The number of randomly selected jurors should be less than or equal to \
-                 `MaxSelectedDraws`."
-            );
-
+            debug_assert!(random_jurors.len() <= 2 * necessary_draws_weight as usize);
             debug_assert!({
                 // proove that random jurors is sorted by juror account id
                 // this is helpful to use binary search later on
@@ -1527,11 +1526,18 @@ mod pallet {
             });
 
             // what is the maximum number of draws with delegations?
-            // It is using necessary_jurors_weight (the number of atoms / draw weight)
+            // It is using necessary_draws_weight (the number of atoms / draw weight)
             // for the last round times two because each delegator
             // could potentially add one juror account to the selections
 
             // new appeal round should have a fresh set of draws
+
+            // ensure that we don't truncate some of the selections
+            debug_assert!(
+                random_jurors.len() <= T::MaxSelectedDraws::get() as usize,
+                "The number of randomly selected jurors should be less than or equal to \
+                 `MaxSelectedDraws`."
+            );
             Ok(<SelectedDrawsOf<T>>::truncate_from(random_jurors))
         }
 
@@ -1595,11 +1601,11 @@ mod pallet {
             court: &CourtOf<T>,
             vote_item: &VoteItem,
         ) -> Result<(), DispatchError> {
-            match court.court_vote_item {
-                CourtVoteItem::Outcome => {
+            match court.vote_item_type {
+                VoteItemType::Outcome => {
                     ensure!(vote_item.is_outcome(), Error::<T>::InvalidVoteItemForOutcomeCourt);
                 }
-                CourtVoteItem::Binary => {
+                VoteItemType::Binary => {
                     ensure!(vote_item.is_binary(), Error::<T>::InvalidVoteItemForBinaryCourt);
                 }
             };
@@ -1634,7 +1640,7 @@ mod pallet {
         }
 
         // Calculates the necessary number of draws depending on the number of market appeals.
-        pub fn necessary_jurors_weight(appeals_len: usize) -> usize {
+        pub fn necessary_draws_weight(appeals_len: usize) -> usize {
             // 2^(appeals_len) * 31 + 2^(appeals_len) - 1
             // MaxAppeals - 1 (= 3) example: 2^3 * 31 + 2^3 - 1 = 255
             APPEAL_BASIS
@@ -1916,9 +1922,9 @@ mod pallet {
                 appeal_period: T::CourtAppealPeriod::get(),
             };
 
-            let court_vote_item = CourtVoteItem::Outcome;
+            let vote_item_type = VoteItemType::Outcome;
             // sets cycle_ends one after the other from now
-            let court = CourtInfo::new(round_timing, court_vote_item);
+            let court = CourtInfo::new(round_timing, vote_item_type);
 
             let ids_len =
                 T::DisputeResolution::add_auto_resolve(market_id, court.cycle_ends.appeal)?;
@@ -2039,15 +2045,19 @@ mod pallet {
             let court_id = <MarketIdToCourtId<T>>::get(market_id)
                 .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;
 
-            let jurors_len: usize = JurorPool::<T>::decode_len().unwrap_or(0);
+            let jurors = JurorPool::<T>::get();
+            let jurors_unconsumed_stake = Self::get_unconsumed_stake_sum(jurors.as_slice());
             match <Courts<T>>::get(court_id) {
                 Some(court) => {
                     let appeals = &court.appeals;
                     let appeal_number = appeals.len().saturating_add(1);
-                    let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
+                    let necessary_draws_weight = Self::necessary_draws_weight(appeal_number);
+                    let required_stake = (necessary_draws_weight as u128)
+                        .saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
                     let valid_period = Self::check_appealable_market(court_id, &court, now).is_ok();
 
-                    if appeals.is_full() || (valid_period && (jurors_len < necessary_jurors_weight))
+                    if appeals.is_full()
+                        || (valid_period && (jurors_unconsumed_stake < required_stake))
                     {
                         has_failed = true;
                     }
@@ -2060,8 +2070,10 @@ mod pallet {
                     let during_dispute_duration =
                         report_block <= now && now < block_after_dispute_duration;
 
-                    let necessary_jurors_weight = Self::necessary_jurors_weight(0usize);
-                    if during_dispute_duration && jurors_len < necessary_jurors_weight {
+                    let necessary_draws_weight = Self::necessary_draws_weight(0usize);
+                    let required_stake = (necessary_draws_weight as u128)
+                        .saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
+                    if during_dispute_duration && jurors_unconsumed_stake < required_stake {
                         has_failed = true;
                     }
                 }

@@ -32,7 +32,7 @@ pub type CourtId = u128;
     PartialEq,
     Eq,
 )]
-pub enum CourtVoteItem {
+pub enum VoteItemType {
     Outcome,
     Binary,
 }
@@ -218,7 +218,7 @@ pub struct CourtInfo<BlockNumber, Appeals> {
     pub appeals: Appeals,
     /// The information about the lifecycle of this court case.
     pub cycle_ends: CycleEnds<BlockNumber>,
-    pub court_vote_item: CourtVoteItem,
+    pub vote_item_type: VoteItemType,
 }
 
 /// The timing information about a court case.
@@ -236,14 +236,14 @@ pub struct RoundTiming<BlockNumber> {
 impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     CourtInfo<BlockNumber, Appeals>
 {
-    pub fn new(round_timing: RoundTiming<BlockNumber>, court_vote_item: CourtVoteItem) -> Self {
+    pub fn new(round_timing: RoundTiming<BlockNumber>, vote_item_type: VoteItemType) -> Self {
         let pre_vote = round_timing.pre_vote_end;
         let vote = pre_vote.saturating_add(round_timing.vote_period);
         let aggregation = vote.saturating_add(round_timing.aggregation_period);
         let appeal = aggregation.saturating_add(round_timing.appeal_period);
         let cycle_ends = CycleEnds { pre_vote, vote, aggregation, appeal };
         let status = CourtStatus::Open;
-        Self { status, appeals: Default::default(), cycle_ends, court_vote_item }
+        Self { status, appeals: Default::default(), cycle_ends, vote_item_type }
     }
 
     pub fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {

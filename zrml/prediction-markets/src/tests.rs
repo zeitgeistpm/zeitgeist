@@ -3126,7 +3126,7 @@ fn it_resolves_a_disputed_court_market() {
         }
 
         // just to have enough jurors for the dispute
-        for j in 1006..(1006 + Court::necessary_jurors_weight(0usize) as u32) {
+        for j in 1006..(1006 + Court::necessary_draws_weight(0usize) as u32) {
             let juror = j as u128;
             let amount = MinJurorStake::get() + juror;
             assert_ok!(AssetManager::deposit(Asset::Ztg, &juror, amount + SENTINEL_AMOUNT));

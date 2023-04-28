@@ -635,7 +635,7 @@ fn vote_works() {
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert_eq!(draws.len(), Court::necessary_jurors_weight(0usize));
+        assert_eq!(draws.len(), Court::necessary_draws_weight(0usize));
         let slashable = MinJurorStake::get();
         let alice_index =
             draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
@@ -821,7 +821,7 @@ fn reveal_vote_works() {
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert_eq!(draws.len(), Court::necessary_jurors_weight(0usize));
+        assert_eq!(draws.len(), Court::necessary_draws_weight(0usize));
         let slashable = MinJurorStake::get();
         let alice_index =
             draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
@@ -1390,13 +1390,13 @@ fn appeal_draws_total_weight_is_correct() {
 
         let last_draws = <SelectedDraws<Runtime>>::get(court_id);
         let last_draws_total_weight = last_draws.iter().map(|draw| draw.weight).sum::<u32>();
-        assert_eq!(last_draws_total_weight, Court::necessary_jurors_weight(0usize) as u32);
+        assert_eq!(last_draws_total_weight, Court::necessary_draws_weight(0usize) as u32);
 
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
-        let neccessary_juror_weight = Court::necessary_jurors_weight(1usize) as u32;
+        let neccessary_juror_weight = Court::necessary_draws_weight(1usize) as u32;
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         let draws_total_weight = draws.iter().map(|draw| draw.weight).sum::<u32>();
         assert_eq!(draws_total_weight, neccessary_juror_weight);
@@ -2458,17 +2458,17 @@ fn on_global_dispute_returns_appealed_outcomes() {
 #[test]
 fn choose_multiple_weighted_works() {
     ExtBuilder::default().build().execute_with(|| {
-        let necessary_jurors_weight = Court::necessary_jurors_weight(0usize);
-        for i in 0..necessary_jurors_weight {
+        let necessary_draws_weight = Court::necessary_draws_weight(0usize);
+        for i in 0..necessary_draws_weight {
             let amount = MinJurorStake::get() + i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
-        let random_jurors = Court::choose_multiple_weighted(necessary_jurors_weight).unwrap();
+        let random_jurors = Court::choose_multiple_weighted(necessary_draws_weight).unwrap();
         assert_eq!(
             random_jurors.iter().map(|draw| draw.weight).sum::<u32>() as usize,
-            necessary_jurors_weight
+            necessary_draws_weight
         );
     });
 }
@@ -2501,15 +2501,15 @@ fn select_jurors_updates_juror_consumed_stake() {
 #[test_case(3usize; "fourth")]
 fn select_jurors_fails_if_not_enough_jurors(appeal_number: usize) {
     ExtBuilder::default().build().execute_with(|| {
-        let necessary_jurors_weight = Court::necessary_jurors_weight(appeal_number);
-        for i in 0..(necessary_jurors_weight - 1usize) {
+        let necessary_draws_weight = Court::necessary_draws_weight(appeal_number);
+        for i in 0..(necessary_draws_weight - 1usize) {
             let amount = MinJurorStake::get() + i as u128;
             let juror = (i + 1000) as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
 
-        assert_noop!(Court::select_jurors(appeal_number), Error::<Runtime>::NotEnoughJurors);
+        assert_noop!(Court::select_jurors(appeal_number), Error::<Runtime>::NotEnoughJurorsStake);
     });
 }
 
@@ -2660,12 +2660,12 @@ fn has_failed_returns_true_for_uninitialized_court() {
 }
 
 #[test]
-fn check_necessary_jurors_weight() {
+fn check_necessary_draws_weight() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(Court::necessary_jurors_weight(0usize), 31usize);
-        assert_eq!(Court::necessary_jurors_weight(1usize), 63usize);
-        assert_eq!(Court::necessary_jurors_weight(2usize), 127usize);
-        assert_eq!(Court::necessary_jurors_weight(3usize), 255usize);
+        assert_eq!(Court::necessary_draws_weight(0usize), 31usize);
+        assert_eq!(Court::necessary_draws_weight(1usize), 63usize);
+        assert_eq!(Court::necessary_draws_weight(2usize), 127usize);
+        assert_eq!(Court::necessary_draws_weight(3usize), 255usize);
     });
 }
 
