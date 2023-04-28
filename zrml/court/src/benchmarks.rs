@@ -408,14 +408,14 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), court_id, vote_item, salt)
 
     appeal {
-        // from 47 because in the last appeal round we need at least 47 jurors
-        let j in 47..T::MaxJurors::get();
+        // from 255 because in the last appeal round we need at least 255 jurors
+        let j in 255..T::MaxJurors::get();
         let a in 0..(T::MaxAppeals::get() - 2);
         let r in 0..62;
         let f in 0..62;
 
         let necessary_jurors_weight = Court::<T>::necessary_jurors_weight((T::MaxAppeals::get() - 1) as usize);
-        debug_assert!(necessary_jurors_weight == 47usize);
+        debug_assert!(necessary_jurors_weight == 255usize);
         fill_pool::<T>(j)?;
         fill_delegations::<T>();
 
@@ -487,6 +487,7 @@ benchmarks! {
     }
 
     reassign_juror_stakes {
+        // because we have 5 MaxDelegations
         let d in 5..T::MaxSelectedDraws::get();
         debug_assert!(T::MaxDelegations::get() < T::MaxSelectedDraws::get());
 
@@ -511,7 +512,7 @@ benchmarks! {
         let mut draws = <SelectedDraws<T>>::get(court_id);
         let mut delegated_stakes: DelegatedStakesOf<T> = Default::default();
         for i in 0..d {
-            let juror: T::AccountId = account("juror", i, 0);
+            let juror: T::AccountId = account("juror_i", i, 0);
             deposit::<T>(&juror);
             <Jurors<T>>::insert(&juror, JurorInfo {
                 stake: T::MinJurorStake::get(),
@@ -571,7 +572,7 @@ benchmarks! {
     }
 
     on_dispute {
-        let j in 5..T::MaxJurors::get();
+        let j in 31..T::MaxJurors::get();
         let r in 0..62;
 
         let now = <frame_system::Pallet<T>>::block_number();
@@ -600,7 +601,8 @@ benchmarks! {
     on_resolution {
         let d in 1..T::MaxSelectedDraws::get();
 
-        fill_pool::<T>(5)?;
+        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
+        fill_pool::<T>(necessary_jurors_weight as u32)?;
 
         let (market_id, court_id) = setup_court::<T>()?;
         let market = get_market::<T>();
@@ -627,7 +629,8 @@ benchmarks! {
     exchange {
         let a in 0..T::MaxAppeals::get();
 
-        fill_pool::<T>(5)?;
+        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
+        fill_pool::<T>(necessary_jurors_weight as u32)?;
         let (market_id, court_id) = setup_court::<T>()?;
         let market = get_market::<T>();
 
@@ -652,15 +655,17 @@ benchmarks! {
     }
 
     get_auto_resolve {
-        fill_pool::<T>(5)?;
+        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
+        fill_pool::<T>(necessary_jurors_weight as u32)?;
         let (market_id, court_id) = setup_court::<T>()?;
         let market = get_market::<T>();
     }: {
-        Court::<T>::get_auto_resolve(&market_id, &market).unwrap();
+        Court::<T>::get_auto_resolve(&market_id, &market);
     }
 
     has_failed {
-        fill_pool::<T>(5)?;
+        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
+        fill_pool::<T>(necessary_jurors_weight as u32)?;
         let (market_id, court_id) = setup_court::<T>()?;
         let market = get_market::<T>();
     }: {
@@ -671,7 +676,8 @@ benchmarks! {
         let a in 0..T::MaxAppeals::get();
         let d in 1..T::MaxSelectedDraws::get();
 
-        fill_pool::<T>(5)?;
+        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
+        fill_pool::<T>(necessary_jurors_weight as u32)?;
         let (market_id, court_id) = setup_court::<T>()?;
         let market = get_market::<T>();
 
@@ -701,7 +707,8 @@ benchmarks! {
     clear {
         let d in 1..T::MaxSelectedDraws::get();
 
-        fill_pool::<T>(5)?;
+        let necessary_jurors_weight: usize = Court::<T>::necessary_jurors_weight(0usize);
+        fill_pool::<T>(necessary_jurors_weight as u32)?;
 
         let (market_id, court_id) = setup_court::<T>()?;
         let market = get_market::<T>();

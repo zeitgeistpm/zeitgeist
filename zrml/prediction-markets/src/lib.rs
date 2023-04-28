@@ -1433,9 +1433,7 @@ mod pallet {
         #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
-            #[allow(dead_code, unused)]
-            #[pallet::compact]
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
@@ -2216,13 +2214,13 @@ mod pallet {
                     let ResultWithWeightInfo { result: auto_resolve_block_opt, weight: _ } =
                         match market.dispute_mechanism {
                             MarketDisputeMechanism::Authorized => {
-                                T::Authorized::get_auto_resolve(market_id, &market)?
+                                T::Authorized::get_auto_resolve(market_id, &market)
                             }
                             MarketDisputeMechanism::Court => {
-                                T::Court::get_auto_resolve(market_id, &market)?
+                                T::Court::get_auto_resolve(market_id, &market)
                             }
                             MarketDisputeMechanism::SimpleDisputes => {
-                                T::SimpleDisputes::get_auto_resolve(market_id, &market)?
+                                T::SimpleDisputes::get_auto_resolve(market_id, &market)
                             }
                         };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {

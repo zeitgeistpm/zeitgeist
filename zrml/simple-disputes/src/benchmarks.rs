@@ -129,7 +129,7 @@ benchmarks! {
 
         fill_disputes::<T>(market_id, d);
     }: {
-        SimpleDisputes::<T>::get_auto_resolve(&market_id, &market).unwrap();
+        SimpleDisputes::<T>::get_auto_resolve(&market_id, &market);
     }
 
     has_failed_weight {

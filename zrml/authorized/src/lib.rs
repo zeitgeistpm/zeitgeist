@@ -296,18 +296,19 @@ mod pallet {
         fn get_auto_resolve(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
-
-            let res = ResultWithWeightInfo {
-                result: Self::get_auto_resolve(market_id),
+        ) -> ResultWithWeightInfo<Option<Self::BlockNumber>> {
+            let mut res = ResultWithWeightInfo {
+                result: None,
                 weight: T::WeightInfo::get_auto_resolve_weight(),
             };
 
-            Ok(res)
+            if market.dispute_mechanism != MarketDisputeMechanism::Authorized {
+                return res;
+            }
+
+            res.result = Self::get_auto_resolve(market_id);
+
+            res
         }
 
         fn has_failed(

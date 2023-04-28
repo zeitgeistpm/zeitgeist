@@ -22,8 +22,7 @@ extern crate alloc;
 use crate::{
     mock::{
         run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, Origin, Runtime,
-        System, ALICE, BOB, CHARLIE, DAVE, EVE, FERDIE, GINA, HARRY, IAN, INITIAL_BALANCE,
-        POOR_PAUL,
+        System, ALICE, BOB, CHARLIE, DAVE, EVE, INITIAL_BALANCE, POOR_PAUL,
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote, VoteItem},
@@ -103,8 +102,8 @@ fn initialize_court() -> CourtId {
     <MarketIdToCourtId<Runtime>>::get(market_id).unwrap()
 }
 
-fn fill_juror_pool() {
-    for i in 0..MaxJurors::get() {
+fn fill_juror_pool(jurors_len: u32) {
+    for i in 0..jurors_len {
         let amount = MinJurorStake::get() + i as u128;
         let juror = (i + 1000) as u128;
         let _ = Balances::deposit(&juror, amount).unwrap();
@@ -152,7 +151,7 @@ fn put_alice_in_draw(court_id: CourtId, stake: BalanceOf<Runtime>) {
 fn set_alice_after_vote(
     outcome: OutcomeReport,
 ) -> (CourtId, <Runtime as frame_system::Config>::Hash, <Runtime as frame_system::Config>::Hash) {
-    fill_juror_pool();
+    fill_juror_pool(MaxJurors::get());
     let court_id = initialize_court();
 
     let amount = MinJurorStake::get() * 100;
@@ -169,18 +168,6 @@ fn set_alice_after_vote(
 
     (court_id, commitment, salt)
 }
-
-const DEFAULT_SET_OF_JURORS: &[JurorPoolItem<AccountIdTest, u128>] = &[
-    JurorPoolItem { stake: 9, juror: HARRY, consumed_stake: 0 },
-    JurorPoolItem { stake: 8, juror: IAN, consumed_stake: 0 },
-    JurorPoolItem { stake: 7, juror: ALICE, consumed_stake: 0 },
-    JurorPoolItem { stake: 6, juror: BOB, consumed_stake: 0 },
-    JurorPoolItem { stake: 5, juror: CHARLIE, consumed_stake: 0 },
-    JurorPoolItem { stake: 4, juror: DAVE, consumed_stake: 0 },
-    JurorPoolItem { stake: 3, juror: EVE, consumed_stake: 0 },
-    JurorPoolItem { stake: 2, juror: FERDIE, consumed_stake: 0 },
-    JurorPoolItem { stake: 1, juror: GINA, consumed_stake: 0 },
-];
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
     BalanceLock { id: CourtLockId::get(), amount, reasons: pallet_balances::Reasons::All }
@@ -640,7 +627,7 @@ fn exit_court_fails_if_inflation_period_not_over() {
 #[test]
 fn vote_works() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -648,7 +635,7 @@ fn vote_works() {
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert_eq!(draws.len(), 5usize);
+        assert_eq!(draws.len(), Court::necessary_jurors_weight(0usize));
         let slashable = MinJurorStake::get();
         let alice_index =
             draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
@@ -693,7 +680,7 @@ fn vote_works() {
 #[test]
 fn vote_overwrite_works() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -755,7 +742,7 @@ fn vote_fails_if_vote_state_incorrect(
     vote: crate::Vote<<Runtime as frame_system::Config>::Hash, crate::DelegatedStakesOf<Runtime>>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -781,7 +768,7 @@ fn vote_fails_if_vote_state_incorrect(
 #[test]
 fn vote_fails_if_caller_not_in_draws() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -803,7 +790,7 @@ fn vote_fails_if_caller_not_in_draws() {
 #[test]
 fn vote_fails_if_not_in_voting_period() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -826,7 +813,7 @@ fn vote_fails_if_not_in_voting_period() {
 #[test]
 fn reveal_vote_works() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -834,7 +821,7 @@ fn reveal_vote_works() {
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert_eq!(draws.len(), 5usize);
+        assert_eq!(draws.len(), Court::necessary_jurors_weight(0usize));
         let slashable = MinJurorStake::get();
         let alice_index =
             draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
@@ -1620,7 +1607,7 @@ fn appeal_adds_last_appeal() {
 #[test]
 fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -1813,7 +1800,7 @@ fn reassign_juror_stakes_fails_if_court_not_closed() {
 #[test]
 fn reassign_juror_stakes_decreases_active_lock() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -1898,7 +1885,7 @@ fn reassign_juror_stakes_decreases_active_lock() {
 #[test]
 fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -2002,7 +1989,7 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
 #[test]
 fn reassign_juror_stakes_works_for_delegations() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -2148,7 +2135,7 @@ fn reassign_juror_stakes_works_for_delegations() {
 #[test]
 fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -2373,19 +2360,7 @@ fn get_auto_resolve_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         let court = <Courts<Runtime>>::get(court_id).unwrap();
         let appeal_end = court.cycle_ends.appeal;
-        assert_eq!(Court::get_auto_resolve(&market_id, &market).unwrap().result, Some(appeal_end));
-    });
-}
-
-#[test]
-fn get_auto_resolve_fails_if_wrong_dispute_mechanism() {
-    ExtBuilder::default().build().execute_with(|| {
-        let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
-        assert_noop!(
-            Court::get_auto_resolve(&0, &market),
-            Error::<Runtime>::MarketDoesNotHaveCourtMechanism
-        );
+        assert_eq!(Court::get_auto_resolve(&market_id, &market).result, Some(appeal_end));
     });
 }
 
@@ -2483,7 +2458,7 @@ fn on_global_dispute_returns_appealed_outcomes() {
 #[test]
 fn choose_multiple_weighted_works() {
     ExtBuilder::default().build().execute_with(|| {
-        let necessary_jurors_weight = Court::necessary_jurors_weight(5usize);
+        let necessary_jurors_weight = Court::necessary_jurors_weight(0usize);
         for i in 0..necessary_jurors_weight {
             let amount = MinJurorStake::get() + i as u128;
             let juror = i as u128;
@@ -2502,7 +2477,7 @@ fn choose_multiple_weighted_works() {
 fn select_jurors_updates_juror_consumed_stake() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
-        fill_juror_pool();
+        fill_juror_pool(MaxJurors::get());
         // the last appeal is reserved for global dispute backing
         let appeal_number = (MaxAppeals::get() - 1) as usize;
         fill_appeals(court_id, appeal_number);
@@ -2593,21 +2568,35 @@ fn on_dispute_inserts_draws() {
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         assert_eq!(
             draws[0],
-            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() }
+            Draw {
+                juror: ALICE,
+                weight: 3,
+                vote: Vote::Drawn,
+                slashable: 3 * MinJurorStake::get()
+            }
         );
         assert_eq!(
             draws[1],
-            Draw { juror: BOB, weight: 2, vote: Vote::Drawn, slashable: 2 * MinJurorStake::get() }
+            Draw { juror: BOB, weight: 4, vote: Vote::Drawn, slashable: 4 * MinJurorStake::get() }
         );
         assert_eq!(
             draws[2],
-            Draw { juror: DAVE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() }
+            Draw {
+                juror: CHARLIE,
+                weight: 8,
+                vote: Vote::Drawn,
+                slashable: 8 * MinJurorStake::get()
+            }
         );
         assert_eq!(
             draws[3],
-            Draw { juror: EVE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() }
+            Draw { juror: DAVE, weight: 8, vote: Vote::Drawn, slashable: 8 * MinJurorStake::get() }
         );
-        assert_eq!(draws.len(), 4usize);
+        assert_eq!(
+            draws[4],
+            Draw { juror: EVE, weight: 8, vote: Vote::Drawn, slashable: 8 * MinJurorStake::get() }
+        );
+        assert_eq!(draws.len(), 5usize);
     });
 }
 
@@ -2673,10 +2662,10 @@ fn has_failed_returns_true_for_uninitialized_court() {
 #[test]
 fn check_necessary_jurors_weight() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(Court::necessary_jurors_weight(0usize), 5usize);
-        assert_eq!(Court::necessary_jurors_weight(1usize), 11usize);
-        assert_eq!(Court::necessary_jurors_weight(2usize), 23usize);
-        assert_eq!(Court::necessary_jurors_weight(3usize), 47usize);
+        assert_eq!(Court::necessary_jurors_weight(0usize), 31usize);
+        assert_eq!(Court::necessary_jurors_weight(1usize), 63usize);
+        assert_eq!(Court::necessary_jurors_weight(2usize), 127usize);
+        assert_eq!(Court::necessary_jurors_weight(3usize), 255usize);
     });
 }
 
@@ -2793,20 +2782,7 @@ fn choose_multiple_weighted_returns_different_jurors_with_other_seed() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
 
-        let mut jurors = <JurorPool<Runtime>>::get();
-        for pool_item in DEFAULT_SET_OF_JURORS.iter() {
-            <Jurors<Runtime>>::insert(
-                pool_item.juror,
-                JurorInfo {
-                    stake: pool_item.stake,
-                    active_lock: 0u128,
-                    prepare_exit_at: None,
-                    delegations: Default::default(),
-                },
-            );
-            jurors.try_push(pool_item.clone()).unwrap();
-        }
-        <JurorPool<Runtime>>::put(jurors);
+        fill_juror_pool(MaxJurors::get());
 
         let nonce_0 = 42u64;
         <crate::JurorsSelectionNonce<Runtime>>::put(nonce_0);
@@ -2855,24 +2831,13 @@ fn get_random_seed_returns_equal_seeds_with_equal_nonce() {
 fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
-        let mut jurors = <JurorPool<Runtime>>::get();
-        for pool_item in DEFAULT_SET_OF_JURORS.iter() {
-            <Jurors<Runtime>>::insert(
-                pool_item.juror,
-                JurorInfo {
-                    stake: pool_item.stake,
-                    active_lock: 0u128,
-                    prepare_exit_at: None,
-                    delegations: Default::default(),
-                },
-            );
-            jurors.try_push(pool_item.clone()).unwrap();
-        }
-        <JurorPool<Runtime>>::put(jurors);
+        fill_juror_pool(MaxJurors::get());
+
+        let jurors = <JurorPool<Runtime>>::get();
 
         let random_jurors = Court::choose_multiple_weighted(2).unwrap();
         for draw in random_jurors {
-            assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| el.juror == draw.juror));
+            assert!(jurors.iter().any(|el| el.juror == draw.juror));
         }
     });
 }

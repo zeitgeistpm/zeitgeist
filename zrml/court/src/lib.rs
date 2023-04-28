@@ -197,7 +197,7 @@ mod pallet {
     }
 
     // Number of draws for an initial market dispute.
-    const INITIAL_DRAWS_NUM: usize = 5;
+    const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent appeals
@@ -304,26 +304,13 @@ mod pallet {
         T: Config,
     {
         /// A juror has been added to the court.
-        JurorJoined {
-            juror: T::AccountId,
-            stake: BalanceOf<T>,
-        },
+        JurorJoined { juror: T::AccountId, stake: BalanceOf<T> },
         /// A juror prepared to exit the court.
-        JurorPreparedExit {
-            juror: T::AccountId,
-        },
+        JurorPreparedExit { juror: T::AccountId },
         /// A juror has been removed from the court.
-        JurorExited {
-            juror: T::AccountId,
-            exit_amount: BalanceOf<T>,
-            active_lock: BalanceOf<T>,
-        },
+        JurorExited { juror: T::AccountId, exit_amount: BalanceOf<T>, active_lock: BalanceOf<T> },
         /// A juror has voted in a court.
-        JurorVoted {
-            court_id: CourtId,
-            juror: T::AccountId,
-            commitment: T::Hash,
-        },
+        JurorVoted { court_id: CourtId, juror: T::AccountId, commitment: T::Hash },
         /// A juror has revealed their vote.
         JurorRevealedVote {
             juror: T::AccountId,
@@ -346,21 +333,14 @@ mod pallet {
             delegated_jurors: Vec<T::AccountId>,
         },
         /// A market has been appealed.
-        CourtAppealed {
-            court_id: CourtId,
-            appeal_number: u32,
-        },
-        MintedInCourt {
-            juror: T::AccountId,
-            amount: BalanceOf<T>,
-        },
+        CourtAppealed { court_id: CourtId, appeal_number: u32 },
+        /// A new token amount was minted for the court jurors.
+        MintedInCourt { juror: T::AccountId, amount: BalanceOf<T> },
         /// The juror stakes have been reassigned. The losing jurors have been slashed.
         /// The winning jurors have been rewarded by the losers.
         /// The losing jurors are those, who did not vote,
         /// were denounced or did not reveal their vote.
-        JurorStakesReassigned {
-            court_id: CourtId,
-        },
+        JurorStakesReassigned { court_id: CourtId },
     }
 
     #[pallet::error]
@@ -1482,6 +1462,9 @@ mod pallet {
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let mut jurors = <JurorPool<T>>::get();
             let total_weight = Self::get_unconsumed_stake_sum(jurors.as_slice());
+            let required_weight =
+                (number as u128).saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
+            ensure!(total_weight >= required_weight, Error::<T>::NotEnoughJurors);
             let random_set = Self::get_n_random_numbers(number, total_weight)?;
             let selections = Self::get_selections(&mut jurors, random_set);
             <JurorPool<T>>::put(jurors);
@@ -1520,10 +1503,7 @@ mod pallet {
         pub(crate) fn select_jurors(
             appeal_number: usize,
         ) -> Result<SelectedDrawsOf<T>, DispatchError> {
-            let jurors_len = <JurorPool<T>>::decode_len().unwrap_or(0);
             let necessary_jurors_weight = Self::necessary_jurors_weight(appeal_number);
-            ensure!(jurors_len >= necessary_jurors_weight, Error::<T>::NotEnoughJurors);
-
             let random_jurors = Self::choose_multiple_weighted(necessary_jurors_weight)?;
 
             // keep in mind that the number of draws is at maximum necessary_jurors_weight * 2
@@ -1654,9 +1634,9 @@ mod pallet {
         }
 
         // Calculates the necessary number of draws depending on the number of market appeals.
-        pub(crate) fn necessary_jurors_weight(appeals_len: usize) -> usize {
-            // 2^(appeals_len) * 5 + 2^(appeals_len) - 1
-            // MaxAppeals - 1 (= 3) example: 2^3 * 5 + 2^3 - 1 = 47
+        pub fn necessary_jurors_weight(appeals_len: usize) -> usize {
+            // 2^(appeals_len) * 31 + 2^(appeals_len) - 1
+            // MaxAppeals - 1 (= 3) example: 2^3 * 31 + 2^3 - 1 = 255
             APPEAL_BASIS
                 .saturating_pow(appeals_len as u32)
                 .saturating_mul(INITIAL_DRAWS_NUM)
@@ -1873,7 +1853,7 @@ mod pallet {
         }
 
         fn on_resolution_max_weight() -> Weight {
-            T::WeightInfo::on_resolution(T::MaxJurors::get(), T::MaxSelectedDraws::get())
+            T::WeightInfo::on_resolution(T::MaxSelectedDraws::get())
         }
 
         fn exchange_max_weight() -> Weight {
@@ -1981,7 +1961,7 @@ mod pallet {
 
             let res = ResultWithWeightInfo {
                 result: Some(winner_outcome),
-                weight: T::WeightInfo::on_resolution(T::MaxJurors::get(), draws_len),
+                weight: T::WeightInfo::on_resolution(draws_len),
             };
 
             Ok(res)
@@ -2029,21 +2009,19 @@ mod pallet {
         fn get_auto_resolve(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+        ) -> ResultWithWeightInfo<Option<Self::BlockNumber>> {
+            let mut res =
+                ResultWithWeightInfo { result: None, weight: T::WeightInfo::get_auto_resolve() };
 
-            let court_id = <MarketIdToCourtId<T>>::get(market_id)
-                .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
+                return res;
+            }
 
-            let res = ResultWithWeightInfo {
-                result: <Courts<T>>::get(court_id).map(|court| court.cycle_ends.appeal),
-                weight: T::WeightInfo::get_auto_resolve(),
-            };
+            if let Some(court_id) = <MarketIdToCourtId<T>>::get(market_id) {
+                res.result = <Courts<T>>::get(court_id).map(|court| court.cycle_ends.appeal);
+            }
 
-            Ok(res)
+            res
         }
 
         fn has_failed(

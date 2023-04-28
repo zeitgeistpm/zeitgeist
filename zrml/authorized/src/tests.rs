@@ -244,7 +244,7 @@ fn get_auto_resolve_works() {
         ));
         let now = frame_system::Pallet::<Runtime>::block_number();
         let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
-        assert_eq!(Authorized::get_auto_resolve(&0, &market).unwrap().result, Some(resolve_at),);
+        assert_eq!(Authorized::get_auto_resolve(&0, &market).result, Some(resolve_at),);
     });
 }
 
@@ -252,6 +252,6 @@ fn get_auto_resolve_works() {
 fn get_auto_resolve_returns_none_without_market_storage() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>();
-        assert_eq!(Authorized::get_auto_resolve(&0, &market).unwrap().result, None,);
+        assert_eq!(Authorized::get_auto_resolve(&0, &market).result, None,);
     });
 }

@@ -98,7 +98,7 @@ pub trait DisputeApi {
     fn get_auto_resolve(
         market_id: &Self::MarketId,
         market: &MarketOfDisputeApi<Self>,
-    ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError>;
+    ) -> ResultWithWeightInfo<Option<Self::BlockNumber>>;
 
     /// Returns `true` if the market dispute mechanism
     /// was unable to come to a conclusion.

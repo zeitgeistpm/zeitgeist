@@ -428,11 +428,14 @@ mod pallet {
         fn get_auto_resolve(
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+        ) -> ResultWithWeightInfo<Option<Self::BlockNumber>> {
+            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
+                return ResultWithWeightInfo {
+                    result: None,
+                    weight: T::WeightInfo::get_auto_resolve_weight(T::MaxDisputes::get()),
+                };
+            }
+
             let disputes = Disputes::<T>::get(market_id);
 
             let res = ResultWithWeightInfo {
@@ -440,7 +443,7 @@ mod pallet {
                 weight: T::WeightInfo::get_auto_resolve_weight(disputes.len() as u32),
             };
 
-            Ok(res)
+            res
         }
 
         fn has_failed(
