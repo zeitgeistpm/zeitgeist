@@ -634,26 +634,26 @@ mod pallet {
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
 
-            let overweight = match market.dispute_mechanism {
+            let weight = match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&market_id, &market)?;
-                    T::Court::on_dispute_max_weight()
-                        .saturating_add(T::SimpleDisputes::on_dispute_max_weight())
+                    T::WeightInfo::dispute_authorized()
                 }
                 MarketDisputeMechanism::Court => {
-                    T::Court::on_dispute(&market_id, &market)?;
-                    T::Authorized::on_dispute_max_weight()
-                        .saturating_add(T::SimpleDisputes::on_dispute_max_weight())
+                    let court_weight = T::Court::on_dispute(&market_id, &market)?.weight;
+                    T::WeightInfo::dispute_authorized()
+                        .saturating_sub(T::Authorized::on_dispute_max_weight())
+                        .saturating_add(court_weight)
                 }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_dispute(&market_id, &market)?;
-                    T::Court::on_dispute_max_weight()
-                        .saturating_add(T::Authorized::on_dispute_max_weight())
+                    let sd_weight = T::SimpleDisputes::on_dispute(&market_id, &market)?.weight;
+                    T::WeightInfo::dispute_authorized()
+                        .saturating_sub(T::Authorized::on_dispute_max_weight())
+                        .saturating_add(sd_weight)
                 }
             };
 
             let dispute_bond = T::DisputeBond::get();
-
             T::AssetManager::reserve_named(&Self::reserve_id(), Asset::Ztg, &who, dispute_bond)?;
 
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
@@ -663,13 +663,7 @@ mod pallet {
             })?;
 
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
-
-            let full_weight = T::WeightInfo::dispute_authorized().saturating_add(
-                T::Court::on_dispute_max_weight()
-                    .saturating_add(T::SimpleDisputes::on_dispute_max_weight()),
-            );
-
-            Ok((Some(full_weight.saturating_sub(overweight))).into())
+            Ok((Some(weight)).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
