@@ -8,7 +8,8 @@ repository.
 
 As of 0.3.9, the changelog's format is based on
 https://keepachangelog.com/en/1.0.0/ and ⚠️ marks changes that might break
-components which query the chain's storage or the runtime APIs/RPC interface.
+components which query the chain's storage, the extrinsics or the runtime
+APIs/RPC interface.
 
 ## v0.3.9
 
