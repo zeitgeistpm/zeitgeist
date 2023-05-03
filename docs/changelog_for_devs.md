@@ -12,14 +12,17 @@ components which query the chain's storage or the runtime APIs/RPC interface.
 
 ## v0.3.9
 
+[#937]: https://github.com/zeitgeistpm/zeitgeist/pull/937
+[#903]: https://github.com/zeitgeistpm/zeitgeist/pull/903
+
 ### Changed
 
 -   ⚠️ Add `outsider` field to `MarketBonds` struct. In particular, the `Market`
-    struct's layout has changed (#903).
+    struct's layout has changed ([#903]).
 
 ### Fixed
 
--   ⚠️ Fix order of arguments for `get_spot_price` (#937).
+-   ⚠️ Fix order of arguments for `get_spot_price` ([#937]).
 
 ## v0.3.8
 
