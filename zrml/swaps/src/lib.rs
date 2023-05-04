@@ -1471,7 +1471,7 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
         }
 
-        // The minimum allowed balance of `asset` in a liquidity pool.
+        /// The minimum allowed balance of `asset` in a liquidity pool.
         pub(crate) fn min_balance(asset: Asset<MarketIdOf<T>>) -> BalanceOf<T> {
             T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
         }
