@@ -1476,15 +1476,15 @@ mod pallet {
             T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
         }
 
-        // Returns the minimum allowed balance allowed for a pool with id `pool_id` containing
-        // `assets`.
-        //
-        // The minimum allowed balance is the maximum of all minimum allowed balances of assets
-        // contained in the pool, _including_ the pool shares asset. This ensures that none of the
-        // accounts involved are slashed when a pool is created with the minimum amount.
-        //
-        // **Should** only be called if `assets` is non-empty. Note that there need not exist a pool
-        // with the specified `pool_id`.
+        /// Returns the minimum allowed balance allowed for a pool with id `pool_id` containing
+        /// `assets`.
+        ///
+        /// The minimum allowed balance is the maximum of all minimum allowed balances of assets
+        /// contained in the pool, _including_ the pool shares asset. This ensures that none of the
+        /// accounts involved are slashed when a pool is created with the minimum amount.
+        ///
+        /// **Should** only be called if `assets` is non-empty. Note that the existence of a pool
+        /// with the specified `pool_id` is not mandatory.
         pub(crate) fn min_balance_of_pool(
             pool_id: PoolId,
             assets: &[Asset<MarketIdOf<T>>],
