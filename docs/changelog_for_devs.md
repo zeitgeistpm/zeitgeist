@@ -2,6 +2,7 @@
 
 Used for communicating changes to other parts of Zeitgeist infrastructure
 ([zeitgeistpm/ui](https://github.com/zeitgeistpm/ui),
+[zeitgeistpm/sdk-next](https://github.com/zeitgeistpm/sdk-next),
 [zeitgeistpm/zeitgeist-subsquid](https://github.com/zeitgeistpm/zeitgeist-subsquid))
 and does not represent a complete changelog for the zeitgeistpm/zeitgeist
 repository.
