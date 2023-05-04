@@ -400,8 +400,8 @@ mod pallet {
         AmountExceedsBalance,
         /// After the first join of the court the amount has to be higher than the current stake.
         AmountBelowLastJoin,
-        /// The random number generation failed.
-        RandNumGenFailed,
+        /// The random number generation failed, because the juror total stake is too low.
+        NotEnoughTotalJurorStakeForRandomNumberGeneration,
         /// The amount is too low to kick the lowest juror out of the stake-weighted pool.
         AmountBelowLowestJuror,
         /// This should not happen, because the juror account should only be once in a pool.
@@ -1119,28 +1119,62 @@ mod pallet {
         }
 
         // Get `n` unique and ordered random numbers from the random number generator.
-        // If the generator returns three times the same number in a row, an error is returned.
+        // This follows the rule of draw without replacement.
         pub(crate) fn get_n_random_numbers(
             n: usize,
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
             let mut rng = Self::rng();
 
+            let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
+
+            if max.checked_div(min_juror_stake).unwrap_or(0) < (n as u128) {
+                return Err(Error::<T>::NotEnoughTotalJurorStakeForRandomNumberGeneration.into());
+            }
+
             let mut random_set = BTreeSet::new();
-            let mut insert_unused_random_number = || -> DispatchResult {
-                let mut count = 0u8;
-                // this loop is to make sure we don't insert the same random number twice
-                while !random_set.insert(rng.gen_range(0u128..=max)) {
-                    count = count.saturating_add(1u8);
-                    if count >= 3u8 {
-                        return Err(Error::<T>::RandNumGenFailed.into());
-                    }
+            let mut remaining_ranges = Vec::new();
+            remaining_ranges.push((0u128, max));
+
+            let mut insert_unused_random_number = || {
+                // create a cumulative vector of range sizes
+                let mut cumulative_ranges = Vec::new();
+                let mut running_total = 0u128;
+                for &(start, end) in remaining_ranges.iter() {
+                    let range_size = end.saturating_sub(start);
+                    running_total = running_total.saturating_add(range_size);
+                    cumulative_ranges.push(running_total);
                 }
-                Ok(())
+
+                // generate a random number within the total range size
+                let random_number = rng.gen_range(0..=running_total);
+
+                // find the corresponding range using binary search
+                let range_index =
+                    cumulative_ranges.binary_search(&random_number).unwrap_or_else(|x| x);
+
+                // choose a random range according to stake-weight from the remaining_ranges vector
+                let (start, end) = remaining_ranges[range_index];
+
+                // generate a random number within the chosen range
+                let random_number = rng.gen_range(start..=end);
+                random_set.insert(random_number);
+
+                // update the remaining_ranges vector by splitting the chosen range
+                let left_range = (start, random_number);
+                let right_range = (random_number.saturating_add(min_juror_stake), end);
+
+                remaining_ranges.remove(range_index);
+                if left_range.0 <= left_range.1 {
+                    remaining_ranges.push(left_range);
+                }
+                if right_range.0 <= right_range.1 {
+                    remaining_ranges.push(right_range);
+                }
             };
 
             for _ in 0..n {
-                insert_unused_random_number()?;
+                insert_unused_random_number();
             }
 
             debug_assert!(random_set.len() == n);
@@ -1148,53 +1182,15 @@ mod pallet {
             Ok(random_set)
         }
 
-        // Get the sum of the unconsumed stake from all jurors in the pool.
-        // The unconsumed stake is the stake that was not already locked in previous courts.
-        fn get_unconsumed_stake_sum(jurors: &[JurorPoolItemOf<T>]) -> u128 {
-            jurors
-                .iter()
-                .map(|pool_item| {
-                    pool_item
-                        .stake
-                        .saturating_sub(pool_item.consumed_stake)
-                        .saturated_into::<u128>()
-                })
-                .sum::<u128>()
-        }
-
-        // Returns the added active lock amount.
+        // Adds active lock amount.
         // The added active lock amount is noted in the Jurors map.
-        fn update_active_lock(
-            juror: &T::AccountId,
-            selections: &BTreeMap<T::AccountId, SelectionValueOf<T>>,
-        ) -> BalanceOf<T> {
-            if let Some(SelectionValue {
-                weight: _,
-                slashable: total_lock_added,
-                delegated_stakes: _,
-            }) = selections.get(juror)
-            {
-                if let Some(mut juror_info) = <Jurors<T>>::get(juror) {
-                    juror_info.active_lock =
-                        juror_info.active_lock.saturating_add(*total_lock_added);
-                    <Jurors<T>>::insert(juror, juror_info);
-                } else {
-                    debug_assert!(false, "Juror should exist in the Jurors map");
-                }
-                return *total_lock_added;
+        fn add_active_lock(juror: &T::AccountId, lock_added: BalanceOf<T>) {
+            if let Some(mut juror_info) = <Jurors<T>>::get(juror) {
+                juror_info.active_lock = juror_info.active_lock.saturating_add(lock_added);
+                <Jurors<T>>::insert(juror, juror_info);
+            } else {
+                debug_assert!(false, "Juror should exist in the Jurors map");
             }
-
-            <BalanceOf<T>>::zero()
-        }
-
-        // Returns true, if `n` is greater or equal to `lower_bound` and less than `upper_bound`.
-        // Returns false, otherwise.
-        fn in_range(n: u128, lower_bound: u128, upper_bound: u128) -> bool {
-            debug_assert!(lower_bound <= upper_bound);
-            if lower_bound <= n && n < upper_bound {
-                return true;
-            }
-            false
         }
 
         /// Add a delegated juror to the `delegated_stakes` vector.
@@ -1369,57 +1365,54 @@ mod pallet {
         // is increased by the random selection weight.
         fn get_selections(
             jurors: &mut JurorPoolOf<T>,
-            mut random_set: BTreeSet<u128>,
+            random_set: BTreeSet<u128>,
+            cumulative_ranges: Vec<u128>,
         ) -> BTreeMap<T::AccountId, SelectionValueOf<T>> {
-            let mut selections = BTreeMap::<T::AccountId, SelectionValueOf<T>>::new();
+            debug_assert!(jurors.len() == cumulative_ranges.len());
+            debug_assert!({
+                let prev = cumulative_ranges.clone();
+                let mut sorted = cumulative_ranges.clone();
+                sorted.sort();
+                prev.len() == sorted.len() && prev.iter().zip(sorted.iter()).all(|(a, b)| a == b)
+            });
+            debug_assert!({
+                random_set.iter().all(|random_number| {
+                    let last = cumulative_ranges.last().unwrap_or(&0);
+                    *random_number <= *last
+                })
+            });
 
+            let mut selections = BTreeMap::<T::AccountId, SelectionValueOf<T>>::new();
             let mut invalid_juror_indices = Vec::<usize>::new();
 
-            let mut current_weight = 0u128;
-            for (i, pool_item) in jurors.iter_mut().enumerate() {
-                let lower_bound = current_weight;
-                let mut unconsumed = pool_item.stake.saturating_sub(pool_item.consumed_stake);
-                let upper_bound =
-                    current_weight.saturating_add(unconsumed.saturated_into::<u128>());
+            for random_number in random_set {
+                let range_index =
+                    cumulative_ranges.binary_search(&random_number).unwrap_or_else(|i| i);
+                if let Some(pool_item) = jurors.get_mut(range_index) {
+                    let unconsumed = pool_item.stake.saturating_sub(pool_item.consumed_stake);
+                    let lock_added = unconsumed.min(T::MinJurorStake::get());
 
-                // this always gets the lowest random number first and maybe removes it
-                let unchangable_random_numbers = random_set.clone();
-                for random_number in unchangable_random_numbers.iter() {
-                    if Self::in_range(*random_number, lower_bound, upper_bound) {
-                        let lock_added = unconsumed.min(T::MinJurorStake::get());
-                        unconsumed = unconsumed.saturating_sub(lock_added);
-
-                        match Self::add_to_selections(
-                            &mut selections,
-                            &pool_item.juror,
-                            lock_added,
-                            *random_number,
-                        ) {
-                            Ok(()) => {}
-                            Err(SelectionError::NoValidDelegatedJuror) => {
-                                // it would be pretty expensive to request another selection
-                                // so just ignore this missing MinJurorStake
-                                // I mean we also miss MinJurorStake in the case
-                                // if the juror fails to vote or reveal or gets denounced
-                                invalid_juror_indices.push(i);
-                            }
+                    match Self::add_to_selections(
+                        &mut selections,
+                        &pool_item.juror,
+                        lock_added,
+                        random_number,
+                    ) {
+                        Ok(()) => {}
+                        Err(SelectionError::NoValidDelegatedJuror) => {
+                            // it would be pretty expensive to request another selection
+                            // so just ignore this missing MinJurorStake
+                            // I mean we also miss MinJurorStake in the case
+                            // if the juror fails to vote or reveal or gets denounced
+                            invalid_juror_indices.push(range_index);
                         }
-
-                        random_set.remove(random_number);
-                    } else {
-                        break;
                     }
+
+                    Self::add_active_lock(&pool_item.juror, lock_added);
+                    pool_item.consumed_stake = pool_item.consumed_stake.saturating_add(lock_added);
+                } else {
+                    debug_assert!(false, "Each range index should match to a juror.");
                 }
-
-                let total_lock_added = Self::update_active_lock(&pool_item.juror, &selections);
-                pool_item.consumed_stake =
-                    pool_item.consumed_stake.saturating_add(total_lock_added);
-
-                if random_set.is_empty() {
-                    break;
-                }
-
-                current_weight = upper_bound;
             }
 
             for i in invalid_juror_indices {
@@ -1467,12 +1460,25 @@ mod pallet {
             draw_weight: usize,
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let mut jurors = <JurorPool<T>>::get();
-            let jurors_unconsumed_stake = Self::get_unconsumed_stake_sum(jurors.as_slice());
+
+            let mut total_unconsumed = 0u128;
+            let mut cumulative_ranges = Vec::new();
+            let mut running_total = 0u128;
+            for pool_item in &jurors {
+                let unconsumed = pool_item
+                    .stake
+                    .saturating_sub(pool_item.consumed_stake)
+                    .saturated_into::<u128>();
+                total_unconsumed = total_unconsumed.saturating_add(unconsumed);
+                running_total = running_total.saturating_add(unconsumed);
+                cumulative_ranges.push(running_total);
+            }
+
             let required_stake = (draw_weight as u128)
                 .saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
-            ensure!(jurors_unconsumed_stake >= required_stake, Error::<T>::NotEnoughJurorsStake);
-            let random_set = Self::get_n_random_numbers(draw_weight, jurors_unconsumed_stake)?;
-            let selections = Self::get_selections(&mut jurors, random_set);
+            ensure!(total_unconsumed >= required_stake, Error::<T>::NotEnoughJurorsStake);
+            let random_set = Self::get_n_random_numbers(draw_weight, total_unconsumed)?;
+            let selections = Self::get_selections(&mut jurors, random_set, cumulative_ranges);
             <JurorPool<T>>::put(jurors);
 
             Ok(Self::convert_selections_to_draws(selections))
@@ -2046,7 +2052,14 @@ mod pallet {
                 .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;
 
             let jurors = JurorPool::<T>::get();
-            let jurors_unconsumed_stake = Self::get_unconsumed_stake_sum(jurors.as_slice());
+            let jurors_unconsumed_stake = jurors.iter().fold(0u128, |acc, pool_item| {
+                let unconsumed = pool_item
+                    .stake
+                    .saturating_sub(pool_item.consumed_stake)
+                    .saturated_into::<u128>();
+                acc.saturating_add(unconsumed)
+            });
+
             match <Courts<T>>::get(court_id) {
                 Some(court) => {
                     let appeals = &court.appeals;

@@ -635,7 +635,10 @@ fn vote_works() {
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert_eq!(draws.len(), Court::necessary_draws_weight(0usize));
+        assert_eq!(
+            draws.iter().map(|draw| draw.weight).sum::<u32>() as usize,
+            Court::necessary_draws_weight(0usize)
+        );
         let slashable = MinJurorStake::get();
         let alice_index =
             draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
@@ -821,7 +824,10 @@ fn reveal_vote_works() {
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert_eq!(draws.len(), Court::necessary_draws_weight(0usize));
+        assert_eq!(
+            draws.iter().map(|draw| draw.weight).sum::<u32>() as usize,
+            Court::necessary_draws_weight(0usize)
+        );
         let slashable = MinJurorStake::get();
         let alice_index =
             draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
@@ -2583,18 +2589,23 @@ fn on_dispute_inserts_draws() {
             draws[2],
             Draw {
                 juror: CHARLIE,
-                weight: 8,
+                weight: 7,
                 vote: Vote::Drawn,
-                slashable: 8 * MinJurorStake::get()
+                slashable: 7 * MinJurorStake::get()
             }
         );
         assert_eq!(
             draws[3],
-            Draw { juror: DAVE, weight: 8, vote: Vote::Drawn, slashable: 8 * MinJurorStake::get() }
+            Draw { juror: DAVE, weight: 7, vote: Vote::Drawn, slashable: 7 * MinJurorStake::get() }
         );
         assert_eq!(
             draws[4],
-            Draw { juror: EVE, weight: 8, vote: Vote::Drawn, slashable: 8 * MinJurorStake::get() }
+            Draw {
+                juror: EVE,
+                weight: 10,
+                vote: Vote::Drawn,
+                slashable: 10 * MinJurorStake::get()
+            }
         );
         assert_eq!(draws.len(), 5usize);
     });
