@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -227,6 +228,8 @@ pub struct Extensions {
     pub parachain_id: u32,
     /// The relay chain of the Parachain.
     pub relay_chain: String,
+    /// Known bad block hashes.
+    pub bad_blocks: sc_client_api::BadBlocks<polkadot_primitives::v2::Block>,
 }
 
 #[cfg(feature = "parachain")]

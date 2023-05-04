@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -44,7 +45,7 @@ use frame_support::{
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
-use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
 use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
@@ -89,10 +90,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 42,
+    spec_version: 45,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 19,
+    transaction_version: 20,
     state_version: 1,
 };
 

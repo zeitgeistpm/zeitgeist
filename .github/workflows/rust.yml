@@ -88,14 +88,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: wasm32-unknown-unknown
-          default: true
-          override: true
-          profile: minimal
-          components: rustfmt, clippy, llvm-tools-preview
+        run: rustup show
 
       - uses: actions-rs/install@v0.1
         with:

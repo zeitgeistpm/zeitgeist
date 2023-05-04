@@ -94,6 +94,7 @@ orml-xcm-support = { branch = "polkadot-v0.9.32", default-features = false, git 
 orml-xtokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 polkadot-primitives = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot" }
+polkadot-runtime = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
 polkadot-runtime-parachains = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-builder = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
@@ -147,7 +148,8 @@ parachain = [
 
     # XCM
 
-    "kusama-runtime",
+    "polkadot-primitives",
+    "polkadot-runtime",
     "polkadot-runtime-parachains",
     "orml-asset-registry",
     "orml-unknown-tokens",
@@ -171,7 +173,7 @@ runtime-benchmarks = [
     "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal",
-    "kusama-runtime?/runtime-benchmarks",
+    "polkadot-runtime?/runtime-benchmarks",
     "orml-asset-registry?/runtime-benchmarks",
     "orml-tokens/runtime-benchmarks",
     "orml-xtokens?/runtime-benchmarks",
@@ -279,8 +281,8 @@ std = [
 
     # XCM
 
-    "kusama-runtime?/std",
-    "polkadot-primitives/std",
+    "polkadot-primitives?/std",
+    "polkadot-runtime?/std",
     "polkadot-runtime-parachains?/std",
     "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",

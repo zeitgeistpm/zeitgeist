@@ -1,5 +1,5 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021 Centrifuge Foundation (centrifuge.io).
-// Copyright 2022 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -19,11 +19,11 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            ksm, register_foreign_parent, register_foreign_ztg, sibling_parachain_account,
+            register_foreign_parent, register_foreign_ztg, roc, sibling_parachain_account,
             zeitgeist_parachain_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID,
             PARA_ID_SIBLING,
         },
-        test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
+        test_net::{RococoNet, Sibling, TestNet, Zeitgeist},
     },
     xcm_config::{config::battery_station, fees::default_per_second},
     AssetRegistry, Balance, Balances, CurrencyId, RuntimeOrigin, Tokens, XTokens,
@@ -173,21 +173,21 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 }
 
 #[test]
-fn transfer_ksm_from_relay_chain() {
+fn transfer_roc_from_relay_chain() {
     TestNet::reset();
 
-    let transfer_amount: Balance = ksm(1);
+    let transfer_amount: Balance = roc(1);
 
     Zeitgeist::execute_with(|| {
         register_foreign_parent(None);
     });
 
-    KusamaNet::execute_with(|| {
-        let initial_balance = kusama_runtime::Balances::free_balance(&ALICE.into());
+    RococoNet::execute_with(|| {
+        let initial_balance = rococo_runtime::Balances::free_balance(&ALICE.into());
         assert!(initial_balance >= transfer_amount);
 
-        assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
-            kusama_runtime::RuntimeOrigin::signed(ALICE.into()),
+        assert_ok!(rococo_runtime::XcmPallet::reserve_transfer_assets(
+            rococo_runtime::Origin::signed(ALICE.into()),
             Box::new(Parachain(battery_station::ID).into().into()),
             Box::new(Junction::AccountId32 { network: NetworkId::Any, id: BOB }.into().into()),
             Box::new((Here, transfer_amount).into()),
@@ -198,17 +198,17 @@ fn transfer_ksm_from_relay_chain() {
     Zeitgeist::execute_with(|| {
         assert_eq!(
             Tokens::free_balance(FOREIGN_PARENT_ID, &BOB.into()),
-            transfer_amount - ksm_fee()
+            transfer_amount - roc_fee()
         );
     });
 }
 
 #[test]
-fn transfer_ksm_to_relay_chain() {
+fn transfer_roc_to_relay_chain() {
     TestNet::reset();
 
-    let transfer_amount: Balance = ksm(1);
-    transfer_ksm_from_relay_chain();
+    let transfer_amount: Balance = roc(1);
+    transfer_roc_from_relay_chain();
 
     Zeitgeist::execute_with(|| {
         let initial_balance = Tokens::free_balance(FOREIGN_PARENT_ID, &ALICE.into());
@@ -234,8 +234,8 @@ fn transfer_ksm_to_relay_chain() {
         )
     });
 
-    KusamaNet::execute_with(|| {
-        assert_eq!(kusama_runtime::Balances::free_balance(&BOB.into()), 999_988_476_752);
+    RococoNet::execute_with(|| {
+        assert_eq!(rococo_runtime::Balances::free_balance(&BOB.into()), 948_894_198_216);
     });
 }
 
@@ -318,7 +318,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 #[test]
 fn test_total_fee() {
     assert_eq!(ztg_fee(), 92_696_000);
-    assert_eq!(ksm_fee(), 9_269_600_000);
+    assert_eq!(roc_fee(), 9_269_600_000);
 }
 
 #[inline]
@@ -331,9 +331,9 @@ fn fee(decimals: u32) -> Balance {
     calc_fee(default_per_second(decimals))
 }
 
-// The fee associated with transferring KSM tokens
+// The fee associated with transferring roc tokens
 #[inline]
-fn ksm_fee() -> Balance {
+fn roc_fee() -> Balance {
     fee(12)
 }
 

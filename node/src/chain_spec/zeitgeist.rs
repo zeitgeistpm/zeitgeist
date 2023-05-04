@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -26,13 +27,13 @@ use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
 use zeitgeist_runtime::parameters::SS58Prefix;
 
-use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD, STAKING_PTD};
+use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD};
 
 #[cfg(feature = "parachain")]
 use {
     super::{generate_inflation_config_function, Extensions},
-    crate::KUSAMA_PARACHAIN_ID,
-    zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
+    crate::POLKADOT_PARACHAIN_ID,
+    zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
     zeitgeist_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
         DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
@@ -148,7 +149,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
             generic_genesis(
                 additional_chain_spec_staging_zeitgeist(
                     #[cfg(feature = "parachain")]
-                    KUSAMA_PARACHAIN_ID.into(),
+                    POLKADOT_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_zeitgeist(),
                 wasm,
@@ -161,8 +162,9 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         Some(token_properties("ZTG", SS58Prefix::get())),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
-            relay_chain: "kusama".into(),
-            parachain_id: KUSAMA_PARACHAIN_ID,
+            relay_chain: "polkadot".into(),
+            parachain_id: POLKADOT_PARACHAIN_ID,
+            bad_blocks: None,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
