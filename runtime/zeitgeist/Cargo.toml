@@ -28,6 +28,7 @@ pallet-treasury = { branch = "polkadot-v0.9.32", default-features = false, git =
 pallet-utility = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-vesting = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+polkadot-primitives = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-block-builder = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -93,8 +94,7 @@ orml-unknown-tokens = { branch = "polkadot-v0.9.32", default-features = false, g
 orml-xcm-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-xtokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
-polkadot-primitives = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot" }
-polkadot-runtime = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/zeitgeistpm/polkadot", optional = true }
+polkadot-runtime = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 polkadot-runtime-parachains = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-builder = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
@@ -148,7 +148,6 @@ parachain = [
 
     # XCM
 
-    "polkadot-primitives",
     "polkadot-runtime",
     "polkadot-runtime-parachains",
     "orml-asset-registry",
@@ -239,6 +238,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "parity-scale-codec/std",
+    "polkadot-primitives/std",
     "scale-info/std",
     "sp-api/std",
     "sp-block-builder/std",
@@ -281,7 +281,6 @@ std = [
 
     # XCM
 
-    "polkadot-primitives?/std",
     "polkadot-runtime?/std",
     "polkadot-runtime-parachains?/std",
     "orml-asset-registry?/std",
