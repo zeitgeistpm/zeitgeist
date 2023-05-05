@@ -58,20 +58,6 @@ macro_rules! decl_common_types {
         #[cfg(not(feature = "with-global-disputes"))]
         type ConditionalMigration = ();
 
-        #[cfg(feature = "parachain")]
-        pub type Executive = frame_executive::Executive<
-            Runtime,
-            Block,
-            frame_system::ChainContext<Runtime>,
-            Runtime,
-            AllPalletsWithSystem,
-            (
-                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
-                ConditionalMigration,
-            ),
-        >;
-
-        #[cfg(not(feature = "parachain"))]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
