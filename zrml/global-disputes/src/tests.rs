@@ -30,7 +30,7 @@ use frame_support::{
     BoundedVec,
 };
 use pallet_balances::{BalanceLock, Error as BalancesError};
-use sp_runtime::traits::Zero;
+use sp_runtime::{traits::Zero, SaturatedConversion};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::mock::{
@@ -280,6 +280,100 @@ fn start_global_dispute_fails_if_max_owner_reached() {
             GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
             Err(Error::<Runtime>::MaxOwnersReached.into())
         );
+    });
+}
+
+#[test]
+fn start_global_dispute_fails_if_shared_possession_required() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let outcome_info = OutcomeInfo {
+            outcome_sum: SETUP_AMOUNT,
+            possession: Possession::Paid { owner: ALICE, fee: VotingOutcomeFee::get() },
+        };
+        <Outcomes<Runtime>>::insert(market_id, OutcomeReport::Scalar(0), outcome_info);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() + 1 {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42),
+                owner: i.into(),
+                amount: SETUP_AMOUNT,
+            });
+        }
+
+        assert_eq!(
+            GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
+            Err(Error::<Runtime>::SharedPossessionRequired.into())
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_adds_owners_for_existing_outcome() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42),
+                owner: i.into(),
+                amount: SETUP_AMOUNT,
+            });
+        }
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        let outcome_info = <Outcomes<Runtime>>::get(market_id, OutcomeReport::Scalar(42)).unwrap();
+        assert_eq!(
+            outcome_info.possession,
+            Possession::Shared { owners: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9].try_into().unwrap() }
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_updates_to_highest_winner() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42 + i.saturated_into::<u128>()),
+                owner: i.into(),
+                amount: SETUP_AMOUNT + i.saturated_into::<u128>(),
+            });
+        }
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        let gd_info = <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap();
+        assert_eq!(gd_info.outcome_info.outcome_sum, SETUP_AMOUNT + 9);
+        assert_eq!(gd_info.winner_outcome, OutcomeReport::Scalar(51));
     });
 }
 
