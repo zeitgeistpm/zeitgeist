@@ -1994,7 +1994,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
         assert_all_parameters(
             [239898989900, _26, _25, _25],
             0,
-            [LIQUIDITY + _1 + 101010100, LIQUIDITY - _1, _100, _100],
+            [LIQUIDITY + _1 + 101010100, LIQUIDITY - _1, LIQUIDITY, LIQUIDITY],
             LIQUIDITY,
         );
     });
