@@ -41,7 +41,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
     /// In case of a duplicated outcome, the owner and amount is added to the pre-existing outcome.
     fn start_global_dispute(
         market_id: &MarketId,
-        initial_item: &[InitialItem<AccountId, Balance>],
+        initial_items: &[InitialItem<AccountId, Balance>],
     ) -> Result<u32, DispatchError>;
 
     /// Determine the winner of a global dispute.
