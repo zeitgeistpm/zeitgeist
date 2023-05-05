@@ -240,6 +240,26 @@ fn start_global_dispute_fails_if_less_than_two_outcomes() {
 }
 
 #[test]
+fn start_global_dispute_fails_if_not_two_unique_outcomes() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        // three times the same outcome => not at least two unique outcomes
+        let initial_items = vec![
+            InitialItem { outcome: OutcomeReport::Scalar(0), owner: ALICE, amount: SETUP_AMOUNT },
+            InitialItem { outcome: OutcomeReport::Scalar(0), owner: BOB, amount: SETUP_AMOUNT },
+            InitialItem { outcome: OutcomeReport::Scalar(0), owner: CHARLIE, amount: SETUP_AMOUNT },
+        ];
+        assert_eq!(
+            GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
+            Err(Error::<Runtime>::AtLeastTwoUniqueOutcomesRequired.into())
+        );
+    });
+}
+
+#[test]
 fn start_global_dispute_fails_if_already_exists() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
