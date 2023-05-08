@@ -800,7 +800,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+            market.dispute_mechanism = MarketDisputeMechanism::Court;
             Ok(())
         })?;
 

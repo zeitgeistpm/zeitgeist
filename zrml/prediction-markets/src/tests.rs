@@ -50,6 +50,7 @@ use zeitgeist_primitives::{
         Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
     },
 };
+use zrml_global_disputes::GlobalDisputesPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_swaps::Pools;
 
@@ -3399,6 +3400,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
             OutcomeReport::Categorical(0)
         ));
 
+        let dispute_block = report_at;
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), market_id,));
 
         for _ in 0..(MaxAppeals::get() - 1) {
@@ -3423,7 +3425,28 @@ fn it_appeals_a_court_market_to_global_dispute() {
             CError::<Runtime>::MaxAppealsReached
         );
 
+        assert!(!GlobalDisputes::is_started(&market_id));
+
         assert_ok!(PredictionMarkets::start_global_dispute(Origin::signed(BOB), market_id));
+
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+
+        assert!(GlobalDisputes::is_started(&market_id));
+        System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
+
+        // remove_last_dispute_from_market_ids_per_dispute_block works
+        let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
+        assert_eq!(removable_market_ids.len(), 0);
+
+        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(
+            now + <Runtime as Config>::GlobalDisputePeriod::get(),
+        );
+        assert_eq!(market_ids, vec![market_id]);
+
+        assert_noop!(
+            PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::GlobalDisputeAlreadyStarted
+        );
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -3458,99 +3481,6 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
         assert_noop!(
             PredictionMarkets::dispute(Origin::signed(EVE), 0),
             Error::<Runtime>::InvalidMarketStatus
-        );
-    });
-}
-
-#[test]
-fn start_global_dispute_works() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 2;
-        assert_ok!(PredictionMarkets::create_market(
-            Origin::signed(ALICE),
-            Asset::Ztg,
-            BOB,
-            MarketPeriod::Block(0..2),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
-            MarketDisputeMechanism::SimpleDisputes,
-            ScoringRule::CPMM,
-        ));
-        let market_id = MarketCommons::latest_market_id().unwrap();
-
-        let market = MarketCommons::market(&market_id).unwrap();
-        let grace_period = market.deadlines.grace_period;
-        run_to_block(end + grace_period + 1);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            market_id,
-            OutcomeReport::Categorical(0)
-        ));
-        let dispute_at_0 = end + grace_period + 2;
-        run_to_block(dispute_at_0);
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), market_id,));
-        for i in 1..=<Runtime as zrml_simple_disputes::Config>::MaxDisputes::get() {
-            assert_noop!(
-                PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
-                Error::<Runtime>::MarketDisputeMechanismNotFailed
-            );
-
-            assert_ok!(SimpleDisputes::suggest_outcome(
-                Origin::signed(CHARLIE),
-                market_id,
-                OutcomeReport::Categorical(i.saturated_into()),
-            ));
-            run_blocks(1);
-            let market = MarketCommons::market(&market_id).unwrap();
-            assert_eq!(market.status, MarketStatus::Disputed);
-        }
-
-        let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(market_id);
-        assert_eq!(disputes.len(), <Runtime as Config>::MaxDisputes::get() as usize);
-
-        let last_dispute = disputes.last().unwrap();
-        let dispute_block = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-        let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
-        assert_eq!(removable_market_ids.len(), 1);
-
-        use zrml_global_disputes::GlobalDisputesPalletApi;
-
-        let now = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id));
-
-        // report check
-        assert_eq!(
-            GlobalDisputes::get_voting_outcome_info(&market_id, &OutcomeReport::Categorical(0)),
-            Some((Zero::zero(), vec![BOB])),
-        );
-        for i in 1..=<Runtime as Config>::MaxDisputes::get() {
-            let dispute_bond =
-                zrml_simple_disputes::default_outcome_bond::<Runtime>((i - 1).into());
-            assert_eq!(
-                GlobalDisputes::get_voting_outcome_info(
-                    &market_id,
-                    &OutcomeReport::Categorical(i.saturated_into())
-                ),
-                Some((dispute_bond, vec![CHARLIE])),
-            );
-        }
-
-        // remove_last_dispute_from_market_ids_per_dispute_block works
-        let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
-        assert_eq!(removable_market_ids.len(), 0);
-
-        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(
-            now + <Runtime as Config>::GlobalDisputePeriod::get(),
-        );
-        assert_eq!(market_ids, vec![market_id]);
-        assert!(GlobalDisputes::is_started(&market_id));
-        System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
-
-        assert_noop!(
-            PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
-            Error::<Runtime>::GlobalDisputeAlreadyStarted
         );
     });
 }

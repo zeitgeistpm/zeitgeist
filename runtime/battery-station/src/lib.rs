@@ -113,6 +113,7 @@ impl Contains<Call> for IsCallable {
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
+            Call::SimpleDisputes(_) => false,
             Call::LiquidityMining(_) => false,
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
