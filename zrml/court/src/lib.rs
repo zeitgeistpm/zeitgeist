@@ -52,7 +52,7 @@ use frame_system::{
     ensure_signed,
     pallet_prelude::{BlockNumberFor, OriginFor},
 };
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use sp_arithmetic::{per_things::Perquintill, traits::One};
 use sp_runtime::{
@@ -1120,61 +1120,37 @@ mod pallet {
 
         // Get `n` unique and ordered random numbers from the random number generator.
         // This follows the rule of draw without replacement.
-        pub(crate) fn get_n_random_numbers(
+        pub(crate) fn get_n_random_section_starts(
             n: usize,
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
             let mut rng = Self::rng();
 
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
-
-            if max.checked_div(min_juror_stake).unwrap_or(0) < (n as u128) {
+            let mut sections_len = max.checked_div(min_juror_stake).unwrap_or(0);
+            let last_partial_section_exists = max % min_juror_stake != 0;
+            if last_partial_section_exists {
+                // the last partial min_juror_stake counts as a full min_juror_stake
+                sections_len = sections_len.saturating_add(1);
+            }
+            if sections_len < (n as u128) {
                 return Err(Error::<T>::NotEnoughTotalJurorStakeForRandomNumberGeneration.into());
             }
 
             let mut random_set = BTreeSet::new();
-            let mut remaining_ranges = Vec::new();
-            remaining_ranges.push((0u128, max));
-
-            let mut insert_unused_random_number = || {
-                // create a cumulative vector of range sizes
-                let mut cumulative_ranges = Vec::new();
-                let mut running_total = 0u128;
-                for &(start, end) in remaining_ranges.iter() {
-                    let range_size = end.saturating_sub(start);
-                    running_total = running_total.saturating_add(range_size);
-                    cumulative_ranges.push(running_total);
-                }
-
-                // generate a random number within the total range size
-                let random_number = rng.gen_range(0..=running_total);
-
-                // find the corresponding range using binary search
-                let range_index =
-                    cumulative_ranges.binary_search(&random_number).unwrap_or_else(|x| x);
-
-                // choose a random range according to stake-weight from the remaining_ranges vector
-                let (start, end) = remaining_ranges[range_index];
-
-                // generate a random number within the chosen range
-                let random_number = rng.gen_range(start..=end);
-                random_set.insert(random_number);
-
-                // update the remaining_ranges vector by splitting the chosen range
-                let left_range = (start, random_number);
-                let right_range = (random_number.saturating_add(min_juror_stake), end);
-
-                remaining_ranges.remove(range_index);
-                if left_range.0 <= left_range.1 {
-                    remaining_ranges.push(left_range);
-                }
-                if right_range.0 <= right_range.1 {
-                    remaining_ranges.push(right_range);
-                }
-            };
-
-            for _ in 0..n {
-                insert_unused_random_number();
+            let indices: Vec<u128> = (0..sections_len).collect();
+            let last_index = sections_len.saturating_sub(1);
+            use rand::seq::SliceRandom;
+            // Pick `n` unique random indices without repitition (replacement)
+            for &index in indices.as_slice().choose_multiple(&mut rng, n) {
+                let is_last_index = index == last_index;
+                let random_section_start = if last_partial_section_exists && is_last_index {
+                    // max is the last possible section start
+                    max
+                } else {
+                    index.saturating_mul(min_juror_stake)
+                };
+                random_set.insert(random_section_start);
             }
 
             debug_assert!(random_set.len() == n);
@@ -1477,7 +1453,7 @@ mod pallet {
             let required_stake = (draw_weight as u128)
                 .saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
             ensure!(total_unconsumed >= required_stake, Error::<T>::NotEnoughJurorsStake);
-            let random_set = Self::get_n_random_numbers(draw_weight, total_unconsumed)?;
+            let random_set = Self::get_n_random_section_starts(draw_weight, total_unconsumed)?;
             let selections = Self::get_selections(&mut jurors, random_set, cumulative_ranges);
             <JurorPool<T>>::put(jurors);
 

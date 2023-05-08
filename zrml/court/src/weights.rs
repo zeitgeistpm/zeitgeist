@@ -200,15 +200,15 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Court JurorPool (r:1 w:1)
     // Storage: Court JurorsSelectionNonce (r:1 w:1)
     // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
-    // Storage: Court Jurors (r:35 w:30)
+    // Storage: Court Jurors (r:31 w:30)
     fn select_jurors(a: u32) -> Weight {
-        Weight::from_ref_time(674_937_000)
-            // Standard Error: 9_406_000
-            .saturating_add(Weight::from_ref_time(2_004_722_000).saturating_mul(a.into()))
-            .saturating_add(T::DbWeight::get().reads(26))
-            .saturating_add(T::DbWeight::get().reads((56_u64).saturating_mul(a.into())))
-            .saturating_add(T::DbWeight::get().writes(20))
-            .saturating_add(T::DbWeight::get().writes((56_u64).saturating_mul(a.into())))
+        Weight::from_ref_time(531_137_000)
+            // Standard Error: 7_595_000
+            .saturating_add(Weight::from_ref_time(1_598_167_000).saturating_mul(a.into()))
+            .saturating_add(T::DbWeight::get().reads(20))
+            .saturating_add(T::DbWeight::get().reads((61_u64).saturating_mul(a.into())))
+            .saturating_add(T::DbWeight::get().writes(18))
+            .saturating_add(T::DbWeight::get().writes((61_u64).saturating_mul(a.into())))
     }
     // Storage: Court NextCourtId (r:1 w:1)
     // Storage: Court JurorPool (r:1 w:1)

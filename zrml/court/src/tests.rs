@@ -2576,22 +2576,22 @@ fn on_dispute_inserts_draws() {
             draws[0],
             Draw {
                 juror: ALICE,
-                weight: 3,
+                weight: 4,
                 vote: Vote::Drawn,
-                slashable: 3 * MinJurorStake::get()
+                slashable: 4 * MinJurorStake::get()
             }
         );
         assert_eq!(
             draws[1],
-            Draw { juror: BOB, weight: 4, vote: Vote::Drawn, slashable: 4 * MinJurorStake::get() }
+            Draw { juror: BOB, weight: 5, vote: Vote::Drawn, slashable: 5 * MinJurorStake::get() }
         );
         assert_eq!(
             draws[2],
             Draw {
                 juror: CHARLIE,
-                weight: 7,
+                weight: 6,
                 vote: Vote::Drawn,
-                slashable: 7 * MinJurorStake::get()
+                slashable: 6 * MinJurorStake::get()
             }
         );
         assert_eq!(
@@ -2600,12 +2600,7 @@ fn on_dispute_inserts_draws() {
         );
         assert_eq!(
             draws[4],
-            Draw {
-                juror: EVE,
-                weight: 10,
-                vote: Vote::Drawn,
-                slashable: 10 * MinJurorStake::get()
-            }
+            Draw { juror: EVE, weight: 9, vote: Vote::Drawn, slashable: 9 * MinJurorStake::get() }
         );
         assert_eq!(draws.len(), 5usize);
     });
