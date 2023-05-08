@@ -97,8 +97,7 @@ parameter_types! {
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
-    pub const MinLiquidity: Balance = 100 * BASE;
-    pub const MinSubsidy: Balance = MinLiquidity::get();
+    pub const MinSubsidy: Balance = 100 * BASE;
     pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
