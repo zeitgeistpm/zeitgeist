@@ -269,10 +269,8 @@ parameter_types! {
     pub const MaxTotalWeight: Balance = MaxWeight::get() * 2;
     /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 64 * BASE;
-    /// Minimum amount of liquidity required to launch a CPMM pool.
-    pub const MinLiquidity: Balance = 100 * BASE;
     /// Minimum subsidy required to launch a Rikiddo pool.
-    pub const MinSubsidy: Balance = MinLiquidity::get();
+    pub const MinSubsidy: Balance = 100 * BASE;
     /// Minimum subsidy a single account can provide.
     pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     /// Minimum weight a single asset can have.

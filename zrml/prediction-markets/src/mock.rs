@@ -48,9 +48,9 @@ use zeitgeist_primitives::{
         MaxGracePeriod, MaxInRatio, MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
         MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval, SimpleDisputesPalletId,
+        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -396,7 +396,6 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
     type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
