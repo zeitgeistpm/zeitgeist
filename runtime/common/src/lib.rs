@@ -1086,7 +1086,6 @@ macro_rules! impl_config_traits {
             type MaxSwapFee = MaxSwapFee;
             type MaxTotalWeight = MaxTotalWeight;
             type MaxWeight = MaxWeight;
-            type MinLiquidity = MinLiquidity;
             type MinSubsidy = MinSubsidy;
             type MinSubsidyPerAccount = MinSubsidyPerAccount;
             type MinWeight = MinWeight;

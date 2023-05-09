@@ -36,7 +36,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
+    constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::Swaps,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -53,6 +53,8 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
+const LIQUIDITY: u128 = 100 * BASE;
+
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
 fn create_market_common_parameters<T: Config>(
@@ -62,8 +64,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    T::AssetManager::deposit(Asset::Ztg, &caller, (100 * MinLiquidity::get()).saturated_into())
-        .unwrap();
+    T::AssetManager::deposit(Asset::Ztg, &caller, (100u128 * LIQUIDITY).saturated_into()).unwrap();
     let oracle = caller.clone();
     let deadlines = Deadlines::<T::BlockNumber> {
         grace_period: 1_u32.into(),
@@ -153,11 +154,7 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
         panic!("setup_redeem_shares_common: Unsupported market type: {market_type:?}");
     }
 
-    Pallet::<T>::do_buy_complete_set(
-        caller.clone(),
-        market_id,
-        MinLiquidity::get().saturated_into(),
-    )?;
+    Pallet::<T>::do_buy_complete_set(caller.clone(), market_id, LIQUIDITY.saturated_into())?;
     let close_origin = T::CloseOrigin::successful_origin();
     let resolve_origin = T::ResolveOrigin::successful_origin();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
@@ -190,7 +187,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
     )?;
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
-    let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
+    let min_liquidity: BalanceOf<T> = LIQUIDITY.saturated_into();
     Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let weight_len: usize = MaxRuntimeUsize::from(categories).into();
@@ -720,7 +717,7 @@ benchmarks! {
             Pallet::<T>::calculate_time_frame_of_moment(range_start)).len();
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
-        let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
+        let min_liquidity: BalanceOf::<T> = LIQUIDITY.saturated_into();
         Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
@@ -763,7 +760,7 @@ benchmarks! {
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id.saturated_into())?;
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
-        let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
+        let min_liquidity: BalanceOf::<T> = LIQUIDITY.saturated_into();
         Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
@@ -782,7 +779,8 @@ benchmarks! {
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        let market_pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id.saturated_into())?;
+        let market_pool_id =
+            <zrml_market_commons::Pallet::<T>>::market_pool(&market_id.saturated_into())?;
         let pool = T::Swaps::pool(market_pool_id)?;
         assert_eq!(pool.pool_status, PoolStatus::Active);
     }
@@ -1112,7 +1110,7 @@ benchmarks! {
             ScoringRule::CPMM,
             None,
         )?;
-        let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
+        let amount: BalanceOf<T> = LIQUIDITY.saturated_into();
         Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
