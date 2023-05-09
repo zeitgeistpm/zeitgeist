@@ -1121,8 +1121,6 @@ mod pallet {
         // The algorithm uses reservoir sampling (Algorithm R),
         // which is an efficient technique for randomly choosing a sample of k elements
         // from a larger population without replacement.
-        // Custom sampling function for u128
-        // This follows the rule of draw without replacement.
         fn get_n_random_indices(range: u128, count: usize) -> Vec<u128> {
             use rand::Rng;
             let mut rng = Self::rng();
@@ -1170,7 +1168,6 @@ mod pallet {
             let last_index = sections_len.saturating_sub(1);
             // Pick `n` unique random indices without repitition (replacement)
             for index in random_indices {
-                let index = index as u128;
                 let is_last_index = index == last_index;
                 let random_section_start = if last_partial_section_exists && is_last_index {
                     // max is the last possible section start
