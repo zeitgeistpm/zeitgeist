@@ -282,18 +282,23 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(a.into())))
     }
     // Storage: MarketCommons Markets (r:1 w:0)
-    // Storage: PredictionMarkets Disputes (r:1 w:0)
     // Storage: GlobalDisputes Winners (r:1 w:1)
-    // Storage: GlobalDisputes Outcomes (r:7 w:7)
-    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:2 w:2)
+    // Storage: Court MarketIdToCourtId (r:1 w:0)
+    // Storage: Court JurorPool (r:1 w:0)
+    // Storage: Court Courts (r:1 w:1)
+    // Storage: Court CourtIdToMarketId (r:1 w:0)
+    // Storage: Court SelectedDraws (r:1 w:1)
+    // Storage: Court Jurors (r:30 w:30)
+    // Storage: GlobalDisputes Outcomes (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
     fn start_global_dispute(m: u32, n: u32) -> Weight {
-        Weight::from_ref_time(128_368_000)
-            // Standard Error: 4_000
-            .saturating_add(Weight::from_ref_time(8_000).saturating_mul(m.into()))
-            // Standard Error: 4_000
-            .saturating_add(Weight::from_ref_time(96_000).saturating_mul(n.into()))
-            .saturating_add(T::DbWeight::get().reads(12))
-            .saturating_add(T::DbWeight::get().writes(10))
+        Weight::from_ref_time(203_655_000)
+            // Standard Error: 1_000
+            .saturating_add(Weight::from_ref_time(67_000).saturating_mul(m.into()))
+            // Standard Error: 1_000
+            .saturating_add(Weight::from_ref_time(15_000).saturating_mul(n.into()))
+            .saturating_add(T::DbWeight::get().reads(39))
+            .saturating_add(T::DbWeight::get().writes(35))
     }
     // Storage: PredictionMarkets Disputes (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)

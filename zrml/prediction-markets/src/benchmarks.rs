@@ -224,7 +224,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 benchmarks! {
     where_clause {
         where
-            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_simple_disputes::Config,
+            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_simple_disputes::Config + zrml_court::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }
@@ -811,6 +811,23 @@ benchmarks! {
             market_ids_1.try_push(i.saturated_into()).unwrap();
         }
 
+        <zrml_court::Pallet<T>>::on_initialize(1u32.into());
+        <frame_system::Pallet<T>>::set_block_number(1u32.into());
+
+        let min_amount = <T as zrml_court::Config>::MinJurorStake::get();
+        for i in 0..<zrml_court::Pallet<T>>::necessary_draws_weight(0usize) {
+            let juror: T::AccountId = account("Jurori", i.try_into().unwrap(), 0);
+            <T as pallet::Config>::AssetManager::deposit(
+                Asset::Ztg,
+                &juror,
+                u128::MAX.saturated_into(),
+            ).unwrap();
+            <zrml_court::Pallet<T>>::join_court(
+                RawOrigin::Signed(juror.clone()).into(),
+                min_amount + i.saturated_into(),
+            )?;
+        }
+
         let disputor: T::AccountId = account("Disputor", 1, 0);
         <T as pallet::Config>::AssetManager::deposit(
             Asset::Ztg,
@@ -822,38 +839,21 @@ benchmarks! {
         }
         .dispatch_bypass_filter(RawOrigin::Signed(disputor).into())?;
 
-        let max_dispute_len = <T as zrml_simple_disputes::Config>::MaxDisputes::get();
-        for i in 0..max_dispute_len {
-            // ensure that the MarketIdsPerDisputeBlock does not interfere
-            // with the start_global_dispute execution block
-            <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
-            let reserver: T::AccountId = account("Reserver", i, 0);
-            <T as pallet::Config>::AssetManager::deposit(Asset::Ztg, &reserver, (u128::MAX).saturated_into())?;
-            let market_id_number: u128 = market_id.saturated_into::<u128>();
-            let _ = zrml_simple_disputes::Call::<T>::suggest_outcome {
-                market_id: market_id_number.saturated_into(),
-                outcome: OutcomeReport::Scalar(i.saturated_into()),
-            }.dispatch_bypass_filter(RawOrigin::Signed(reserver.clone()).into())?;
-        }
-
         let market = <zrml_market_commons::Pallet<T>>::market(&market_id.saturated_into()).unwrap();
-        let market_id_number: u128 = market_id.saturated_into::<u128>();
-        let market_id_simple: zrml_simple_disputes::MarketIdOf<T> = market_id_number.saturated_into();
-        let disputes = zrml_simple_disputes::Disputes::<T>::get(market_id_simple);
-        let last_dispute = disputes.last().unwrap();
-        let dispute_duration_ends_at_block = last_dispute.at + market.deadlines.dispute_duration;
+        use zeitgeist_primitives::traits::DisputeApi;
+        let appeal_end = T::Court::get_auto_resolve(&market_id, &market).result.unwrap();
         let mut market_ids_2: BoundedVec<MarketIdOf<T>, CacheSize> = BoundedVec::try_from(
             vec![market_id],
         ).unwrap();
         for i in 1..n {
             market_ids_2.try_push(i.saturated_into()).unwrap();
         }
-        MarketIdsPerDisputeBlock::<T>::insert(dispute_duration_ends_at_block, market_ids_2);
+        MarketIdsPerDisputeBlock::<T>::insert(appeal_end, market_ids_2);
 
-        let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
-        <frame_system::Pallet<T>>::set_block_number(current_block);
+        <frame_system::Pallet<T>>::set_block_number(appeal_end - 1u64.saturated_into::<T::BlockNumber>());
 
-        let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
+        let now = <frame_system::Pallet<T>>::block_number();
+        let global_dispute_end = now + T::GlobalDisputePeriod::get();
         // the complexity depends on MarketIdsPerDisputeBlock at the current block
         // this is because a variable number of market ids need to be decoded from the storage
         MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);

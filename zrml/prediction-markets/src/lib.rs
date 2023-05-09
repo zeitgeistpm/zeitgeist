@@ -1418,17 +1418,15 @@ mod pallet {
             Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
 
-        /// When the `MaxDisputes` amount of disputes is reached,
-        /// this allows to start a global dispute.
+        /// Start a global dispute, if the market dispute mechanism fails.
         ///
         /// # Arguments
         ///
         /// * `market_id`: The identifier of the market.
         ///
         /// NOTE:
-        /// The outcomes of the disputes and the report outcome
+        /// The returned outcomes of the market dispute mechanism and the report outcome
         /// are added to the global dispute voting outcomes.
-        /// The bond of each dispute is the initial vote amount.
         #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get(), CacheSize::get()))]
         #[transactional]
         pub fn start_global_dispute(
