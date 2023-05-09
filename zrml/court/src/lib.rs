@@ -1118,14 +1118,40 @@ mod pallet {
             Weight::zero()
         }
 
-        // Get `n` unique and ordered random numbers from the random number generator.
+        // The algorithm uses reservoir sampling (Algorithm R),
+        // which is an efficient technique for randomly choosing a sample of k elements
+        // from a larger population without replacement.
+        // Custom sampling function for u128
         // This follows the rule of draw without replacement.
+        fn get_n_random_indices(range: u128, count: usize) -> Vec<u128> {
+            use rand::Rng;
+            let mut rng = Self::rng();
+
+            let mut result = Vec::with_capacity(count);
+
+            if count as u128 > range {
+                return result;
+            }
+
+            for i in 0..count as u128 {
+                result.push(i);
+            }
+
+            for i in count as u128..range {
+                let random_index = rng.gen_range(0..=i);
+                if random_index < count as u128 {
+                    result[random_index as usize] = i;
+                }
+            }
+
+            result
+        }
+
+        // Get `n` unique and ordered random numbers from the random number generator.
         pub(crate) fn get_n_random_section_starts(
             n: usize,
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
-            let mut rng = Self::rng();
-
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
             let mut sections_len = max.checked_div(min_juror_stake).unwrap_or(0);
             let last_partial_section_exists = max % min_juror_stake != 0;
@@ -1137,12 +1163,14 @@ mod pallet {
                 return Err(Error::<T>::NotEnoughTotalJurorStakeForRandomNumberGeneration.into());
             }
 
+            // Use the `get_n_random_indices` function to generate a random sample of unique indices
+            let random_indices = Self::get_n_random_indices(sections_len, n);
+
             let mut random_set = BTreeSet::new();
-            let indices: Vec<u128> = (0..sections_len).collect();
             let last_index = sections_len.saturating_sub(1);
-            use rand::seq::SliceRandom;
             // Pick `n` unique random indices without repitition (replacement)
-            for &index in indices.as_slice().choose_multiple(&mut rng, n) {
+            for index in random_indices {
+                let index = index as u128;
                 let is_last_index = index == last_index;
                 let random_section_start = if last_partial_section_exists && is_last_index {
                     // max is the last possible section start
