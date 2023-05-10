@@ -1118,31 +1118,82 @@ mod pallet {
             Weight::zero()
         }
 
-        // The algorithm uses reservoir sampling (Algorithm R),
-        // which is an efficient technique for randomly choosing a sample of k elements
-        // from a larger population without replacement.
-        fn get_n_random_indices(range: u128, count: usize) -> Vec<u128> {
-            use rand::Rng;
-            let mut rng = Self::rng();
+        // Returns `n` unique random numbers from `1` to `max`.
+        fn generate_n_unique_random_numbers(
+            mut rng: impl rand::Rng,
+            max: u128,
+            n: usize,
+        ) -> BTreeSet<u128> {
+            debug_assert!(max > 10_000u128 && n <= 255usize);
 
-            let mut result = Vec::with_capacity(count);
+            let mut swaps = BTreeMap::new();
+            let mut result = BTreeSet::new();
 
-            if count as u128 > range {
-                return result;
-            }
+            for i in 0..n {
+                let random_index = rng.gen_range(i..max as usize) as u128;
+                let a = *swaps.get(&i).unwrap_or(&i);
+                let b = *swaps.get(&random_index).unwrap_or(&random_index);
 
-            for i in 0..count as u128 {
-                result.push(i);
-            }
+                // Perform the swap
+                swaps.insert(i, b);
+                swaps.insert(random_index, a);
 
-            for i in count as u128..range {
-                let random_index = rng.gen_range(0..=i);
-                if random_index < count as u128 {
-                    result[random_index as usize] = i;
-                }
+                result.insert(b.saturating_add(1));
             }
 
             result
+        }
+
+        fn generate_n_unique_random_numbers_2(
+            mut rng: impl rand::Rng,
+            max: u128,
+            n: usize,
+        ) -> BTreeSet<u128> {
+            debug_assert!(max > 10_000u128 && n <= 255usize);
+
+            let mut numbers = BTreeSet::new();
+
+            for _ in 0..n {
+                let random_number = rng.gen_range(1u128..=max);
+                let mut current_value = random_number;
+
+                while numbers.contains(&current_value) {
+                    current_value = current_value.saturating_add(1) % max;
+                }
+
+                numbers.insert(current_value);
+            }
+
+            numbers
+        }
+
+        // TODO test this function and both paths (algos)
+        // Return `n` unique random numbers from `1` to `max`.
+        pub fn get_n_random_indices(max: u128, n: usize) -> Vec<u128> {
+            // the collection of a vector (1u128..max) with max > 10_000 elements is too expensive
+            // that's why we use a different algorithm for bigger max values
+            let mut rng = Self::rng();
+
+            debug_assert!(n as u128 <= 255u128, "Ensure `n` is significantly smaller than `max`.");
+            if max > 10_000u128 {
+                // If 10% of the current total supply (1035088749687441409 / 10 = 103508874968744140)
+                // is divided by the current `MinJurorStake` (5000000000000), we get 20701.7749
+                // so the following algorithm hits round about 5% (of current total issuance)
+                // locked in court
+                return Self::generate_n_unique_random_numbers(&mut rng, max, n)
+                    .into_iter()
+                    .collect::<Vec<u128>>();
+            }
+
+            debug_assert!(max <= 10_000u128, "Ensure the collected vector is not too big.");
+            use rand::seq::SliceRandom;
+            // the collection of a vector above 10_000 elements is too expensive
+            (1u128..=max)
+                .collect::<Vec<u128>>()
+                .as_slice()
+                .choose_multiple(&mut rng, n)
+                .cloned()
+                .collect::<Vec<u128>>()
         }
 
         // Get `n` unique and ordered random numbers from the random number generator.
@@ -1151,12 +1202,9 @@ mod pallet {
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
-            let mut sections_len = max.checked_div(min_juror_stake).unwrap_or(0);
-            let last_partial_section_exists = max % min_juror_stake != 0;
-            if last_partial_section_exists {
-                // the last partial min_juror_stake counts as a full min_juror_stake
-                sections_len = sections_len.saturating_add(1);
-            }
+            debug_assert!((max % min_juror_stake).is_zero(), "This is ensured by the caller.");
+            let sections_len = max.checked_div(min_juror_stake).unwrap_or(0);
+
             if sections_len < (n as u128) {
                 return Err(Error::<T>::NotEnoughTotalJurorStakeForRandomNumberGeneration.into());
             }
@@ -1165,16 +1213,8 @@ mod pallet {
             let random_indices = Self::get_n_random_indices(sections_len, n);
 
             let mut random_set = BTreeSet::new();
-            let last_index = sections_len.saturating_sub(1);
-            // Pick `n` unique random indices without repitition (replacement)
             for index in random_indices {
-                let is_last_index = index == last_index;
-                let random_section_start = if last_partial_section_exists && is_last_index {
-                    // max is the last possible section start
-                    max
-                } else {
-                    index.saturating_mul(min_juror_stake)
-                };
+                let random_section_start = index.saturating_mul(min_juror_stake);
                 random_set.insert(random_section_start);
             }
 
@@ -1366,29 +1406,31 @@ mod pallet {
         // is increased by the random selection weight.
         fn get_selections(
             jurors: &mut JurorPoolOf<T>,
-            random_set: BTreeSet<u128>,
-            cumulative_ranges: Vec<u128>,
+            random_section_starts: BTreeSet<u128>,
+            cumulative_section_starts: Vec<(u128, bool)>,
         ) -> BTreeMap<T::AccountId, SelectionValueOf<T>> {
-            debug_assert!(jurors.len() == cumulative_ranges.len());
+            debug_assert!(jurors.len() == cumulative_section_starts.len());
             debug_assert!({
-                let prev = cumulative_ranges.clone();
-                let mut sorted = cumulative_ranges.clone();
+                let prev = cumulative_section_starts.clone();
+                let mut sorted = cumulative_section_starts.clone();
                 sorted.sort();
                 prev.len() == sorted.len() && prev.iter().zip(sorted.iter()).all(|(a, b)| a == b)
             });
             debug_assert!({
-                random_set.iter().all(|random_number| {
-                    let last = cumulative_ranges.last().unwrap_or(&0);
-                    *random_number <= *last
+                random_section_starts.iter().all(|random_section_start| {
+                    let last = cumulative_section_starts.last().unwrap_or(&(0, false)).0;
+                    *random_section_start <= last
                 })
             });
 
             let mut selections = BTreeMap::<T::AccountId, SelectionValueOf<T>>::new();
             let mut invalid_juror_indices = Vec::<usize>::new();
 
-            for random_number in random_set {
-                let range_index =
-                    cumulative_ranges.binary_search(&random_number).unwrap_or_else(|i| i);
+            for random_section_start in random_section_starts {
+                let allow_zero_stake = false;
+                let range_index = cumulative_section_starts
+                    .binary_search(&(random_section_start, allow_zero_stake))
+                    .unwrap_or_else(|i| i);
                 if let Some(pool_item) = jurors.get_mut(range_index) {
                     let unconsumed = pool_item.stake.saturating_sub(pool_item.consumed_stake);
                     let lock_added = unconsumed.min(T::MinJurorStake::get());
@@ -1397,7 +1439,7 @@ mod pallet {
                         &mut selections,
                         &pool_item.juror,
                         lock_added,
-                        random_number,
+                        random_section_start,
                     ) {
                         Ok(()) => {}
                         Err(SelectionError::NoValidDelegatedJuror) => {
@@ -1454,32 +1496,42 @@ mod pallet {
                 .collect()
         }
 
-        // Choose `number` of jurors from the pool randomly
-        // according to the weighted stake of the jurors.
+        // Choose `number` (multiple) of `MinJurorStake` from the pool randomly
+        // according to the weighted stake of all jurors and delegators.
         // Return the random draws.
         pub(crate) fn choose_multiple_weighted(
             draw_weight: usize,
         ) -> Result<Vec<DrawOf<T>>, DispatchError> {
             let mut jurors = <JurorPool<T>>::get();
 
+            let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
+
             let mut total_unconsumed = 0u128;
-            let mut cumulative_ranges = Vec::new();
+            let mut cumulative_section_starts = Vec::new();
             let mut running_total = 0u128;
             for pool_item in &jurors {
                 let unconsumed = pool_item
                     .stake
                     .saturating_sub(pool_item.consumed_stake)
                     .saturated_into::<u128>();
+                let remainder = unconsumed % min_juror_stake;
+                let unconsumed = unconsumed.saturating_sub(remainder);
                 total_unconsumed = total_unconsumed.saturating_add(unconsumed);
                 running_total = running_total.saturating_add(unconsumed);
-                cumulative_ranges.push(running_total);
+                let zero_stake = unconsumed.is_zero();
+                cumulative_section_starts.push((running_total, zero_stake));
             }
+            debug_assert!(
+                (total_unconsumed % min_juror_stake).is_zero(),
+                "Remainders are being cut in the above for loop."
+            );
 
-            let required_stake = (draw_weight as u128)
-                .saturating_mul(T::MinJurorStake::get().saturated_into::<u128>());
+            let required_stake = (draw_weight as u128).saturating_mul(min_juror_stake);
             ensure!(total_unconsumed >= required_stake, Error::<T>::NotEnoughJurorsStake);
-            let random_set = Self::get_n_random_section_starts(draw_weight, total_unconsumed)?;
-            let selections = Self::get_selections(&mut jurors, random_set, cumulative_ranges);
+            let random_section_starts =
+                Self::get_n_random_section_starts(draw_weight, total_unconsumed)?;
+            let selections =
+                Self::get_selections(&mut jurors, random_section_starts, cumulative_section_starts);
             <JurorPool<T>>::put(jurors);
 
             Ok(Self::convert_selections_to_draws(selections))

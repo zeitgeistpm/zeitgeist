@@ -135,7 +135,7 @@ fn put_alice_in_draw(court_id: CourtId, stake: BalanceOf<Runtime>) {
     let mut draws = <SelectedDraws<Runtime>>::get(court_id);
     assert!(!draws.is_empty());
     let slashable = MinJurorStake::get();
-    draws[0] = Draw { juror: ALICE, weight: 2, vote: Vote::Drawn, slashable };
+    draws[0] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
     <SelectedDraws<Runtime>>::insert(court_id, draws);
     <Jurors<Runtime>>::insert(
         ALICE,
@@ -2576,9 +2576,9 @@ fn on_dispute_inserts_draws() {
             draws[0],
             Draw {
                 juror: ALICE,
-                weight: 2,
+                weight: 3,
                 vote: Vote::Drawn,
-                slashable: 2 * MinJurorStake::get()
+                slashable: 3 * MinJurorStake::get()
             }
         );
         assert_eq!(
@@ -2596,11 +2596,16 @@ fn on_dispute_inserts_draws() {
         );
         assert_eq!(
             draws[3],
-            Draw { juror: DAVE, weight: 8, vote: Vote::Drawn, slashable: 8 * MinJurorStake::get() }
+            Draw { juror: DAVE, weight: 6, vote: Vote::Drawn, slashable: 6 * MinJurorStake::get() }
         );
         assert_eq!(
             draws[4],
-            Draw { juror: EVE, weight: 9, vote: Vote::Drawn, slashable: 9 * MinJurorStake::get() }
+            Draw {
+                juror: EVE,
+                weight: 10,
+                vote: Vote::Drawn,
+                slashable: 10 * MinJurorStake::get()
+            }
         );
         assert_eq!(draws.len(), 5usize);
     });
