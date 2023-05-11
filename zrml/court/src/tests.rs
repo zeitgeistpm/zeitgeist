@@ -2589,14 +2589,14 @@ fn on_dispute_inserts_draws() {
             draws[2],
             Draw {
                 juror: CHARLIE,
-                weight: 7,
+                weight: 6,
                 vote: Vote::Drawn,
-                slashable: 7 * MinJurorStake::get()
+                slashable: 6 * MinJurorStake::get()
             }
         );
         assert_eq!(
             draws[3],
-            Draw { juror: DAVE, weight: 6, vote: Vote::Drawn, slashable: 6 * MinJurorStake::get() }
+            Draw { juror: DAVE, weight: 7, vote: Vote::Drawn, slashable: 7 * MinJurorStake::get() }
         );
         assert_eq!(
             draws[4],

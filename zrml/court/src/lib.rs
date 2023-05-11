@@ -494,7 +494,7 @@ mod pallet {
 
         /// Join the court to become a delegator.
         /// The `amount` of this call represents the total stake of the delegator.
-        /// If the one of the delegated jurors is selected for a court case,
+        /// If the random selection algorithm chooses a delegators stake,
         /// the caller delegates the vote power to the drawn delegated juror.
         /// The delegator gets slashed or rewarded according to the delegated jurors decisions.
         ///
@@ -1118,89 +1118,18 @@ mod pallet {
             Weight::zero()
         }
 
-        // Returns `n` unique random numbers from `1` to `max`.
-        fn generate_n_unique_random_numbers(
-            mut rng: impl rand::Rng,
-            max: u128,
-            n: usize,
-        ) -> BTreeSet<u128> {
-            debug_assert!(max > 10_000u128 && n <= 255usize);
-
-            let mut swaps = BTreeMap::new();
-            let mut result = BTreeSet::new();
-
-            for i in 0..n {
-                let random_index = rng.gen_range(i..max as usize) as u128;
-                let a = *swaps.get(&i).unwrap_or(&i);
-                let b = *swaps.get(&random_index).unwrap_or(&random_index);
-
-                // Perform the swap
-                swaps.insert(i, b);
-                swaps.insert(random_index, a);
-
-                result.insert(b.saturating_add(1));
-            }
-
-            result
-        }
-
-        fn generate_n_unique_random_numbers_2(
-            mut rng: impl rand::Rng,
-            max: u128,
-            n: usize,
-        ) -> BTreeSet<u128> {
-            debug_assert!(max > 10_000u128 && n <= 255usize);
-
-            let mut numbers = BTreeSet::new();
-
-            for _ in 0..n {
-                let random_number = rng.gen_range(1u128..=max);
-                let mut current_value = random_number;
-
-                while numbers.contains(&current_value) {
-                    current_value = current_value.saturating_add(1) % max;
-                }
-
-                numbers.insert(current_value);
-            }
-
-            numbers
-        }
-
-        // TODO test this function and both paths (algos)
-        // Return `n` unique random numbers from `1` to `max`.
-        pub fn get_n_random_indices(max: u128, n: usize) -> Vec<u128> {
-            // the collection of a vector (1u128..max) with max > 10_000 elements is too expensive
-            // that's why we use a different algorithm for bigger max values
-            let mut rng = Self::rng();
-
-            debug_assert!(n as u128 <= 255u128, "Ensure `n` is significantly smaller than `max`.");
-            if max > 10_000u128 {
-                // If 10% of the current total supply (1035088749687441409 / 10 = 103508874968744140)
-                // is divided by the current `MinJurorStake` (5000000000000), we get 20701.7749
-                // so the following algorithm hits round about 5% (of current total issuance)
-                // locked in court
-                return Self::generate_n_unique_random_numbers(&mut rng, max, n)
-                    .into_iter()
-                    .collect::<Vec<u128>>();
-            }
-
-            debug_assert!(max <= 10_000u128, "Ensure the collected vector is not too big.");
-            use rand::seq::SliceRandom;
-            // the collection of a vector above 10_000 elements is too expensive
-            (1u128..=max)
-                .collect::<Vec<u128>>()
-                .as_slice()
-                .choose_multiple(&mut rng, n)
-                .cloned()
-                .collect::<Vec<u128>>()
-        }
-
-        // Get `n` unique and ordered random numbers from the random number generator.
+        // Get `n` unique and ordered random `MinJurorStake` section starts
+        // from the random number generator.
+        // Uses Partial Fisher Yates shuffle and drawing without replacement.
+        // The time complexity is O(n).
+        // Return a vector of n unique random numbers between 1 and max (inclusive).
         pub(crate) fn get_n_random_section_starts(
             n: usize,
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
+            use rand::Rng;
+            let mut rng = Self::rng();
+
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
             debug_assert!((max % min_juror_stake).is_zero(), "This is ensured by the caller.");
             let sections_len = max.checked_div(min_juror_stake).unwrap_or(0);
@@ -1209,18 +1138,31 @@ mod pallet {
                 return Err(Error::<T>::NotEnoughTotalJurorStakeForRandomNumberGeneration.into());
             }
 
-            // Use the `get_n_random_indices` function to generate a random sample of unique indices
-            let random_indices = Self::get_n_random_indices(sections_len, n);
+            let mut swaps = BTreeMap::<u128, u128>::new();
+            let mut random_section_starts = BTreeSet::new();
 
-            let mut random_set = BTreeSet::new();
-            for index in random_indices {
-                let random_section_start = index.saturating_mul(min_juror_stake);
-                random_set.insert(random_section_start);
+            for i in 0..(n as u128) {
+                let visited_i = *swaps.get(&i).unwrap_or(&i);
+
+                let unused_random_index = rng.gen_range(i..sections_len);
+                let unused_random_number =
+                    *swaps.get(&unused_random_index).unwrap_or(&unused_random_index);
+
+                // save the unused random number, which is between i and sections_len, to the map
+                // i can be found later on two, because we save it below as `visited_i`
+                swaps.insert(i, unused_random_number);
+                // save already visited i to the map, so that it can possibly inserted later on
+                swaps.insert(unused_random_index, visited_i);
+
+                // add one because we need numbers between 1 and sections_len (inclusive)
+                let random_index = unused_random_number.saturating_add(1);
+                let random_section_start = random_index.saturating_mul(min_juror_stake);
+                random_section_starts.insert(random_section_start);
             }
 
-            debug_assert!(random_set.len() == n);
+            debug_assert!(random_section_starts.len() == n);
 
-            Ok(random_set)
+            Ok(random_section_starts)
         }
 
         // Adds active lock amount.
@@ -1496,8 +1438,10 @@ mod pallet {
                 .collect()
         }
 
-        // Choose `number` (multiple) of `MinJurorStake` from the pool randomly
+        // Choose `draw_weight` (multiple) of `MinJurorStake` from the pool randomly
         // according to the weighted stake of all jurors and delegators.
+        // NOTE: The jurors and delegators are being cut by the remainder
+        // if the stake is not a multiple of `MinJurorStake`.
         // Return the random draws.
         pub(crate) fn choose_multiple_weighted(
             draw_weight: usize,
@@ -1518,6 +1462,10 @@ mod pallet {
                 let unconsumed = unconsumed.saturating_sub(remainder);
                 total_unconsumed = total_unconsumed.saturating_add(unconsumed);
                 running_total = running_total.saturating_add(unconsumed);
+                // this is useful for binary search to match the correct juror
+                // if we don't do this, the binary search in `get_selections`
+                // might take the wrong juror (with zero stake)
+                // (running total would be the same for two consecutive jurors)
                 let zero_stake = unconsumed.is_zero();
                 cumulative_section_starts.push((running_total, zero_stake));
             }
