@@ -102,7 +102,7 @@ parameter_types! {
     /// The maximum number of randomly selected `MinJurorStake` draws / atoms of jurors for a dispute.
     pub const MaxSelectedDraws: u32 = 510;
     /// The maximum number of jurors / delegators that can be registered.
-    pub const MaxJurors: u32 = 1_000;
+    pub const MaxCourtParticipants: u32 = 1_000;
     /// The minimum stake a user needs to reserve to become a juror.
     pub const MinJurorStake: Balance = 500 * BASE;
     /// The interval for requesting multiple court votes at once.

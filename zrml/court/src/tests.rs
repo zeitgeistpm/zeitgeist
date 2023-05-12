@@ -26,9 +26,9 @@ use crate::{
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote, VoteItem},
-    AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, Courts, Error, Event, JurorInfo,
-    JurorInfoOf, JurorPool, JurorPoolItem, JurorPoolOf, Jurors, MarketIdToCourtId, MarketOf,
-    NegativeImbalanceOf, RequestBlock, SelectedDraws,
+    AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
+    CourtParticipantInfoOf, CourtPool, CourtPoolItem, CourtPoolOf, Courts, Error, Event,
+    MarketIdToCourtId, MarketOf, NegativeImbalanceOf, Participants, RequestBlock, SelectedDraws,
 };
 use alloc::collections::BTreeMap;
 use frame_support::{
@@ -46,7 +46,7 @@ use zeitgeist_primitives::{
     constants::{
         mock::{
             AppealBond, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod,
-            InflationPeriod, MaxAppeals, MaxJurors, MinJurorStake, RequestInterval,
+            InflationPeriod, MaxAppeals, MaxCourtParticipants, MinJurorStake, RequestInterval,
         },
         BASE,
     },
@@ -135,11 +135,11 @@ fn put_alice_in_draw(court_id: CourtId, stake: BalanceOf<Runtime>) {
     let mut draws = <SelectedDraws<Runtime>>::get(court_id);
     assert!(!draws.is_empty());
     let slashable = MinJurorStake::get();
-    draws[0] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
+    draws[0] = Draw { court_participant: ALICE, weight: 1, vote: Vote::Drawn, slashable };
     <SelectedDraws<Runtime>>::insert(court_id, draws);
-    <Jurors<Runtime>>::insert(
+    <Participants<Runtime>>::insert(
         ALICE,
-        JurorInfo {
+        CourtParticipantInfo {
             stake,
             active_lock: slashable,
             prepare_exit_at: None,
@@ -151,7 +151,7 @@ fn put_alice_in_draw(court_id: CourtId, stake: BalanceOf<Runtime>) {
 fn set_alice_after_vote(
     outcome: OutcomeReport,
 ) -> (CourtId, <Runtime as frame_system::Config>::Hash, <Runtime as frame_system::Config>::Hash) {
-    fill_juror_pool(MaxJurors::get());
+    fill_juror_pool(MaxCourtParticipants::get());
     let court_id = initialize_court();
 
     let amount = MinJurorStake::get() * 100;
@@ -181,7 +181,7 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
         run_blocks(InflationPeriod::get());
         assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
-        assert_eq!(Jurors::<Runtime>::iter().count(), 0);
+        assert_eq!(Participants::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
         assert_eq!(Balances::locks(ALICE), vec![]);
     });
@@ -195,10 +195,10 @@ fn join_court_successfully_stores_required_data() {
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         System::assert_last_event(Event::JurorJoined { juror: ALICE, stake: amount }.into());
         assert_eq!(
-            Jurors::<Runtime>::iter().next().unwrap(),
+            Participants::<Runtime>::iter().next().unwrap(),
             (
                 ALICE,
-                JurorInfo {
+                CourtParticipantInfo {
                     stake: amount,
                     active_lock: 0u128,
                     prepare_exit_at: None,
@@ -209,8 +209,8 @@ fn join_court_successfully_stores_required_data() {
         assert_eq!(Balances::free_balance(ALICE), alice_free_balance_before);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
-            JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, consumed_stake: 0 }]
+            CourtPool::<Runtime>::get().into_inner(),
+            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
         );
     });
 }
@@ -223,14 +223,15 @@ fn join_court_works_multiple_joins() {
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
-            JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, consumed_stake: 0 }]
+            CourtPool::<Runtime>::get().into_inner(),
+            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
         );
         assert_eq!(
-            Jurors::<Runtime>::iter().collect::<Vec<(AccountIdTest, JurorInfoOf<Runtime>)>>(),
+            Participants::<Runtime>::iter()
+                .collect::<Vec<(AccountIdTest, CourtParticipantInfoOf<Runtime>)>>(),
             vec![(
                 ALICE,
-                JurorInfo {
+                CourtParticipantInfo {
                     stake: amount,
                     active_lock: 0u128,
                     prepare_exit_at: None,
@@ -242,16 +243,16 @@ fn join_court_works_multiple_joins() {
         assert_ok!(Court::join_court(Origin::signed(BOB), amount));
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
         assert_eq!(
-            JurorPool::<Runtime>::get().into_inner(),
+            CourtPool::<Runtime>::get().into_inner(),
             vec![
-                JurorPoolItem { stake: amount, juror: ALICE, consumed_stake: 0 },
-                JurorPoolItem { stake: amount, juror: BOB, consumed_stake: 0 }
+                CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 },
+                CourtPoolItem { stake: amount, court_participant: BOB, consumed_stake: 0 }
             ]
         );
-        assert_eq!(Jurors::<Runtime>::iter().count(), 2);
+        assert_eq!(Participants::<Runtime>::iter().count(), 2);
         assert_eq!(
-            Jurors::<Runtime>::get(ALICE).unwrap(),
-            JurorInfo {
+            Participants::<Runtime>::get(ALICE).unwrap(),
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock: 0u128,
                 prepare_exit_at: None,
@@ -259,8 +260,8 @@ fn join_court_works_multiple_joins() {
             }
         );
         assert_eq!(
-            Jurors::<Runtime>::get(BOB).unwrap(),
-            JurorInfo {
+            Participants::<Runtime>::get(BOB).unwrap(),
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock: 0u128,
                 prepare_exit_at: None,
@@ -273,16 +274,16 @@ fn join_court_works_multiple_joins() {
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(higher_amount)]);
         assert_eq!(
-            JurorPool::<Runtime>::get().into_inner(),
+            CourtPool::<Runtime>::get().into_inner(),
             vec![
-                JurorPoolItem { stake: amount, juror: BOB, consumed_stake: 0 },
-                JurorPoolItem { stake: higher_amount, juror: ALICE, consumed_stake: 0 },
+                CourtPoolItem { stake: amount, court_participant: BOB, consumed_stake: 0 },
+                CourtPoolItem { stake: higher_amount, court_participant: ALICE, consumed_stake: 0 },
             ]
         );
-        assert_eq!(Jurors::<Runtime>::iter().count(), 2);
+        assert_eq!(Participants::<Runtime>::iter().count(), 2);
         assert_eq!(
-            Jurors::<Runtime>::get(BOB).unwrap(),
-            JurorInfo {
+            Participants::<Runtime>::get(BOB).unwrap(),
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock: 0u128,
                 prepare_exit_at: None,
@@ -290,8 +291,8 @@ fn join_court_works_multiple_joins() {
             }
         );
         assert_eq!(
-            Jurors::<Runtime>::get(ALICE).unwrap(),
-            JurorInfo {
+            Participants::<Runtime>::get(ALICE).unwrap(),
+            CourtParticipantInfo {
                 stake: higher_amount,
                 active_lock: 0u128,
                 prepare_exit_at: None,
@@ -309,22 +310,23 @@ fn join_court_saves_consumed_stake_and_active_lock_for_double_join() {
 
         let consumed_stake = min;
         let active_lock = min + 1;
-        Jurors::<Runtime>::insert(
+        Participants::<Runtime>::insert(
             ALICE,
-            JurorInfo {
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock,
                 prepare_exit_at: None,
                 delegations: Default::default(),
             },
         );
-        let juror_pool = vec![JurorPoolItem { stake: amount, juror: ALICE, consumed_stake }];
-        JurorPool::<Runtime>::put::<JurorPoolOf<Runtime>>(juror_pool.try_into().unwrap());
+        let juror_pool =
+            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake }];
+        CourtPool::<Runtime>::put::<CourtPoolOf<Runtime>>(juror_pool.try_into().unwrap());
 
         let higher_amount = amount + 1;
         assert_ok!(Court::join_court(Origin::signed(ALICE), higher_amount));
-        assert_eq!(JurorPool::<Runtime>::get().into_inner()[0].consumed_stake, consumed_stake);
-        assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().active_lock, active_lock);
+        assert_eq!(CourtPool::<Runtime>::get().into_inner()[0].consumed_stake, consumed_stake);
+        assert_eq!(Participants::<Runtime>::get(ALICE).unwrap().active_lock, active_lock);
     });
 }
 
@@ -377,7 +379,7 @@ fn join_court_fails_juror_needs_to_exit() {
 
         assert_noop!(
             Court::join_court(Origin::signed(ALICE), amount + 1),
-            Error::<Runtime>::JurorNeedsToExit
+            Error::<Runtime>::NeedToExit
         );
     });
 }
@@ -388,7 +390,7 @@ fn join_court_fails_amount_below_lowest_juror() {
         let min = MinJurorStake::get();
         let min_amount = 2 * min;
 
-        let max_accounts = JurorPoolOf::<Runtime>::bound();
+        let max_accounts = CourtPoolOf::<Runtime>::bound();
         let max_amount = min_amount + max_accounts as u128;
         for i in 1..=max_accounts {
             let amount = max_amount - i as u128;
@@ -396,7 +398,7 @@ fn join_court_fails_amount_below_lowest_juror() {
             assert_ok!(Court::join_court(Origin::signed(i as u128), amount));
         }
 
-        assert!(JurorPool::<Runtime>::get().is_full());
+        assert!(CourtPool::<Runtime>::get().is_full());
 
         assert_noop!(
             Court::join_court(Origin::signed(0u128), min_amount - 1),
@@ -411,13 +413,13 @@ fn prepare_exit_court_works() {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(
-            JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, consumed_stake: 0 }]
+            CourtPool::<Runtime>::get().into_inner(),
+            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-        System::assert_last_event(Event::JurorPreparedExit { juror: ALICE }.into());
-        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
+        System::assert_last_event(Event::ExitPrepared { court_participant: ALICE }.into());
+        assert!(CourtPool::<Runtime>::get().into_inner().is_empty());
     });
 }
 
@@ -427,22 +429,25 @@ fn prepare_exit_court_removes_correct_jurors() {
         let min = MinJurorStake::get();
         let min_amount = 2 * min;
 
-        for i in 0..JurorPoolOf::<Runtime>::bound() {
+        for i in 0..CourtPoolOf::<Runtime>::bound() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
 
-        for r in 0..JurorPoolOf::<Runtime>::bound() {
-            let len = JurorPool::<Runtime>::get().into_inner().len();
+        for r in 0..CourtPoolOf::<Runtime>::bound() {
+            let len = CourtPool::<Runtime>::get().into_inner().len();
             assert!(
-                JurorPool::<Runtime>::get().into_inner().iter().any(|item| item.juror == r as u128)
+                CourtPool::<Runtime>::get()
+                    .into_inner()
+                    .iter()
+                    .any(|item| item.court_participant == r as u128)
             );
             assert_ok!(Court::prepare_exit_court(Origin::signed(r as u128)));
-            assert_eq!(JurorPool::<Runtime>::get().into_inner().len(), len - 1);
-            JurorPool::<Runtime>::get().into_inner().iter().for_each(|item| {
-                assert_ne!(item.juror, r as u128);
+            assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
+            CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
+                assert_ne!(item.court_participant, r as u128);
             });
         }
     });
@@ -454,7 +459,7 @@ fn join_court_binary_search_sorted_insert_works() {
         let min = MinJurorStake::get();
         let min_amount = 2 * min;
 
-        let max_accounts = JurorPoolOf::<Runtime>::bound();
+        let max_accounts = CourtPoolOf::<Runtime>::bound();
         let mut rng = rand::thread_rng();
         let mut random_numbers: Vec<u32> = (0u32..max_accounts as u32).collect();
         random_numbers.shuffle(&mut rng);
@@ -467,7 +472,7 @@ fn join_court_binary_search_sorted_insert_works() {
         }
 
         let mut last_stake = 0;
-        for pool_item in JurorPool::<Runtime>::get().into_inner().iter() {
+        for pool_item in CourtPool::<Runtime>::get().into_inner().iter() {
             assert!(pool_item.stake >= last_stake);
             last_stake = pool_item.stake;
         }
@@ -480,15 +485,15 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
         let amount = 2 * BASE;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(
-            JurorPool::<Runtime>::get().into_inner(),
-            vec![JurorPoolItem { stake: amount, juror: ALICE, consumed_stake: 0 }]
+            CourtPool::<Runtime>::get().into_inner(),
+            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
 
         assert_noop!(
             Court::prepare_exit_court(Origin::signed(ALICE)),
-            Error::<Runtime>::JurorAlreadyPreparedExit
+            Error::<Runtime>::AlreadyPreparedExit
         );
     });
 }
@@ -496,7 +501,7 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
 #[test]
 fn prepare_exit_court_fails_juror_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
-        assert!(Jurors::<Runtime>::iter().next().is_none());
+        assert!(Participants::<Runtime>::iter().next().is_none());
 
         assert_noop!(
             Court::prepare_exit_court(Origin::signed(ALICE)),
@@ -511,19 +516,24 @@ fn exit_court_works_without_active_lock() {
         let min = MinJurorStake::get();
         let amount = 2 * min;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert!(!JurorPool::<Runtime>::get().into_inner().is_empty());
+        assert!(!CourtPool::<Runtime>::get().into_inner().is_empty());
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
-        assert!(Jurors::<Runtime>::get(ALICE).is_some());
+        assert!(CourtPool::<Runtime>::get().into_inner().is_empty());
+        assert!(Participants::<Runtime>::get(ALICE).is_some());
 
         run_blocks(InflationPeriod::get());
 
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         System::assert_last_event(
-            Event::JurorExited { juror: ALICE, exit_amount: amount, active_lock: 0u128 }.into(),
+            Event::ExitedCourt {
+                court_participant: ALICE,
+                exit_amount: amount,
+                active_lock: 0u128,
+            }
+            .into(),
         );
-        assert!(Jurors::<Runtime>::iter().next().is_none());
+        assert!(Participants::<Runtime>::iter().next().is_none());
         assert!(Balances::locks(ALICE).is_empty());
     });
 }
@@ -534,11 +544,11 @@ fn exit_court_works_with_active_lock() {
         let active_lock = MinJurorStake::get();
         let amount = 3 * active_lock;
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert!(!JurorPool::<Runtime>::get().into_inner().is_empty());
+        assert!(!CourtPool::<Runtime>::get().into_inner().is_empty());
 
         assert_eq!(
-            <Jurors<Runtime>>::get(ALICE).unwrap(),
-            JurorInfo {
+            <Participants<Runtime>>::get(ALICE).unwrap(),
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock: 0,
                 prepare_exit_at: None,
@@ -546,9 +556,9 @@ fn exit_court_works_with_active_lock() {
             }
         );
         // assume that `choose_multiple_weighted` has set the active_lock
-        <Jurors<Runtime>>::insert(
+        <Participants<Runtime>>::insert(
             ALICE,
-            JurorInfo {
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock,
                 prepare_exit_at: None,
@@ -560,18 +570,22 @@ fn exit_court_works_with_active_lock() {
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
-        assert!(JurorPool::<Runtime>::get().into_inner().is_empty());
+        assert!(CourtPool::<Runtime>::get().into_inner().is_empty());
 
         run_blocks(InflationPeriod::get());
 
         assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
         System::assert_last_event(
-            Event::JurorExited { juror: ALICE, exit_amount: amount - active_lock, active_lock }
-                .into(),
+            Event::ExitedCourt {
+                court_participant: ALICE,
+                exit_amount: amount - active_lock,
+                active_lock,
+            }
+            .into(),
         );
         assert_eq!(
-            Jurors::<Runtime>::get(ALICE).unwrap(),
-            JurorInfo {
+            Participants::<Runtime>::get(ALICE).unwrap(),
+            CourtParticipantInfo {
                 stake: active_lock,
                 active_lock,
                 prepare_exit_at: Some(now),
@@ -627,7 +641,7 @@ fn exit_court_fails_if_inflation_period_not_over() {
 #[test]
 fn vote_works() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -641,12 +655,13 @@ fn vote_works() {
         );
         let slashable = MinJurorStake::get();
         let alice_index =
-            draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
-        draws[alice_index] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
+            draws.binary_search_by_key(&ALICE, |draw| draw.court_participant).unwrap_or_else(|j| j);
+        draws[alice_index] =
+            Draw { court_participant: ALICE, weight: 1, vote: Vote::Drawn, slashable };
         <SelectedDraws<Runtime>>::insert(court_id, draws);
-        <Jurors<Runtime>>::insert(
+        <Participants<Runtime>>::insert(
             ALICE,
-            JurorInfo {
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock: slashable,
                 prepare_exit_at: None,
@@ -672,7 +687,10 @@ fn vote_works() {
                 assert_eq!(old_draw, new_draw);
             }
         }
-        assert_eq!(old_draws[alice_index].juror, new_draws[alice_index].juror);
+        assert_eq!(
+            old_draws[alice_index].court_participant,
+            new_draws[alice_index].court_participant
+        );
         assert_eq!(old_draws[alice_index].weight, new_draws[alice_index].weight);
         assert_eq!(old_draws[alice_index].slashable, new_draws[alice_index].slashable);
         assert_eq!(old_draws[alice_index].vote, Vote::Drawn);
@@ -683,7 +701,7 @@ fn vote_works() {
 #[test]
 fn vote_overwrite_works() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -745,7 +763,7 @@ fn vote_fails_if_vote_state_incorrect(
     vote: crate::Vote<<Runtime as frame_system::Config>::Hash, crate::DelegatedStakesOf<Runtime>>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -753,7 +771,7 @@ fn vote_fails_if_vote_state_incorrect(
 
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(!draws.is_empty());
-        draws[0] = Draw { juror: ALICE, weight: 101, vote, slashable: 42u128 };
+        draws[0] = Draw { court_participant: ALICE, weight: 101, vote, slashable: 42u128 };
         <SelectedDraws<Runtime>>::insert(court_id, draws);
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
@@ -771,11 +789,11 @@ fn vote_fails_if_vote_state_incorrect(
 #[test]
 fn vote_fails_if_caller_not_in_draws() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
-        draws.retain(|draw| draw.juror != ALICE);
+        draws.retain(|draw| draw.court_participant != ALICE);
         <SelectedDraws<Runtime>>::insert(court_id, draws);
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
@@ -793,7 +811,7 @@ fn vote_fails_if_caller_not_in_draws() {
 #[test]
 fn vote_fails_if_not_in_voting_period() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -816,7 +834,7 @@ fn vote_fails_if_not_in_voting_period() {
 #[test]
 fn reveal_vote_works() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -830,12 +848,13 @@ fn reveal_vote_works() {
         );
         let slashable = MinJurorStake::get();
         let alice_index =
-            draws.binary_search_by_key(&ALICE, |draw| draw.juror).unwrap_or_else(|j| j);
-        draws[alice_index] = Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable };
+            draws.binary_search_by_key(&ALICE, |draw| draw.court_participant).unwrap_or_else(|j| j);
+        draws[alice_index] =
+            Draw { court_participant: ALICE, weight: 1, vote: Vote::Drawn, slashable };
         <SelectedDraws<Runtime>>::insert(court_id, draws);
-        <Jurors<Runtime>>::insert(
+        <Participants<Runtime>>::insert(
             ALICE,
-            JurorInfo {
+            CourtParticipantInfo {
                 stake: amount,
                 active_lock: slashable,
                 prepare_exit_at: None,
@@ -869,7 +888,10 @@ fn reveal_vote_works() {
             }
             assert_eq!(old_draw, new_draw);
         }
-        assert_eq!(old_draws[alice_index].juror, new_draws[alice_index].juror);
+        assert_eq!(
+            old_draws[alice_index].court_participant,
+            new_draws[alice_index].court_participant
+        );
         assert_eq!(old_draws[alice_index].weight, new_draws[alice_index].weight);
         assert_eq!(old_draws[alice_index].slashable, new_draws[alice_index].slashable);
         assert_eq!(old_draws[alice_index].vote, Vote::Secret { commitment });
@@ -885,7 +907,7 @@ fn reveal_vote_fails_if_caller_not_juror() {
 
         run_blocks(CourtVotePeriod::get() + 1);
 
-        <Jurors<Runtime>>::remove(ALICE);
+        <Participants<Runtime>>::remove(ALICE);
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -940,7 +962,7 @@ fn reveal_vote_fails_if_juror_not_drawn() {
         run_blocks(CourtVotePeriod::get() + 1);
 
         <SelectedDraws<Runtime>>::mutate(court_id, |draws| {
-            draws.retain(|draw| draw.juror != ALICE);
+            draws.retain(|draw| draw.court_participant != ALICE);
         });
 
         let vote_item = VoteItem::Outcome(outcome);
@@ -998,7 +1020,7 @@ fn reveal_vote_fails_if_juror_not_voted() {
 
         <SelectedDraws<Runtime>>::mutate(court_id, |draws| {
             draws.iter_mut().for_each(|draw| {
-                if draw.juror == ALICE {
+                if draw.court_participant == ALICE {
                     draw.vote = Vote::Drawn;
                 }
             });
@@ -1064,11 +1086,9 @@ fn denounce_vote_works() {
         let (court_id, commitment, salt) = set_alice_after_vote(outcome.clone());
 
         let old_draws = <SelectedDraws<Runtime>>::get(court_id);
-        assert!(
-            old_draws
-                .iter()
-                .any(|draw| { draw.juror == ALICE && matches!(draw.vote, Vote::Secret { .. }) })
-        );
+        assert!(old_draws.iter().any(|draw| {
+            draw.court_participant == ALICE && matches!(draw.vote, Vote::Secret { .. })
+        }));
 
         let free_alice_before = Balances::free_balance(ALICE);
         let pot_balance_before = Balances::free_balance(&Court::reward_pot(court_id));
@@ -1095,8 +1115,8 @@ fn denounce_vote_works() {
 
         let new_draws = <SelectedDraws<Runtime>>::get(court_id);
         assert_eq!(old_draws[1..], new_draws[1..]);
-        assert_eq!(old_draws[0].juror, ALICE);
-        assert_eq!(old_draws[0].juror, new_draws[0].juror);
+        assert_eq!(old_draws[0].court_participant, ALICE);
+        assert_eq!(old_draws[0].court_participant, new_draws[0].court_participant);
         assert_eq!(old_draws[0].weight, new_draws[0].weight);
         assert_eq!(old_draws[0].slashable, new_draws[0].slashable);
         assert_eq!(old_draws[0].vote, Vote::Secret { commitment });
@@ -1105,8 +1125,8 @@ fn denounce_vote_works() {
         let free_alice_after = Balances::free_balance(ALICE);
         let slash = old_draws[0].slashable;
         assert!(!slash.is_zero());
-        // slash happens in `reassign_juror_stakes`
-        // see `reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners`
+        // slash happens in `reassign_court_stakes`
+        // see `reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners`
         assert_eq!(free_alice_after, free_alice_before);
 
         let pot_balance_after = Balances::free_balance(&Court::reward_pot(court_id));
@@ -1135,7 +1155,7 @@ fn denounce_vote_fails_if_juror_does_not_exist() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        <Jurors<Runtime>>::remove(ALICE);
+        <Participants<Runtime>>::remove(ALICE);
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -1187,7 +1207,7 @@ fn denounce_vote_fails_if_juror_not_drawn() {
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
         <SelectedDraws<Runtime>>::mutate(court_id, |draws| {
-            draws.retain(|draw| draw.juror != ALICE);
+            draws.retain(|draw| draw.court_participant != ALICE);
         });
 
         let vote_item = VoteItem::Outcome(outcome);
@@ -1222,7 +1242,7 @@ fn denounce_vote_fails_if_juror_not_voted() {
 
         <SelectedDraws<Runtime>>::mutate(court_id, |draws| {
             draws.iter_mut().for_each(|draw| {
-                if draw.juror == ALICE {
+                if draw.court_participant == ALICE {
                     draw.vote = Vote::Drawn;
                 }
             });
@@ -1611,9 +1631,9 @@ fn appeal_adds_last_appeal() {
 }
 
 #[test]
-fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
+fn reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -1630,22 +1650,32 @@ fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
         let vote_item = VoteItem::Outcome(outcome);
 
         let draws: crate::SelectedDrawsOf<Runtime> = vec![
-            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: MinJurorStake::get() },
             Draw {
-                juror: BOB,
+                court_participant: ALICE,
+                weight: 1,
+                vote: Vote::Drawn,
+                slashable: MinJurorStake::get(),
+            },
+            Draw {
+                court_participant: BOB,
                 weight: 1,
                 vote: Vote::Secret { commitment },
                 slashable: 2 * MinJurorStake::get(),
             },
             Draw {
-                juror: CHARLIE,
+                court_participant: CHARLIE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: vote_item.clone(), salt },
                 slashable: 3 * MinJurorStake::get(),
             },
-            Draw { juror: DAVE, weight: 1, vote: Vote::Drawn, slashable: 4 * MinJurorStake::get() },
             Draw {
-                juror: EVE,
+                court_participant: DAVE,
+                weight: 1,
+                vote: Vote::Drawn,
+                slashable: 4 * MinJurorStake::get(),
+            },
+            Draw {
+                court_participant: EVE,
                 weight: 1,
                 vote: Vote::Denounced { commitment, vote_item, salt },
                 slashable: 5 * MinJurorStake::get(),
@@ -1672,7 +1702,7 @@ fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
         let free_dave_before = Balances::free_balance(&DAVE);
         let free_eve_before = Balances::free_balance(&EVE);
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
         let free_alice_after = Balances::free_balance(&ALICE);
         assert_ne!(free_alice_after, free_alice_before);
@@ -1700,17 +1730,17 @@ fn reassign_juror_stakes_slashes_tardy_jurors_and_rewards_winners() {
 }
 
 #[test]
-fn reassign_juror_stakes_fails_if_court_not_found() {
+fn reassign_court_stakes_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::reassign_juror_stakes(Origin::signed(EVE), 0),
+            Court::reassign_court_stakes(Origin::signed(EVE), 0),
             Error::<Runtime>::CourtNotFound
         );
     });
 }
 
 #[test]
-fn reassign_juror_stakes_emits_event() {
+fn reassign_court_stakes_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
@@ -1721,13 +1751,13 @@ fn reassign_juror_stakes_emits_event() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
-        System::assert_last_event(Event::JurorStakesReassigned { court_id }.into());
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        System::assert_last_event(Event::StakesReassigned { court_id }.into());
     });
 }
 
 #[test]
-fn reassign_juror_stakes_fails_if_juror_stakes_already_reassigned() {
+fn reassign_court_stakes_fails_if_juror_stakes_already_reassigned() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
@@ -1738,17 +1768,17 @@ fn reassign_juror_stakes_fails_if_juror_stakes_already_reassigned() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
         assert_noop!(
-            Court::reassign_juror_stakes(Origin::signed(EVE), court_id),
+            Court::reassign_court_stakes(Origin::signed(EVE), court_id),
             Error::<Runtime>::CourtAlreadyReassigned
         );
     });
 }
 
 #[test]
-fn reassign_juror_stakes_updates_court_status() {
+fn reassign_court_stakes_updates_court_status() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
@@ -1763,7 +1793,7 @@ fn reassign_juror_stakes_updates_court_status() {
         let resolution_vote_item = VoteItem::Outcome(resolution_outcome);
         assert_eq!(court.status, CourtStatus::Closed { winner: resolution_vote_item });
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
         let court = <Courts<Runtime>>::get(court_id).unwrap();
         assert_eq!(court.status, CourtStatus::Reassigned);
@@ -1771,7 +1801,7 @@ fn reassign_juror_stakes_updates_court_status() {
 }
 
 #[test]
-fn reassign_juror_stakes_removes_draws() {
+fn reassign_court_stakes_removes_draws() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
@@ -1785,7 +1815,7 @@ fn reassign_juror_stakes_removes_draws() {
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(!draws.is_empty());
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(draws.is_empty());
@@ -1793,20 +1823,20 @@ fn reassign_juror_stakes_removes_draws() {
 }
 
 #[test]
-fn reassign_juror_stakes_fails_if_court_not_closed() {
+fn reassign_court_stakes_fails_if_court_not_closed() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
         assert_noop!(
-            Court::reassign_juror_stakes(Origin::signed(EVE), court_id),
+            Court::reassign_court_stakes(Origin::signed(EVE), court_id),
             Error::<Runtime>::CourtNotClosed
         );
     });
 }
 
 #[test]
-fn reassign_juror_stakes_decreases_active_lock() {
+fn reassign_court_stakes_decreases_active_lock() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -1821,46 +1851,51 @@ fn reassign_juror_stakes_decreases_active_lock() {
         let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
 
         let alice_slashable = MinJurorStake::get();
-        <Jurors<Runtime>>::mutate(ALICE, |juror_info| {
-            if let Some(ref mut info) = juror_info {
+        <Participants<Runtime>>::mutate(ALICE, |p_info| {
+            if let Some(ref mut info) = p_info {
                 info.active_lock = alice_slashable;
             }
         });
         let bob_slashable = 2 * MinJurorStake::get();
-        <Jurors<Runtime>>::mutate(BOB, |juror_info| {
-            if let Some(ref mut juror_info) = juror_info {
-                juror_info.active_lock = bob_slashable;
+        <Participants<Runtime>>::mutate(BOB, |p_info| {
+            if let Some(ref mut p_info) = p_info {
+                p_info.active_lock = bob_slashable;
             }
         });
         let charlie_slashable = 3 * MinJurorStake::get();
-        <Jurors<Runtime>>::mutate(CHARLIE, |juror_info| {
-            if let Some(ref mut juror_info) = juror_info {
-                juror_info.active_lock = charlie_slashable;
+        <Participants<Runtime>>::mutate(CHARLIE, |p_info| {
+            if let Some(ref mut p_info) = p_info {
+                p_info.active_lock = charlie_slashable;
             }
         });
         let dave_slashable = 4 * MinJurorStake::get();
-        <Jurors<Runtime>>::mutate(DAVE, |juror_info| {
-            if let Some(ref mut juror_info) = juror_info {
-                juror_info.active_lock = dave_slashable;
+        <Participants<Runtime>>::mutate(DAVE, |p_info| {
+            if let Some(ref mut p_info) = p_info {
+                p_info.active_lock = dave_slashable;
             }
         });
 
         let draws: crate::SelectedDrawsOf<Runtime> = vec![
-            Draw { juror: ALICE, weight: 1, vote: Vote::Drawn, slashable: alice_slashable },
             Draw {
-                juror: BOB,
+                court_participant: ALICE,
+                weight: 1,
+                vote: Vote::Drawn,
+                slashable: alice_slashable,
+            },
+            Draw {
+                court_participant: BOB,
                 weight: 1,
                 vote: Vote::Secret { commitment },
                 slashable: bob_slashable,
             },
             Draw {
-                juror: CHARLIE,
+                court_participant: CHARLIE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: vote_item.clone(), salt },
                 slashable: charlie_slashable,
             },
             Draw {
-                juror: DAVE,
+                court_participant: DAVE,
                 weight: 1,
                 vote: Vote::Denounced { commitment, vote_item, salt },
                 slashable: dave_slashable,
@@ -1880,18 +1915,18 @@ fn reassign_juror_stakes_decreases_active_lock() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap();
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
-        assert!(<Jurors<Runtime>>::get(ALICE).unwrap().active_lock.is_zero());
-        assert!(<Jurors<Runtime>>::get(BOB).unwrap().active_lock.is_zero());
-        assert!(<Jurors<Runtime>>::get(CHARLIE).unwrap().active_lock.is_zero());
-        assert!(<Jurors<Runtime>>::get(DAVE).unwrap().active_lock.is_zero());
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert!(<Participants<Runtime>>::get(ALICE).unwrap().active_lock.is_zero());
+        assert!(<Participants<Runtime>>::get(BOB).unwrap().active_lock.is_zero());
+        assert!(<Participants<Runtime>>::get(CHARLIE).unwrap().active_lock.is_zero());
+        assert!(<Participants<Runtime>>::get(DAVE).unwrap().active_lock.is_zero());
     });
 }
 
 #[test]
-fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
+fn reassign_court_stakes_slashes_loosers_and_awards_winners() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -1917,25 +1952,25 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
 
         let draws: crate::SelectedDrawsOf<Runtime> = vec![
             Draw {
-                juror: ALICE,
+                court_participant: ALICE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: vote_item.clone(), salt },
                 slashable: alice_slashable,
             },
             Draw {
-                juror: BOB,
+                court_participant: BOB,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item_0, salt },
                 slashable: bob_slashable,
             },
             Draw {
-                juror: CHARLIE,
+                court_participant: CHARLIE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item, salt },
                 slashable: charlie_slashable,
             },
             Draw {
-                juror: DAVE,
+                court_participant: DAVE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item_1, salt },
                 slashable: dave_slashable,
@@ -1966,7 +2001,7 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
         let tardy_or_denounced_value = 5 * MinJurorStake::get();
         let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
         let bob_slashed = last_draws[BOB as usize].slashable;
         let dave_slashed = last_draws[DAVE as usize].slashable;
@@ -1993,9 +2028,9 @@ fn reassign_juror_stakes_slashes_loosers_and_awards_winners() {
 }
 
 #[test]
-fn reassign_juror_stakes_works_for_delegations() {
+fn reassign_court_stakes_works_for_delegations() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -2031,31 +2066,31 @@ fn reassign_juror_stakes_works_for_delegations() {
 
         let draws: crate::SelectedDrawsOf<Runtime> = vec![
             Draw {
-                juror: ALICE,
+                court_participant: ALICE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: vote_item.clone(), salt },
                 slashable: alice_slashable,
             },
             Draw {
-                juror: EVE,
+                court_participant: EVE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item, salt },
                 slashable: eve_slashable,
             },
             Draw {
-                juror: BOB,
+                court_participant: BOB,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item, salt },
                 slashable: bob_slashable,
             },
             Draw {
-                juror: CHARLIE,
+                court_participant: CHARLIE,
                 weight: 1,
                 vote: Vote::Delegated { delegated_stakes: delegated_stakes_charlie.clone() },
                 slashable: charlie_slashable,
             },
             Draw {
-                juror: DAVE,
+                court_participant: DAVE,
                 weight: 1,
                 vote: Vote::Delegated { delegated_stakes: delegated_stakes_dave.clone() },
                 slashable: dave_slashable,
@@ -2087,9 +2122,10 @@ fn reassign_juror_stakes_works_for_delegations() {
         let tardy_or_denounced_value = 5 * MinJurorStake::get();
         let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
-        let bob_slashed = last_draws.iter().find(|draw| draw.juror == BOB).unwrap().slashable;
+        let bob_slashed =
+            last_draws.iter().find(|draw| draw.court_participant == BOB).unwrap().slashable;
         let charlie_delegated_bob_slashed =
             delegated_stakes_charlie.iter().find(|(acc, _)| *acc == BOB).unwrap().1;
         let dave_delegated_bob_slashed =
@@ -2139,9 +2175,9 @@ fn reassign_juror_stakes_works_for_delegations() {
 }
 
 #[test]
-fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
+fn reassign_court_stakes_rewards_treasury_if_no_winner() {
     ExtBuilder::default().build().execute_with(|| {
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
@@ -2162,25 +2198,25 @@ fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
 
         let draws: crate::SelectedDrawsOf<Runtime> = vec![
             Draw {
-                juror: ALICE,
+                court_participant: ALICE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item_1.clone(), salt },
                 slashable: MinJurorStake::get(),
             },
             Draw {
-                juror: BOB,
+                court_participant: BOB,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item_0.clone(), salt },
                 slashable: 2 * MinJurorStake::get(),
             },
             Draw {
-                juror: CHARLIE,
+                court_participant: CHARLIE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item_0, salt },
                 slashable: 3 * MinJurorStake::get(),
             },
             Draw {
-                juror: DAVE,
+                court_participant: DAVE,
                 weight: 1,
                 vote: Vote::Revealed { commitment, vote_item: wrong_vote_item_1, salt },
                 slashable: 4 * MinJurorStake::get(),
@@ -2209,7 +2245,7 @@ fn reassign_juror_stakes_rewards_treasury_if_no_winner() {
         let treasury_account = Court::treasury_account_id();
         let free_treasury_before = Balances::free_balance(&treasury_account);
 
-        assert_ok!(Court::reassign_juror_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
 
         let alice_slashed = last_draws[ALICE as usize].slashable;
         let bob_slashed = last_draws[BOB as usize].slashable;
@@ -2483,18 +2519,18 @@ fn choose_multiple_weighted_works() {
 fn select_jurors_updates_juror_consumed_stake() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
         // the last appeal is reserved for global dispute backing
         let appeal_number = (MaxAppeals::get() - 1) as usize;
         fill_appeals(court_id, appeal_number);
 
-        let jurors = JurorPool::<Runtime>::get();
+        let jurors = CourtPool::<Runtime>::get();
         let consumed_stake_before = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
 
         let new_draws = Court::select_jurors(appeal_number).unwrap();
 
         let total_draw_slashable = new_draws.iter().map(|draw| draw.slashable).sum::<u128>();
-        let jurors = JurorPool::<Runtime>::get();
+        let jurors = CourtPool::<Runtime>::get();
         let consumed_stake_after = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
         assert_ne!(consumed_stake_before, consumed_stake_after);
         assert_eq!(consumed_stake_before + total_draw_slashable, consumed_stake_after);
@@ -2515,7 +2551,10 @@ fn select_jurors_fails_if_not_enough_jurors(appeal_number: usize) {
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
 
-        assert_noop!(Court::select_jurors(appeal_number), Error::<Runtime>::NotEnoughJurorsStake);
+        assert_noop!(
+            Court::select_jurors(appeal_number),
+            Error::<Runtime>::NotEnoughJurorsAndDelegatorsStake
+        );
     });
 }
 
@@ -2528,10 +2567,10 @@ fn appeal_reduces_active_lock_from_old_draws() {
         let old_draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(!old_draws.is_empty());
         old_draws.iter().for_each(|draw| {
-            let juror = draw.juror;
-            let juror_info = <Jurors<Runtime>>::get(juror).unwrap();
+            let juror = draw.court_participant;
+            let p_info = <Participants<Runtime>>::get(juror).unwrap();
             assert_ne!(draw.slashable, 0);
-            assert_eq!(juror_info.active_lock, draw.slashable);
+            assert_eq!(p_info.active_lock, draw.slashable);
         });
 
         run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
@@ -2540,12 +2579,14 @@ fn appeal_reduces_active_lock_from_old_draws() {
 
         let new_draws = <SelectedDraws<Runtime>>::get(court_id);
         old_draws.iter().for_each(|draw| {
-            let juror = draw.juror;
-            let juror_info = <Jurors<Runtime>>::get(juror).unwrap();
-            if let Some(new_draw) = new_draws.iter().find(|new_draw| new_draw.juror == juror) {
-                assert_eq!(new_draw.slashable, juror_info.active_lock);
+            let juror = draw.court_participant;
+            let p_info = <Participants<Runtime>>::get(juror).unwrap();
+            if let Some(new_draw) =
+                new_draws.iter().find(|new_draw| new_draw.court_participant == juror)
+            {
+                assert_eq!(new_draw.slashable, p_info.active_lock);
             } else {
-                assert_eq!(juror_info.active_lock, 0);
+                assert_eq!(p_info.active_lock, 0);
             }
         });
     });
@@ -2575,7 +2616,7 @@ fn on_dispute_inserts_draws() {
         assert_eq!(
             draws[0],
             Draw {
-                juror: ALICE,
+                court_participant: ALICE,
                 weight: 3,
                 vote: Vote::Drawn,
                 slashable: 3 * MinJurorStake::get()
@@ -2583,12 +2624,17 @@ fn on_dispute_inserts_draws() {
         );
         assert_eq!(
             draws[1],
-            Draw { juror: BOB, weight: 5, vote: Vote::Drawn, slashable: 5 * MinJurorStake::get() }
+            Draw {
+                court_participant: BOB,
+                weight: 5,
+                vote: Vote::Drawn,
+                slashable: 5 * MinJurorStake::get()
+            }
         );
         assert_eq!(
             draws[2],
             Draw {
-                juror: CHARLIE,
+                court_participant: CHARLIE,
                 weight: 6,
                 vote: Vote::Drawn,
                 slashable: 6 * MinJurorStake::get()
@@ -2596,12 +2642,17 @@ fn on_dispute_inserts_draws() {
         );
         assert_eq!(
             draws[3],
-            Draw { juror: DAVE, weight: 7, vote: Vote::Drawn, slashable: 7 * MinJurorStake::get() }
+            Draw {
+                court_participant: DAVE,
+                weight: 7,
+                vote: Vote::Drawn,
+                slashable: 7 * MinJurorStake::get()
+            }
         );
         assert_eq!(
             draws[4],
             Draw {
-                juror: EVE,
+                court_participant: EVE,
                 weight: 10,
                 vote: Vote::Drawn,
                 slashable: 10 * MinJurorStake::get()
@@ -2627,7 +2678,7 @@ fn has_failed_returns_true_for_appealable_court_too_few_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
         // force empty jurors pool
-        <JurorPool<Runtime>>::kill();
+        <CourtPool<Runtime>>::kill();
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
         let court = <Courts<Runtime>>::get(court_id).unwrap();
@@ -2654,7 +2705,7 @@ fn has_failed_returns_true_for_appealable_court_appeals_full() {
 fn has_failed_returns_true_for_uninitialized_court() {
     ExtBuilder::default().build().execute_with(|| {
         // force empty jurors pool
-        <JurorPool<Runtime>>::kill();
+        <CourtPool<Runtime>>::kill();
         let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
         let report_block = 42;
         MarketCommons::mutate_market(&market_id, |market| {
@@ -2702,7 +2753,7 @@ fn prepare_draws(court_id: CourtId, outcomes_with_weights: Vec<(u128, u32)>) {
         let commitment = BlakeTwo256::hash_of(&(juror, vote_item.clone(), salt));
         draws
             .try_push(Draw {
-                juror,
+                court_participant: juror,
                 weight: *weight,
                 vote: Vote::Revealed { commitment, vote_item, salt },
                 slashable: 0u128,
@@ -2793,10 +2844,10 @@ fn choose_multiple_weighted_returns_different_jurors_with_other_seed() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
 
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
 
         let nonce_0 = 42u64;
-        <crate::JurorsSelectionNonce<Runtime>>::put(nonce_0);
+        <crate::SelectionNonce<Runtime>>::put(nonce_0);
         // randomness is mocked and purely based on the nonce
         // thus a different nonce will result in a different seed (disregarding hash collisions)
         let first_random_seed = Court::get_random_seed(nonce_0);
@@ -2805,7 +2856,7 @@ fn choose_multiple_weighted_returns_different_jurors_with_other_seed() {
         run_blocks(1);
 
         let nonce_1 = 69u64;
-        <crate::JurorsSelectionNonce<Runtime>>::put(nonce_1);
+        <crate::SelectionNonce<Runtime>>::put(nonce_1);
         let second_random_seed = Court::get_random_seed(nonce_1);
 
         assert_ne!(first_random_seed, second_random_seed);
@@ -2826,12 +2877,12 @@ fn get_random_seed_returns_equal_seeds_with_equal_nonce() {
         // this is useful to check that the random seed only depends on the nonce
         // the same nonce always results in the same seed for testing deterministic
         let nonce = 42u64;
-        <crate::JurorsSelectionNonce<Runtime>>::put(nonce);
+        <crate::SelectionNonce<Runtime>>::put(nonce);
         let first_random_seed = Court::get_random_seed(nonce);
 
         run_blocks(1);
 
-        <crate::JurorsSelectionNonce<Runtime>>::put(nonce);
+        <crate::SelectionNonce<Runtime>>::put(nonce);
         let second_random_seed = Court::get_random_seed(nonce);
 
         assert_eq!(first_random_seed, second_random_seed);
@@ -2842,13 +2893,13 @@ fn get_random_seed_returns_equal_seeds_with_equal_nonce() {
 fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(123);
-        fill_juror_pool(MaxJurors::get());
+        fill_juror_pool(MaxCourtParticipants::get());
 
-        let jurors = <JurorPool<Runtime>>::get();
+        let jurors = <CourtPool<Runtime>>::get();
 
         let random_jurors = Court::choose_multiple_weighted(2).unwrap();
         for draw in random_jurors {
-            assert!(jurors.iter().any(|el| el.juror == draw.juror));
+            assert!(jurors.iter().any(|el| el.court_participant == draw.court_participant));
         }
     });
 }
@@ -2856,7 +2907,7 @@ fn random_jurors_returns_a_subset_of_jurors() {
 #[test]
 fn handle_inflation_works() {
     ExtBuilder::default().build().execute_with(|| {
-        let mut jurors = <JurorPool<Runtime>>::get();
+        let mut jurors = <CourtPool<Runtime>>::get();
         let mut free_balances_before = BTreeMap::new();
         let jurors_list = vec![1000, 10_000, 100_000, 1_000_000, 10_000_000];
         for number in jurors_list.iter() {
@@ -2864,9 +2915,11 @@ fn handle_inflation_works() {
             let juror = *number;
             let _ = Balances::deposit(&juror, stake).unwrap();
             free_balances_before.insert(juror, stake);
-            jurors.try_push(JurorPoolItem { stake, juror, consumed_stake: 0 }).unwrap();
+            jurors
+                .try_push(CourtPoolItem { stake, court_participant: juror, consumed_stake: 0 })
+                .unwrap();
         }
-        <JurorPool<Runtime>>::put(jurors.clone());
+        <CourtPool<Runtime>>::put(jurors.clone());
 
         let inflation_period = InflationPeriod::get();
         run_to_block(inflation_period);

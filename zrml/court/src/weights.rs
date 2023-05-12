@@ -54,7 +54,7 @@ pub trait WeightInfoZeitgeist {
     fn denounce_vote(d: u32) -> Weight;
     fn reveal_vote(d: u32) -> Weight;
     fn appeal(j: u32, a: u32, r: u32, f: u32) -> Weight;
-    fn reassign_juror_stakes(d: u32) -> Weight;
+    fn reassign_court_stakes(d: u32) -> Weight;
     fn set_inflation() -> Weight;
     fn handle_inflation(j: u32) -> Weight;
     fn select_jurors(a: u32) -> Weight;
@@ -175,7 +175,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Court SelectedDraws (r:1 w:1)
     // Storage: Court Jurors (r:5 w:5)
     // Storage: System Account (r:6 w:5)
-    fn reassign_juror_stakes(d: u32) -> Weight {
+    fn reassign_court_stakes(d: u32) -> Weight {
         Weight::from_ref_time(0)
             // Standard Error: 19_000
             .saturating_add(Weight::from_ref_time(44_416_000).saturating_mul(d.into()))

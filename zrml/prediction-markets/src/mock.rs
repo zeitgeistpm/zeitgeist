@@ -44,13 +44,13 @@ use zeitgeist_primitives::{
         CorrectionPeriod, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtPalletId,
         CourtVotePeriod, ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
         InflationPeriod, LiquidityMiningPalletId, MaxAppeals, MaxApprovals, MaxAssets,
-        MaxCategories, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
-        MaxGracePeriod, MaxInRatio, MaxJurors, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval, SimpleDisputesPalletId,
-        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxCategories, MaxCourtParticipants, MaxDelegations, MaxDisputeDuration, MaxDisputes,
+        MaxEditReasonLen, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
+        MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
+        MinJurorStake, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval,
+        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -314,7 +314,7 @@ impl zrml_court::Config for Runtime {
     type MaxAppeals = MaxAppeals;
     type MaxDelegations = MaxDelegations;
     type MaxSelectedDraws = MaxSelectedDraws;
-    type MaxJurors = MaxJurors;
+    type MaxCourtParticipants = MaxCourtParticipants;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type CourtPalletId = CourtPalletId;

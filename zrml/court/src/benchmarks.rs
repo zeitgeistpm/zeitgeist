@@ -24,9 +24,10 @@
 
 extern crate alloc;
 use crate::{
-    types::{CourtStatus, Draw, JurorInfo, JurorPoolItem, Vote},
-    AppealInfo, BalanceOf, Call, Config, CourtId, Courts, DelegatedStakesOf, JurorPool, Jurors,
-    MarketIdToCourtId, MarketOf, Pallet as Court, Pallet, RequestBlock, SelectedDraws, VoteItem,
+    types::{CourtParticipantInfo, CourtPoolItem, CourtStatus, Draw, Vote},
+    AppealInfo, BalanceOf, Call, Config, CourtId, CourtPool, Courts, DelegatedStakesOf,
+    MarketIdToCourtId, MarketOf, Pallet as Court, Pallet, Participants, RequestBlock,
+    SelectedDraws, VoteItem,
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
@@ -92,16 +93,16 @@ fn fill_pool<T>(number: u32) -> Result<(), &'static str>
 where
     T: Config,
 {
-    let mut jurors = <JurorPool<T>>::get();
+    let mut pool = <CourtPool<T>>::get();
     let min_amount = T::MinJurorStake::get();
     let max_amount = min_amount + min_amount + BalanceOf::<T>::from(number);
     for i in 0..number {
         let juror: T::AccountId = account("juror", i, 0);
         let stake = max_amount - BalanceOf::<T>::from(i);
         let _ = T::Currency::deposit_creating(&juror, stake);
-        <Jurors<T>>::insert(
+        <Participants<T>>::insert(
             juror.clone(),
-            JurorInfo {
+            CourtParticipantInfo {
                 stake,
                 active_lock: <BalanceOf<T>>::zero(),
                 prepare_exit_at: None,
@@ -109,15 +110,15 @@ where
             },
         );
         let consumed_stake = BalanceOf::<T>::zero();
-        let pool_item = JurorPoolItem { stake, juror: juror.clone(), consumed_stake };
-        match jurors
-            .binary_search_by_key(&(stake, &juror), |pool_item| (pool_item.stake, &pool_item.juror))
-        {
+        let pool_item = CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake };
+        match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
+            (pool_item.stake, &pool_item.court_participant)
+        }) {
             Ok(_) => panic!("Juror already in pool"),
-            Err(index) => jurors.try_insert(index, pool_item).unwrap(),
+            Err(index) => pool.try_insert(index, pool_item).unwrap(),
         };
     }
-    <JurorPool<T>>::put(jurors);
+    <CourtPool<T>>::put(pool);
     Ok(())
 }
 
@@ -127,19 +128,19 @@ fn fill_delegations<T>()
 where
     T: Config,
 {
-    let jurors = <JurorPool<T>>::get();
-    debug_assert!(jurors.len() >= T::MaxDelegations::get() as usize);
-    let mut jurors_iter = jurors.iter();
+    let pool = <CourtPool<T>>::get();
+    debug_assert!(pool.len() >= T::MaxDelegations::get() as usize);
+    let mut pool_iter = pool.iter();
     let mut delegated_jurors = vec![];
     for _ in 0..T::MaxDelegations::get() {
-        let delegated_juror = jurors_iter.next().unwrap().juror.clone();
+        let delegated_juror = pool_iter.next().unwrap().court_participant.clone();
         delegated_jurors.push(delegated_juror);
     }
-    for pool_item in jurors_iter {
-        let juror = &pool_item.juror;
-        let mut j = <Jurors<T>>::get(juror).unwrap();
+    for pool_item in pool_iter {
+        let juror = &pool_item.court_participant;
+        let mut j = <Participants<T>>::get(juror).unwrap();
         j.delegations = Some(delegated_jurors.clone().try_into().unwrap());
-        <Jurors<T>>::insert(juror, j);
+        <Participants<T>>::insert(juror, j);
     }
 }
 
@@ -180,19 +181,23 @@ where
     for i in 0..number {
         let juror = account("juror", i, 0);
         deposit::<T>(&juror);
-        <Jurors<T>>::insert(
+        <Participants<T>>::insert(
             &juror,
-            JurorInfo {
+            CourtParticipantInfo {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
                 delegations: Default::default(),
             },
         );
-        let draw =
-            Draw { juror, vote: Vote::Drawn, weight: 1u32, slashable: T::MinJurorStake::get() };
+        let draw = Draw {
+            court_participant: juror,
+            vote: Vote::Drawn,
+            weight: 1u32,
+            slashable: T::MinJurorStake::get(),
+        };
         let index = draws
-            .binary_search_by_key(&draw.juror, |draw| draw.juror.clone())
+            .binary_search_by_key(&draw.court_participant, |draw| draw.court_participant.clone())
             .unwrap_or_else(|j| j);
         draws.try_insert(index, draw).unwrap();
     }
@@ -209,7 +214,8 @@ where
     // change draws to have revealed votes
     for draw in draws.iter_mut() {
         let salt = Default::default();
-        let commitment = T::Hashing::hash_of(&(draw.juror.clone(), winner_outcome.clone(), salt));
+        let commitment =
+            T::Hashing::hash_of(&(draw.court_participant.clone(), winner_outcome.clone(), salt));
         draw.vote = Vote::Revealed {
             commitment,
             vote_item: VoteItem::Outcome(winner_outcome.clone()),
@@ -221,7 +227,7 @@ where
 
 benchmarks! {
     join_court {
-        let j in 0..(T::MaxJurors::get() - 1);
+        let j in 0..(T::MaxCourtParticipants::get() - 1);
 
         fill_pool::<T>(j)?;
 
@@ -235,7 +241,7 @@ benchmarks! {
     delegate {
         // jurors greater or equal to MaxDelegations,
         // because we can not delegate to a non-existent juror
-        let j in 5..(T::MaxJurors::get() - 1);
+        let j in 5..(T::MaxCourtParticipants::get() - 1);
         let d in 1..T::MaxDelegations::get();
 
         fill_pool::<T>(j)?;
@@ -243,18 +249,18 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         join_with_min_stake::<T>(&caller)?;
 
-        let juror_pool = <JurorPool<T>>::get();
+        let juror_pool = <CourtPool<T>>::get();
         let mut delegations = Vec::<T::AccountId>::new();
         juror_pool.iter()
-            .filter(|pool_item| pool_item.juror != caller).take(d as usize)
-            .for_each(|pool_item| delegations.push(pool_item.juror.clone()));
+            .filter(|pool_item| pool_item.court_participant != caller).take(d as usize)
+            .for_each(|pool_item| delegations.push(pool_item.court_participant.clone()));
 
         let new_stake = T::MinJurorStake::get()
             .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
     }: _(RawOrigin::Signed(caller), new_stake, delegations)
 
     prepare_exit_court {
-        let j in 0..(T::MaxJurors::get() - 1);
+        let j in 0..(T::MaxCourtParticipants::get() - 1);
 
         fill_pool::<T>(j)?;
 
@@ -270,8 +276,8 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
         <frame_system::Pallet<T>>::set_block_number(now + T::InflationPeriod::get());
 
-        <Jurors<T>>::mutate(caller.clone(), |prev_juror_info| {
-            prev_juror_info.as_mut().unwrap().active_lock = <BalanceOf<T>>::zero();
+        <Participants<T>>::mutate(caller.clone(), |prev_p_info| {
+            prev_p_info.as_mut().unwrap().active_lock = <BalanceOf<T>>::zero();
         });
 
         let juror = T::Lookup::unlookup(caller.clone());
@@ -285,8 +291,8 @@ benchmarks! {
         let now = <frame_system::Pallet<T>>::block_number();
         <frame_system::Pallet<T>>::set_block_number(now + T::InflationPeriod::get());
 
-        <Jurors<T>>::mutate(caller.clone(), |prev_juror_info| {
-            prev_juror_info.as_mut().unwrap().active_lock = T::MinJurorStake::get();
+        <Participants<T>>::mutate(caller.clone(), |prev_p_info| {
+            prev_p_info.as_mut().unwrap().active_lock = T::MinJurorStake::get();
         });
 
         let juror = T::Lookup::unlookup(caller.clone());
@@ -295,7 +301,7 @@ benchmarks! {
     vote {
         let d in 1..T::MaxSelectedDraws::get();
 
-        fill_pool::<T>(T::MaxJurors::get() - 1)?;
+        fill_pool::<T>(T::MaxCourtParticipants::get() - 1)?;
 
         let caller: T::AccountId = whitelisted_caller();
         let (market_id, court_id) = setup_court::<T>()?;
@@ -309,12 +315,12 @@ benchmarks! {
         let draws_len = draws.len();
         draws.remove(0);
         let draw = Draw {
-            juror: caller.clone(),
+            court_participant: caller.clone(),
             vote: Vote::Drawn,
             weight: 1u32,
             slashable: <BalanceOf<T>>::zero(),
         };
-        let index = draws.binary_search_by_key(&caller, |draw| draw.juror.clone()).unwrap_or_else(|j| j);
+        let index = draws.binary_search_by_key(&caller, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
         draws.try_insert(index, draw).unwrap();
         <SelectedDraws<T>>::insert(court_id, draws);
 
@@ -342,7 +348,7 @@ benchmarks! {
         let vote_item = VoteItem::Outcome(outcome);
         let denounced_juror: T::AccountId = account("denounced_juror", 0, 0);
         join_with_min_stake::<T>(&denounced_juror)?;
-        <Jurors<T>>::insert(&denounced_juror, JurorInfo {
+        <Participants<T>>::insert(&denounced_juror, CourtParticipantInfo {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
             prepare_exit_at: None,
@@ -354,9 +360,9 @@ benchmarks! {
         let mut draws = <SelectedDraws<T>>::get(court_id);
         draws.remove(0);
         let draws_len = draws.len();
-        let index = draws.binary_search_by_key(&denounced_juror, |draw| draw.juror.clone()).unwrap_or_else(|j| j);
+        let index = draws.binary_search_by_key(&denounced_juror, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
         let draw = Draw {
-            juror: denounced_juror,
+            court_participant: denounced_juror,
             vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
@@ -370,7 +376,7 @@ benchmarks! {
     reveal_vote {
         let d in 1..T::MaxSelectedDraws::get();
 
-        fill_pool::<T>(T::MaxJurors::get() - 1)?;
+        fill_pool::<T>(T::MaxCourtParticipants::get() - 1)?;
 
         let caller: T::AccountId = whitelisted_caller();
         let (market_id, court_id) = setup_court::<T>()?;
@@ -384,7 +390,7 @@ benchmarks! {
         let outcome = OutcomeReport::Scalar(0u128);
         let vote_item = VoteItem::Outcome(outcome);
         join_with_min_stake::<T>(&caller)?;
-        <Jurors<T>>::insert(&caller, JurorInfo {
+        <Participants<T>>::insert(&caller, CourtParticipantInfo {
             stake: T::MinJurorStake::get(),
             active_lock: T::MinJurorStake::get(),
             prepare_exit_at: None,
@@ -395,9 +401,9 @@ benchmarks! {
         let mut draws = <SelectedDraws<T>>::get(court_id);
         let draws_len = draws.len();
         draws.remove(0);
-        let index = draws.binary_search_by_key(&caller, |draw| draw.juror.clone()).unwrap_or_else(|j| j);
+        let index = draws.binary_search_by_key(&caller, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
         draws.try_insert(index, Draw {
-            juror: caller.clone(),
+            court_participant: caller.clone(),
             vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
@@ -409,7 +415,7 @@ benchmarks! {
 
     appeal {
         // from 255 because in the last appeal round we need at least 255 jurors
-        let j in 255..T::MaxJurors::get();
+        let j in 255..T::MaxCourtParticipants::get();
         let a in 0..(T::MaxAppeals::get() - 2);
         let r in 0..62;
         let f in 0..62;
@@ -449,7 +455,7 @@ benchmarks! {
         let draws_len = Court::<T>::necessary_draws_weight(a as usize) as u32;
         for i in 0..draws_len {
             let juror: T::AccountId = account("juror", i, 0);
-            <Jurors<T>>::insert(&juror, JurorInfo {
+            <Participants<T>>::insert(&juror, CourtParticipantInfo {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
@@ -459,7 +465,7 @@ benchmarks! {
             let commitment = T::Hashing::hash_of(&(juror.clone(), vote_item.clone(), salt));
             let draw =
                 Draw {
-                    juror,
+                    court_participant: juror,
                     vote: Vote::Revealed { commitment, vote_item, salt },
                     weight: 1u32,
                     slashable: <BalanceOf<T>>::zero()
@@ -486,7 +492,7 @@ benchmarks! {
         assert_eq!(court.cycle_ends.appeal, new_resolve_at);
     }
 
-    reassign_juror_stakes {
+    reassign_court_stakes {
         // because we have 5 MaxDelegations
         let d in 5..T::MaxSelectedDraws::get();
         debug_assert!(T::MaxDelegations::get() < T::MaxSelectedDraws::get());
@@ -514,7 +520,7 @@ benchmarks! {
         for i in 0..d {
             let juror: T::AccountId = account("juror_i", i, 0);
             deposit::<T>(&juror);
-            <Jurors<T>>::insert(&juror, JurorInfo {
+            <Participants<T>>::insert(&juror, CourtParticipantInfo {
                 stake: T::MinJurorStake::get(),
                 active_lock: T::MinJurorStake::get(),
                 prepare_exit_at: None,
@@ -530,14 +536,14 @@ benchmarks! {
                 };
                 let commitment = T::Hashing::hash_of(&(juror.clone(), vote_item.clone(), salt));
                 Draw {
-                    juror,
+                    court_participant: juror,
                     vote: Vote::Revealed { commitment, vote_item, salt },
                     weight: 1u32,
                     slashable: T::MinJurorStake::get(),
                 }
             } else {
                 Draw {
-                    juror,
+                    court_participant: juror,
                     vote: Vote::Delegated { delegated_stakes: delegated_stakes.clone() },
                     weight: 1u32,
                     slashable: T::MinJurorStake::get(),
@@ -553,7 +559,7 @@ benchmarks! {
     }: _(RawOrigin::Root, inflation)
 
     handle_inflation {
-        let j in 1..T::MaxJurors::get();
+        let j in 1..T::MaxCourtParticipants::get();
         fill_pool::<T>(j)?;
 
         <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get());
@@ -564,7 +570,7 @@ benchmarks! {
 
     select_jurors {
         let a in 0..(T::MaxAppeals::get() - 1);
-        fill_pool::<T>(T::MaxJurors::get())?;
+        fill_pool::<T>(T::MaxCourtParticipants::get())?;
 
         fill_delegations::<T>();
     }: {
@@ -572,7 +578,7 @@ benchmarks! {
     }
 
     on_dispute {
-        let j in 31..T::MaxJurors::get();
+        let j in 31..T::MaxCourtParticipants::get();
         let r in 0..62;
 
         let now = <frame_system::Pallet<T>>::block_number();
@@ -614,7 +620,7 @@ benchmarks! {
         // change draws to have revealed votes
         for draw in draws.iter_mut() {
             let salt = Default::default();
-            let commitment = T::Hashing::hash_of(&(draw.juror.clone(), winner_outcome.clone(), salt));
+            let commitment = T::Hashing::hash_of(&(draw.court_participant.clone(), winner_outcome.clone(), salt));
             draw.vote = Vote::Revealed {
                 commitment,
                 vote_item: VoteItem::Outcome(winner_outcome.clone()),

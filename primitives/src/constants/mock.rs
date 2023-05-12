@@ -46,7 +46,7 @@ parameter_types! {
     pub const MaxAppeals: u32 = 4;
     pub const MaxDelegations: u32 = 5;
     pub const MaxSelectedDraws: u32 = 510;
-    pub const MaxJurors: u32 = 1_000;
+    pub const MaxCourtParticipants: u32 = 1_000;
     pub const MinJurorStake: Balance = 50 * CENT;
     pub const InflationPeriod: BlockNumber = 20;
 }

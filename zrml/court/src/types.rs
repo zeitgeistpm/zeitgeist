@@ -74,7 +74,7 @@ impl VoteItem {
     }
 }
 
-/// The general information about a particular juror.
+/// The general information about a particular court participant (juror or delegator).
 #[derive(
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
@@ -85,14 +85,15 @@ impl VoteItem {
     PartialEq,
     Eq,
 )]
-pub struct JurorInfo<Balance, BlockNumber, Delegations> {
-    /// The juror's amount in the stake weighted pool.
-    /// This amount is used to find a juror with a binary search on the pool.
+pub struct CourtParticipantInfo<Balance, BlockNumber, Delegations> {
+    /// The court participants amount in the stake weighted pool.
+    /// This amount is used to find a court participant with a binary search on the pool.
     pub stake: Balance,
     /// The current amount of funds which are locked in courts.
     pub active_lock: Balance,
-    /// The block number when a juror exit from court was requested.
+    /// The block number when an exit from court was requested.
     pub prepare_exit_at: Option<BlockNumber>,
+    /// The delegations of the court participant. This determines the account as a delegator.
     pub delegations: Option<Delegations>,
 }
 
@@ -126,7 +127,7 @@ pub struct CommitmentMatcher<AccountId, Hash> {
     Eq,
 )]
 pub enum Vote<Hash, DelegatedStakes> {
-    /// The juror delegated stake to other jurors.
+    /// The delegator delegated stake to other jurors.
     Delegated { delegated_stakes: DelegatedStakes },
     /// The juror was randomly selected to vote in a specific court case.
     Drawn,
@@ -218,6 +219,7 @@ pub struct CourtInfo<BlockNumber, Appeals> {
     pub appeals: Appeals,
     /// The information about the lifecycle of this court case.
     pub cycle_ends: CycleEnds<BlockNumber>,
+    /// The type of the vote item.
     pub vote_item_type: VoteItemType,
 }
 
@@ -256,7 +258,7 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     }
 }
 
-/// After a juror was randomly selected to vote in a court case,
+/// After a court participant was randomly selected to vote in a court case,
 /// this information is relevant to handle the post-selection process.
 #[derive(
     parity_scale_codec::Decode,
@@ -269,8 +271,8 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     Eq,
 )]
 pub struct Draw<AccountId, Balance, Hash, DelegatedStakes> {
-    /// The juror who was randomly selected.
-    pub juror: AccountId,
+    /// The court participant who was randomly selected.
+    pub court_participant: AccountId,
     /// The weight of the juror in this court case.
     /// The higher the weight the more voice the juror has in the final winner decision.
     pub weight: u32,
@@ -292,13 +294,14 @@ pub struct Draw<AccountId, Balance, Hash, DelegatedStakes> {
     PartialEq,
     Eq,
 )]
-pub struct JurorPoolItem<AccountId, Balance> {
-    /// The amount of funds associated to a juror in order to get selected for a court case.
+pub struct CourtPoolItem<AccountId, Balance> {
+    /// The amount of funds associated to a court participant
+    /// in order to get selected for a court case.
     pub stake: Balance,
     /// The account which is the juror that might be selected in court cases.
-    pub juror: AccountId,
+    pub court_participant: AccountId,
     /// The consumed amount of the stake for all draws. This is useful to reduce the probability
-    /// of a juror to be selected again.
+    /// of a court participant to be selected again.
     pub consumed_stake: Balance,
 }
 
