@@ -108,7 +108,7 @@ pub trait DisputeApi {
         market: &MarketOfDisputeApi<Self>,
     ) -> Result<ResultWithWeightInfo<bool>, DispatchError>;
 
-    /// Called, when a global dispute is started.
+    /// Initialise a global dispute for the failed market dispute mechanism.
     /// **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     ///
     /// # Returns
