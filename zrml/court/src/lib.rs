@@ -2137,7 +2137,6 @@ mod pallet {
                 }
             }
 
-            // TODO all funds to treasury?
             let res = ResultWithWeightInfo {
                 result: overall_imbalance,
                 weight: T::WeightInfo::exchange(appeals_len),
