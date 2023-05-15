@@ -190,7 +190,7 @@ mod pallet {
         /// Handler for slashed funds.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-        /// Slashed funds are send to the treasury
+        /// The treasury pallet identifier.
         #[pallet::constant]
         type TreasuryPalletId: Get<PalletId>;
 
