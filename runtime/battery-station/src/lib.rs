@@ -36,6 +36,7 @@ pub use frame_system::{
 pub use pallet_author_slot_filter::EligibilityValue;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_collective::EnsureProportionMoreThan;
+use zrml_prediction_markets::mock::SimpleDisputes;
 
 #[cfg(feature = "parachain")]
 pub use crate::parachain_params::*;
@@ -118,20 +119,11 @@ impl Contains<Call> for IsCallable {
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo and SimpleDisputes markets
-                    create_market {
-                        scoring_rule: RikiddoSigmoidFeeMarketEma,
-                        dispute_mechanism: SimpleDisputes,
-                        ..
-                    } => false,
-                    edit_market {
-                        scoring_rule: RikiddoSigmoidFeeMarketEma,
-                        dispute_mechanism: SimpleDisputes,
-                        ..
-                    } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: SimpleDisputes,
-                        ..
-                    } => false,
+                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    create_market { dispute_mechanism: SimpleDisputes, .. } => false,
+                    create_cpmm_market_and_deploy_assets { dispute_mechanism: SimpleDisputes, .. } => false,
+                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    edit_market { dispute_mechanism: SimpleDisputes, .. } => false,
                     _ => true,
                 }
             }
