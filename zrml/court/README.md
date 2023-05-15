@@ -47,18 +47,3 @@ will be rewarded.
 #### `MonetaryGovernanceOrigin` Dispatches
 
 - `set_inflation` - Set the yearly inflation rate of the court system.
-
-#### Private Pallet API
-
-- `on_dispute` - Initialise a new court case.
-- `on_resolution` - Resolve an existing court case and return the decision
-  winner.
-- `exchange` - Slash the unjustified appealers, put those funds to the treasury
-  and unreserve the justified appeal bonds.
-- `get_auto_resolve` - Get the block number when `on_resolution` is evoked for a
-  court case.
-- `has_failed` - Determine whether the court mechanism failed to meet the
-  preconditions to start a court case.
-- `on_global_dispute` - Prepare the global dispute if the court mechanism has
-  failed.
-- `clear` - Clean up the storage items of a specific court case.
