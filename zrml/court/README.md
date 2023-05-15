@@ -2,6 +2,11 @@
 
 A pallet for stake-weighted plurality decision making.
 
+- [`Call`]()
+- [`Config`]()
+- [`Error`]()
+- [`Event`]()
+
 ## Overview
 
 The court system is responsible for ensuring that the truth is added to the
@@ -12,7 +17,7 @@ will be rewarded.
 
 ## Terminology
 
-- `aggregation period` - The period in which the actively participating jurors
+- **Aggregation Period:** The period in which the actively participating jurors
   need to reveal their vote secrets.
 
 ## Interface
