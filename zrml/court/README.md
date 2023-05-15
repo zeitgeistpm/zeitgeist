@@ -1,6 +1,6 @@
 # Court
 
-A pallet for stake-weighted, plurality decision making.
+A pallet for stake-weighted plurality decision making.
 
 ## Overview
 
