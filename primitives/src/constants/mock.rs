@@ -39,10 +39,10 @@ parameter_types! {
     pub const BlocksPerYear: BlockNumber = 100;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
     pub const RequestInterval: BlockNumber = 15;
-    pub const CourtVotePeriod: BlockNumber = 3;
-    pub const CourtAggregationPeriod: BlockNumber = 4;
-    pub const CourtAppealPeriod: BlockNumber = 5;
-    pub const CourtLockId: LockIdentifier = *b"zge/cloc";
+    pub const VotePeriod: BlockNumber = 3;
+    pub const AggregationPeriod: BlockNumber = 4;
+    pub const AppealPeriod: BlockNumber = 5;
+    pub const LockId: LockIdentifier = *b"zge/cloc";
     pub const MaxAppeals: u32 = 4;
     pub const MaxDelegations: u32 = 5;
     pub const MaxSelectedDraws: u32 = 510;

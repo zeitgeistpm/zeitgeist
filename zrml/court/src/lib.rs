@@ -102,23 +102,23 @@ mod pallet {
 
         /// The time in which the jurors can cast their commitment vote.
         #[pallet::constant]
-        type CourtVotePeriod: Get<Self::BlockNumber>;
+        type VotePeriod: Get<Self::BlockNumber>;
 
         /// The time in which the jurors should reveal their commitment vote.
         #[pallet::constant]
-        type CourtAggregationPeriod: Get<Self::BlockNumber>;
+        type AggregationPeriod: Get<Self::BlockNumber>;
 
         /// The time in which a court case can get appealed.
         #[pallet::constant]
-        type CourtAppealPeriod: Get<Self::BlockNumber>;
+        type AppealPeriod: Get<Self::BlockNumber>;
 
         /// The court lock identifier.
         #[pallet::constant]
-        type CourtLockId: Get<LockIdentifier>;
+        type LockId: Get<LockIdentifier>;
 
         /// Identifier of this pallet
         #[pallet::constant]
-        type CourtPalletId: Get<PalletId>;
+        type PalletId: Get<PalletId>;
 
         /// The currency implementation used to transfer, lock and reserve tokens.
         type Currency: Currency<Self::AccountId>
@@ -642,18 +642,13 @@ mod pallet {
             );
 
             let (exit_amount, active_lock, weight) = if prev_p_info.active_lock.is_zero() {
-                T::Currency::remove_lock(T::CourtLockId::get(), &who);
+                T::Currency::remove_lock(T::LockId::get(), &who);
                 Participants::<T>::remove(&who);
                 (prev_p_info.stake, <BalanceOf<T>>::zero(), T::WeightInfo::exit_court_remove())
             } else {
                 let active_lock = prev_p_info.active_lock;
                 let exit_amount = prev_p_info.stake.saturating_sub(active_lock);
-                T::Currency::set_lock(
-                    T::CourtLockId::get(),
-                    &who,
-                    active_lock,
-                    WithdrawReasons::all(),
-                );
+                T::Currency::set_lock(T::LockId::get(), &who, active_lock, WithdrawReasons::all());
 
                 prev_p_info.stake = active_lock;
                 Participants::<T>::insert(&who, prev_p_info);
@@ -929,9 +924,9 @@ mod pallet {
                 debug_assert!(request_block >= now, "Request block must be greater than now.");
                 let round_timing = RoundTiming {
                     pre_vote_end: request_block,
-                    vote_period: T::CourtVotePeriod::get(),
-                    aggregation_period: T::CourtAggregationPeriod::get(),
-                    appeal_period: T::CourtAppealPeriod::get(),
+                    vote_period: T::VotePeriod::get(),
+                    aggregation_period: T::AggregationPeriod::get(),
+                    appeal_period: T::AppealPeriod::get(),
                 };
                 // sets cycle_ends one after the other from now
                 court.update_lifecycle(round_timing);
@@ -1624,13 +1619,13 @@ mod pallet {
         /// The reserve ID of the court pallet.
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
-            T::CourtPalletId::get().0
+            T::PalletId::get().0
         }
 
         /// The account ID which is used to reward the correct jurors.
         #[inline]
         pub fn reward_pot(court_id: CourtId) -> T::AccountId {
-            T::CourtPalletId::get().into_sub_account_truncating(court_id)
+            T::PalletId::get().into_sub_account_truncating(court_id)
         }
 
         /// The account ID of the treasury.
@@ -1967,9 +1962,9 @@ mod pallet {
             debug_assert!(request_block >= now, "Request block must be greater than now.");
             let round_timing = RoundTiming {
                 pre_vote_end: request_block,
-                vote_period: T::CourtVotePeriod::get(),
-                aggregation_period: T::CourtAggregationPeriod::get(),
-                appeal_period: T::CourtAppealPeriod::get(),
+                vote_period: T::VotePeriod::get(),
+                aggregation_period: T::AggregationPeriod::get(),
+                appeal_period: T::AppealPeriod::get(),
             };
 
             let vote_item_type = VoteItemType::Outcome;
@@ -2309,7 +2304,7 @@ impl<T: Config> Pallet<T> {
                 })?,
         };
 
-        T::Currency::set_lock(T::CourtLockId::get(), who, amount, WithdrawReasons::all());
+        T::Currency::set_lock(T::LockId::get(), who, amount, WithdrawReasons::all());
 
         let pool_len = pool.len() as u32;
         CourtPool::<T>::put(pool);

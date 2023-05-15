@@ -479,9 +479,9 @@ benchmarks! {
         <RequestBlock<T>>::put(now + 1u64.saturated_into::<T::BlockNumber>());
 
         let new_resolve_at = <RequestBlock<T>>::get()
-            + T::CourtVotePeriod::get()
-            + T::CourtAggregationPeriod::get()
-            + T::CourtAppealPeriod::get();
+            + T::VotePeriod::get()
+            + T::AggregationPeriod::get()
+            + T::AppealPeriod::get();
         for i in 0..f {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, new_resolve_at).unwrap();
@@ -586,9 +586,9 @@ benchmarks! {
         <RequestBlock<T>>::put(pre_vote_end);
 
         let appeal_end = pre_vote_end
-            + T::CourtVotePeriod::get()
-            + T::CourtAggregationPeriod::get()
-            + T::CourtAppealPeriod::get();
+            + T::VotePeriod::get()
+            + T::AggregationPeriod::get()
+            + T::AppealPeriod::get();
 
         for i in 0..r {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();

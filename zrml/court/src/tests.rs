@@ -45,8 +45,8 @@ use test_case::test_case;
 use zeitgeist_primitives::{
     constants::{
         mock::{
-            AppealBond, CourtAggregationPeriod, CourtAppealPeriod, CourtLockId, CourtVotePeriod,
-            InflationPeriod, MaxAppeals, MaxCourtParticipants, MinJurorStake, RequestInterval,
+            AggregationPeriod, AppealBond, AppealPeriod, InflationPeriod, LockId, MaxAppeals,
+            MaxCourtParticipants, MinJurorStake, RequestInterval, VotePeriod,
         },
         BASE,
     },
@@ -170,7 +170,7 @@ fn set_alice_after_vote(
 }
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
-    BalanceLock { id: CourtLockId::get(), amount, reasons: pallet_balances::Reasons::All }
+    BalanceLock { id: LockId::get(), amount, reasons: pallet_balances::Reasons::All }
 }
 
 #[test]
@@ -819,7 +819,7 @@ fn vote_fails_if_not_in_voting_period() {
 
         put_alice_in_draw(court_id, amount);
 
-        run_to_block(<RequestBlock<Runtime>>::get() + CourtVotePeriod::get() + 1);
+        run_to_block(<RequestBlock<Runtime>>::get() + VotePeriod::get() + 1);
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
@@ -873,7 +873,7 @@ fn reveal_vote_works() {
 
         let old_draws = <SelectedDraws<Runtime>>::get(court_id);
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         assert_ok!(Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item.clone(), salt,));
         System::assert_last_event(
@@ -905,7 +905,7 @@ fn reveal_vote_fails_if_caller_not_juror() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         <Participants<Runtime>>::remove(ALICE);
 
@@ -923,7 +923,7 @@ fn reveal_vote_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         <Courts<Runtime>>::remove(court_id);
 
@@ -942,7 +942,7 @@ fn reveal_vote_fails_if_not_in_aggregation_period() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -959,7 +959,7 @@ fn reveal_vote_fails_if_juror_not_drawn() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         <SelectedDraws<Runtime>>::mutate(court_id, |draws| {
             draws.retain(|draw| draw.court_participant != ALICE);
@@ -980,7 +980,7 @@ fn reveal_vote_fails_for_invalid_reveal() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         let invalid_outcome = OutcomeReport::Scalar(43u128);
         let invalid_vote_item = VoteItem::Outcome(invalid_outcome);
@@ -997,7 +997,7 @@ fn reveal_vote_fails_for_invalid_salt() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, correct_salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         let incorrect_salt: <Runtime as frame_system::Config>::Hash = [42; 32].into();
         assert_ne!(correct_salt, incorrect_salt);
@@ -1016,7 +1016,7 @@ fn reveal_vote_fails_if_juror_not_voted() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         <SelectedDraws<Runtime>>::mutate(court_id, |draws| {
             draws.iter_mut().for_each(|draw| {
@@ -1041,7 +1041,7 @@ fn reveal_vote_fails_if_already_revealed() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -1070,7 +1070,7 @@ fn reveal_vote_fails_if_already_denounced() {
             salt
         ));
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         assert_noop!(
             Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
@@ -1189,7 +1189,7 @@ fn denounce_vote_fails_if_not_in_voting_period() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -1263,7 +1263,7 @@ fn denounce_vote_fails_if_vote_already_revealed() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, salt) = set_alice_after_vote(outcome.clone());
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -1307,7 +1307,7 @@ fn appeal_updates_cycle_ends() {
 
         let last_court = <Courts<Runtime>>::get(court_id).unwrap();
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1317,17 +1317,14 @@ fn appeal_updates_cycle_ends() {
         let request_block = <RequestBlock<Runtime>>::get();
         assert!(now < request_block);
         assert_eq!(court.cycle_ends.pre_vote, request_block);
-        assert_eq!(court.cycle_ends.vote, request_block + CourtVotePeriod::get());
+        assert_eq!(court.cycle_ends.vote, request_block + VotePeriod::get());
         assert_eq!(
             court.cycle_ends.aggregation,
-            request_block + CourtVotePeriod::get() + CourtAggregationPeriod::get()
+            request_block + VotePeriod::get() + AggregationPeriod::get()
         );
         assert_eq!(
             court.cycle_ends.appeal,
-            request_block
-                + CourtVotePeriod::get()
-                + CourtAggregationPeriod::get()
-                + CourtAppealPeriod::get()
+            request_block + VotePeriod::get() + AggregationPeriod::get() + AppealPeriod::get()
         );
 
         assert!(last_court.cycle_ends.pre_vote < court.cycle_ends.pre_vote);
@@ -1343,7 +1340,7 @@ fn appeal_reserves_get_appeal_bond() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let free_charlie_before = Balances::free_balance(CHARLIE);
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
@@ -1362,7 +1359,7 @@ fn appeal_emits_event() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1379,7 +1376,7 @@ fn appeal_shifts_auto_resolve() {
         let resolve_at_0 = <Courts<Runtime>>::get(court_id).unwrap().cycle_ends.appeal;
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1399,7 +1396,7 @@ fn appeal_overrides_last_draws() {
         let last_draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(!last_draws.len().is_zero());
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1418,7 +1415,7 @@ fn appeal_draws_total_weight_is_correct() {
         let last_draws_total_weight = last_draws.iter().map(|draw| draw.weight).sum::<u32>();
         assert_eq!(last_draws_total_weight, Court::necessary_draws_weight(0usize) as u32);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1435,7 +1432,7 @@ fn appeal_get_latest_resolved_outcome_changes() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1458,13 +1455,13 @@ fn appeal_get_latest_resolved_outcome_changes() {
         put_alice_in_draw(court_id, MinJurorStake::get());
         assert_ok!(Court::vote(Origin::signed(ALICE), court_id, commitment));
 
-        run_blocks(CourtVotePeriod::get() + 1);
+        run_blocks(VotePeriod::get() + 1);
 
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_ok!(Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item.clone(), salt));
 
-        run_blocks(CourtAggregationPeriod::get() + 1);
+        run_blocks(AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -1496,7 +1493,7 @@ fn appeal_fails_if_appeal_bond_exceeds_balance() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_noop!(
             Court::appeal(Origin::signed(POOR_PAUL), court_id),
@@ -1513,7 +1510,7 @@ fn appeal_fails_if_max_appeals_reached() {
 
         fill_appeals(court_id, MaxAppeals::get() as usize);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_noop!(
             Court::appeal(Origin::signed(CHARLIE), court_id),
@@ -1529,7 +1526,7 @@ fn check_appealable_market_fails_if_market_not_found() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let court = <Courts<Runtime>>::get(court_id).unwrap();
         MarketCommons::remove_market(&court_id).unwrap();
@@ -1548,7 +1545,7 @@ fn check_appealable_market_fails_if_dispute_mechanism_wrong() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let court = <Courts<Runtime>>::get(court_id).unwrap();
 
@@ -1573,7 +1570,7 @@ fn check_appealable_market_fails_if_not_in_appeal_period() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get());
+        run_blocks(VotePeriod::get());
 
         let court = <Courts<Runtime>>::get(court_id).unwrap();
 
@@ -1590,7 +1587,7 @@ fn appeal_last_appeal_just_removes_auto_resolve() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         fill_appeals(court_id, (MaxAppeals::get() - 1) as usize);
 
@@ -1612,7 +1609,7 @@ fn appeal_adds_last_appeal() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         fill_appeals(court_id, (MaxAppeals::get() - 1) as usize);
 
@@ -1688,9 +1685,7 @@ fn reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners() {
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
-        run_blocks(
-            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
-        );
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + AppealPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -1745,7 +1740,7 @@ fn reassign_court_stakes_emits_event() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -1762,7 +1757,7 @@ fn reassign_court_stakes_fails_if_juror_stakes_already_reassigned() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -1783,7 +1778,7 @@ fn reassign_court_stakes_updates_court_status() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -1806,7 +1801,7 @@ fn reassign_court_stakes_removes_draws() {
         let outcome = OutcomeReport::Scalar(42u128);
         let (court_id, _, _) = set_alice_after_vote(outcome);
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -1907,9 +1902,7 @@ fn reassign_court_stakes_decreases_active_lock() {
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
-        run_blocks(
-            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
-        );
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + AppealPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -1983,9 +1976,7 @@ fn reassign_court_stakes_slashes_loosers_and_awards_winners() {
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
-        run_blocks(
-            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
-        );
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + AppealPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -2103,9 +2094,7 @@ fn reassign_court_stakes_works_for_delegations() {
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
-        run_blocks(
-            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
-        );
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + AppealPeriod::get() + 1);
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
@@ -2229,9 +2218,7 @@ fn reassign_court_stakes_rewards_treasury_if_no_winner() {
 
         run_to_block(<RequestBlock<Runtime>>::get() + 1);
 
-        run_blocks(
-            CourtVotePeriod::get() + CourtAggregationPeriod::get() + CourtAppealPeriod::get() + 1,
-        );
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + AppealPeriod::get() + 1);
 
         let mut court = <Courts<Runtime>>::get(court_id).unwrap();
         court.status = CourtStatus::Closed { winner: vote_item };
@@ -2573,7 +2560,7 @@ fn appeal_reduces_active_lock_from_old_draws() {
             assert_eq!(p_info.active_lock, draw.slashable);
         });
 
-        run_blocks(CourtVotePeriod::get() + CourtAggregationPeriod::get() + 1);
+        run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
 
@@ -2600,9 +2587,9 @@ fn on_dispute_creates_correct_court_info() {
         let cycle_ends = court.cycle_ends;
         let request_block = <RequestBlock<Runtime>>::get();
         assert_eq!(cycle_ends.pre_vote, request_block);
-        assert_eq!(cycle_ends.vote, cycle_ends.pre_vote + CourtVotePeriod::get());
-        assert_eq!(cycle_ends.aggregation, cycle_ends.vote + CourtAggregationPeriod::get());
-        assert_eq!(cycle_ends.appeal, cycle_ends.aggregation + CourtAppealPeriod::get());
+        assert_eq!(cycle_ends.vote, cycle_ends.pre_vote + VotePeriod::get());
+        assert_eq!(cycle_ends.aggregation, cycle_ends.vote + AggregationPeriod::get());
+        assert_eq!(cycle_ends.appeal, cycle_ends.aggregation + AppealPeriod::get());
         assert_eq!(court.status, CourtStatus::Open);
         assert!(court.appeals.is_empty());
     });

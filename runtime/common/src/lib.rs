@@ -982,11 +982,11 @@ macro_rules! impl_config_traits {
             type AppealBond = AppealBond;
             type AppealCheck = AppealCheck;
             type BlocksPerYear = BlocksPerYear;
-            type CourtVotePeriod = CourtVotePeriod;
-            type CourtAggregationPeriod = CourtAggregationPeriod;
-            type CourtAppealPeriod = CourtAppealPeriod;
-            type CourtLockId = CourtLockId;
-            type CourtPalletId = CourtPalletId;
+            type VotePeriod = CourtVotePeriod;
+            type AggregationPeriod = CourtAggregationPeriod;
+            type AppealPeriod = CourtAppealPeriod;
+            type LockId = CourtLockId;
+            type PalletId = CourtPalletId;
             type Currency = Balances;
             type DefaultWinner = DefaultWinner;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;

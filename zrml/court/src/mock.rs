@@ -38,10 +38,10 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AppealBond, BlockHashCount, BlocksPerYear, CourtAggregationPeriod, CourtAppealPeriod,
-        CourtLockId, CourtPalletId, CourtVotePeriod, InflationPeriod, MaxAppeals, MaxApprovals,
-        MaxCourtParticipants, MaxDelegations, MaxReserves, MaxSelectedDraws, MinJurorStake,
-        MinimumPeriod, PmPalletId, RequestInterval, BASE,
+        AggregationPeriod, AppealBond, AppealPeriod, BlockHashCount, BlocksPerYear, CourtPalletId,
+        InflationPeriod, LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxDelegations,
+        MaxReserves, MaxSelectedDraws, MinJurorStake, MinimumPeriod, PmPalletId, RequestInterval,
+        VotePeriod, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -184,11 +184,11 @@ impl crate::Config for Runtime {
     type AppealBond = AppealBond;
     type AppealCheck = AppealCheck;
     type BlocksPerYear = BlocksPerYear;
-    type CourtLockId = CourtLockId;
+    type LockId = LockId;
     type Currency = Balances;
-    type CourtVotePeriod = CourtVotePeriod;
-    type CourtAggregationPeriod = CourtAggregationPeriod;
-    type CourtAppealPeriod = CourtAppealPeriod;
+    type VotePeriod = VotePeriod;
+    type AggregationPeriod = AggregationPeriod;
+    type AppealPeriod = AppealPeriod;
     type DefaultWinner = DefaultWinner;
     type DisputeResolution = MockResolution;
     type Event = Event;
@@ -200,7 +200,7 @@ impl crate::Config for Runtime {
     type MaxCourtParticipants = MaxCourtParticipants;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
-    type CourtPalletId = CourtPalletId;
+    type PalletId = CourtPalletId;
     type Random = MockStorage;
     type RequestInterval = RequestInterval;
     type Slash = Treasury;
