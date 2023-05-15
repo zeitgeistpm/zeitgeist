@@ -1647,10 +1647,16 @@ mod pallet {
         ) -> Result<(), DispatchError> {
             match court.vote_item_type {
                 VoteItemType::Outcome => {
-                    ensure!(vote_item.is_outcome(), Error::<T>::InvalidVoteItemForOutcomeCourt);
+                    ensure!(
+                        matches!(vote_item, VoteItem::Outcome(_)),
+                        Error::<T>::InvalidVoteItemForOutcomeCourt
+                    );
                 }
                 VoteItemType::Binary => {
-                    ensure!(vote_item.is_binary(), Error::<T>::InvalidVoteItemForBinaryCourt);
+                    ensure!(
+                        matches!(vote_item, VoteItem::Binary(_)),
+                        Error::<T>::InvalidVoteItemForBinaryCourt
+                    );
                 }
             };
 

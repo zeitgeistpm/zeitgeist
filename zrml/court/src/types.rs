@@ -64,14 +64,6 @@ impl VoteItem {
             _ => None,
         }
     }
-
-    pub fn is_outcome(&self) -> bool {
-        matches!(self, Self::Outcome(_))
-    }
-
-    pub fn is_binary(&self) -> bool {
-        matches!(self, Self::Binary(_))
-    }
 }
 
 /// The general information about a particular court participant (juror or delegator).
