@@ -439,7 +439,7 @@ where
         let pm_version = StorageVersion::get::<crate::Pallet<T>>();
         if pm_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "MoveDataToSimpleDisputes: market-commons version is {:?}, but {:?} is required",
+                "MoveDataToSimpleDisputes: prediction-markets version is {:?}, but {:?} is required",
                 pm_version,
                 PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
             );
