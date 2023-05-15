@@ -1101,6 +1101,100 @@ mod pallet {
     where
         T: Config,
     {
+        fn do_join_court(
+            who: &T::AccountId,
+            amount: BalanceOf<T>,
+            delegations: Option<DelegationsOf<T>>,
+        ) -> Result<u32, DispatchError> {
+            ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
+            let free_balance = T::Currency::free_balance(who);
+            ensure!(amount <= free_balance, Error::<T>::AmountExceedsBalance);
+
+            let mut pool = CourtPool::<T>::get();
+
+            let (active_lock, consumed_stake) = if let Some(prev_p_info) =
+                <Participants<T>>::get(who)
+            {
+                ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
+                let (index, pool_item) = Self::get_pool_item(&pool, prev_p_info.stake, who)
+                    .ok_or(Error::<T>::NeedToExit)?;
+                debug_assert!(
+                    prev_p_info.prepare_exit_at.is_none(),
+                    "If the pool item is found, the prepare_exit_at could have never been written."
+                );
+                let consumed_stake = pool_item.consumed_stake;
+                pool.remove(index);
+                (prev_p_info.active_lock, consumed_stake)
+            } else {
+                if pool.is_full() {
+                    let lowest_item = pool.first();
+                    let lowest_stake = lowest_item
+                        .map(|pool_item| pool_item.stake)
+                        .unwrap_or_else(<BalanceOf<T>>::zero);
+                    debug_assert!({
+                        let mut sorted = pool.clone();
+                        sorted.sort_by_key(|pool_item| {
+                            (pool_item.stake, pool_item.court_participant.clone())
+                        });
+                        pool.len() == sorted.len()
+                            && pool
+                                .iter()
+                                .zip(sorted.iter())
+                                .all(|(a, b)| lowest_stake <= a.stake && a == b)
+                    });
+                    ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
+                    // remove the lowest staked court participant
+                    pool.remove(0);
+                }
+                (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero())
+            };
+
+            match pool.binary_search_by_key(&(amount, who), |pool_item| {
+                (pool_item.stake, &pool_item.court_participant)
+            }) {
+                Ok(_) => {
+                    debug_assert!(
+                        false,
+                        "This should never happen, because we are removing the court participant \
+                         above."
+                    );
+                    return Err(Error::<T>::CourtParticipantTwiceInPool.into());
+                }
+                Err(i) => pool
+                    .try_insert(
+                        i,
+                        CourtPoolItem {
+                            stake: amount,
+                            court_participant: who.clone(),
+                            consumed_stake,
+                        },
+                    )
+                    .map_err(|_| {
+                        debug_assert!(
+                            false,
+                            "This should never happen, because we are removing the lowest staked \
+                             court participant above."
+                        );
+                        Error::<T>::MaxCourtParticipantsReached
+                    })?,
+            };
+
+            T::Currency::set_lock(T::LockId::get(), who, amount, WithdrawReasons::all());
+
+            let pool_len = pool.len() as u32;
+            CourtPool::<T>::put(pool);
+
+            let p_info = CourtParticipantInfoOf::<T> {
+                stake: amount,
+                active_lock,
+                prepare_exit_at: None,
+                delegations,
+            };
+            <Participants<T>>::insert(who, p_info);
+
+            Ok(pool_len)
+        }
+
         // Handle the external incentivisation of the court system.
         pub(crate) fn handle_inflation(now: T::BlockNumber) -> Weight {
             let inflation_period = T::InflationPeriod::get();
@@ -2223,95 +2317,5 @@ mod pallet {
         T::AppealBond::get().saturating_mul(
             (APPEAL_BOND_BASIS.saturating_pow(n as u32)).saturated_into::<BalanceOf<T>>(),
         )
-    }
-}
-
-impl<T: Config> Pallet<T> {
-    fn do_join_court(
-        who: &T::AccountId,
-        amount: BalanceOf<T>,
-        delegations: Option<DelegationsOf<T>>,
-    ) -> Result<u32, DispatchError> {
-        ensure!(amount >= T::MinJurorStake::get(), Error::<T>::BelowMinJurorStake);
-        let free_balance = T::Currency::free_balance(who);
-        ensure!(amount <= free_balance, Error::<T>::AmountExceedsBalance);
-
-        let mut pool = CourtPool::<T>::get();
-
-        let (active_lock, consumed_stake) = if let Some(prev_p_info) = <Participants<T>>::get(who) {
-            ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
-            let (index, pool_item) =
-                Self::get_pool_item(&pool, prev_p_info.stake, who).ok_or(Error::<T>::NeedToExit)?;
-            debug_assert!(
-                prev_p_info.prepare_exit_at.is_none(),
-                "If the pool item is found, the prepare_exit_at could have never been written."
-            );
-            let consumed_stake = pool_item.consumed_stake;
-            pool.remove(index);
-            (prev_p_info.active_lock, consumed_stake)
-        } else {
-            if pool.is_full() {
-                let lowest_item = pool.first();
-                let lowest_stake = lowest_item
-                    .map(|pool_item| pool_item.stake)
-                    .unwrap_or_else(<BalanceOf<T>>::zero);
-                debug_assert!({
-                    let mut sorted = pool.clone();
-                    sorted.sort_by_key(|pool_item| {
-                        (pool_item.stake, pool_item.court_participant.clone())
-                    });
-                    pool.len() == sorted.len()
-                        && pool
-                            .iter()
-                            .zip(sorted.iter())
-                            .all(|(a, b)| lowest_stake <= a.stake && a == b)
-                });
-                ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
-                // remove the lowest staked court participant
-                pool.remove(0);
-            }
-            (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero())
-        };
-
-        match pool.binary_search_by_key(&(amount, who), |pool_item| {
-            (pool_item.stake, &pool_item.court_participant)
-        }) {
-            Ok(_) => {
-                debug_assert!(
-                    false,
-                    "This should never happen, because we are removing the court participant \
-                     above."
-                );
-                return Err(Error::<T>::CourtParticipantTwiceInPool.into());
-            }
-            Err(i) => pool
-                .try_insert(
-                    i,
-                    CourtPoolItem { stake: amount, court_participant: who.clone(), consumed_stake },
-                )
-                .map_err(|_| {
-                    debug_assert!(
-                        false,
-                        "This should never happen, because we are removing the lowest staked \
-                         court participant above."
-                    );
-                    Error::<T>::MaxCourtParticipantsReached
-                })?,
-        };
-
-        T::Currency::set_lock(T::LockId::get(), who, amount, WithdrawReasons::all());
-
-        let pool_len = pool.len() as u32;
-        CourtPool::<T>::put(pool);
-
-        let p_info = CourtParticipantInfoOf::<T> {
-            stake: amount,
-            active_lock,
-            prepare_exit_at: None,
-            delegations,
-        };
-        <Participants<T>>::insert(who, p_info);
-
-        Ok(pool_len)
     }
 }
