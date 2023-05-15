@@ -1851,11 +1851,6 @@ mod pallet {
 
         // Check if the (juror, vote_item, salt) combination matches the secret hash of the vote.
         pub(crate) fn is_valid(commitment_matcher: CommitmentMatcherOf<T>) -> DispatchResult {
-            // market id and current appeal number is part of salt generation
-            // salt should be signed by the juror (court_id ++ appeal number)
-            // salt can be reproduced only be the juror address
-            // with knowing court_id and appeal number
-            // so even if the salt is forgotten it can be reproduced only by the juror
             let CommitmentMatcher {
                 hashed: commitment,
                 raw: RawCommitment { juror, vote_item, salt },
