@@ -9,9 +9,8 @@ A pallet for stake-weighted plurality decision making.
 
 ## Overview
 
-The court system is responsible for ensuring that the truth is added to the
-blockchain. Prediction markets, which depend on accurate information, reward
-traders who base their decisions on truthful data. If someone provides false
+Court is a market dispute resolution mechanism. It is responsible for ensuring 
+that the truth is added to the blockchain. If someone provides false
 information, they will be punished, while those who share accurate information
 will be rewarded.
 
