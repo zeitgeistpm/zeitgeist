@@ -2,6 +2,7 @@
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
+orml-traits = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.29", default-features = false, git = "https://github.com/zeitgeistpm/substrate" }
@@ -9,6 +10,8 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
+orml-currencies = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }
 sp-io = { branch = "moonbeam-polkadot-v0.9.29", git = "https://github.com/zeitgeistpm/substrate" }

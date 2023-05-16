@@ -153,11 +153,9 @@ parameter_types! {
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
-    /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
-    /// was deposited.
-    pub const DisputeBond: Balance = 5 * BASE;
-    /// `DisputeBond` is increased by this factor after every dispute.
-    pub const DisputeFactor: Balance = 2 * BASE;
+    /// Unreserved in case the dispute was justified otherwise slashed.
+    /// This is when the resolved outcome is different to the default (reported) outcome.
+    pub const DisputeBond: Balance = 25 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum block period for a dispute.
@@ -224,6 +222,12 @@ parameter_types! {
     // Simple disputes parameters
     /// Pallet identifier, mainly used for named balance reserves.
     pub const SimpleDisputesPalletId: PalletId = SD_PALLET_ID;
+    /// (Slashable) Bond that is provided for overriding the last outcome addition.
+    /// Slashed in case the final outcome does not match the dispute for which the `OutcomeBond`
+    /// was deposited.
+    pub const OutcomeBond: Balance = 5 * BASE;
+    /// `OutcomeBond` is increased by this factor after every new outcome addition.
+    pub const OutcomeFactor: Balance = 2 * BASE;
 
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw

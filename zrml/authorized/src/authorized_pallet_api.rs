@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -15,6 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use zeitgeist_primitives::traits::DisputeApi;
+use zeitgeist_primitives::traits::{DisputeApi, DisputeMaxWeightApi};
 
-pub trait AuthorizedPalletApi: DisputeApi {}
+pub trait AuthorizedPalletApi: DisputeApi + DisputeMaxWeightApi {}

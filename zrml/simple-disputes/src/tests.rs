@@ -20,10 +20,11 @@
 
 use crate::{
     mock::{ExtBuilder, Runtime, SimpleDisputes},
-    Error, MarketOf,
+    Disputes, Error, MarketOf,
 };
-use frame_support::assert_noop;
+use frame_support::{assert_noop, BoundedVec};
 use zeitgeist_primitives::{
+    constants::mock::{OutcomeBond, OutcomeFactor},
     traits::DisputeApi,
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
@@ -46,16 +47,16 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
-    bonds: MarketBonds { creation: None, oracle: None, outsider: None },
+    bonds: MarketBonds { creation: None, oracle: None, outsider: None, dispute: None },
 };
 
 #[test]
 fn on_dispute_denies_non_simple_disputes_markets() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
-            SimpleDisputes::on_dispute(&[], &0, &market),
+            SimpleDisputes::on_dispute(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
         );
     });
@@ -63,11 +64,11 @@ fn on_dispute_denies_non_simple_disputes_markets() {
 
 #[test]
 fn on_resolution_denies_non_simple_disputes_markets() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
-            SimpleDisputes::on_resolution(&[], &0, &market),
+            SimpleDisputes::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
         );
     });
@@ -75,16 +76,33 @@ fn on_resolution_denies_non_simple_disputes_markets() {
 
 #[test]
 fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outcome() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
-        let disputes = [
-            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
-            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
-        ];
+        let disputes = BoundedVec::try_from(
+            [
+                MarketDispute {
+                    at: 0,
+                    by: 0,
+                    outcome: OutcomeReport::Scalar(0),
+                    bond: OutcomeBond::get(),
+                },
+                MarketDispute {
+                    at: 0,
+                    by: 0,
+                    outcome: OutcomeReport::Scalar(20),
+                    bond: OutcomeFactor::get() * OutcomeBond::get(),
+                },
+            ]
+            .to_vec(),
+        )
+        .unwrap();
+        Disputes::<Runtime>::insert(0, &disputes);
         assert_eq!(
-            &SimpleDisputes::on_resolution(&disputes, &0, &market).unwrap().unwrap(),
+            &SimpleDisputes::on_resolution(&0, &market).unwrap().result.unwrap(),
             &disputes.last().unwrap().outcome
         )
     });
 }
+
+// TODO test `suggest_outcome` functionality and API functionality

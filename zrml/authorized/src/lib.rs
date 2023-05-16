@@ -35,21 +35,22 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, AuthorizedPalletApi};
+    use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::{DispatchResult, DispatchResultWithPostInfo},
+        dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::{ConstU32, EnsureOrigin, OptionQuery, StorageMap},
+        pallet_prelude::{ConstU32, EnsureOrigin, OptionQuery, StorageMap, Weight},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
     use frame_system::pallet_prelude::OriginFor;
     use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
-        traits::{DisputeApi, DisputeResolutionApi},
+        traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
         types::{
-            Asset, AuthorityReport, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
-            OutcomeReport,
+            Asset, AuthorityReport, GlobalDisputeItem, Market, MarketDisputeMechanism,
+            MarketStatus, OutcomeReport, ResultWithWeightInfo,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -61,6 +62,8 @@ mod pallet {
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -100,15 +103,20 @@ mod pallet {
 
             let report_opt = AuthorizedOutcomeReports::<T>::get(market_id);
             let (report, ids_len) = match &report_opt {
-                Some(report) => (AuthorityReport { resolve_at: report.resolve_at, outcome }, 0u32),
+                Some(report) => (
+                    AuthorityReport { resolve_at: report.resolve_at, outcome: outcome.clone() },
+                    0u32,
+                ),
                 None => {
                     let resolve_at = now.saturating_add(T::CorrectionPeriod::get());
                     let ids_len = T::DisputeResolution::add_auto_resolve(&market_id, resolve_at)?;
-                    (AuthorityReport { resolve_at, outcome }, ids_len)
+                    (AuthorityReport { resolve_at, outcome: outcome.clone() }, ids_len)
                 }
             };
 
             AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
+            Self::deposit_event(Event::AuthorityReported { market_id, outcome });
 
             if report_opt.is_none() {
                 Ok(Some(T::WeightInfo::authorize_market_outcome_first_report(ids_len)).into())
@@ -157,16 +165,19 @@ mod pallet {
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
         MarketIsNotDisputed,
-        /// Only one dispute is allowed.
-        OnlyOneDisputeAllowed,
         /// The report does not match the market's type.
         OutcomeMismatch,
     }
 
     #[pallet::event]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {}
+        T: Config,
+    {
+        /// The Authority reported.
+        AuthorityReported { market_id: MarketIdOf<T>, outcome: OutcomeReport },
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
@@ -185,66 +196,169 @@ mod pallet {
         }
     }
 
+    impl<T> DisputeMaxWeightApi for Pallet<T>
+    where
+        T: Config,
+    {
+        fn on_dispute_max_weight() -> Weight {
+            T::WeightInfo::on_dispute_weight()
+        }
+
+        fn on_resolution_max_weight() -> Weight {
+            T::WeightInfo::on_resolution_weight()
+        }
+
+        fn exchange_max_weight() -> Weight {
+            T::WeightInfo::exchange_weight()
+        }
+
+        fn get_auto_resolve_max_weight() -> Weight {
+            T::WeightInfo::get_auto_resolve_weight()
+        }
+
+        fn has_failed_max_weight() -> Weight {
+            T::WeightInfo::has_failed_weight()
+        }
+
+        fn on_global_dispute_max_weight() -> Weight {
+            T::WeightInfo::on_global_dispute_weight()
+        }
+
+        fn clear_max_weight() -> Weight {
+            T::WeightInfo::clear_weight()
+        }
+    }
+
     impl<T> DisputeApi for Pallet<T>
     where
         T: Config,
     {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
+        type NegativeImbalance = NegativeImbalanceOf<T>;
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
         fn on_dispute(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            ensure!(disputes.is_empty(), Error::<T>::OnlyOneDisputeAllowed);
-            Ok(())
+
+            let res =
+                ResultWithWeightInfo { result: (), weight: T::WeightInfo::on_dispute_weight() };
+
+            Ok(res)
         }
 
         fn on_resolution(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Option<OutcomeReport>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
             let report = AuthorizedOutcomeReports::<T>::take(market_id);
-            Ok(report.map(|r| r.outcome))
+
+            let res = ResultWithWeightInfo {
+                result: report.map(|r| r.outcome),
+                weight: T::WeightInfo::on_resolution_weight(),
+            };
+
+            Ok(res)
+        }
+
+        fn exchange(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+            _: &OutcomeReport,
+            overall_imbalance: NegativeImbalanceOf<T>,
+        ) -> Result<ResultWithWeightInfo<NegativeImbalanceOf<T>>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            // all funds to treasury
+            let res = ResultWithWeightInfo {
+                result: overall_imbalance,
+                weight: T::WeightInfo::exchange_weight(),
+            };
+
+            Ok(res)
         }
 
         fn get_auto_resolve(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
-            Ok(Self::get_auto_resolve(market_id))
+
+            let res = ResultWithWeightInfo {
+                result: Self::get_auto_resolve(market_id),
+                weight: T::WeightInfo::get_auto_resolve_weight(),
+            };
+
+            Ok(res)
         }
 
         fn has_failed(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<bool, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Authorized,
                 Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
             );
 
-            Ok(false)
+            let res =
+                ResultWithWeightInfo { result: false, weight: T::WeightInfo::has_failed_weight() };
+
+            Ok(res)
+        }
+
+        fn on_global_dispute(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<
+            ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
+            DispatchError,
+        > {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+
+            let res = ResultWithWeightInfo {
+                result: Vec::new(),
+                weight: T::WeightInfo::on_global_dispute_weight(),
+            };
+
+            Ok(res)
+        }
+
+        fn clear(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+
+            AuthorizedOutcomeReports::<T>::remove(market_id);
+
+            let res = ResultWithWeightInfo { result: (), weight: T::WeightInfo::clear_weight() };
+
+            Ok(res)
         }
     }
 

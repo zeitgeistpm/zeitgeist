@@ -52,7 +52,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
+        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery, Weight},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -66,8 +66,11 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        traits::{DisputeApi, DisputeResolutionApi},
-        types::{Asset, Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
+        types::{
+            Asset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
+            OutcomeReport, ResultWithWeightInfo,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -87,6 +90,8 @@ mod pallet {
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -100,6 +105,33 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(1_000_000_000_000)]
+        pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            // TODO take a bond from the caller
+            ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+
+            let jurors: Vec<_> = Jurors::<T>::iter().collect();
+            // TODO &[] was disputes list before: how to handle it now without disputes from pm?
+            let necessary_jurors_num = Self::necessary_jurors_num(&[]);
+            let mut rng = Self::rng();
+            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
+            let curr_block_num = <frame_system::Pallet<T>>::block_number();
+            let block_limit = curr_block_num.saturating_add(T::CourtCaseDuration::get());
+            for (ai, _) in random_jurors {
+                RequestedJurors::<T>::insert(market_id, ai, block_limit);
+            }
+
+            Self::deposit_event(Event::MarketAppealed { market_id });
+
+            Ok(())
+        }
+
         // MARK(non-transactional): `remove_juror_from_all_courts_of_all_markets` is infallible.
         #[pallet::weight(T::WeightInfo::exit_court())]
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
@@ -200,6 +232,8 @@ mod pallet {
         NoVotes,
         /// Forbids voting of unknown accounts
         OnlyJurorsCanVote,
+        /// The market is not in a state where it can be disputed.
+        MarketIsNotDisputed,
     }
 
     #[pallet::event]
@@ -210,6 +244,10 @@ mod pallet {
     {
         ExitedJuror(T::AccountId, Juror),
         JoinedJuror(T::AccountId, Juror),
+        /// A market has been appealed.
+        MarketAppealed {
+            market_id: MarketIdOf<T>,
+        },
     }
 
     #[pallet::hooks]
@@ -393,7 +431,9 @@ mod pallet {
         //
         // Result is capped to `usize::MAX` or in other words, capped to a very, very, very
         // high number of jurors.
-        fn necessary_jurors_num(disputes: &[MarketDispute<T::AccountId, T::BlockNumber>]) -> usize {
+        fn necessary_jurors_num(
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
+        ) -> usize {
             let len = disputes.len();
             INITIAL_JURORS_NUM.saturating_add(SUBSEQUENT_JURORS_FACTOR.saturating_mul(len))
         }
@@ -500,36 +540,64 @@ mod pallet {
         }
     }
 
+    impl<T> DisputeMaxWeightApi for Pallet<T>
+    where
+        T: Config,
+    {
+        fn on_dispute_max_weight() -> Weight {
+            T::WeightInfo::on_dispute_weight()
+        }
+
+        fn on_resolution_max_weight() -> Weight {
+            T::WeightInfo::on_resolution_weight()
+        }
+
+        fn exchange_max_weight() -> Weight {
+            T::WeightInfo::exchange_weight()
+        }
+
+        fn get_auto_resolve_max_weight() -> Weight {
+            T::WeightInfo::get_auto_resolve_weight()
+        }
+
+        fn has_failed_max_weight() -> Weight {
+            T::WeightInfo::has_failed_weight()
+        }
+
+        fn on_global_dispute_max_weight() -> Weight {
+            T::WeightInfo::on_global_dispute_weight()
+        }
+
+        fn clear_max_weight() -> Weight {
+            T::WeightInfo::clear_weight()
+        }
+    }
+
     impl<T> DisputeApi for Pallet<T>
     where
         T: Config,
     {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
+        type NegativeImbalance = NegativeImbalanceOf<T>;
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
         type Origin = T::Origin;
 
         fn on_dispute(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            market_id: &Self::MarketId,
+            _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            let necessary_jurors_num = Self::necessary_jurors_num(disputes);
-            let mut rng = Self::rng();
-            let random_jurors = Self::random_jurors(&jurors, necessary_jurors_num, &mut rng);
-            let curr_block_num = <frame_system::Pallet<T>>::block_number();
-            let block_limit = curr_block_num.saturating_add(T::CourtCaseDuration::get());
-            for (ai, _) in random_jurors {
-                RequestedJurors::<T>::insert(market_id, ai, block_limit);
-            }
-            Ok(())
+
+            let res =
+                ResultWithWeightInfo { result: (), weight: T::WeightInfo::on_dispute_weight() };
+
+            Ok(res)
         }
 
         // Set jurors that sided on the second most voted outcome as tardy. Jurors are only
@@ -537,10 +605,9 @@ mod pallet {
         // voted outcome (winner of the losing majority) are placed as tardy instead of
         // being slashed.
         fn on_resolution(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Option<OutcomeReport>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
@@ -562,31 +629,100 @@ mod pallet {
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
             let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
             let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
-            Ok(Some(first))
+
+            let res = ResultWithWeightInfo {
+                result: Some(first),
+                weight: T::WeightInfo::on_resolution_weight(),
+            };
+
+            Ok(res)
+        }
+
+        fn exchange(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+            _: &OutcomeReport,
+            overall_imbalance: NegativeImbalanceOf<T>,
+        ) -> Result<ResultWithWeightInfo<NegativeImbalanceOf<T>>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            // TODO all funds to treasury?
+
+            let res = ResultWithWeightInfo {
+                result: overall_imbalance,
+                weight: T::WeightInfo::exchange_weight(),
+            };
+            Ok(res)
         }
 
         fn get_auto_resolve(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<Option<Self::BlockNumber>>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            Ok(None)
+
+            let res = ResultWithWeightInfo {
+                result: None,
+                weight: T::WeightInfo::get_auto_resolve_weight(),
+            };
+
+            Ok(res)
         }
 
         fn has_failed(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &MarketOf<T>,
-        ) -> Result<bool, DispatchError> {
+        ) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
             ensure!(
                 market.dispute_mechanism == MarketDisputeMechanism::Court,
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
-            Ok(false)
+
+            let res =
+                ResultWithWeightInfo { result: false, weight: T::WeightInfo::has_failed_weight() };
+
+            Ok(res)
+        }
+
+        fn on_global_dispute(
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<
+            ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
+            DispatchError,
+        > {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+
+            let res = ResultWithWeightInfo {
+                result: Vec::new(),
+                weight: T::WeightInfo::on_global_dispute_weight(),
+            };
+
+            Ok(res)
+        }
+
+        fn clear(
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Court,
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            let _ = Votes::<T>::clear_prefix(market_id, u32::max_value(), None);
+            let _ = RequestedJurors::<T>::clear_prefix(market_id, u32::max_value(), None);
+
+            let res = ResultWithWeightInfo { result: (), weight: T::WeightInfo::clear_weight() };
+
+            Ok(res)
         }
     }
 
@@ -623,4 +759,36 @@ mod pallet {
         T::AccountId,
         (T::BlockNumber, OutcomeReport),
     >;
+}
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>() -> MarketOf<T>
+where
+    T: crate::Config,
+{
+    use frame_support::traits::Get;
+    use sp_runtime::traits::AccountIdConversion;
+    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
+
+    zeitgeist_primitives::types::Market {
+        base_asset: Asset::Ztg,
+        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: T::PalletId::get().into_account_truncating(),
+        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Court,
+        metadata: Default::default(),
+        oracle: T::PalletId::get().into_account_truncating(),
+        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        deadlines: zeitgeist_primitives::types::Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 1_u32.into(),
+        },
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
+    }
 }

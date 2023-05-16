@@ -26,7 +26,6 @@ use frame_support::{
     construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
     traits::Everything,
-    BoundedVec,
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
@@ -40,8 +39,8 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
-        MarketId, Moment, OutcomeReport, UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
+        Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -68,7 +67,6 @@ construct_runtime!(
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
-    pub const MaxDisputes: u32 = 64;
 }
 
 // MockResolution implements DisputeResolutionApi with no-ops.
@@ -79,7 +77,6 @@ impl DisputeResolutionApi for MockResolution {
     type Balance = Balance;
     type BlockNumber = BlockNumber;
     type MarketId = MarketId;
-    type MaxDisputes = MaxDisputes;
     type Moment = Moment;
 
     fn resolve(
@@ -118,17 +115,6 @@ impl DisputeResolutionApi for MockResolution {
             ids.retain(|id| id != market_id);
             ids.len() as u32
         })
-    }
-
-    fn get_disputes(
-        _market_id: &Self::MarketId,
-    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
-        BoundedVec::try_from(vec![MarketDispute {
-            at: 42u64,
-            by: BOB,
-            outcome: OutcomeReport::Scalar(42),
-        }])
-        .unwrap()
     }
 }
 

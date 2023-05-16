@@ -88,6 +88,7 @@ pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
     pub outsider: Option<Bond<AI, BA>>,
+    pub dispute: Option<Bond<AI, BA>>,
 }
 
 impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
@@ -100,13 +101,14 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
         value_or_default(&self.creation)
             .saturating_add(value_or_default(&self.oracle))
             .saturating_add(value_or_default(&self.outsider))
+            .saturating_add(value_or_default(&self.dispute))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None, outsider: None }
+        MarketBonds { creation: None, oracle: None, outsider: None, dispute: None }
     }
 }
 
@@ -175,11 +177,31 @@ pub enum MarketCreation {
     Advised,
 }
 
+/// Defines a global dispute item for the initialisation of a global dispute.
+pub struct GlobalDisputeItem<AccountId, Balance> {
+    /// The account that already paid somehow for the outcome.
+    pub owner: AccountId,
+    /// The outcome that was already paid for
+    /// and should be added as vote outcome inside global disputes.
+    pub outcome: OutcomeReport,
+    /// The initial amount added in the global dispute vote system initially for the outcome.
+    pub initial_vote_amount: Balance,
+}
+
+// TODO to remove, when Disputes storage item is removed
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct MarketDispute<AccountId, BlockNumber> {
+pub struct OldMarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
     pub outcome: OutcomeReport,
+}
+
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct MarketDispute<AccountId, BlockNumber, Balance> {
+    pub at: BlockNumber,
+    pub by: AccountId,
+    pub outcome: OutcomeReport,
+    pub bond: Balance,
 }
 
 /// How a market should resolve disputes
