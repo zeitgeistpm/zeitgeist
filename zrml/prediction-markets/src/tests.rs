@@ -53,9 +53,8 @@ use zeitgeist_primitives::{
 use zrml_global_disputes::GlobalDisputesPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_swaps::Pools;
-
-const SENTINEL_AMOUNT: u128 = BASE;
 const LIQUIDITY: u128 = 100 * BASE;
+const SENTINEL_AMOUNT: u128 = BASE;
 
 fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
     Deadlines {
