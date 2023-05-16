@@ -52,7 +52,7 @@ use frame_system::{
     ensure_signed,
     pallet_prelude::{BlockNumberFor, OriginFor},
 };
-use rand::{RngCore, SeedableRng};
+use rand::{Rng, RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use sp_arithmetic::{per_things::Perquintill, traits::One};
 use sp_runtime::{
@@ -1250,7 +1250,6 @@ mod pallet {
             n: usize,
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
-            use rand::Rng;
             let mut rng = Self::rng();
 
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
