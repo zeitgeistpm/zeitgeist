@@ -492,7 +492,8 @@ mod pallet {
         /// Then you risk at most `MinJurorStake` for this court.
         /// The probability to get selected is higher the more funds are staked.
         /// The `amount` of this call represents the total stake of the juror.
-        /// If the pool is full, the lowest staked juror is removed from the juror pool.
+        /// If the pool is full, the lowest staked court participant is removed from the court pool.
+        /// If the `amount` is lower than the lowest staked court participant, the call fails.
         ///
         /// # Arguments
         ///
@@ -517,12 +518,14 @@ mod pallet {
         }
 
         /// Join the court to become a delegator.
-        /// The `amount` of this call represents the total stake of the delegator.
-        /// If the delegator is already part of the court,
-        /// the `amount` needs to be higher than the previous amount to update the delegator stake.
         /// If the random selection algorithm chooses a delegators stake,
         /// the caller delegates the vote power to the drawn delegated juror.
         /// The delegator gets slashed or rewarded according to the delegated jurors decisions.
+        /// If the delegator is already part of the court,
+        /// the `amount` needs to be higher than the previous amount to update the delegators stake.
+        /// The `amount` of this call represents the total stake of the delegator.
+        /// If the pool is full, the lowest staked court participant is removed from the court pool.
+        /// If the `amount` is lower than the lowest staked court participant, the call fails.
         ///
         /// # Arguments
         ///
