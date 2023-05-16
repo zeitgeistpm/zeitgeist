@@ -1718,7 +1718,7 @@ mod pallet {
 
         /// The account ID which is used to reward the correct jurors.
         #[inline]
-        pub fn reward_pot(court_id: CourtId) -> T::AccountId {
+        pub(crate) fn reward_pot(court_id: CourtId) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating(court_id)
         }
 
