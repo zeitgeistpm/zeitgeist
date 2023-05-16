@@ -520,7 +520,7 @@ mod pallet {
         /// Join the court to become a delegator.
         /// If the random selection algorithm chooses a delegators stake,
         /// the caller delegates the vote power to the drawn delegated juror.
-        /// The delegator gets slashed or rewarded according to the delegated jurors decisions.
+        /// The delegator gets slashed or rewarded according to the delegated juror's decisions.
         /// If the delegator is already part of the court,
         /// the `amount` needs to be higher than the previous amount to update the delegators stake.
         /// The `amount` of this call represents the total stake of the delegator.
