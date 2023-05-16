@@ -621,7 +621,7 @@ mod pallet {
         /// # Arguments
         ///
         /// - `court_participant`: The court participant,
-        /// who is assumed to be not be part of the pool anymore.
+        /// who is assumed not to be part of the pool anymore.
         ///
         /// # Weight
         ///
