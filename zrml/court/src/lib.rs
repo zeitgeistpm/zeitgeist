@@ -480,6 +480,8 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         /// Join to become a juror, who is able to get randomly selected
         /// for court cases according to the provided stake.
+        /// If the juror is already part of the court,
+        /// the `amount` needs to be higher than the previous amount to update the juror stake.
         /// If the juror gets selected for a court case, the juror has to vote and reveal the vote.
         /// If the juror does not vote or reveal the vote, the juror gets slashed
         /// by the selected multiple of `MinJurorStake` for the court.
@@ -516,6 +518,8 @@ mod pallet {
 
         /// Join the court to become a delegator.
         /// The `amount` of this call represents the total stake of the delegator.
+        /// If the delegator is already part of the court,
+        /// the `amount` needs to be higher than the previous amount to update the delegator stake.
         /// If the random selection algorithm chooses a delegators stake,
         /// the caller delegates the vote power to the drawn delegated juror.
         /// The delegator gets slashed or rewarded according to the delegated jurors decisions.
