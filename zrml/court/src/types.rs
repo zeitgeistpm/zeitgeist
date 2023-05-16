@@ -81,31 +81,31 @@ impl VoteItem {
 pub struct CourtParticipantInfo<Balance, BlockNumber, Delegations> {
     /// The court participants amount in the stake weighted pool.
     /// This amount is used to find a court participant with a binary search on the pool.
-    pub stake: Balance,
+    pub(crate) stake: Balance,
     /// The current amount of funds which are locked in courts.
-    pub active_lock: Balance,
+    pub(crate) active_lock: Balance,
     /// The block number when an exit from court was requested.
-    pub prepare_exit_at: Option<BlockNumber>,
+    pub(crate) prepare_exit_at: Option<BlockNumber>,
     /// The delegations of the court participant. This determines the account as a delegator.
-    pub delegations: Option<Delegations>,
+    pub(crate) delegations: Option<Delegations>,
 }
 
 /// The raw information behind the secret hash of a juror's vote.
-pub struct RawCommitment<AccountId, Hash> {
+pub(crate) struct RawCommitment<AccountId, Hash> {
     /// The juror's account id.
-    pub juror: AccountId,
+    pub(crate) juror: AccountId,
     /// The vote item which the juror voted for.
-    pub vote_item: VoteItem,
+    pub(crate) vote_item: VoteItem,
     /// The salt which was used to hash the vote.
-    pub salt: Hash,
+    pub(crate) salt: Hash,
 }
 
 /// The raw information which is hashed to create the secret hash of a juror's vote.
-pub struct CommitmentMatcher<AccountId, Hash> {
+pub(crate) struct CommitmentMatcher<AccountId, Hash> {
     /// The juror's hashed commitment
-    pub hashed: Hash,
+    pub(crate) hashed: Hash,
     /// The raw commitment which is intended to lead to the hashed commitment.
-    pub raw: RawCommitment<AccountId, Hash>,
+    pub(crate) raw: RawCommitment<AccountId, Hash>,
 }
 
 /// All possible states of a vote.
@@ -187,11 +187,11 @@ pub enum CourtStatus {
 )]
 pub struct AppealInfo<AccountId, Balance> {
     /// The account which made the appeal.
-    pub backer: AccountId,
+    pub(crate) backer: AccountId,
     /// The amount of funds which were locked for the appeal.
-    pub bond: Balance,
+    pub(crate) bond: Balance,
     /// The vote item which was appealed.
-    pub appealed_vote_item: VoteItem,
+    pub(crate) appealed_vote_item: VoteItem,
 }
 
 /// The information about a court case.
@@ -217,7 +217,7 @@ pub struct CourtInfo<BlockNumber, Appeals> {
 }
 
 /// The timing information about a court case.
-pub struct RoundTiming<BlockNumber> {
+pub(crate) struct RoundTiming<BlockNumber> {
     /// The end block of the pre-vote period.
     pub pre_vote_end: BlockNumber,
     /// The block duration for votes.
@@ -231,7 +231,10 @@ pub struct RoundTiming<BlockNumber> {
 impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
     CourtInfo<BlockNumber, Appeals>
 {
-    pub fn new(round_timing: RoundTiming<BlockNumber>, vote_item_type: VoteItemType) -> Self {
+    pub(crate) fn new(
+        round_timing: RoundTiming<BlockNumber>,
+        vote_item_type: VoteItemType,
+    ) -> Self {
         let pre_vote = round_timing.pre_vote_end;
         let vote = pre_vote.saturating_add(round_timing.vote_period);
         let aggregation = vote.saturating_add(round_timing.aggregation_period);
@@ -241,7 +244,7 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
         Self { status, appeals: Default::default(), cycle_ends, vote_item_type }
     }
 
-    pub fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {
+    pub(crate) fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {
         self.cycle_ends.pre_vote = round_timing.pre_vote_end;
         self.cycle_ends.vote = self.cycle_ends.pre_vote.saturating_add(round_timing.vote_period);
         self.cycle_ends.aggregation =
@@ -309,14 +312,14 @@ pub struct CourtPoolItem<AccountId, Balance> {
     PartialEq,
     Eq,
 )]
-pub struct SelectionValue<Balance, DelegatedStakes> {
+pub(crate) struct SelectionValue<Balance, DelegatedStakes> {
     /// The overall weight of the juror or delegator for a specific selected draw.
-    pub weight: u32,
+    pub(crate) weight: u32,
     /// The amount that can be slashed for this selected draw.
-    pub slashable: Balance,
+    pub(crate) slashable: Balance,
     /// The different portions of stake distributed over multiple jurors.
     /// The sum of all delegated stakes should be equal to `slashable`.
-    pub delegated_stakes: DelegatedStakes,
+    pub(crate) delegated_stakes: DelegatedStakes,
 }
 
 /// The type to add one weight to the selected draws.
@@ -330,7 +333,7 @@ pub struct SelectionValue<Balance, DelegatedStakes> {
     PartialEq,
     Eq,
 )]
-pub enum SelectionAdd<AccountId, Balance> {
+pub(crate) enum SelectionAdd<AccountId, Balance> {
     /// The variant to add an active juror, who is not a delegator.
     SelfStake { lock: Balance },
     /// The variant to decide that a delegator is added
@@ -341,22 +344,22 @@ pub enum SelectionAdd<AccountId, Balance> {
 }
 
 /// The information about an active juror who voted for a court.
-pub struct SelfInfo<Balance> {
+pub(crate) struct SelfInfo<Balance> {
     /// The slashable amount of the juror herself.
-    pub slashable: Balance,
+    pub(crate) slashable: Balance,
     /// The item for which the juror voted.
-    pub vote_item: VoteItem,
+    pub(crate) vote_item: VoteItem,
 }
 
-pub struct JurorVoteWithStakes<AccountId, Balance> {
+pub(crate) struct JurorVoteWithStakes<AccountId, Balance> {
     /// An optional information about an active juror herself, who was selected and voted.
     /// This could be None, because delegators could have delegated to a juror who failed to vote.
-    pub self_info: Option<SelfInfo<Balance>>,
+    pub(crate) self_info: Option<SelfInfo<Balance>>,
     // many delegators can have delegated to the same juror
     // that's why the value is a vector and should be sorted (binary search by key)
     // the key is the delegator account
     // the value is the delegated stake
-    pub delegations: Vec<(AccountId, Balance)>,
+    pub(crate) delegations: Vec<(AccountId, Balance)>,
 }
 
 impl<AccountId, Balance> Default for JurorVoteWithStakes<AccountId, Balance> {
@@ -366,6 +369,6 @@ impl<AccountId, Balance> Default for JurorVoteWithStakes<AccountId, Balance> {
 }
 
 /// An internal error type to determine how the selection of draws fails.
-pub enum SelectionError {
+pub(crate) enum SelectionError {
     NoValidDelegatedJuror,
 }
