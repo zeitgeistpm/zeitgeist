@@ -275,7 +275,7 @@ pub struct Draw<AccountId, Balance, Hash, DelegatedStakes> {
     /// The information about the vote state.
     pub vote: Vote<Hash, DelegatedStakes>,
     /// The amount of funds which can be slashed for this court case.
-    /// This is related to a multiple of `MinStake` to mitigate Sybil attacks.
+    /// This is equal to a multiple of `MinJurorStake` to mitigate Sybil attacks.
     pub slashable: Balance,
 }
 
