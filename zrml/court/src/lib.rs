@@ -413,8 +413,6 @@ mod pallet {
         AmountExceedsBalance,
         /// After the first join of the court the amount has to be higher than the current stake.
         AmountBelowLastJoin,
-        /// The random number generation failed, because the juror total stake is too low.
-        NotEnoughTotalJurorStakeForRandomNumberGeneration,
         /// The amount is too low to kick the lowest juror out of the stake-weighted pool.
         AmountBelowLowestJuror,
         /// This should not happen, because the juror account should only be once in a pool.
@@ -1258,10 +1256,7 @@ mod pallet {
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
             debug_assert!((max % min_juror_stake).is_zero(), "This is ensured by the caller.");
             let sections_len = max.checked_div(min_juror_stake).unwrap_or(0);
-
-            if sections_len < (n as u128) {
-                return Err(Error::<T>::NotEnoughTotalJurorStakeForRandomNumberGeneration.into());
-            }
+            debug_assert!(sections_len >= (n as u128));
 
             let mut swaps = BTreeMap::<u128, u128>::new();
             let mut random_section_starts = BTreeSet::new();
