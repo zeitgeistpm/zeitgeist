@@ -9,10 +9,9 @@ A pallet for stake-weighted plurality decision making.
 
 ## Overview
 
-Court is a market dispute resolution mechanism. It is responsible for ensuring 
-that the truth is added to the blockchain. If someone provides false
-information, they will be punished, while those who share accurate information
-will be rewarded.
+Court is a market dispute resolution mechanism. It allows jurors to make decisions. 
+If a juror does not vote with the plurality of the other jurors, the juror will be punished, 
+while those who did vote with the plurality will be rewarded.
 
 ## Terminology
 
