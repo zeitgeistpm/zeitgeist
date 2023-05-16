@@ -472,7 +472,7 @@ mod pallet {
         }
 
         fn integrity_test() {
-            assert!(!T::BlocksPerYear::get().is_zero(), "Blocks per year assumption changed.");
+            assert!(!T::BlocksPerYear::get().is_zero(), "Blocks per year musn't be zero!");
         }
     }
 
