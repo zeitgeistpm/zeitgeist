@@ -2308,7 +2308,7 @@ mod pallet {
 
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}
 
-    // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
+    // No one can own more than `BalanceOf<T>::MAX`, it doesn't matter if this function saturates.
     pub fn get_appeal_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
