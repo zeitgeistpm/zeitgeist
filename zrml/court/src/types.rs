@@ -100,14 +100,6 @@ pub(crate) struct RawCommitment<AccountId, Hash> {
     pub(crate) salt: Hash,
 }
 
-/// The raw information which is hashed to create the secret hash of a juror's vote.
-pub(crate) struct CommitmentMatcher<AccountId, Hash> {
-    /// The juror's hashed commitment
-    pub(crate) hashed: Hash,
-    /// The raw commitment which is intended to lead to the hashed commitment.
-    pub(crate) raw: RawCommitment<AccountId, Hash>,
-}
-
 /// All possible states of a vote.
 #[derive(
     parity_scale_codec::Decode,

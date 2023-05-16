@@ -25,9 +25,9 @@ extern crate alloc;
 use crate::{
     traits::{AppealCheckApi, DefaultWinnerApi, VoteCheckApi},
     weights::WeightInfoZeitgeist,
-    AppealInfo, CommitmentMatcher, CourtId, CourtInfo, CourtParticipantInfo, CourtPoolItem,
-    CourtStatus, Draw, JurorVoteWithStakes, RawCommitment, RoundTiming, SelectionAdd,
-    SelectionError, SelectionValue, SelfInfo, Vote, VoteItem, VoteItemType,
+    AppealInfo, CourtId, CourtInfo, CourtParticipantInfo, CourtPoolItem, CourtStatus, Draw,
+    JurorVoteWithStakes, RawCommitment, RoundTiming, SelectionAdd, SelectionError, SelectionValue,
+    SelfInfo, Vote, VoteItem, VoteItemType,
 };
 use alloc::{
     collections::{BTreeMap, BTreeSet},
@@ -244,7 +244,6 @@ mod pallet {
     pub(crate) type SelectedDrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxSelectedDraws>;
     pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
-    pub(crate) type CommitmentMatcherOf<T> = CommitmentMatcher<AccountIdOf<T>, HashOf<T>>;
     pub(crate) type RawCommitmentOf<T> = RawCommitment<AccountIdOf<T>, HashOf<T>>;
     pub(crate) type CacheSize = ConstU32<64>;
 
@@ -1951,14 +1950,14 @@ mod pallet {
         }
 
         // Check if the (juror, vote_item, salt) combination matches the secret hash of the vote.
-        pub(crate) fn is_valid(commitment_matcher: CommitmentMatcherOf<T>) -> DispatchResult {
-            let CommitmentMatcher {
-                hashed: commitment,
-                raw: RawCommitment { juror, vote_item, salt },
-            } = commitment_matcher;
+        pub(crate) fn compare_commitment(
+            hashed_commitment: T::Hash,
+            raw_commitment: RawCommitmentOf<T>,
+        ) -> DispatchResult {
+            let RawCommitment { juror, vote_item, salt } = raw_commitment;
 
             ensure!(
-                commitment == T::Hashing::hash_of(&(juror, vote_item, salt)),
+                hashed_commitment == T::Hashing::hash_of(&(juror, vote_item, salt)),
                 Error::<T>::InvalidReveal
             );
 
@@ -1974,9 +1973,7 @@ mod pallet {
         ) -> Result<T::Hash, DispatchError> {
             match vote {
                 Vote::Secret { commitment } => {
-                    let commitment_matcher =
-                        CommitmentMatcher { hashed: commitment, raw: raw_commitment };
-                    Self::is_valid(commitment_matcher)?;
+                    Self::compare_commitment(commitment, raw_commitment)?;
                     Ok(commitment)
                 }
                 Vote::Drawn => Err(Error::<T>::JurorNotVoted.into()),
