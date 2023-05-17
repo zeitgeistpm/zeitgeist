@@ -96,6 +96,7 @@ where
     let mut pool = <CourtPool<T>>::get();
     let min_amount = T::MinJurorStake::get();
     let max_amount = min_amount + min_amount + BalanceOf::<T>::from(number);
+    let joined_at = <frame_system::Pallet<T>>::block_number();
     for i in 0..number {
         let juror: T::AccountId = account("juror", i, 0);
         let stake = max_amount - BalanceOf::<T>::from(i);
@@ -110,7 +111,7 @@ where
             },
         );
         let consumed_stake = BalanceOf::<T>::zero();
-        let pool_item = CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake };
+        let pool_item = CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake, joined_at };
         match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
             (pool_item.stake, &pool_item.court_participant)
         }) {

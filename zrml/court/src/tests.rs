@@ -192,6 +192,7 @@ fn join_court_successfully_stores_required_data() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
         let alice_free_balance_before = Balances::free_balance(ALICE);
+        let joined_at = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         System::assert_last_event(Event::JurorJoined { juror: ALICE, stake: amount }.into());
         assert_eq!(
@@ -210,7 +211,12 @@ fn join_court_successfully_stores_required_data() {
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
-            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
+            vec![CourtPoolItem {
+                stake: amount,
+                court_participant: ALICE,
+                consumed_stake: 0,
+                joined_at
+            }]
         );
     });
 }
@@ -220,11 +226,17 @@ fn join_court_works_multiple_joins() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let amount = 2 * min;
+        let joined_at_0 = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
-            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
+            vec![CourtPoolItem {
+                stake: amount,
+                court_participant: ALICE,
+                consumed_stake: 0,
+                joined_at: joined_at_0
+            }]
         );
         assert_eq!(
             Participants::<Runtime>::iter()
@@ -240,13 +252,24 @@ fn join_court_works_multiple_joins() {
             )]
         );
 
+        let joined_at_1 = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(Origin::signed(BOB), amount));
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![
-                CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 },
-                CourtPoolItem { stake: amount, court_participant: BOB, consumed_stake: 0 }
+                CourtPoolItem {
+                    stake: amount,
+                    court_participant: ALICE,
+                    consumed_stake: 0,
+                    joined_at: joined_at_0
+                },
+                CourtPoolItem {
+                    stake: amount,
+                    court_participant: BOB,
+                    consumed_stake: 0,
+                    joined_at: joined_at_1
+                }
             ]
         );
         assert_eq!(Participants::<Runtime>::iter().count(), 2);
@@ -276,8 +299,18 @@ fn join_court_works_multiple_joins() {
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![
-                CourtPoolItem { stake: amount, court_participant: BOB, consumed_stake: 0 },
-                CourtPoolItem { stake: higher_amount, court_participant: ALICE, consumed_stake: 0 },
+                CourtPoolItem {
+                    stake: amount,
+                    court_participant: BOB,
+                    consumed_stake: 0,
+                    joined_at: joined_at_1
+                },
+                CourtPoolItem {
+                    stake: higher_amount,
+                    court_participant: ALICE,
+                    consumed_stake: 0,
+                    joined_at: joined_at_0
+                },
             ]
         );
         assert_eq!(Participants::<Runtime>::iter().count(), 2);
@@ -319,8 +352,13 @@ fn join_court_saves_consumed_stake_and_active_lock_for_double_join() {
                 delegations: Default::default(),
             },
         );
-        let juror_pool =
-            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake }];
+        let joined_at = <frame_system::Pallet<Runtime>>::block_number();
+        let juror_pool = vec![CourtPoolItem {
+            stake: amount,
+            court_participant: ALICE,
+            consumed_stake,
+            joined_at,
+        }];
         CourtPool::<Runtime>::put::<CourtPoolOf<Runtime>>(juror_pool.try_into().unwrap());
 
         let higher_amount = amount + 1;
@@ -411,10 +449,16 @@ fn join_court_fails_amount_below_lowest_juror() {
 fn prepare_exit_court_works() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
+        let joined_at = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
-            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
+            vec![CourtPoolItem {
+                stake: amount,
+                court_participant: ALICE,
+                consumed_stake: 0,
+                joined_at
+            }]
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
@@ -541,10 +585,16 @@ fn join_court_binary_search_sorted_insert_works() {
 fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
+        let joined_at = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
-            vec![CourtPoolItem { stake: amount, court_participant: ALICE, consumed_stake: 0 }]
+            vec![CourtPoolItem {
+                stake: amount,
+                court_participant: ALICE,
+                consumed_stake: 0,
+                joined_at
+            }]
         );
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
@@ -2955,19 +3005,26 @@ fn handle_inflation_works() {
         let mut jurors = <CourtPool<Runtime>>::get();
         let mut free_balances_before = BTreeMap::new();
         let jurors_list = vec![1000, 10_000, 100_000, 1_000_000, 10_000_000];
+        run_to_block(InflationPeriod::get());
+        let joined_at = <frame_system::Pallet<Runtime>>::block_number();
         for number in jurors_list.iter() {
             let stake = *number;
             let juror = *number;
             let _ = Balances::deposit(&juror, stake).unwrap();
             free_balances_before.insert(juror, stake);
             jurors
-                .try_push(CourtPoolItem { stake, court_participant: juror, consumed_stake: 0 })
+                .try_push(CourtPoolItem {
+                    stake,
+                    court_participant: juror,
+                    consumed_stake: 0,
+                    joined_at,
+                })
                 .unwrap();
         }
         <CourtPool<Runtime>>::put(jurors.clone());
 
         let inflation_period = InflationPeriod::get();
-        run_to_block(inflation_period);
+        run_blocks(inflation_period);
         let now = <frame_system::Pallet<Runtime>>::block_number();
         Court::handle_inflation(now);
 
@@ -2985,5 +3042,51 @@ fn handle_inflation_works() {
 
         let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
         assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 432_868_408_838);
+    });
+}
+
+#[test]
+fn handle_inflation_without_waiting_one_inflation_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut jurors = <CourtPool<Runtime>>::get();
+        let mut free_balances_before = BTreeMap::new();
+        let jurors_list = vec![1000, 10_000, 100_000, 1_000_000, 10_000_000];
+        run_to_block(InflationPeriod::get());
+        let joined_at = <frame_system::Pallet<Runtime>>::block_number();
+        for number in jurors_list.iter() {
+            let stake = *number;
+            let juror = *number;
+            let _ = Balances::deposit(&juror, stake).unwrap();
+            free_balances_before.insert(juror, stake);
+            jurors
+                .try_push(CourtPoolItem {
+                    stake,
+                    court_participant: juror,
+                    consumed_stake: 0,
+                    joined_at,
+                })
+                .unwrap();
+        }
+        <CourtPool<Runtime>>::put(jurors.clone());
+
+        let inflation_period = InflationPeriod::get();
+        run_blocks(inflation_period.saturating_sub(1));
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        Court::handle_inflation(now);
+
+        let free_balance_after_0 = Balances::free_balance(jurors_list[0]);
+        assert_eq!(free_balance_after_0 - free_balances_before[&jurors_list[0]], 0);
+
+        let free_balance_after_1 = Balances::free_balance(jurors_list[1]);
+        assert_eq!(free_balance_after_1 - free_balances_before[&jurors_list[1]], 0);
+
+        let free_balance_after_2 = Balances::free_balance(jurors_list[2]);
+        assert_eq!(free_balance_after_2 - free_balances_before[&jurors_list[2]], 0);
+
+        let free_balance_after_3 = Balances::free_balance(jurors_list[3]);
+        assert_eq!(free_balance_after_3 - free_balances_before[&jurors_list[3]], 0);
+
+        let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
+        assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 0);
     });
 }

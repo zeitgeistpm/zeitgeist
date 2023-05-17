@@ -282,7 +282,7 @@ pub struct Draw<AccountId, Balance, Hash, DelegatedStakes> {
     PartialEq,
     Eq,
 )]
-pub struct CourtPoolItem<AccountId, Balance> {
+pub struct CourtPoolItem<AccountId, Balance, BlockNumber> {
     /// The amount of funds associated to a court participant
     /// in order to get selected for a court case.
     pub stake: Balance,
@@ -291,6 +291,8 @@ pub struct CourtPoolItem<AccountId, Balance> {
     /// The consumed amount of the stake for all draws. This is useful to reduce the probability
     /// of a court participant to be selected again.
     pub consumed_stake: Balance,
+    /// The block number at which the participant joined.
+    pub joined_at: BlockNumber,
 }
 
 /// The information about an internal selected draw of a juror or delegator.

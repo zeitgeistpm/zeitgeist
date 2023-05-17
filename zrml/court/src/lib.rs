@@ -237,7 +237,8 @@ mod pallet {
     pub(crate) type JurorVoteWithStakesOf<T> = JurorVoteWithStakes<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type CourtParticipantInfoOf<T> =
         CourtParticipantInfo<BalanceOf<T>, BlockNumberFor<T>, DelegationsOf<T>>;
-    pub(crate) type CourtPoolItemOf<T> = CourtPoolItem<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type CourtPoolItemOf<T> =
+        CourtPoolItem<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>;
     pub(crate) type CourtPoolOf<T> =
         BoundedVec<CourtPoolItemOf<T>, <T as Config>::MaxCourtParticipants>;
     pub(crate) type DrawOf<T> = Draw<AccountIdOf<T>, BalanceOf<T>, HashOf<T>, DelegatedStakesOf<T>>;
@@ -1116,7 +1117,9 @@ mod pallet {
 
             let mut pool = CourtPool::<T>::get();
 
-            let (active_lock, consumed_stake) = if let Some(prev_p_info) =
+            let now = <frame_system::Pallet<T>>::block_number();
+
+            let (active_lock, consumed_stake, joined_at) = if let Some(prev_p_info) =
                 <Participants<T>>::get(who)
             {
                 ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
@@ -1127,8 +1130,9 @@ mod pallet {
                     "If the pool item is found, the prepare_exit_at could have never been written."
                 );
                 let consumed_stake = pool_item.consumed_stake;
+                let joined_at = pool_item.joined_at;
                 pool.remove(index);
-                (prev_p_info.active_lock, consumed_stake)
+                (prev_p_info.active_lock, consumed_stake, joined_at)
             } else {
                 if pool.is_full() {
                     let lowest_item = pool.first();
@@ -1150,7 +1154,8 @@ mod pallet {
                     // remove the lowest staked court participant
                     pool.remove(0);
                 }
-                (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero())
+
+                (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero(), now)
             };
 
             match pool.binary_search_by_key(&(amount, who), |pool_item| {
@@ -1171,6 +1176,7 @@ mod pallet {
                             stake: amount,
                             court_participant: who.clone(),
                             consumed_stake,
+                            joined_at,
                         },
                     )
                     .map_err(|_| {
@@ -1217,10 +1223,20 @@ mod pallet {
 
                 let pool = <CourtPool<T>>::get();
                 let pool_len = pool.len() as u32;
-                let total_stake = pool.iter().fold(0u128, |acc, pool_item| {
-                    acc.saturating_add(pool_item.stake.saturated_into::<u128>())
-                });
-                for CourtPoolItem { stake, court_participant, .. } in pool {
+                let at_least_one_inflation_period =
+                    |joined_at| now.saturating_sub(joined_at) >= T::InflationPeriod::get();
+                let total_stake = pool
+                    .iter()
+                    .filter(|pool_item| at_least_one_inflation_period(pool_item.joined_at))
+                    .fold(0u128, |acc, pool_item| {
+                        acc.saturating_add(pool_item.stake.saturated_into::<u128>())
+                    });
+                for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
+                    if !at_least_one_inflation_period(joined_at) {
+                        // participants who joined and didn't wait
+                        // at least one full inflation period won't get a reward
+                        continue;
+                    }
                     let share =
                         Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
                     let mint = share * inflation_period_mint.saturated_into::<u128>();
