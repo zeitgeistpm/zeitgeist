@@ -424,7 +424,7 @@ fn prepare_exit_court_works() {
 }
 
 #[test]
-fn prepare_exit_court_removes_correct_jurors() {
+fn prepare_exit_court_removes_lowest_staked_juror() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let min_amount = 2 * min;
@@ -436,20 +436,78 @@ fn prepare_exit_court_removes_correct_jurors() {
             assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
 
-        for r in 0..CourtPoolOf::<Runtime>::bound() {
-            let len = CourtPool::<Runtime>::get().into_inner().len();
-            assert!(
-                CourtPool::<Runtime>::get()
-                    .into_inner()
-                    .iter()
-                    .any(|item| item.court_participant == r as u128)
-            );
-            assert_ok!(Court::prepare_exit_court(Origin::signed(r as u128)));
-            assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
-            CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
-                assert_ne!(item.court_participant, r as u128);
-            });
+        let len = CourtPool::<Runtime>::get().into_inner().len();
+        assert!(
+            CourtPool::<Runtime>::get()
+                .into_inner()
+                .iter()
+                .any(|item| item.court_participant == 0u128)
+        );
+        assert_ok!(Court::prepare_exit_court(Origin::signed(0u128)));
+        assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
+        CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
+            assert_ne!(item.court_participant, 0u128);
+        });
+    });
+}
+
+#[test]
+fn prepare_exit_court_removes_middle_staked_juror() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let min_amount = 2 * min;
+
+        for i in 0..CourtPoolOf::<Runtime>::bound() {
+            let amount = min_amount + i as u128;
+            let juror = i as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
         }
+
+        let middle_index = (CourtPoolOf::<Runtime>::bound() / 2) as u128;
+
+        let len = CourtPool::<Runtime>::get().into_inner().len();
+        assert!(
+            CourtPool::<Runtime>::get()
+                .into_inner()
+                .iter()
+                .any(|item| item.court_participant == middle_index)
+        );
+        assert_ok!(Court::prepare_exit_court(Origin::signed(middle_index)));
+        assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
+        CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
+            assert_ne!(item.court_participant, middle_index);
+        });
+    });
+}
+
+#[test]
+fn prepare_exit_court_removes_highest_staked_juror() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min = MinJurorStake::get();
+        let min_amount = 2 * min;
+
+        for i in 0..CourtPoolOf::<Runtime>::bound() {
+            let amount = min_amount + i as u128;
+            let juror = i as u128;
+            let _ = Balances::deposit(&juror, amount).unwrap();
+            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        }
+
+        let last_index = (CourtPoolOf::<Runtime>::bound() - 1) as u128;
+
+        let len = CourtPool::<Runtime>::get().into_inner().len();
+        assert!(
+            CourtPool::<Runtime>::get()
+                .into_inner()
+                .iter()
+                .any(|item| item.court_participant == last_index)
+        );
+        assert_ok!(Court::prepare_exit_court(Origin::signed(last_index)));
+        assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
+        CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
+            assert_ne!(item.court_participant, last_index);
+        });
     });
 }
 
