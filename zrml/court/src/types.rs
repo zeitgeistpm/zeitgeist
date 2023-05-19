@@ -124,28 +124,6 @@ pub enum Vote<Hash, DelegatedStakes> {
     Denounced { commitment: Hash, vote_item: VoteItem, salt: Hash },
 }
 
-/// The information about the lifecycle of a court case.
-#[derive(
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
-    scale_info::TypeInfo,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-)]
-pub struct CycleEnds<BlockNumber> {
-    /// The end block of the pre-vote period.
-    pub pre_vote: BlockNumber,
-    /// The end block of the vote period.
-    pub vote: BlockNumber,
-    /// The end block of the aggregation period.
-    pub aggregation: BlockNumber,
-    /// The end block of the appeal period.
-    pub appeal: BlockNumber,
-}
-
 /// The status of a court case.
 #[derive(
     parity_scale_codec::Decode,
@@ -186,6 +164,31 @@ pub struct AppealInfo<AccountId, Balance> {
     pub(crate) appealed_vote_item: VoteItem,
 }
 
+/// The timing information about a court round.
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+)]
+pub struct RoundTiming<BlockNumber> {
+    /// The end block of the pre-vote period.
+    pub pre_vote: BlockNumber,
+    /// The end block of the vote period.
+    /// Note this can also be used as the block duration for votes.
+    pub vote: BlockNumber,
+    /// The end block of the aggregation period.
+    /// Note this can also be used as the block duration for revealing votes.
+    pub aggregation: BlockNumber,
+    /// The end block of the appeal period.
+    /// Note this can also be used as the block duration for appeals.
+    pub appeal: BlockNumber,
+}
+
 /// The information about a court case.
 #[derive(
     parity_scale_codec::Decode,
@@ -202,22 +205,10 @@ pub struct CourtInfo<BlockNumber, Appeals> {
     pub status: CourtStatus,
     /// The list of all appeals.
     pub appeals: Appeals,
-    /// The information about the lifecycle of this court case.
-    pub cycle_ends: CycleEnds<BlockNumber>,
+    /// This specifies the end blocks of the court case phases.
+    pub round_ends: RoundTiming<BlockNumber>,
     /// The type of the vote item.
     pub vote_item_type: VoteItemType,
-}
-
-/// The timing information about a court case.
-pub(crate) struct RoundTiming<BlockNumber> {
-    /// The end block of the pre-vote period.
-    pub pre_vote_end: BlockNumber,
-    /// The block duration for votes.
-    pub vote_period: BlockNumber,
-    /// The block duration for revealing votes.
-    pub aggregation_period: BlockNumber,
-    /// The block duration for appeals.
-    pub appeal_period: BlockNumber,
 }
 
 impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
@@ -227,22 +218,20 @@ impl<BlockNumber: sp_runtime::traits::Saturating + Copy, Appeals: Default>
         round_timing: RoundTiming<BlockNumber>,
         vote_item_type: VoteItemType,
     ) -> Self {
-        let pre_vote = round_timing.pre_vote_end;
-        let vote = pre_vote.saturating_add(round_timing.vote_period);
-        let aggregation = vote.saturating_add(round_timing.aggregation_period);
-        let appeal = aggregation.saturating_add(round_timing.appeal_period);
-        let cycle_ends = CycleEnds { pre_vote, vote, aggregation, appeal };
+        let pre_vote = round_timing.pre_vote;
+        let vote = pre_vote.saturating_add(round_timing.vote);
+        let aggregation = vote.saturating_add(round_timing.aggregation);
+        let appeal = aggregation.saturating_add(round_timing.appeal);
+        let round_ends = RoundTiming { pre_vote, vote, aggregation, appeal };
         let status = CourtStatus::Open;
-        Self { status, appeals: Default::default(), cycle_ends, vote_item_type }
+        Self { status, appeals: Default::default(), round_ends, vote_item_type }
     }
 
-    pub(crate) fn update_lifecycle(&mut self, round_timing: RoundTiming<BlockNumber>) {
-        self.cycle_ends.pre_vote = round_timing.pre_vote_end;
-        self.cycle_ends.vote = self.cycle_ends.pre_vote.saturating_add(round_timing.vote_period);
-        self.cycle_ends.aggregation =
-            self.cycle_ends.vote.saturating_add(round_timing.aggregation_period);
-        self.cycle_ends.appeal =
-            self.cycle_ends.aggregation.saturating_add(round_timing.appeal_period);
+    pub(crate) fn update_round(&mut self, round_timing: RoundTiming<BlockNumber>) {
+        self.round_ends.pre_vote = round_timing.pre_vote;
+        self.round_ends.vote = self.round_ends.pre_vote.saturating_add(round_timing.vote);
+        self.round_ends.aggregation = self.round_ends.vote.saturating_add(round_timing.aggregation);
+        self.round_ends.appeal = self.round_ends.aggregation.saturating_add(round_timing.appeal);
     }
 }
 

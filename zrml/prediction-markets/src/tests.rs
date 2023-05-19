@@ -3162,7 +3162,7 @@ fn it_resolves_a_disputed_court_market() {
         assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), market_id,));
 
         let court = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
-        let vote_start = court.cycle_ends.pre_vote + 1;
+        let vote_start = court.round_ends.pre_vote + 1;
 
         run_to_block(vote_start);
 
@@ -3220,7 +3220,7 @@ fn it_resolves_a_disputed_court_market() {
             salt
         ));
 
-        let aggregation_start = court.cycle_ends.vote + 1;
+        let aggregation_start = court.round_ends.vote + 1;
         run_to_block(aggregation_start);
 
         assert_ok!(Court::reveal_vote(
@@ -3255,7 +3255,7 @@ fn it_resolves_a_disputed_court_market() {
 
         // juror_5 fails to reveal in time
 
-        let resolve_at = court.cycle_ends.appeal;
+        let resolve_at = court.round_ends.appeal;
         let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at);
         assert_eq!(market_ids.len(), 1);
 
@@ -3326,7 +3326,7 @@ fn it_resolves_a_disputed_court_market() {
 
 fn simulate_appeal_cycle(market_id: MarketId) {
     let court = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
-    let vote_start = court.cycle_ends.pre_vote + 1;
+    let vote_start = court.round_ends.pre_vote + 1;
 
     run_to_block(vote_start);
 
@@ -3342,7 +3342,7 @@ fn simulate_appeal_cycle(market_id: MarketId) {
         assert_ok!(Court::vote(Origin::signed(draw.court_participant), market_id, commitment));
     }
 
-    let aggregation_start = court.cycle_ends.vote + 1;
+    let aggregation_start = court.round_ends.vote + 1;
     run_to_block(aggregation_start);
 
     for draw in draws {
@@ -3354,7 +3354,7 @@ fn simulate_appeal_cycle(market_id: MarketId) {
         ));
     }
 
-    let resolve_at = court.cycle_ends.appeal;
+    let resolve_at = court.round_ends.appeal;
     let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at);
     assert_eq!(market_ids.len(), 1);
 

@@ -111,7 +111,8 @@ where
             },
         );
         let consumed_stake = BalanceOf::<T>::zero();
-        let pool_item = CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake, joined_at };
+        let pool_item =
+            CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake, joined_at };
         match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
             (pool_item.stake, &pool_item.court_participant)
         }) {
@@ -308,7 +309,7 @@ benchmarks! {
         let (market_id, court_id) = setup_court::<T>()?;
 
         let court = <Courts<T>>::get(court_id).unwrap();
-        let pre_vote = court.cycle_ends.pre_vote;
+        let pre_vote = court.round_ends.pre_vote;
 
         fill_draws::<T>(court_id, d)?;
 
@@ -340,7 +341,7 @@ benchmarks! {
         let (market_id, court_id) = setup_court::<T>()?;
 
         let court = <Courts<T>>::get(court_id).unwrap();
-        let pre_vote = court.cycle_ends.pre_vote;
+        let pre_vote = court.round_ends.pre_vote;
 
         fill_draws::<T>(court_id, d)?;
 
@@ -383,7 +384,7 @@ benchmarks! {
         let (market_id, court_id) = setup_court::<T>()?;
 
         let court = <Courts<T>>::get(court_id).unwrap();
-        let vote_end = court.cycle_ends.vote;
+        let vote_end = court.round_ends.vote;
 
         fill_draws::<T>(court_id, d)?;
 
@@ -431,14 +432,14 @@ benchmarks! {
         let (market_id, court_id) = setup_court::<T>()?;
 
         let mut court = <Courts<T>>::get(court_id).unwrap();
-        let appeal_end = court.cycle_ends.appeal;
+        let appeal_end = court.round_ends.appeal;
         for i in 0..r {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
         }
         T::DisputeResolution::add_auto_resolve(&market_id, appeal_end).unwrap();
 
-        let aggregation = court.cycle_ends.aggregation;
+        let aggregation = court.round_ends.aggregation;
         for i in 0..a {
             let appeal_info = AppealInfo {
                 backer: account("backer", i, 0),
@@ -490,7 +491,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), court_id)
     verify {
         let court = <Courts<T>>::get(court_id).unwrap();
-        assert_eq!(court.cycle_ends.appeal, new_resolve_at);
+        assert_eq!(court.round_ends.appeal, new_resolve_at);
     }
 
     reassign_court_stakes {
