@@ -417,7 +417,7 @@ fn join_court_fails_juror_needs_to_exit() {
 
         assert_noop!(
             Court::join_court(Origin::signed(ALICE), amount + 1),
-            Error::<Runtime>::NeedToExit
+            Error::<Runtime>::ParticipantNotInCourtPool
         );
     });
 }
@@ -741,7 +741,7 @@ fn exit_court_fails_if_inflation_period_not_over() {
 
         assert_noop!(
             Court::exit_court(Origin::signed(ALICE), ALICE),
-            Error::<Runtime>::WaitFullInflationPeriod
+            Error::<Runtime>::PrematureExit
         );
     });
 }
@@ -1021,7 +1021,7 @@ fn reveal_vote_fails_if_caller_not_juror() {
 
         assert_noop!(
             Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
-            Error::<Runtime>::OnlyJurorsCanReveal
+            Error::<Runtime>::CallerIsNotACourtParticipant
         );
     });
 }
@@ -1077,7 +1077,7 @@ fn reveal_vote_fails_if_juror_not_drawn() {
 
         assert_noop!(
             Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
-            Error::<Runtime>::JurorNotDrawn
+            Error::<Runtime>::CallerNotInSelectedDraws
         );
     });
 }
@@ -1094,7 +1094,7 @@ fn reveal_vote_fails_for_invalid_reveal() {
         let invalid_vote_item = VoteItem::Outcome(invalid_outcome);
         assert_noop!(
             Court::reveal_vote(Origin::signed(ALICE), court_id, invalid_vote_item, salt),
-            Error::<Runtime>::InvalidReveal
+            Error::<Runtime>::CommitmentHashMismatch
         );
     });
 }
@@ -1113,7 +1113,7 @@ fn reveal_vote_fails_for_invalid_salt() {
         let vote_item = VoteItem::Outcome(outcome);
         assert_noop!(
             Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, incorrect_salt),
-            Error::<Runtime>::InvalidReveal
+            Error::<Runtime>::CommitmentHashMismatch
         );
     });
 }
@@ -1138,7 +1138,7 @@ fn reveal_vote_fails_if_juror_not_voted() {
 
         assert_noop!(
             Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
-            Error::<Runtime>::JurorNotVoted
+            Error::<Runtime>::JurorDidNotVote
         );
     });
 }
@@ -1252,7 +1252,7 @@ fn denounce_vote_fails_if_self_denounce() {
 
         assert_noop!(
             Court::denounce_vote(Origin::signed(ALICE), court_id, ALICE, vote_item, salt),
-            Error::<Runtime>::SelfDenounceDisallowed
+            Error::<Runtime>::CallerDenouncedItself
         );
     });
 }
@@ -1337,7 +1337,7 @@ fn denounce_vote_fails_if_invalid_reveal() {
         let invalid_vote_item = VoteItem::Outcome(invalid_outcome);
         assert_noop!(
             Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, invalid_vote_item, salt),
-            Error::<Runtime>::InvalidReveal
+            Error::<Runtime>::CommitmentHashMismatch
         );
     });
 }
@@ -1360,7 +1360,7 @@ fn denounce_vote_fails_if_juror_not_voted() {
 
         assert_noop!(
             Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, vote_item, salt),
-            Error::<Runtime>::JurorNotVoted
+            Error::<Runtime>::JurorDidNotVote
         );
     });
 }

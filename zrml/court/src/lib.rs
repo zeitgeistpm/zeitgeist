@@ -365,12 +365,12 @@ mod pallet {
         MarketDoesNotHaveCourtMechanism,
         /// The market is not in a state where it can be disputed.
         MarketIsNotDisputed,
-        /// Only jurors can reveal their votes.
-        OnlyJurorsCanReveal,
+        /// This operation requires the caller to be a juror or delegator.
+        CallerIsNotACourtParticipant,
         /// The vote is not commitment.
         VoteAlreadyRevealed,
         /// The vote item and salt reveal do not match the commitment vote.
-        InvalidReveal,
+        CommitmentHashMismatch,
         /// No court for this market id was found.
         CourtNotFound,
         /// This operation is only allowed in the voting period.
@@ -390,16 +390,17 @@ mod pallet {
         /// In order to exit the court the juror has to exit
         /// the pool first with `prepare_exit_court`.
         AlreadyPreparedExit,
+        /// The juror or delegator is not part of the court pool.
         /// The court participant needs to exit the court and then rejoin.
-        NeedToExit,
+        ParticipantNotInCourtPool,
         /// The juror was not randomly selected for the court.
         JurorNotDrawn,
         /// The juror was drawn but did not manage to commitmently vote within the court.
-        JurorNotVoted,
+        JurorDidNotVote,
         /// The juror was already denounced.
         VoteAlreadyDenounced,
         /// A juror tried to denounce herself.
-        SelfDenounceDisallowed,
+        CallerDenouncedItself,
         /// The court is not in the closed state.
         CourtNotClosed,
         /// The juror stakes of the court already got reassigned.
@@ -424,7 +425,7 @@ mod pallet {
         AppealBondExceedsBalance,
         /// The juror should at least wait one inflation period after the funds can be unstaked.
         /// Otherwise hopping in and out for inflation rewards is possible.
-        WaitFullInflationPeriod,
+        PrematureExit,
         /// The `prepare_exit_at` field is not present.
         PrepareExitAtNotPresent,
         /// The maximum number of delegations is reached for this account.
@@ -448,7 +449,7 @@ mod pallet {
         /// The vote item is not valid for this (binary) court.
         InvalidVoteItemForBinaryCourt,
         /// The appealed vote item is not an outcome.
-        AppealedVoteItemIsNotOutcome,
+        AppealedVoteItemIsNoOutcome,
         /// The winner vote item is not an outcome.
         WinnerVoteItemIsNoOutcome,
         /// The outcome does not match the market outcomes.
@@ -643,7 +644,7 @@ mod pallet {
                 prev_p_info.prepare_exit_at.ok_or(Error::<T>::PrepareExitAtNotPresent)?;
             ensure!(
                 now.saturating_sub(prepare_exit_at) >= T::InflationPeriod::get(),
-                Error::<T>::WaitFullInflationPeriod
+                Error::<T>::PrematureExit
             );
 
             let (exit_amount, active_lock, weight) = if prev_p_info.active_lock.is_zero() {
@@ -762,7 +763,7 @@ mod pallet {
 
             let juror = T::Lookup::lookup(juror)?;
 
-            ensure!(denouncer != juror, Error::<T>::SelfDenounceDisallowed);
+            ensure!(denouncer != juror, Error::<T>::CallerDenouncedItself);
 
             ensure!(<Participants<T>>::contains_key(&juror), Error::<T>::JurorDoesNotExist);
 
@@ -835,7 +836,10 @@ mod pallet {
                 T::VoteCheck::pre_validate(&market_id, vote_item.clone())?;
             }
 
-            ensure!(<Participants<T>>::get(&who).is_some(), Error::<T>::OnlyJurorsCanReveal);
+            ensure!(
+                <Participants<T>>::get(&who).is_some(),
+                Error::<T>::CallerIsNotACourtParticipant
+            );
             let court = <Courts<T>>::get(court_id).ok_or(Error::<T>::CourtNotFound)?;
             Self::check_vote_item(&court, &vote_item)?;
 
@@ -859,7 +863,7 @@ mod pallet {
                         Vote::Revealed { commitment, vote_item: vote_item.clone(), salt };
                     draws[index] = Draw { court_participant: who.clone(), vote: raw_vote, ..draw };
                 }
-                Err(_) => return Err(Error::<T>::JurorNotDrawn.into()),
+                Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
             }
 
             let draws_len = draws.len() as u32;
@@ -1124,7 +1128,7 @@ mod pallet {
             {
                 ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
                 let (index, pool_item) = Self::get_pool_item(&pool, prev_p_info.stake, who)
-                    .ok_or(Error::<T>::NeedToExit)?;
+                    .ok_or(Error::<T>::ParticipantNotInCourtPool)?;
                 debug_assert!(
                     prev_p_info.prepare_exit_at.is_none(),
                     "If the pool item is found, the prepare_exit_at could have never been written."
@@ -1968,7 +1972,7 @@ mod pallet {
 
             ensure!(
                 hashed_commitment == T::Hashing::hash_of(&(juror, vote_item, salt)),
-                Error::<T>::InvalidReveal
+                Error::<T>::CommitmentHashMismatch
             );
 
             Ok(())
@@ -1986,7 +1990,7 @@ mod pallet {
                     Self::compare_commitment(commitment, raw_commitment)?;
                     Ok(commitment)
                 }
-                Vote::Drawn => Err(Error::<T>::JurorNotVoted.into()),
+                Vote::Drawn => Err(Error::<T>::JurorDidNotVote.into()),
                 Vote::Delegated { delegated_stakes: _ } => Err(Error::<T>::JurorDelegated.into()),
                 Vote::Revealed { commitment: _, vote_item: _, salt: _ } => {
                     Err(Error::<T>::VoteAlreadyRevealed.into())
@@ -2140,7 +2144,7 @@ mod pallet {
                 let appealed_vote_item_as_outcome = appealed_vote_item
                     .clone()
                     .into_outcome()
-                    .ok_or(Error::<T>::AppealedVoteItemIsNotOutcome)?;
+                    .ok_or(Error::<T>::AppealedVoteItemIsNoOutcome)?;
                 if resolved_outcome == &appealed_vote_item_as_outcome {
                     let (imb, missing) =
                         T::Currency::slash_reserved_named(&Self::reserve_id(), backer, *bond);

@@ -3234,7 +3234,7 @@ fn it_resolves_a_disputed_court_market() {
         let wrong_salt = BlakeTwo256::hash_of(&69);
         assert_noop!(
             Court::reveal_vote(Origin::signed(juror_2), market_id, vote_item_0.clone(), wrong_salt),
-            CError::<Runtime>::InvalidReveal
+            CError::<Runtime>::CommitmentHashMismatch
         );
         assert_ok!(Court::reveal_vote(
             Origin::signed(juror_2),
@@ -3250,7 +3250,7 @@ fn it_resolves_a_disputed_court_market() {
 
         assert_noop!(
             Court::reveal_vote(Origin::signed(juror_4), market_id, vote_item_0.clone(), salt),
-            CError::<Runtime>::JurorNotVoted
+            CError::<Runtime>::JurorDidNotVote
         );
 
         // juror_5 fails to reveal in time
