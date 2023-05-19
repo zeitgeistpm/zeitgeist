@@ -199,15 +199,15 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(j.into())))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(j.into())))
     }
-    // Storage: Court JurorPool (r:1 w:1)
-    // Storage: Court JurorsSelectionNonce (r:1 w:1)
+    // Storage: Court CourtPool (r:1 w:1)
+    // Storage: Court SelectionNonce (r:1 w:1)
     // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
-    // Storage: Court Jurors (r:32 w:31)
-    fn select_jurors(a: u32) -> Weight {
-        Weight::from_ref_time(513_126_000)
-            // Standard Error: 7_829_000
-            .saturating_add(Weight::from_ref_time(1_640_272_000).saturating_mul(a.into()))
-            .saturating_add(T::DbWeight::get().reads(21))
+    // Storage: Court Participants (r:35 w:31)
+    fn select_jurors(a: u32, ) -> Weight {
+        Weight::from_ref_time(639_560_000)
+            // Standard Error: 11_776_000
+            .saturating_add(Weight::from_ref_time(2_310_239_000).saturating_mul(a.into()))
+            .saturating_add(T::DbWeight::get().reads(24))
             .saturating_add(T::DbWeight::get().reads((60_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(19))
             .saturating_add(T::DbWeight::get().writes((60_u64).saturating_mul(a.into())))
