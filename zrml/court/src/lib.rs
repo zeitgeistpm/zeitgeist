@@ -1424,7 +1424,6 @@ mod pallet {
                         .is_some()
                     {
                         valid_delegated_jurors.push(delegated_juror.clone());
-                        break;
                     }
                 }
             }
