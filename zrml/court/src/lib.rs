@@ -52,7 +52,7 @@ use frame_system::{
     ensure_signed,
     pallet_prelude::{BlockNumberFor, OriginFor},
 };
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{seq::SliceRandom, Rng, RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use sp_arithmetic::{per_things::Perquintill, traits::One};
 use sp_runtime::{
@@ -1408,42 +1408,28 @@ mod pallet {
             }
         }
 
-        /// Return the first valid active juror starting
-        /// from the `random_number` index out of the `delegations`.
-        fn get_valid_delegated_juror(
-            delegations: &[T::AccountId],
-            random_number: u128,
-        ) -> Option<T::AccountId> {
+        /// Return one delegated juror out of the delegations randomly.
+        fn get_valid_delegated_juror(delegations: &[T::AccountId]) -> Option<T::AccountId> {
+            let mut rng = Self::rng();
             let pool: CourtPoolOf<T> = CourtPool::<T>::get();
-            let mut delegated_juror = None;
+            let mut valid_delegated_jurors = Vec::new();
 
-            for count in 0..delegations.len() {
-                let delegation_index = (random_number.saturating_add(count as u128)
-                    % delegations.len() as u128) as usize;
-                delegated_juror = match delegations.get(delegation_index) {
-                    Some(del_j) => Some(del_j.clone()),
-                    None => {
-                        log::error!("Delegation with modulo index should exist!");
-                        debug_assert!(false);
-                        None
+            for delegated_juror in delegations {
+                if let Some(delegated_juror_info) = <Participants<T>>::get(delegated_juror) {
+                    if delegated_juror_info.delegations.is_some() {
+                        // skip if delegated juror is delegator herself
+                        continue;
                     }
-                };
-
-                if let Some(del_j) = &delegated_juror {
-                    if let Some(delegated_juror_info) = <Participants<T>>::get(del_j) {
-                        if delegated_juror_info.delegations.is_some() {
-                            // skip if delegated juror is delegator herself
-                            continue;
-                        }
-                        if Self::get_pool_item(&pool, delegated_juror_info.stake, del_j).is_some() {
-                            delegated_juror = Some(del_j.clone());
-                            break;
-                        }
+                    if Self::get_pool_item(&pool, delegated_juror_info.stake, delegated_juror)
+                        .is_some()
+                    {
+                        valid_delegated_jurors.push(delegated_juror.clone());
+                        break;
                     }
                 }
             }
 
-            delegated_juror
+            valid_delegated_jurors.choose(&mut rng).cloned()
         }
 
         /// Add a juror or delegator with the provided `lock_added` to the `selections` map.
@@ -1451,15 +1437,13 @@ mod pallet {
             selections: &mut BTreeMap<T::AccountId, SelectionValueOf<T>>,
             court_participant: &T::AccountId,
             lock_added: BalanceOf<T>,
-            random_number: u128,
         ) -> Result<(), SelectionError> {
             let delegations_opt = <Participants<T>>::get(court_participant.clone())
                 .and_then(|p_info| p_info.delegations);
             match delegations_opt {
                 Some(delegations) => {
-                    let delegated_juror =
-                        Self::get_valid_delegated_juror(delegations.as_slice(), random_number)
-                            .ok_or(SelectionError::NoValidDelegatedJuror)?;
+                    let delegated_juror = Self::get_valid_delegated_juror(delegations.as_slice())
+                        .ok_or(SelectionError::NoValidDelegatedJuror)?;
 
                     // delegated juror gets the vote weight
                     let sel_add = SelectionAdd::DelegationWeight;
@@ -1520,7 +1504,6 @@ mod pallet {
                         &mut selections,
                         &pool_item.court_participant,
                         lock_added,
-                        random_section_start,
                     ) {
                         Ok(()) => {}
                         Err(SelectionError::NoValidDelegatedJuror) => {
