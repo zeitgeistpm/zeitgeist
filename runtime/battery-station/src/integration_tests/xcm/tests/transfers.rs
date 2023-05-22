@@ -187,7 +187,7 @@ fn transfer_roc_from_relay_chain() {
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(rococo_runtime::XcmPallet::reserve_transfer_assets(
-            rococo_runtime::Origin::signed(ALICE.into()),
+            rococo_runtime::RuntimeOrigin::signed(ALICE.into()),
             Box::new(Parachain(battery_station::ID).into().into()),
             Box::new(Junction::AccountId32 { network: NetworkId::Any, id: BOB }.into().into()),
             Box::new((Here, transfer_amount).into()),

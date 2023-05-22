@@ -21,7 +21,10 @@ use crate::{
     CurrencyId, DmpQueue, Runtime, RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
-use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
+use polkadot_primitives::{
+    runtime_api::runtime_decl_for_ParachainHost::ParachainHostV3,
+    v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE},
+};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 

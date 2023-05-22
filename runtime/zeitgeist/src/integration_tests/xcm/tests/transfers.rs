@@ -187,7 +187,7 @@ fn transfer_dot_from_relay_chain() {
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
-            polkadot_runtime::Origin::signed(ALICE.into()),
+            polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
             Box::new(Parachain(zeitgeist::ID).into().into()),
             Box::new(Junction::AccountId32 { network: NetworkId::Any, id: BOB }.into().into()),
             Box::new((Here, transfer_amount).into()),
