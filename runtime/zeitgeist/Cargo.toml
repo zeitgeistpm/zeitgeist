@@ -88,7 +88,6 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.17", default-features = false, optional = true }
 
 # XCM
-kusama-runtime = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 orml-asset-registry = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-unknown-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-xcm-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }

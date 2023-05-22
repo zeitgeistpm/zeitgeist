@@ -12918,7 +12918,6 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
- "kusama-runtime",
  "log",
  "nimbus-primitives",
  "orml-asset-registry",

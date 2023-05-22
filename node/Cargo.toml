@@ -158,6 +158,7 @@ runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-benchmarking-cli/runtime-benchmarks",
+    "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
