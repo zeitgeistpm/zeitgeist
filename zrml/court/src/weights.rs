@@ -203,7 +203,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Court SelectionNonce (r:1 w:1)
     // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
     // Storage: Court Participants (r:35 w:31)
-    fn select_jurors(a: u32, ) -> Weight {
+    fn select_jurors(a: u32) -> Weight {
         Weight::from_ref_time(639_560_000)
             // Standard Error: 11_776_000
             .saturating_add(Weight::from_ref_time(2_310_239_000).saturating_mul(a.into()))

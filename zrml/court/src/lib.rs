@@ -390,9 +390,6 @@ mod pallet {
         /// In order to exit the court the juror has to exit
         /// the pool first with `prepare_exit_court`.
         AlreadyPreparedExit,
-        /// The juror or delegator is not part of the court pool.
-        /// The court participant needs to exit the court and then rejoin.
-        ParticipantNotInCourtPool,
         /// The juror was not randomly selected for the court.
         JurorNotDrawn,
         /// The juror was drawn but did not manage to commitmently vote within the court.
@@ -1123,44 +1120,56 @@ mod pallet {
 
             let now = <frame_system::Pallet<T>>::block_number();
 
-            let (active_lock, consumed_stake, joined_at) = if let Some(prev_p_info) =
-                <Participants<T>>::get(who)
-            {
-                ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
-                let (index, pool_item) = Self::get_pool_item(&pool, prev_p_info.stake, who)
-                    .ok_or(Error::<T>::ParticipantNotInCourtPool)?;
-                debug_assert!(
-                    prev_p_info.prepare_exit_at.is_none(),
-                    "If the pool item is found, the prepare_exit_at could have never been written."
-                );
-                let consumed_stake = pool_item.consumed_stake;
-                let joined_at = pool_item.joined_at;
-                pool.remove(index);
-                (prev_p_info.active_lock, consumed_stake, joined_at)
-            } else {
-                if pool.is_full() {
-                    let lowest_item = pool.first();
-                    let lowest_stake = lowest_item
-                        .map(|pool_item| pool_item.stake)
-                        .unwrap_or_else(<BalanceOf<T>>::zero);
-                    debug_assert!({
-                        let mut sorted = pool.clone();
-                        sorted.sort_by_key(|pool_item| {
-                            (pool_item.stake, pool_item.court_participant.clone())
+            let remove_weakest_if_full =
+                |mut p: CourtPoolOf<T>| -> Result<CourtPoolOf<T>, DispatchError> {
+                    if p.is_full() {
+                        let lowest_item = p.first();
+                        let lowest_stake = lowest_item
+                            .map(|pool_item| pool_item.stake)
+                            .unwrap_or_else(<BalanceOf<T>>::zero);
+                        debug_assert!({
+                            let mut sorted = p.clone();
+                            sorted.sort_by_key(|pool_item| {
+                                (pool_item.stake, pool_item.court_participant.clone())
+                            });
+                            p.len() == sorted.len()
+                                && p.iter()
+                                    .zip(sorted.iter())
+                                    .all(|(a, b)| lowest_stake <= a.stake && a == b)
                         });
-                        pool.len() == sorted.len()
-                            && pool
-                                .iter()
-                                .zip(sorted.iter())
-                                .all(|(a, b)| lowest_stake <= a.stake && a == b)
-                    });
-                    ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
-                    // remove the lowest staked court participant
-                    pool.remove(0);
-                }
+                        ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
+                        // remove the lowest staked court participant
+                        p.remove(0);
+                    }
 
-                (<BalanceOf<T>>::zero(), <BalanceOf<T>>::zero(), now)
-            };
+                    Ok(p)
+                };
+
+            let mut active_lock = <BalanceOf<T>>::zero();
+            let mut consumed_stake = <BalanceOf<T>>::zero();
+            let mut joined_at = now;
+
+            if let Some(prev_p_info) = <Participants<T>>::get(who) {
+                ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
+
+                if let Some((index, pool_item)) = Self::get_pool_item(&pool, prev_p_info.stake, who)
+                {
+                    active_lock = prev_p_info.active_lock;
+                    consumed_stake = pool_item.consumed_stake;
+                    joined_at = pool_item.joined_at;
+
+                    pool.remove(index);
+                } else {
+                    active_lock = prev_p_info.active_lock;
+                    consumed_stake = prev_p_info.active_lock;
+
+                    pool = remove_weakest_if_full(pool)?;
+                }
+            } else {
+                pool = remove_weakest_if_full(pool)?;
+            }
+
+            let (active_lock, consumed_stake, joined_at) = (active_lock, consumed_stake, joined_at);
 
             match pool.binary_search_by_key(&(amount, who), |pool_item| {
                 (pool_item.stake, &pool_item.court_participant)

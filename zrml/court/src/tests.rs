@@ -407,18 +407,22 @@ fn join_court_fails_amount_below_last_join() {
 }
 
 #[test]
-fn join_court_fails_juror_needs_to_exit() {
+fn join_court_after_prepare_exit_court() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let amount = 2 * min;
+        let now = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
 
         assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
 
-        assert_noop!(
-            Court::join_court(Origin::signed(ALICE), amount + 1),
-            Error::<Runtime>::ParticipantNotInCourtPool
-        );
+        let p_info = <Participants<Runtime>>::get(ALICE).unwrap();
+        assert_eq!(Some(now), p_info.prepare_exit_at);
+
+        assert_ok!(Court::join_court(Origin::signed(ALICE), amount + 1));
+
+        let p_info = <Participants<Runtime>>::get(ALICE).unwrap();
+        assert_eq!(None, p_info.prepare_exit_at);
     });
 }
 
