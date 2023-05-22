@@ -25,7 +25,7 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 use zeitgeist_primitives::{
     constants::mock::{
-        MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinWeight, BASE,
+        MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
     types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
@@ -102,7 +102,9 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         let origin = rng.gen::<u128>();
         let market_id = rng.gen::<u128>();
         let swap_fee = rng.gen_range(0..BASE);
-        let amount = rng.gen_range(MinLiquidity::get()..u128::MAX);
+        // Slightly dirty hack: We're assuming that the minimum liquidity is CENT. This is not
+        // guaranteed by the protocol, but will most likely remain so forever.
+        let amount = rng.gen_range(CENT..u128::MAX);
 
         Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, amount, weights })
     }

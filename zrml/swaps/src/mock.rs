@@ -39,8 +39,8 @@ use zeitgeist_primitives::{
     constants::mock::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
-        MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy,
-        MinWeight, MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
+        MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinSubsidy, MinWeight,
+        MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -98,7 +98,6 @@ impl crate::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
     type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
