@@ -24,9 +24,7 @@
 
 use crate as prediction_markets;
 use frame_support::{
-    construct_runtime, ensure, ord_parameter_types,
-    pallet_prelude::DispatchError,
-    parameter_types,
+    construct_runtime, ord_parameter_types, parameter_types,
     traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -54,16 +52,9 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketDisputeMechanism, MarketId, MarketStatus, Moment, PoolId,
-        SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
-use zrml_court::{
-    traits::{AppealCheckApi, DefaultWinnerApi, VoteCheckApi},
-    types::VoteItem,
-    Error as CError,
-};
-use zrml_market_commons::MarketCommonsPalletApi;
 
 use zeitgeist_primitives::constants::mock::{
     GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
@@ -256,50 +247,8 @@ impl zrml_authorized::Config for Runtime {
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
 
-pub struct AppealCheck;
-impl AppealCheckApi for AppealCheck {
-    type MarketId = MarketId;
-
-    fn pre_appeal(market_id: &Self::MarketId) -> Result<(), DispatchError> {
-        let market = MarketCommons::market(market_id)?;
-        ensure!(market.status == MarketStatus::Disputed, CError::<Runtime>::MarketIsNotDisputed);
-        ensure!(
-            market.dispute_mechanism == MarketDisputeMechanism::Court,
-            CError::<Runtime>::MarketDoesNotHaveCourtMechanism
-        );
-        Ok(())
-    }
-}
-
-pub struct VoteCheck;
-impl VoteCheckApi for VoteCheck {
-    type MarketId = MarketId;
-
-    fn pre_validate(market_id: &Self::MarketId, vote_item: VoteItem) -> Result<(), DispatchError> {
-        let market = MarketCommons::market(market_id)?;
-        ensure!(
-            market.matches_outcome_report(&vote_item.into_outcome().unwrap()),
-            CError::<Runtime>::OutcomeMismatch
-        );
-        Ok(())
-    }
-}
-
-pub struct DefaultWinner;
-impl DefaultWinnerApi for DefaultWinner {
-    type MarketId = MarketId;
-
-    fn default_winner(market_id: &Self::MarketId) -> Result<VoteItem, DispatchError> {
-        let market = MarketCommons::market(market_id)?;
-        let report = market.report.as_ref().ok_or(CError::<Runtime>::MarketReportNotFound)?;
-        let vote_item = VoteItem::Outcome(report.outcome.clone());
-        Ok(vote_item)
-    }
-}
-
 impl zrml_court::Config for Runtime {
     type AppealBond = AppealBond;
-    type AppealCheck = AppealCheck;
     type BlocksPerYear = BlocksPerYear;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type VotePeriod = VotePeriod;
@@ -307,7 +256,6 @@ impl zrml_court::Config for Runtime {
     type AppealPeriod = AppealPeriod;
     type LockId = LockId;
     type Currency = Balances;
-    type DefaultWinner = DefaultWinner;
     type Event = Event;
     type InflationPeriod = InflationPeriod;
     type MarketCommons = MarketCommons;
@@ -322,7 +270,6 @@ impl zrml_court::Config for Runtime {
     type RequestInterval = RequestInterval;
     type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
-    type VoteCheck = VoteCheck;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }
 

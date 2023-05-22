@@ -18,14 +18,9 @@
 
 #![cfg(test)]
 
-use crate::{
-    self as zrml_court,
-    mock_storage::pallet as mock_storage,
-    traits::{AppealCheckApi, DefaultWinnerApi, VoteCheckApi},
-    Error as PError, VoteItem,
-};
+use crate::{self as zrml_court, mock_storage::pallet as mock_storage};
 use frame_support::{
-    construct_runtime, ensure, ord_parameter_types,
+    construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
     parameter_types,
     traits::{Everything, Hooks, NeverEnsureOrigin},
@@ -45,11 +40,10 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market,
-        MarketDisputeMechanism, MarketId, MarketStatus, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
+        Moment, UncheckedExtrinsicTest,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -139,57 +133,14 @@ impl DisputeResolutionApi for MockResolution {
     }
 }
 
-pub struct AppealCheck;
-impl AppealCheckApi for AppealCheck {
-    type MarketId = MarketId;
-
-    fn pre_appeal(market_id: &Self::MarketId) -> Result<(), DispatchError> {
-        let market = MarketCommons::market(market_id)?;
-        ensure!(market.status == MarketStatus::Disputed, PError::<Runtime>::MarketIsNotDisputed);
-        ensure!(
-            market.dispute_mechanism == MarketDisputeMechanism::Court,
-            PError::<Runtime>::MarketDoesNotHaveCourtMechanism
-        );
-        Ok(())
-    }
-}
-
-pub struct VoteCheck;
-impl VoteCheckApi for VoteCheck {
-    type MarketId = MarketId;
-
-    fn pre_validate(market_id: &Self::MarketId, vote_item: VoteItem) -> Result<(), DispatchError> {
-        let market = MarketCommons::market(market_id)?;
-        ensure!(
-            market.matches_outcome_report(&vote_item.into_outcome().unwrap()),
-            PError::<Runtime>::OutcomeMismatch
-        );
-        Ok(())
-    }
-}
-
-pub struct DefaultWinner;
-impl DefaultWinnerApi for DefaultWinner {
-    type MarketId = MarketId;
-
-    fn default_winner(market_id: &Self::MarketId) -> Result<VoteItem, DispatchError> {
-        let market = MarketCommons::market(market_id)?;
-        let report = market.report.as_ref().ok_or(PError::<Runtime>::MarketReportNotFound)?;
-        let vote_item = VoteItem::Outcome(report.outcome.clone());
-        Ok(vote_item)
-    }
-}
-
 impl crate::Config for Runtime {
     type AppealBond = AppealBond;
-    type AppealCheck = AppealCheck;
     type BlocksPerYear = BlocksPerYear;
     type LockId = LockId;
     type Currency = Balances;
     type VotePeriod = VotePeriod;
     type AggregationPeriod = AggregationPeriod;
     type AppealPeriod = AppealPeriod;
-    type DefaultWinner = DefaultWinner;
     type DisputeResolution = MockResolution;
     type Event = Event;
     type InflationPeriod = InflationPeriod;
@@ -205,7 +156,6 @@ impl crate::Config for Runtime {
     type RequestInterval = RequestInterval;
     type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
-    type VoteCheck = VoteCheck;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
