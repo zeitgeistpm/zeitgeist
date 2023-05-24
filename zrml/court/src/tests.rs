@@ -2615,7 +2615,7 @@ fn choose_multiple_weighted_works() {
 }
 
 #[test]
-fn select_jurors_updates_juror_consumed_stake() {
+fn select_participants_updates_juror_consumed_stake() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
         fill_juror_pool(MaxCourtParticipants::get());
@@ -2626,7 +2626,7 @@ fn select_jurors_updates_juror_consumed_stake() {
         let jurors = CourtPool::<Runtime>::get();
         let consumed_stake_before = jurors.iter().map(|juror| juror.consumed_stake).sum::<u128>();
 
-        let new_draws = Court::select_jurors(appeal_number).unwrap();
+        let new_draws = Court::select_participants(appeal_number).unwrap();
 
         let total_draw_slashable = new_draws.iter().map(|draw| draw.slashable).sum::<u128>();
         let jurors = CourtPool::<Runtime>::get();
@@ -2640,7 +2640,7 @@ fn select_jurors_updates_juror_consumed_stake() {
 #[test_case(1usize; "second")]
 #[test_case(2usize; "third")]
 #[test_case(3usize; "fourth")]
-fn select_jurors_fails_if_not_enough_jurors(appeal_number: usize) {
+fn select_participants_fails_if_not_enough_jurors(appeal_number: usize) {
     ExtBuilder::default().build().execute_with(|| {
         let necessary_draws_weight = Court::necessary_draws_weight(appeal_number);
         for i in 0..(necessary_draws_weight - 1usize) {
@@ -2651,7 +2651,7 @@ fn select_jurors_fails_if_not_enough_jurors(appeal_number: usize) {
         }
 
         assert_noop!(
-            Court::select_jurors(appeal_number),
+            Court::select_participants(appeal_number),
             Error::<Runtime>::NotEnoughJurorsAndDelegatorsStake
         );
     });

@@ -179,13 +179,16 @@ pub struct RoundTiming<BlockNumber> {
     /// The end block of the pre-vote period.
     pub pre_vote: BlockNumber,
     /// The end block of the vote period.
-    /// Note this can also be used as the block duration for votes.
+    /// Note this can also be used as the block duration for votes,
+    /// if it is used for the initialisation of the court round ends.
     pub vote: BlockNumber,
     /// The end block of the aggregation period.
-    /// Note this can also be used as the block duration for revealing votes.
+    /// Note this can also be used as the block duration for revealing votes,
+    /// if it is used for the initialisation of the court round ends.
     pub aggregation: BlockNumber,
     /// The end block of the appeal period.
-    /// Note this can also be used as the block duration for appeals.
+    /// Note this can also be used as the block duration for appeals,
+    /// if it is used for the initialisation of the court round ends.
     pub appeal: BlockNumber,
 }
 

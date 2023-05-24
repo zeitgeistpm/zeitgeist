@@ -148,11 +148,14 @@ mod pallet {
         /// The maximum number of randomly selected n * `MinJurorStake` (n equals all draw weights)
         /// out of all jurors and delegators stake. This configuration parameter should be
         /// the maximum necessary_draws_weight multiplied by 2.
+        /// Each `MinJurorStake` (draw weight) out of `n * MinJurorStake` belongs
+        /// to one juror or one delegator.
         /// (necessary_draws_weight = 2^(appeals_len) * 31 + 2^(appeals_len) - 1)
         /// Assume MaxAppeals - 1 (= 3), example: 2^3 * 31 + 2^3 - 1 = 255
         /// => 2 * 255 = 510 = `MaxSelectedDraws`.
-        /// Why the multiplication by two? Because with delegations each juror draw weight
-        /// could potentially delegate an additional juror in addition to the delegator itself.
+        /// Why the multiplication by two?
+        /// Because each draw weight is associated with one juror account id and
+        /// potentially a delegator account id.
         #[pallet::constant]
         type MaxSelectedDraws: Get<u32>;
 
@@ -189,14 +192,14 @@ mod pallet {
         type WeightInfo: WeightInfoZeitgeist;
     }
 
-    // Number of draws for an initial market dispute.
+    // Number of draws for the initial court round.
     const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent appeals
-    // of the same market
+    // of the same court.
     const APPEAL_BASIS: usize = 2;
-    // Basis used to increase the bond for subsequent appeals of the same market
+    // Basis used to increase the bond for subsequent appeals of the same market.
     const APPEAL_BOND_BASIS: u32 = 2;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -241,7 +244,7 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     /// The pool of jurors and delegators who can get randomly selected according to their stake.
-    /// The pool is sorted by stake in ascending order [min, ..., max].
+    /// The pool is sorted by `stake` in ascending order [min, ..., max].
     #[pallet::storage]
     pub type CourtPool<T: Config> = StorageValue<_, CourtPoolOf<T>, ValueQuery>;
 
@@ -667,7 +670,7 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is the number of jurors
+        /// Complexity: `O(log(n))`, where `n` is the number of participants
         /// in the list of random selections (draws).
         #[pallet::weight(T::WeightInfo::vote(T::MaxSelectedDraws::get()))]
         #[transactional]
@@ -718,7 +721,7 @@ mod pallet {
 
         /// Denounce a juror during the voting period for which the commitment vote is known.
         /// This is useful to punish the behaviour that jurors reveal
-        /// their commitments before the voting period ends.
+        /// their commitments to others before the voting period ends.
         /// A check of `commitment_hash == hash(juror ++ vote_item ++ salt)`
         /// is performed for validation.
         ///
@@ -732,7 +735,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is the number of selected draws.
+        /// Complexity: `O(log(n))`, where `n` is the number of selected draws
+        /// in the specified court.
         #[pallet::weight(T::WeightInfo::denounce_vote(T::MaxSelectedDraws::get()))]
         #[transactional]
         pub fn denounce_vote(
@@ -800,8 +804,9 @@ mod pallet {
             Ok(Some(T::WeightInfo::denounce_vote(draws_len)).into())
         }
 
-        /// Reveal the commitment vote of the caller juror.
-        /// A check of `commitment_hash == hash(juror ++ vote_item ++ salt)` is performed for validation.
+        /// Reveal the commitment vote of the caller, who is a selected juror.
+        /// A check of `commitment_hash == hash(juror ++ vote_item ++ salt)`
+        /// is performed for validation.
         ///
         /// # Arguments
         ///
@@ -811,7 +816,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is the number of selected draws.
+        /// Complexity: `O(log(n))`, where `n` is the number of selected draws
+        /// in the specified court.
         #[pallet::weight(T::WeightInfo::reveal_vote(T::MaxSelectedDraws::get()))]
         #[transactional]
         pub fn reveal_vote(
@@ -881,7 +887,7 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: It depends heavily on the complexity of `select_jurors`.
+        /// Complexity: It depends heavily on the complexity of `select_participants`.
         #[pallet::weight(T::WeightInfo::appeal(
             T::MaxCourtParticipants::get(),
             T::MaxAppeals::get(),
@@ -915,13 +921,13 @@ mod pallet {
 
             let last_resolve_at = court.round_ends.appeal;
 
-            // used for benchmarking, juror pool is queried inside `select_jurors`
+            // used for benchmarking, juror pool is queried inside `select_participants`
             let pool_len = <CourtPool<T>>::decode_len().unwrap_or(0) as u32;
 
             let mut ids_len_1 = 0u32;
             // if appeal_number == MaxAppeals, then don't start a new appeal round
             if appeal_number < T::MaxAppeals::get() as usize {
-                let new_draws = Self::select_jurors(appeal_number)?;
+                let new_draws = Self::select_participants(appeal_number)?;
                 let request_block = <RequestBlock<T>>::get();
                 debug_assert!(request_block >= now, "Request block must be greater than now.");
                 let round_timing = RoundTiming {
@@ -1266,12 +1272,12 @@ mod pallet {
             Weight::zero()
         }
 
-        // Get `n` unique and ordered random `MinJurorStake` section starts
+        // Get `n` unique and ordered random `MinJurorStake` section ends
         // from the random number generator.
         // Uses Partial Fisher Yates shuffle and drawing without replacement.
         // The time complexity is O(n).
-        // Return a vector of n unique random numbers between 1 and max (inclusive).
-        pub(crate) fn get_n_random_section_starts(
+        // Return a vector of n unique random numbers between ´MinJurorStake´ and ´max´ (inclusive).
+        pub(crate) fn get_n_random_section_ends(
             n: usize,
             max: u128,
         ) -> Result<BTreeSet<u128>, DispatchError> {
@@ -1283,7 +1289,7 @@ mod pallet {
             debug_assert!(sections_len >= (n as u128));
 
             let mut swaps = BTreeMap::<u128, u128>::new();
-            let mut random_section_starts = BTreeSet::new();
+            let mut random_section_ends = BTreeSet::new();
 
             for i in 0..(n as u128) {
                 let visited_i = *swaps.get(&i).unwrap_or(&i);
@@ -1300,13 +1306,13 @@ mod pallet {
 
                 // add one because we need numbers between 1 and sections_len (inclusive)
                 let random_index = unused_random_number.saturating_add(1);
-                let random_section_start = random_index.saturating_mul(min_juror_stake);
-                random_section_starts.insert(random_section_start);
+                let random_section_end = random_index.saturating_mul(min_juror_stake);
+                random_section_ends.insert(random_section_end);
             }
 
-            debug_assert!(random_section_starts.len() == n);
+            debug_assert!(random_section_ends.len() == n);
 
-            Ok(random_section_starts)
+            Ok(random_section_ends)
         }
 
         // Adds active lock amount.
@@ -1475,30 +1481,30 @@ mod pallet {
         // If a delegator is chosen by a random number, one delegated juror gets the vote weight.
         fn get_selections(
             pool: &mut CourtPoolOf<T>,
-            random_section_starts: BTreeSet<u128>,
-            cumulative_section_starts: Vec<(u128, bool)>,
+            random_section_ends: BTreeSet<u128>,
+            cumulative_section_ends: Vec<(u128, bool)>,
         ) -> BTreeMap<T::AccountId, SelectionValueOf<T>> {
-            debug_assert!(pool.len() == cumulative_section_starts.len());
+            debug_assert!(pool.len() == cumulative_section_ends.len());
             debug_assert!({
-                let prev = cumulative_section_starts.clone();
-                let mut sorted = cumulative_section_starts.clone();
+                let prev = cumulative_section_ends.clone();
+                let mut sorted = cumulative_section_ends.clone();
                 sorted.sort();
                 prev.len() == sorted.len() && prev.iter().zip(sorted.iter()).all(|(a, b)| a == b)
             });
             debug_assert!({
-                random_section_starts.iter().all(|random_section_start| {
-                    let last = cumulative_section_starts.last().unwrap_or(&(0, false)).0;
-                    *random_section_start <= last
+                random_section_ends.iter().all(|random_section_end| {
+                    let last = cumulative_section_ends.last().unwrap_or(&(0, false)).0;
+                    *random_section_end <= last
                 })
             });
 
             let mut selections = BTreeMap::<T::AccountId, SelectionValueOf<T>>::new();
             let mut invalid_juror_indices = Vec::<usize>::new();
 
-            for random_section_start in random_section_starts {
+            for random_section_end in random_section_ends {
                 let allow_zero_stake = false;
-                let range_index = cumulative_section_starts
-                    .binary_search(&(random_section_start, allow_zero_stake))
+                let range_index = cumulative_section_ends
+                    .binary_search(&(random_section_end, allow_zero_stake))
                     .unwrap_or_else(|i| i);
                 if let Some(pool_item) = pool.get_mut(range_index) {
                     let unconsumed = pool_item.stake.saturating_sub(pool_item.consumed_stake);
@@ -1582,7 +1588,7 @@ mod pallet {
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
 
             let mut total_unconsumed = 0u128;
-            let mut cumulative_section_starts = Vec::new();
+            let mut cumulative_section_ends = Vec::new();
             let mut running_total = 0u128;
             for pool_item in &pool {
                 let unconsumed = pool_item
@@ -1598,7 +1604,7 @@ mod pallet {
                 // might take the wrong juror (with zero stake)
                 // (running total would be the same for two consecutive jurors)
                 let zero_stake = unconsumed.is_zero();
-                cumulative_section_starts.push((running_total, zero_stake));
+                cumulative_section_ends.push((running_total, zero_stake));
             }
             debug_assert!(
                 (total_unconsumed % min_juror_stake).is_zero(),
@@ -1610,10 +1616,10 @@ mod pallet {
                 total_unconsumed >= required_stake,
                 Error::<T>::NotEnoughJurorsAndDelegatorsStake
             );
-            let random_section_starts =
-                Self::get_n_random_section_starts(draw_weight, total_unconsumed)?;
+            let random_section_ends =
+                Self::get_n_random_section_ends(draw_weight, total_unconsumed)?;
             let selections =
-                Self::get_selections(&mut pool, random_section_starts, cumulative_section_starts);
+                Self::get_selections(&mut pool, random_section_ends, cumulative_section_ends);
             <CourtPool<T>>::put(pool);
 
             Ok(Self::convert_selections_to_draws(selections))
@@ -1646,7 +1652,7 @@ mod pallet {
         // in further court rounds shrinks.
         //
         // Returns the new draws.
-        pub(crate) fn select_jurors(
+        pub(crate) fn select_participants(
             appeal_number: usize,
         ) -> Result<SelectedDrawsOf<T>, DispatchError> {
             let necessary_draws_weight = Self::necessary_draws_weight(appeal_number);
@@ -2057,7 +2063,7 @@ mod pallet {
 
             let appeal_number = 0usize;
             let pool_len = <CourtPool<T>>::decode_len().unwrap_or(0) as u32;
-            let new_draws = Self::select_jurors(appeal_number)?;
+            let new_draws = Self::select_participants(appeal_number)?;
 
             let now = <frame_system::Pallet<T>>::block_number();
             let request_block = <RequestBlock<T>>::get();

@@ -570,13 +570,13 @@ benchmarks! {
         Court::<T>::handle_inflation(now);
     }
 
-    select_jurors {
+    select_participants {
         let a in 0..(T::MaxAppeals::get() - 1);
         fill_pool::<T>(T::MaxCourtParticipants::get())?;
 
         fill_delegations::<T>();
     }: {
-        let _ = Court::<T>::select_jurors(a as usize).unwrap();
+        let _ = Court::<T>::select_participants(a as usize).unwrap();
     }
 
     on_dispute {
