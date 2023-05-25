@@ -13,28 +13,21 @@ else
     rustflags=$1
 fi
 
-test_package_with_feature primitives default $rustflags
-test_package_with_feature primitives std $rustflags
+RUSTFLAGS="${rustflags#-Cinstrument-coverage}" cargo test --all-features
 
-no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
+if [[ $rustflags == *"-Cinstrument-coverage"* ]]; then
+  test_package_with_feature primitives std "$rustflags"
+  no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
 
-cargo test --package zeitgeist-runtime --lib -- --nocapture
+  for package in zrml/*; do
+    if [[ " ${no_runtime_benchmarks[*]} " != *" ${package##*/} "* ]]; then
+      echo "TEST $package std,runtime-benchmarks"
+      test_package_with_feature "$package" std,runtime-benchmarks "$rustflags"
+    else
+      echo "TEST $package std"
+      test_package_with_feature "$package" std "$rustflags"
+    fi
+  done
 
-# TODO(#848): Delete when feature "with-global-dispute" is removed
-cargo test -p zrml-prediction-markets --features with-global-disputes,parachain
-
-
-for package in zrml/*
-do
-  test_package_with_feature "$package" std "$rustflags"
-  echo "TEST $package std"
-
-  if [[ " ${no_runtime_benchmarks[*]} " != *" ${package##*/} "* ]]; then
-    test_package_with_feature "$package" std,runtime-benchmarks "$rustflags"
-    echo "TEST $package std,runtime-benchmarks"
-  fi
-done
-
-if [[ ! -z "$rustflags" ]]; then
-    grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --llvm --ignore '../*' --ignore "/*" -o $RUNNER_TEMP/zeitgeist-test-coverage.lcov
+  grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --llvm --ignore '../*' --ignore "/*" -o $RUNNER_TEMP/zeitgeist-test-coverage.lcov
 fi
