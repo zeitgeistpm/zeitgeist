@@ -556,7 +556,7 @@ macro_rules! impl_config_traits {
             type ExistentialDeposits = ExistentialDeposits;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
-            type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+            type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
             type OnKilledTokenAccount = ();
             type OnNewTokenAccount = ();
             type ReserveIdentifier = [u8; 8];
