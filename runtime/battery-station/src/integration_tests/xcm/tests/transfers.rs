@@ -235,7 +235,7 @@ fn transfer_roc_to_relay_chain() {
     });
 
     RococoNet::execute_with(|| {
-        assert_eq!(rococo_runtime::Balances::free_balance(&BOB.into()), 948_894_198_216);
+        assert_eq!(rococo_runtime::Balances::free_balance(&BOB.into()), 999_988_806_429);
     });
 }
 

@@ -235,7 +235,7 @@ fn transfer_dot_to_relay_chain() {
     });
 
     PolkadotNet::execute_with(|| {
-        assert_eq!(polkadot_runtime::Balances::free_balance(&BOB.into()), 19_530_582_548);
+        assert_eq!(polkadot_runtime::Balances::free_balance(&BOB.into()), 19_573_469_824);
     });
 }
 
