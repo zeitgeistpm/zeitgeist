@@ -2,11 +2,11 @@
 
 set -e
 
-echo "*** Initializing WASM build environment"
+echo "*** Initializing build environment"
 
-if [ -z $CI_PROJECT_NAME ] ; then
-   rustup update nightly-2022-04-13
-   rustup update stable
-fi
+sudo apt-get update && \
+   sudo apt-get install -y build-essential clang curl libssl-dev protobuf-compiler
 
-rustup target add wasm32-unknown-unknown --toolchain nightly-2022-04-13
+curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+   source "$HOME/.cargo/env" && \
+   rustup show
