@@ -18,7 +18,7 @@
 
 use crate::{
     parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist, AccountId, CurrencyId,
-    DmpQueue, Origin, Runtime, XcmpQueue,
+    DmpQueue, Runtime, RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -38,7 +38,7 @@ decl_test_relay_chain! {
 decl_test_parachain! {
     pub struct Zeitgeist {
         Runtime = Runtime,
-        Origin = Origin,
+        RuntimeOrigin = RuntimeOrigin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
         new_ext = para_ext(zeitgeist::ID),
@@ -48,7 +48,7 @@ decl_test_parachain! {
 decl_test_parachain! {
     pub struct Sibling {
         Runtime = Runtime,
-        Origin = Origin,
+        RuntimeOrigin = RuntimeOrigin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
         new_ext = para_ext(PARA_ID_SIBLING),

@@ -18,10 +18,13 @@
 
 use crate::{
     parameters::ZeitgeistTreasuryAccount, xcm_config::config::battery_station, AccountId,
-    CurrencyId, DmpQueue, Origin, Runtime, XcmpQueue,
+    CurrencyId, DmpQueue, Runtime, RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
-use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
+use polkadot_primitives::{
+    runtime_api::runtime_decl_for_ParachainHost::ParachainHostV3,
+    v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE},
+};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
@@ -38,7 +41,7 @@ decl_test_relay_chain! {
 decl_test_parachain! {
     pub struct Zeitgeist {
         Runtime = Runtime,
-        Origin = Origin,
+        RuntimeOrigin = RuntimeOrigin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
         new_ext = para_ext(battery_station::ID),
@@ -48,7 +51,7 @@ decl_test_parachain! {
 decl_test_parachain! {
     pub struct Sibling {
         Runtime = Runtime,
-        Origin = Origin,
+        RuntimeOrigin = RuntimeOrigin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
         new_ext = para_ext(PARA_ID_SIBLING),

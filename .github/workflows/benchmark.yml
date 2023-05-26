@@ -17,6 +17,9 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       # Ensure that at most one benchmark worklow runs across all workflows
       - name: Turnstyle
         uses: softprops/turnstyle@v1

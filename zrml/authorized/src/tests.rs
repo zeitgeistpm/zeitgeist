@@ -20,7 +20,7 @@
 
 use crate::{
     market_mock,
-    mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB},
+    mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Runtime, RuntimeOrigin, BOB},
     mock_storage::pallet as mock_storage,
     AuthorizedOutcomeReports, Error,
 };
@@ -36,7 +36,7 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(1)
         ));
@@ -55,7 +55,7 @@ fn authorize_market_outcome_does_not_reset_dispute_resolution() {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
 
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(1),
         ));
@@ -69,7 +69,7 @@ fn authorize_market_outcome_does_not_reset_dispute_resolution() {
         assert_eq!(mock_storage::MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_0), vec![0]);
 
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(2)
         ));
@@ -88,7 +88,7 @@ fn authorize_market_outcome_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Authorized::authorize_market_outcome(
-                Origin::signed(AuthorizedDisputeResolutionUser::get()),
+                RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
                 0,
                 OutcomeReport::Scalar(1)
             ),
@@ -105,7 +105,7 @@ fn authorize_market_outcome_fails_on_non_authorized_market() {
         Markets::<Runtime>::insert(0, market);
         assert_noop!(
             Authorized::authorize_market_outcome(
-                Origin::signed(AuthorizedDisputeResolutionUser::get()),
+                RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
                 0,
                 OutcomeReport::Scalar(1)
             ),
@@ -122,7 +122,7 @@ fn authorize_market_outcome_fails_on_undisputed_market() {
         Markets::<Runtime>::insert(0, market);
         assert_noop!(
             Authorized::authorize_market_outcome(
-                Origin::signed(AuthorizedDisputeResolutionUser::get()),
+                RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
                 0,
                 OutcomeReport::Scalar(1)
             ),
@@ -137,7 +137,7 @@ fn authorize_market_outcome_fails_on_invalid_report() {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_noop!(
             Authorized::authorize_market_outcome(
-                Origin::signed(AuthorizedDisputeResolutionUser::get()),
+                RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
                 0,
                 OutcomeReport::Categorical(123)
             ),
@@ -151,7 +151,11 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_noop!(
-            Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
+            Authorized::authorize_market_outcome(
+                RuntimeOrigin::signed(BOB),
+                0,
+                OutcomeReport::Scalar(1)
+            ),
             DispatchError::BadOrigin,
         );
     });
@@ -183,7 +187,7 @@ fn on_resolution_removes_stored_outcomes() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(2)
         ));
@@ -199,12 +203,12 @@ fn on_resolution_returns_the_reported_outcome() {
         Markets::<Runtime>::insert(0, &market);
         // Authorize outcome, then overwrite it.
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(1)
         ));
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(2)
         ));
@@ -221,12 +225,12 @@ fn authorized_market_outcome_can_handle_multiple_markets() {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         Markets::<Runtime>::insert(1, market_mock::<Runtime>());
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(123)
         ));
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             1,
             OutcomeReport::Scalar(456)
         ));
@@ -250,7 +254,7 @@ fn get_auto_resolve_works() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(1)
         ));
