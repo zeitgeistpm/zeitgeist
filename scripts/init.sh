@@ -4,9 +4,15 @@ set -e
 
 echo "*** Initializing build environment"
 
-sudo apt-get update && \
+# No sudo during docker build
+if [ -f /.dockerenv ]; then
+   apt-get update && \
+   apt-get install -y build-essential clang curl libssl-dev protobuf-compiler
+else
+   sudo apt-get update && \
    sudo apt-get install -y build-essential clang curl libssl-dev protobuf-compiler
+fi
 
 curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-   source "$HOME/.cargo/env" && \
+   . "$HOME/.cargo/env" && \
    rustup show
