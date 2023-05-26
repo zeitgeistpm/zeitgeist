@@ -870,7 +870,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type Event = Event;
             type MaxApprovals = MaxApprovals;
-            type OnSlash = ();
+            type OnSlash = Treasury;
             type PalletId = TreasuryPalletId;
             type ProposalBond = ProposalBond;
             type ProposalBondMinimum = ProposalBondMinimum;
