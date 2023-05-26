@@ -89,7 +89,7 @@ jobs:
         run: |
           # Ensure context is GitHub hosted runner
           # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-          if [[ ${{ runner.name }} == "GitHub Actions"* ]]; then
+          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
             echo "Freeing up space in GitHub hosted runner"
             sudo rm -rf /usr/share/dotnet
             sudo rm -rf /opt/ghc
