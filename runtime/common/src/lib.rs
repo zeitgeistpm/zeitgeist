@@ -563,7 +563,7 @@ macro_rules! impl_config_traits {
 
         pub struct CurrencyHooks<R>(sp_std::marker::PhantomData<R>);
         impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, CurrencyId, Balance> for CurrencyHooks<C> {
-            type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+            type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
             type OnKilledTokenAccount = ();
             type OnNewTokenAccount = ();
             type OnSlash = ();
