@@ -42,8 +42,10 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
+/// Storage cost per byte and item.
+// Approach: Achieve same cost per item and bytes in relation to total supply as on Polkadot.
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
-    items as Balance * 20 * BASE + (bytes as Balance) * 100 * MILLI
+    items as Balance * 150 * CENT + (bytes as Balance) * 75 * MICRO
 }
 
 // Rikiddo and TokensConfig
