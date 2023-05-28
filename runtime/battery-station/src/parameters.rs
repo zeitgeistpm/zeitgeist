@@ -80,6 +80,22 @@ parameter_types! {
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+    // Contracts
+    pub const ContractsCallFilters;
+    pub const ContractsDepositPerItem;
+    pub const ContractsDepositPerByte;
+    pub const ContractsCallStackDepth;
+    pub const pallet_transaction_payment::Pallet<Self>;
+    pub const pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
+    pub const ContractsChainExtensions;
+    pub const ContractsDeletionQueueDepth;
+    pub const ContractsDeletionWeightLimit;
+    pub const ContractsSchedule;
+    pub const ContractsScheduleAddressGenerator;
+    pub const ContractsMaxCodeLen;
+    pub const ContractsMaxStorageKeyLen;
+
+
     // Court
     /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;

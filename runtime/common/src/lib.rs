@@ -303,6 +303,7 @@ macro_rules! create_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 31,
                 Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
+                // Contracts: pallet_contracts = 33,
 
                 // Third-party
                 AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
@@ -653,6 +654,27 @@ macro_rules! impl_config_traits {
             type RuntimeOrigin = RuntimeOrigin;
             type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
+        }
+
+        impl pallet_contracts::Config for Runtime {
+            type Time = Timestamp;
+            type Randomness = RandomnessCollectiveFlip;
+            type Currency = Balances;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
+            type CallFilter = ContractsCallFilters;
+            type DepositPerItem = ContractsDepositPerItem;
+            type DepositPerByte = ContractsDepositPerByte;
+            type CallStack = ContractsCallStackDepth;
+            type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+            type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
+            type ChainExtension = ContractsChainExtensions;
+            type DeletionQueueDepth = ContractsDeletionQueueDepth;
+            type DeletionWeightLimit = ContractsDeletionWeightLimit;
+            type Schedule = ContractsSchedule;
+            type AddressGenerator = ContractsAddressGenerator;
+            type MaxCodeLen = ContractsMaxCodeLen;
+            type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
         }
 
         impl pallet_democracy::Config for Runtime {
@@ -1120,6 +1142,7 @@ macro_rules! impl_config_traits {
     }
 }
 
+// TODO: Contracts runtime api
 // Implement runtime apis
 #[macro_export]
 macro_rules! create_runtime_api {
