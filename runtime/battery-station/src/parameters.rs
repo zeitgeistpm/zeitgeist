@@ -119,9 +119,9 @@ parameter_types! {
 
     // Identity
     /// The amount held on deposit for a registered identity
-    pub const BasicDeposit: Balance = 8 * BASE;
+    pub const BasicDeposit: Balance = deposit(1, 258);
     /// The amount held on deposit per additional field for a registered identity.
-    pub const FieldDeposit: Balance = 256 * CENT;
+    pub const FieldDeposit: Balance = deposit(0, 66);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 64;
