@@ -133,7 +133,7 @@ parameter_types! {
     /// The amount held on deposit for a registered subaccount. This should account for the fact
     /// that one storage item's value will increase by the size of an account ID, and there will
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
-    pub const SubAccountDeposit: Balance = 2 * BASE;
+    pub const SubAccountDeposit: Balance = deposit(1, 53);
 
     // Liquidity Mining parameters
     /// Pallet identifier, mainly used for named balance reserves.
