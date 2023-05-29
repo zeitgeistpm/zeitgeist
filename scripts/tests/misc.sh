@@ -13,7 +13,11 @@ else
     rustflags=$1
 fi
 
-RUSTFLAGS="${rustflags#-Cinstrument-coverage}" cargo test --all-features
+# Test standalone
+RUSTFLAGS="${rustflags#-Cinstrument-coverage}" cargo test --features=default,runtime-benchmarks
+
+# Test parachain
+RUSTFLAGS="${rustflags#-Cinstrument-coverage}" cargo test --features=default,parachain,runtime-benchmarks
 
 if [[ $rustflags == *"-Cinstrument-coverage"* ]]; then
   test_package_with_feature primitives std "$rustflags"
