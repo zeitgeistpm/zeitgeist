@@ -17,8 +17,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    parameters::ZeitgeistTreasuryAccount, xcm_config::config::battery_station, AccountId,
-    CurrencyId, DmpQueue, Runtime, RuntimeOrigin, XcmpQueue,
+    parameters::ZeitgeistTreasuryAccount, xcm_config::config::battery_station, CurrencyId,
+    DmpQueue, Runtime, RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::{
@@ -78,11 +78,9 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
 
     let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(AccountId::from(ALICE), roc(2002))],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
+    pallet_balances::GenesisConfig::<Runtime> { balances: vec![(ALICE, roc(2002))] }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
     polkadot_runtime_parachains::configuration::GenesisConfig::<Runtime> {
         config: default_parachains_host_configuration(),
@@ -104,8 +102,8 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
 pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
     ExtBuilder::default()
         .set_balances(vec![
-            (AccountId::from(ALICE), CurrencyId::Ztg, ztg(10)),
-            (AccountId::from(ALICE), FOREIGN_PARENT_ID, roc(10)),
+            (ALICE, CurrencyId::Ztg, ztg(10)),
+            (ALICE, FOREIGN_PARENT_ID, roc(10)),
             (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, roc(1)),
         ])
         .set_parachain_id(parachain_id)
