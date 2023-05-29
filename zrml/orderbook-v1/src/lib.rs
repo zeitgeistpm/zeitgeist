@@ -261,10 +261,10 @@ mod pallet {
         type MarketId: MarketId;
 
         type Shares: MultiReservableCurrency<
-            Self::AccountId,
-            Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::MarketId>,
-        >;
+                Self::AccountId,
+                Balance = BalanceOf<Self>,
+                CurrencyId = Asset<Self::MarketId>,
+            >;
 
         type WeightInfo: WeightInfoZeitgeist;
     }

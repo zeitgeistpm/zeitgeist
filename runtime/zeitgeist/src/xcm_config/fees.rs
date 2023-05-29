@@ -60,10 +60,10 @@ pub struct FixedConversionRateProvider<AssetRegistry>(PhantomData<AssetRegistry>
 
 impl<
     AssetRegistry: orml_traits::asset_registry::Inspect<
-        AssetId = CurrencyId,
-        Balance = Balance,
-        CustomMetadata = CustomMetadata,
-    >,
+            AssetId = CurrencyId,
+            Balance = Balance,
+            CustomMetadata = CustomMetadata,
+        >,
 > orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
 {
     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
