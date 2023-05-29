@@ -19,7 +19,7 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "parachain")]
 

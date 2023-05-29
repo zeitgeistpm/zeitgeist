@@ -55,8 +55,8 @@ fn transfer_ztg_to_sibling() {
     });
 
     Zeitgeist::execute_with(|| {
-        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
+        assert_eq!(Balances::free_balance(<[u8; 32] as std::convert::Into<<Zeitgeist as sp_runtime::traits::AppVerify>::AccountId>>::into(ALICE)), alice_initial_balance);
+        assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Ztg,
@@ -75,10 +75,10 @@ fn transfer_ztg_to_sibling() {
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance - transfer_amount);
+        assert_eq!(Balances::free_balance(<[u8; 32] as std::convert::Into<<Zeitgeist as sp_runtime::traits::AppVerify>::AccountId>>::into(ALICE)), alice_initial_balance - transfer_amount);
 
         // Verify that the amount transferred is now part of the sibling account here
-        assert_eq!(Balances::free_balance(&sibling_parachain_account()), transfer_amount);
+        assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {
@@ -117,15 +117,15 @@ fn transfer_ztg_sibling_to_zeitgeist() {
     Zeitgeist::execute_with(|| {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
 
-        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
+        assert_eq!(Balances::free_balance(<[u8; 32] as std::convert::Into<<Zeitgeist as sp_runtime::traits::AppVerify>::AccountId>>::into(ALICE)), alice_initial_balance);
         assert_eq!(
-            Balances::free_balance(&sibling_parachain_account()),
+            Balances::free_balance(sibling_parachain_account()),
             sibling_sovereign_initial_balance
         );
     });
 
     Sibling::execute_with(|| {
-        assert_eq!(Balances::free_balance(&zeitgeist_parachain_account()), 0);
+        assert_eq!(Balances::free_balance(zeitgeist_parachain_account()), 0);
         assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(BOB.into()),
@@ -154,13 +154,13 @@ fn transfer_ztg_sibling_to_zeitgeist() {
     Zeitgeist::execute_with(|| {
         // Verify that ALICE now has initial balance + amount transferred - fee
         assert_eq!(
-            Balances::free_balance(&ALICE.into()),
+            Balances::free_balance(<[u8; 32] as std::convert::Into<<Zeitgeist as sp_runtime::traits::AppVerify>::AccountId>>::into(ALICE)),
             alice_initial_balance + transfer_amount - ztg_fee(),
         );
 
         // Verify that the reserve has been adjusted properly
         assert_eq!(
-            Balances::free_balance(&sibling_parachain_account()),
+            Balances::free_balance(sibling_parachain_account()),
             sibling_sovereign_initial_balance - transfer_amount
         );
 
@@ -183,7 +183,7 @@ fn transfer_dot_from_relay_chain() {
     });
 
     PolkadotNet::execute_with(|| {
-        let initial_balance = polkadot_runtime::Balances::free_balance(&ALICE.into());
+        let initial_balance = polkadot_runtime::Balances::free_balance(<[u8; 32] as std::convert::Into<PolkadotNet::AccountId>>::into(ALICE));
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
@@ -235,7 +235,7 @@ fn transfer_dot_to_relay_chain() {
     });
 
     PolkadotNet::execute_with(|| {
-        assert_eq!(polkadot_runtime::Balances::free_balance(&BOB.into()), 19_573_469_824);
+        assert_eq!(polkadot_runtime::Balances::free_balance(BOB.into()), 19_573_469_824);
     });
 }
 
@@ -271,8 +271,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
     });
 
     Zeitgeist::execute_with(|| {
-        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
-        assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
+        assert_eq!(Balances::free_balance(<[u8; 32] as std::convert::Into<<Zeitgeist as sp_runtime::traits::AppVerify>::AccountId>>::into(ALICE)), alice_initial_balance);
+        assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Ztg,
@@ -291,10 +291,10 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance - transfer_amount);
+        assert_eq!(Balances::free_balance(<[u8; 32] as std::convert::Into<<Zeitgeist as sp_runtime::traits::AppVerify>::AccountId>>::into(ALICE)), alice_initial_balance - transfer_amount);
 
         // Verify that the amount transferred is now part of the sibling account here
-        assert_eq!(Balances::free_balance(&sibling_parachain_account()), transfer_amount);
+        assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {

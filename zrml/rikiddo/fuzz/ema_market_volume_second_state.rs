@@ -19,7 +19,7 @@
 //! -> change state (update), update, get ema, clear
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![no_main]
 

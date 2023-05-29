@@ -79,7 +79,7 @@ fn add_vote_outcome_works() {
             10 * BASE,
         )
         .unwrap();
-        let free_balance_alice_before = Balances::free_balance(&ALICE);
+        let free_balance_alice_before = Balances::free_balance(ALICE);
         let free_balance_reward_account =
             Balances::free_balance(GlobalDisputes::reward_account(&market_id));
         assert_ok!(GlobalDisputes::add_vote_outcome(
@@ -96,7 +96,7 @@ fn add_vote_outcome_works() {
             .into(),
         );
         assert_eq!(
-            Balances::free_balance(&ALICE),
+            Balances::free_balance(ALICE),
             free_balance_alice_before - VotingOutcomeFee::get()
         );
         assert_eq!(
@@ -212,9 +212,9 @@ fn reward_outcome_owner_works_for_multiple_owners() {
         };
         <Winners<Runtime>>::insert(market_id, winner_info);
 
-        let free_balance_alice_before = Balances::free_balance(&ALICE);
-        let free_balance_bob_before = Balances::free_balance(&BOB);
-        let free_balance_charlie_before = Balances::free_balance(&CHARLIE);
+        let free_balance_alice_before = Balances::free_balance(ALICE);
+        let free_balance_bob_before = Balances::free_balance(BOB);
+        let free_balance_charlie_before = Balances::free_balance(CHARLIE);
 
         assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
@@ -230,12 +230,12 @@ fn reward_outcome_owner_works_for_multiple_owners() {
             .into(),
         );
         assert_eq!(
-            Balances::free_balance(&ALICE),
+            Balances::free_balance(ALICE),
             free_balance_alice_before + VotingOutcomeFee::get()
         );
-        assert_eq!(Balances::free_balance(&BOB), free_balance_bob_before + VotingOutcomeFee::get());
+        assert_eq!(Balances::free_balance(BOB), free_balance_bob_before + VotingOutcomeFee::get());
         assert_eq!(
-            Balances::free_balance(&CHARLIE),
+            Balances::free_balance(CHARLIE),
             free_balance_charlie_before + VotingOutcomeFee::get()
         );
         assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
@@ -301,7 +301,7 @@ fn reward_outcome_owner_works_for_one_owner() {
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
-        let free_balance_alice_before = Balances::free_balance(&ALICE);
+        let free_balance_alice_before = Balances::free_balance(ALICE);
 
         assert_ok!(GlobalDisputes::reward_outcome_owner(RuntimeOrigin::signed(ALICE), market_id));
 
@@ -310,7 +310,7 @@ fn reward_outcome_owner_works_for_one_owner() {
         );
 
         assert_eq!(
-            Balances::free_balance(&ALICE),
+            Balances::free_balance(ALICE),
             free_balance_alice_before + 3 * VotingOutcomeFee::get()
         );
         assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
@@ -336,10 +336,10 @@ fn reward_outcome_owner_works_for_no_reward_funds() {
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
-        let free_balance_alice_before = Balances::free_balance(&ALICE);
+        let free_balance_alice_before = Balances::free_balance(ALICE);
 
         let reward_account_free_balance =
-            Balances::free_balance(&GlobalDisputes::reward_account(&market_id));
+            Balances::free_balance(GlobalDisputes::reward_account(&market_id));
         // this case happens, when add_vote_outcome wasn't called
         // so no loosers, who provided the VotingOutcomeFee
         assert!(reward_account_free_balance.is_zero());
@@ -350,7 +350,7 @@ fn reward_outcome_owner_works_for_no_reward_funds() {
             Event::<Runtime>::OutcomeOwnersRewardedWithNoFunds { market_id }.into(),
         );
 
-        assert_eq!(Balances::free_balance(&ALICE), free_balance_alice_before);
+        assert_eq!(Balances::free_balance(ALICE), free_balance_alice_before);
         assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
         assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_none());
     });

@@ -48,7 +48,7 @@ where
         let mut total = 0;
         #[allow(
             // Iterator will never yield more than `usize::MAX` elements
-            clippy::integer_arithmetic
+            clippy::arithmetic_side_effects
         )]
         let accounts = <Accounts<T>>::iter()
             .filter_map(|(k0, k1, v)| {
