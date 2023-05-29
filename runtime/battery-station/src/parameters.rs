@@ -22,11 +22,11 @@
     clippy::integer_arithmetic
 )]
 
-use super::VERSION;
+use super::{Runtime, RuntimeCall, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
-    traits::WithdrawReasons,
+    traits::{Nothing, WithdrawReasons},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         Weight,
@@ -81,21 +81,17 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Contracts
-    //pub const ContractsCallFilters 
-    pub const ContractsDepositPerItem = deposit(1,0);
-    pub const ContractsDepositPerByte = deposit(0,1);
-    /*
-    pub const ContractsCallStackDepth;
-    pub const pallet_transaction_payment::Pallet<Self>;
-    pub const pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
-    pub const ContractsChainExtensions;
-    pub const ContractsDeletionQueueDepth;
-    pub const ContractsDeletionWeightLimit;
-    pub const ContractsSchedule;
-    pub const ContractsScheduleAddressGenerator;
-    pub const ContractsMaxCodeLen;
-    pub const ContractsMaxStorageKeyLen;
-    */
+    pub const ContractsCallFilters: Contains<RuntimeCall> = Nothing;
+    pub const ContractsCallStackDepth: smallvec::Array<Item = Frame<Runtime>> = [pallet_contracts::Frame<Runtime>; 7]
+    pub const ContractsChainExtensions: pallet_contracts::chain_extension::ChainExtension<pallet_contracts::Pallet<Runtime>>;
+    pub const ContractsDeletionQueueDepth: u32 = RuntimeBlockWeights::get().max_block * Perbill::from_percent(10);
+    pub const ContractsDeletionWeightLimit: Weight = 128;
+    pub const ContractsDepositPerByte: Balance = deposit(0,1);
+    pub const ContractsDepositPerItem: Balance = deposit(1,0);
+    pub const ContractsSchedule: pallet_contracts::schedule::Schedule<pallet_contracts::Pallet<Runtime>> = Default::default();
+    pub const ContractsScheduleAddressGenerator: pallet_contracts::AddressGenerator<pallet_contracts::Pallet<Runtime>> = pallet_contracts::DefaultAddressGenerator;
+    pub const ContractsMaxCodeLen: u32 = 128 * 1024;
+    pub const ContractsMaxStorageKeyLen: u32 = 128
 
 
     // Court
@@ -411,7 +407,7 @@ parameter_type_with_key! {
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
-                    orml_asset_registry::Pallet<super::Runtime> as orml_traits::asset_registry::Inspect
+                    orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {
