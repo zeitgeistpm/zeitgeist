@@ -81,9 +81,10 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Contracts
-    pub const ContractsCallFilters;
-    pub const ContractsDepositPerItem;
-    pub const ContractsDepositPerByte;
+    //pub const ContractsCallFilters 
+    pub const ContractsDepositPerItem = deposit(1,0);
+    pub const ContractsDepositPerByte = deposit(0,1);
+    /*
     pub const ContractsCallStackDepth;
     pub const pallet_transaction_payment::Pallet<Self>;
     pub const pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
@@ -94,6 +95,7 @@ parameter_types! {
     pub const ContractsScheduleAddressGenerator;
     pub const ContractsMaxCodeLen;
     pub const ContractsMaxStorageKeyLen;
+    */
 
 
     // Court
