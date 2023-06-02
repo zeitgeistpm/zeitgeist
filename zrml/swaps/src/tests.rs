@@ -406,7 +406,7 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
         // Reserve some funds for subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
         assert_ok!(Currencies::deposit(ASSET_D, &BOB, _26));
-        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), pool_id, _26));
+        assert_ok!(Swaps::pool_join_subsidy(RuntimeOrigin::signed(BOB), pool_id, _26));
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), _25);
         assert_eq!(Currencies::reserved_balance(ASSET_D, &BOB), _26);
 
@@ -438,7 +438,7 @@ fn distribute_pool_share_rewards() {
         subsidy_providers.iter().for_each(|provider| {
             assert_ok!(Currencies::deposit(base_asset, provider, subsidy_per_acc));
             assert_ok!(Swaps::pool_join_subsidy(
-                Origin::signed(*provider),
+                RuntimeOrigin::signed(*provider),
                 pool_id,
                 subsidy_per_acc
             ));
@@ -452,7 +452,7 @@ fn distribute_pool_share_rewards() {
         asset_holders.iter().for_each(|asset_holder| {
             assert_ok!(Currencies::deposit(base_asset, asset_holder, asset_per_acc + 20));
             assert_ok!(Swaps::swap_exact_amount_out(
-                Origin::signed(*asset_holder),
+                RuntimeOrigin::signed(*asset_holder),
                 pool_id,
                 base_asset,
                 Some(asset_per_acc + 20),
@@ -514,8 +514,8 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         let subsidy_bob = min_subsidy + _25;
         assert_ok!(Currencies::deposit(ASSET_D, &ALICE, subsidy_alice));
         assert_ok!(Currencies::deposit(ASSET_D, &BOB, subsidy_bob));
-        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), pool_id, min_subsidy));
-        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), pool_id, subsidy_bob));
+        assert_ok!(Swaps::pool_join_subsidy(RuntimeOrigin::signed(ALICE), pool_id, min_subsidy));
+        assert_ok!(Swaps::pool_join_subsidy(RuntimeOrigin::signed(BOB), pool_id, subsidy_bob));
         assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
 
         // Check that subsidy was deposited, shares were distributed in exchange, the initial
@@ -621,7 +621,7 @@ fn pool_join_fails_if_pool_is_closed() {
         let pool_id = 0;
         assert_ok!(Swaps::close_pool(pool_id));
         assert_noop!(
-            Swaps::pool_join(Origin::signed(ALICE), pool_id, _1, vec![_1, _1, _1, _1]),
+            Swaps::pool_join(RuntimeOrigin::signed(ALICE), pool_id, _1, vec![_1, _1, _1, _1]),
             crate::Error::<Runtime>::InvalidPoolStatus,
         );
     });
@@ -645,7 +645,7 @@ fn most_operations_fail_if_pool_is_clean() {
         ));
 
         assert_noop!(
-            Swaps::pool_join(Origin::signed(ALICE), pool_id, _1, vec![_10]),
+            Swaps::pool_join(RuntimeOrigin::signed(ALICE), pool_id, _1, vec![_10]),
             crate::Error::<Runtime>::InvalidPoolStatus,
         );
         assert_noop!(
@@ -825,7 +825,7 @@ fn pool_exit_with_exact_asset_amount_satisfies_max_out_ratio_constraints() {
 
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 ASSET_A,
                 _50,
@@ -860,7 +860,7 @@ fn pool_exit_with_exact_pool_amount_satisfies_max_in_ratio_constraints() {
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 ASSET_A,
                 _50,
@@ -1055,7 +1055,7 @@ fn pool_exit_emits_correct_events() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
-        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, _1, vec!(1, 2, 3, 4),));
+        assert_ok!(Swaps::pool_exit(RuntimeOrigin::signed(BOB), 0, _1, vec!(1, 2, 3, 4),));
         let amount = _1 - BASE / 10; // Subtract 10% fees!
         System::assert_last_event(
             Event::PoolExit(PoolAssetsEvent {
@@ -1076,7 +1076,7 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
 
-        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, _10, vec!(_1, _1, _1, _1),));
+        assert_ok!(Swaps::pool_exit(RuntimeOrigin::signed(BOB), 0, _10, vec!(_1, _1, _1, _1),));
 
         let pool_account = Swaps::pool_account_id(&0);
         let pool_shares_id = Swaps::pool_shares_id(0);
@@ -1115,7 +1115,11 @@ fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
         assert_ok!(Swaps::close_pool(0));
-        assert_ok!(Swaps::admin_clean_up_pool(Origin::root(), 0, OutcomeReport::Categorical(65),));
+        assert_ok!(Swaps::admin_clean_up_pool(
+            RuntimeOrigin::root(),
+            0,
+            OutcomeReport::Categorical(65),
+        ));
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1),));
 
         System::assert_last_event(
@@ -2285,12 +2289,12 @@ fn join_pool_exit_pool_does_not_create_extra_tokens() {
 
         let amount = 123_456_789_123; // Strange number to force rounding errors!
         assert_ok!(Swaps::pool_join(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             0,
             amount,
             vec![_10000, _10000, _10000, _10000]
         ));
-        assert_ok!(Swaps::pool_exit(Origin::signed(CHARLIE), 0, amount, vec![0, 0, 0, 0]));
+        assert_ok!(Swaps::pool_exit(RuntimeOrigin::signed(CHARLIE), 0, amount, vec![0, 0, 0, 0]));
 
         // Check that the pool retains more tokens than before, and that Charlie loses some tokens
         // due to fees.
@@ -2684,7 +2688,7 @@ fn single_asset_join_and_exit_are_inverse() {
         let pool_id = 0;
         assert_ok!(Currencies::deposit(asset, &ALICE, amount_in));
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             asset,
             amount_in,
@@ -2692,7 +2696,7 @@ fn single_asset_join_and_exit_are_inverse() {
         ));
         let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(pool_id), &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             asset,
             pool_amount,
@@ -2721,7 +2725,7 @@ fn single_asset_operations_are_equivalent_to_swaps() {
         let pool_id = 0;
         assert_ok!(Currencies::deposit(asset_in, &ALICE, amount_in));
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             asset_in,
             amount_in,
@@ -2729,7 +2733,7 @@ fn single_asset_operations_are_equivalent_to_swaps() {
         ));
         let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(pool_id), &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             asset_out,
             pool_amount,
@@ -2743,7 +2747,7 @@ fn single_asset_operations_are_equivalent_to_swaps() {
         let pool_id = 0;
         assert_ok!(Currencies::deposit(asset_in, &ALICE, amount_in));
         assert_ok!(Swaps::swap_exact_amount_in(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             asset_in,
             amount_in,
@@ -2766,7 +2770,7 @@ fn pool_join_with_uneven_balances() {
         let pool_id = 0;
         let pool_account_id = Swaps::pool_account_id(&pool_id);
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _50));
-        assert_ok!(Swaps::pool_join(Origin::signed(ALICE), pool_id, _10, vec![_100; 4]));
+        assert_ok!(Swaps::pool_join(RuntimeOrigin::signed(ALICE), pool_id, _10, vec![_100; 4]));
         assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), _165);
         assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), _110);
         assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), _110);
@@ -2807,7 +2811,7 @@ fn pool_exit_fails_if_balances_drop_too_low() {
 
         // We withdraw 99% of it, leaving 0.01 of each asset, which is below minimum balance.
         assert_noop!(
-            Swaps::pool_exit(Origin::signed(BOB), pool_id, _10, vec![0; 4]),
+            Swaps::pool_exit(RuntimeOrigin::signed(BOB), pool_id, _10, vec![0; 4]),
             crate::Error::<Runtime>::PoolDrain,
         );
     });
@@ -2832,7 +2836,7 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
         // We withdraw too much liquidity but leave enough of each asset.
         assert_noop!(
             Swaps::pool_exit(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 _100 - Swaps::min_balance(Swaps::pool_shares_id(pool_id)) + 1,
                 vec![0; 4]
@@ -2874,7 +2878,7 @@ fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
 
         assert_noop!(
             Swaps::swap_exact_amount_in(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 ASSET_A,
                 Swaps::min_balance(ASSET_A) / 10,
@@ -2919,7 +2923,7 @@ fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
 
         assert_noop!(
             Swaps::swap_exact_amount_out(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 pool_id,
                 ASSET_A,
                 Some(u128::MAX),
@@ -2963,7 +2967,13 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
         ));
 
         assert_noop!(
-            Swaps::pool_exit_with_exact_pool_amount(Origin::signed(BOB), pool_id, ASSET_A, _1, 0),
+            Swaps::pool_exit_with_exact_pool_amount(
+                RuntimeOrigin::signed(BOB),
+                pool_id,
+                ASSET_A,
+                _1,
+                0
+            ),
             crate::Error::<Runtime>::PoolDrain,
         );
     });
@@ -2990,7 +3000,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_liquidity_drops_too_low() {
         let ten_percent_of_pool = Swaps::min_balance(pool_shares_id) / 10;
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 ASSET_A,
                 ten_percent_of_pool,
@@ -3034,7 +3044,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_balances_drop_too_low() {
         let ten_percent_of_balance = Swaps::min_balance(ASSET_A) / 10;
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 ASSET_A,
                 ten_percent_of_balance,
@@ -3059,7 +3069,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
 
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
-                Origin::signed(BOB),
+                RuntimeOrigin::signed(BOB),
                 pool_id,
                 ASSET_A,
                 _25,
@@ -3077,7 +3087,7 @@ fn trading_functions_cache_pool_ids() {
         let pool_id = 0;
 
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             ASSET_A,
             _2,
@@ -3087,7 +3097,7 @@ fn trading_functions_cache_pool_ids() {
         PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
 
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             ASSET_A,
             _2,
@@ -3097,7 +3107,7 @@ fn trading_functions_cache_pool_ids() {
         PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
 
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             ASSET_A,
             _1,
@@ -3107,7 +3117,7 @@ fn trading_functions_cache_pool_ids() {
         PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
 
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             ASSET_A,
             _1,
@@ -3117,7 +3127,7 @@ fn trading_functions_cache_pool_ids() {
         PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
 
         assert_ok!(Swaps::swap_exact_amount_in(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             ASSET_A,
             _1,
@@ -3129,7 +3139,7 @@ fn trading_functions_cache_pool_ids() {
         PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
 
         assert_ok!(Swaps::swap_exact_amount_out(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             ASSET_A,
             Some(u128::MAX),
@@ -3422,8 +3432,8 @@ fn execute_arbitrage_observes_min_balances_mint_sell() {
     });
 }
 
-fn alice_signed() -> Origin {
-    Origin::signed(ALICE)
+fn alice_signed() -> RuntimeOrigin {
+    RuntimeOrigin::signed(ALICE)
 }
 
 fn create_initial_pool(
@@ -3496,7 +3506,7 @@ fn subsidize_and_start_rikiddo_pool(
 ) {
     let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
-    assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
+    assert_ok!(Swaps::pool_join_subsidy(RuntimeOrigin::signed(*who), pool_id, min_subsidy));
     assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
 }
 

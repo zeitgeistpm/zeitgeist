@@ -26,7 +26,7 @@ use crate::{
         test_net::{RococoNet, Sibling, TestNet, Zeitgeist},
     },
     xcm_config::{config::battery_station, fees::default_per_second},
-    AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
+    AssetRegistry, Balance, Balances, CurrencyId, RuntimeOrigin, Tokens, XTokens,
     ZeitgeistTreasuryAccount,
 };
 
@@ -58,7 +58,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
         assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Ztg,
             transfer_amount,
             Box::new(
@@ -71,7 +71,7 @@ fn transfer_ztg_to_sibling() {
                 )
                 .into()
             ),
-            4_000_000_000,
+            xcm_emulator::Limited(4_000_000_000),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -128,7 +128,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         assert_eq!(Balances::free_balance(&zeitgeist_parachain_account()), 0);
         assert_eq!(Tokens::free_balance(FOREIGN_ZTG_ID, &BOB.into()), bob_initial_balance);
         assert_ok!(XTokens::transfer(
-            Origin::signed(BOB.into()),
+            RuntimeOrigin::signed(BOB.into()),
             FOREIGN_ZTG_ID,
             transfer_amount,
             Box::new(
@@ -141,7 +141,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                 )
                 .into()
             ),
-            4_000_000_000,
+            xcm_emulator::Limited(4_000_000_000),
         ));
 
         // Confirm that Bobs's balance is initial balance - amount transferred
@@ -187,7 +187,7 @@ fn transfer_roc_from_relay_chain() {
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(rococo_runtime::XcmPallet::reserve_transfer_assets(
-            rococo_runtime::Origin::signed(ALICE.into()),
+            rococo_runtime::RuntimeOrigin::signed(ALICE.into()),
             Box::new(Parachain(battery_station::ID).into().into()),
             Box::new(Junction::AccountId32 { network: NetworkId::Any, id: BOB }.into().into()),
             Box::new((Here, transfer_amount).into()),
@@ -215,7 +215,7 @@ fn transfer_roc_to_relay_chain() {
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
@@ -225,7 +225,7 @@ fn transfer_roc_to_relay_chain() {
                 )
                 .into()
             ),
-            4_000_000_000
+            xcm_emulator::Limited(4_000_000_000)
         ));
 
         assert_eq!(
@@ -235,7 +235,7 @@ fn transfer_roc_to_relay_chain() {
     });
 
     RococoNet::execute_with(|| {
-        assert_eq!(rococo_runtime::Balances::free_balance(&BOB.into()), 948_894_198_216);
+        assert_eq!(rococo_runtime::Balances::free_balance(&BOB.into()), 999_988_806_429);
     });
 }
 
@@ -274,7 +274,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         assert_eq!(Balances::free_balance(&ALICE.into()), alice_initial_balance);
         assert_eq!(Balances::free_balance(&sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
-            Origin::signed(ALICE.into()),
+            RuntimeOrigin::signed(ALICE.into()),
             CurrencyId::Ztg,
             transfer_amount,
             Box::new(
@@ -287,7 +287,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
                 )
                 .into()
             ),
-            4_000_000_000,
+            xcm_emulator::Limited(4_000_000_000),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
