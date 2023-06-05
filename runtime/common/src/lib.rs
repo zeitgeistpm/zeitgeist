@@ -60,6 +60,12 @@ macro_rules! decl_common_types {
             }
         }
 
+        #[cfg(feature = "with-global-disputes")]
+        type ConditionalMigration = zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>;
+
+        #[cfg(not(feature = "with-global-disputes"))]
+        type ConditionalMigration = ();
+
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
@@ -68,7 +74,7 @@ macro_rules! decl_common_types {
             AllPalletsWithSystem,
             (
                 zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
-                zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
+                ConditionalMigration,
             ),
         >;
 
