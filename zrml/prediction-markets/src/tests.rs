@@ -3250,11 +3250,21 @@ fn it_resolves_a_disputed_court_market() {
             vote_item_0.clone(),
             salt
         ));
-        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(juror_1), market_id, vote_item_1, salt));
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(juror_1),
+            market_id,
+            vote_item_1,
+            salt
+        ));
 
         let wrong_salt = BlakeTwo256::hash_of(&69);
         assert_noop!(
-            Court::reveal_vote(RuntimeOrigin::signed(juror_2), market_id, vote_item_0.clone(), wrong_salt),
+            Court::reveal_vote(
+                RuntimeOrigin::signed(juror_2),
+                market_id,
+                vote_item_0.clone(),
+                wrong_salt
+            ),
             CError::<Runtime>::CommitmentHashMismatch
         );
         assert_ok!(Court::reveal_vote(
@@ -3265,12 +3275,22 @@ fn it_resolves_a_disputed_court_market() {
         ));
 
         assert_noop!(
-            Court::reveal_vote(RuntimeOrigin::signed(juror_3), market_id, vote_item_0.clone(), salt),
+            Court::reveal_vote(
+                RuntimeOrigin::signed(juror_3),
+                market_id,
+                vote_item_0.clone(),
+                salt
+            ),
             CError::<Runtime>::VoteAlreadyDenounced
         );
 
         assert_noop!(
-            Court::reveal_vote(RuntimeOrigin::signed(juror_4), market_id, vote_item_0.clone(), salt),
+            Court::reveal_vote(
+                RuntimeOrigin::signed(juror_4),
+                market_id,
+                vote_item_0.clone(),
+                salt
+            ),
             CError::<Runtime>::JurorDidNotVote
         );
 
@@ -3360,7 +3380,11 @@ fn simulate_appeal_cycle(market_id: MarketId) {
     for draw in &draws {
         let commitment =
             BlakeTwo256::hash_of(&(draw.court_participant, wrong_vote_item.clone(), salt));
-        assert_ok!(Court::vote(RuntimeOrigin::signed(draw.court_participant), market_id, commitment));
+        assert_ok!(Court::vote(
+            RuntimeOrigin::signed(draw.court_participant),
+            market_id,
+            commitment
+        ));
     }
 
     let aggregation_start = court.round_ends.vote + 1;

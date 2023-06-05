@@ -21,8 +21,8 @@
 extern crate alloc;
 use crate::{
     mock::{
-        run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, RuntimeOrigin, Runtime,
-        System, ALICE, BOB, CHARLIE, DAVE, EVE, INITIAL_BALANCE, POOR_PAUL,
+        run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, Runtime,
+        RuntimeOrigin, System, ALICE, BOB, CHARLIE, DAVE, EVE, INITIAL_BALANCE, POOR_PAUL,
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote, VoteItem},
@@ -987,7 +987,12 @@ fn reveal_vote_works() {
 
         run_blocks(VotePeriod::get() + 1);
 
-        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt,));
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(ALICE),
+            court_id,
+            vote_item.clone(),
+            salt,
+        ));
         System::assert_last_event(
             Event::JurorRevealedVote { juror: ALICE, court_id, vote_item: vote_item.clone(), salt }
                 .into(),
@@ -1157,7 +1162,12 @@ fn reveal_vote_fails_if_already_revealed() {
 
         let vote_item = VoteItem::Outcome(outcome);
 
-        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt));
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(ALICE),
+            court_id,
+            vote_item.clone(),
+            salt
+        ));
 
         assert_noop!(
             Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
@@ -1340,7 +1350,13 @@ fn denounce_vote_fails_if_invalid_reveal() {
         let invalid_outcome = OutcomeReport::Scalar(69u128);
         let invalid_vote_item = VoteItem::Outcome(invalid_outcome);
         assert_noop!(
-            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, invalid_vote_item, salt),
+            Court::denounce_vote(
+                RuntimeOrigin::signed(BOB),
+                court_id,
+                ALICE,
+                invalid_vote_item,
+                salt
+            ),
             Error::<Runtime>::CommitmentHashMismatch
         );
     });
@@ -1379,7 +1395,12 @@ fn denounce_vote_fails_if_vote_already_revealed() {
 
         let vote_item = VoteItem::Outcome(outcome);
 
-        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt));
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(ALICE),
+            court_id,
+            vote_item.clone(),
+            salt
+        ));
 
         assert_noop!(
             Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
@@ -1571,7 +1592,12 @@ fn appeal_get_latest_resolved_outcome_changes() {
 
         let vote_item = VoteItem::Outcome(outcome);
 
-        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt));
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(ALICE),
+            court_id,
+            vote_item.clone(),
+            salt
+        ));
 
         run_blocks(AggregationPeriod::get() + 1);
 
@@ -1595,7 +1621,10 @@ fn appeal_get_latest_resolved_outcome_changes() {
 #[test]
 fn appeal_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(Court::appeal(RuntimeOrigin::signed(CHARLIE), 0), Error::<Runtime>::CourtNotFound);
+        assert_noop!(
+            Court::appeal(RuntimeOrigin::signed(CHARLIE), 0),
+            Error::<Runtime>::CourtNotFound
+        );
     });
 }
 
