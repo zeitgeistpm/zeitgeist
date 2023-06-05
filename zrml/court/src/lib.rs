@@ -128,7 +128,7 @@ mod pallet {
         >;
 
         /// Event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The inflation period in which new tokens are minted.
         #[pallet::constant]
@@ -172,7 +172,7 @@ mod pallet {
         type MinJurorStake: Get<BalanceOf<Self>>;
 
         /// The origin for monetary governance to control the court inflation.
-        type MonetaryGovernanceOrigin: EnsureOrigin<Self::Origin>;
+        type MonetaryGovernanceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Randomness source
         type Random: Randomness<Self::Hash, Self::BlockNumber>;
@@ -2046,7 +2046,7 @@ mod pallet {
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
-        type Origin = T::Origin;
+        type Origin = T::RuntimeOrigin;
 
         fn on_dispute(
             market_id: &Self::MarketId,

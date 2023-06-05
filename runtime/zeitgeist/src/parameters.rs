@@ -24,11 +24,12 @@
 
 use super::VERSION;
 use frame_support::{
+    dispatch::DispatchClass,
     parameter_types,
-    traits::LockIdentifier,
+    traits::{LockIdentifier, WithdrawReasons},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-        DispatchClass, Weight,
+        Weight,
     },
     PalletId,
 };
@@ -44,7 +45,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
-    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
+    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2)
+        .set_proof_size(polkadot_primitives::v2::MAX_POV_SIZE as u64);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
@@ -166,7 +168,6 @@ parameter_types! {
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
@@ -376,6 +377,8 @@ parameter_types! {
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
+    pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+         WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
 parameter_types! {

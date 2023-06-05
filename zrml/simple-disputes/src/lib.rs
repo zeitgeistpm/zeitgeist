@@ -73,7 +73,7 @@ mod pallet {
         >;
 
         /// Event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
@@ -318,7 +318,7 @@ mod pallet {
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
-        type Origin = T::Origin;
+        type Origin = T::RuntimeOrigin;
 
         fn on_dispute(
             _: &Self::MarketId,

@@ -129,7 +129,7 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The period, in which the authority can correct the outcome of a market.
         /// This value must not be zero.
@@ -149,7 +149,7 @@ mod pallet {
         >;
 
         /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
-        type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::Origin>;
+        type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Identifier of this pallet
         #[pallet::constant]
@@ -239,7 +239,7 @@ mod pallet {
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
-        type Origin = T::Origin;
+        type Origin = T::RuntimeOrigin;
 
         fn on_dispute(
             _: &Self::MarketId,

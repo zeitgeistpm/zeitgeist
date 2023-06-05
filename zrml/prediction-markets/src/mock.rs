@@ -104,7 +104,7 @@ construct_runtime!(
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
@@ -122,7 +122,7 @@ impl crate::Config for Runtime {
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
     type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
@@ -161,9 +161,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -173,7 +173,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type OnSetCode = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -192,13 +192,11 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
-    type OnDust = ();
-    type OnKilledTokenAccount = ();
-    type OnNewTokenAccount = ();
+    type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -215,7 +213,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -240,7 +238,7 @@ impl zrml_authorized::Config for Runtime {
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type CorrectionPeriod = CorrectionPeriod;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
@@ -256,7 +254,7 @@ impl zrml_court::Config for Runtime {
     type AppealPeriod = AppealPeriod;
     type LockId = LockId;
     type Currency = Balances;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type InflationPeriod = InflationPeriod;
     type MarketCommons = MarketCommons;
     type MaxAppeals = MaxAppeals;
@@ -274,7 +272,7 @@ impl zrml_court::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
@@ -305,7 +303,7 @@ impl zrml_rikiddo::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type AssetManager = AssetManager;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type OutcomeBond = OutcomeBond;
     type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
@@ -316,7 +314,7 @@ impl zrml_simple_disputes::Config for Runtime {
 }
 
 impl zrml_global_disputes::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -330,7 +328,7 @@ impl zrml_global_disputes::Config for Runtime {
 }
 
 impl zrml_swaps::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFee;
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
@@ -357,7 +355,7 @@ impl pallet_treasury::Config for Runtime {
     type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MaxApprovals = MaxApprovals;
     type OnSlash = ();
     type PalletId = TreasuryPalletId;

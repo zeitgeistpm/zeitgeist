@@ -37,7 +37,7 @@ mod pallet {
     use alloc::{format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
-        dispatch::{DispatchResultWithPostInfo, Weight},
+        dispatch::{DispatchResultWithPostInfo, Pays, Weight},
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
@@ -45,9 +45,7 @@ mod pallet {
             tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
-        transactional,
-        weights::Pays,
-        Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
@@ -1518,7 +1516,7 @@ mod pallet {
         type AdvisoryBondSlashPercentage: Get<Percent>;
 
         /// The origin that is allowed to approve / reject pending advised markets.
-        type ApproveOrigin: EnsureOrigin<Self::Origin>;
+        type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
@@ -1543,11 +1541,11 @@ mod pallet {
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Moment = MomentOf<Self>,
-            Origin = Self::Origin,
+            Origin = Self::RuntimeOrigin,
         >;
 
         /// The origin that is allowed to close markets.
-        type CloseOrigin: EnsureOrigin<Self::Origin>;
+        type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
@@ -1557,18 +1555,18 @@ mod pallet {
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Moment = MomentOf<Self>,
-            Origin = Self::Origin,
+            Origin = Self::RuntimeOrigin,
         >;
 
         /// The origin that is allowed to destroy markets.
-        type DestroyOrigin: EnsureOrigin<Self::Origin>;
+        type DestroyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
         type DisputeBond: Get<BalanceOf<Self>>;
 
         /// Event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// See [`GlobalDisputesPalletApi`].
         type GlobalDisputes: GlobalDisputesPalletApi<
@@ -1651,7 +1649,7 @@ mod pallet {
         type PalletId: Get<PalletId>;
 
         /// The origin that is allowed to reject pending advised markets.
-        type RejectOrigin: EnsureOrigin<Self::Origin>;
+        type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
@@ -1659,10 +1657,10 @@ mod pallet {
         type OracleBond: Get<BalanceOf<Self>>;
 
         /// The origin that is allowed to request edits in pending advised markets.
-        type RequestEditOrigin: EnsureOrigin<Self::Origin>;
+        type RequestEditOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The origin that is allowed to resolve markets.
-        type ResolveOrigin: EnsureOrigin<Self::Origin>;
+        type ResolveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// See [`DisputeApi`].
         type SimpleDisputes: zrml_simple_disputes::SimpleDisputesPalletApi<
@@ -1672,7 +1670,7 @@ mod pallet {
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Moment = MomentOf<Self>,
-            Origin = Self::Origin,
+            Origin = Self::RuntimeOrigin,
         >;
 
         /// Handler for slashed funds.

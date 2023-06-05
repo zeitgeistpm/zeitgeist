@@ -21,7 +21,7 @@
 extern crate alloc;
 use crate::{
     mock::{
-        run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, Origin, Runtime,
+        run_blocks, run_to_block, Balances, Court, ExtBuilder, MarketCommons, RuntimeOrigin, Runtime,
         System, ALICE, BOB, CHARLIE, DAVE, EVE, INITIAL_BALANCE, POOR_PAUL,
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
@@ -87,11 +87,11 @@ fn initialize_court() -> CourtId {
     let amount_charlie = 4 * BASE;
     let amount_dave = 5 * BASE;
     let amount_eve = 6 * BASE;
-    Court::join_court(Origin::signed(ALICE), amount_alice).unwrap();
-    Court::join_court(Origin::signed(BOB), amount_bob).unwrap();
-    Court::join_court(Origin::signed(CHARLIE), amount_charlie).unwrap();
-    Court::join_court(Origin::signed(DAVE), amount_dave).unwrap();
-    Court::join_court(Origin::signed(EVE), amount_eve).unwrap();
+    Court::join_court(RuntimeOrigin::signed(ALICE), amount_alice).unwrap();
+    Court::join_court(RuntimeOrigin::signed(BOB), amount_bob).unwrap();
+    Court::join_court(RuntimeOrigin::signed(CHARLIE), amount_charlie).unwrap();
+    Court::join_court(RuntimeOrigin::signed(DAVE), amount_dave).unwrap();
+    Court::join_court(RuntimeOrigin::signed(EVE), amount_eve).unwrap();
     let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
     MarketCommons::mutate_market(&market_id, |market| {
         market.report = Some(Report { at: 1, by: BOB, outcome: ORACLE_REPORT });
@@ -107,7 +107,7 @@ fn fill_juror_pool(jurors_len: u32) {
         let amount = MinJurorStake::get() + i as u128;
         let juror = (i + 1000) as u128;
         let _ = Balances::deposit(&juror, amount).unwrap();
-        assert_ok!(Court::join_court(Origin::signed(juror), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
     }
 }
 
@@ -155,7 +155,7 @@ fn set_alice_after_vote(
     let court_id = initialize_court();
 
     let amount = MinJurorStake::get() * 100;
-    assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+    assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
     put_alice_in_draw(court_id, amount);
 
@@ -164,7 +164,7 @@ fn set_alice_after_vote(
     let salt = <Runtime as frame_system::Config>::Hash::default();
     let vote_item = VoteItem::Outcome(outcome);
     let commitment = BlakeTwo256::hash_of(&(ALICE, vote_item, salt));
-    assert_ok!(Court::vote(Origin::signed(ALICE), court_id, commitment));
+    assert_ok!(Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment));
 
     (court_id, commitment, salt)
 }
@@ -177,10 +177,10 @@ fn the_lock(amount: u128) -> BalanceLock<u128> {
 fn exit_court_successfully_removes_a_juror_and_frees_balances() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
         run_blocks(InflationPeriod::get());
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
+        assert_ok!(Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE));
         assert_eq!(Participants::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
         assert_eq!(Balances::locks(ALICE), vec![]);
@@ -193,7 +193,7 @@ fn join_court_successfully_stores_required_data() {
         let amount = 2 * BASE;
         let alice_free_balance_before = Balances::free_balance(ALICE);
         let joined_at = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
         System::assert_last_event(Event::JurorJoined { juror: ALICE, stake: amount }.into());
         assert_eq!(
             Participants::<Runtime>::iter().next().unwrap(),
@@ -227,7 +227,7 @@ fn join_court_works_multiple_joins() {
         let min = MinJurorStake::get();
         let amount = 2 * min;
         let joined_at_0 = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
@@ -253,7 +253,7 @@ fn join_court_works_multiple_joins() {
         );
 
         let joined_at_1 = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
@@ -293,7 +293,7 @@ fn join_court_works_multiple_joins() {
         );
 
         let higher_amount = amount + 1;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), higher_amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), higher_amount));
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(higher_amount)]);
         assert_eq!(
@@ -362,7 +362,7 @@ fn join_court_saves_consumed_stake_and_active_lock_for_double_join() {
         CourtPool::<Runtime>::put::<CourtPoolOf<Runtime>>(juror_pool.try_into().unwrap());
 
         let higher_amount = amount + 1;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), higher_amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), higher_amount));
         assert_eq!(CourtPool::<Runtime>::get().into_inner()[0].consumed_stake, consumed_stake);
         assert_eq!(Participants::<Runtime>::get(ALICE).unwrap().active_lock, active_lock);
     });
@@ -374,7 +374,7 @@ fn join_court_fails_below_min_juror_stake() {
         let min = MinJurorStake::get();
         let amount = min - 1;
         assert_noop!(
-            Court::join_court(Origin::signed(ALICE), amount),
+            Court::join_court(RuntimeOrigin::signed(ALICE), amount),
             Error::<Runtime>::BelowMinJurorStake
         );
     });
@@ -386,7 +386,7 @@ fn join_court_fails_if_amount_exceeds_balance() {
         let min = MinJurorStake::get();
         let amount = min + 1;
         assert_noop!(
-            Court::join_court(Origin::signed(POOR_PAUL), amount),
+            Court::join_court(RuntimeOrigin::signed(POOR_PAUL), amount),
             Error::<Runtime>::AmountExceedsBalance
         );
     });
@@ -397,10 +397,10 @@ fn join_court_fails_amount_below_last_join() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let last_join_amount = 2 * min;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), last_join_amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), last_join_amount));
 
         assert_noop!(
-            Court::join_court(Origin::signed(ALICE), last_join_amount - 1),
+            Court::join_court(RuntimeOrigin::signed(ALICE), last_join_amount - 1),
             Error::<Runtime>::AmountBelowLastJoin
         );
     });
@@ -412,14 +412,14 @@ fn join_court_after_prepare_exit_court() {
         let min = MinJurorStake::get();
         let amount = 2 * min;
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
 
         let p_info = <Participants<Runtime>>::get(ALICE).unwrap();
         assert_eq!(Some(now), p_info.prepare_exit_at);
 
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount + 1));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount + 1));
 
         let p_info = <Participants<Runtime>>::get(ALICE).unwrap();
         assert_eq!(None, p_info.prepare_exit_at);
@@ -437,13 +437,13 @@ fn join_court_fails_amount_below_lowest_juror() {
         for i in 1..=max_accounts {
             let amount = max_amount - i as u128;
             let _ = Balances::deposit(&(i as u128), amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(i as u128), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(i as u128), amount));
         }
 
         assert!(CourtPool::<Runtime>::get().is_full());
 
         assert_noop!(
-            Court::join_court(Origin::signed(0u128), min_amount - 1),
+            Court::join_court(RuntimeOrigin::signed(0u128), min_amount - 1),
             Error::<Runtime>::AmountBelowLowestJuror
         );
     });
@@ -454,7 +454,7 @@ fn prepare_exit_court_works() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
         let joined_at = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![CourtPoolItem {
@@ -465,7 +465,7 @@ fn prepare_exit_court_works() {
             }]
         );
 
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
         System::assert_last_event(Event::ExitPrepared { court_participant: ALICE }.into());
         assert!(CourtPool::<Runtime>::get().into_inner().is_empty());
     });
@@ -481,7 +481,7 @@ fn prepare_exit_court_removes_lowest_staked_juror() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
@@ -491,7 +491,7 @@ fn prepare_exit_court_removes_lowest_staked_juror() {
                 .iter()
                 .any(|item| item.court_participant == 0u128)
         );
-        assert_ok!(Court::prepare_exit_court(Origin::signed(0u128)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(0u128)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
             assert_ne!(item.court_participant, 0u128);
@@ -509,7 +509,7 @@ fn prepare_exit_court_removes_middle_staked_juror() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
         let middle_index = (CourtPoolOf::<Runtime>::bound() / 2) as u128;
@@ -521,7 +521,7 @@ fn prepare_exit_court_removes_middle_staked_juror() {
                 .iter()
                 .any(|item| item.court_participant == middle_index)
         );
-        assert_ok!(Court::prepare_exit_court(Origin::signed(middle_index)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(middle_index)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
             assert_ne!(item.court_participant, middle_index);
@@ -539,7 +539,7 @@ fn prepare_exit_court_removes_highest_staked_juror() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
         let last_index = (CourtPoolOf::<Runtime>::bound() - 1) as u128;
@@ -551,7 +551,7 @@ fn prepare_exit_court_removes_highest_staked_juror() {
                 .iter()
                 .any(|item| item.court_participant == last_index)
         );
-        assert_ok!(Court::prepare_exit_court(Origin::signed(last_index)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(last_index)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
             assert_ne!(item.court_participant, last_index);
@@ -574,7 +574,7 @@ fn join_court_binary_search_sorted_insert_works() {
             let amount = max_amount - i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
         let mut last_stake = 0;
@@ -590,7 +590,7 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
         let joined_at = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![CourtPoolItem {
@@ -601,10 +601,10 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
             }]
         );
 
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
 
         assert_noop!(
-            Court::prepare_exit_court(Origin::signed(ALICE)),
+            Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::AlreadyPreparedExit
         );
     });
@@ -616,7 +616,7 @@ fn prepare_exit_court_fails_juror_does_not_exist() {
         assert!(Participants::<Runtime>::iter().next().is_none());
 
         assert_noop!(
-            Court::prepare_exit_court(Origin::signed(ALICE)),
+            Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::JurorDoesNotExist
         );
     });
@@ -627,16 +627,16 @@ fn exit_court_works_without_active_lock() {
     ExtBuilder::default().build().execute_with(|| {
         let min = MinJurorStake::get();
         let amount = 2 * min;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
         assert!(!CourtPool::<Runtime>::get().into_inner().is_empty());
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
         assert!(CourtPool::<Runtime>::get().into_inner().is_empty());
         assert!(Participants::<Runtime>::get(ALICE).is_some());
 
         run_blocks(InflationPeriod::get());
 
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
+        assert_ok!(Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE));
         System::assert_last_event(
             Event::ExitedCourt {
                 court_participant: ALICE,
@@ -655,7 +655,7 @@ fn exit_court_works_with_active_lock() {
     ExtBuilder::default().build().execute_with(|| {
         let active_lock = MinJurorStake::get();
         let amount = 3 * active_lock;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
         assert!(!CourtPool::<Runtime>::get().into_inner().is_empty());
 
         assert_eq!(
@@ -681,12 +681,12 @@ fn exit_court_works_with_active_lock() {
         assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
         assert!(CourtPool::<Runtime>::get().into_inner().is_empty());
 
         run_blocks(InflationPeriod::get());
 
-        assert_ok!(Court::exit_court(Origin::signed(ALICE), ALICE));
+        assert_ok!(Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE));
         System::assert_last_event(
             Event::ExitedCourt {
                 court_participant: ALICE,
@@ -712,7 +712,7 @@ fn exit_court_works_with_active_lock() {
 fn exit_court_fails_juror_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE), ALICE),
+            Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE),
             Error::<Runtime>::JurorDoesNotExist
         );
     });
@@ -722,12 +722,12 @@ fn exit_court_fails_juror_does_not_exist() {
 fn exit_court_fails_juror_not_prepared_to_exit() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
         run_blocks(InflationPeriod::get());
 
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE), ALICE),
+            Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE),
             Error::<Runtime>::PrepareExitAtNotPresent
         );
     });
@@ -737,14 +737,14 @@ fn exit_court_fails_juror_not_prepared_to_exit() {
 fn exit_court_fails_if_inflation_period_not_over() {
     ExtBuilder::default().build().execute_with(|| {
         let amount = 2 * BASE;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
-        assert_ok!(Court::prepare_exit_court(Origin::signed(ALICE)));
+        assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
 
         run_blocks(InflationPeriod::get() - 1);
 
         assert_noop!(
-            Court::exit_court(Origin::signed(ALICE), ALICE),
+            Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE),
             Error::<Runtime>::PrematureExit
         );
     });
@@ -757,7 +757,7 @@ fn vote_works() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -788,7 +788,7 @@ fn vote_works() {
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), court_id, commitment));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment));
         System::assert_last_event(Event::JurorVoted { court_id, juror: ALICE, commitment }.into());
 
         let new_draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -817,7 +817,7 @@ fn vote_overwrite_works() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
         put_alice_in_draw(court_id, amount);
 
@@ -826,7 +826,7 @@ fn vote_overwrite_works() {
         let wrong_outcome = OutcomeReport::Scalar(69u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let wrong_commitment = BlakeTwo256::hash_of(&(ALICE, wrong_outcome, salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), court_id, wrong_commitment));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(ALICE), court_id, wrong_commitment));
         assert_eq!(
             <SelectedDraws<Runtime>>::get(court_id)[0].vote,
             Vote::Secret { commitment: wrong_commitment }
@@ -836,7 +836,7 @@ fn vote_overwrite_works() {
 
         let right_outcome = OutcomeReport::Scalar(42u128);
         let new_commitment = BlakeTwo256::hash_of(&(ALICE, right_outcome, salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), court_id, new_commitment));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(ALICE), court_id, new_commitment));
         assert_ne!(wrong_commitment, new_commitment);
         assert_eq!(
             <SelectedDraws<Runtime>>::get(court_id)[0].vote,
@@ -851,7 +851,7 @@ fn vote_fails_if_court_not_found() {
         let court_id = 0;
         let commitment = <Runtime as frame_system::Config>::Hash::default();
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), court_id, commitment),
+            Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment),
             Error::<Runtime>::CourtNotFound
         );
     });
@@ -879,7 +879,7 @@ fn vote_fails_if_vote_state_incorrect(
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(!draws.is_empty());
@@ -892,7 +892,7 @@ fn vote_fails_if_vote_state_incorrect(
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), court_id, commitment),
+            Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment),
             Error::<Runtime>::InvalidVoteState
         );
     });
@@ -914,7 +914,7 @@ fn vote_fails_if_caller_not_in_draws() {
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), court_id, commitment),
+            Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment),
             Error::<Runtime>::CallerNotInSelectedDraws
         );
     });
@@ -927,7 +927,7 @@ fn vote_fails_if_not_in_voting_period() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
         put_alice_in_draw(court_id, amount);
 
@@ -937,7 +937,7 @@ fn vote_fails_if_not_in_voting_period() {
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let commitment = BlakeTwo256::hash_of(&(ALICE, outcome, salt));
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), court_id, commitment),
+            Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment),
             Error::<Runtime>::NotInVotingPeriod
         );
     });
@@ -950,7 +950,7 @@ fn reveal_vote_works() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
 
         // trick a little bit to let alice be part of the ("random") selection
         let mut draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -981,13 +981,13 @@ fn reveal_vote_works() {
 
         let salt = <Runtime as frame_system::Config>::Hash::default();
         let commitment = BlakeTwo256::hash_of(&(ALICE, vote_item.clone(), salt));
-        assert_ok!(Court::vote(Origin::signed(ALICE), court_id, commitment));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment));
 
         let old_draws = <SelectedDraws<Runtime>>::get(court_id);
 
         run_blocks(VotePeriod::get() + 1);
 
-        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item.clone(), salt,));
+        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt,));
         System::assert_last_event(
             Event::JurorRevealedVote { juror: ALICE, court_id, vote_item: vote_item.clone(), salt }
                 .into(),
@@ -1024,7 +1024,7 @@ fn reveal_vote_fails_if_caller_not_juror() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::CallerIsNotACourtParticipant
         );
     });
@@ -1042,7 +1042,7 @@ fn reveal_vote_fails_if_court_not_found() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::CourtNotFound
         );
     });
@@ -1059,7 +1059,7 @@ fn reveal_vote_fails_if_not_in_aggregation_period() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::NotInAggregationPeriod
         );
     });
@@ -1080,7 +1080,7 @@ fn reveal_vote_fails_if_juror_not_drawn() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::CallerNotInSelectedDraws
         );
     });
@@ -1097,7 +1097,7 @@ fn reveal_vote_fails_for_invalid_reveal() {
         let invalid_outcome = OutcomeReport::Scalar(43u128);
         let invalid_vote_item = VoteItem::Outcome(invalid_outcome);
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, invalid_vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, invalid_vote_item, salt),
             Error::<Runtime>::CommitmentHashMismatch
         );
     });
@@ -1116,7 +1116,7 @@ fn reveal_vote_fails_for_invalid_salt() {
 
         let vote_item = VoteItem::Outcome(outcome);
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, incorrect_salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, incorrect_salt),
             Error::<Runtime>::CommitmentHashMismatch
         );
     });
@@ -1141,7 +1141,7 @@ fn reveal_vote_fails_if_juror_not_voted() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::JurorDidNotVote
         );
     });
@@ -1157,10 +1157,10 @@ fn reveal_vote_fails_if_already_revealed() {
 
         let vote_item = VoteItem::Outcome(outcome);
 
-        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item.clone(), salt));
+        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt));
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::VoteAlreadyRevealed
         );
     });
@@ -1175,7 +1175,7 @@ fn reveal_vote_fails_if_already_denounced() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_ok!(Court::denounce_vote(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             court_id,
             ALICE,
             vote_item.clone(),
@@ -1185,7 +1185,7 @@ fn reveal_vote_fails_if_already_denounced() {
         run_blocks(VotePeriod::get() + 1);
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::VoteAlreadyDenounced
         );
     });
@@ -1208,7 +1208,7 @@ fn denounce_vote_works() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_ok!(Court::denounce_vote(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             court_id,
             ALICE,
             vote_item.clone(),
@@ -1255,7 +1255,7 @@ fn denounce_vote_fails_if_self_denounce() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(ALICE), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(ALICE), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::CallerDenouncedItself
         );
     });
@@ -1272,7 +1272,7 @@ fn denounce_vote_fails_if_juror_does_not_exist() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::JurorDoesNotExist
         );
     });
@@ -1289,7 +1289,7 @@ fn denounce_vote_fails_if_court_not_found() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::CourtNotFound
         );
     });
@@ -1306,7 +1306,7 @@ fn denounce_vote_fails_if_not_in_voting_period() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::NotInVotingPeriod
         );
     });
@@ -1325,7 +1325,7 @@ fn denounce_vote_fails_if_juror_not_drawn() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::JurorNotDrawn
         );
     });
@@ -1340,7 +1340,7 @@ fn denounce_vote_fails_if_invalid_reveal() {
         let invalid_outcome = OutcomeReport::Scalar(69u128);
         let invalid_vote_item = VoteItem::Outcome(invalid_outcome);
         assert_noop!(
-            Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, invalid_vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, invalid_vote_item, salt),
             Error::<Runtime>::CommitmentHashMismatch
         );
     });
@@ -1363,7 +1363,7 @@ fn denounce_vote_fails_if_juror_not_voted() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(BOB), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(BOB), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::JurorDidNotVote
         );
     });
@@ -1379,10 +1379,10 @@ fn denounce_vote_fails_if_vote_already_revealed() {
 
         let vote_item = VoteItem::Outcome(outcome);
 
-        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item.clone(), salt));
+        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt));
 
         assert_noop!(
-            Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item, salt),
+            Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item, salt),
             Error::<Runtime>::VoteAlreadyRevealed
         );
     });
@@ -1397,7 +1397,7 @@ fn denounce_vote_fails_if_vote_already_denounced() {
         let vote_item = VoteItem::Outcome(outcome);
 
         assert_ok!(Court::denounce_vote(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             court_id,
             ALICE,
             vote_item.clone(),
@@ -1405,7 +1405,7 @@ fn denounce_vote_fails_if_vote_already_denounced() {
         ));
 
         assert_noop!(
-            Court::denounce_vote(Origin::signed(CHARLIE), court_id, ALICE, vote_item, salt),
+            Court::denounce_vote(RuntimeOrigin::signed(CHARLIE), court_id, ALICE, vote_item, salt),
             Error::<Runtime>::VoteAlreadyDenounced
         );
     });
@@ -1421,7 +1421,7 @@ fn appeal_updates_round_ends() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         let court = <Courts<Runtime>>::get(court_id).unwrap();
@@ -1455,7 +1455,7 @@ fn appeal_reserves_get_appeal_bond() {
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         let free_charlie_before = Balances::free_balance(CHARLIE);
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let free_charlie_after = Balances::free_balance(CHARLIE);
         let bond = crate::get_appeal_bond::<Runtime>(1usize);
@@ -1473,7 +1473,7 @@ fn appeal_emits_event() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         System::assert_last_event(Event::CourtAppealed { court_id, appeal_number: 1u32 }.into());
     });
@@ -1490,7 +1490,7 @@ fn appeal_shifts_auto_resolve() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let resolve_at_1 = <Courts<Runtime>>::get(court_id).unwrap().round_ends.appeal;
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at_1), vec![0]);
@@ -1510,7 +1510,7 @@ fn appeal_overrides_last_draws() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         assert_ne!(draws, last_draws);
@@ -1529,7 +1529,7 @@ fn appeal_draws_total_weight_is_correct() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let neccessary_juror_weight = Court::necessary_draws_weight(1usize) as u32;
         let draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -1546,7 +1546,7 @@ fn appeal_get_latest_resolved_outcome_changes() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let last_appealed_vote_item = <Courts<Runtime>>::get(court_id)
             .unwrap()
@@ -1565,17 +1565,17 @@ fn appeal_get_latest_resolved_outcome_changes() {
 
         // cheat a little to get alice in the draw for the new appeal
         put_alice_in_draw(court_id, MinJurorStake::get());
-        assert_ok!(Court::vote(Origin::signed(ALICE), court_id, commitment));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(ALICE), court_id, commitment));
 
         run_blocks(VotePeriod::get() + 1);
 
         let vote_item = VoteItem::Outcome(outcome);
 
-        assert_ok!(Court::reveal_vote(Origin::signed(ALICE), court_id, vote_item.clone(), salt));
+        assert_ok!(Court::reveal_vote(RuntimeOrigin::signed(ALICE), court_id, vote_item.clone(), salt));
 
         run_blocks(AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let new_appealed_vote_item = <Courts<Runtime>>::get(court_id)
             .unwrap()
@@ -1595,7 +1595,7 @@ fn appeal_get_latest_resolved_outcome_changes() {
 #[test]
 fn appeal_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(Court::appeal(Origin::signed(CHARLIE), 0), Error::<Runtime>::CourtNotFound);
+        assert_noop!(Court::appeal(RuntimeOrigin::signed(CHARLIE), 0), Error::<Runtime>::CourtNotFound);
     });
 }
 
@@ -1608,7 +1608,7 @@ fn appeal_fails_if_appeal_bond_exceeds_balance() {
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_noop!(
-            Court::appeal(Origin::signed(POOR_PAUL), court_id),
+            Court::appeal(RuntimeOrigin::signed(POOR_PAUL), court_id),
             Error::<Runtime>::AppealBondExceedsBalance
         );
     });
@@ -1625,7 +1625,7 @@ fn appeal_fails_if_max_appeals_reached() {
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
         assert_noop!(
-            Court::appeal(Origin::signed(CHARLIE), court_id),
+            Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id),
             Error::<Runtime>::MaxAppealsReached
         );
     });
@@ -1709,7 +1709,7 @@ fn appeal_last_appeal_just_removes_auto_resolve() {
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), vec![market_id]);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at), vec![]);
     });
@@ -1729,7 +1729,7 @@ fn appeal_adds_last_appeal() {
         let appealed_vote_item =
             Court::get_latest_winner_vote_item(court_id, last_draws.as_slice()).unwrap();
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let court = <Courts<Runtime>>::get(court_id).unwrap();
         assert!(court.appeals.is_full());
@@ -1746,11 +1746,11 @@ fn reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
-        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
-        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
-        assert_ok!(Court::join_court(Origin::signed(EVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(EVE), amount));
 
         let outcome = OutcomeReport::Scalar(42u128);
         let salt = <Runtime as frame_system::Config>::Hash::default();
@@ -1809,7 +1809,7 @@ fn reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners() {
         let free_dave_before = Balances::free_balance(&DAVE);
         let free_eve_before = Balances::free_balance(&EVE);
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         let free_alice_after = Balances::free_balance(&ALICE);
         assert_ne!(free_alice_after, free_alice_before);
@@ -1840,7 +1840,7 @@ fn reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners() {
 fn reassign_court_stakes_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::reassign_court_stakes(Origin::signed(EVE), 0),
+            Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), 0),
             Error::<Runtime>::CourtNotFound
         );
     });
@@ -1858,7 +1858,7 @@ fn reassign_court_stakes_emits_event() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
         System::assert_last_event(Event::StakesReassigned { court_id }.into());
     });
 }
@@ -1875,10 +1875,10 @@ fn reassign_court_stakes_fails_if_juror_stakes_already_reassigned() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap().result.unwrap();
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         assert_noop!(
-            Court::reassign_court_stakes(Origin::signed(EVE), court_id),
+            Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id),
             Error::<Runtime>::CourtAlreadyReassigned
         );
     });
@@ -1900,7 +1900,7 @@ fn reassign_court_stakes_updates_court_status() {
         let resolution_vote_item = VoteItem::Outcome(resolution_outcome);
         assert_eq!(court.status, CourtStatus::Closed { winner: resolution_vote_item });
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         let court = <Courts<Runtime>>::get(court_id).unwrap();
         assert_eq!(court.status, CourtStatus::Reassigned);
@@ -1922,7 +1922,7 @@ fn reassign_court_stakes_removes_draws() {
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(!draws.is_empty());
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         let draws = <SelectedDraws<Runtime>>::get(court_id);
         assert!(draws.is_empty());
@@ -1934,7 +1934,7 @@ fn reassign_court_stakes_fails_if_court_not_closed() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
         assert_noop!(
-            Court::reassign_court_stakes(Origin::signed(EVE), court_id),
+            Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id),
             Error::<Runtime>::CourtNotClosed
         );
     });
@@ -1947,10 +1947,10 @@ fn reassign_court_stakes_decreases_active_lock() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
-        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
-        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(DAVE), amount));
 
         let outcome = OutcomeReport::Scalar(42u128);
         let vote_item = VoteItem::Outcome(outcome.clone());
@@ -2020,7 +2020,7 @@ fn reassign_court_stakes_decreases_active_lock() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap();
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
         assert!(<Participants<Runtime>>::get(ALICE).unwrap().active_lock.is_zero());
         assert!(<Participants<Runtime>>::get(BOB).unwrap().active_lock.is_zero());
         assert!(<Participants<Runtime>>::get(CHARLIE).unwrap().active_lock.is_zero());
@@ -2035,10 +2035,10 @@ fn reassign_court_stakes_slashes_loosers_and_awards_winners() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
-        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
-        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(DAVE), amount));
 
         let outcome = OutcomeReport::Scalar(42u128);
         let vote_item = VoteItem::Outcome(outcome.clone());
@@ -2104,7 +2104,7 @@ fn reassign_court_stakes_slashes_loosers_and_awards_winners() {
         let tardy_or_denounced_value = 5 * MinJurorStake::get();
         let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         let bob_slashed = last_draws[BOB as usize].slashable;
         let dave_slashed = last_draws[DAVE as usize].slashable;
@@ -2137,11 +2137,11 @@ fn reassign_court_stakes_works_for_delegations() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
-        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
-        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
-        assert_ok!(Court::join_court(Origin::signed(EVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(EVE), amount));
 
         let outcome = OutcomeReport::Scalar(42u128);
         let vote_item = VoteItem::Outcome(outcome.clone());
@@ -2223,7 +2223,7 @@ fn reassign_court_stakes_works_for_delegations() {
         let tardy_or_denounced_value = 5 * MinJurorStake::get();
         let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         let bob_slashed =
             last_draws.iter().find(|draw| draw.court_participant == BOB).unwrap().slashable;
@@ -2282,10 +2282,10 @@ fn reassign_court_stakes_rewards_treasury_if_no_winner() {
         let court_id = initialize_court();
 
         let amount = MinJurorStake::get() * 100;
-        assert_ok!(Court::join_court(Origin::signed(ALICE), amount));
-        assert_ok!(Court::join_court(Origin::signed(BOB), amount));
-        assert_ok!(Court::join_court(Origin::signed(CHARLIE), amount));
-        assert_ok!(Court::join_court(Origin::signed(DAVE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), amount));
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(DAVE), amount));
 
         let outcome = OutcomeReport::Scalar(42u128);
         let vote_item = VoteItem::Outcome(outcome);
@@ -2344,7 +2344,7 @@ fn reassign_court_stakes_rewards_treasury_if_no_winner() {
         let treasury_account = Court::treasury_account_id();
         let free_treasury_before = Balances::free_balance(&treasury_account);
 
-        assert_ok!(Court::reassign_court_stakes(Origin::signed(EVE), court_id));
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
         let alice_slashed = last_draws[ALICE as usize].slashable;
         let bob_slashed = last_draws[BOB as usize].slashable;
@@ -2604,7 +2604,7 @@ fn choose_multiple_weighted_works() {
             let amount = MinJurorStake::get() + i as u128;
             let juror = i as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
         let random_jurors = Court::choose_multiple_weighted(necessary_draws_weight).unwrap();
         assert_eq!(
@@ -2647,7 +2647,7 @@ fn select_participants_fails_if_not_enough_jurors(appeal_number: usize) {
             let amount = MinJurorStake::get() + i as u128;
             let juror = (i + 1000) as u128;
             let _ = Balances::deposit(&juror, amount).unwrap();
-            assert_ok!(Court::join_court(Origin::signed(juror), amount));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
         assert_noop!(
@@ -2674,7 +2674,7 @@ fn appeal_reduces_active_lock_from_old_draws() {
 
         run_blocks(VotePeriod::get() + AggregationPeriod::get() + 1);
 
-        assert_ok!(Court::appeal(Origin::signed(CHARLIE), court_id));
+        assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
         let new_draws = <SelectedDraws<Runtime>>::get(court_id);
         old_draws.iter().for_each(|draw| {
