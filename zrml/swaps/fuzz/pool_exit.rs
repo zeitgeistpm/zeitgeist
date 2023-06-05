@@ -18,7 +18,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
+use zrml_swaps::mock::{ExtBuilder, RuntimeOrigin, Swaps};
 
 mod utils;
 use orml_traits::currency::MultiCurrency;
@@ -47,7 +47,7 @@ fuzz_target!(|data: GeneralPoolData| {
             data.pool_amount,
         );
         let _ = Swaps::pool_exit(
-            Origin::signed(data.origin),
+            RuntimeOrigin::signed(data.origin),
             pool_id,
             data.pool_amount,
             data.asset_bounds,

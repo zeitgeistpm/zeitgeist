@@ -90,7 +90,7 @@ fn add_vote_outcome_works() {
         let free_balance_reward_account =
             Balances::free_balance(GlobalDisputes::reward_account(&market_id));
         assert_ok!(GlobalDisputes::add_vote_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(80),
         ));
@@ -410,7 +410,7 @@ fn add_vote_outcome_fails_with_outcome_mismatch() {
 
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Categorical(0u16),
             ),
@@ -425,7 +425,7 @@ fn add_vote_outcome_fails_with_non_existing_market() {
         let market_id = 0u128;
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Scalar(80),
             ),
@@ -442,7 +442,7 @@ fn add_vote_outcome_fails_if_no_global_dispute_present() {
         Markets::<Runtime>::insert(market_id, &market);
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Scalar(20),
             ),
@@ -465,7 +465,7 @@ fn add_vote_outcome_fails_if_global_dispute_is_in_wrong_state(status: GdStatus<B
 
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Scalar(20),
             ),
@@ -493,7 +493,7 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
         );
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Scalar(20),
             ),
@@ -514,7 +514,7 @@ fn add_vote_outcome_fails_if_balance_too_low() {
 
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
-                Origin::signed(POOR_PAUL),
+                RuntimeOrigin::signed(POOR_PAUL),
                 market_id,
                 OutcomeReport::Scalar(80),
             ),
@@ -555,11 +555,11 @@ fn reward_outcome_owner_works_for_multiple_owners() {
         let free_balance_bob_before = Balances::free_balance(&BOB);
         let free_balance_charlie_before = Balances::free_balance(&CHARLIE);
 
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::reward_outcome_owner(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(
             Event::<Runtime>::OutcomeOwnersRewarded {
@@ -608,9 +608,9 @@ fn reward_outcome_owner_has_dust() {
         };
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::reward_outcome_owner(RuntimeOrigin::signed(ALICE), market_id,));
 
         // 100 * BASE = 1_000_000_000_000 checked_div 6 = 166_666_666_666
         // 166_666_666_666 * 6 = 999_999_999_996 so 4 left
@@ -646,13 +646,13 @@ fn reward_outcome_owner_works_for_one_owner() {
         };
         <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
         let free_balance_alice_before = Balances::free_balance(&ALICE);
 
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id));
+        assert_ok!(GlobalDisputes::reward_outcome_owner(RuntimeOrigin::signed(ALICE), market_id));
 
         System::assert_last_event(
             Event::<Runtime>::OutcomeOwnersRewarded { market_id, owners: vec![ALICE] }.into(),
@@ -679,7 +679,7 @@ fn vote_fails_if_amount_below_min_outcome_vote_amount() {
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Scalar(40),
                 MinOutcomeVoteAmount::get() - 1,
@@ -702,7 +702,7 @@ fn vote_fails_for_insufficient_funds() {
         // Paul does not have 50 * BASE
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
-                Origin::signed(POOR_PAUL),
+                RuntimeOrigin::signed(POOR_PAUL),
                 market_id,
                 OutcomeReport::Scalar(0),
                 50 * BASE
@@ -725,28 +725,28 @@ fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_c
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(0),
             42 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(20),
             42 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(40),
             42 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(60),
             42 * BASE
@@ -775,7 +775,7 @@ fn vote_on_outcome_check_event() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(60),
             42 * BASE
@@ -830,7 +830,7 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
-                Origin::signed(*disputor),
+                RuntimeOrigin::signed(*disputor),
                 market_id,
                 OutcomeReport::Scalar(0),
                 arbitrary_amount + 1
@@ -839,7 +839,7 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
         );
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(*disputor),
+            RuntimeOrigin::signed(*disputor),
             market_id,
             OutcomeReport::Scalar(0),
             arbitrary_amount
@@ -871,7 +871,7 @@ fn transfer_fails_with_fully_locked_balance() {
         let arbitrary_amount = 42 * BASE;
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(*disputor),
+            RuntimeOrigin::signed(*disputor),
             market_id,
             OutcomeReport::Scalar(0),
             free_balance_disputor_before - arbitrary_amount
@@ -884,10 +884,10 @@ fn transfer_fails_with_fully_locked_balance() {
         );
 
         assert_noop!(
-            Balances::transfer(Origin::signed(*disputor), BOB, arbitrary_amount + 1),
+            Balances::transfer(RuntimeOrigin::signed(*disputor), BOB, arbitrary_amount + 1),
             pallet_balances::Error::<Runtime>::LiquidityRestrictions
         );
-        assert_ok!(Balances::transfer(Origin::signed(*disputor), BOB, arbitrary_amount));
+        assert_ok!(Balances::transfer(RuntimeOrigin::signed(*disputor), BOB, arbitrary_amount));
     });
 }
 
@@ -908,7 +908,7 @@ fn reserve_fails_with_fully_locked_balance() {
         let arbitrary_amount = 42 * BASE;
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(*disputor),
+            RuntimeOrigin::signed(*disputor),
             market_id,
             OutcomeReport::Scalar(0),
             free_balance_disputor_before - arbitrary_amount
@@ -941,26 +941,26 @@ fn determine_voting_winner_works_four_outcome_votes() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(0),
             10 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(20),
             10 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(40),
             11 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(60),
             10 * BASE
@@ -996,25 +996,25 @@ fn determine_voting_winner_works_three_outcome_votes() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(20),
             30 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(40),
             50 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(0),
             10 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(0),
             41 * BASE
@@ -1045,25 +1045,25 @@ fn determine_voting_winner_works_two_outcome_votes() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(60),
             10 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(20),
             50 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(60),
             20 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(60),
             21 * BASE
@@ -1094,7 +1094,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(20),
             BASE
@@ -1102,7 +1102,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
         check_outcome_sum(&market_id, OutcomeReport::Scalar(20), BASE);
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(0),
             10 * BASE
@@ -1110,7 +1110,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
         check_outcome_sum(&market_id, OutcomeReport::Scalar(0), 10 * BASE);
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(20),
             10 * BASE
@@ -1118,7 +1118,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
         check_outcome_sum(&market_id, OutcomeReport::Scalar(20), 11 * BASE);
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(0),
             40 * BASE
@@ -1128,7 +1128,7 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
 
         // Now Alice wins again
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(20),
             40 * BASE
@@ -1157,14 +1157,14 @@ fn purge_outcomes_fully_cleaned_works() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(0),
             10 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(20),
             10 * BASE
@@ -1176,10 +1176,10 @@ fn purge_outcomes_fully_cleaned_works() {
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(BOB), BOB));
 
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
@@ -1207,13 +1207,13 @@ fn purge_outcomes_partially_cleaned_works() {
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesPartiallyCleaned { market_id }.into());
 
         assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_some());
 
-        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
@@ -1252,7 +1252,7 @@ fn refund_vote_fees_works() {
         // minus 2 because of the above push_vote_outcome calls
         for i in 0..(2 * RemoveKeysLimit::get() - 2) {
             assert_ok!(GlobalDisputes::add_vote_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 // offset to not conflict with pushed outcomes
                 OutcomeReport::Scalar(offset + i as u128),
@@ -1263,13 +1263,13 @@ fn refund_vote_fees_works() {
         assert_ok!(GlobalDisputes::destroy_global_dispute(&market_id));
 
         let alice_free_balance_before = Balances::free_balance(&ALICE);
-        assert_ok!(GlobalDisputes::refund_vote_fees(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::refund_vote_fees(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesPartiallyCleaned { market_id }.into());
 
         assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_some());
 
-        assert_ok!(GlobalDisputes::refund_vote_fees(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::refund_vote_fees(RuntimeOrigin::signed(ALICE), market_id,));
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
@@ -1295,7 +1295,7 @@ fn unlock_clears_lock_info() {
         set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(0),
             50 * BASE
@@ -1305,7 +1305,7 @@ fn unlock_clears_lock_info() {
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id, 50 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
     });
@@ -1331,7 +1331,7 @@ fn vote_fails_if_outcome_does_not_exist() {
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
-                Origin::signed(ALICE),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
                 OutcomeReport::Scalar(42),
                 50 * BASE
@@ -1363,25 +1363,25 @@ fn locking_works_for_one_market() {
         assert!(Balances::locks(EVE).is_empty());
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id,
             OutcomeReport::Scalar(0),
             50 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(20),
             40 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(CHARLIE),
+            RuntimeOrigin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(40),
             30 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(EVE),
+            RuntimeOrigin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(60),
             20 * BASE
@@ -1401,7 +1401,7 @@ fn locking_works_for_one_market() {
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
 
@@ -1412,7 +1412,7 @@ fn locking_works_for_one_market() {
         assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(BOB), BOB));
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
         assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![(market_id, 30 * BASE)]);
@@ -1420,13 +1420,13 @@ fn locking_works_for_one_market() {
         assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(CHARLIE), CHARLIE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(CHARLIE), CHARLIE));
         assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![]);
         assert!(Balances::locks(CHARLIE).is_empty());
         assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(EVE), EVE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(EVE), EVE));
         assert_eq!(<Locks<Runtime>>::get(EVE), vec![]);
         assert!(Balances::locks(EVE).is_empty());
     });
@@ -1456,26 +1456,26 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         assert!(Balances::locks(BOB).is_empty());
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id_1,
             OutcomeReport::Scalar(0),
             50 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id_1,
             OutcomeReport::Scalar(20),
             40 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id_2,
             OutcomeReport::Scalar(0),
             30 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id_2,
             OutcomeReport::Scalar(20),
             20 * BASE
@@ -1500,7 +1500,7 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
             vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)]
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_2, 30 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
         assert_eq!(
@@ -1509,7 +1509,7 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         );
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(BOB), BOB));
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_2, 20 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(20 * BASE)]);
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_2, 30 * BASE)]);
@@ -1518,14 +1518,14 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         assert!(GlobalDisputes::determine_voting_winner(&market_id_2).is_some());
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_2, 30 * BASE)]);
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_2, 20 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(20 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(BOB), BOB));
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
     });
@@ -1555,26 +1555,26 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         assert!(Balances::locks(BOB).is_empty());
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id_1,
             OutcomeReport::Scalar(0),
             50 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id_1,
             OutcomeReport::Scalar(20),
             40 * BASE
         ));
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(ALICE),
+            RuntimeOrigin::signed(ALICE),
             market_id_2,
             OutcomeReport::Scalar(0),
             30 * BASE
         ));
         assert_ok!(GlobalDisputes::vote_on_outcome(
-            Origin::signed(BOB),
+            RuntimeOrigin::signed(BOB),
             market_id_2,
             OutcomeReport::Scalar(20),
             20 * BASE
@@ -1599,7 +1599,7 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
             vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)]
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_1, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_eq!(
@@ -1608,7 +1608,7 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         );
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(BOB), BOB));
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_1, 40 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_1, 50 * BASE)]);
@@ -1618,14 +1618,14 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_1, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(ALICE), ALICE));
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_1, 40 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
-        assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
+        assert_ok!(GlobalDisputes::unlock_vote_balance(RuntimeOrigin::signed(BOB), BOB));
         assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
     });

@@ -19,6 +19,8 @@
 extern crate alloc;
 
 use crate::{types::*, Config, Pallet as GDPallet, *};
+#[cfg(feature = "try-runtime")]
+use alloc::vec::Vec;
 use frame_support::{
     dispatch::Weight,
     log,
@@ -28,7 +30,9 @@ use frame_support::{
 use sp_runtime::traits::Saturating;
 
 #[cfg(feature = "try-runtime")]
-use alloc::string::ToString;
+use alloc::collections::BTreeMap;
+#[cfg(feature = "try-runtime")]
+use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "try-runtime")]
 use scale_info::prelude::format;
 
@@ -117,39 +121,29 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<(), &'static str> {
-        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-
-        let mut counter = 0_u32;
-        for (market_id, winner_info) in crate::Winners::<T>::iter() {
-            Self::set_temp_storage(winner_info, &format!("{:?}", market_id));
-
-            counter = counter.saturating_add(1_u32);
-        }
-        let counter_key = "counter_key".to_string();
-        Self::set_temp_storage(counter, &counter_key);
-        Ok(())
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        let old_winners = crate::Winners::<T>::iter()
+            .collect::<BTreeMap<MarketIdOf<T>, OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>>>();
+        Ok(old_winners.encode())
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade() -> Result<(), &'static str> {
-        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
         let mut markets_count = 0_u32;
-        let old_counter_key = "counter_key".to_string();
+        let old_winners: BTreeMap<MarketIdOf<T>, OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>> =
+            Decode::decode(&mut &previous_state[..])
+                .expect("Failed to decode state: Invalid state");
         for (market_id, gd_info) in crate::GlobalDisputesInfo::<T>::iter() {
             let GlobalDisputeInfo { winner_outcome, outcome_info, status } = gd_info;
 
-            let market_id_str = format!("{:?}", market_id);
-
-            let winner_info: OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>> =
-                Self::get_temp_storage(&market_id_str)
-                    .unwrap_or_else(|| panic!("old value not found for market id {:?}", market_id));
+            let winner_info: &OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>> = old_winners
+                .get(&market_id)
+                .expect(&format!("Market {:?} not found", market_id)[..]);
 
             assert_eq!(winner_outcome, winner_info.outcome);
             assert_eq!(status, GdStatus::Finished);
 
-            let owners = winner_info.outcome_info.owners;
+            let owners = winner_info.outcome_info.owners.clone();
             let owners_len = owners.len();
 
             let possession = match owners_len {
@@ -169,8 +163,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
 
             markets_count += 1_u32;
         }
-        let old_markets_count: u32 =
-            Self::get_temp_storage(&old_counter_key).expect("old counter key storage not found");
+        let old_markets_count = old_winners.len() as u32;
         assert_eq!(markets_count, old_markets_count);
 
         // empty Winners storage map

@@ -11,6 +11,9 @@ jobs:
     name: Test migration
     runs-on: ubuntu-latest
     steps:
+      - name: Install ProtoBuf Compiler
+        run: |
+          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 

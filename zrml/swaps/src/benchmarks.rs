@@ -50,7 +50,7 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 const LIQUIDITY: u128 = 100 * BASE;
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
