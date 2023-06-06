@@ -17,9 +17,6 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       # Ensure that at most one benchmark worklow runs across all workflows
       - name: Turnstyle
         uses: softprops/turnstyle@v1
@@ -36,12 +33,8 @@ jobs:
         uses: actions/checkout@v2
         if: github.event_name == 'workflow_dispatch'
 
-      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
-      # to the lack of support of `rust-toolchain` files with TOML syntax:
-      # https://github.com/actions-rs/toolchain/issues/126.
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
