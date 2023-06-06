@@ -790,16 +790,13 @@ mod pallet {
             + PartialOrd<I9F23>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+            >;
 
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -841,22 +838,19 @@ mod pallet {
 
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
         type RikiddoSigmoidFeeMarketEma: RikiddoMVPallet<
-            Balance = BalanceOf<Self>,
-            PoolId = PoolId,
-            FU = Self::FixedTypeU,
-            Rikiddo = RikiddoSigmoidMV<
-                Self::FixedTypeU,
-                Self::FixedTypeS,
-                FeeSigmoid<Self::FixedTypeS>,
-                EmaMarketVolume<Self::FixedTypeU>,
-            >,
-        >;
+                Balance = BalanceOf<Self>,
+                PoolId = PoolId,
+                FU = Self::FixedTypeU,
+                Rikiddo = RikiddoSigmoidMV<
+                    Self::FixedTypeU,
+                    Self::FixedTypeS,
+                    FeeSigmoid<Self::FixedTypeS>,
+                    EmaMarketVolume<Self::FixedTypeU>,
+                >,
+            >;
 
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-        >;
+        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
 
         /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;

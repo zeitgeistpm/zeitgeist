@@ -23,6 +23,7 @@ use crate::{
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;
+use sp_runtime::AccountId32;
 use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
@@ -95,8 +96,8 @@ impl ExtBuilder {
 }
 
 /// Accounts
-pub const ALICE: [u8; 32] = [4u8; 32];
-pub const BOB: [u8; 32] = [5u8; 32];
+pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 
 /// A PARA ID used for a sibling parachain.
 /// It must be one that doesn't collide with any other in use.

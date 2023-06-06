@@ -129,16 +129,13 @@ mod pallet {
         type CorrectionPeriod: Get<Self::BlockNumber>;
 
         type DisputeResolution: DisputeResolutionApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+            >;
 
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
         type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::RuntimeOrigin>;
