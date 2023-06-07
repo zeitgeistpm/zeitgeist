@@ -1838,7 +1838,7 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
         MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
-        /// A proposed market has been edited by the market creator \[market_id\]
+        /// A proposed market has been edited by the market creator \[market_id, new_market\]
         MarketEdited(MarketIdOf<T>, MarketOf<T>),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
