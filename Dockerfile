@@ -1,34 +1,30 @@
 # Based from https://github.com/paritytech/substrate/blob/master/.maintain/Dockerfile
 
-FROM phusion/baseimage:bionic-1.0.0 as builder
+FROM phusion/baseimage:jammy-1.0.1 as builder
 LABEL maintainer="hi@zeitgeit.pm"
 LABEL description="This is the build stage for the Zeitgeist node. Here is created the binary."
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG PROFILE=release
+ARG PROFILE=production
 ARG FEATURES=default
 WORKDIR /zeitgeist
 
 COPY . /zeitgeist
 
 RUN apt-get update && \
-    apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
-    apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
+    apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold"
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-    export PATH="$PATH:$HOME/.cargo/bin" && \
-    rustup toolchain install nightly-2022-04-13 && \
-    rustup target add wasm32-unknown-unknown --toolchain nightly-2022-04-13 && \
-    rustup default stable && \
-    cargo build --profile "$PROFILE" --features "$FEATURES"
+RUN ./scripts/init.sh
+
+RUN . "$HOME/.cargo/env" && cargo build --profile "$PROFILE" --features "$FEATURES"
 
 # ==== SECOND STAGE ====
 
-FROM phusion/baseimage:bionic-1.0.0
+FROM phusion/baseimage:jammy-1.0.1
 LABEL maintainer="hi@zeitgeist.pm"
 LABEL description="This is the 2nd stage: a very small image where we copy the Zeigeist node binary."
-ARG PROFILE=release
+ARG PROFILE=production
 
 RUN mv /usr/share/ca* /tmp && \
     rm -rf /usr/share/* && \
@@ -42,13 +38,12 @@ RUN ldd /usr/local/bin/zeitgeist && \
     /usr/local/bin/zeitgeist --version
 
 # Shrinking
-RUN rm -rf /usr/lib/python* && \
-    rm -rf /usr/bin /usr/sbin /usr/share/man
+RUN rm -rf /usr/lib/python* && rm -rf /usr/share/man
 
 USER zeitgeist
 EXPOSE 30333 9933 9944
 
-RUN mkdir /zeitgeist/data
+RUN mkdir -p /zeitgeist/data
 
 VOLUME ["/zeitgeist/data"]
 

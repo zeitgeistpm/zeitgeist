@@ -11,17 +11,10 @@ jobs:
     name: Test migration
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
-      # to the lack of support of `rust-toolchain` files with TOML syntax:
-      # https://github.com/actions-rs/toolchain/issues/126.
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - run: ./scripts/runtime-upgrade/test_runtime_upgrade.sh ${{ github.event.inputs.block }}

@@ -69,10 +69,7 @@ mod pallet {
         type GlobalDisputesPalletId: Get<PalletId>;
 
         /// To reference the market id type.
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         /// The maximum numbers of distinct markets
         /// on which one account can simultaneously vote on outcomes.

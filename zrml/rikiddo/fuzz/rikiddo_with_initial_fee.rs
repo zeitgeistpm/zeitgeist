@@ -18,7 +18,7 @@
 //! Fuzz test: Rikiddo is called with initial fee -> cost, price, all_prices, clear
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![allow(clippy::type_complexity)]
 #![no_main]

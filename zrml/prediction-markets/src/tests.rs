@@ -75,12 +75,12 @@ fn reserve_sentinel_amounts() {
     assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &DAVE, SENTINEL_AMOUNT));
     assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &EVE, SENTINEL_AMOUNT));
     assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &FRED, SENTINEL_AMOUNT));
-    assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(&BOB), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(&CHARLIE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(&DAVE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(&EVE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(&FRED), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(ALICE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(BOB), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(CHARLIE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(DAVE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(EVE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(FRED), SENTINEL_AMOUNT);
 }
 
 fn check_reserve(account: &AccountIdTest, expected: Balance) {
@@ -519,13 +519,13 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -561,13 +561,13 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -607,13 +607,13 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -668,8 +668,8 @@ fn admin_destroy_market_correctly_slashes_dispute_bonds() {
         set_up_account(&CHARLIE);
         set_up_account(&DAVE);
 
-        let balance_free_before_charlie = Balances::free_balance(&CHARLIE);
-        let balance_free_before_dave = Balances::free_balance(&DAVE);
+        let balance_free_before_charlie = Balances::free_balance(CHARLIE);
+        let balance_free_before_dave = Balances::free_balance(DAVE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), market_id));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &CHARLIE),
@@ -718,13 +718,13 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -752,13 +752,13 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -786,7 +786,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed_with_edit_requ
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
@@ -799,7 +799,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed_with_edit_requ
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
         assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
     };
@@ -829,13 +829,13 @@ fn admin_destroy_market_correctly_slashes_advised_market_active() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -873,13 +873,13 @@ fn admin_destroy_market_correctly_slashes_advised_market_reported() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -918,13 +918,13 @@ fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -964,13 +964,13 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(RuntimeOrigin::signed(SUDO), 0));
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             SENTINEL_AMOUNT
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     };
     ExtBuilder::default().build().execute_with(|| {
@@ -1125,7 +1125,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before = Balances::free_balance(&ALICE);
+        let balance_free_before = Balances::free_balance(ALICE);
         let balance_reserved_before =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
@@ -1159,7 +1159,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
                 - <Runtime as Config>::ValidityBond::get()
         );
         assert_eq!(
-            Balances::free_balance(&ALICE),
+            Balances::free_balance(ALICE),
             balance_free_before
                 + <Runtime as Config>::OracleBond::get()
                 + <Runtime as Config>::ValidityBond::get()
@@ -1214,7 +1214,7 @@ fn it_creates_binary_markets() {
         );
 
         // check the correct amount was reserved
-        let alice_reserved = Balances::reserved_balance(&ALICE);
+        let alice_reserved = Balances::reserved_balance(ALICE);
         assert_eq!(alice_reserved, ValidityBond::get() + OracleBond::get());
 
         // Creates an advised market.
@@ -1225,7 +1225,7 @@ fn it_creates_binary_markets() {
             ScoringRule::CPMM,
         );
 
-        let new_alice_reserved = Balances::reserved_balance(&ALICE);
+        let new_alice_reserved = Balances::reserved_balance(ALICE);
         assert_eq!(new_alice_reserved, AdvisoryBond::get() + OracleBond::get() + alice_reserved);
 
         // Make sure that the market id has been incrementing
@@ -1586,7 +1586,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         ));
         assert!(Balances::free_balance(Treasury::account_id()).is_zero());
 
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
@@ -1604,7 +1604,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
                 - <Runtime as Config>::OracleBond::get()
                 - <Runtime as Config>::AdvisoryBond::get(),
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_alice = Balances::free_balance(ALICE);
         let slash_amount_advisory_bond = <Runtime as Config>::AdvisoryBondSlashPercentage::get()
             .mul_floor(<Runtime as Config>::AdvisoryBond::get());
         let advisory_bond_remains =
@@ -1674,7 +1674,7 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
@@ -1693,7 +1693,7 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             balance_reserved_before_alice
         );
-        assert_eq!(Balances::free_balance(&ALICE), balance_free_before_alice);
+        assert_eq!(Balances::free_balance(ALICE), balance_free_before_alice);
         assert_noop!(
             MarketCommons::market(&market_id),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
@@ -1720,7 +1720,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_alice = Balances::free_balance(ALICE);
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
@@ -1752,7 +1752,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             balance_reserved_before_alice
         );
-        assert_eq!(Balances::free_balance(&ALICE), balance_free_before_alice);
+        assert_eq!(Balances::free_balance(ALICE), balance_free_before_alice);
         assert_noop!(
             MarketCommons::market(&market_id),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
@@ -2354,7 +2354,7 @@ fn it_allows_to_sell_a_complete_set() {
         }
 
         // also check native balance
-        let bal = Balances::free_balance(&BOB);
+        let bal = Balances::free_balance(BOB);
         assert_eq!(bal, 1_000 * BASE);
 
         System::assert_last_event(Event::SoldCompleteSet(0, CENT, BOB).into());
@@ -3095,18 +3095,18 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get() + total_slashed / 2);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
-        let eve_balance = Balances::free_balance(&EVE);
+        let eve_balance = Balances::free_balance(EVE);
         assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
 
-        let dave_balance = Balances::free_balance(&DAVE);
+        let dave_balance = Balances::free_balance(DAVE);
         assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
 
-        let alice_balance = Balances::free_balance(&ALICE);
+        let alice_balance = Balances::free_balance(ALICE);
         assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
-        let bob_balance = Balances::free_balance(&BOB);
+        let bob_balance = Balances::free_balance(BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
 
         assert!(market_after.bonds.creation.unwrap().is_settled);
@@ -3338,7 +3338,7 @@ fn it_allows_to_redeem_shares() {
         assert_eq!(market.status, MarketStatus::Resolved);
 
         assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
-        let bal = Balances::free_balance(&CHARLIE);
+        let bal = Balances::free_balance(CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
         System::assert_last_event(
             Event::TokensRedeemed(0, Asset::CategoricalOutcome(0, 1), CENT, CENT, CHARLIE).into(),
@@ -4079,7 +4079,7 @@ fn authorized_correctly_resolves_disputed_market() {
         assert_eq!(market.status, MarketStatus::Disputed);
 
         // check everyone's deposits
-        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        let charlie_reserved = Balances::reserved_balance(CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
@@ -4181,11 +4181,11 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             ScoringRule::CPMM,
         ));
         let market_id = 0;
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, AdvisoryBond::get() + OracleBond::get());
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), market_id));
         check_reserve(&ALICE, OracleBond::get());
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();
         assert!(market.bonds.creation.unwrap().is_settled);
     };
@@ -4321,7 +4321,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4334,7 +4334,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         run_to_block(grace_period + market.deadlines.dispute_duration + 1);
         check_reserve(&ALICE, 0);
         assert_eq!(
-            Balances::free_balance(&ALICE),
+            Balances::free_balance(ALICE),
             alice_balance_before + ValidityBond::get() + OracleBond::get()
         );
     };
@@ -4366,10 +4366,10 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
 
-        let charlie_balance_before = Balances::free_balance(&CHARLIE);
+        let charlie_balance_before = Balances::free_balance(CHARLIE);
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         let report_at = grace_period + market.deadlines.oracle_duration + 1;
@@ -4385,18 +4385,18 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.bonds.outsider, Some(Bond::new(CHARLIE, OutsiderBond::get())));
         check_reserve(&CHARLIE, OutsiderBond::get());
-        assert_eq!(Balances::free_balance(&CHARLIE), charlie_balance_before - OutsiderBond::get());
-        let charlie_balance_before = Balances::free_balance(&CHARLIE);
+        assert_eq!(Balances::free_balance(CHARLIE), charlie_balance_before - OutsiderBond::get());
+        let charlie_balance_before = Balances::free_balance(CHARLIE);
 
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // Check that validity bond didn't get slashed, but oracle bond did
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + ValidityBond::get());
 
         check_reserve(&CHARLIE, 0);
         // Check that the outsider gets the OracleBond together with the OutsiderBond
         assert_eq!(
-            Balances::free_balance(&CHARLIE),
+            Balances::free_balance(CHARLIE),
             charlie_balance_before + OracleBond::get() + OutsiderBond::get()
         );
         let market = MarketCommons::market(&0).unwrap();
@@ -4418,7 +4418,7 @@ fn outsider_reports_wrong_outcome() {
         reserve_sentinel_amounts();
 
         let end = 100;
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
@@ -4444,7 +4444,7 @@ fn outsider_reports_wrong_outcome() {
             OutcomeReport::Categorical(1)
         ));
 
-        let outsider_balance_before = Balances::free_balance(&outsider);
+        let outsider_balance_before = Balances::free_balance(outsider);
         check_reserve(&outsider, OutsiderBond::get());
 
         let dispute_at_0 = report_at + 1;
@@ -4468,10 +4468,10 @@ fn outsider_reports_wrong_outcome() {
         // on_resolution called
         run_blocks(market.deadlines.dispute_duration);
 
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before - OracleBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before - OracleBond::get());
 
         check_reserve(&outsider, 0);
-        assert_eq!(Balances::free_balance(&outsider), outsider_balance_before);
+        assert_eq!(Balances::free_balance(outsider), outsider_balance_before);
 
         // disputor EVE gets the OracleBond and OutsiderBond and DisputeBond
         assert_eq!(
@@ -4510,7 +4510,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4524,7 +4524,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // Check that nothing got slashed
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + OracleBond::get());
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4555,7 +4555,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4569,7 +4569,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         run_blocks(market.deadlines.dispute_duration);
         // Check that oracle bond got slashed
         check_reserve(&ALICE, 0);
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before);
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4600,7 +4600,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4619,7 +4619,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + ValidityBond::get());
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4651,7 +4651,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4670,7 +4670,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before);
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4701,7 +4701,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4727,7 +4727,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
         assert_eq!(
-            Balances::free_balance(&ALICE),
+            Balances::free_balance(ALICE),
             alice_balance_before + ValidityBond::get() + OracleBond::get()
         );
     };
@@ -4761,7 +4761,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -4786,7 +4786,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + OracleBond::get());
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4818,7 +4818,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             ScoringRule::CPMM,
         ));
 
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
 
         let outsider = CHARLIE;
@@ -4851,11 +4851,11 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + ValidityBond::get());
 
         check_reserve(&outsider, 0);
         assert_eq!(
-            Balances::free_balance(&outsider),
+            Balances::free_balance(outsider),
             outsider_balance_before + OracleBond::get() + OutsiderBond::get()
         );
     };
@@ -4892,7 +4892,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         let outsider = CHARLIE;
 
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
-        let alice_balance_before = Balances::free_balance(&ALICE);
+        let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
         let after_oracle_duration =
@@ -4922,11 +4922,11 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         run_blocks(market.deadlines.dispute_duration);
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
-        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+        assert_eq!(Balances::free_balance(ALICE), alice_balance_before);
 
         check_reserve(&outsider, 0);
         assert_eq!(
-            Balances::free_balance(&outsider),
+            Balances::free_balance(outsider),
             outsider_balance_before + OracleBond::get() + OutsiderBond::get()
         );
     };

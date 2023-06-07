@@ -23,7 +23,7 @@
 // <https://github.com/balancer-labs/balancer-core>.
 
 // Auto-generated code is a no man's land
-#![allow(clippy::integer_arithmetic, clippy::indexing_slicing)]
+#![allow(clippy::arithmetic_side_effects, clippy::indexing_slicing)]
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
