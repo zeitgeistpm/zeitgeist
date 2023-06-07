@@ -46,11 +46,19 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
+        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
+
+        // Migration for scheduler pallet to move from a plain RuntimeCall to a CallOrHash.
+        pub struct SchedulerMigrationV1toV4;
+        impl OnRuntimeUpgrade for SchedulerMigrationV1toV4 {
+            fn on_runtime_upgrade() -> frame_support::weights::Weight {
+                Scheduler::migrate_v1_to_v4()
+            }
+        }
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -59,6 +67,10 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                SchedulerMigrationV1toV4,
+                pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+                pallet_preimage::migration::v1::Migration<Runtime>,
+                pallet_democracy::migrations::v1::Migration<Runtime>,
                 zrml_prediction_markets::migrations::AddOutsiderAndDisputeBond<Runtime>,
                 zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
             ),
@@ -77,8 +89,8 @@ macro_rules! decl_common_types {
             CheckWeight<Runtime>,
             ChargeTransactionPayment<Runtime>,
         );
-        pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
-        pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+        pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
+        pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
         // Governance
         type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -364,7 +376,7 @@ macro_rules! impl_config_traits {
         // Configure Pallets
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_dmp_queue::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
@@ -373,7 +385,7 @@ macro_rules! impl_config_traits {
         impl cumulus_pallet_parachain_system::Config for Runtime {
             type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type DmpMessageHandler = DmpQueue;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type OnSystemEvent = ();
             type OutboundXcmpMessageSource = XcmpQueue;
             type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
@@ -384,7 +396,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_xcm::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
 
@@ -393,7 +405,7 @@ macro_rules! impl_config_traits {
             type ChannelInfo = ParachainSystem;
             type ControllerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
             type VersionWrapper = ();
             type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
@@ -408,9 +420,9 @@ macro_rules! impl_config_traits {
             type BlockLength = RuntimeBlockLength;
             type BlockNumber = BlockNumber;
             type BlockWeights = RuntimeBlockWeights;
-            type Call = Call;
+            type RuntimeCall = RuntimeCall;
             type DbWeight = RocksDbWeight;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type Hash = Hash;
             type Hashing = BlakeTwo256;
             type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -423,7 +435,7 @@ macro_rules! impl_config_traits {
             type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
             #[cfg(not(feature = "parachain"))]
             type OnSetCode = ();
-            type Origin = Origin;
+            type RuntimeOrigin = RuntimeOrigin;
             type PalletInfo = PalletInfo;
             type SS58Prefix = SS58Prefix;
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
@@ -449,14 +461,14 @@ macro_rules! impl_config_traits {
         impl pallet_author_mapping::Config for Runtime {
             type DepositAmount = CollatorDeposit;
             type DepositCurrency = Balances;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type Keys = session_keys_primitives::VrfId;
             type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
         impl pallet_author_slot_filter::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type RandomnessSource = RandomnessCollectiveFlip;
             type PotentialAuthors = ParachainStaking;
             type WeightInfo = weights::pallet_author_slot_filter::WeightInfo<Runtime>;
@@ -464,8 +476,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(not(feature = "parachain"))]
         impl pallet_grandpa::Config for Runtime {
-            type Event = Event;
-            type Call = Call;
+            type RuntimeEvent = RuntimeEvent;
             type KeyOwnerProofSystem = ();
             type KeyOwnerProof =
                 <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
@@ -486,20 +497,20 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl pallet_xcm::Config for Runtime {
-            type Event = Event;
-            type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+            type RuntimeEvent = RuntimeEvent;
+            type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
             type XcmRouter = XcmRouter;
-            type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+            type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
             type XcmExecuteFilter = Nothing;
             // ^ Disable dispatchable execute on the XCM pallet.
             // Needs to be `Everything` for local testing.
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
             type XcmTeleportFilter = Everything;
             type XcmReserveTransferFilter = Nothing;
-            type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+            type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
             type LocationInverter = LocationInverter<Ancestry>;
-            type Origin = Origin;
-            type Call = Call;
+            type RuntimeOrigin = RuntimeOrigin;
+            type RuntimeCall = RuntimeCall;
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
             // ^ Override for AdvertisedXcmVersion default
@@ -512,7 +523,7 @@ macro_rules! impl_config_traits {
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DelegationBondLessDelay = DelegationBondLessDelay;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type LeaveCandidatesDelay = LeaveCandidatesDelay;
             type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
             type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
@@ -526,6 +537,7 @@ macro_rules! impl_config_traits {
             type MinSelectedCandidates = MinSelectedCandidates;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type OnCollatorPayout = ();
+            type PayoutCollatorReward = ();
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
@@ -539,7 +551,7 @@ macro_rules! impl_config_traits {
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
             type Balance = Balance;
             type CustomMetadata = CustomMetadata;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type WeightInfo = ();
         }
 
@@ -550,25 +562,35 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
         }
 
+        pub struct CurrencyHooks<R>(sp_std::marker::PhantomData<R>);
+        impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, CurrencyId, Balance> for CurrencyHooks<C> {
+            type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
+            type OnKilledTokenAccount = ();
+            type OnNewTokenAccount = ();
+            type OnSlash = ();
+            type PostDeposit = ();
+            type PostTransfer = ();
+            type PreDeposit = ();
+            type PreTransfer = ();
+        }
+
         impl orml_tokens::Config for Runtime {
             type Amount = Amount;
             type Balance = Balance;
+            type CurrencyHooks = CurrencyHooks<Runtime>;
             type CurrencyId = CurrencyId;
             type DustRemovalWhitelist = DustRemovalWhitelist;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposits = ExistentialDeposits;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
-            type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
-            type OnKilledTokenAccount = ();
-            type OnNewTokenAccount = ();
             type ReserveIdentifier = [u8; 8];
             type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
         impl orml_unknown_tokens::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
         }
 
         #[cfg(feature = "parachain")]
@@ -578,14 +600,14 @@ macro_rules! impl_config_traits {
             type BaseXcmWeight = BaseXcmWeight;
             type CurrencyId = CurrencyId;
             type CurrencyIdConvert = AssetConvert;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type LocationInverter = LocationInverter<Ancestry>;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
             type MinXcmFee = ParachainMinFee;
             type MultiLocationsFilter = Everything;
             type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
             type SelfLocation = SelfLocation;
-            type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+            type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
 
@@ -593,7 +615,7 @@ macro_rules! impl_config_traits {
             type AccountStore = System;
             type Balance = Balance;
             type DustRemoval = ();
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposit = ExistentialDeposit;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
@@ -603,40 +625,39 @@ macro_rules! impl_config_traits {
 
         impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {
             type DefaultVote = PrimeDefaultVote;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxMembers = AdvisoryCommitteeMaxMembers;
             type MaxProposals = AdvisoryCommitteeMaxProposals;
             type MotionDuration = AdvisoryCommitteeMotionDuration;
-            type Origin = Origin;
-            type Proposal = Call;
+            type RuntimeOrigin = RuntimeOrigin;
+            type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
 
         impl pallet_collective::Config<CouncilInstance> for Runtime {
             type DefaultVote = PrimeDefaultVote;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxMembers = CouncilMaxMembers;
             type MaxProposals = CouncilMaxProposals;
             type MotionDuration = CouncilMotionDuration;
-            type Origin = Origin;
-            type Proposal = Call;
+            type RuntimeOrigin = RuntimeOrigin;
+            type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
 
         impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
             type DefaultVote = PrimeDefaultVote;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxMembers = TechnicalCommitteeMaxMembers;
             type MaxProposals = TechnicalCommitteeMaxProposals;
             type MotionDuration = TechnicalCommitteeMotionDuration;
-            type Origin = Origin;
-            type Proposal = Call;
+            type RuntimeOrigin = RuntimeOrigin;
+            type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
 
         impl pallet_democracy::Config for Runtime {
-            type Proposal = Call;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type EnactmentPeriod = EnactmentPeriod;
             type LaunchPeriod = LaunchPeriod;
@@ -667,20 +688,21 @@ macro_rules! impl_config_traits {
             /// Origin for anyone able to veto proposals.
             type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
             type CooloffPeriod = CooloffPeriod;
-            type PreimageByteDeposit = PreimageByteDeposit;
-            type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
             type Slash = Treasury;
             type Scheduler = Scheduler;
             type PalletsOrigin = OriginCaller;
             type MaxVotes = MaxVotes;
             type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
             type MaxProposals = MaxProposals;
+            type Preimages = Preimage;
+            type MaxBlacklisted = ConstU32<100>;
+            type MaxDeposits = ConstU32<100>;
         }
 
         impl pallet_identity::Config for Runtime {
             type BasicDeposit = BasicDeposit;
             type Currency = Balances;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type FieldDeposit = FieldDeposit;
             type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
             type MaxAdditionalFields = MaxAdditionalFields;
@@ -694,7 +716,7 @@ macro_rules! impl_config_traits {
 
         impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
             type AddOrigin = EnsureRootOrTwoThirdsCouncil;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxMembers = AdvisoryCommitteeMaxMembers;
             type MembershipChanged = AdvisoryCommittee;
             type MembershipInitialized = AdvisoryCommittee;
@@ -707,7 +729,7 @@ macro_rules! impl_config_traits {
 
         impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
             type AddOrigin = EnsureRootOrThreeFourthsCouncil;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxMembers = CouncilMaxMembers;
             type MembershipChanged = Council;
             type MembershipInitialized = Council;
@@ -720,7 +742,7 @@ macro_rules! impl_config_traits {
 
         impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
             type AddOrigin = EnsureRootOrTwoThirdsCouncil;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxMembers = TechnicalCommitteeMaxMembers;
             type MembershipChanged = TechnicalCommittee;
             type MembershipInitialized = TechnicalCommittee;
@@ -732,8 +754,8 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_multisig::Config for Runtime {
-            type Event = Event;
-            type Call = Call;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
             type Currency = Balances;
             type DepositBase = DepositBase;
             type DepositFactor = DepositFactor;
@@ -743,31 +765,30 @@ macro_rules! impl_config_traits {
 
         impl pallet_preimage::Config for Runtime {
             type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type ManagerOrigin = EnsureRoot<AccountId>;
-            type MaxSize = PreimageMaxSize;
             type BaseDeposit = PreimageBaseDeposit;
             type ByteDeposit = PreimageByteDeposit;
         }
 
-        impl InstanceFilter<Call> for ProxyType {
-            fn filter(&self, c: &Call) -> bool {
+        impl InstanceFilter<RuntimeCall> for ProxyType {
+            fn filter(&self, c: &RuntimeCall) -> bool {
                 match self {
                     ProxyType::Any => true,
                     ProxyType::CancelProxy => {
-                        matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+                        matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
                     }
                     ProxyType::Governance => matches!(
                         c,
-                        Call::Democracy(..)
-                            | Call::Council(..)
-                            | Call::TechnicalCommittee(..)
-                            | Call::AdvisoryCommittee(..)
-                            | Call::Treasury(..)
+                        RuntimeCall::Democracy(..)
+                            | RuntimeCall::Council(..)
+                            | RuntimeCall::TechnicalCommittee(..)
+                            | RuntimeCall::AdvisoryCommittee(..)
+                            | RuntimeCall::Treasury(..)
                     ),
                     #[cfg(feature = "parachain")]
-                    ProxyType::Staking => matches!(c, Call::ParachainStaking(..)),
+                    ProxyType::Staking => matches!(c, RuntimeCall::ParachainStaking(..)),
                     #[cfg(not(feature = "parachain"))]
                     ProxyType::Staking => false,
                 }
@@ -784,8 +805,8 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_proxy::Config for Runtime {
-            type Event = Event;
-            type Call = Call;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
             type Currency = Balances;
             type ProxyType = ProxyType;
             type ProxyDepositBase = ProxyDepositBase;
@@ -801,17 +822,16 @@ macro_rules! impl_config_traits {
         impl pallet_randomness_collective_flip::Config for Runtime {}
 
         impl pallet_scheduler::Config for Runtime {
-            type Event = Event;
-            type Origin = Origin;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeOrigin = RuntimeOrigin;
             type PalletsOrigin = OriginCaller;
-            type Call = Call;
+            type RuntimeCall = RuntimeCall;
             type MaximumWeight = MaximumSchedulerWeight;
             type ScheduleOrigin = EnsureRoot<AccountId>;
             type MaxScheduledPerBlock = MaxScheduledPerBlock;
             type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
             type OriginPrivilegeCmp = EqualPrivilegeOnly;
-            type PreimageProvider = Preimage;
-            type NoPreimagePostponement = NoPreimagePostponement;
+            type Preimages = Preimage;
         }
 
         // Timestamp
@@ -857,7 +877,7 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_transaction_payment::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
             type OnChargeTransaction =
@@ -871,9 +891,9 @@ macro_rules! impl_config_traits {
             type Burn = Burn;
             type BurnDestination = ();
             type Currency = Balances;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaxApprovals = MaxApprovals;
-            type OnSlash = ();
+            type OnSlash = Treasury;
             type PalletId = TreasuryPalletId;
             type ProposalBond = ProposalBond;
             type ProposalBondMinimum = ProposalBondMinimum;
@@ -895,23 +915,24 @@ macro_rules! impl_config_traits {
             type CuratorDepositMin = CuratorDepositMin;
             type CuratorDepositMultiplier = CuratorDepositMultiplier;
             type DataDepositPerByte = DataDepositPerByte;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MaximumReasonLength = MaximumReasonLength;
             type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
         impl pallet_utility::Config for Runtime {
-            type Event = Event;
-            type Call = Call;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
             type PalletsOrigin = OriginCaller;
             type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
         }
 
         impl pallet_vesting::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
             type MinVestedTransfer = MinVestedTransfer;
+            type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
             type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 
             // `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
@@ -926,7 +947,7 @@ macro_rules! impl_config_traits {
             type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = AuthorizedPalletId;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
@@ -935,7 +956,7 @@ macro_rules! impl_config_traits {
         impl zrml_court::Config for Runtime {
             type CourtCaseDuration = CourtCaseDuration;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = CourtPalletId;
             type Random = RandomnessCollectiveFlip;
@@ -945,7 +966,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_liquidity_mining::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type MarketId = MarketId;
             type PalletId = LiquidityMiningPalletId;
@@ -989,7 +1010,7 @@ macro_rules! impl_config_traits {
             type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
             #[cfg(feature = "with-global-disputes")]
@@ -1047,7 +1068,7 @@ macro_rules! impl_config_traits {
             type OutcomeBond = OutcomeBond;
             type OutcomeFactor = OutcomeFactor;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type MaxDisputes = MaxDisputes;
             type PalletId = SimpleDisputesPalletId;
@@ -1057,7 +1078,7 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "with-global-disputes")]
         impl zrml_global_disputes::Config for Runtime {
             type Currency = Balances;
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type GlobalDisputeLockId = GlobalDisputeLockId;
             type GlobalDisputesPalletId = GlobalDisputesPalletId;
             type MarketCommons = MarketCommons;
@@ -1070,7 +1091,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_swaps::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type ExitFee = ExitFee;
             type FixedTypeU = FixedU128<U33>;
             type FixedTypeS = FixedI128<U33>;
@@ -1096,7 +1117,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_styx::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
             type Currency = Balances;
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
@@ -1332,17 +1353,17 @@ macro_rules! create_runtime_api {
                 }
             }
 
-            impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, Call>
+            impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, RuntimeCall>
             for Runtime
             {
                 fn query_call_info(
-                    call: Call,
+                    call: RuntimeCall,
                     len: u32,
                 ) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_call_info(call, len)
                 }
                 fn query_call_fee_details(
-                    call: Call,
+                    call: RuntimeCall,
                     len: u32,
                 ) -> pallet_transaction_payment::FeeDetails<Balance> {
                     TransactionPayment::query_call_fee_details(call, len)
@@ -1803,7 +1824,7 @@ macro_rules! create_common_tests {
         mod common_tests {
             mod fees {
                 use crate::*;
-                use frame_support::weights::{DispatchClass, Weight};
+                use frame_support::{dispatch::DispatchClass, weights::Weight};
                 use sp_core::H256;
                 use sp_runtime::traits::Convert;
 

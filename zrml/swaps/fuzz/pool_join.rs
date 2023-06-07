@@ -21,7 +21,7 @@ use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 
 use utils::GeneralPoolData;
-use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
+use zrml_swaps::mock::{ExtBuilder, RuntimeOrigin, Swaps};
 mod utils;
 use utils::construct_asset;
 use zrml_swaps::mock::AssetManager;
@@ -41,7 +41,7 @@ fuzz_target!(|data: GeneralPoolData| {
         let pool_id = data.pool_creation.create_pool();
         // join a pool with a valid pool id
         let _ = Swaps::pool_join(
-            Origin::signed(data.origin),
+            RuntimeOrigin::signed(data.origin),
             pool_id,
             data.pool_amount,
             data.asset_bounds,

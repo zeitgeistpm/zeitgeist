@@ -38,9 +38,9 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The origin that is allowed to set the amount burned when crossing Styx.
-        type SetBurnAmountOrigin: EnsureOrigin<Self::Origin>;
+        type SetBurnAmountOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type Currency: Currency<Self::AccountId>;
 

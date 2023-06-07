@@ -26,8 +26,6 @@ use alloc::format;
 use alloc::vec::Vec;
 #[cfg(feature = "try-runtime")]
 use frame_support::migration::storage_key_iter;
-#[cfg(feature = "try-runtime")]
-use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 use frame_support::{
     dispatch::Weight,
     log,
@@ -162,7 +160,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<(), &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         use frame_support::pallet_prelude::Blake2_128Concat;
 
         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
@@ -170,7 +168,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
             MARKETS,
         )
         .collect::<BTreeMap<_, _>>();
-        Self::set_temp_storage(old_markets, "old_markets");
 
         let markets = Markets::<T>::iter_keys().count() as u32;
         let decodable_markets = Markets::<T>::iter_values().count() as u32;
@@ -184,13 +181,14 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
             log::info!("Markets: {}, Decodable Markets: {}", markets, decodable_markets);
         }
 
-        Ok(())
+        Ok(old_markets.encode())
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade() -> Result<(), &'static str> {
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
         let old_markets: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
-            Self::get_temp_storage("old_markets").unwrap();
+            Decode::decode(&mut &previous_state[..])
+                .expect("Failed to decode state: Invalid state");
         let new_market_count = <zrml_market_commons::Pallet<T>>::market_iter().count();
         assert_eq!(old_markets.len(), new_market_count);
         for (market_id, new_market) in <zrml_market_commons::Pallet<T>>::market_iter() {
@@ -439,7 +437,8 @@ where
         let pm_version = StorageVersion::get::<crate::Pallet<T>>();
         if pm_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "MoveDataToSimpleDisputes: prediction-markets version is {:?}, but {:?} is required",
+                "MoveDataToSimpleDisputes: prediction-markets version is {:?}, but {:?} is \
+                 required",
                 pm_version,
                 PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
             );
@@ -545,19 +544,18 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<(), &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         log::info!("MoveDataToSimpleDisputes: Start pre_upgrade!");
 
         let old_disputes = crate::Disputes::<T>::iter().collect::<BTreeMap<_, _>>();
-        Self::set_temp_storage(old_disputes, "old_disputes");
-
-        Ok(())
+        Ok(old_disputes.encode())
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade() -> Result<(), &'static str> {
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
         let old_disputes: BTreeMap<MarketIdOf<T>, OldDisputesOf<T>> =
-            Self::get_temp_storage("old_disputes").unwrap();
+            Decode::decode(&mut &previous_state[..])
+                .expect("Failed to decode state: Invalid state");
 
         log::info!("MoveDataToSimpleDisputes: (post_upgrade) Start first try-runtime part!");
 
