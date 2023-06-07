@@ -121,11 +121,11 @@ mod pallet {
 
         /// The functionality to allow controlling the markets resolution time.
         type DisputeResolution: DisputeResolutionApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+            >;
 
         /// Event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -136,10 +136,10 @@ mod pallet {
 
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            Currency = Self::Currency,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Currency = Self::Currency,
+            >;
 
         /// The maximum number of appeals until a court fails.
         #[pallet::constant]
@@ -1661,7 +1661,7 @@ mod pallet {
             // keep in mind that the number of draws is at maximum necessary_draws_weight * 2
             // because with delegations each juror draw weight
             // could delegate an additional juror in addition to the delegator itself
-            debug_assert!(random_jurors.len() <= 2 * necessary_draws_weight as usize);
+            debug_assert!(random_jurors.len() <= 2 * necessary_draws_weight);
             debug_assert!({
                 // proove that random jurors is sorted by juror account id
                 // this is helpful to use binary search later on

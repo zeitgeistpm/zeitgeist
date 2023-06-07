@@ -14,18 +14,11 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
-      # to the lack of support of `rust-toolchain` files with TOML syntax:
-      # https://github.com/actions-rs/toolchain/issues/126.
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
         
       - uses: actions-rs/install@v0.1
         with:
@@ -48,32 +41,27 @@ jobs:
           "standalone"
         ]
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
 
       - name: Checks
         run: ./scripts/tests/${{ matrix.scripts }}.sh
+
   benchmark:
     name: Quick check benchmarks
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
       
       - run: ./scripts/benchmarks/quick_check.sh
 
@@ -81,14 +69,11 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - uses: actions-rs/install@v0.1
         with:
@@ -115,14 +100,11 @@ jobs:
     name: Fuzz
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - uses: actions-rs/install@v0.1
         with:

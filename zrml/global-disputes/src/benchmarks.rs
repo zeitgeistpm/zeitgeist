@@ -19,7 +19,7 @@
 
 #![allow(
     // Auto-generated code is a no man's land
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "runtime-benchmarks")]
 

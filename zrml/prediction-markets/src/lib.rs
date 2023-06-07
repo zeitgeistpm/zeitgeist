@@ -1520,43 +1520,43 @@ mod pallet {
 
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-            ReserveIdentifier = [u8; 8],
-        >;
+                Self::AccountId,
+                Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
+                CurrencyId = Asset<MarketIdOf<Self>>,
+                ReserveIdentifier = [u8; 8],
+            >;
 
         #[cfg(feature = "parachain")]
         type AssetRegistry: Inspect<
-            AssetId = Asset<MarketIdOf<Self>>,
-            Balance = BalanceOf<Self>,
-            CustomMetadata = CustomMetadata,
-        >;
+                AssetId = Asset<MarketIdOf<Self>>,
+                Balance = BalanceOf<Self>,
+                CustomMetadata = CustomMetadata,
+            >;
 
         /// See [`zrml_authorized::AuthorizedPalletApi`].
         type Authorized: zrml_authorized::AuthorizedPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            NegativeImbalance = NegativeImbalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::RuntimeOrigin,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                NegativeImbalance = NegativeImbalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+                Origin = Self::RuntimeOrigin,
+            >;
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            NegativeImbalance = NegativeImbalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::RuntimeOrigin,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                NegativeImbalance = NegativeImbalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+                Origin = Self::RuntimeOrigin,
+            >;
 
         /// The origin that is allowed to destroy markets.
         type DestroyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -1569,21 +1569,17 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// See [`GlobalDisputesPalletApi`].
-        type GlobalDisputes: GlobalDisputesPalletApi<
-            MarketIdOf<Self>,
-            Self::AccountId,
-            BalanceOf<Self>,
-        >;
+        type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, Self::AccountId, BalanceOf<Self>>;
 
         /// The number of blocks the global dispute period remains open.
         type GlobalDisputePeriod: Get<Self::BlockNumber>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+            >;
 
         /// The maximum number of categories available for categorical markets.
         #[pallet::constant]
@@ -1664,14 +1660,14 @@ mod pallet {
 
         /// See [`DisputeApi`].
         type SimpleDisputes: zrml_simple_disputes::SimpleDisputesPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            NegativeImbalance = NegativeImbalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::RuntimeOrigin,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                NegativeImbalance = NegativeImbalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+                Origin = Self::RuntimeOrigin,
+            >;
 
         /// Handler for slashed funds.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -2891,15 +2887,15 @@ mod pallet {
         where
             F: FnMut(&MarketIdOf<T>, MarketOf<T>) -> DispatchResult,
             MarketIdsPerBlock: frame_support::StorageMap<
-                T::BlockNumber,
-                BoundedVec<MarketIdOf<T>, CacheSize>,
-                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
-            >,
+                    T::BlockNumber,
+                    BoundedVec<MarketIdOf<T>, CacheSize>,
+                    Query = BoundedVec<MarketIdOf<T>, CacheSize>,
+                >,
             MarketIdsPerTimeFrame: frame_support::StorageMap<
-                TimeFrame,
-                BoundedVec<MarketIdOf<T>, CacheSize>,
-                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
-            >,
+                    TimeFrame,
+                    BoundedVec<MarketIdOf<T>, CacheSize>,
+                    Query = BoundedVec<MarketIdOf<T>, CacheSize>,
+                >,
         {
             let market_ids_per_block = MarketIdsPerBlock::get(block_number);
             for market_id in market_ids_per_block.iter() {

@@ -66,11 +66,11 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-            ReserveIdentifier = [u8; 8],
-        >;
+                Self::AccountId,
+                Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
+                CurrencyId = Asset<MarketIdOf<Self>>,
+                ReserveIdentifier = [u8; 8],
+            >;
 
         /// Event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -80,11 +80,11 @@ mod pallet {
         type OutcomeBond: Get<BalanceOf<Self>>;
 
         type DisputeResolution: DisputeResolutionApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+            >;
 
         /// The additional amount of currency that must be bonded when creating a subsequent
         /// dispute.
@@ -92,10 +92,7 @@ mod pallet {
         type OutcomeFactor: Get<BalanceOf<Self>>;
 
         /// The identifier of individual markets.
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         /// The maximum number of disputes allowed on any single market.
         #[pallet::constant]

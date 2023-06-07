@@ -1213,7 +1213,7 @@ fn denounce_vote_works() {
         }));
 
         let free_alice_before = Balances::free_balance(ALICE);
-        let pot_balance_before = Balances::free_balance(&Court::reward_pot(court_id));
+        let pot_balance_before = Balances::free_balance(Court::reward_pot(court_id));
 
         let vote_item = VoteItem::Outcome(outcome);
 
@@ -1251,7 +1251,7 @@ fn denounce_vote_works() {
         // see `reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners`
         assert_eq!(free_alice_after, free_alice_before);
 
-        let pot_balance_after = Balances::free_balance(&Court::reward_pot(court_id));
+        let pot_balance_after = Balances::free_balance(Court::reward_pot(court_id));
         assert_eq!(pot_balance_after, pot_balance_before);
     });
 }
@@ -1832,34 +1832,34 @@ fn reassign_court_stakes_slashes_tardy_jurors_and_rewards_winners() {
         let market = MarketCommons::market(&market_id).unwrap();
         let _ = Court::on_resolution(&market_id, &market).unwrap();
 
-        let free_alice_before = Balances::free_balance(&ALICE);
-        let free_bob_before = Balances::free_balance(&BOB);
-        let free_charlie_before = Balances::free_balance(&CHARLIE);
-        let free_dave_before = Balances::free_balance(&DAVE);
-        let free_eve_before = Balances::free_balance(&EVE);
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+        let free_dave_before = Balances::free_balance(DAVE);
+        let free_eve_before = Balances::free_balance(EVE);
 
         assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
-        let free_alice_after = Balances::free_balance(&ALICE);
+        let free_alice_after = Balances::free_balance(ALICE);
         assert_ne!(free_alice_after, free_alice_before);
         assert_eq!(free_alice_after, free_alice_before - old_draws[ALICE as usize].slashable);
 
-        let free_bob_after = Balances::free_balance(&BOB);
+        let free_bob_after = Balances::free_balance(BOB);
         assert_ne!(free_bob_after, free_bob_before);
         assert_eq!(free_bob_after, free_bob_before - old_draws[BOB as usize].slashable);
 
-        let free_charlie_after = Balances::free_balance(&CHARLIE);
+        let free_charlie_after = Balances::free_balance(CHARLIE);
         let full_slashes = old_draws[ALICE as usize].slashable
             + old_draws[BOB as usize].slashable
             + old_draws[DAVE as usize].slashable
             + old_draws[EVE as usize].slashable;
         assert_eq!(free_charlie_after, free_charlie_before + full_slashes);
 
-        let free_dave_after = Balances::free_balance(&DAVE);
+        let free_dave_after = Balances::free_balance(DAVE);
         assert_ne!(free_dave_after, free_dave_before);
         assert_eq!(free_dave_after, free_dave_before - old_draws[DAVE as usize].slashable);
 
-        let free_eve_after = Balances::free_balance(&EVE);
+        let free_eve_after = Balances::free_balance(EVE);
         assert_ne!(free_eve_after, free_eve_before);
         assert_eq!(free_eve_after, free_eve_before - old_draws[EVE as usize].slashable);
     });
@@ -2155,7 +2155,7 @@ fn reassign_court_stakes_slashes_loosers_and_awards_winners() {
         let free_dave_after = Balances::free_balance(DAVE);
         assert_eq!(free_dave_after, free_dave_before - dave_slashed);
 
-        assert!(Balances::free_balance(&reward_pot).is_zero());
+        assert!(Balances::free_balance(reward_pot).is_zero());
     });
 }
 
@@ -2300,7 +2300,7 @@ fn reassign_court_stakes_works_for_delegations() {
         let dave_rewarded = dave_share * slashed;
         assert_eq!(free_dave_after, free_dave_before + dave_rewarded - dave_delegated_bob_slashed);
 
-        assert!(Balances::free_balance(&reward_pot).is_zero());
+        assert!(Balances::free_balance(reward_pot).is_zero());
     });
 }
 
@@ -2371,7 +2371,7 @@ fn reassign_court_stakes_rewards_treasury_if_no_winner() {
         let free_dave_before = Balances::free_balance(DAVE);
 
         let treasury_account = Court::treasury_account_id();
-        let free_treasury_before = Balances::free_balance(&treasury_account);
+        let free_treasury_before = Balances::free_balance(treasury_account);
 
         assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
@@ -2394,7 +2394,7 @@ fn reassign_court_stakes_rewards_treasury_if_no_winner() {
         let free_dave_after = Balances::free_balance(DAVE);
         assert_eq!(free_dave_after, free_dave_before - dave_slashed);
 
-        assert_eq!(Balances::free_balance(&treasury_account), free_treasury_before + slashed);
+        assert_eq!(Balances::free_balance(treasury_account), free_treasury_before + slashed);
     });
 }
 
@@ -2488,7 +2488,7 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
             let backer = number;
             let _ = Balances::deposit(&backer, bond).unwrap();
             assert_ok!(Balances::reserve_named(&Court::reserve_id(), &backer, bond));
-            let free_balance = Balances::free_balance(&backer);
+            let free_balance = Balances::free_balance(backer);
             free_balances_before.insert(backer, free_balance);
             court.appeals.try_push(AppealInfo { backer, bond, appealed_vote_item }).unwrap();
             number += 1;
@@ -2508,7 +2508,7 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
         let appeals = court.appeals;
         for AppealInfo { backer, bond, appealed_vote_item } in appeals {
             assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &backer), 0);
-            let free_balance_after = Balances::free_balance(&backer);
+            let free_balance_after = Balances::free_balance(backer);
             let free_balance_before = free_balances_before.get(&backer).unwrap();
 
             let resolved_vote_item = VoteItem::Outcome(resolved_outcome.clone());
@@ -2875,7 +2875,7 @@ fn prepare_draws(court_id: CourtId, outcomes_with_weights: Vec<(u128, u32)>) {
     for (i, (outcome_index, weight)) in outcomes_with_weights.iter().enumerate() {
         // offset to not conflict with other jurors
         let offset_i = (i + 1000) as u128;
-        let juror = offset_i as u128;
+        let juror = offset_i;
         let salt = BlakeTwo256::hash_of(&offset_i);
         let vote_item: VoteItem = VoteItem::Outcome(OutcomeReport::Scalar(*outcome_index));
         let commitment = BlakeTwo256::hash_of(&(juror, vote_item.clone(), salt));

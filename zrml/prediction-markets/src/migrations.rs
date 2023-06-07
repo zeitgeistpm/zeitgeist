@@ -676,7 +676,7 @@ mod tests_simple_disputes_migration {
                 let dispute = OldMarketDispute {
                     at: i as u64 + 42u64,
                     by: i as u128,
-                    outcome: OutcomeReport::Categorical(i as u16),
+                    outcome: OutcomeReport::Categorical(i),
                 };
                 disputes.try_push(dispute).unwrap();
             }
@@ -692,7 +692,7 @@ mod tests_simple_disputes_migration {
 
                 assert_eq!(dispute.at, i as u64 + 42u64);
                 assert_eq!(dispute.by, i as u128);
-                assert_eq!(dispute.outcome, OutcomeReport::Categorical(i as u16));
+                assert_eq!(dispute.outcome, OutcomeReport::Categorical(i));
 
                 let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i as usize);
                 assert_eq!(dispute.bond, bond);
@@ -711,7 +711,7 @@ mod tests_simple_disputes_migration {
                 let dispute = OldMarketDispute {
                     at: i as u64 + 42u64,
                     by: i as u128,
-                    outcome: OutcomeReport::Categorical(i as u16),
+                    outcome: OutcomeReport::Categorical(i),
                 };
                 let bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(i.into());
                 let pm_reserve_id = crate::Pallet::<Runtime>::reserve_id();

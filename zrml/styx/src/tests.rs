@@ -25,9 +25,9 @@ fn cross_slashes_funds_and_stores_crossing() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         let burn_amount = crate::BurnAmount::<Runtime>::get();
-        let original_balance = Balances::free_balance(&ALICE);
+        let original_balance = Balances::free_balance(ALICE);
         assert_ok!(Styx::cross(RuntimeOrigin::signed(ALICE)));
-        let balance_after_crossing = Balances::free_balance(&ALICE);
+        let balance_after_crossing = Balances::free_balance(ALICE);
         let diff = original_balance - balance_after_crossing;
         assert!(Crossings::<Runtime>::contains_key(ALICE));
         assert_eq!(diff, burn_amount);

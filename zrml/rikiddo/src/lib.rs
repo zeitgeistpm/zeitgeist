@@ -18,7 +18,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 // This is required to be able to use the derive(Arbitrary) macro.
-#![cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
+#![cfg_attr(feature = "arbitrary", allow(clippy::arithmetic_side_effects))]
 #![deny(missing_docs)]
 
 extern crate alloc;
