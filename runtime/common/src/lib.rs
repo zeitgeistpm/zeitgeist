@@ -613,7 +613,7 @@ macro_rules! impl_config_traits {
         impl pallet_balances::Config for Runtime {
             type AccountStore = System;
             type Balance = Balance;
-            type DustRemoval = ();
+            type DustRemoval = Treasury;
             type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposit = ExistentialDeposit;
             type MaxLocks = MaxLocks;
