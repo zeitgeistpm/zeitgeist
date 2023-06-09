@@ -14,6 +14,7 @@ APIs/RPC interface.
 
 ## v0.3.9
 
+[#1011]: https://github.com/zeitgeistpm/zeitgeist/pull/1011
 [#937]: https://github.com/zeitgeistpm/zeitgeist/pull/937
 [#903]: https://github.com/zeitgeistpm/zeitgeist/pull/903
 
@@ -21,6 +22,9 @@ APIs/RPC interface.
 
 - ⚠️ Add `outsider` field to `MarketBonds` struct. In particular, the `Market`
   struct's layout has changed ([#903]).
+- Adjust `deposit` function used to calculate storage fees for the following
+  pallets: identity, multisig, preimage, proxy. The cost of adding an identity
+  reduced from a minimum of 125 ZTG to a minimum of 1.5243 ZTG ([#1011])
 
 ### Fixed
 

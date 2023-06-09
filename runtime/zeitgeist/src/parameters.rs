@@ -119,9 +119,9 @@ parameter_types! {
 
     // Identity
     /// The amount held on deposit for a registered identity
-    pub const BasicDeposit: Balance = 100 * BASE;
+    pub const BasicDeposit: Balance = deposit(1, 258);
     /// The amount held on deposit per additional field for a registered identity.
-    pub const FieldDeposit: Balance = 25 * BASE;
+    pub const FieldDeposit: Balance = deposit(0, 66);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 16;
@@ -133,7 +133,7 @@ parameter_types! {
     /// The amount held on deposit for a registered subaccount. This should account for the fact
     /// that one storage item's value will increase by the size of an account ID, and there will
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
-    pub const SubAccountDeposit: Balance = 20 * BASE;
+    pub const SubAccountDeposit: Balance = deposit(1, 53);
 
     // Liquidity Mining parameters
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
