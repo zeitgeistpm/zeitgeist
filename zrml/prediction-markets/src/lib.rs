@@ -1644,6 +1644,7 @@ mod pallet {
         type MaxRejectReasonLen: Get<u32>;
 
         /// The maximum allowed duration of a market from creation to market close in blocks.
+        #[pallet::constant]
         type MaxMarketLifetime: Get<Self::BlockNumber>;
 
         /// The maximum number of bytes allowed as edit reason.
