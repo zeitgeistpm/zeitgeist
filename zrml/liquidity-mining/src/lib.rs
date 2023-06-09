@@ -104,10 +104,10 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = Self::MarketId,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = Self::MarketId,
+            >;
 
         type MarketId: MarketId;
 

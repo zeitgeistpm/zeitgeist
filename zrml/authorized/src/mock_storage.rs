@@ -32,10 +32,7 @@ pub(crate) mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
     }
 
     #[pallet::pallet]

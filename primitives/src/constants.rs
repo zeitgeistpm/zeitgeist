@@ -19,7 +19,7 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 
 #[cfg(feature = "mock")]
@@ -42,10 +42,10 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
-/// Storage cost for keys (per item) and values (per byte).
-// Approach: Achieve same cost per item and value in relation to total supply as on Polkadot.
+/// Storage cost per byte and item.
+// Approach: Achieve same cost per item and bytes in relation to total supply as on Polkadot.
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
-    items as Balance * 150 * CENT * BASE + (bytes as Balance) * 75 * MICRO
+    items as Balance * 150 * CENT + (bytes as Balance) * 75 * MICRO
 }
 
 // Rikiddo and TokensConfig
