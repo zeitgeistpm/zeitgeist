@@ -75,26 +75,25 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: grcov
-          use-tool-cache: true
+      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
+      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+      - name: Free up disk space on GitHub hosted runners
+        run: |
+          # Ensure context is GitHub hosted runner
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
+            echo "Freeing up space in GitHub hosted runner"
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /opt/ghc
+            sudo rm -rf "/usr/local/share/boost"
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          fi
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
       - name: Tests
-        run: ./scripts/tests/misc.sh -Cinstrument-coverage
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ${{ runner.temp }}/zeitgeist-test-coverage.lcov
-          fail_ci_if_error: true
-          flags: tests
-          verbose: true
-          name: unit-tests
+        run: ./scripts/tests/test.sh
 
   fuzz:
     name: Fuzz

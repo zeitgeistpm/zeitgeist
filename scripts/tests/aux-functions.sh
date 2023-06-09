@@ -17,5 +17,5 @@ test_package_with_feature() {
 
     /bin/echo -e "\e[0;33m***** Testing '$package' with features '$features' *****\e[0m\n"
     # default rustc profile dev (debug) is used to stop for debug_assertions
-    CARGO_INCREMENTAL=0 RUSTFLAGS="$rustflags" LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" cargo test --features $features --manifest-path $package/Cargo.toml --no-default-features
+    RUSTFLAGS="$rustflags" cargo test --features $features --manifest-path $package/Cargo.toml --no-default-features
 }
