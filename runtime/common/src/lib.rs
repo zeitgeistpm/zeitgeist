@@ -86,7 +86,8 @@ macro_rules! decl_common_types {
             CheckEra<Runtime>,
             CheckNonce<Runtime>,
             CheckWeight<Runtime>,
-            ChargeTransactionPayment<Runtime>,
+            // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
+            pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
         );
         pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
         pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
@@ -289,6 +290,7 @@ macro_rules! create_runtime {
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
+                AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -873,6 +875,165 @@ macro_rules! impl_config_traits {
             #[cfg(not(feature = "parachain"))]
             type OnTimestampSet = Aura;
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
+        }
+
+        use frame_support::unsigned::TransactionValidityError;
+        use orml_traits::arithmetic::One;
+        use orml_traits::arithmetic::Zero;
+        use frame_support::traits::fungibles::CreditOf;
+        use frame_support::traits::tokens::WithdrawReasons;
+        use frame_support::traits::ExistenceRequirement;
+        use frame_support::traits::tokens::WithdrawConsequence;
+        use sp_runtime::traits::DispatchInfoOf;
+        use sp_runtime::traits::PostDispatchInfoOf;
+        use frame_support::pallet_prelude::InvalidTransaction;
+        use frame_support::traits::tokens::fungibles::Balanced;
+
+        // TODO comes from here https://github.com/InvArch/InvArch-Node/blob/7c17df639f219d76cf94a3a61374a58496ca1d69/runtime/tinkernet/src/fee_handling.rs
+        // TODO https://github.com/paritytech/substrate/blob/6f7ec5368a7ea7f2f626a4c28d067e90f7a2aa30/frame/transaction-payment/src/payment.rs#L64-L138
+        pub struct FilteredTransactionCharger;
+        impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
+            type AssetId = CurrencyId;
+            type Balance = Balance;
+            type LiquidityInfo = CreditOf<AccountId, Tokens>;
+
+            fn withdraw_fee(
+                who: &AccountId,
+                call: &RuntimeCall,
+                _dispatch_info: &DispatchInfoOf<RuntimeCall>,
+                asset_id: Self::AssetId,
+                fee: Self::Balance,
+                tip: Self::Balance,
+            ) -> Result<CreditOf<AccountId, Tokens>, TransactionValidityError>
+            {
+                // We don't know the precision of the underlying asset. Because the converted fee could be
+                // less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
+                // fee.
+                let min_converted_fee = if fee.is_zero() {
+                    Zero::zero()
+                } else {
+                    One::one()
+                };
+
+                let bmul = |a, b, base| {
+                    let c0 = a.check_mul_rslt(&b).ok()?;
+                    let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
+                    c1.check_div_rslt(&base).ok()
+                };
+
+                let pay_native_fee = || -> Result<CreditOf<AccountId, Tokens>, TransactionValidityError> {
+                    let withdraw_reason = if tip.is_zero() {
+                        WithdrawReasons::TRANSACTION_PAYMENT
+                    } else {
+                        WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
+                    };
+
+                    Balances::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive)
+                        .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+                };
+
+                let credit = if asset_id == Asset::Ztg {
+                    pay_native_fee()?
+                } else {
+                    let location = AssetConvert::convert(asset_id);
+                    let metadata = location.and_then(|loc| AssetRegistry::metadata_by_location(loc));
+                    let fee_factor = metadata.and_then(|data| data.additional.xcm.fee_factor);
+
+                    if let Some(fee_factor) = fee_factor {
+                        let base = 10u128.checked_pow(metadata.unwrap().decimals)?;
+                        let fee = bmul(fee, fee_factor, base);
+                        let converted_fee = fee.max(min_converted_fee);
+
+                        <Tokens as Balanced<AccountId>>::withdraw(asset_id, who, converted_fee)
+                            .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+                    } else {
+                        // pay native fee if asset id is not found inside registry
+                        pay_native_fee()?
+                    }
+                };
+
+                Ok(credit)
+            }
+
+            fn correct_and_deposit_fee(
+                who: &AccountId,
+                _dispatch_info: &DispatchInfoOf<RuntimeCall>,
+                _post_info: &PostDispatchInfoOf<RuntimeCall>,
+                corrected_fee: Self::Balance,
+                tip: Self::Balance,
+                already_withdrawn: Self::LiquidityInfo,
+            ) -> Result<(), TransactionValidityError> {
+                let asset_id = already_withdrawn.asset();
+
+                let bmul = |a, b, base| {
+                    let c0 = a.check_mul_rslt(&b).ok()?;
+                    let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
+                    c1.check_div_rslt(&base).ok()
+                };
+
+                let correct_native_fee = || -> Result<(CreditOf<AccountId, Tokens>, CreditOf<AccountId, Tokens>), TransactionValidityError> {
+                    // Calculate how much refund we should return
+                    let refund_amount = already_withdrawn.peek().saturating_sub(corrected_fee);
+                    // refund to the the account that paid the fees. If this fails, the
+                    // account might have dropped below the existential balance. In
+                    // that case we don't refund anything.
+                    let refund_imbalance = Balances::deposit_into_existing(who, refund_amount)
+                        .unwrap_or_else(|_| Balances::PositiveImbalance::zero());
+                    // merge the imbalance caused by paying the fees and refunding parts of it again.
+                    let adjusted_paid = already_withdrawn
+                        .offset(refund_imbalance)
+                        .same()
+                        .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+                    // Call someone else to handle the imbalance (fee and tip separately)
+                    let (tip, fee) = adjusted_paid.split(tip);
+                    // Handle the final fee, e.g. by transferring to the block author or burning.
+                    (fee, tip)
+                };
+
+                let (fee, tip) = if asset_id == Asset::Ztg {
+                    correct_native_fee()?
+                } else {
+                    let location = AssetConvert::convert(asset_id);
+                    let metadata = location.and_then(|loc| AssetRegistry::metadata_by_location(loc));
+                    let fee_factor = metadata.and_then(|data| data.additional.xcm.fee_factor);
+
+                    let min_converted_fee = if corrected_fee.is_zero() {
+                        Zero::zero()
+                    } else {
+                        One::one()
+                    };
+
+                    if let Some(fee_factor) = fee_factor {
+                        let base = 10u128.checked_pow(metadata.unwrap().decimals)?;
+                        let fee = bmul(corrected_fee, fee_factor, base);
+                        let converted_fee = fee.max(min_converted_fee);
+
+                        // Calculate how much refund we should return.
+                        let (final_fee, refund) = already_withdrawn.split(converted_fee);
+
+                        // Refund to the account that already_withdrawn the fees. If this fails, the account might have dropped
+                        // below the existential balance. In that case we don't refund anything.
+                        let _ = <Tokens as Balanced<AccountId>>::resolve(who, refund);
+
+                        (final_fee, <Balances as Currency<AccountId>>::Imbalance::zero())
+                    } else {
+                        // pay native fee if asset id is not found inside registry
+                        correct_native_fee()?
+                    };
+                };
+
+                // Handle the final fee, e.g. by transferring to the block author or burning.
+                DealWithFees::on_unbalanceds(Some(fee).into_iter().chain(Some(tip)));
+
+                Ok(())
+            }
+        }
+
+        // TODO maybe only for feature parachain?
+        impl pallet_asset_tx_payment::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type Fungibles = Tokens;
+            type OnChargeAssetTransaction = FilteredTransactionCharger;
         }
 
         impl pallet_transaction_payment::Config for Runtime {
