@@ -85,7 +85,7 @@ parameter_types! {
     pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
-    pub const ContractsMaxCodeLen: u32 = 256 * 1024;
+    pub const ContractsMaxCodeLen: u32 = 246 * 1024;
     pub const ContractsMaxStorageKeyLen: u32 = 128;
     pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
