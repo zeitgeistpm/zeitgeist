@@ -1380,7 +1380,7 @@ macro_rules! create_runtime_api {
                         CONTRACTS_DEBUG_OUTPUT
                     )
                 }
-        
+
                 fn instantiate(
                     origin: AccountId,
                     value: Balance,
@@ -1403,7 +1403,7 @@ macro_rules! create_runtime_api {
                         CONTRACTS_DEBUG_OUTPUT
                     )
                 }
-        
+
                 fn upload_code(
                     origin: AccountId,
                     code: Vec<u8>,
@@ -1412,7 +1412,7 @@ macro_rules! create_runtime_api {
                 {
                     Contracts::bare_upload_code(origin, code, storage_deposit_limit)
                 }
-        
+
                 fn get_storage(
                     address: AccountId,
                     key: Vec<u8>,
