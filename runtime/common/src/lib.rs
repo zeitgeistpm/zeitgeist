@@ -303,7 +303,7 @@ macro_rules! create_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 31,
                 Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
-                // Contracts: pallet_contracts = 33,
+                Contracts: pallet_contracts = 33,
 
                 // Third-party
                 AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
@@ -657,24 +657,24 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_contracts::Config for Runtime {
-            type Time = Timestamp;
-            type Randomness = RandomnessCollectiveFlip;
+            type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+            type CallFilter = frame_support::traits::Nothing;
+            type CallStack = [pallet_contracts::Frame::<Runtime>; 7];
+            type ChainExtension = ();
             type Currency = Balances;
-            type RuntimeEvent = RuntimeEvent;
-            type RuntimeCall = RuntimeCall;
-            type CallFilter = ContractsCallFilters;
-            type DepositPerItem = ContractsDepositPerItem;
-            type DepositPerByte = ContractsDepositPerByte;
-            type CallStack = ContractsCallStackDepth;
-            type WeightPrice = pallet_transaction_payment::Pallet<Self>;
-            type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
-            type ChainExtension = ContractsChainExtensions;
             type DeletionQueueDepth = ContractsDeletionQueueDepth;
             type DeletionWeightLimit = ContractsDeletionWeightLimit;
-            type Schedule = ContractsSchedule;
-            type AddressGenerator = ContractsAddressGenerator;
+            type DepositPerItem = ContractsDepositPerItem;
+            type DepositPerByte = ContractsDepositPerByte;
             type MaxCodeLen = ContractsMaxCodeLen;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
+            type Randomness = RandomnessCollectiveFlip;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
+            type Schedule = ContractsSchedule;
+            type Time = Timestamp;
+            type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+            type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
         }
 
         impl pallet_democracy::Config for Runtime {

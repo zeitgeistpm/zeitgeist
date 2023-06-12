@@ -81,18 +81,13 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Contracts
-    pub const ContractsCallFilters: Contains<RuntimeCall> = Nothing;
-    pub const ContractsCallStackDepth: smallvec::Array<Item = Frame<Runtime>> = [pallet_contracts::Frame<Runtime>; 7]
-    pub const ContractsChainExtensions: pallet_contracts::chain_extension::ChainExtension<pallet_contracts::Pallet<Runtime>>;
-    pub const ContractsDeletionQueueDepth: u32 = RuntimeBlockWeights::get().max_block * Perbill::from_percent(10);
-    pub const ContractsDeletionWeightLimit: Weight = 128;
+    pub const ContractsDeletionQueueDepth: u32 = 128;
+    pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
-    pub const ContractsSchedule: pallet_contracts::schedule::Schedule<pallet_contracts::Pallet<Runtime>> = Default::default();
-    pub const ContractsScheduleAddressGenerator: pallet_contracts::AddressGenerator<pallet_contracts::Pallet<Runtime>> = pallet_contracts::DefaultAddressGenerator;
-    pub const ContractsMaxCodeLen: u32 = 128 * 1024;
-    pub const ContractsMaxStorageKeyLen: u32 = 128
-
+    pub const ContractsMaxCodeLen: u32 = 256 * 1024;
+    pub const ContractsMaxStorageKeyLen: u32 = 128;
+    pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
     /// Duration of a single court case.
