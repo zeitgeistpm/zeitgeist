@@ -43,7 +43,7 @@ pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
     traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
-    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};

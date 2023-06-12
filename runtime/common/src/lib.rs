@@ -1142,11 +1142,14 @@ macro_rules! impl_config_traits {
     }
 }
 
-// TODO: Contracts runtime api
 // Implement runtime apis
 #[macro_export]
 macro_rules! create_runtime_api {
     ($($additional_apis:tt)*) => {
+        // Prints debug output of the `contracts` pallet to stdout if the node is
+        // started with `-lruntime::contracts=debug`.
+        const CONTRACTS_DEBUG_OUTPUT: bool = true;
+
         impl_runtime_apis! {
             #[cfg(feature = "parachain")]
             impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1350,6 +1353,69 @@ macro_rules! create_runtime_api {
             impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
                 fn account_nonce(account: AccountId) -> Index {
                     System::account_nonce(account)
+                }
+            }
+
+            impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
+                for Runtime
+            {
+                fn call(
+                    origin: AccountId,
+                    dest: AccountId,
+                    value: Balance,
+                    gas_limit: Option<Weight>,
+                    storage_deposit_limit: Option<Balance>,
+                    input_data: Vec<u8>,
+                ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+                    let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+                    Contracts::bare_call(
+                        origin,
+                        dest,
+                        value,
+                        gas_limit,
+                        storage_deposit_limit,
+                        input_data,
+                        CONTRACTS_DEBUG_OUTPUT
+                    )
+                }
+        
+                fn instantiate(
+                    origin: AccountId,
+                    value: Balance,
+                    gas_limit: Option<Weight>,
+                    storage_deposit_limit: Option<Balance>,
+                    code: pallet_contracts_primitives::Code<Hash>,
+                    data: Vec<u8>,
+                    salt: Vec<u8>,
+                ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
+                {
+                    let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+                    Contracts::bare_instantiate(
+                        origin,
+                        value,
+                        gas_limit,
+                        storage_deposit_limit,
+                        code,
+                        data,
+                        salt,
+                        CONTRACTS_DEBUG_OUTPUT
+                    )
+                }
+        
+                fn upload_code(
+                    origin: AccountId,
+                    code: Vec<u8>,
+                    storage_deposit_limit: Option<Balance>,
+                ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+                {
+                    Contracts::bare_upload_code(origin, code, storage_deposit_limit)
+                }
+        
+                fn get_storage(
+                    address: AccountId,
+                    key: Vec<u8>,
+                ) -> pallet_contracts_primitives::GetStorageResult {
+                    Contracts::get_storage(address, key)
                 }
             }
 
