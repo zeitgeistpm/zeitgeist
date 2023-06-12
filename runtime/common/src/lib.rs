@@ -673,8 +673,8 @@ macro_rules! impl_config_traits {
             type RuntimeCall = RuntimeCall;
             type Schedule = ContractsSchedule;
             type Time = Timestamp;
-            type WeightPrice = pallet_transaction_payment::Pallet<Self>;
-            type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>; // TODO: custom weights
+            type WeightPrice = pallet_transaction_payment::Pallet<Runtime>;
+            type WeightInfo = weights::pallet_contracts::WeightInfo<Runtime>;
         }
 
         impl pallet_democracy::Config for Runtime {
