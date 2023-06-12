@@ -22,11 +22,11 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{Runtime, RuntimeCall, VERSION};
+use super::{Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
-    traits::{Nothing, WithdrawReasons},
+    traits::WithdrawReasons,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         Weight,
