@@ -233,34 +233,21 @@ macro_rules! decl_common_types {
 
         impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees
         {
-            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = CreditOf<AccountId, Tokens>>) {
-                if let Some(fees) = fees_then_tips.next() {
-                    // Merge fees and tips if there are any tips
-                    let merged = if let Some(tips) = fees_then_tips.next() {
-                        // the asset id of tips and fees has to be the same
-                        tips.merge(fees)
-                    } else {
-                        Ok(fees)
-                    };
-
-                    debug_assert!(FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32);
-                    if let Ok(m) = merged {
-                        let total_percentage = (FEES_AND_TIPS_TREASURY_PERCENTAGE.saturating_add(FEES_AND_TIPS_BURN_PERCENTAGE)) as u128;
-                        // Split the merged imbalance into two parts
-                        let (split_for_treasury, split_for_burn) = m.split(
-                            m.peek() * FEES_AND_TIPS_TREASURY_PERCENTAGE as u128 / total_percentage
-                        );
-                        // Handle the split imbalances
-                        // TODO on_unbalanced is not implemented for other currencies than the native currency
-                        // TODO https://github.com/paritytech/substrate/blob/85415fb3a452dba12ff564e6b093048eed4c5aad/frame/treasury/src/lib.rs#L618-L627
-                        // https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/treasury/src/lib.rs#L490
-                        let _ = <Tokens as Balanced<AccountId>>::resolve(&TreasuryPalletId::get().into_account_truncating(), split_for_treasury);
-                        // Burn the remaining part
-                        drop(split_for_burn);
-                    } else {
-                        debug_assert!(false, "The asset id of fees and tips should be equal!");
-                    }
-                }
+            fn on_unbalanced(fees_and_tips: CreditOf<AccountId, Tokens>) {
+                debug_assert!(FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32);
+                let total_percentage = (FEES_AND_TIPS_TREASURY_PERCENTAGE.saturating_add(FEES_AND_TIPS_BURN_PERCENTAGE)) as u128;
+                let fees_and_tips_value = fees_and_tips.peek().clone();
+                // Split the merged imbalance into two parts
+                let (split_for_treasury, split_for_burn) = fees_and_tips.split(
+                    fees_and_tips_value * FEES_AND_TIPS_TREASURY_PERCENTAGE as u128 / total_percentage
+                );
+                // Handle the split imbalances
+                // on_unbalanced is not implemented for other currencies than the native currency
+                // https://github.com/paritytech/substrate/blob/85415fb3a452dba12ff564e6b093048eed4c5aad/frame/treasury/src/lib.rs#L618-L627
+                // https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/treasury/src/lib.rs#L490
+                let _ = <Tokens as Balanced<AccountId>>::resolve(&TreasuryPalletId::get().into_account_truncating(), split_for_treasury);
+                // Burn the remaining part
+                drop(split_for_burn);
             }
         }
 
@@ -916,7 +903,7 @@ macro_rules! impl_config_traits {
         use orml_traits::arithmetic::One;
         use orml_traits::arithmetic::Zero;
         use frame_support::traits::fungibles::CreditOf;
-        use frame_support::traits::fungibles::Inspect;
+        use frame_support::traits::tokens::fungibles::Inspect;
         use frame_support::traits::tokens::WithdrawReasons;
         use frame_support::traits::ExistenceRequirement;
         use frame_support::traits::tokens::WithdrawConsequence;
@@ -924,13 +911,80 @@ macro_rules! impl_config_traits {
         use sp_runtime::traits::PostDispatchInfoOf;
         use frame_support::pallet_prelude::InvalidTransaction;
         use frame_support::traits::tokens::fungibles::Balanced;
+        use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
+        use sp_runtime::traits::Convert;
 
-        // TODO: It does foreign fees by extending transactions to include an optional `AssetId` that specifies the asset
+        // It does foreign fees by extending transactions to include an optional `AssetId` that specifies the asset
         // to be used for payment (defaulting to the native token on `None`). So for each transaction you can specify asset id
         // For real ZTG you use None and for orml_tokens ZTG you use `Some(Asset::Ztg)` and for DOT you use `Some(Asset::Foreign(0))`
-        // TODO comes from here https://github.com/InvArch/InvArch-Node/blob/7c17df639f219d76cf94a3a61374a58496ca1d69/runtime/tinkernet/src/fee_handling.rs
-        // TODO https://github.com/paritytech/substrate/blob/6f7ec5368a7ea7f2f626a4c28d067e90f7a2aa30/frame/transaction-payment/src/payment.rs#L64-L138
         pub struct TokensTxCharger;
+
+        type TTCBalance = <TokensTxCharger as pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime>>::Balance;
+        type TTCAsset = <TokensTxCharger as pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime>>::AssetId;
+        type TTCLiquidityInfo = <TokensTxCharger as pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime>>::LiquidityInfo;
+
+        fn calculate_fee(
+            native_fee: TTCBalance,
+            fee_factor: TTCBalance,
+            base: TTCBalance,
+        ) -> Result<TTCBalance, TransactionValidityError> {
+            // We don't know the precision of the underlying asset. Because the converted fee could be
+            // less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
+            // fee.
+            let min_converted_fee: TTCBalance = if native_fee.is_zero() {
+                Zero::zero()
+            } else {
+                One::one()
+            };
+
+            let bmul = |a: TTCBalance, b: TTCBalance, base: TTCBalance| -> Option<TTCBalance> {
+                let c0 = a.check_mul_rslt(&b).ok()?;
+                // The addition of base / 2 before the final division is a way to round to the nearest whole number
+                // if the fractional part of (a * b) / base is 0.5 or greater, it rounds up, otherwise, it rounds down.
+                let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
+                c1.check_div_rslt(&base).ok()
+            };
+
+            // example DOT: decimals = 10, base = 10^10 = 10_000_000_000
+            // assume fee_factor of DOT is 143_120_520
+            // now assume fee is 1 ZTG (1 * 10^10),
+            // means DOT fee = 1 * 10^10 * 143_120_520 / dot base (10^10) = 143_120_520
+            // which is 143_120_520 / 10^10 = 0.0143120520 DOT
+            let converted_fee = bmul(native_fee, fee_factor, base)
+                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+            let converted_fee = converted_fee.max(min_converted_fee);
+
+            Ok(converted_fee)
+        }
+
+        fn handle_withdraw(
+            asset_id: TTCAsset,
+            who: &AccountId,
+            converted_fee: TTCBalance,
+        ) -> Result<TTCLiquidityInfo, TransactionValidityError> {
+            let can_withdraw =
+                <Tokens as frame_support::traits::fungibles::Inspect<AccountId>>::can_withdraw(asset_id, who, converted_fee);
+            if !matches!(can_withdraw, WithdrawConsequence::Success) {
+                return Err(InvalidTransaction::Payment.into());
+            }
+
+            <Tokens as Balanced<AccountId>>::withdraw(asset_id, who, converted_fee)
+                .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+        }
+
+        fn get_fee_factor_and_base(
+            asset_id: TTCAsset,
+        ) -> Result<(TTCBalance, TTCBalance), TransactionValidityError> {
+            let location = AssetConvert::convert(asset_id);
+            let metadata = location.and_then(|loc| <AssetRegistry as orml_traits::asset_registry::Inspect>::metadata_by_location(&loc))
+                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+            let fee_factor = metadata.additional.xcm.fee_factor
+                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+            let base = 10u128.checked_pow(metadata.decimals)
+                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+            Ok((fee_factor, base))
+        }
+
         impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TokensTxCharger {
             type AssetId = CurrencyId;
             type Balance = Balance;
@@ -942,75 +996,32 @@ macro_rules! impl_config_traits {
                 _dispatch_info: &DispatchInfoOf<RuntimeCall>,
                 asset_id: Self::AssetId,
                 native_fee: Self::Balance,
-                tip: Self::Balance,
+                _tip: Self::Balance,
             ) -> Result<Self::LiquidityInfo, TransactionValidityError>
             {
-                // We don't know the precision of the underlying asset. Because the converted fee could be
-                // less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
-                // fee.
-                let min_converted_fee = if native_fee.is_zero() {
-                    Zero::zero()
-                } else {
-                    One::one()
-                };
-
-                use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
-                let bmul = |a, b, base| {
-                    let c0 = a.check_mul_rslt(&b).ok()?;
-                    // The addition of base / 2 before the final division is a way to round to the nearest whole number
-                    // if the fractional part of (a * b) / base is 0.5 or greater, it rounds up, otherwise, it rounds down.
-                    let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
-                    c1.check_div_rslt(&base).ok()
-                };
-
-                let credit = match asset_id {
+                match asset_id {
                     Asset::Ztg => {
                         // this is the case that `Some(Asset::Ztg)` is used,
                         // but we can't deal with pallet_balances here,
                         // because LiquidityInfo is based on orml_tokens
                         // so we use orml_tokens `Asset::Ztg`, which is not the real ZTG of pallet_balances
                         // to get the real ZTG from pallet_balances, you need to specify `None` as asset_id for each transaction
+                        let min_converted_fee: TTCBalance = if native_fee.is_zero() {
+                            Zero::zero()
+                        } else {
+                            One::one()
+                        };
                         let converted_fee = native_fee.max(min_converted_fee);
-
-                        let can_withdraw =
-                            <Tokens as Inspect<AccountId>>::can_withdraw(asset_id, who, converted_fee);
-                        if !matches!(can_withdraw, WithdrawConsequence::Success) {
-                            return Err(InvalidTransaction::Payment.into());
-                        }
-
-                        <Tokens as Balanced<AccountId>>::withdraw(Asset::Ztg, who, converted_fee)
-                            .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+                        handle_withdraw(Asset::Ztg, who, converted_fee)
                     },
                     #[cfg(feature = "parachain")]
                     Asset::ForeignAsset(_) => {
-                        let location = AssetConvert::convert(asset_id);
-                        let metadata = location.and_then(|loc| AssetRegistry::metadata_by_location(loc));
-                        let fee_factor = metadata
-                            .and_then(|data| data.additional.xcm.fee_factor)
-                            .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-
-                        let base = 10u128.checked_pow(metadata.decimals)?;
-                        // example DOT: decimals = 10, base = 10^10 = 10_000_000_000
-                        // assume fee_factor of DOT is 143_120_520
-                        // now assume fee is 1 ZTG (1 * 10^10),
-                        // means DOT fee = 1 * 10^10 * 143_120_520 / dot base (10^10) = 143_120_520
-                        // which is 143_120_520 / 10^10 = 0.0143120520 DOT
-                        let converted_fee = bmul(native_fee, fee_factor, base);
-                        let converted_fee = converted_fee.max(min_converted_fee);
-
-                        let can_withdraw =
-                            <Tokens as Inspect<AccountId>>::can_withdraw(asset_id, who, converted_fee);
-                        if !matches!(can_withdraw, WithdrawConsequence::Success) {
-                            return Err(InvalidTransaction::Payment.into());
-                        }
-
-                        <Tokens as Balanced<AccountId>>::withdraw(asset_id, who, converted_fee)
-                            .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+                        let (fee_factor, base) = get_fee_factor_and_base(asset_id)?;
+                        let converted_fee = calculate_fee(native_fee, fee_factor, base)?;
+                        handle_withdraw(asset_id, who, converted_fee)
                     },
                     _ => return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment)),
-                };
-
-                Ok(credit)
+                }
             }
 
             fn correct_and_deposit_fee(
@@ -1018,24 +1029,11 @@ macro_rules! impl_config_traits {
                 _dispatch_info: &DispatchInfoOf<RuntimeCall>,
                 _post_info: &PostDispatchInfoOf<RuntimeCall>,
                 corrected_fee: Self::Balance,
-                tip: Self::Balance,
+                _tip: Self::Balance,
                 paid: Self::LiquidityInfo,
             ) -> Result<(), TransactionValidityError> {
                 let asset_id = paid.asset();
-
-                let min_converted_fee = if corrected_fee.is_zero() {
-                    Zero::zero()
-                } else {
-                    One::one()
-                };
-
-                let bmul = |a, b, base| {
-                    let c0 = a.check_mul_rslt(&b).ok()?;
-                    let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
-                    c1.check_div_rslt(&base).ok()
-                };
-
-                let (final_fee, final_tip) = match asset_id {
+                let final_fee = match asset_id {
                     Asset::Ztg => {
                         // Calculate how much refund we should return.
                         let (fee, refund) = paid.split(corrected_fee);
@@ -1044,24 +1042,12 @@ macro_rules! impl_config_traits {
                         // below the existential balance. In that case we don't refund anything.
                         let _ = <Tokens as Balanced<AccountId>>::resolve(who, refund);
 
-                        fee.split(tip)
+                        fee
                     },
                     #[cfg(feature = "parachain")]
                     Asset::ForeignAsset(_) => {
-                        let location = AssetConvert::convert(asset_id);
-                        let metadata = location.and_then(|loc| AssetRegistry::metadata_by_location(loc));
-                        let fee_factor = metadata
-                            .and_then(|data| data.additional.xcm.fee_factor)
-                            .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-
-                        let base = 10u128.checked_pow(metadata.decimals)?;
-                        // example DOT: decimals = 10, base = 10^10 = 10_000_000_000
-                        // assume fee_factor of DOT is 143_120_520
-                        // now assume fee is 1 ZTG (1 * 10^10),
-                        // means DOT fee = 1 * 10^10 * 143_120_520 / dot base (10^10) = 143_120_520
-                        // which is 143_120_520 / 10^10 = 0.0143120520 DOT
-                        let converted_fee = bmul(corrected_fee, fee_factor, base);
-                        let converted_fee = converted_fee.max(min_converted_fee);
+                        let (fee_factor, base) = get_fee_factor_and_base(asset_id)?;
+                        let converted_fee = calculate_fee(corrected_fee, fee_factor, base)?;
 
                         // Calculate how much refund we should return.
                         let (fee, refund) = paid.split(converted_fee);
@@ -1070,14 +1056,14 @@ macro_rules! impl_config_traits {
                         // below the existential balance. In that case we don't refund anything.
                         let _ = <Tokens as Balanced<AccountId>>::resolve(who, refund);
 
-                        fee.split(tip)
+                        fee
                     },
                     _ => return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment)),
                 };
 
                 // Handle the final fee and tip, e.g. by transferring to the treasury.
                 // Note: The `corrected_fee` already includes the `tip`.
-                DealWithForeignFees::on_unbalanceds(Some(final_fee).into_iter().chain(Some(final_tip)));
+                DealWithForeignFees::on_unbalanced(final_fee);
 
                 Ok(())
             }
