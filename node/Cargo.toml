@@ -6,6 +6,7 @@ path = "./src/main.rs"
 substrate-build-script-utils = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 
 [dependencies]
+pallet-asset-tx-payment = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment-rpc = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment-rpc-runtime-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }

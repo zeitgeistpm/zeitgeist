@@ -914,6 +914,8 @@ macro_rules! impl_config_traits {
         use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
         use sp_runtime::traits::Convert;
 
+        // TODO: test functions
+
         // It does foreign fees by extending transactions to include an optional `AssetId` that specifies the asset
         // to be used for payment (defaulting to the native token on `None`). So for each transaction you can specify asset id
         // For real ZTG you use None and for orml_tokens ZTG you use `Some(Asset::Ztg)` and for DOT you use `Some(Asset::Foreign(0))`
@@ -972,6 +974,7 @@ macro_rules! impl_config_traits {
                 .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
         }
 
+        #[cfg(feature = "parachain")]
         fn get_fee_factor_and_base(
             asset_id: TTCAsset,
         ) -> Result<(TTCBalance, TTCBalance), TransactionValidityError> {
@@ -1028,7 +1031,7 @@ macro_rules! impl_config_traits {
                 who: &AccountId,
                 _dispatch_info: &DispatchInfoOf<RuntimeCall>,
                 _post_info: &PostDispatchInfoOf<RuntimeCall>,
-                corrected_fee: Self::Balance,
+                corrected_native_fee: Self::Balance,
                 _tip: Self::Balance,
                 paid: Self::LiquidityInfo,
             ) -> Result<(), TransactionValidityError> {
@@ -1036,7 +1039,7 @@ macro_rules! impl_config_traits {
                 let final_fee = match asset_id {
                     Asset::Ztg => {
                         // Calculate how much refund we should return.
-                        let (fee, refund) = paid.split(corrected_fee);
+                        let (fee, refund) = paid.split(corrected_native_fee);
 
                         // Refund to the account that paid the fees. If this fails, the account might have dropped
                         // below the existential balance. In that case we don't refund anything.
@@ -1047,7 +1050,7 @@ macro_rules! impl_config_traits {
                     #[cfg(feature = "parachain")]
                     Asset::ForeignAsset(_) => {
                         let (fee_factor, base) = get_fee_factor_and_base(asset_id)?;
-                        let converted_fee = calculate_fee(corrected_fee, fee_factor, base)?;
+                        let converted_fee = calculate_fee(corrected_native_fee, fee_factor, base)?;
 
                         // Calculate how much refund we should return.
                         let (fee, refund) = paid.split(converted_fee);
@@ -1062,7 +1065,7 @@ macro_rules! impl_config_traits {
                 };
 
                 // Handle the final fee and tip, e.g. by transferring to the treasury.
-                // Note: The `corrected_fee` already includes the `tip`.
+                // Note: The `corrected_native_fee` already includes the `tip`.
                 DealWithForeignFees::on_unbalanced(final_fee);
 
                 Ok(())

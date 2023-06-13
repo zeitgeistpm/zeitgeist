@@ -12824,6 +12824,7 @@ dependencies = [
  "moonbeam-vrf",
  "nimbus-consensus",
  "nimbus-primitives",
+ "pallet-asset-tx-payment",
  "pallet-author-inherent",
  "pallet-parachain-staking",
  "pallet-transaction-payment",
