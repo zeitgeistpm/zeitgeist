@@ -16,14 +16,14 @@
       0
     ]
   ],
-  "protocolId": "battery_station_v2",
+  "protocolId": "battery_station_v3",
   "properties": {
     "ss58Format": 73,
     "tokenDecimals": 10,
     "tokenSymbol": "ZBS"
   },
-  "parachain_id": 2050,
-  "relay_chain": "battery_station_relay_v3",
+  "parachain_id": 2101,
+  "relay_chain": "rococo",
   "consensusEngine": null,
   "codeSubstitutes": {},
   "genesis": {

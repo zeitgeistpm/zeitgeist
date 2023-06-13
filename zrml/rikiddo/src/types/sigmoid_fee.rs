@@ -68,7 +68,7 @@ pub struct FeeSigmoidConfig<FS: FixedSigned> {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_fee_sigmoid_config {
     ( $t:ident, $LeEqU:ident, $p:ty ) => {
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         impl<'a, Frac> Arbitrary<'a> for FeeSigmoidConfig<$t<Frac>>
         where
             Frac: $LeEqU,

@@ -18,9 +18,8 @@
 
 use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
-    KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
+    POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
-use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -291,7 +290,7 @@ where
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
     let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-    let (network, system_rpc_tx, start_network) =
+    let (network, system_rpc_tx, tx_handler_controller, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
@@ -323,6 +322,7 @@ where
         keystore: params.keystore_container.sync_keystore(),
         network: network.clone(),
         rpc_builder,
+        tx_handler_controller,
         system_rpc_tx,
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),
@@ -347,7 +347,7 @@ where
         Arc::new(move |hash, data| network.announce_block(hash, data))
     };
 
-    let relay_chain_slot_duration = KUSAMA_BLOCK_DURATION;
+    let relay_chain_slot_duration = POLKADOT_BLOCK_DURATION;
 
     if collator {
         let parachain_consensus = build_consensus(
@@ -390,7 +390,6 @@ where
             relay_chain_interface,
             relay_chain_slot_duration,
             import_queue,
-            collator_options: CollatorOptions { relay_chain_rpc_url: Default::default() },
         };
 
         start_full_node(params)?;

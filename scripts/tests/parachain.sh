@@ -6,7 +6,8 @@ set -euxo pipefail
 
 . "$(dirname "$0")/aux-functions.sh" --source-only
 
-check_package_with_feature runtime/battery-station std,parachain
-check_package_with_feature runtime/zeitgeist std,parachain
+check_package_with_feature runtime/battery-station 'parachain --all-features'
 
-check_package_with_feature node default,parachain
+check_package_with_feature runtime/zeitgeist 'parachain --all-features'
+
+check_package_with_feature node 'parachain --all-features'

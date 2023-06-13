@@ -18,10 +18,12 @@
 
 use crate::{
     xcm_config::config::{general_key, zeitgeist},
-    AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, Origin, Runtime, System,
+    AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, Runtime, RuntimeOrigin,
+    System,
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;
+use sp_runtime::AccountId32;
 use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
@@ -94,8 +96,8 @@ impl ExtBuilder {
 }
 
 /// Accounts
-pub const ALICE: [u8; 32] = [4u8; 32];
-pub const BOB: [u8; 32] = [5u8; 32];
+pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 
 /// A PARA ID used for a sibling parachain.
 /// It must be one that doesn't collide with any other in use.
@@ -133,7 +135,7 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         additional: additional_meta.unwrap_or_default(),
     };
 
-    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_ZTG_ID)));
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_ZTG_ID)));
 }
 
 pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {
@@ -147,21 +149,25 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         additional: additional_meta.unwrap_or_default(),
     };
 
-    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_SIBLING_ID)));
+    assert_ok!(AssetRegistry::register_asset(
+        RuntimeOrigin::root(),
+        meta,
+        Some(FOREIGN_SIBLING_ID)
+    ));
 }
 
 pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
-    // Register KSM as foreign asset in the sibling parachain
+    // Register dot as foreign asset in the sibling parachain
     let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-        decimals: 12,
-        name: "Kusama".into(),
-        symbol: "KSM".into(),
-        existential_deposit: 10_000_000_000, // 0.01
+        decimals: 10,
+        name: "Polkadot".into(),
+        symbol: "DOT".into(),
+        existential_deposit: 10_000_000_000, // 1
         location: Some(VersionedMultiLocation::V1(foreign_parent_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
-    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_PARENT_ID)));
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_PARENT_ID)));
 }
 
 #[inline]
@@ -170,8 +176,8 @@ pub(super) fn ztg(amount: Balance) -> Balance {
 }
 
 #[inline]
-pub(super) fn ksm(amount: Balance) -> Balance {
-    foreign(amount, 12)
+pub(super) fn dot(amount: Balance) -> Balance {
+    foreign(amount, 10)
 }
 
 #[inline]

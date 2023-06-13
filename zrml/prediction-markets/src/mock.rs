@@ -18,7 +18,7 @@
 
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "mock")]
 
@@ -44,10 +44,9 @@ use zeitgeist_primitives::{
         MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod,
         MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
         MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutsiderBond, PmPalletId,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        MinCategories, MinDisputeDuration, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
+        MinWeight, MinimumPeriod, OutsiderBond, PmPalletId, SimpleDisputesPalletId, StakeWeight,
+        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -105,7 +104,7 @@ construct_runtime!(
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
@@ -131,7 +130,7 @@ construct_runtime!(
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
@@ -150,7 +149,7 @@ impl crate::Config for Runtime {
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
     #[cfg(feature = "with-global-disputes")]
@@ -191,9 +190,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -203,7 +202,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type OnSetCode = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -222,13 +221,11 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
-    type OnDust = ();
-    type OnKilledTokenAccount = ();
-    type OnNewTokenAccount = ();
+    type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
@@ -245,7 +242,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -270,7 +267,7 @@ impl zrml_authorized::Config for Runtime {
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type CorrectionPeriod = CorrectionPeriod;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
@@ -280,7 +277,7 @@ impl zrml_authorized::Config for Runtime {
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
@@ -290,7 +287,7 @@ impl zrml_court::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
@@ -320,7 +317,7 @@ impl zrml_rikiddo::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
@@ -328,7 +325,7 @@ impl zrml_simple_disputes::Config for Runtime {
 
 #[cfg(feature = "with-global-disputes")]
 impl zrml_global_disputes::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -342,7 +339,7 @@ impl zrml_global_disputes::Config for Runtime {
 }
 
 impl zrml_swaps::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFee;
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
@@ -355,7 +352,6 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
     type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
@@ -370,7 +366,7 @@ impl pallet_treasury::Config for Runtime {
     type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MaxApprovals = MaxApprovals;
     type OnSlash = ();
     type PalletId = TreasuryPalletId;
@@ -416,7 +412,6 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
-                .into_iter()
                 .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
                 .collect(),
         }

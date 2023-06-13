@@ -17,20 +17,20 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist, AccountId, CurrencyId,
-    DmpQueue, Origin, Runtime, XcmpQueue,
+    parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist, CurrencyId, DmpQueue,
+    Runtime, RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
-use super::setup::{ksm, ztg, ExtBuilder, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
+use super::setup::{dot, ztg, ExtBuilder, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
 
 decl_test_relay_chain! {
-    pub struct KusamaNet {
-        Runtime = kusama_runtime::Runtime,
-        XcmConfig = kusama_runtime::xcm_config::XcmConfig,
+    pub struct PolkadotNet {
+        Runtime = polkadot_runtime::Runtime,
+        XcmConfig = polkadot_runtime::xcm_config::XcmConfig,
         new_ext = relay_ext(),
     }
 }
@@ -38,7 +38,7 @@ decl_test_relay_chain! {
 decl_test_parachain! {
     pub struct Zeitgeist {
         Runtime = Runtime,
-        Origin = Origin,
+        RuntimeOrigin = RuntimeOrigin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
         new_ext = para_ext(zeitgeist::ID),
@@ -48,7 +48,7 @@ decl_test_parachain! {
 decl_test_parachain! {
     pub struct Sibling {
         Runtime = Runtime,
-        Origin = Origin,
+        RuntimeOrigin = RuntimeOrigin,
         XcmpMessageHandler = XcmpQueue,
         DmpMessageHandler = DmpQueue,
         new_ext = para_ext(PARA_ID_SIBLING),
@@ -57,13 +57,13 @@ decl_test_parachain! {
 
 decl_test_network! {
     pub struct TestNet {
-        relay_chain = KusamaNet,
+        relay_chain = PolkadotNet,
         parachains = vec![
             // N.B: Ideally, we could use the defined para id constants but doing so
             // fails with: "error: arbitrary expressions aren't allowed in patterns"
 
             // Be sure to use `xcm_config::config::zeitgeist::ID`
-            (2101, Zeitgeist),
+            (2092, Zeitgeist),
             // Be sure to use `PARA_ID_SIBLING`
             (3000, Sibling),
         ],
@@ -71,15 +71,13 @@ decl_test_network! {
 }
 
 pub(super) fn relay_ext() -> sp_io::TestExternalities {
-    use kusama_runtime::{Runtime, System};
+    use polkadot_runtime::{Runtime, System};
 
     let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(AccountId::from(ALICE), ksm(2002))],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
+    pallet_balances::GenesisConfig::<Runtime> { balances: vec![(ALICE, dot(2002))] }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
     polkadot_runtime_parachains::configuration::GenesisConfig::<Runtime> {
         config: default_parachains_host_configuration(),
@@ -101,9 +99,9 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
 pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
     ExtBuilder::default()
         .set_balances(vec![
-            (AccountId::from(ALICE), CurrencyId::Ztg, ztg(10)),
-            (AccountId::from(ALICE), FOREIGN_PARENT_ID, ksm(10)),
-            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, ksm(1)),
+            (ALICE, CurrencyId::Ztg, ztg(10)),
+            (ALICE, FOREIGN_PARENT_ID, dot(10)),
+            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, dot(10)),
         ])
         .set_parachain_id(parachain_id)
         .build()
