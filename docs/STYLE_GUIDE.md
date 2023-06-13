@@ -2,8 +2,8 @@
 
 ## Comments
 
-- Comments **must** be wrapped at 100 chars per line
-- Comments **must** be formulated in markdown
+- Comments **must** be wrapped at 100 chars per line.
+- Comments **must** be formulated in markdown.
 
 ## Doc comments
 
@@ -68,7 +68,7 @@ duplicating documentation.
 ## Formatting
 
 - rustfmt and clippy have the last say in formatting.
-- Please format code contained in macro invocations (`impl_benchmarks!`,
+- Format code contained in macro invocations (`impl_benchmarks!`,
   `decl_runtime_apis!`, homebrew macros in `runtime/`, etc.) and attributes
   (`#[pallet::weight(...)`, etc.) manually.
 - Add trailing commas in macro invocations manually, as rustfmt won't add them
@@ -86,20 +86,8 @@ duplicating documentation.
 - Never use panickers.
 - Prefer double turbofish `Vec::<T>::new()` over single turbofish
   `<Vec<T>>::new()`.
-- All branches of match expressions must be explicit. Never use the catch-all
-  `_ =>`. For example:
-
-  ```rust
-  match market_status {
-      MarketStatus::Active => {
-          // --- snip ---
-      }
-      _ => {
-          // --- snip ---
-      } // not allowed
-  }
-  ```
-
+- All branches of match expressions **should** be explicit. Avoid using the
+  catch-all `_ =>`.
 - When changing enums, maintain the existing order and add variants only at the
   end of the enum to prevent messing up indices.
 - Maintain lexicographical ordering of traits in `#[derive(...)]` attributes.
