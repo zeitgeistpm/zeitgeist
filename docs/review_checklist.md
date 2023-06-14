@@ -21,9 +21,9 @@
   - [ ] Are breaking changes marked as such?
   - [ ] Is the file formatted with `prettier -w docs/changelog_for_devs.md`?
 - Sanity tests:
-  - [ ] The local node produces blocks.
-  - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
+  - [ ] The local node produces blocks (run `cargo run --profile=production -- --tmp`).
   - [ ] The node syncs with Zeitgeist and Battery Station.
+  - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
 - [ ] Code quality:
   - [ ] Are there compiler warnings which can easily be avoided?
   - [ ] Is integer arithmetic saturated/checked and are all panickers removed?
