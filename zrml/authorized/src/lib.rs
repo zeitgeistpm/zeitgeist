@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -24,6 +25,7 @@ mod authorized_pallet_api;
 mod benchmarks;
 pub mod migrations;
 mod mock;
+mod mock_storage;
 mod tests;
 pub mod weights;
 
@@ -35,22 +37,25 @@ mod pallet {
     use crate::{weights::WeightInfoZeitgeist, AuthorizedPalletApi};
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::DispatchResult,
+        dispatch::{DispatchResult, DispatchResultWithPostInfo},
         ensure,
-        pallet_prelude::{EnsureOrigin, OptionQuery, StorageMap},
+        pallet_prelude::{ConstU32, EnsureOrigin, OptionQuery, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
     use frame_system::pallet_prelude::OriginFor;
-    use sp_runtime::DispatchError;
+    use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
-        traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        traits::{DisputeApi, DisputeResolutionApi},
+        types::{
+            Asset, AuthorityReport, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
+            OutcomeReport,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -59,27 +64,56 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub type CacheSize = ConstU32<64>;
+    pub(crate) type MarketOf<T> = Market<
+        <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Overwrites already provided outcomes for the same market and account.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::authorize_market_outcome())]
+        #[pallet::weight(
+            T::WeightInfo::authorize_market_outcome_first_report(CacheSize::get()).max(
+                T::WeightInfo::authorize_market_outcome_existing_report(),
+            )
+        )]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::AuthorizedDisputeResolutionOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized => {
-                    AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
-                    Ok(())
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+
+            let now = frame_system::Pallet::<T>::block_number();
+
+            let report_opt = AuthorizedOutcomeReports::<T>::get(market_id);
+            let (report, ids_len) = match &report_opt {
+                Some(report) => (AuthorityReport { resolve_at: report.resolve_at, outcome }, 0u32),
+                None => {
+                    let resolve_at = now.saturating_add(T::CorrectionPeriod::get());
+                    let ids_len = T::DisputeResolution::add_auto_resolve(&market_id, resolve_at)?;
+                    (AuthorityReport { resolve_at, outcome }, ids_len)
                 }
-                _ => Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into()),
+            };
+
+            AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
+            if report_opt.is_none() {
+                Ok(Some(T::WeightInfo::authorize_market_outcome_first_report(ids_len)).into())
+            } else {
+                Ok(Some(T::WeightInfo::authorize_market_outcome_existing_report()).into())
             }
         }
     }
@@ -87,16 +121,24 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        /// Market commons
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        /// The period, in which the authority can correct the outcome of a market.
+        /// This value must not be zero.
+        #[pallet::constant]
+        type CorrectionPeriod: Get<Self::BlockNumber>;
+
+        type DisputeResolution: DisputeResolutionApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+            >;
+
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
-        type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::Origin>;
+        type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Identifier of this pallet
         #[pallet::constant]
@@ -112,6 +154,8 @@ mod pallet {
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
         MarketIsNotDisputed,
+        /// Only one dispute is allowed.
+        OnlyOneDisputeAllowed,
         /// The report does not match the market's type.
         OutcomeMismatch,
     }
@@ -128,7 +172,15 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    impl<T> Pallet<T> where T: Config {}
+    impl<T> Pallet<T>
+    where
+        T: Config,
+    {
+        /// Return the resolution block number for the given market.
+        fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
+            AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at)
+        }
+    }
 
     impl<T> DisputeApi for Pallet<T>
     where
@@ -139,26 +191,57 @@ mod pallet {
         type BlockNumber = T::BlockNumber;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
-        type Origin = T::Origin;
+        type Origin = T::RuntimeOrigin;
 
         fn on_dispute(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            market: &MarketOf<T>,
         ) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            ensure!(disputes.is_empty(), Error::<T>::OnlyOneDisputeAllowed);
             Ok(())
         }
 
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &MarketOf<T>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            let result = AuthorizedOutcomeReports::<T>::get(market_id);
-            if result.is_some() {
-                AuthorizedOutcomeReports::<T>::remove(market_id);
-            }
-            Ok(result)
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            let report = AuthorizedOutcomeReports::<T>::take(market_id);
+            Ok(report.map(|r| r.outcome))
+        }
+
+        fn get_auto_resolve(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            market_id: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            Ok(Self::get_auto_resolve(market_id))
+        }
+
+        fn has_failed(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &MarketOf<T>,
+        ) -> Result<bool, DispatchError> {
+            ensure!(
+                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+
+            Ok(false)
         }
     }
 
@@ -168,20 +251,20 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
     pub type AuthorizedOutcomeReports<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, AuthorityReport<T::BlockNumber>, OptionQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
 {
     use frame_support::traits::Get;
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::ScoringRule;
+    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
+        base_asset: Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
         creator: T::PalletId::get().into_account_truncating(),
@@ -199,5 +282,6 @@ where
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
     }
 }

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -21,7 +22,7 @@ mod market_id;
 mod swaps;
 mod zeitgeist_multi_reservable_currency;
 
-pub use dispute_api::DisputeApi;
+pub use dispute_api::{DisputeApi, DisputeResolutionApi};
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
 pub use swaps::Swaps;

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,8 +18,10 @@
 
 #![cfg(feature = "with-zeitgeist-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance};
-use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{
+    generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
+    EndowedAccountWithBalance,
+};
 use hex_literal::hex;
 use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
@@ -28,8 +31,13 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    zeitgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
+    super::{generate_inflation_config_function, Extensions},
+    crate::POLKADOT_PARACHAIN_ID,
+    zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
+    zeitgeist_runtime::{
+        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
+        DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
+    },
 };
 
 cfg_if::cfg_if! {
@@ -37,7 +45,6 @@ cfg_if::cfg_if! {
         const DEFAULT_STAKING_AMOUNT_ZEITGEIST: u128 = MinCollatorStk::get();
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
-        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_ZEITGEIST: u128 = 0;
         pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
     } else {
         pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
@@ -71,7 +78,10 @@ fn endowed_accounts_staging_zeitgeist() -> Vec<EndowedAccountWithBalance> {
 fn additional_chain_spec_staging_zeitgeist(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
+    use zeitgeist_primitives::constants::BASE;
+
     AdditionalChainSpec {
+        blocks_per_round: DefaultBlocksPerRound::get(),
         candidates: vec![
             (
                 hex!["524e9aac979cbb9ecdb7acd1635755c3b15696321a3345ca77f0ab0ae23f675a"].into(),
@@ -92,9 +102,15 @@ fn additional_chain_spec_staging_zeitgeist(
                 DEFAULT_STAKING_AMOUNT_ZEITGEIST,
             ),
         ],
-        crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_ZEITGEIST,
-        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
+        collator_commission: DefaultCollatorCommission::get(),
+        inflation_info: inflation_config(
+            STAKING_PTD * Perbill::from_percent(40),
+            STAKING_PTD * Perbill::from_percent(70),
+            STAKING_PTD,
+            TOTAL_INITIAL_ZTG * BASE,
+        ),
         nominations: vec![],
+        parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
         parachain_id,
     }
 }
@@ -113,12 +129,14 @@ fn additional_chain_spec_staging_zeitgeist() -> AdditionalChainSpec {
     }
 }
 
-#[inline]
 pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 
 generate_generic_genesis_function!(zeitgeist_runtime,);
+
+#[cfg(feature = "parachain")]
+generate_inflation_config_function!(zeitgeist_runtime);
 
 pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
     let wasm = get_wasm()?;
@@ -131,7 +149,7 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
             generic_genesis(
                 additional_chain_spec_staging_zeitgeist(
                     #[cfg(feature = "parachain")]
-                    crate::KUSAMA_PARACHAIN_ID.into(),
+                    POLKADOT_PARACHAIN_ID.into(),
                 ),
                 endowed_accounts_staging_zeitgeist(),
                 wasm,
@@ -144,8 +162,9 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         Some(token_properties("ZTG", SS58Prefix::get())),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
-            relay_chain: "kusama".into(),
-            parachain_id: crate::KUSAMA_PARACHAIN_ID,
+            relay_chain: "polkadot".into(),
+            parachain_id: POLKADOT_PARACHAIN_ID,
+            bad_blocks: None,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -36,7 +37,7 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
+        traits::{Currency, Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, PalletId, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
@@ -47,18 +48,22 @@ mod pallet {
         },
         ArithmeticError, DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::types::{Market, PoolId};
+    use zeitgeist_primitives::types::{Asset, Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
 
-    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
-
+    type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
+        BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
+        Asset<MarketIdOf<T>>,
     >;
+    pub type MarketIdOf<T> = <T as Config>::MarketId;
+    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}

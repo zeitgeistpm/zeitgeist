@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,7 +18,7 @@
 
 #![allow(
   // Auto-generated code is a no man's land
-  clippy::integer_arithmetic
+  clippy::arithmetic_side_effects
 )]
 #![allow(clippy::type_complexity)]
 #![cfg(feature = "runtime-benchmarks")]
@@ -26,7 +27,7 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Styx;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin},
@@ -50,6 +51,10 @@ benchmarks! {
         T::Currency::deposit_creating(&caller, balance);
         let call = Call::<T>::set_burn_amount { amount };
     }: { call.dispatch_bypass_filter(origin)? }
-}
 
-impl_benchmark_test_suite!(Styx, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
+    impl_benchmark_test_suite!(
+        Styx,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

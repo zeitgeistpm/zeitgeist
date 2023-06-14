@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,7 +19,7 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, ExtBuilder, LiquidityMining, Origin, Runtime, System, ALICE, BOB},
+    mock::{Balances, ExtBuilder, LiquidityMining, Runtime, RuntimeOrigin, System, ALICE, BOB},
     track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
     track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
     BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, OwnedValues,
@@ -31,8 +32,8 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
-    Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, ScoringRule,
+    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -192,7 +193,7 @@ fn only_sudo_can_change_per_block_distribution() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(LiquidityMining::set_per_block_distribution(RawOrigin::Root.into(), 100));
         assert_err!(
-            LiquidityMining::set_per_block_distribution(Origin::signed(ALICE), 100),
+            LiquidityMining::set_per_block_distribution(RuntimeOrigin::signed(ALICE), 100),
             DispatchError::BadOrigin
         );
     });
@@ -202,6 +203,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
     Markets::<Runtime>::insert(
         market_id,
         Market {
+            base_asset: Asset::Ztg,
             creation: MarketCreation::Permissionless,
             creator_fee: 0,
             creator: 0,
@@ -219,6 +221,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             resolved_outcome: None,
             status: MarketStatus::Closed,
             scoring_rule: ScoringRule::CPMM,
+            bonds: MarketBonds::default(),
         },
     );
 }

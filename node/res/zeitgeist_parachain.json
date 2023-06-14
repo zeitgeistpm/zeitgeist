@@ -18,14 +18,14 @@
       0
     ]
   ],
-  "protocolId": "zeitgeist",
+  "protocolId": "zeitgeist-polkadot",
   "properties": {
     "ss58Format": 73,
     "tokenDecimals": 10,
     "tokenSymbol": "ZTG"
   },
-  "parachain_id": 2101,
-  "relay_chain": "kusama",
+  "parachain_id": 2092,
+  "relay_chain": "polkadot",
   "consensusEngine": null,
   "codeSubstitutes": {},
   "genesis": {

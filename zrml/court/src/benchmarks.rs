@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,14 +18,14 @@
 
 #![allow(
     // Auto-generated code is a no man's land
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
 #[cfg(test)]
 use crate::Pallet as Court;
 use crate::{BalanceOf, Call, Config, CurrencyOf, Pallet};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
@@ -64,6 +65,10 @@ benchmarks! {
         let outcome = OutcomeReport::Scalar(u128::MAX);
         deposit_and_join_court::<T>(&caller);
     }: _(RawOrigin::Signed(caller), market_id, outcome)
-}
 
-impl_benchmark_test_suite!(Court, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
+    impl_benchmark_test_suite!(
+        Court,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

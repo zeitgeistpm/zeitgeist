@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,7 +19,7 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 
 #[cfg(feature = "mock")]
@@ -29,6 +30,7 @@ use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
 // Definitions for time
+pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100;
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
 pub const MILLISECS_PER_BLOCK: u32 = 12000;
 pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
@@ -40,8 +42,10 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
+/// Storage cost per byte and item.
+// Approach: Achieve same cost per item and bytes in relation to total supply as on Polkadot.
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
-    items as Balance * 20 * BASE + (bytes as Balance) * 100 * MILLI
+    items as Balance * 150 * CENT + (bytes as Balance) * 75 * MICRO
 }
 
 // Rikiddo and TokensConfig
@@ -77,6 +81,8 @@ pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
 // Prediction Markets
+/// The maximum allowed market life time, measured in blocks.
+pub const MAX_MARKET_LIFETIME: BlockNumber = 365 * BLOCKS_PER_DAY;
 /// Max. categories in a prediction market.
 pub const MAX_CATEGORIES: u16 = 64;
 /// The dispute_duration is time where users can dispute the outcome.

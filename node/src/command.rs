@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,20 +17,25 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
+    benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
     cli::{Cli, Subcommand},
-    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
     service::{new_chain_ops, new_full, IdentifyVariant},
 };
-use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
+use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
-use std::sync::Arc;
+use sp_keyring::Sr25519Keyring;
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
-    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
+    battery_station_runtime::{
+        ExistentialDeposit as BatteryStationED, RuntimeApi as BatteryStationRuntimeApi,
+    },
 };
 #[cfg(feature = "with-zeitgeist-runtime")]
-use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
+use {
+    super::service::ZeitgeistExecutor,
+    zeitgeist_runtime::{ExistentialDeposit as ZeitgeistED, RuntimeApi as ZeitgeistRuntimeApi},
+};
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend,
@@ -109,6 +115,11 @@ pub fn run() -> sc_cli::Result<()> {
                 BenchmarkCmd::Machine(cmd) => {
                     runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
                 }
+                #[cfg(not(feature = "runtime-benchmarks"))]
+                BenchmarkCmd::Storage(_) => Err("Storage benchmarking can be enabled with \
+                                                 `--features runtime-benchmarks`."
+                    .into()),
+                #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => match chain_spec {
                     #[cfg(feature = "with-zeitgeist-runtime")]
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
@@ -151,12 +162,13 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), true);
+                                RemarksExtrinsicBuilder::new(params.client.clone(), true);
                             cmd.run(
                                 config,
                                 params.client,
                                 inherent_benchmark_data()?,
-                                Arc::new(ext_builder),
+                                Vec::new(),
+                                &ext_builder,
                             )
                         }),
                         #[cfg(feature = "with-battery-station-runtime")]
@@ -167,12 +179,72 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), false);
+                                RemarksExtrinsicBuilder::new(params.client.clone(), false);
                             cmd.run(
                                 config,
                                 params.client,
                                 inherent_benchmark_data()?,
-                                Arc::new(ext_builder),
+                                Vec::new(),
+                                &ext_builder,
+                            )
+                        }),
+                        #[cfg(not(feature = "with-battery-station-runtime"))]
+                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                    }
+                }
+
+                BenchmarkCmd::Extrinsic(cmd) => {
+                    if cfg!(feature = "parachain") {
+                        return Err("Extrinsic is only supported in standalone chain".into());
+                    }
+                    match chain_spec {
+                        #[cfg(feature = "with-zeitgeist-runtime")]
+                        spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                zeitgeist_runtime::RuntimeApi,
+                                ZeitgeistExecutor,
+                            >(&config)?;
+                            // Register the *Remark* and *TKA* builders.
+                            let ext_factory = ExtrinsicFactory(vec![
+                                Box::new(RemarksExtrinsicBuilder::new(params.client.clone(), true)),
+                                Box::new(TransferKeepAliveBuilder::new(
+                                    params.client.clone(),
+                                    Sr25519Keyring::Alice.to_account_id(),
+                                    ZeitgeistED::get(),
+                                    true,
+                                )),
+                            ]);
+                            cmd.run(
+                                params.client,
+                                inherent_benchmark_data()?,
+                                Vec::new(),
+                                &ext_factory,
+                            )
+                        }),
+                        #[cfg(feature = "with-battery-station-runtime")]
+                        _ => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                battery_station_runtime::RuntimeApi,
+                                BatteryStationExecutor,
+                            >(&config)?;
+                            // Register the *Remark* and *TKA* builders.
+                            let ext_factory = ExtrinsicFactory(vec![
+                                Box::new(RemarksExtrinsicBuilder::new(
+                                    params.client.clone(),
+                                    false,
+                                )),
+                                Box::new(TransferKeepAliveBuilder::new(
+                                    params.client.clone(),
+                                    Sr25519Keyring::Alice.to_account_id(),
+                                    BatteryStationED::get(),
+                                    false,
+                                )),
+                            ]);
+                            cmd.run(
+                                params.client,
+                                inherent_benchmark_data()?,
+                                Vec::new(),
+                                &ext_factory,
                             )
                         }),
                         #[cfg(not(feature = "with-battery-station-runtime"))]
@@ -421,7 +493,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         );
 
         let parachain_id = cumulus_primitives_core::ParaId::from(
-            cli.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
+            cli.parachain_id.or(parachain_id_extension).unwrap_or(super::POLKADOT_PARACHAIN_ID),
         );
 
         let parachain_account =
@@ -484,10 +556,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
-        if let sc_cli::Role::Light = config.role {
-            return Err("Light client not supported!".into());
-        }
-
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(

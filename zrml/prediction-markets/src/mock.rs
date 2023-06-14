@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,7 +18,7 @@
 
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "mock")]
 
@@ -27,6 +28,8 @@ use frame_support::{
     traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+#[cfg(feature = "parachain")]
+use orml_asset_registry::AssetMetadata;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
@@ -35,15 +38,15 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
-        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
-        MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
-        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
-        MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
-        MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
-        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
+        CourtCaseDuration, CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
+        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets,
+        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod,
+        MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
+        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputeDuration, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
+        MinWeight, MinimumPeriod, OutsiderBond, PmPalletId, SimpleDisputesPalletId, StakeWeight,
+        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -101,7 +104,7 @@ construct_runtime!(
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
@@ -127,7 +130,7 @@ construct_runtime!(
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
@@ -138,13 +141,15 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    #[cfg(feature = "parachain")]
+    type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
     #[cfg(feature = "with-global-disputes")]
@@ -158,12 +163,13 @@ impl crate::Config for Runtime {
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
-    type MaxMarketPeriod = MaxMarketPeriod;
+    type MaxMarketLifetime = MaxMarketLifetime;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
+    type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -184,9 +190,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -196,7 +202,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type OnSetCode = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -215,22 +221,28 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
-    type OnDust = ();
-    type OnKilledTokenAccount = ();
-    type OnNewTokenAccount = ();
+    type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
+crate::orml_asset_registry::impl_mock_registry! {
+    MockRegistry,
+    CurrencyId,
+    Balance,
+    zeitgeist_primitives::types::CustomMetadata
 }
 
 impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -252,17 +264,20 @@ ord_parameter_types! {
 }
 
 impl zrml_authorized::Config for Runtime {
-    type Event = Event;
-    type MarketCommons = MarketCommons;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
+    type CorrectionPeriod = CorrectionPeriod;
+    type RuntimeEvent = RuntimeEvent;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
-    type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
@@ -272,7 +287,7 @@ impl zrml_court::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
@@ -302,14 +317,15 @@ impl zrml_rikiddo::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
 }
 
 #[cfg(feature = "with-global-disputes")]
 impl zrml_global_disputes::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -323,7 +339,7 @@ impl zrml_global_disputes::Config for Runtime {
 }
 
 impl zrml_swaps::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFee;
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
@@ -336,7 +352,6 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
     type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
@@ -351,7 +366,7 @@ impl pallet_treasury::Config for Runtime {
     type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MaxApprovals = MaxApprovals;
     type OnSlash = ();
     type PalletId = TreasuryPalletId;
@@ -392,7 +407,50 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
-
+        #[cfg(feature = "parachain")]
+        use frame_support::traits::GenesisBuild;
+        #[cfg(feature = "parachain")]
+        orml_tokens::GenesisConfig::<Runtime> {
+            balances: (0..69)
+                .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
+                .collect(),
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+        #[cfg(feature = "parachain")]
+        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+            allow_as_base_asset: true,
+            ..Default::default()
+        };
+        #[cfg(feature = "parachain")]
+        orml_asset_registry_mock::GenesisConfig {
+            metadata: vec![
+                (
+                    CurrencyId::ForeignAsset(100),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "ACALA USD".as_bytes().to_vec(),
+                        symbol: "AUSD".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: custom_metadata,
+                    },
+                ),
+                (
+                    CurrencyId::ForeignAsset(420),
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "FANCY_TOKEN".as_bytes().to_vec(),
+                        symbol: "FTK".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: zeitgeist_primitives::types::CustomMetadata::default(),
+                    },
+                ),
+            ],
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
         t.into()
     }
 }

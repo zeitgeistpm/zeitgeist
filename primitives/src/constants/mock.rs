@@ -1,3 +1,21 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(feature = "mock")]
 
 pub use super::*;
@@ -11,6 +29,7 @@ use orml_traits::parameter_type_with_key;
 // Authorized
 parameter_types! {
     pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
+    pub const CorrectionPeriod: BlockNumber = 4;
 }
 
 // Court
@@ -43,23 +62,24 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
+    pub const MaxDisputeDuration: BlockNumber = 50;
     pub const MaxDisputes: u16 = 6;
-    pub const MinCategories: u16 = 2;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    pub const MinSubsidyPeriod: Moment = 60_000;
+    pub const MaxEditReasonLen: u32 = 1024;
+    pub const MaxGracePeriod: BlockNumber = 20;
+    pub const MaxMarketLifetime: BlockNumber = 1_000_000;
+    pub const MaxOracleDuration: BlockNumber = 30;
+    pub const MaxRejectReasonLen: u32 = 1024;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    pub const MaxMarketPeriod: Moment = u64::MAX / 2;
-    pub const OracleBond: Balance = 50 * CENT;
-    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-    pub const ValidityBond: Balance = 50 * CENT;
+    pub const MinCategories: u16 = 2;
     pub const MinDisputeDuration: BlockNumber = 2;
     pub const MinOracleDuration: BlockNumber = 2;
-    pub const MaxDisputeDuration: BlockNumber = 5;
-    pub const MaxGracePeriod: BlockNumber = 2;
-    pub const MaxOracleDuration: BlockNumber = 3;
-    pub const MaxEditReasonLen: u32 = 1024;
-    pub const MaxRejectReasonLen: u32 = 1024;
+    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    pub const MinSubsidyPeriod: Moment = 60_000;
+    pub const OracleBond: Balance = 50 * CENT;
+    pub const OutsiderBond: Balance = 2 * OracleBond::get();
+    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const ValidityBond: Balance = 50 * CENT;
 }
 
 // Simple disputes parameters
@@ -77,8 +97,7 @@ parameter_types! {
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
-    pub const MinLiquidity: Balance = 100 * BASE;
-    pub const MinSubsidy: Balance = MinLiquidity::get();
+    pub const MinSubsidy: Balance = 100 * BASE;
     pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");

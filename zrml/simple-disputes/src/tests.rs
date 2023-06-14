@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -19,18 +20,19 @@
 
 use crate::{
     mock::{ExtBuilder, Runtime, SimpleDisputes},
-    Error,
+    Error, MarketOf,
 };
 use frame_support::assert_noop;
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
-        Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, OutcomeReport, ScoringRule,
+        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDispute,
+        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, OutcomeReport, ScoringRule,
     },
 };
 
-const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
+const DEFAULT_MARKET: MarketOf<Runtime> = Market {
+    base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,
@@ -44,6 +46,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
+    bonds: MarketBonds { creation: None, oracle: None, outsider: None },
 };
 
 #[test]

@@ -1,5 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
-// Copyright 2022 Zeitgeist PM LLC.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,7 +19,7 @@
 
 #![allow(
     // Auto-generated code is a no man's land
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
@@ -28,13 +27,14 @@ use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi, types::*, BalanceOf, Call, Config,
     Pallet as GlobalDisputes, *,
 };
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     sp_runtime::traits::StaticLookup,
     traits::{Currency, Get},
     BoundedVec,
 };
 use frame_system::RawOrigin;
+use num_traits::ops::checked::CheckedRem;
 use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
@@ -47,7 +47,7 @@ where
         T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value() / 2u128.saturated_into());
 }
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
@@ -260,6 +260,7 @@ benchmarks! {
             &reward_account,
             T::VotingOutcomeFee::get().saturating_mul(10u128.saturated_into()),
         );
+        let reward_before = T::Currency::free_balance(&reward_account);
 
         let caller: T::AccountId = whitelisted_caller();
 
@@ -281,7 +282,13 @@ benchmarks! {
             }
             .into(),
         );
-        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
+        let remainder = reward_before.checked_rem(&o.into()).unwrap();
+        let expected = if remainder < T::Currency::minimum_balance() {
+            0u8.into()
+        } else {
+            remainder
+        };
+        assert_eq!(T::Currency::free_balance(&reward_account), expected);
     }
 
     reward_outcome_owner_no_funds {
@@ -371,10 +378,10 @@ benchmarks! {
         assert!(<Outcomes<T>>::iter_prefix(market_id).next().is_none());
         assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> { market_id }.into());
     }
-}
 
-impl_benchmark_test_suite!(
-    GlobalDisputes,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+    impl_benchmark_test_suite!(
+        GlobalDisputes,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -33,6 +34,7 @@ pub use frame_system::{
 };
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
+pub use pallet_balances::Call as BalancesCall;
 
 #[cfg(feature = "parachain")]
 pub use crate::parachain_params::*;
@@ -43,7 +45,7 @@ use frame_support::{
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
-use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
 use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
@@ -54,10 +56,9 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
-    frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::{
-        asset_registry::{CustomAssetProcessor, CustomMetadata},
+        asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
     },
 };
@@ -74,7 +75,7 @@ use sp_runtime::{
 };
 
 #[cfg(feature = "parachain")]
-use nimbus_primitives::{CanAuthor, NimbusId};
+use nimbus_primitives::CanAuthor;
 use sp_version::RuntimeVersion;
 
 #[cfg(test)]
@@ -89,10 +90,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 41,
+    spec_version: 45,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 18,
+    transaction_version: 20,
     state_version: 1,
 };
 
@@ -101,8 +102,8 @@ pub struct IsCallable;
 
 // Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
-impl Contains<Call> for IsCallable {
-    fn contains(call: &Call) -> bool {
+impl Contains<RuntimeCall> for IsCallable {
+    fn contains(call: &RuntimeCall) -> bool {
         #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
@@ -117,15 +118,17 @@ impl Contains<Call> for IsCallable {
             MarketDisputeMechanism::{Court, SimpleDisputes},
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
-        use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
+        use zrml_prediction_markets::Call::{
+            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+        };
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
             // Membership is managed by the respective Membership instance
-            Call::AdvisoryCommittee(set_members { .. }) => false,
+            RuntimeCall::AdvisoryCommittee(set_members { .. }) => false,
             // See "balance.set_balance"
-            Call::AssetManager(update_balance { .. }) => false,
-            Call::Balances(inner_call) => {
+            RuntimeCall::AssetManager(update_balance { .. }) => false,
+            RuntimeCall::Balances(inner_call) => {
                 match inner_call {
                     // Balances should not be set. All newly generated tokens be minted by well
                     // known and approved processes, like staking. However, this could be used
@@ -140,17 +143,19 @@ impl Contains<Call> for IsCallable {
                 }
             }
             // Membership is managed by the respective Membership instance
-            Call::Council(set_members { .. }) => false,
-            Call::Court(_) => false,
+            RuntimeCall::Council(set_members { .. }) => false,
+            RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
-            Call::DmpQueue(service_overweight { .. }) => false,
-            Call::LiquidityMining(_) => false,
-            Call::PredictionMarkets(inner_call) => {
+            RuntimeCall::DmpQueue(service_overweight { .. }) => false,
+            RuntimeCall::LiquidityMining(_) => false,
+            RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                    edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                     create_cpmm_market_and_deploy_assets {
                         dispute_mechanism: Court | SimpleDisputes,
                         ..
@@ -158,7 +163,7 @@ impl Contains<Call> for IsCallable {
                     _ => true,
                 }
             }
-            Call::System(inner_call) => {
+            RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
                     // Cleaning up storage should be done by pallets or independent migrations.
@@ -179,9 +184,9 @@ impl Contains<Call> for IsCallable {
                 }
             }
             // Membership is managed by the respective Membership instance
-            Call::TechnicalCommittee(set_members { .. }) => false,
+            RuntimeCall::TechnicalCommittee(set_members { .. }) => false,
             // There should be no reason to force vested transfer.
-            Call::Vesting(force_vested_transfer { .. }) => false,
+            RuntimeCall::Vesting(force_vested_transfer { .. }) => false,
             _ => true,
         }
     }

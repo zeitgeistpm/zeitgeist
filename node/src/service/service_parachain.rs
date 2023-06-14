@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,9 +18,8 @@
 
 use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
-    KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
+    POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
-use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -32,7 +32,8 @@ use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_network_common::service::NetworkBlock;
+use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::SyncCryptoStorePtr;
@@ -233,7 +234,7 @@ where
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-#[sc_tracing::logging::prefix_logs_with("🌔 Zeitgeist Parachain")]
+#[sc_tracing::logging::prefix_logs_with("🔮 Zeitgeist Parachain")]
 async fn do_new_full<RuntimeApi, Executor, BIC>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
@@ -261,10 +262,6 @@ where
         bool,
     ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
-    if matches!(parachain_config.role, Role::Light) {
-        return Err("Light client not supported!".into());
-    }
-
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
@@ -293,7 +290,7 @@ where
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
     let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-    let (network, system_rpc_tx, start_network) =
+    let (network, system_rpc_tx, tx_handler_controller, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
@@ -325,6 +322,7 @@ where
         keystore: params.keystore_container.sync_keystore(),
         network: network.clone(),
         rpc_builder,
+        tx_handler_controller,
         system_rpc_tx,
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),
@@ -349,7 +347,7 @@ where
         Arc::new(move |hash, data| network.announce_block(hash, data))
     };
 
-    let relay_chain_slot_duration = KUSAMA_BLOCK_DURATION;
+    let relay_chain_slot_duration = POLKADOT_BLOCK_DURATION;
 
     if collator {
         let parachain_consensus = build_consensus(
@@ -392,7 +390,6 @@ where
             relay_chain_interface,
             relay_chain_slot_duration,
             import_queue,
-            collator_options: CollatorOptions { relay_chain_rpc_url: Default::default() },
         };
 
         start_full_node(params)?;

@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,7 +18,7 @@
 
 #![allow(
     // Auto-generated code is a no man's land
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "runtime-benchmarks")]
 #![allow(clippy::type_complexity)]
@@ -25,7 +26,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as OrderBook;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -101,10 +102,10 @@ benchmarks! {
     make_order_bid {
         let (caller, asset, amt, prc) = order_common_parameters::<T>(None)?;
     }: make_order(RawOrigin::Signed(caller), asset, OrderSide::Bid, amt, prc)
-}
 
-impl_benchmark_test_suite!(
-    OrderBook,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+    impl_benchmark_test_suite!(
+        OrderBook,
+        crate::mock::ExtBuilder::default().build(),
+        crate::mock::Runtime,
+    );
+}
