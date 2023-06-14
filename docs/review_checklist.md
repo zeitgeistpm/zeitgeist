@@ -25,6 +25,7 @@
   - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
   - [ ] The node syncs with Zeitgeist and Battery Station.
 - [ ] Code quality:
+  - [ ] Are there compiler warnings which can easily be avoided?
   - [ ] Is integer arithmetic saturated/checked and are all panickers removed?
   - [ ] Is code contained in macro invocations (benchmarks,
         `runtime/common/src/lib.rs`, `decl_runtime_apis!`) correctly formatted?
