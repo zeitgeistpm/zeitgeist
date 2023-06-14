@@ -23,15 +23,13 @@
 - Sanity tests:
   - [ ] The local node produces blocks.
   - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
-  - [ ] All runtime benchmarks pass on Zeitgeist and Battery Station (don't just
-        test against the mock!).
   - [ ] The node syncs with Zeitgeist and Battery Station.
 - [ ] Code quality:
-  - [ ] Are there any compiler/clippy warnings?
   - [ ] Is integer arithmetic saturated/checked and are all panickers removed?
   - [ ] Is code contained in macro invocations (benchmarks,
         `runtime/common/src/lib.rs`, `decl_runtime_apis!`) correctly formatted?
-  - [ ] Are all `*.toml` files formatted with `taplo`?
+  - [ ] Are all `*.toml` files formatted with `taplo` (run
+        `taplo format --check`)?
   - [ ] Are all copyright notices up to date?
   - [ ] Are enums sorted alphabetically, except for enums used in storage (to
         prevent migrations) or errors and events?
