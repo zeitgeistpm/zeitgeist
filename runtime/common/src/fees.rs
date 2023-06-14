@@ -312,7 +312,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot = Asset::ForeignAsset(0);
-                
+
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
 
                     let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);
@@ -358,10 +358,10 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot = Asset::ForeignAsset(0);
-                
+
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
 
-                    
+
                     assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
 
                     let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
@@ -377,8 +377,8 @@ macro_rules! fee_tests {
 
                     let free_balance_treasury_before = Tokens::free_balance(dot, &Treasury::account_id());
                     let free_balance_alice_before = Tokens::free_balance(dot, &alice);
-                    let corrected_native_fee = 71_560_260u128;
-                    let paid = <Tokens as Balanced<AccountId>>::issue(dot, 143_120_520u128);
+                    let corrected_native_fee = BASE;
+                    let paid = <Tokens as Balanced<AccountId>>::issue(dot, 2 * BASE);
                     let tip = 0u128;
                     assert_ok!(TokensTxCharger::correct_and_deposit_fee(
                         &alice,
@@ -389,8 +389,11 @@ macro_rules! fee_tests {
                         paid,
                     ));
 
-                    assert_eq!(1_024_174, Tokens::free_balance(dot, &Treasury::account_id()) - free_balance_treasury_before);
-                    assert_eq!(142_096_346, Tokens::free_balance(dot, &alice) - free_balance_alice_before);
+                    let treasury_gain = Tokens::free_balance(dot, &Treasury::account_id()) - free_balance_treasury_before;
+                    let alice_gain = Tokens::free_balance(dot, &alice) - free_balance_alice_before;
+
+                    assert_eq!(143_120_520, treasury_gain);
+                    assert_eq!(2 * BASE - treasury_gain, alice_gain);
                 }
             });
         }
@@ -428,7 +431,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot = Asset::ForeignAsset(0);
-                
+
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
 
                     assert_noop!(get_fee_factor_and_base(dot), TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)));
@@ -456,7 +459,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let non_location_token = Asset::ForeignAsset(1);
-                
+
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(non_location_token)));
 
                     assert_noop!(get_fee_factor_and_base(non_location_token), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
@@ -484,7 +487,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let overflow_currency = Asset::ForeignAsset(1);
-                
+
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(overflow_currency)));
 
                     assert_noop!(get_fee_factor_and_base(overflow_currency), TransactionValidityError::Invalid(InvalidTransaction::Custom(4u8)));
