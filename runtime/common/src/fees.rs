@@ -243,6 +243,7 @@ macro_rules! fee_tests {
         use zeitgeist_primitives::constants::BASE;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use frame_support::{assert_noop, assert_ok};
+        #[cfg(feature = "parachain")]
         use orml_asset_registry::AssetMetadata;
 
         fn run_with_system_weight<F>(w: Weight, mut assertions: F)
