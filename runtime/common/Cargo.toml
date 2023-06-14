@@ -27,6 +27,7 @@ pallet-transaction-payment-rpc-runtime-api = { branch = "polkadot-v0.9.32", defa
 pallet-treasury = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-utility = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-vesting = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+xcm = { branch = "release-v0.9.32", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 
 # Utility
 cfg-if = { version = "1.0.0" }
@@ -39,6 +40,7 @@ parachain = [
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
+    "xcm",
 ]
 std = [
     "cumulus-pallet-xcmp-queue?/std",
@@ -68,6 +70,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
+    "xcm?/std",
 ]
 with-global-disputes = []
 
