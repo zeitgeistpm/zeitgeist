@@ -1,8 +1,9 @@
-<!-- Please adhere to the style guide at <link> -->
+<!-- Please adhere to the style guide at -->
+<!-- https://github.com/zeitgeistpm/zeitgeist/blob/main/docs/STYLE_GUIDE.md -->
 
 <!-- Include references to the issues it fixes here separated by whitespaces. -->
-<!-- Use a valid GitHub keyword for that, such as "closes" or "fixes". Example: >
-<!-- closes #500 #700 -->
+<!-- Use a valid GitHub keyword for that, such as "closes" or "fixes". -->
+<!-- Example: closes #500 #700 -->
 
 ### What does it do?
 
