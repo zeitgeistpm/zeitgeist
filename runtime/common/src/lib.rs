@@ -845,14 +845,14 @@ macro_rules! impl_config_traits {
         impl<AccountId: From<sp_runtime::AccountId32>> pallet_randomness::AddressMapping<AccountId> for DummyAddressMapping {
             fn into_account_id(address: sp_core::H160) -> AccountId {
                 // Ethereum address mapping is not used for now as we only use local VRFs
-                ZeitgeistTreasuryAccount::get().into()
+                AccountId::from(sp_runtime::AccountId32::from([0u8; 32]))
             }
         }
 
         // We only intend to use local VRFs for court.
         #[cfg(feature = "parachain")]
         impl pallet_randomness::Config for Runtime {
-            type Event = Event;
+            type RuntimeEvent = RuntimeEvent;
             type AddressMapping = DummyAddressMapping;
             type Currency = Balances;
             type BabeDataGetter = BabeDataGetter;
@@ -1004,6 +1004,9 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = CourtPalletId;
+            #[cfg(feature = "parachain")]
+            type Random = Randomness;
+            #[cfg(not(feature = "parachain"))]
             type Random = RandomnessCollectiveFlip;
             type StakeWeight = StakeWeight;
             type TreasuryPalletId = TreasuryPalletId;

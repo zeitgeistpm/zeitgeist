@@ -75,7 +75,6 @@ sc-network = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech
 sc-network-common = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 sc-tracing = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.144" }
-# RAND: session-keys-primitives was special rand branch before
 session-keys-primitives = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 sp-keystore = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
 substrate-prometheus-endpoint = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }

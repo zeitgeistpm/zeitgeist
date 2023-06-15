@@ -18,7 +18,7 @@ pallet-multisig = { branch = "polkadot-v0.9.32", default-features = false, git =
 pallet-parachain-staking = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 pallet-preimage = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-proxy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-randomness = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
+pallet-randomness = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 pallet-randomness-collective-flip = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-scheduler = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
