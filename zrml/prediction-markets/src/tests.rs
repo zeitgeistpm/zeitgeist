@@ -3006,7 +3006,7 @@ fn it_resolves_a_disputed_market() {
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
-        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        let charlie_reserved = Balances::reserved_balance(CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
         let dispute_at_0 = report_at + 1;
@@ -3040,13 +3040,13 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(market.status, MarketStatus::Disputed);
 
         // check everyone's deposits
-        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        let charlie_reserved = Balances::reserved_balance(CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get() + OutcomeBond::get());
 
-        let dave_reserved = Balances::reserved_balance(&DAVE);
+        let dave_reserved = Balances::reserved_balance(DAVE);
         assert_eq!(dave_reserved, OutcomeBond::get() + OutcomeFactor::get());
 
-        let eve_reserved = Balances::reserved_balance(&EVE);
+        let eve_reserved = Balances::reserved_balance(EVE);
         assert_eq!(eve_reserved, OutcomeBond::get() + 2 * OutcomeFactor::get());
 
         // check disputes length
@@ -3091,9 +3091,9 @@ fn it_resolves_a_disputed_market() {
         let dave_reserved = OutcomeBond::get() + OutcomeFactor::get();
         let total_slashed = dave_reserved;
 
-        let charlie_balance = Balances::free_balance(&CHARLIE);
+        let charlie_balance = Balances::free_balance(CHARLIE);
         assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get() + total_slashed / 2);
-        let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
+        let charlie_reserved_2 = Balances::reserved_balance(CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(EVE);
         assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
@@ -4462,8 +4462,8 @@ fn outsider_reports_wrong_outcome() {
 
         check_reserve(&DAVE, outcome_bond);
 
-        let eve_balance_before = Balances::free_balance(&EVE);
-        let dave_balance_before = Balances::free_balance(&DAVE);
+        let eve_balance_before = Balances::free_balance(EVE);
+        let dave_balance_before = Balances::free_balance(DAVE);
 
         // on_resolution called
         run_blocks(market.deadlines.dispute_duration);
@@ -4475,11 +4475,11 @@ fn outsider_reports_wrong_outcome() {
 
         // disputor EVE gets the OracleBond and OutsiderBond and DisputeBond
         assert_eq!(
-            Balances::free_balance(&EVE),
+            Balances::free_balance(EVE),
             eve_balance_before + DisputeBond::get() + OutsiderBond::get() + OracleBond::get()
         );
         // DAVE gets his outcome bond back
-        assert_eq!(Balances::free_balance(&DAVE), dave_balance_before + outcome_bond);
+        assert_eq!(Balances::free_balance(DAVE), dave_balance_before + outcome_bond);
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -4833,7 +4833,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             0,
             OutcomeReport::Categorical(0)
         ));
-        let outsider_balance_before = Balances::free_balance(&outsider);
+        let outsider_balance_before = Balances::free_balance(outsider);
         check_reserve(&outsider, OutsiderBond::get());
 
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
@@ -4904,7 +4904,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             0,
             OutcomeReport::Categorical(0)
         ));
-        let outsider_balance_before = Balances::free_balance(&outsider);
+        let outsider_balance_before = Balances::free_balance(outsider);
         check_reserve(&outsider, OutsiderBond::get());
 
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
