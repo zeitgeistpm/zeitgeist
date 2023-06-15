@@ -15,6 +15,7 @@ APIs/RPC interface.
 ## v0.3.9
 
 [#976]: https://github.com/zeitgeistpm/zeitgeist/pull/976
+[#1011]: https://github.com/zeitgeistpm/zeitgeist/pull/1011
 [#937]: https://github.com/zeitgeistpm/zeitgeist/pull/937
 [#903]: https://github.com/zeitgeistpm/zeitgeist/pull/903
 
@@ -55,6 +56,9 @@ APIs/RPC interface.
       The losing jurors are those, who did not vote, or did not vote with the plurality,
       were denounced or did not reveal their vote.
   - `InflationSet` - The yearly inflation rate of the court system was set.
+- Adjust `deposit` function used to calculate storage fees for the following
+  pallets: identity, multisig, preimage, proxy. The cost of adding an identity
+  reduced from a minimum of 125 ZTG to a minimum of 1.5243 ZTG ([#1011])
 
 ### Fixed
 
