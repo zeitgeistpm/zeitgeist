@@ -125,6 +125,7 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
         crate::chain_spec::Extensions {
             relay_chain: "rococo-dev".into(),
             parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
+            bad_blocks: None,
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),

@@ -1,4 +1,36 @@
-# v0.3.8
+# Changelog for Developers
+
+Used for communicating changes to other parts of Zeitgeist infrastructure
+([zeitgeistpm/ui](https://github.com/zeitgeistpm/ui),
+[zeitgeistpm/sdk-next](https://github.com/zeitgeistpm/sdk-next),
+[zeitgeistpm/zeitgeist-subsquid](https://github.com/zeitgeistpm/zeitgeist-subsquid))
+and does not represent a complete changelog for the zeitgeistpm/zeitgeist
+repository.
+
+As of 0.3.9, the changelog's format is based on
+https://keepachangelog.com/en/1.0.0/ and ⚠️ marks changes that might break
+components which query the chain's storage, the extrinsics or the runtime
+APIs/RPC interface.
+
+## v0.3.9
+
+[#1011]: https://github.com/zeitgeistpm/zeitgeist/pull/1011
+[#937]: https://github.com/zeitgeistpm/zeitgeist/pull/937
+[#903]: https://github.com/zeitgeistpm/zeitgeist/pull/903
+
+### Changed
+
+- ⚠️ Add `outsider` field to `MarketBonds` struct. In particular, the `Market`
+  struct's layout has changed ([#903]).
+- Adjust `deposit` function used to calculate storage fees for the following
+  pallets: identity, multisig, preimage, proxy. The cost of adding an identity
+  reduced from a minimum of 125 ZTG to a minimum of 1.5243 ZTG ([#1011])
+
+### Fixed
+
+- ⚠️ Fix order of arguments for `get_spot_price` ([#937]).
+
+## v0.3.8
 
 - Added the `bonds` field to the `Market` struct, which tracks the status of the
   advisory, oracle and validity bonds. Each of its members has type `Bond`,
@@ -12,8 +44,8 @@
   This is the time of the first call to `authorize_market_outcome` plus the
   `CorrectionPeriod`.
 - Create prediction markets with Ztg or registered foreign asset which has
-  `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics related
-  to prediction market creation/editing now have `base_asset` parameter.
+  `allow_as_base_asset` set to `true` in `AssetRegistry` metadata. Extrinsics
+  related to prediction market creation/editing now have `base_asset` parameter.
 
 # v0.3.7
 

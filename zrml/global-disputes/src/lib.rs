@@ -58,7 +58,7 @@ mod pallet {
         /// The currency implementation used to lock tokens for voting.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The vote lock identifier.
         #[pallet::constant]
@@ -69,10 +69,7 @@ mod pallet {
         type GlobalDisputesPalletId: Get<PalletId>;
 
         /// To reference the market id type.
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         /// The maximum numbers of distinct markets
         /// on which one account can simultaneously vote on outcomes.

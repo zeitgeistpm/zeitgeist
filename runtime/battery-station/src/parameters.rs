@@ -19,15 +19,17 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 
 use super::VERSION;
 use frame_support::{
+    dispatch::DispatchClass,
     parameter_types,
+    traits::WithdrawReasons,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-        DispatchClass, Weight,
+        Weight,
     },
     PalletId,
 };
@@ -46,7 +48,8 @@ use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
-    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2);
+    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2)
+        .set_proof_size(polkadot_primitives::v2::MAX_POV_SIZE as u64);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
@@ -116,9 +119,9 @@ parameter_types! {
 
     // Identity
     /// The amount held on deposit for a registered identity
-    pub const BasicDeposit: Balance = 8 * BASE;
+    pub const BasicDeposit: Balance = deposit(1, 258);
     /// The amount held on deposit per additional field for a registered identity.
-    pub const FieldDeposit: Balance = 256 * CENT;
+    pub const FieldDeposit: Balance = deposit(0, 66);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 64;
@@ -130,7 +133,7 @@ parameter_types! {
     /// The amount held on deposit for a registered subaccount. This should account for the fact
     /// that one storage item's value will increase by the size of an account ID, and there will
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
-    pub const SubAccountDeposit: Balance = 2 * BASE;
+    pub const SubAccountDeposit: Balance = deposit(1, 53);
 
     // Liquidity Mining parameters
     /// Pallet identifier, mainly used for named balance reserves.
@@ -144,7 +147,6 @@ parameter_types! {
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
@@ -249,10 +251,8 @@ parameter_types! {
     pub const MaxTotalWeight: Balance = MaxWeight::get() * 2;
     /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 64 * BASE;
-    /// Minimum amount of liquidity required to launch a CPMM pool.
-    pub const MinLiquidity: Balance = 100 * BASE;
     /// Minimum subsidy required to launch a Rikiddo pool.
-    pub const MinSubsidy: Balance = MinLiquidity::get();
+    pub const MinSubsidy: Balance = 100 * BASE;
     /// Minimum subsidy a single account can provide.
     pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     /// Minimum weight a single asset can have.
@@ -358,6 +358,8 @@ parameter_types! {
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
+    pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+         WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
 #[cfg(feature = "with-global-disputes")]

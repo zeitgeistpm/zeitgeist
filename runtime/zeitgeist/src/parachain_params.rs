@@ -19,11 +19,11 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "parachain")]
 
-use super::{parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo};
+use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
@@ -41,10 +41,10 @@ parameter_types! {
     // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
-    pub const RelayNetwork: NetworkId = NetworkId::Kusama;
+    pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+    pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub UnitWeightCost: u64 = 200_000_000;
 
     // Staking

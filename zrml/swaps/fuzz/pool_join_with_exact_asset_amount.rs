@@ -18,7 +18,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
+use zrml_swaps::mock::{ExtBuilder, RuntimeOrigin, Swaps};
 
 use utils::ExactAssetAmountData;
 mod utils;
@@ -41,7 +41,7 @@ fuzz_target!(|data: ExactAssetAmountData| {
         }
         let pool_id = data.pool_creation.create_pool();
         let _ = Swaps::pool_join_with_exact_asset_amount(
-            Origin::signed(data.origin),
+            RuntimeOrigin::signed(data.origin),
             pool_id,
             construct_asset(data.asset),
             data.asset_amount,
