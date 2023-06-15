@@ -163,6 +163,7 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.

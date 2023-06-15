@@ -22,17 +22,18 @@
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
-#[cfg(test)]
-use crate::Pallet as Authorized;
-use crate::{market_mock, AuthorizedOutcomeReports, Call, Config, Pallet};
+use crate::{
+    market_mock, AuthorizedOutcomeReports, Call, Config, NegativeImbalanceOf, Pallet as Authorized,
+    Pallet,
+};
 use frame_benchmarking::benchmarks;
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get},
+    traits::{EnsureOrigin, Get, Imbalance},
 };
 use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::{
-    traits::DisputeResolutionApi,
+    traits::{DisputeApi, DisputeResolutionApi},
     types::{AuthorityReport, OutcomeReport},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -94,6 +95,72 @@ benchmarks! {
     } verify {
         let report = AuthorityReport { resolve_at, outcome: OutcomeReport::Scalar(1) };
         assert_eq!(AuthorizedOutcomeReports::<T>::get(market_id).unwrap(), report);
+    }
+
+    on_dispute_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        Authorized::<T>::on_dispute(&market_id, &market).unwrap();
+    }
+
+    on_resolution_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+
+        let report = AuthorityReport { resolve_at: 0u32.into(), outcome: OutcomeReport::Scalar(0) };
+        AuthorizedOutcomeReports::<T>::insert(market_id, report);
+    }: {
+        Authorized::<T>::on_resolution(&market_id, &market).unwrap();
+    }
+
+    exchange_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+
+        let outcome = OutcomeReport::Scalar(0);
+        let imb = NegativeImbalanceOf::<T>::zero();
+    }: {
+        Authorized::<T>::exchange(&market_id, &market, &outcome, imb).unwrap();
+    }
+
+    get_auto_resolve_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+        let report = AuthorityReport { resolve_at: 0u32.into(), outcome: OutcomeReport::Scalar(0) };
+        AuthorizedOutcomeReports::<T>::insert(market_id, report);
+    }: {
+        Authorized::<T>::get_auto_resolve(&market_id, &market).unwrap();
+    }
+
+    has_failed_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        Authorized::<T>::has_failed(&market_id, &market).unwrap();
+    }
+
+    on_global_dispute_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+    }: {
+        Authorized::<T>::on_global_dispute(&market_id, &market).unwrap();
+    }
+
+    clear_weight {
+        let market_id = 0u32.into();
+        let market = market_mock::<T>();
+        T::MarketCommons::push_market(market.clone()).unwrap();
+        let report = AuthorityReport { resolve_at: 0u32.into(), outcome: OutcomeReport::Scalar(0) };
+        AuthorizedOutcomeReports::<T>::insert(market_id, report);
+    }: {
+        Authorized::<T>::clear(&market_id, &market).unwrap();
     }
 
     impl_benchmark_test_suite!(

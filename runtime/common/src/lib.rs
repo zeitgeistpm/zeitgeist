@@ -71,7 +71,8 @@ macro_rules! decl_common_types {
                 pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
                 pallet_preimage::migration::v1::Migration<Runtime>,
                 pallet_democracy::migrations::v1::Migration<Runtime>,
-                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
+                zrml_prediction_markets::migrations::AddOutsiderAndDisputeBond<Runtime>,
+                zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
             ),
         >;
 
@@ -314,7 +315,7 @@ macro_rules! create_runtime {
                 Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 52,
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
                 RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
+                SimpleDisputes: zrml_simple_disputes::{Call, Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
@@ -1054,7 +1055,6 @@ macro_rules! impl_config_traits {
             type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
-            type DisputeFactor = DisputeFactor;
             type RuntimeEvent = RuntimeEvent;
             #[cfg(feature = "with-global-disputes")]
             type GlobalDisputes = GlobalDisputes;
@@ -1109,10 +1109,15 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_simple_disputes::Config for Runtime {
+            type AssetManager = AssetManager;
+            type OutcomeBond = OutcomeBond;
+            type OutcomeFactor = OutcomeFactor;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
+            type MaxDisputes = MaxDisputes;
             type PalletId = SimpleDisputesPalletId;
+            type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "with-global-disputes")]
@@ -1263,6 +1268,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_court, Court);
+                    list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     #[cfg(feature = "with-global-disputes")]
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     #[cfg(not(feature = "parachain"))]
@@ -1342,6 +1348,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_court, Court);
+                    add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     #[cfg(feature = "with-global-disputes")]
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     #[cfg(not(feature = "parachain"))]
