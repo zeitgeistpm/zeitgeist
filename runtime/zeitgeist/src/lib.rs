@@ -112,6 +112,9 @@ impl Contains<RuntimeCall> for IsCallable {
         use orml_currencies::Call::update_balance;
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
+        use pallet_contracts::Call::{
+            instantiate_with_code, instantiate_with_code_old_weight, upload_code,
+        };
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
@@ -142,6 +145,13 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            // Permissioned contracts: Only deployable via utility.dispatch_as(...)
+            RuntimeCall::Contracts(inner_call) => match inner_call {
+                instantiate_with_code { .. } => false,
+                instantiate_with_code_old_weight { .. } => false,
+                upload_code { .. } => false,
+                _ => true,
+            },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
             RuntimeCall::Court(_) => false,
