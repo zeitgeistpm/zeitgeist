@@ -21,8 +21,11 @@
   - [ ] Are breaking changes marked as such?
   - [ ] Is the file formatted with `prettier -w docs/changelog_for_devs.md`?
 - Sanity tests:
-  - [ ] The local node produces blocks (run `cargo run --profile=production -- --tmp`).
-  - [ ] The node syncs with Zeitgeist and Battery Station.
+  - [ ] The local temporary development node produces blocks:
+        `cargo run --profile=production -- --tmp`.
+  - [ ] The node syncs with Zeitgeist and Battery Station:
+        `cargo run --profile=production --features=parachain`,
+        `cargo run --profile=production --features=parachain -- --chain=battery_station`.
   - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
 - [ ] Code quality:
   - [ ] Are there compiler warnings which can easily be avoided?
