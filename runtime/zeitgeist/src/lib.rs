@@ -113,7 +113,8 @@ impl Contains<RuntimeCall> for IsCallable {
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
         use pallet_contracts::Call::{
-            call, call_old_weight, instantiate, instantiate_old_weight, remove_code, set_code,
+            call, call_old_weight, instantiate, instantiate_old_weight, remove_code,
+            set_code as set_code_contracts,
         };
         use pallet_vesting::Call::force_vested_transfer;
 
@@ -152,7 +153,7 @@ impl Contains<RuntimeCall> for IsCallable {
                 instantiate { .. } => true,
                 instantiate_old_weight { .. } => true,
                 remove_code { .. } => true,
-                set_code { .. } => true,
+                set_code_contracts { .. } => true,
                 _ => false,
             },
             // Membership is managed by the respective Membership instance
