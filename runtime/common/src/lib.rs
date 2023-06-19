@@ -1377,7 +1377,7 @@ macro_rules! create_runtime_api {
                         gas_limit,
                         storage_deposit_limit,
                         input_data,
-                        CONTRACTS_DEBUG_OUTPUT
+                        CONTRACTS_DEBUG_OUTPUT,
                     )
                 }
 
@@ -1400,7 +1400,7 @@ macro_rules! create_runtime_api {
                         code,
                         data,
                         salt,
-                        CONTRACTS_DEBUG_OUTPUT
+                        CONTRACTS_DEBUG_OUTPUT,
                     )
                 }
 
