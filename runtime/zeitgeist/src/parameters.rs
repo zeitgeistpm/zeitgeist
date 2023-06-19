@@ -82,7 +82,12 @@ parameter_types! {
 
     // Contracts
     pub const ContractsDeletionQueueDepth: u32 = 128;
-    pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
+    pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10)
+        * RuntimeBlockWeights::get()
+            .per_class
+            .get(DispatchClass::Normal)
+            .max_total
+            .unwrap_or(RuntimeBlockWeights::get().max_block);
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 123 * 1024;
