@@ -113,7 +113,7 @@ impl Contains<RuntimeCall> for IsCallable {
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
         use pallet_contracts::Call::{
-            instantiate_with_code, instantiate_with_code_old_weight, upload_code,
+            call, call_old_weight, instantiate, instantiate_old_weight, remove_code, set_code,
         };
         use pallet_vesting::Call::force_vested_transfer;
 
@@ -147,10 +147,13 @@ impl Contains<RuntimeCall> for IsCallable {
             }
             // Permissioned contracts: Only deployable via utility.dispatch_as(...)
             RuntimeCall::Contracts(inner_call) => match inner_call {
-                instantiate_with_code { .. } => false,
-                instantiate_with_code_old_weight { .. } => false,
-                upload_code { .. } => false,
-                _ => true,
+                call { .. } => true,
+                call_old_weight { .. } => true,
+                instantiate { .. } => true,
+                instantiate_old_weight { .. } => true,
+                remove_code { .. } => true,
+                set_code { .. } => true,
+                _ => false,
             },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
