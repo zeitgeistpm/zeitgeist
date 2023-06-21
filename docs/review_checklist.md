@@ -1,25 +1,22 @@
-- [ ] Check if there are any TODOs which are not linked to an issue of the
-      zeitgeist repository like this: `TODO(#999)`.
-- [ ] Does the PR link relevant issues and contain a detailed description?
-- [ ] If the PR changes the business logic, does it add the corresponding
-      labels?
-- [ ] Are the doc strings up to date?
+- [ ] All todos contain a reference to an issue like this: `TODO(#999)`.
+- [ ] The PR links relevant issues and contains a detailed description.
+- [ ] All relevant labels were added.
+- [ ] The docstrings are up to date.
 - [ ] If the PR adds or changes extrinsics or functions used by extrinsics:
-  - [ ] Is the _Weight_ section in the documentation up to date?
-  - [ ] Are the benchmarks up to date?
-  - [ ] Do the call filters need to be adjusted (forbidden scoring rules,
-        dispute mechanisms)?
-  - [ ] Do the extrinsics emit all the required events (see [Events](#events)
-        below)?
-- [ ] Is the module `README.md` up to date?
-- [ ] Is [docs.zeitgeist.pm] up to date?
-- [ ] Is `docs/changelog_for_devs.md` up to date, specifically:
-  - [ ] Are changes relevant to the Frontend Team (extrinsics changed, new
-        functions) mentioned here?
-  - [ ] Are all new events explained so they can easily be integrated into the
-        indexer?
-  - [ ] Are breaking changes marked as such?
-  - [ ] Is the file formatted with `prettier -w docs/changelog_for_devs.md`?
+  - [ ] The _Weight_ section in the documentation is up to date.
+  - [ ] The benchmarks are up to date.
+  - [ ] The call filters were adjusted.
+  - [ ] The extrinsics emit all the required events (see [Events](#events)
+        below).
+- [ ] The module `README.md` is up to date.
+- [ ] [docs.zeitgeist.pm] is up to date.
+- [ ] `docs/changelog_for_devs.md` is up to date, specifically:
+  - [ ] Changes relevant to the Frontend Team (extrinsics changed, new
+        functions) are mentioned here.
+  - [ ] All new events are explained so they can easily be integrated into the
+        indexer.
+  - [ ] Breaking changes are marked as such.
+  - [ ] The file is formatted with `prettier -w docs/changelog_for_devs.md`.
 - Sanity tests:
   - [ ] The local temporary development node produces blocks:
         `cargo run --profile=production -- --tmp`.
@@ -28,26 +25,25 @@
         `cargo run --profile=production --features=parachain -- --chain=battery_station`.
   - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
 - [ ] Code quality:
-  - [ ] Are there compiler warnings which can easily be avoided?
-  - [ ] Is integer arithmetic saturated/checked and are all panickers removed?
-  - [ ] Is code contained in macro invocations (benchmarks,
-        `runtime/common/src/lib.rs`, `decl_runtime_apis!`) correctly formatted?
-  - [ ] Are all `*.toml` files formatted with `taplo` (run
-        `taplo format --check`)?
-  - [ ] Are all copyright notices up to date?
-  - [ ] Are enums sorted alphabetically, except for enums used in storage (to
-        prevent migrations) or errors and events?
-- [ ] If an action is required by the Frontend Team, add an issue to
+  - [ ] Avoidable compiler warnings were resolved.
+  - [ ] Integer arithmetic is only saturated/checked and all panickers are removed.
+  - [ ] Code contained in macro invocations (benchmarks,
+        `runtime/common/src/lib.rs`, `decl_runtime_apis!`) is correctly formatted.
+  - [ ] All `*.toml` files are formatted with `taplo` (run
+        `taplo format --check`).
+  - [ ] All copyright notices are up to date.
+  - [ ] Enums are sorted alphabetically, except for enums used in storage (to
+        prevent migrations), errors and events.
+- [ ] In case an action is required by the Frontend Team, an issue was added to
       zeitgeistpm/ui.
-- [ ] If the PR adds a new pallet, is the pallet added to the benchmark
-      configuration in `scripts/`?
-- [ ] If you are changing/removing configuration values, storage items: Do the
-      changes require a storage migration?
-- [ ] If you are adding/changing configuration values on the mainnet: Have the
-      implications been discussed with the product owners?
+- [ ] In case the PR adds a new pallet, the pallet is added to the benchmark
+      configuration in `scripts/`.
+- [ ] In case configuration items or storage elements were changed: Necessary storage migrations are provided.
+- [ ] In case configuration values changed: The
+      implications have been discussed with the [code owners](https://github.com/zeitgeistpm/zeitgeist/blob/main/CODEOWNERS).
 - [ ] If the changes include a storage migration:
-  - [ ] Is the version number in the pallet bumped?
-  - [ ] Add try-runtime checks and ensure the following:
+  - [ ] The affected pallet's `STORAGE_VERSION` was bumped.
+  - [ ] Try-runtime checks were added and the following conditions were ensured:
     - [ ] The storage migration bumps the pallet version correctly.
     - [ ] The try-runtime _fails_ if you comment out the migration code.
     - [ ] The try-runtime passes without any warnings (substrate storage
@@ -56,10 +52,10 @@
 
 ## Events
 
-_All_ modifications of the on-chain storage **must** be broadcast to our indexer
+_All_ modifications of the on-chain storage **must** be broadcast to indexers
 by emitting a high-level event. The term _high-level_ event refers to an event
 which may or may not contextualize _low-level_ events emitted by pallets that
-our business logic builds on, for example pallet-balances. Examples of
+Zeitgeist's business logic builds on, for example pallet-balances. Examples of
 high-level events are:
 
 - `SwapExactAmountIn` (contextualizes a couple of low-level events like
