@@ -85,8 +85,8 @@ jobs:
       
       - run: ./scripts/benchmarks/quick_check.sh
 
-  tests:
-    name: Tests
+  test_standalone:
+    name: Test standalone build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -113,7 +113,37 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Tests
-        run: ./scripts/tests/test.sh
+        run: ./scripts/tests/test_standalone.sh
+
+  test_parachain:
+    name: Test parachain build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
+      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+      - name: Free up disk space on GitHub hosted runners
+        run: |
+          # Ensure context is GitHub hosted runner
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
+            echo "Freeing up space in GitHub hosted runner"
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /opt/ghc
+            sudo rm -rf "/usr/local/share/boost"
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          fi
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Tests
+        run: ./scripts/tests/test_parachain.sh
 
   fuzz:
     name: Fuzz
