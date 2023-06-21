@@ -22,7 +22,7 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::VERSION;
+use super::{Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
@@ -79,6 +79,20 @@ parameter_types! {
     pub const TechnicalCommitteeMaxMembers: u32 = 100;
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+
+    // Contracts
+    pub const ContractsDeletionQueueDepth: u32 = 128;
+    pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10)
+        * RuntimeBlockWeights::get()
+            .per_class
+            .get(DispatchClass::Normal)
+            .max_total
+            .unwrap_or(RuntimeBlockWeights::get().max_block);
+    pub const ContractsDepositPerByte: Balance = deposit(0,1);
+    pub const ContractsDepositPerItem: Balance = deposit(1,0);
+    pub const ContractsMaxCodeLen: u32 = 123 * 1024;
+    pub const ContractsMaxStorageKeyLen: u32 = 128;
+    pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
     /// Duration of a single court case.
@@ -393,7 +407,7 @@ parameter_type_with_key! {
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
-                    orml_asset_registry::Pallet<super::Runtime> as orml_traits::asset_registry::Inspect
+                    orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {

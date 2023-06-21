@@ -42,7 +42,7 @@ pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
     traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
-    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
@@ -112,6 +112,10 @@ impl Contains<RuntimeCall> for IsCallable {
         use orml_currencies::Call::update_balance;
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
+        use pallet_contracts::Call::{
+            call, call_old_weight, instantiate, instantiate_old_weight, remove_code,
+            set_code as set_code_contracts,
+        };
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
@@ -142,6 +146,16 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            // Permissioned contracts: Only deployable via utility.dispatch_as(...)
+            RuntimeCall::Contracts(inner_call) => match inner_call {
+                call { .. } => true,
+                call_old_weight { .. } => true,
+                instantiate { .. } => true,
+                instantiate_old_weight { .. } => true,
+                remove_code { .. } => true,
+                set_code_contracts { .. } => true,
+                _ => false,
+            },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
             RuntimeCall::Court(_) => false,

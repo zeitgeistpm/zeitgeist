@@ -13,6 +13,8 @@ orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "ht
 pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-bounties = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-contracts = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-contracts-primitives = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-identity = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-membership = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -182,6 +184,7 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-bounties/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
+    "pallet-contracts/runtime-benchmarks",
     "pallet-democracy/runtime-benchmarks",
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
@@ -222,6 +225,8 @@ std = [
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
+    "pallet-contracts/std",
+    "pallet-contracts-primitives/std",
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
@@ -341,6 +346,7 @@ try-runtime = [
     "pallet-membership/try-runtime",
 
     # Other Parity runtime pallets
+    "pallet-contracts/try-runtime",
     "pallet-identity/try-runtime",
     "pallet-utility/try-runtime",
 
