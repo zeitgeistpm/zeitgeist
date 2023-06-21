@@ -26,9 +26,11 @@
   - [ ] `try-runtime` passes on Zeitgeist and Battery Station.
 - [ ] Code quality:
   - [ ] Avoidable compiler warnings were resolved.
-  - [ ] Integer arithmetic is only saturated/checked and all panickers are removed.
+  - [ ] Integer arithmetic is only saturated/checked and all panickers are
+        removed.
   - [ ] Code contained in macro invocations (benchmarks,
-        `runtime/common/src/lib.rs`, `decl_runtime_apis!`) is correctly formatted.
+        `runtime/common/src/lib.rs`, `decl_runtime_apis!`) is correctly
+        formatted.
   - [ ] All `*.toml` files are formatted with `taplo` (run
         `taplo format --check`).
   - [ ] All copyright notices are up to date.
@@ -38,9 +40,11 @@
       zeitgeistpm/ui.
 - [ ] In case the PR adds a new pallet, the pallet is added to the benchmark
       configuration in `scripts/`.
-- [ ] In case configuration items or storage elements were changed: Necessary storage migrations are provided.
-- [ ] In case configuration values changed: The
-      implications have been discussed with the [code owners](https://github.com/zeitgeistpm/zeitgeist/blob/main/CODEOWNERS).
+- [ ] In case configuration items or storage elements were changed: Necessary
+      storage migrations are provided.
+- [ ] In case configuration values changed: The implications have been discussed
+      with the
+      [code owners](https://github.com/zeitgeistpm/zeitgeist/blob/main/CODEOWNERS).
 - [ ] If the changes include a storage migration:
   - [ ] The affected pallet's `STORAGE_VERSION` was bumped.
   - [ ] Try-runtime checks were added and the following conditions were ensured:
@@ -52,8 +56,8 @@
 
 ## Events
 
-_All_ modifications of the on-chain storage **must** be broadcast to indexers
-by emitting a high-level event. The term _high-level_ event refers to an event
+_All_ modifications of the on-chain storage **must** be broadcast to indexers by
+emitting a high-level event. The term _high-level_ event refers to an event
 which may or may not contextualize _low-level_ events emitted by pallets that
 Zeitgeist's business logic builds on, for example pallet-balances. Examples of
 high-level events are:
