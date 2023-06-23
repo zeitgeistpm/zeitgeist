@@ -112,3 +112,6 @@ lto = true
 opt-level = 3
 # Zeitgeist runtime requires unwinding.
 panic = "unwind"
+
+[patch."https://github.com/paritytech/polkadot"]
+polkadot-service = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
