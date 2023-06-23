@@ -103,7 +103,7 @@ pub struct IsCallable;
 // Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
-    fn contains(call: &RuntimeCall) -> bool {
+    fn contains(runtime_call: &RuntimeCall) -> bool {
         #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
@@ -127,7 +127,7 @@ impl Contains<RuntimeCall> for IsCallable {
         };
 
         #[allow(clippy::match_like_matches_macro)]
-        match call {
+        match runtime_call {
             // Membership is managed by the respective Membership instance
             RuntimeCall::AdvisoryCommittee(set_members { .. }) => false,
             // See "balance.set_balance"
