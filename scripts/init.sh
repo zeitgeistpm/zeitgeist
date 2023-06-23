@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Initializes a build environment.
-# Passing one argument results in avoiding the usage of sudo for privileged commands.
+# Passing "nosudo" in the first argument results in avoiding the usage of sudo for privileged commands.
 
 set -e
 
