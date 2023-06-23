@@ -7,7 +7,7 @@ set -e
 
 echo "*** Initializing build environment"
 
-if [ -n "$1" ]; then
+if [ "$1" == "nosudo" ]; then
    apt-get update && \
    apt-get install -y build-essential clang curl libssl-dev protobuf-compiler
 else
