@@ -1,3 +1,21 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #[macro_export]
 macro_rules! impl_fee_types {
     {} => {
@@ -61,8 +79,6 @@ macro_rules! impl_foreign_fees {
         use frame_support::traits::tokens::fungibles::Balanced;
         use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
         use sp_runtime::traits::Convert;
-
-        // TODO: test functions
 
         // It does foreign fees by extending transactions to include an optional `AssetId` that specifies the asset
         // to be used for payment (defaulting to the native token on `None`). So for each transaction you can specify asset id
