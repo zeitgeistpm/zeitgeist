@@ -163,4 +163,4 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
-      - run: ./scripts/tests/fuzz.sh
+      - run: ./scripts/tests/fuzz.sh --verbose
