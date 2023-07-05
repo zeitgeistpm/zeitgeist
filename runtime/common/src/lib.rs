@@ -66,13 +66,6 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                SchedulerMigrationV1toV4,
-                pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
-                pallet_preimage::migration::v1::Migration<Runtime>,
-                pallet_democracy::migrations::v1::Migration<Runtime>,
-                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
-            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
