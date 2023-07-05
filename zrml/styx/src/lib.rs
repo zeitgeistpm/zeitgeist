@@ -85,6 +85,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Burns ZTG(styx.burnAmount()) to cross, granting the ability to claim your zeitgeist avatar.
         /// The signer can only cross once.
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::cross())]
         pub fn cross(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -113,6 +114,7 @@ pub mod pallet {
         /// # Arguments
         ///
         /// * `amount`: The amount of the new burn price
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::set_burn_amount())]
         pub fn set_burn_amount(
             origin: OriginFor<T>,

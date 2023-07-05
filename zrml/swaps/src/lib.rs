@@ -129,6 +129,7 @@ mod pallet {
         ///
         /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
         /// assets in the pool if the market is categorical.
+        #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
                 .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar())
@@ -184,6 +185,7 @@ mod pallet {
         // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
         // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
         // though.
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::pool_exit(
             min_assets_out.len().min(T::MaxAssets::get().into()) as u32
         ))]
@@ -245,6 +247,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: O(1)
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::pool_exit_subsidy())]
         #[transactional]
         pub fn pool_exit_subsidy(
@@ -340,6 +343,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)`
+        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
         // MARK(non-transactional): Immediately calls and returns a transactional.
         pub fn pool_exit_with_exact_asset_amount(
@@ -377,6 +381,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)`
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_pool_amount())]
         #[transactional]
         pub fn pool_exit_with_exact_pool_amount(
@@ -456,6 +461,7 @@ mod pallet {
         // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
         // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
         // though.
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::pool_join(
             max_assets_in.len().min(T::MaxAssets::get().into()) as u32
         ))]
@@ -510,6 +516,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: O(1)
+        #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
         #[transactional]
         pub fn pool_join_subsidy(
@@ -580,6 +587,7 @@ mod pallet {
         ///
         /// Complexity: O(1)
         // MARK(non-transactional): Immediately calls and returns a transactional.
+        #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
@@ -616,6 +624,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)`
+        #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
         #[transactional]
         pub fn pool_join_with_exact_pool_amount(
@@ -687,6 +696,7 @@ mod pallet {
         /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
         /// assets if the scoring rule is Rikiddo.
         // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
+        #[pallet::call_index(9)]
         #[pallet::weight(T::WeightInfo::swap_exact_amount_in_cpmm())]
         #[transactional]
         pub fn swap_exact_amount_in(
@@ -730,6 +740,7 @@ mod pallet {
         /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
         /// assets if the scoring rule is Rikiddo.
         // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
+        #[pallet::call_index(10)]
         #[pallet::weight(T::WeightInfo::swap_exact_amount_out_cpmm())]
         #[transactional]
         pub fn swap_exact_amount_out(

@@ -67,6 +67,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
         )]
@@ -112,6 +113,7 @@ mod pallet {
             }
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(
             T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
         )]
@@ -178,6 +180,7 @@ mod pallet {
             }
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(
             T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
         )]
