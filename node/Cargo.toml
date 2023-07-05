@@ -107,6 +107,7 @@ zeitgeist-primitives = { path = "../primitives" }
 zeitgeist-runtime = { path = "../runtime/zeitgeist", optional = true }
 zrml-liquidity-mining = { path = "../zrml/liquidity-mining" }
 zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
+
 [features]
 default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
 parachain = [
@@ -177,7 +178,7 @@ description = "An evolving blockchain for prediction markets and futarchy."
 edition = "2021"
 homepage = "https://zeitgeist.pm"
 name = "zeitgeist-node"
-version = "0.3.8"
+version = "0.3.9"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
