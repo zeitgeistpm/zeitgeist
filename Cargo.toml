@@ -112,3 +112,22 @@ lto = true
 opt-level = 3
 # Zeitgeist runtime requires unwinding.
 panic = "unwind"
+
+[patch."https://github.com/paritytech/polkadot"]
+pallet-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-cli = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-client = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-core-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-node-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-node-subsystem = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-overseer = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-parachain = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-runtime = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-runtime-parachains = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-service = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-test-service = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+rococo-runtime = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+xcm-builder = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+xcm-executor = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }

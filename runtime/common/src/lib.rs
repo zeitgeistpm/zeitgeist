@@ -67,13 +67,6 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                SchedulerMigrationV1toV4,
-                pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
-                pallet_preimage::migration::v1::Migration<Runtime>,
-                pallet_democracy::migrations::v1::Migration<Runtime>,
-                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
-            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -1596,6 +1589,13 @@ macro_rules! create_runtime_api {
 
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
+                }
+
+                fn get_all_spot_prices(
+                    pool_id: &PoolId,
+                    with_fees: bool,
+                ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+                    Swaps::get_all_spot_prices(pool_id, with_fees)
                 }
             }
 

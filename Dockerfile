@@ -15,7 +15,7 @@ COPY . /zeitgeist
 RUN apt-get update && \
     apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold"
 
-RUN ./scripts/init.sh
+RUN ./scripts/init.sh nosudo
 
 RUN . "$HOME/.cargo/env" && cargo build --profile "$PROFILE" --features "$FEATURES"
 

@@ -1460,6 +1460,24 @@ mod pallet {
             }
         }
 
+        // Returns vector of pairs `(a, p)` where `a` ranges over all assets in the pool and `p` is
+        // the spot price of swapping the base asset for `a` (including swap fees if `with_fees` is
+        // `true`).
+        pub fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool,
+        ) -> Result<Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)>, DispatchError> {
+            let pool = Self::pool_by_id(*pool_id)?;
+            pool.assets
+                .into_iter()
+                .map(|asset| {
+                    let spot_price =
+                        Self::get_spot_price(pool_id, &pool.base_asset, &asset, with_fees)?;
+                    Ok((asset, spot_price))
+                })
+                .collect()
+        }
+
         #[inline]
         pub fn pool_account_id(pool_id: &PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
@@ -1573,7 +1591,7 @@ mod pallet {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
 
-        pub(crate) fn pool_by_id(
+        pub fn pool_by_id(
             pool_id: PoolId,
         ) -> Result<Pool<BalanceOf<T>, MarketIdOf<T>>, DispatchError>
         where
