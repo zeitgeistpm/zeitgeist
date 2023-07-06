@@ -59,8 +59,8 @@ cumulus-primitives-core = { branch = "polkadot-v0.9.32", git = "https://github.c
 cumulus-primitives-parachain-inherent = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
 cumulus-relay-chain-inprocess-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
 cumulus-relay-chain-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-relay-chain-rpc-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
 cumulus-relay-chain-minimal-node = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-relay-chain-rpc-interface = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/cumulus", optional = true }
 
 # Parachain
 
