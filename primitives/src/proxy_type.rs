@@ -36,6 +36,11 @@ pub enum ProxyType {
     CancelProxy,
     Governance,
     Staking,
+    CreateMarket,
+    ReportOutcome,
+    ProvideLiquidity,
+    BuySellCompleteSets,
+    Trading,
 }
 
 impl Default for ProxyType {
