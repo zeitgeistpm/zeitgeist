@@ -1591,6 +1591,13 @@ macro_rules! create_runtime_api {
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
                 }
+
+                fn get_all_spot_prices(
+                    pool_id: &PoolId,
+                    with_fees: bool,
+                ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+                    Swaps::get_all_spot_prices(pool_id, with_fees)
+                }
             }
 
             #[cfg(feature = "try-runtime")]
