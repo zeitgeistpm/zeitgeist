@@ -1,5 +1,6 @@
 // Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2019-2022 PureStake Inc.
 //
 // This file is part of Zeitgeist.
 //
@@ -18,7 +19,7 @@
 
 use super::{
     benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
-    cli::{Cli, Subcommand},
+    cli::{Cli, RpcConfig, Subcommand},
     service::{new_chain_ops, new_full, IdentifyVariant},
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
@@ -492,6 +493,8 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             [crate::cli::RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
         );
 
+        let rpc_config = RpcConfig { relay_chain_rpc_url: cli.run.relay_chain_rpc_url.clone() };
+
         let parachain_id = cumulus_primitives_core::ParaId::from(
             cli.parachain_id.or(parachain_id_extension).unwrap_or(super::POLKADOT_PARACHAIN_ID),
         );
@@ -525,6 +528,19 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             None
         };
 
+        log::info!(
+            "Is collating: {}",
+            if parachain_config.role.is_authority() { "yes" } else { "no" }
+        );
+
+        if rpc_config.relay_chain_rpc_url.is_some() && !cli.relaychain_args.is_empty() {
+            log::warn!(
+                "Detected relay chain node arguments together with --relay-chain-rpc-url. This \
+                 command starts a minimal Polkadot node that only uses a network-related subset \
+                 of all relay chain CLI options."
+            );
+        }
+
         match &parachain_config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
@@ -532,6 +548,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_id,
                 polkadot_config,
                 hwbench,
+                rpc_config,
             )
             .await
             .map(|r| r.0)
@@ -542,6 +559,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_id,
                 polkadot_config,
                 hwbench,
+                rpc_config,
             )
             .await
             .map(|r| r.0)
@@ -556,17 +574,21 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
+        let rpc_config = RpcConfig { relay_chain_rpc_url: None };
+
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
                 config,
                 cli.no_hardware_benchmarks,
+                rpc_config,
             )
             .map_err(sc_cli::Error::Service),
             #[cfg(feature = "with-battery-station-runtime")]
             _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
                 config,
                 cli.no_hardware_benchmarks,
+                rpc_config,
             )
             .map_err(sc_cli::Error::Service),
             #[cfg(all(
@@ -576,6 +598,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
                 config,
                 cli.no_hardware_benchmarks,
+                rpc_config,
             )
             .map_err(sc_cli::Error::Service),
             #[cfg(all(

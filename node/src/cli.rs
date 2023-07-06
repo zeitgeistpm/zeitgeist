@@ -545,3 +545,7 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
         match_client!(self, hash(number))
     }
 }
+
+pub struct RpcConfig {
+    pub relay_chain_rpc_url: Option<url::Url>,
+}
