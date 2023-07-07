@@ -805,34 +805,64 @@ macro_rules! impl_config_traits {
                     ProxyType::Staking => matches!(c, RuntimeCall::ParachainStaking(..)),
                     #[cfg(not(feature = "parachain"))]
                     ProxyType::Staking => false,
-                    ProxyType::CreateMarket =>
-                        matches!(c,
-                            RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::create_market {..}) |
-                            RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::create_cpmm_market_and_deploy_assets {..})
-                        ),
-                    ProxyType::ReportOutcome =>
-                        matches!(c,
-                            RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::report {..})
-                        ),
-                    ProxyType::ProvideLiquidity =>
-                        matches!(c,
-                            RuntimeCall::Swaps(zrml_swaps::Call::pool_join {..}) |
-                            RuntimeCall::Swaps(zrml_swaps::Call::pool_join_with_exact_asset_amount {..}) |
-                            RuntimeCall::Swaps(zrml_swaps::Call::pool_join_with_exact_pool_amount {..}) |
-                            RuntimeCall::Swaps(zrml_swaps::Call::pool_exit {..}) |
-                            RuntimeCall::Swaps(zrml_swaps::Call::pool_exit_with_exact_asset_amount {..}) |
-                            RuntimeCall::Swaps(zrml_swaps::Call::pool_exit_with_exact_pool_amount {..})
-                        ),
-                    ProxyType::BuySellCompleteSets =>
-                        matches!(c,
-                            RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::buy_complete_set {..}) |
-                            RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::sell_complete_set {..})
-                        ),
-                    ProxyType::Trading =>
-                        matches!(c,
-                            RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in {..}) |
-                            RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out {..})
-                        ),
+                    ProxyType::CreateEditMarket => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::create_market { .. })
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::edit_market { .. }
+                            )
+                    ),
+                    ProxyType::ReportOutcome => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::report { .. })
+                    ),
+                    ProxyType::Dispute => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::dispute { .. })
+                    ),
+                    ProxyType::ProvideLiquidity => matches!(
+                        c,
+                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
+                            )
+                    ),
+                    ProxyType::BuySellCompleteSets => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::buy_complete_set { .. }
+                        ) | RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::sell_complete_set { .. }
+                        )
+                    ),
+                    ProxyType::Trading => matches!(
+                        c,
+                        RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                    ),
+                    ProxyType::HandleAssets => matches!(
+                        c,
+                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::buy_complete_set { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::sell_complete_set { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
+                            )
+                    ),
                 }
             }
 
