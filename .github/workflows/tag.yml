@@ -10,18 +10,12 @@ jobs:
     name: Test Try Runtime
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
-      # to the lack of support of `rust-toolchain` files with TOML syntax:
-      # https://github.com/actions-rs/toolchain/issues/126.
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
+
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -30,18 +24,12 @@ jobs:
     name: Test Try Runtime
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
-      # to the lack of support of `rust-toolchain` files with TOML syntax:
-      # https://github.com/actions-rs/toolchain/issues/126.
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
+        
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
 

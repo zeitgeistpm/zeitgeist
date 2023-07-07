@@ -19,10 +19,10 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 
-use super::VERSION;
+use super::{Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
@@ -80,6 +80,20 @@ parameter_types! {
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+    // Contracts
+    pub const ContractsDeletionQueueDepth: u32 = 128;
+    pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10)
+        * RuntimeBlockWeights::get()
+            .per_class
+            .get(DispatchClass::Normal)
+            .max_total
+            .unwrap_or(RuntimeBlockWeights::get().max_block);
+    pub const ContractsDepositPerByte: Balance = deposit(0,1);
+    pub const ContractsDepositPerItem: Balance = deposit(1,0);
+    pub const ContractsMaxCodeLen: u32 = 246 * 1024;
+    pub const ContractsMaxStorageKeyLen: u32 = 128;
+    pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
+
     // Court
     /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
@@ -119,9 +133,9 @@ parameter_types! {
 
     // Identity
     /// The amount held on deposit for a registered identity
-    pub const BasicDeposit: Balance = 8 * BASE;
+    pub const BasicDeposit: Balance = deposit(1, 258);
     /// The amount held on deposit per additional field for a registered identity.
-    pub const FieldDeposit: Balance = 256 * CENT;
+    pub const FieldDeposit: Balance = deposit(0, 66);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 64;
@@ -133,7 +147,7 @@ parameter_types! {
     /// The amount held on deposit for a registered subaccount. This should account for the fact
     /// that one storage item's value will increase by the size of an account ID, and there will
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
-    pub const SubAccountDeposit: Balance = 2 * BASE;
+    pub const SubAccountDeposit: Balance = deposit(1, 53);
 
     // Liquidity Mining parameters
     /// Pallet identifier, mainly used for named balance reserves.
@@ -395,7 +409,7 @@ parameter_type_with_key! {
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
-                    orml_asset_registry::Pallet<super::Runtime> as orml_traits::asset_registry::Inspect
+                    orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {

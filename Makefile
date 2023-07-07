@@ -24,6 +24,7 @@ check-dummy:
 		try-runtime \
 		--execution=Native \
 		--chain=${TRYRUNTIME_CHAIN} \
+		--no-spec-check-panic \
 		on-runtime-upgrade \
 		live \
 		--uri=${TRYRUNTIME_URL}

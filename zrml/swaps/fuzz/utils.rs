@@ -17,7 +17,7 @@
 
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic,
+    clippy::arithmetic_side_effects,
     clippy::type_complexity,
 )]
 

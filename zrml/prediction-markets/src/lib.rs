@@ -1528,41 +1528,41 @@ mod pallet {
 
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-            ReserveIdentifier = [u8; 8],
-        >;
+                Self::AccountId,
+                Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
+                CurrencyId = Asset<MarketIdOf<Self>>,
+                ReserveIdentifier = [u8; 8],
+            >;
 
         #[cfg(feature = "parachain")]
         type AssetRegistry: Inspect<
-            AssetId = Asset<MarketIdOf<Self>>,
-            Balance = BalanceOf<Self>,
-            CustomMetadata = CustomMetadata,
-        >;
+                AssetId = Asset<MarketIdOf<Self>>,
+                Balance = BalanceOf<Self>,
+                CustomMetadata = CustomMetadata,
+            >;
 
         /// See [`zrml_authorized::AuthorizedPalletApi`].
         type Authorized: zrml_authorized::AuthorizedPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::RuntimeOrigin,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+                Origin = Self::RuntimeOrigin,
+            >;
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::RuntimeOrigin,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+                Origin = Self::RuntimeOrigin,
+            >;
 
         /// The origin that is allowed to destroy markets.
         type DestroyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -1582,18 +1582,18 @@ mod pallet {
         /// See [`GlobalDisputesPalletApi`].
         #[cfg(feature = "with-global-disputes")]
         type GlobalDisputes: GlobalDisputesPalletApi<
-            MarketIdOf<Self>,
-            Self::AccountId,
-            BalanceOf<Self>,
-            Self::BlockNumber,
-        >;
+                MarketIdOf<Self>,
+                Self::AccountId,
+                BalanceOf<Self>,
+                Self::BlockNumber,
+            >;
 
         type LiquidityMining: LiquidityMiningPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+            >;
 
         /// The maximum number of categories available for categorical markets.
         #[pallet::constant]
@@ -1645,6 +1645,7 @@ mod pallet {
         type MaxRejectReasonLen: Get<u32>;
 
         /// The maximum allowed duration of a market from creation to market close in blocks.
+        #[pallet::constant]
         type MaxMarketLifetime: Get<Self::BlockNumber>;
 
         /// The maximum number of bytes allowed as edit reason.
@@ -1674,13 +1675,13 @@ mod pallet {
 
         /// See [`DisputeApi`].
         type SimpleDisputes: DisputeApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::RuntimeOrigin,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+                Origin = Self::RuntimeOrigin,
+            >;
 
         /// Handler for slashed funds.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -1806,13 +1807,13 @@ mod pallet {
     where
         T: Config,
     {
-        /// Custom addition block initialization logic wasn't successful
+        /// Custom addition block initialization logic wasn't successful.
         BadOnInitialize,
-        /// A complete set of assets has been bought \[market_id, amount_per_asset, buyer\]
+        /// A complete set of assets has been bought. \[market_id, amount_per_asset, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// A market has been approved \[market_id, new_market_status\]
+        /// A market has been approved. \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
-        /// A market has been created \[market_id, market_account, market\]
+        /// A market has been created. \[market_id, market_account, market\]
         MarketCreated(MarketIdOf<T>, T::AccountId, MarketOf<T>),
         /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
@@ -1821,25 +1822,26 @@ mod pallet {
         /// A market was discarded after failing to gather enough subsidy.
         /// \[market_id, new_market_status\]
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
-        /// A market has been closed \[market_id\]
+        /// A market has been closed. \[market_id\]
         MarketClosed(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_market_status, new_outcome\]
+        /// A market has been disputed. \[market_id, new_market_status, new_outcome\]
         MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
-        /// A pending market has been rejected as invalid with a reason. \[market_id, reject_reason\]
+        /// A pending market has been rejected as invalid with a reason.
+        /// \[market_id, reject_reason\]
         MarketRejected(MarketIdOf<T>, RejectReason<T>),
-        /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
+        /// A market has been reported on. \[market_id, new_market_status, reported_outcome\]
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
-        /// A market has been resolved \[market_id, new_market_status, real_outcome\]
+        /// A market has been resolved. \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
         MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
-        /// A proposed market has been edited by the market creator \[market_id\]
+        /// A proposed market has been edited by the market creator. \[market_id, new_market\]
         MarketEdited(MarketIdOf<T>, MarketOf<T>),
-        /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
+        /// A complete set of assets has been sold. \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// An amount of winning outcomes have been redeemed
+        /// An amount of winning outcomes have been redeemed.
         /// \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
             MarketIdOf<T>,
@@ -2852,15 +2854,15 @@ mod pallet {
         where
             F: FnMut(&MarketIdOf<T>, MarketOf<T>) -> DispatchResult,
             MarketIdsPerBlock: frame_support::StorageMap<
-                T::BlockNumber,
-                BoundedVec<MarketIdOf<T>, CacheSize>,
-                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
-            >,
+                    T::BlockNumber,
+                    BoundedVec<MarketIdOf<T>, CacheSize>,
+                    Query = BoundedVec<MarketIdOf<T>, CacheSize>,
+                >,
             MarketIdsPerTimeFrame: frame_support::StorageMap<
-                TimeFrame,
-                BoundedVec<MarketIdOf<T>, CacheSize>,
-                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
-            >,
+                    TimeFrame,
+                    BoundedVec<MarketIdOf<T>, CacheSize>,
+                    Query = BoundedVec<MarketIdOf<T>, CacheSize>,
+                >,
         {
             let market_ids_per_block = MarketIdsPerBlock::get(block_number);
             for market_id in market_ids_per_block.iter() {

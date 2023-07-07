@@ -35,6 +35,7 @@ pub mod orml_tokens;
 pub mod pallet_balances;
 pub mod pallet_bounties;
 pub mod pallet_collective;
+pub mod pallet_contracts;
 pub mod pallet_democracy;
 pub mod pallet_identity;
 pub mod pallet_membership;

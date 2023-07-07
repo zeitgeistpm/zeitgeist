@@ -12,18 +12,11 @@ https://keepachangelog.com/en/1.0.0/ and ⚠️ marks changes that might break
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
-## v0.3.9
-
-[#937]: https://github.com/zeitgeistpm/zeitgeist/pull/937
-[#903]: https://github.com/zeitgeistpm/zeitgeist/pull/903
+## v0.4.0
 
 ### Changed
 
-- ⚠️ Add `outsider` field to `MarketBonds` struct. In particular, the `Market`
-  struct's layout has changed ([#903]).
-  # v0.3.9
-
-All things about Global Disputes:
+All things about Global Disputes ⚠️ :
 - Added new dispatchable function:
   - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
     was destroyed.
@@ -46,6 +39,23 @@ All things about Global Disputes:
   - `Active { add_outcome_end: BlockNumber, vote_end: BlockNumber }`
   - `Finished`
   - `Destroyed`
+
+## v0.3.9
+
+[#1011]: https://github.com/zeitgeistpm/zeitgeist/pull/1011
+[#937]: https://github.com/zeitgeistpm/zeitgeist/pull/937
+[#903]: https://github.com/zeitgeistpm/zeitgeist/pull/903
+
+### Changed
+
+- ⚠️ Add `outsider` field to `MarketBonds` struct. In particular, the `Market`
+  struct's layout has changed ([#903]).
+
+  # v0.3.9
+
+- Adjust `deposit` function used to calculate storage fees for the following
+  pallets: identity, multisig, preimage, proxy. The cost of adding an identity
+  reduced from a minimum of 125 ZTG to a minimum of 1.5243 ZTG ([#1011])
 
 ### Fixed
 

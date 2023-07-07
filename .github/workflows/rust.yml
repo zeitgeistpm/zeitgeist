@@ -14,18 +14,11 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
-      # to the lack of support of `rust-toolchain` files with TOML syntax:
-      # https://github.com/actions-rs/toolchain/issues/126.
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
         
       - uses: actions-rs/install@v0.1
         with:
@@ -36,6 +29,26 @@ jobs:
 
       - name: Format
         run: ./scripts/tests/format.sh --check
+
+  copyright:
+    name: Copyright Notices
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+      - name: Install check-license and dependencies
+        run: |
+          pip install scripts/check-license
+          pip install -r scripts/check-license/requirements.txt
+      - name: Query files changed
+        id: files_changed
+        uses: Ana06/get-changed-files@v1.2
+        with:
+          filter: '*.rs$'
+      - name: Check copyright notices
+        run: check-license ${{ steps.files_changed.outputs.added_modified }}
 
   checks:
     name: Checks
@@ -48,81 +61,99 @@ jobs:
           "standalone"
         ]
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
 
       - name: Checks
         run: ./scripts/tests/${{ matrix.scripts }}.sh
+
   benchmark:
     name: Quick check benchmarks
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
       
       - run: ./scripts/benchmarks/quick_check.sh
 
-  tests:
-    name: Tests
+  test_standalone:
+    name: Test standalone build
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: grcov
-          use-tool-cache: true
+      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
+      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+      - name: Free up disk space on GitHub hosted runners
+        run: |
+          # Ensure context is GitHub hosted runner
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
+            echo "Freeing up space in GitHub hosted runner"
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /opt/ghc
+            sudo rm -rf "/usr/local/share/boost"
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          fi
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
       - name: Tests
-        run: ./scripts/tests/misc.sh -Cinstrument-coverage
+        run: ./scripts/tests/test_standalone.sh
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ${{ runner.temp }}/zeitgeist-test-coverage.lcov
-          fail_ci_if_error: true
-          flags: tests
-          verbose: true
-          name: unit-tests
+  test_parachain:
+    name: Test parachain build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
+      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+      - name: Free up disk space on GitHub hosted runners
+        run: |
+          # Ensure context is GitHub hosted runner
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
+            echo "Freeing up space in GitHub hosted runner"
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /opt/ghc
+            sudo rm -rf "/usr/local/share/boost"
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          fi
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Tests
+        run: ./scripts/tests/test_parachain.sh
 
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest
     steps:
-      - name: Install ProtoBuf Compiler
-        run: |
-          sudo apt-get install protobuf-compiler
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install rust toolchain
-        run: rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - uses: actions-rs/install@v0.1
         with:
@@ -132,4 +163,4 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
-      - run: ./scripts/tests/fuzz.sh
+      - run: ./scripts/tests/fuzz.sh --verbose

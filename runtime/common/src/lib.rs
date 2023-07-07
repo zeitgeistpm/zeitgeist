@@ -72,10 +72,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                zrml_prediction_markets::migrations::AddOutsiderBond<Runtime>,
-                ConditionalMigration,
-            ),
+            ConditionalMigration,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -306,6 +303,7 @@ macro_rules! create_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 31,
                 Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
+                Contracts: pallet_contracts = 33,
 
                 // Third-party
                 AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
@@ -616,7 +614,7 @@ macro_rules! impl_config_traits {
         impl pallet_balances::Config for Runtime {
             type AccountStore = System;
             type Balance = Balance;
-            type DustRemoval = ();
+            type DustRemoval = Treasury;
             type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposit = ExistentialDeposit;
             type MaxLocks = MaxLocks;
@@ -656,6 +654,27 @@ macro_rules! impl_config_traits {
             type RuntimeOrigin = RuntimeOrigin;
             type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
+        }
+
+        impl pallet_contracts::Config for Runtime {
+            type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+            type CallFilter = frame_support::traits::Nothing;
+            type CallStack = [pallet_contracts::Frame::<Runtime>; 5];
+            type ChainExtension = ();
+            type Currency = Balances;
+            type DeletionQueueDepth = ContractsDeletionQueueDepth;
+            type DeletionWeightLimit = ContractsDeletionWeightLimit;
+            type DepositPerItem = ContractsDepositPerItem;
+            type DepositPerByte = ContractsDepositPerByte;
+            type MaxCodeLen = ContractsMaxCodeLen;
+            type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
+            type Randomness = RandomnessCollectiveFlip;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
+            type Schedule = ContractsSchedule;
+            type Time = Timestamp;
+            type WeightPrice = pallet_transaction_payment::Pallet<Runtime>;
+            type WeightInfo = weights::pallet_contracts::WeightInfo<Runtime>;
         }
 
         impl pallet_democracy::Config for Runtime {
@@ -1128,6 +1147,10 @@ macro_rules! impl_config_traits {
 #[macro_export]
 macro_rules! create_runtime_api {
     ($($additional_apis:tt)*) => {
+        // Prints debug output of the `contracts` pallet to stdout if the node is
+        // started with `-lruntime::contracts=debug`.
+        const CONTRACTS_DEBUG_OUTPUT: bool = true;
+
         impl_runtime_apis! {
             #[cfg(feature = "parachain")]
             impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1208,6 +1231,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
+                    list_benchmark!(list, extra, pallet_contracts, Contracts);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
                     list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
@@ -1286,6 +1310,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
+                    add_benchmark!(params, batches, pallet_contracts, Contracts);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
                     add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
@@ -1331,6 +1356,69 @@ macro_rules! create_runtime_api {
             impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
                 fn account_nonce(account: AccountId) -> Index {
                     System::account_nonce(account)
+                }
+            }
+
+            impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
+                for Runtime
+            {
+                fn call(
+                    origin: AccountId,
+                    dest: AccountId,
+                    value: Balance,
+                    gas_limit: Option<Weight>,
+                    storage_deposit_limit: Option<Balance>,
+                    input_data: Vec<u8>,
+                ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+                    let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+                    Contracts::bare_call(
+                        origin,
+                        dest,
+                        value,
+                        gas_limit,
+                        storage_deposit_limit,
+                        input_data,
+                        CONTRACTS_DEBUG_OUTPUT,
+                    )
+                }
+
+                fn instantiate(
+                    origin: AccountId,
+                    value: Balance,
+                    gas_limit: Option<Weight>,
+                    storage_deposit_limit: Option<Balance>,
+                    code: pallet_contracts_primitives::Code<Hash>,
+                    data: Vec<u8>,
+                    salt: Vec<u8>,
+                ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
+                {
+                    let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+                    Contracts::bare_instantiate(
+                        origin,
+                        value,
+                        gas_limit,
+                        storage_deposit_limit,
+                        code,
+                        data,
+                        salt,
+                        CONTRACTS_DEBUG_OUTPUT,
+                    )
+                }
+
+                fn upload_code(
+                    origin: AccountId,
+                    code: Vec<u8>,
+                    storage_deposit_limit: Option<Balance>,
+                ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+                {
+                    Contracts::bare_upload_code(origin, code, storage_deposit_limit)
+                }
+
+                fn get_storage(
+                    address: AccountId,
+                    key: Vec<u8>,
+                ) -> pallet_contracts_primitives::GetStorageResult {
+                    Contracts::get_storage(address, key)
                 }
             }
 
@@ -1510,6 +1598,13 @@ macro_rules! create_runtime_api {
 
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
+                }
+
+                fn get_all_spot_prices(
+                    pool_id: &PoolId,
+                    with_fees: bool,
+                ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+                    Swaps::get_all_spot_prices(pool_id, with_fees)
                 }
             }
 
