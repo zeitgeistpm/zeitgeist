@@ -99,11 +99,11 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type DisputeResolution: DisputeResolutionApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+                Moment = MomentOf<Self>,
+            >;
 
         /// The vote lock identifier.
         #[pallet::constant]
@@ -115,10 +115,10 @@ mod pallet {
 
         /// To reference the market id type.
         type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            Currency = Self::Currency,
-            BlockNumber = Self::BlockNumber,
-        >;
+                AccountId = Self::AccountId,
+                Currency = Self::Currency,
+                BlockNumber = Self::BlockNumber,
+            >;
 
         /// The maximum numbers of distinct markets
         /// on which one account can simultaneously vote on outcomes.
