@@ -13,10 +13,9 @@ WORKDIR /zeitgeist
 COPY . /zeitgeist
 
 RUN apt-get update && \
-    apt-get upgrade -y -o Dpkg::Options::="--force-confold" && \
-    apt-get install -y --no-install-recommends cmake=3.10.2-1ubuntu2.18.04.2 pkg-config=0.29.1-0ubuntu2 libssl-dev=1.1.1-1ubuntu2.1~18.04.23 git=1:2.17.1-1ubuntu0.18 clang=1:6.0-41~exp4 libclang-dev=1:6.0-41~exp4
+    apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
+    apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH="$PATH:$HOME/.cargo/bin" && \
     rustup toolchain install nightly-2021-12-08 && \
