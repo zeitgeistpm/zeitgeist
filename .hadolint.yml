@@ -1,1 +1,3 @@
-ignored: SC1091, SC2115
+ignored: 
+  - SC1091
+  - C2115
