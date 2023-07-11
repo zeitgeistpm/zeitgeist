@@ -49,8 +49,8 @@ jobs:
           output: 'zeitgeist-node-parachain-report.sarif'
           severity: 'HIGH,CRITICAL'
       
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: 'zeitgeist-node-parachain-report.sarif'
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   if: always()
+      #   with:
+      #     sarif_file: 'zeitgeist-node-parachain-report.sarif'
