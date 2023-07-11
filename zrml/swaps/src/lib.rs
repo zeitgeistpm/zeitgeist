@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -112,7 +113,7 @@ mod pallet {
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000;
+    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -756,7 +757,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The fee for exiting a pool.
         #[pallet::constant]
@@ -789,16 +790,13 @@ mod pallet {
             + PartialOrd<I9F23>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+            >;
 
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -822,10 +820,6 @@ mod pallet {
         /// The minimum amount of assets in a pool.
         type MinAssets: Get<u16>;
 
-        /// The minimum amount of liqudity required to bootstrap a pool.
-        #[pallet::constant]
-        type MinLiquidity: Get<BalanceOf<Self>>;
-
         /// The minimum amount of subsidy required to state transit a market into active state.
         /// Must be greater than 0, but can be arbitrarily close to 0.
         #[pallet::constant]
@@ -844,22 +838,19 @@ mod pallet {
 
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
         type RikiddoSigmoidFeeMarketEma: RikiddoMVPallet<
-            Balance = BalanceOf<Self>,
-            PoolId = PoolId,
-            FU = Self::FixedTypeU,
-            Rikiddo = RikiddoSigmoidMV<
-                Self::FixedTypeU,
-                Self::FixedTypeS,
-                FeeSigmoid<Self::FixedTypeS>,
-                EmaMarketVolume<Self::FixedTypeU>,
-            >,
-        >;
+                Balance = BalanceOf<Self>,
+                PoolId = PoolId,
+                FU = Self::FixedTypeU,
+                Rikiddo = RikiddoSigmoidMV<
+                    Self::FixedTypeU,
+                    Self::FixedTypeS,
+                    FeeSigmoid<Self::FixedTypeS>,
+                    EmaMarketVolume<Self::FixedTypeU>,
+                >,
+            >;
 
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-        >;
+        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
 
         /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;
@@ -881,7 +872,7 @@ mod pallet {
         BelowMinimumWeight,
         /// Some funds could not be transferred due to a too low balance.
         InsufficientBalance,
-        /// Liquidity provided to new CPMM pool is less than `MinLiquidity`.
+        /// Liquidity provided to new CPMM pool is less than the minimum allowed balance.
         InsufficientLiquidity,
         /// The market was not started since the subsidy goal was not reached.
         InsufficientSubsidy,
@@ -1097,8 +1088,8 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
-            if remaining_weight < ON_IDLE_MIN_WEIGHT {
-                return 0;
+            if remaining_weight.all_lt(ON_IDLE_MIN_WEIGHT) {
+                return Weight::zero();
             }
             Self::execute_arbitrage_all(remaining_weight / 2)
         }
@@ -1114,7 +1105,7 @@ mod pallet {
         ) -> Weight {
             // CPMM handling of market profit not supported
             if pool.scoring_rule == ScoringRule::CPMM {
-                return 1_000_000;
+                return Weight::from_ref_time(1_000_000);
             }
 
             // Total pool shares
@@ -1249,19 +1240,19 @@ mod pallet {
             // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
             // the number of pools. This shouldn't ever happen, but if it does, we ensure that
             // `pool_count` is zero (this isn't really a runtime error).
-            let pool_count: u32 = weight
-                .saturating_sub(overhead)
-                .checked_div(extra_weight_per_pool)
+            let pool_count = weight
+                .ref_time()
+                .saturating_sub(overhead.ref_time())
+                .checked_div(extra_weight_per_pool.ref_time())
                 .unwrap_or_else(|| {
                     log::warn!("Unexpected zero division when calculating arbitrage weight");
-                    Weight::zero()
-                })
-                .saturated_into(); // Saturates only if we have u32::MAX trades per block.
-            if pool_count == 0 {
+                    0_u64
+                });
+            if pool_count == 0_u64 {
                 return weight;
             }
             Self::apply_to_cached_pools(
-                pool_count,
+                pool_count.saturated_into(),
                 |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
                 extra_weight_per_pool,
             )
@@ -1469,14 +1460,53 @@ mod pallet {
             }
         }
 
+        // Returns vector of pairs `(a, p)` where `a` ranges over all assets in the pool and `p` is
+        // the spot price of swapping the base asset for `a` (including swap fees if `with_fees` is
+        // `true`).
+        pub fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool,
+        ) -> Result<Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)>, DispatchError> {
+            let pool = Self::pool_by_id(*pool_id)?;
+            pool.assets
+                .into_iter()
+                .map(|asset| {
+                    let spot_price =
+                        Self::get_spot_price(pool_id, &pool.base_asset, &asset, with_fees)?;
+                    Ok((asset, spot_price))
+                })
+                .collect()
+        }
+
         #[inline]
         pub fn pool_account_id(pool_id: &PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
         }
 
-        // The minimum allowed balance in a liquidity pool.
+        /// The minimum allowed balance of `asset` in a liquidity pool.
         pub(crate) fn min_balance(asset: Asset<MarketIdOf<T>>) -> BalanceOf<T> {
             T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
+        }
+
+        /// Returns the minimum allowed balance allowed for a pool with id `pool_id` containing
+        /// `assets`.
+        ///
+        /// The minimum allowed balance is the maximum of all minimum allowed balances of assets
+        /// contained in the pool, _including_ the pool shares asset. This ensures that none of the
+        /// accounts involved are slashed when a pool is created with the minimum amount.
+        ///
+        /// **Should** only be called if `assets` is non-empty. Note that the existence of a pool
+        /// with the specified `pool_id` is not mandatory.
+        pub(crate) fn min_balance_of_pool(
+            pool_id: PoolId,
+            assets: &[Asset<MarketIdOf<T>>],
+        ) -> BalanceOf<T> {
+            assets
+                .iter()
+                .map(|asset| Self::min_balance(*asset))
+                .max()
+                .unwrap_or_else(|| MIN_BALANCE.saturated_into())
+                .max(Self::min_balance(Self::pool_shares_id(pool_id)))
         }
 
         fn ensure_minimum_liquidity_shares(
@@ -1561,7 +1591,7 @@ mod pallet {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
 
-        pub(crate) fn pool_by_id(
+        pub fn pool_by_id(
             pool_id: PoolId,
         ) -> Result<Pool<BalanceOf<T>, MarketIdOf<T>>, DispatchError>
         where
@@ -1616,7 +1646,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut extra_weight = 0;
+            let mut extra_weight = Weight::zero();
             let mut total_assets = 0;
 
             Self::mutate_pool(pool_id, |pool| {
@@ -1686,7 +1716,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `who`: The account that is the creator of the pool. Must have enough
-        ///     funds for each of the assets to cover the `MinLiqudity`.
+        ///     funds for each of the assets to cover the `amount`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
         /// * `market_id`: The market id of the market the pool belongs to.
@@ -1728,8 +1758,11 @@ mod pallet {
                 match scoring_rule {
                     ScoringRule::CPMM => {
                         ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
+                        // `amount` must be larger than all minimum balances. As we deposit `amount`
+                        // liquidity shares, we must also ensure that `amount` is larger than the
+                        // existential deposit of the liquidity shares.
                         ensure!(
-                            amount_unwrapped >= T::MinLiquidity::get(),
+                            amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
                             Error::<T>::InsufficientLiquidity
                         );
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
@@ -2211,7 +2244,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut weight = 0;
+            let mut weight = Weight::zero();
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Clean;

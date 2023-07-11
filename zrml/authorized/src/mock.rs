@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,8 +18,16 @@
 
 #![cfg(test)]
 
-use crate::{self as zrml_authorized};
-use frame_support::{construct_runtime, ord_parameter_types, traits::Everything};
+extern crate alloc;
+
+use crate::{self as zrml_authorized, mock_storage::pallet as mock_storage};
+use alloc::{vec, vec::Vec};
+use frame_support::{
+    construct_runtime, ord_parameter_types,
+    pallet_prelude::{DispatchError, Weight},
+    traits::Everything,
+    BoundedVec,
+};
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
@@ -26,11 +35,13 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, BASE,
+        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod,
+        PmPalletId, BASE,
     },
+    traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
+        MarketId, Moment, OutcomeReport, UncheckedExtrinsicTest,
     },
 };
 
@@ -50,20 +61,90 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        // Just a mock storage for testing.
+        MockStorage: mock_storage::{Storage},
     }
 );
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+    pub const MaxDisputes: u32 = 64;
+}
+
+// MockResolution implements DisputeResolutionApi with no-ops.
+pub struct MockResolution;
+
+impl DisputeResolutionApi for MockResolution {
+    type AccountId = AccountIdTest;
+    type Balance = Balance;
+    type BlockNumber = BlockNumber;
+    type MarketId = MarketId;
+    type MaxDisputes = MaxDisputes;
+    type Moment = Moment;
+
+    fn resolve(
+        _market_id: &Self::MarketId,
+        _market: &Market<
+            Self::AccountId,
+            Self::Balance,
+            Self::BlockNumber,
+            Self::Moment,
+            Asset<Self::MarketId>,
+        >,
+    ) -> Result<Weight, DispatchError> {
+        Ok(Weight::zero())
+    }
+
+    fn add_auto_resolve(
+        market_id: &Self::MarketId,
+        resolve_at: Self::BlockNumber,
+    ) -> Result<u32, DispatchError> {
+        let ids_len = <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::try_mutate(
+            resolve_at,
+            |ids| -> Result<u32, DispatchError> {
+                ids.try_push(*market_id).map_err(|_| DispatchError::Other("Storage Overflow"))?;
+                Ok(ids.len() as u32)
+            },
+        )?;
+        Ok(ids_len)
+    }
+
+    fn auto_resolve_exists(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> bool {
+        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::get(resolve_at).contains(market_id)
+    }
+
+    fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
+        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
+            ids.retain(|id| id != market_id);
+            ids.len() as u32
+        })
+    }
+
+    fn get_disputes(
+        _market_id: &Self::MarketId,
+    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
+        BoundedVec::try_from(vec![MarketDispute {
+            at: 42u64,
+            by: BOB,
+            outcome: OutcomeReport::Scalar(42),
+        }])
+        .unwrap()
+    }
 }
 
 impl crate::Config for Runtime {
-    type Event = ();
+    type RuntimeEvent = ();
+    type CorrectionPeriod = CorrectionPeriod;
+    type DisputeResolution = MockResolution;
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
+}
+
+impl mock_storage::Config for Runtime {
+    type MarketCommons = MarketCommons;
 }
 
 impl frame_system::Config for Runtime {
@@ -74,9 +155,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -85,7 +166,7 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -97,7 +178,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;

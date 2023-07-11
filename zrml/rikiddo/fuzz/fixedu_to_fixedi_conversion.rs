@@ -18,7 +18,7 @@
 //! Fuzz test: Conversion FixedU -> FixedI
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![no_main]
 

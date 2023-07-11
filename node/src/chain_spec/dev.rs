@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -22,14 +23,25 @@ use super::{
     get_account_id_from_seed, get_from_seed, token_properties, AdditionalChainSpec,
     EndowedAccountWithBalance,
 };
-
 #[cfg(feature = "parachain")]
-use battery_station_runtime::{EligibilityValue, PolkadotXcmConfig};
+use battery_station_runtime::{
+    DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+    EligibilityValue, PolkadotXcmConfig,
+};
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
     constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
     types::Balance,
+};
+#[cfg(feature = "parachain")]
+use {
+    super::battery_station::inflation_config,
+    sp_runtime::Perbill,
+    zeitgeist_primitives::constants::{
+        ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
+        BASE,
+    },
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
@@ -65,15 +77,22 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
             generic_genesis(
                 #[cfg(feature = "parachain")]
                 AdditionalChainSpec {
+                    blocks_per_round: DefaultBlocksPerRound::get(),
                     candidates: vec![(
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
                         super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
-                    crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
-                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    collator_commission: DefaultCollatorCommission::get(),
+                    inflation_info: inflation_config(
+                        STAKING_PTD * Perbill::from_percent(40),
+                        STAKING_PTD * Perbill::from_percent(70),
+                        STAKING_PTD,
+                        TOTAL_INITIAL_ZTG * BASE,
+                    ),
                     nominations: vec![],
-                    parachain_id: 2050_u32.into(),
+                    parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
+                    parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
@@ -105,7 +124,11 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
         None,
         Some(token_properties("DEV", battery_station_runtime::SS58Prefix::get())),
         #[cfg(feature = "parachain")]
-        crate::chain_spec::Extensions { relay_chain: "rococo-dev".into(), parachain_id: 2050_u32 },
+        crate::chain_spec::Extensions {
+            relay_chain: "rococo-dev".into(),
+            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID,
+            bad_blocks: None,
+        },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
     ))

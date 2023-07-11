@@ -58,7 +58,7 @@ pub struct TimestampedVolume<F: Fixed> {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_timestamped_volume {
     ( $t:ident, $LeEqU:ident, $p:ty ) => {
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>>
         where
             Frac: $LeEqU,

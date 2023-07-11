@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,10 +18,9 @@
 
 #![allow(clippy::type_complexity)]
 use alloc::vec::Vec;
-use frame_support::traits::Get;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::NamedMultiReservableCurrency;
-use sp_runtime::DispatchError;
+use sp_runtime::{traits::Get, DispatchError};
 
 /// Custom `NamedMultiReservableCurrency` trait.
 pub trait ZeitgeistAssetManager<AccountId>: NamedMultiReservableCurrency<AccountId> {
@@ -48,7 +48,7 @@ where
         let mut total = 0;
         #[allow(
             // Iterator will never yield more than `usize::MAX` elements
-            clippy::integer_arithmetic
+            clippy::arithmetic_side_effects
         )]
         let accounts = <Accounts<T>>::iter()
             .filter_map(|(k0, k1, v)| {

@@ -80,19 +80,19 @@ mod pallet {
             let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
-                let maker = order_data.maker.clone();
-                ensure!(sender == maker, Error::<T>::NotOrderCreator);
+                let maker = &order_data.maker;
+                ensure!(sender == *maker, Error::<T>::NotOrderCreator);
 
                 match order_data.side {
                     OrderSide::Bid => {
                         let cost = order_data.cost()?;
-                        T::Currency::unreserve(&maker, cost);
+                        T::Currency::unreserve(maker, cost);
                         let mut bids = Self::bids(asset);
                         remove_item::<T::Hash, _>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
-                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
+                        T::Shares::unreserve(order_data.asset, maker, order_data.total);
                         let mut asks = Self::asks(asset);
                         remove_item::<T::Hash, _>(&mut asks, order_hash);
                         <Asks<T>>::insert(asset, asks);
@@ -256,15 +256,15 @@ mod pallet {
     pub trait Config: frame_system::Config {
         type Currency: ReservableCurrency<Self::AccountId>;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type MarketId: MarketId;
 
         type Shares: MultiReservableCurrency<
-            Self::AccountId,
-            Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::MarketId>,
-        >;
+                Self::AccountId,
+                Balance = BalanceOf<Self>,
+                CurrencyId = Asset<Self::MarketId>,
+            >;
 
         type WeightInfo: WeightInfoZeitgeist;
     }

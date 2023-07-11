@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,11 +19,11 @@
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "parachain")]
 
-use super::{parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo};
+use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
@@ -37,22 +38,14 @@ parameter_types! {
     /// The amount that should be taken as a security deposit when registering a NimbusId.
     pub const CollatorDeposit: Balance = 2 * BASE;
 
-    // Crowdloan
-    pub const InitializationPayment: Perbill = Perbill::from_percent(30);
-    pub const Initialized: bool = false;
-    pub const MaxInitContributorsBatchSizes: u32 = 500;
-    pub const MinimumReward: Balance = 0;
-    pub const RelaySignaturesThreshold: Perbill = Perbill::from_percent(100);
-    pub const SignatureNetworkIdentifier:  &'static [u8] = b"zeitgeist-";
-
     // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
     pub const RelayNetwork: NetworkId = NetworkId::Any;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub UnitWeightCost: Weight = 200_000_000;
+    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+    pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
+    pub UnitWeightCost: u64 = 200_000_000;
 
     // Staking
     /// Rounds before the candidate bond increase/decrease can be executed
@@ -90,7 +83,7 @@ parameter_types! {
 
     // XCM
     /// Base weight for XCM execution
-    pub const BaseXcmWeight: Weight = 200_000_000;
+    pub const BaseXcmWeight: u64 = 200_000_000;
     /// The maximum number of distinct assets allowed to be transferred in a
     /// single helper extrinsic.
     pub const MaxAssetsForTransfer: usize = 2;

@@ -31,7 +31,7 @@ pub trait Swaps<AccountId> {
     /// # Arguments
     ///
     /// * `who`: The account that is the creator of the pool. Must have enough
-    /// funds for each of the assets to cover the `MinLiqudity`.
+    /// funds for each of the assets to cover the minimum balance.
     /// * `assets`: The assets that are used in the pool.
     /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
     /// * `market_id`: The market id of the market the pool belongs to.

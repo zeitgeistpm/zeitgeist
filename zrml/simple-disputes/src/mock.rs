@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,7 +19,12 @@
 #![cfg(test)]
 
 use crate::{self as zrml_simple_disputes};
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{
+    construct_runtime,
+    pallet_prelude::{DispatchError, Weight},
+    traits::Everything,
+    BoundedVec,
+};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -27,9 +33,10 @@ use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
     },
+    traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketDispute,
+        MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -48,8 +55,55 @@ construct_runtime!(
     }
 );
 
+// NoopResolution implements DisputeResolutionApi with no-ops.
+pub struct NoopResolution;
+
+impl DisputeResolutionApi for NoopResolution {
+    type AccountId = AccountIdTest;
+    type Balance = Balance;
+    type BlockNumber = BlockNumber;
+    type MarketId = MarketId;
+    type MaxDisputes = u32;
+    type Moment = Moment;
+
+    fn resolve(
+        _market_id: &Self::MarketId,
+        _market: &Market<
+            Self::AccountId,
+            Self::Balance,
+            Self::BlockNumber,
+            Self::Moment,
+            Asset<Self::MarketId>,
+        >,
+    ) -> Result<Weight, DispatchError> {
+        Ok(Weight::zero())
+    }
+
+    fn add_auto_resolve(
+        _market_id: &Self::MarketId,
+        _resolve_at: Self::BlockNumber,
+    ) -> Result<u32, DispatchError> {
+        Ok(0u32)
+    }
+
+    fn auto_resolve_exists(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> bool {
+        false
+    }
+
+    fn remove_auto_resolve(_market_id: &Self::MarketId, _resolve_at: Self::BlockNumber) -> u32 {
+        0u32
+    }
+
+    fn get_disputes(
+        _market_id: &Self::MarketId,
+    ) -> BoundedVec<MarketDispute<Self::AccountId, Self::BlockNumber>, Self::MaxDisputes> {
+        Default::default()
+    }
+}
+
 impl crate::Config for Runtime {
-    type Event = ();
+    type RuntimeEvent = ();
+    type DisputeResolution = NoopResolution;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
 }
@@ -62,9 +116,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -73,7 +127,7 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -85,7 +139,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
