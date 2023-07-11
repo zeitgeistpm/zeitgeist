@@ -22,7 +22,6 @@
     "tokenSymbol": "ZBP"
   },
   "consensusEngine": null,
-  "lightSyncState": null,
   "genesis": {
     "raw": {
       "top": {

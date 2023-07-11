@@ -1,6 +1,24 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{
-    service::{AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch},
-    KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
+    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
+    POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
@@ -8,23 +26,23 @@ use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_relay_chain_interface::RelayChainInterface;
-use cumulus_relay_chain_local::build_relay_chain_interface;
+use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
 use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_network_common::service::NetworkBlock;
+use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::SyncCryptoStorePtr;
 use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
-use zeitgeist_primitives::types::Hash;
-use zeitgeist_runtime::{opaque::Block, RuntimeApi};
+use zeitgeist_primitives::types::{Block, Hash};
 
-type FullBackend = TFullBackend<Block>;
-type FullClient<RuntimeApi, Executor> =
+pub type FullBackend = TFullBackend<Block>;
+pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
     FullClient<RuntimeApi, Executor>,
@@ -36,11 +54,21 @@ pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
 >;
 
 /// Start a parachain node.
-pub async fn new_full(
+pub async fn new_full<RuntimeApi, Executor>(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, ExecutorDispatch>>)> {
+    hwbench: Option<sc_sysinfo::HwBench>,
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
+{
     do_new_full(
         parachain_config,
         polkadot_config,
@@ -63,7 +91,7 @@ pub async fn new_full(
             );
             proposer_factory.set_soft_deadline(SOFT_DEADLINE_PERCENT);
 
-            let provider = move |_, (relay_parent, validation_data, author_id)| {
+            let provider = move |_, (relay_parent, validation_data, _author_id)| {
                 let relay_chain_interface = relay_chain_interface.clone();
                 async move {
                     let parachain_inherent =
@@ -83,11 +111,26 @@ pub async fn new_full(
                         )
                     })?;
 
-                    let author = nimbus_primitives::InherentDataProvider::<NimbusId>(author_id);
+                    let author = nimbus_primitives::InherentDataProvider;
+                    let randomness = session_keys_primitives::InherentDataProvider;
 
-                    Ok((time, parachain_inherent, author))
+                    Ok((time, parachain_inherent, author, randomness))
                 }
             };
+
+            let client_clone = client.clone();
+            let keystore_clone = keystore.clone();
+            let maybe_provide_vrf_digest =
+                move |nimbus_id: NimbusId,
+                      parent: Hash|
+                      -> Option<sp_runtime::generic::DigestItem> {
+                    moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi, Executor>>(
+                        &client_clone,
+                        &keystore_clone,
+                        nimbus_id,
+                        parent,
+                    )
+                };
 
             Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
                 para_id: parachain_id,
@@ -97,8 +140,10 @@ pub async fn new_full(
                 keystore,
                 skip_prediction: force_authoring,
                 create_inherent_data_providers: provider,
+                additional_digests_provider: maybe_provide_vrf_digest,
             }))
         },
+        hwbench,
     )
     .await
 }
@@ -114,9 +159,8 @@ pub fn new_partial<RuntimeApi, Executor>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,
@@ -190,19 +234,19 @@ where
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-#[sc_tracing::logging::prefix_logs_with("🌔 Zeitgeist Parachain")]
+#[sc_tracing::logging::prefix_logs_with("🔮 Zeitgeist Parachain")]
 async fn do_new_full<RuntimeApi, Executor, BIC>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
-    id: polkadot_primitives::v0::Id,
+    id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
+    hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,
@@ -218,10 +262,6 @@ where
         bool,
     ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
-    if matches!(parachain_config.role, Role::Light) {
-        return Err("Light client not supported!".into());
-    }
-
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
@@ -231,12 +271,17 @@ where
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) =
-        build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
-            .map_err(|e| match e {
-                polkadot_service::Error::Sub(x) => x,
-                s => format!("{}", s).into(),
-            })?;
+    let (relay_chain_interface, collator_key) = build_inprocess_relay_chain(
+        polkadot_config,
+        &parachain_config,
+        telemetry_worker_handle,
+        &mut task_manager,
+        hwbench.clone(),
+    )
+    .map_err(|e| match e {
+        RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
+        s => s.to_string().into(),
+    })?;
 
     let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 
@@ -245,7 +290,7 @@ where
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
     let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-    let (network, system_rpc_tx, start_network) =
+    let (network, system_rpc_tx, tx_handler_controller, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
@@ -258,7 +303,7 @@ where
             warp_sync: None,
         })?;
 
-    let rpc_extensions_builder = {
+    let rpc_builder = {
         let client = client.clone();
         let pool = transaction_pool.clone();
 
@@ -266,7 +311,7 @@ where
             let deps =
                 crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
 
-            Ok(crate::rpc::create_full(deps))
+            crate::rpc::create_full(deps).map_err(Into::into)
         })
     };
 
@@ -276,19 +321,33 @@ where
         config: parachain_config,
         keystore: params.keystore_container.sync_keystore(),
         network: network.clone(),
-        rpc_extensions_builder,
+        rpc_builder,
+        tx_handler_controller,
         system_rpc_tx,
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),
         transaction_pool: transaction_pool.clone(),
     })?;
 
+    if let Some(hwbench) = hwbench {
+        sc_sysinfo::print_hwbench(&hwbench);
+
+        if let Some(ref mut telemetry) = telemetry {
+            let telemetry_handle = telemetry.handle();
+            task_manager.spawn_handle().spawn(
+                "telemetry_hwbench",
+                None,
+                sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
+            );
+        }
+    }
+
     let announce_block = {
         let network = network.clone();
         Arc::new(move |hash, data| network.announce_block(hash, data))
     };
 
-    let relay_chain_slot_duration = KUSAMA_BLOCK_DURATION;
+    let relay_chain_slot_duration = POLKADOT_BLOCK_DURATION;
 
     if collator {
         let parachain_consensus = build_consensus(
@@ -315,7 +374,9 @@ where
             spawner,
             parachain_consensus,
             import_queue,
-            collator_key,
+            collator_key: collator_key.ok_or_else(|| {
+                sc_service::error::Error::Other("Collator Key is None".to_string())
+            })?,
             relay_chain_slot_duration,
         };
 

@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! This module contains the structures used to calculate the fee based on a sigmoid curve.
 
 use crate::{
@@ -51,7 +68,7 @@ pub struct FeeSigmoidConfig<FS: FixedSigned> {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_fee_sigmoid_config {
     ( $t:ident, $LeEqU:ident, $p:ty ) => {
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         impl<'a, Frac> Arbitrary<'a> for FeeSigmoidConfig<$t<Frac>>
         where
             Frac: $LeEqU,

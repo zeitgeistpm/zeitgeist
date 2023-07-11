@@ -7,6 +7,6 @@ if [[ -z "$1" ]] ; then
     exit 1
 fi
 
-docker build . -t zeitgeistpm/zeitgeist-node:$1 -t zeitgeistpm/zeitgeist-node:latest
+docker build . -t zeitgeistpm/zeitgeist-node:$1 -t zeitgeistpm/zeitgeist-node:latest --build-arg PROFILE=production
 docker push zeitgeistpm/zeitgeist-node:$1
 docker push zeitgeistpm/zeitgeist-node:latest

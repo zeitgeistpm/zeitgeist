@@ -1,20 +1,24 @@
-//! # Rikiddo
-//!
-//! Generic and modular implemenation of Rikiddo market scoring rule.
-//!
-//! Provides traits and implementations for sigmoid fee caluclation, calculation of ema based on
-//! market volume, LMSR and Rikiddo using sigmoid fee calculation and two ema periods.
-//!
-//! Rikiddo is a liquidity-sensitive logarithm market scoring algorithm, which can be used
-//! to determine the prices of event assets and their corresponding probabilities. It incorporates
-//! historical trading data to optimize it's reactiveness to abrupt and longer lasting changes
-//! in the market trend. More information at [blog.zeitgeist.pm].
-//!
-//! [blog.zeitgeist.pm]: https://blog.zeitgeist.pm/introducing-zeitgeists-rikiddo-scoring-rule/
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 // This is required to be able to use the derive(Arbitrary) macro.
-#![cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
+#![cfg_attr(feature = "arbitrary", allow(clippy::arithmetic_side_effects))]
 #![deny(missing_docs)]
 
 extern crate alloc;

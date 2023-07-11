@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! This module contains a collection of types that are required to implement the Rikiddo core
 //! functionality, as well as the Rikiddo core functionality itself.
 
@@ -41,7 +58,7 @@ pub struct TimestampedVolume<F: Fixed> {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_timestamped_volume {
     ( $t:ident, $LeEqU:ident, $p:ty ) => {
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>>
         where
             Frac: $LeEqU,

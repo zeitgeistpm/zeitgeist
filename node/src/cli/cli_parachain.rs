@@ -1,10 +1,28 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+use clap::Parser;
 use sc_cli::{
     self, ChainSpec, ImportParams, KeystoreParams, NetworkParams, RuntimeVersion, SharedParams,
     SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use std::{net::SocketAddr, path::PathBuf};
-use structopt::StructOpt;
 
 const BATTERY_STATION_RELAY_ID: &str = "battery_station_relay_v3";
 
@@ -33,7 +51,7 @@ impl RelayChainCli {
             .as_ref()
             .map(|x| x.path().join(chain_id.clone().unwrap_or_else(|| "polkadot".into())));
 
-        Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
+        Self { base_path, chain_id, base: clap::Parser::parse_from(relay_chain_args) }
     }
 }
 
@@ -43,7 +61,7 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
     }
 
     fn base_path(&self) -> sc_cli::Result<Option<BasePath>> {
-        Ok(self.shared_params().base_path().or_else(|| self.base_path.clone().map(Into::into)))
+        Ok(self.shared_params().base_path()?.or_else(|| self.base_path.clone().map(Into::into)))
     }
 
     fn chain_id(&self, is_dev: bool) -> sc_cli::Result<String> {
@@ -133,12 +151,11 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.shared_params()
     }
 
-    fn state_cache_child_ratio(&self) -> sc_cli::Result<Option<usize>> {
-        self.base.base.state_cache_child_ratio()
-    }
-
-    fn transaction_pool(&self) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
-        self.base.base.transaction_pool()
+    fn transaction_pool(
+        &self,
+        is_dev: bool,
+    ) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
+        self.base.base.transaction_pool(is_dev)
     }
 }
 
@@ -203,50 +220,23 @@ impl sc_cli::SubstrateCli for RelayChainCli {
     }
 }
 
-/// Command for exporting the genesis state of the parachain
-#[derive(Debug, StructOpt)]
-pub struct ExportGenesisStateCommand {
-    /// Output file name or stdout if unspecified.
-    #[structopt(parse(from_os_str))]
-    pub output: Option<PathBuf>,
-
-    /// Id of the parachain this state is for.
-    // Sync with crate::DEFAULT_PARACHAIN_ID
-    #[structopt(long)]
-    pub parachain_id: u32,
-
-    /// Write output in binary. Default is to write in hex.
-    #[structopt(short, long)]
-    pub raw: bool,
-
-    /// The name of the chain for that the genesis state should be exported.
-    #[structopt(long)]
-    pub chain: Option<String>,
-}
-
-/// Command for exporting the genesis wasm file.
-#[derive(Debug, structopt::StructOpt)]
-pub struct ExportGenesisWasmCommand {
-    /// Output file name or stdout if unspecified.
-    #[structopt(parse(from_os_str))]
-    pub output: Option<PathBuf>,
-
-    /// Write output in binary. Default is to write in hex.
-    #[structopt(short, long)]
-    pub raw: bool,
-
-    /// The name of the chain for that the genesis wasm file should be exported.
-    #[structopt(long)]
-    pub chain: Option<String>,
-}
-
-#[derive(Debug, structopt::StructOpt)]
+#[derive(Debug, Parser)]
 pub struct RunCmd {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub base: sc_cli::RunCmd,
 
+    /// Disable automatic hardware benchmarks.
+    ///
+    /// By default these benchmarks are automatically ran at startup and measure
+    /// the CPU speed, the memory bandwidth and the disk speed.
+    ///
+    /// The results are then printed out in the logs, and also sent as part of
+    /// telemetry, if telemetry is enabled.
+    #[clap(long)]
+    pub no_hardware_benchmarks: bool,
+
     /// Id of the parachain this collator collates for.
-    #[structopt(long)]
+    #[clap(long)]
     pub parachain_id: u32,
 }
 

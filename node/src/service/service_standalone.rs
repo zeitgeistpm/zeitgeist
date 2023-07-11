@@ -1,9 +1,25 @@
+// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::service::{
-    AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch,
-};
-use sc_client_api::{BlockBackend, ExecutorProvider};
+use crate::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection};
+use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_finality_grandpa::{grandpa_peers_set_config, protocol_standard_name, SharedVoterState};
@@ -13,18 +29,38 @@ use sc_service::{
 };
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_api::ConstructRuntimeApi;
-use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
-use zeitgeist_runtime::{opaque::Block, RuntimeApi};
+use zeitgeist_primitives::types::Block;
 
-type FullClient<RuntimeApi, Executor> =
+pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
-type FullBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_full<RuntimeApi, Executor>(
+    mut config: Configuration,
+    disable_hardware_benchmarks: bool,
+) -> Result<TaskManager, ServiceError>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
+{
+    let hwbench = if !disable_hardware_benchmarks {
+        config.database.path().map(|database_path| {
+            let _ = std::fs::create_dir_all(&database_path);
+            sc_sysinfo::gather_hwbench(Some(database_path))
+        })
+    } else {
+        None
+    };
+
     let sc_service::PartialComponents {
         client,
         backend,
@@ -34,7 +70,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
-    } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+    } = new_partial::<RuntimeApi, Executor>(&config)?;
 
     if let Some(url) = &config.keystore_remote {
         match remote_keystore(url) {
@@ -60,7 +96,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         Vec::default(),
     ));
 
-    let (network, system_rpc_tx, network_starter) =
+    let (network, system_rpc_tx, tx_handler_controller, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &config,
             client: client.clone(),
@@ -87,7 +123,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
 
-    let rpc_extensions_builder = {
+    let rpc_builder = {
         let client = client.clone();
         let pool = transaction_pool.clone();
 
@@ -95,7 +131,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
             let deps =
                 crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
 
-            Ok(crate::rpc::create_full(deps))
+            crate::rpc::create_full(deps).map_err(Into::into)
         })
     };
 
@@ -105,12 +141,26 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         keystore: keystore_container.sync_keystore(),
         task_manager: &mut task_manager,
         transaction_pool: transaction_pool.clone(),
-        rpc_extensions_builder,
+        rpc_builder: rpc_builder,
+        tx_handler_controller: tx_handler_controller,
         backend,
         system_rpc_tx,
         config,
         telemetry: telemetry.as_mut(),
     })?;
+
+    if let Some(hwbench) = hwbench {
+        sc_sysinfo::print_hwbench(&hwbench);
+
+        if let Some(ref mut telemetry) = telemetry {
+            let telemetry_handle = telemetry.handle();
+            task_manager.spawn_handle().spawn(
+                "telemetry_hwbench",
+                None,
+                sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
+            );
+        }
+    }
 
     if role.is_authority() {
         let proposer_factory = sc_basic_authorship::ProposerFactory::new(
@@ -121,16 +171,12 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
             telemetry.as_ref().map(|x| x.handle()),
         );
 
-        let can_author_with =
-            sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
-
         let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
-        let raw_slot_duration = slot_duration.slot_duration();
 
-        let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(
+        let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _>(
             StartAuraParams {
                 slot_duration,
-                client: client.clone(),
+                client,
                 select_chain,
                 block_import,
                 proposer_factory,
@@ -138,17 +184,16 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
                     let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
                     let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-							*timestamp,
-							raw_slot_duration,
-						);
+                        sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                            *timestamp,
+                            slot_duration,
+                        );
 
-                    Ok((timestamp, slot))
+                    Ok((slot, timestamp))
                 },
                 force_authoring,
                 backoff_authoring_blocks,
                 keystore: keystore_container.sync_keystore(),
-                can_author_with,
                 sync_oracle: network.clone(),
                 justification_sync_link: network.clone(),
                 block_proposal_slot_portion: SlotProportion::new(2f32 / 3f32),
@@ -168,7 +213,6 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         if role.is_authority() { Some(keystore_container.sync_keystore()) } else { None };
 
     let grandpa_config = sc_finality_grandpa::Config {
-        // FIXME #1578 make this available through chainspec
         gossip_duration: Duration::from_millis(333),
         justification_period: 512,
         name: Some(name),
@@ -234,9 +278,8 @@ pub fn new_partial<RuntimeApi, Executor>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,
@@ -293,10 +336,10 @@ where
         telemetry.as_ref().map(|x| x.handle()),
     )?;
 
-    let slot_duration = sc_consensus_aura::slot_duration(&*client)?.slot_duration();
+    let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
 
-    let import_queue =
-        sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(ImportQueueParams {
+    let import_queue = sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(
+        ImportQueueParams {
             block_import: grandpa_block_import.clone(),
             justification_import: Some(Box::new(grandpa_block_import.clone())),
             client: client.clone(),
@@ -304,21 +347,19 @@ where
                 let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
                 let slot =
-                    sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+                    sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
                         *timestamp,
                         slot_duration,
                     );
 
-                Ok((timestamp, slot))
+                Ok((slot, timestamp))
             },
             spawner: &task_manager.spawn_essential_handle(),
-            can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(
-                client.executor().clone(),
-            ),
             registry: config.prometheus_registry(),
             check_for_equivocation: Default::default(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
-        })?;
+        },
+    )?;
 
     Ok(sc_service::PartialComponents {
         client,

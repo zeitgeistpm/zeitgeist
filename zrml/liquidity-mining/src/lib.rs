@@ -1,12 +1,22 @@
-//! Manages and distributes incentives to liquidity providers
-//!
-//! Each block has a maximum allowed amount of ZTG that is distributed among the`PoolShare`
-//! owners of that same block. Over time this amount will increase until a market closes and
-//! then all rewards will be distributed accordingly.
-//!
-//! This pallet is mostly self-contained and only need to know about the native currency. To
-//! interact with its functionalities, please use the provided API.
+// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -78,11 +88,12 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::set_per_block_distribution())]
+        // MARK(non-transactional): `set_per_block_distribution` is infallible.
         pub fn set_per_block_distribution(
             origin: OriginFor<T>,
-            per_block_distribution: BalanceOf<T>,
+            #[pallet::compact] per_block_distribution: BalanceOf<T>,
         ) -> DispatchResult {
-            let _ = ensure_root(origin)?;
+            ensure_root(origin)?;
             <PerBlockIncentive<T>>::put(per_block_distribution);
             Ok(())
         }
@@ -90,13 +101,13 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = Self::MarketId,
-        >;
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                MarketId = Self::MarketId,
+            >;
 
         type MarketId: MarketId;
 
@@ -176,12 +187,12 @@ mod pallet {
                 }
                 Some(())
             };
-            with_transaction(|| match fun() {
+            let _ = with_transaction(|| match fun() {
                 None => {
                     log::error!("Block {:?} was not finalized", block);
-                    TransactionOutcome::Rollback(())
+                    TransactionOutcome::Rollback(Err("Block was not finalized"))
                 }
-                Some(_) => TransactionOutcome::Commit(()),
+                Some(_) => TransactionOutcome::Commit(Ok(())),
             });
         }
     }
@@ -195,8 +206,9 @@ mod pallet {
         T: Config,
     {
         // pot/fund account
+        #[inline]
         pub(crate) fn pallet_account_id() -> T::AccountId {
-            T::PalletId::get().into_account()
+            T::PalletId::get().into_account_truncating()
         }
     }
 

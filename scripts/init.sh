@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 
+# Initializes a build environment.
+# Passing "nosudo" in the first argument results in avoiding the usage of sudo for privileged commands.
+
 set -e
 
-echo "*** Initializing WASM build environment"
+echo "*** Initializing build environment"
 
-if [ -z $CI_PROJECT_NAME ] ; then
-   rustup update nightly-2021-12-08
-   rustup update stable
+if [ "$1" == "nosudo" ]; then
+   apt-get update && \
+   apt-get install -y build-essential clang curl libssl-dev protobuf-compiler
+else
+   sudo apt-get update && \
+   sudo apt-get install -y build-essential clang curl libssl-dev protobuf-compiler
 fi
 
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-12-08
+curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+   . "$HOME/.cargo/env" && \
+   rustup show

@@ -1,19 +1,36 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![allow(
     // Constants parameters inside `parameter_types!` already check
     // arithmetic operations at compile time
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 
+#[cfg(feature = "mock")]
+pub mod mock;
 pub mod ztg;
 
-use crate::{
-    asset::Asset,
-    types::{Balance, BlockNumber, CurrencyId, Moment},
-};
+use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
-use orml_traits::parameter_type_with_key;
 
 // Definitions for time
+pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100;
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
 pub const MILLISECS_PER_BLOCK: u32 = 12000;
 pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
@@ -25,8 +42,10 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
+/// Storage cost per byte and item.
+// Approach: Achieve same cost per item and bytes in relation to total supply as on Polkadot.
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
-    items as Balance * 20 * BASE + (bytes as Balance) * 100 * MILLI
+    items as Balance * 150 * CENT + (bytes as Balance) * 75 * MICRO
 }
 
 // Rikiddo and TokensConfig
@@ -45,91 +64,53 @@ parameter_types! {
 }
 
 // Authorized
-parameter_types! {
-    pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
-}
+/// Pallet identifier, mainly used for named balance reserves.
+pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 
 // Court
-parameter_types! {
-    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
-    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-    pub const StakeWeight: u128 = 2 * BASE;
-}
+/// Pallet identifier, mainly used for named balance reserves.
+pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
 
-// Liquidity Mining parameters
-parameter_types! {
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
-}
+// Global Disputes
+pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
+/// Lock identifier, mainly used for the locks on the accounts.
+pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 
-// Prediction Market parameters
-parameter_types! {
-    pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const DisputeBond: Balance = 5 * BASE;
-    pub const DisputeFactor: Balance = 2 * BASE;
-    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
-    pub const MaxCategories: u16 = 10;
-    pub const MaxDisputes: u16 = 6;
-    pub const MinCategories: u16 = 2;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    pub const MinSubsidyPeriod: Moment = 60_000;
-    // 2_678_400_000 = 31 days.
-    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    pub const OracleBond: Balance = 50 * CENT;
-    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
-    pub const ValidityBond: Balance = 50 * CENT;
-}
+// Liqudity Mining
+/// Pallet identifier, mainly used for named balance reserves.
+pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
-// Simple disputes parameters
-parameter_types! {
-    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
-}
+// Prediction Markets
+/// The maximum allowed market life time, measured in blocks.
+pub const MAX_MARKET_LIFETIME: BlockNumber = 365 * BLOCKS_PER_DAY;
+/// Max. categories in a prediction market.
+pub const MAX_CATEGORIES: u16 = 64;
+/// The dispute_duration is time where users can dispute the outcome.
+/// Minimum block period for a dispute.
+pub const MIN_DISPUTE_DURATION: BlockNumber = 12 * BLOCKS_PER_HOUR;
+/// Minimum block period for oracle_duration.
+pub const MIN_ORACLE_DURATION: BlockNumber = BLOCKS_PER_HOUR;
+/// Maximum block period for a dispute.
+pub const MAX_DISPUTE_DURATION: BlockNumber = 30 * BLOCKS_PER_DAY;
+/// Maximum block period for an grace_period.
+/// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
+pub const MAX_GRACE_PERIOD: BlockNumber = 365 * BLOCKS_PER_DAY;
+/// Maximum block period for an oracle_duration.
+/// The oracle_duration is a duration where the oracle has to submit its report.
+pub const MAX_ORACLE_DURATION: BlockNumber = 14 * BLOCKS_PER_DAY;
 
-// Swaps parameters
-parameter_types! {
-    pub const ExitFee: Balance = 0;
-    pub const MinAssets: u16 = 2;
-    pub const MaxAssets: u16 = MaxCategories::get() + 1;
-    pub const MaxInRatio: Balance = (BASE / 3) + 1;
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
-    pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxWeight: Balance = 50 * BASE;
-    pub const MinLiquidity: Balance = 100 * BASE;
-    pub const MinSubsidy: Balance = MinLiquidity::get();
-    pub const MinWeight: Balance = BASE;
-    pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
-}
+/// Pallet identifier, mainly used for named balance reserves.
+pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
 
-// Shared within tests
-// Balance
-parameter_types! {
-    pub const ExistentialDeposit: u128 = CENT;
-    pub const MaxLocks: u32 = 50;
-    pub const MaxReserves: u32 = 50;
-}
+// Simple Disputes
+pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
 
-// ORML
-parameter_types! {
-    // ORML
-    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-}
+// Swaps
+/// Max. assets in a swap pool.
+pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
+/// Pallet identifier, mainly used for named balance reserves.
+pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
 
-parameter_type_with_key! {
-    // Well, not every asset is a currency ¯\_(ツ)_/¯
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-        match currency_id {
-            Asset::Ztg => ExistentialDeposit::get(),
-            _ => 0
-        }
-    };
-}
-
-// System
-parameter_types! {
-    pub const BlockHashCount: u64 = 250;
-}
-
-// Time
-parameter_types! {
-    pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
-}
+// Treasury
+/// Pallet identifier, used to derive treasury account
+pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/tsry");

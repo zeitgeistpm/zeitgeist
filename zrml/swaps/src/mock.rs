@@ -1,18 +1,47 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the license above but
+// published without copyright notice by Balancer Labs
+// (<https://balancer.finance>, contact@balancer.finance) in the
+// balancer-core repository
+// <https://github.com/balancer-labs/balancer-core>.
+
 #![cfg(feature = "mock")]
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::arithmetic_side_effects
+)]
 
 use crate as zrml_swaps;
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    DispatchError,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{
+    constants::mock::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
-        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks,
-        MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy,
-        MinWeight, MinimumPeriod, SwapsPalletId, BASE,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
+        MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinSubsidy, MinWeight,
+        MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -29,6 +58,12 @@ pub const EVE: AccountIdTest = 4;
 
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
+// Mocked exit fee for easier calculations
+parameter_types! {
+    pub storage ExitFeeMock: Balance = BASE / 10;
+    pub const MinSubsidyPerAccount: Balance = BASE;
+}
+
 construct_runtime!(
     pub enum Runtime
     where
@@ -37,7 +72,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Currencies: orml_currencies::{Event<T>, Pallet},
+        Currencies: orml_currencies::{Pallet},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
@@ -48,25 +83,28 @@ construct_runtime!(
     }
 );
 
+pub type AssetManager = Currencies;
+
 impl crate::Config for Runtime {
-    type Event = Event;
-    type ExitFee = ExitFee;
+    type RuntimeEvent = RuntimeEvent;
+    type ExitFee = ExitFeeMock;
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
-    type MarketId = MarketId;
+    type MarketCommons = MarketCommons;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
+    type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currencies;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -78,9 +116,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -90,7 +128,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type OnSetCode = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -98,7 +136,6 @@ impl frame_system::Config for Runtime {
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
@@ -110,10 +147,12 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
-    type OnDust = ();
+    type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
@@ -121,7 +160,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
@@ -130,7 +169,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
@@ -140,6 +179,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
@@ -194,19 +234,27 @@ sp_api::mock_impl_runtime_apis! {
       for Runtime
     {
         fn get_spot_price(
-            pool_id: PoolId,
-            asset_in: Asset<MarketId>,
-            asset_out: Asset<MarketId>,
+            pool_id: &PoolId,
+            asset_in: &Asset<MarketId>,
+            asset_out: &Asset<MarketId>,
+            with_fees: bool,
         ) -> SerdeWrapper<Balance> {
-            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
+            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
         }
 
-        fn pool_account_id(pool_id: PoolId) -> AccountIdTest {
+        fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
             Swaps::pool_account_id(pool_id)
         }
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
+        }
+
+        fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool
+        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+            Swaps::get_all_spot_prices(pool_id, with_fees)
         }
     }
 }

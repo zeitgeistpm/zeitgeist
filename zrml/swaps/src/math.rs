@@ -1,6 +1,30 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the license above but
+// published without copyright notice by Balancer Labs
+// (<https://balancer.finance>, contact@balancer.finance) in the
+// balancer-core repository
+// <https://github.com/balancer-labs/balancer-core>.
+
+#![allow(clippy::let_and_return)]
+
 use crate::{
     check_arithm_rslt::CheckArithmRslt,
-    consts::EXIT_FEE,
     fixed::{bdiv, bmul, bpow},
 };
 use frame_support::dispatch::DispatchError;
@@ -199,10 +223,11 @@ pub fn calc_single_out_given_pool_in(
     total_weight: u128,
     pool_amount_in: u128,
     swap_fee: u128,
+    exit_fee: u128,
 ) -> Result<u128, DispatchError> {
     let normalized_weight = bdiv(asset_weight_out, total_weight)?;
 
-    let pool_amount_in_after_exit_fee = bmul(pool_amount_in, BASE.check_sub_rslt(&EXIT_FEE)?)?;
+    let pool_amount_in_after_exit_fee = bmul(pool_amount_in, BASE.check_sub_rslt(&exit_fee)?)?;
     let new_pool_supply = pool_supply.check_sub_rslt(&pool_amount_in_after_exit_fee)?;
     let pool_ratio = bdiv(new_pool_supply, pool_supply)?;
 
@@ -239,6 +264,7 @@ pub fn calc_pool_in_given_single_out(
     total_weight: u128,
     asset_amount_out: u128,
     swap_fee: u128,
+    exit_fee: u128,
 ) -> Result<u128, DispatchError> {
     let normalized_weight = bdiv(asset_weight_out, total_weight)?;
     let zoo = BASE.check_sub_rslt(&normalized_weight)?;
@@ -253,6 +279,6 @@ pub fn calc_pool_in_given_single_out(
     let new_pool_supply = bmul(pool_ratio, pool_supply)?;
 
     let pool_amount_in_after_exit_fee = pool_supply.check_sub_rslt(&new_pool_supply)?;
-    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&EXIT_FEE)?);
+    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&exit_fee)?);
     pool_amount_in
 }

@@ -14,11 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install Rust toolchain
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
-          source "$HOME/.cargo/env" 
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustup show
+      - name: Install build tools
+        run: ./scripts/init.sh
 
       - run: ./scripts/runtime-upgrade/test_runtime_upgrade.sh ${{ github.event.inputs.block }}

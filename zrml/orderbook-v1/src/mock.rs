@@ -1,3 +1,21 @@
+// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(feature = "mock")]
 
 use crate as orderbook_v1;
@@ -7,7 +25,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{
+    constants::mock::{
         BlockHashCount, ExistentialDeposit, ExistentialDeposits, MaxLocks, MaxReserves, BASE,
     },
     types::{
@@ -29,13 +47,13 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Pallet, Storage},
     }
 );
 
 impl crate::Config for Runtime {
     type Currency = Balances;
-    type Event = ();
+    type RuntimeEvent = ();
     type MarketId = MarketId;
     type Shares = Tokens;
     type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
@@ -49,9 +67,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -60,7 +78,7 @@ impl frame_system::Config for Runtime {
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -73,10 +91,12 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
-    type OnDust = ();
+    type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
@@ -84,7 +104,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type RuntimeEvent = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;

@@ -1,6 +1,23 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![cfg(feature = "mock")]
 #![allow(missing_docs)]
@@ -14,7 +31,7 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
+    constants::mock::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, PoolId,
         UncheckedExtrinsicTest,
@@ -42,7 +59,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Rikiddo: crate::{Pallet, Storage},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
     }
 );
@@ -70,9 +87,9 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockNumber = BlockNumber;
     type BlockWeights = ();
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -82,7 +99,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type OnSetCode = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
@@ -93,7 +110,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type MaxReserves = MaxReserves;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();

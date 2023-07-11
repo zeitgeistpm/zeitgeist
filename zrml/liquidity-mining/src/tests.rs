@@ -1,7 +1,25 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, ExtBuilder, LiquidityMining, Origin, Runtime, System, ALICE, BOB},
+    mock::{Balances, ExtBuilder, LiquidityMining, Runtime, RuntimeOrigin, System, ALICE, BOB},
     track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
     track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
     BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, OwnedValues,
@@ -14,8 +32,8 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
-    Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-    ScoringRule,
+    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -52,7 +70,7 @@ fn distribute_market_incentives_removes_market_and_distributes_all_incentives_to
         // In this case, each market have the same amount of incentives
         let market_incentives = ExtBuilder::default().per_block_incentives / 2;
         // Perpetual balance for the entire campaign
-        let entire_market_perpetual_balance = market_incentives * 1 / 1000;
+        let entire_market_perpetual_balance = market_incentives / 1000;
         // Account only stayed 1 block out of 4 (25%), i.e, lost 75% of the perpetual balance
         let actual_market_perpetual_balance = entire_market_perpetual_balance / 4;
         // Ordinary balance
@@ -175,7 +193,7 @@ fn only_sudo_can_change_per_block_distribution() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(LiquidityMining::set_per_block_distribution(RawOrigin::Root.into(), 100));
         assert_err!(
-            LiquidityMining::set_per_block_distribution(Origin::signed(ALICE), 100),
+            LiquidityMining::set_per_block_distribution(RuntimeOrigin::signed(ALICE), 100),
             DispatchError::BadOrigin
         );
     });
@@ -185,18 +203,25 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
     Markets::<Runtime>::insert(
         market_id,
         Market {
+            base_asset: Asset::Ztg,
             creation: MarketCreation::Permissionless,
             creator_fee: 0,
             creator: 0,
             market_type: MarketType::Categorical(0),
-            mdm: MarketDisputeMechanism::SimpleDisputes,
+            dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
             metadata: vec![],
             oracle: 0,
             period: MarketPeriod::Block(period),
+            deadlines: Deadlines {
+                grace_period: 1_u64,
+                oracle_duration: 1_u64,
+                dispute_duration: 1_u64,
+            },
             report: None,
             resolved_outcome: None,
             status: MarketStatus::Closed,
             scoring_rule: ScoringRule::CPMM,
+            bonds: MarketBonds::default(),
         },
     );
 }

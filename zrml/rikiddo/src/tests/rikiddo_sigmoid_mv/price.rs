@@ -1,3 +1,21 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+#![allow(clippy::needless_late_init)]
 use frame_support::assert_err;
 use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128, FixedU128};
 
@@ -45,12 +63,12 @@ fn check_price_helper_result(helper: u8) -> Result<(), &'static str> {
 
     if helper == 1 {
         rikiddo_price =
-            rikiddo.price_helper_first_quotient(&param, &param[0], &formula_components)?;
+            rikiddo.price_helper_first_quotient(&param, &param[0], formula_components)?;
         rikiddo_price_f64 =
             price_first_quotient(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[0]);
         error_msg_function = "price_helper_first_quotient"
     } else {
-        rikiddo_price = rikiddo.price_helper_second_quotient(&param, &formula_components)?;
+        rikiddo_price = rikiddo.price_helper_second_quotient(&param, formula_components)?;
         rikiddo_price_f64 = price_second_quotient(rikiddo.config.initial_fee.to_num(), &param_f64);
         error_msg_function = "price_helper_second_quotient"
     }
@@ -84,7 +102,7 @@ fn rikiddo_price_helper_first_quotient_overflow_exponent_sub_exp_qj() {
     formula_components.exponents.insert(param[1], <FixedI128<U64>>::from(-i64::MAX >> 5));
     formula_components.sum_times_fee = 0.1.to_fixed();
     assert_err!(
-        rikiddo.price_helper_first_quotient(&param, &param[0], &formula_components),
+        rikiddo.price_helper_first_quotient(&param, &param[0], formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: exponent - exponent_balance_in_question"
     );
 }
@@ -108,7 +126,7 @@ fn rikiddo_price_helper_second_quotient_reduced_exp_not_found() {
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     formula_components.exponents.insert(param[0], 1.to_fixed());
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, &formula_components),
+        rikiddo.price_helper_second_quotient(&param, formula_components),
         "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
     );
 }
@@ -121,7 +139,7 @@ fn rikiddo_price_helper_second_quotient_overflow_elem_times_reduced_exp() {
     formula_components.exponents.insert(param[0], 1.to_fixed());
     formula_components.reduced_exponential_results.insert(1.to_fixed(), 2.to_fixed());
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, &formula_components),
+        rikiddo.price_helper_second_quotient(&param, formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result"
     );
 }
@@ -135,7 +153,7 @@ fn rikiddo_price_helper_second_quotient_overflow_sum_j_plus_elem_time_reduced_ex
     formula_components.exponents.insert(param[1], 1.to_fixed());
     formula_components.reduced_exponential_results.insert(1.to_fixed(), 1.to_fixed());
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, &formula_components),
+        rikiddo.price_helper_second_quotient(&param, formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: sum_j += \
          elem_times_reduced_exponential_result"
     );
@@ -151,7 +169,7 @@ fn rikiddo_price_helper_second_quotient_overflow_sum_balances_times_sum_exp() {
     formula_components.sum_exp = 2.to_fixed();
     formula_components.sum_balances = <FixedI128<U64>>::from_num(i64::MAX);
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, &formula_components),
+        rikiddo.price_helper_second_quotient(&param, formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp"
     );
 }
@@ -167,7 +185,7 @@ fn rikiddo_price_helper_second_quotient_overflow_numerator_div_denominator() {
     // The following parameter will lead to a zero division error
     formula_components.sum_exp = 0.to_fixed();
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, &formula_components),
+        rikiddo.price_helper_second_quotient(&param, formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / denominator"
     );
 }

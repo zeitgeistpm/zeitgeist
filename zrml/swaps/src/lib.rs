@@ -1,23 +1,46 @@
-//! # Swaps
-//!
-//! A module to handle swapping shares out for different ones. Allows
-//! liquidity providers to deposit full outcome shares and earn fees.
+// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the license above but
+// published without copyright notice by Balancer Labs
+// (<https://balancer.finance>, contact@balancer.finance) in the
+// balancer-core repository
+// <https://github.com/balancer-labs/balancer-core>.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
 #[macro_use]
 mod utils;
 
+mod arbitrage;
 mod benchmarks;
-mod check_arithm_rslt;
+pub mod check_arithm_rslt;
 mod consts;
 mod events;
-mod fixed;
-mod math;
-mod migrations;
+pub mod fixed;
+pub mod math;
+pub mod migrations;
 pub mod mock;
+mod root;
 mod tests;
 pub mod weights;
 
@@ -26,6 +49,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
+        arbitrage::ArbitrageForCpmm,
         check_arithm_rslt::CheckArithmRslt,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         fixed::{bdiv, bmul},
@@ -36,15 +60,15 @@ mod pallet {
         },
         weights::*,
     };
-    use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+    use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{Get, IsType, StorageVersion},
-        Blake2_128Concat, PalletId, Twox64Concat,
+        traits::{Get, Hooks, IsType, StorageVersion},
+        transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
@@ -62,14 +86,15 @@ mod pallet {
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
-        constants::BASE,
-        traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
+        constants::{BASE, CENT},
+        traits::{Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
+    use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoMVPallet,
@@ -77,29 +102,66 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
-    pub(crate) type BalanceOf<T> =
-        <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+
+    pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
+    const ARBITRAGE_THRESHOLD: u128 = CENT;
+    const MIN_BALANCE: u128 = CENT;
+    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::admin_set_pool_as_stale())]
-        #[frame_support::transactional]
-        pub fn admin_set_pool_as_stale(
+        /// Clean up the pool of a resolved market.
+        ///
+        /// # Arguments
+        ///
+        /// - `origin`: The root origin.
+        /// - `market_id`: The id of the market that the pool belongs to.
+        /// - `outcome_report`: The report that resolved the market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
+        /// assets in the pool if the market is categorical.
+        #[pallet::weight(
+            T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
+                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar())
+        )]
+        #[transactional]
+        pub fn admin_clean_up_pool(
             origin: OriginFor<T>,
-            market_type: MarketType,
-            pool_id: PoolId,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             outcome_report: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
+            // TODO(#785): This is not properly benchmarked for Rikiddo yet!
             ensure_root(origin)?;
-            Self::set_pool_as_stale(
-                &market_type,
+            let market = T::MarketCommons::market(&market_id)?;
+            let pool_id = T::MarketCommons::market_pool(&market_id)?;
+            Self::clean_up_pool(
+                &market.market_type,
                 pool_id,
                 &outcome_report,
-                &Self::pool_account_id(pool_id),
+                &Self::pool_account_id(&pool_id),
             )?;
-            Ok(())
+            let weight_info = match market.market_type {
+                MarketType::Scalar(_) => T::WeightInfo::admin_clean_up_pool_cpmm_scalar(),
+                // This is a time-efficient way of getting the number of assets, but makes the
+                // assumption that `assets = category_count + 1`. This is definitely a code smell
+                // and a result of not separating `prediction-markets` from `swaps` properly in
+                // this function.
+                MarketType::Categorical(category_count) => {
+                    T::WeightInfo::admin_clean_up_pool_cpmm_categorical(
+                        category_count.saturating_add(1) as u32,
+                    )
+                }
+            };
+            Ok(Some(weight_info).into())
         }
 
         /// Pool - Exit
@@ -114,18 +176,31 @@ mod pallet {
         /// retrieved assets.
         /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
         /// provided values.
-        #[pallet::weight(T::WeightInfo::pool_exit(min_assets_out.len() as u32))]
-        #[frame_support::transactional]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
+        // Using `min_assets_out.len()` is fine because we don't iterate over the assets before
+        // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
+        // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
+        // though.
+        #[pallet::weight(T::WeightInfo::pool_exit(
+            min_assets_out.len().min(T::MaxAssets::get().into()) as u32
+        ))]
+        #[transactional]
         pub fn pool_exit(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            pool_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
             min_assets_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            // If the pool is still in use, prevent a pool drain.
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             let params = PoolParams {
                 asset_bounds: min_assets_out,
                 event: |evt| Self::deposit_event(Event::PoolExit(evt)),
@@ -134,23 +209,25 @@ mod pallet {
                 pool_id,
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
-                    T::Shares::transfer(asset, &pool_account_id, &who, amount)?;
+                    T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
                     Ok(())
                 },
-                transfer_pool: |pool_shares_id| {
-                    let exit_fee_pct = T::ExitFee::get().saturated_into();
-                    let exit_fee =
-                        bmul(pool_amount.saturated_into(), exit_fee_pct)?.saturated_into();
-                    let pool_amount_minus_exit_fee = pool_amount.check_sub_rslt(&exit_fee)?;
-                    T::Shares::transfer(pool_shares_id, &who, &pool_account_id, exit_fee)?;
-                    Self::burn_pool_shares(pool_id, &who, pool_amount_minus_exit_fee)?;
+                transfer_pool: || {
+                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
                     Ok(())
+                },
+                fee: |amount: BalanceOf<T>| {
+                    let exit_fee_amount =
+                        bmul(amount.saturated_into(), Self::calc_exit_fee(&pool).saturated_into())?
+                            .saturated_into();
+                    Ok(exit_fee_amount)
                 },
                 who: who_clone,
             };
-            crate::utils::pool::<_, _, _, T>(params)
+            crate::utils::pool::<_, _, _, _, T>(params)
         }
 
         /// Pool - Remove subsidty from a pool that uses the Rikiddo scoring rule.
@@ -164,13 +241,19 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be unreserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be removed from subsidy.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
         #[pallet::weight(T::WeightInfo::pool_exit_subsidy())]
+        #[transactional]
         pub fn pool_exit_subsidy(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(amount != Zero::zero(), Error::<T>::ZeroAmount);
 
             <Pools<T>>::try_mutate(pool_id, |pool_opt| {
                 let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
@@ -179,19 +262,21 @@ mod pallet {
                     pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
                     Error::<T>::InvalidScoringRule
                 );
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let base_asset = pool.base_asset;
                 let mut real_amount = amount;
-                let upper_bound;
                 let transferred;
 
-                if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
-                    upper_bound = subsidy;
-
+                if let Some(subsidy) = <SubsidyProviders<T>>::get(pool_id, &who) {
                     if amount > subsidy {
                         real_amount = subsidy;
                     }
+                    // If the account would be left with less than the minimum subsidy per account,
+                    // then withdraw all their subsidy instead.
+                    if subsidy.saturating_sub(amount) < T::MinSubsidyPerAccount::get() {
+                        real_amount = subsidy;
+                    }
 
-                    let missing = T::Shares::unreserve(base_asset, &who, real_amount);
+                    let missing = T::AssetManager::unreserve(base_asset, &who, real_amount);
                     transferred = real_amount.saturating_sub(missing);
                     let zero_balance = <BalanceOf<T>>::zero();
 
@@ -199,7 +284,7 @@ mod pallet {
                         log::warn!(
                             "[Swaps] Data inconsistency: More subsidy provided than currently \
                              reserved.
-                        Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                             Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
                             who,
                             transferred,
@@ -211,14 +296,14 @@ mod pallet {
                     let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
 
                     if new_amount > zero_balance && missing == zero_balance {
-                        <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
+                        <SubsidyProviders<T>>::insert(pool_id, &who, new_amount);
                         pool.total_subsidy = Some(
                             total_subsidy
                                 .checked_sub(&transferred)
                                 .ok_or(ArithmeticError::Overflow)?,
                         );
                     } else {
-                        let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
+                        <SubsidyProviders<T>>::remove(pool_id, &who);
                         pool.total_subsidy = Some(
                             total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
                         );
@@ -227,12 +312,12 @@ mod pallet {
                     return Err(Error::<T>::NoSubsidyProvided.into());
                 }
 
-                Self::deposit_event(Event::<T>::PoolExitSubsidy(PoolAssetEvent {
-                    asset: base_asset,
-                    bound: upper_bound,
-                    cpep: CommonPoolEventParams { pool_id, who },
+                Self::deposit_event(Event::<T>::PoolExitSubsidy(
+                    base_asset,
+                    amount,
+                    CommonPoolEventParams { pool_id, who },
                     transferred,
-                }));
+                ));
 
                 Ok(())
             })
@@ -251,13 +336,18 @@ mod pallet {
         /// * `asset_amount`: Asset amount that is leaving the pool.
         /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
         /// greater than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
+        // MARK(non-transactional): Immediately calls and returns a transactional.
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            asset: Asset<T::MarketId>,
-            asset_amount: BalanceOf<T>,
-            max_pool_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset: Asset<MarketIdOf<T>>,
+            #[pallet::compact] asset_amount: BalanceOf<T>,
+            #[pallet::compact] max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Self as Swaps<T::AccountId>>::pool_exit_with_exact_asset_amount(
@@ -283,20 +373,25 @@ mod pallet {
         /// * `pool_amount`: Pool amount that is entering the pool.
         /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
         /// than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_pool_amount())]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_exit_with_exact_pool_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            asset: Asset<T::MarketId>,
-            pool_amount: BalanceOf<T>,
-            min_asset_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset: Asset<MarketIdOf<T>>,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
-            ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let who = ensure_signed(origin)?;
             let who_clone = who.clone();
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
 
             let params = PoolExitWithExactAmountParams {
                 asset,
@@ -312,9 +407,10 @@ mod pallet {
                         pool.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
                         asset_amount
@@ -325,10 +421,12 @@ mod pallet {
                             .saturated_into(),
                         Error::<T>::MaxOutRatio
                     );
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(asset_amount)
                 },
                 bound: min_asset_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 ensure_balance: |_| Ok(()),
                 event: |evt| Self::deposit_event(Event::PoolExitWithExactPoolAmount(evt)),
                 who: who_clone,
@@ -336,7 +434,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
-            pool_exit_with_exact_amount::<_, _, _, _, T>(params)
+            pool_exit_with_exact_amount::<_, _, _, _, _, T>(params)
         }
 
         /// Pool - Join
@@ -350,19 +448,33 @@ mod pallet {
         /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
         /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
         /// provided values.
-        #[pallet::weight(T::WeightInfo::pool_join(max_assets_in.len() as u32))]
-        #[frame_support::transactional]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
+        // Using `min_assets_out.len()` is fine because we don't iterate over the assets before
+        // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
+        // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
+        // though.
+        #[pallet::weight(T::WeightInfo::pool_join(
+            max_assets_in.len().min(T::MaxAssets::get().into()) as u32
+        ))]
+        #[transactional]
         pub fn pool_join(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            pool_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
             max_assets_in: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            ensure!(
+                matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                Error::<T>::InvalidPoolStatus,
+            );
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
 
-            Self::check_if_pool_is_active(&pool)?;
             let params = PoolParams {
                 asset_bounds: max_assets_in,
                 event: |evt| Self::deposit_event(Event::PoolJoin(evt)),
@@ -372,15 +484,16 @@ mod pallet {
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
                     ensure!(amount <= amount_bound, Error::<T>::LimitIn);
-                    T::Shares::transfer(asset, &who, &pool_account_id, amount)?;
+                    T::AssetManager::transfer(asset, &who, &pool_account_id, amount)?;
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, amount);
                     Ok(())
                 },
-                transfer_pool: |_| Self::mint_pool_shares(pool_id, &who, pool_amount),
+                transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
+                fee: |_| Ok(0u128.saturated_into()),
                 who: who.clone(),
             };
 
-            let _ = crate::utils::pool::<_, _, _, T>(params)?;
+            crate::utils::pool::<_, _, _, _, T>(params)?;
             Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
         }
 
@@ -393,13 +506,19 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be reserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be added to subsidy.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
         #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
+        #[transactional]
         pub fn pool_join_subsidy(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(amount != Zero::zero(), Error::<T>::ZeroAmount);
 
             <Pools<T>>::try_mutate(pool_id, |pool_opt| {
                 let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
@@ -408,26 +527,36 @@ mod pallet {
                     pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
                     Error::<T>::InvalidScoringRule
                 );
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                T::Shares::reserve(base_asset, &who, amount)?;
+                let base_asset = pool.base_asset;
+                T::AssetManager::reserve(base_asset, &who, amount)?;
 
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
-                let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
-                    if let Some(prev_val) = user_subsidy {
-                        *prev_val += amount;
-                    } else {
-                        *user_subsidy = Some(amount);
-                    }
+                <SubsidyProviders<T>>::try_mutate::<_, _, _, DispatchError, _>(
+                    pool_id,
+                    &who,
+                    |user_subsidy| {
+                        if let Some(prev_val) = user_subsidy {
+                            *prev_val = prev_val.saturating_add(amount);
+                        } else {
+                            // If the account adds subsidy for the first time, ensure that it's
+                            // larger than the minimum amount.
+                            ensure!(
+                                amount >= T::MinSubsidyPerAccount::get(),
+                                Error::<T>::InvalidSubsidyAmount
+                            );
+                            *user_subsidy = Some(amount);
+                        }
 
-                    pool.total_subsidy = Some(total_subsidy + amount);
-                });
+                        pool.total_subsidy = Some(total_subsidy.saturating_add(amount));
+                        Ok(())
+                    },
+                )?;
 
-                Self::deposit_event(Event::<T>::PoolJoinSubsidy(PoolAssetEvent {
-                    asset: base_asset,
-                    bound: amount,
-                    cpep: CommonPoolEventParams { pool_id, who },
-                    transferred: amount,
-                }));
+                Self::deposit_event(Event::PoolJoinSubsidy(
+                    base_asset,
+                    amount,
+                    CommonPoolEventParams { pool_id, who },
+                ));
 
                 Ok(())
             })
@@ -446,13 +575,18 @@ mod pallet {
         /// * `asset_amount`: Asset amount that is entering the pool.
         /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
         /// than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
+        // MARK(non-transactional): Immediately calls and returns a transactional.
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
-            asset_amount: BalanceOf<T>,
-            min_pool_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset_in: Asset<MarketIdOf<T>>,
+            #[pallet::compact] asset_amount: BalanceOf<T>,
+            #[pallet::compact] min_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Self as Swaps<T::AccountId>>::pool_join_with_exact_asset_amount(
@@ -478,17 +612,21 @@ mod pallet {
         /// * `pool_amount`: Asset amount that is entering the pool.
         /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or
         /// less than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_join_with_exact_pool_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            asset: Asset<T::MarketId>,
-            pool_amount: BalanceOf<T>,
-            max_asset_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset: Asset<MarketIdOf<T>>,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            #[pallet::compact] max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             let who = ensure_signed(origin)?;
             let who_clone = who.clone();
             let params = PoolJoinWithExactAmountParams {
@@ -509,7 +647,7 @@ mod pallet {
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
                         asset_amount <= asset_balance.check_mul_rslt(&T::MaxInRatio::get())?,
@@ -519,6 +657,7 @@ mod pallet {
                     Ok(asset_amount)
                 },
                 bound: max_asset_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 event: |evt| Self::deposit_event(Event::PoolJoinWithExactPoolAmount(evt)),
                 pool_account_id: &pool_account_id,
                 pool_amount: |_, _| Ok(pool_amount),
@@ -526,7 +665,7 @@ mod pallet {
                 pool: &pool,
                 who: who_clone,
             };
-            pool_join_with_exact_amount::<_, _, _, T>(params)
+            pool_join_with_exact_amount::<_, _, _, _, T>(params)
         }
 
         /// Swap - Exact amount in
@@ -542,16 +681,22 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_rikiddo(T::MaxAssets::get().into()))]
-        #[frame_support::transactional]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
+        /// assets if the scoring rule is Rikiddo.
+        // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_cpmm())]
+        #[transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
-            asset_amount_in: BalanceOf<T>,
-            asset_out: Asset<T::MarketId>,
-            min_asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset_in: Asset<MarketIdOf<T>>,
+            #[pallet::compact] asset_amount_in: BalanceOf<T>,
+            asset_out: Asset<MarketIdOf<T>>,
+            min_asset_amount_out: Option<BalanceOf<T>>,
+            max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
@@ -575,27 +720,33 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
         /// * `asset_in`: Asset entering the pool.
-        /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
+        /// * `max_asset_amount_in`: Maximum asset amount that can enter the pool.
         /// * `asset_out`: Asset leaving the pool.
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_rikiddo(T::MaxAssets::get().into()))]
-        #[frame_support::transactional]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
+        /// assets if the scoring rule is Rikiddo.
+        // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_cpmm())]
+        #[transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: BalanceOf<T>,
-            asset_out: Asset<T::MarketId>,
-            asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset_in: Asset<MarketIdOf<T>>,
+            max_asset_amount_in: Option<BalanceOf<T>>,
+            asset_out: Asset<MarketIdOf<T>>,
+            #[pallet::compact] asset_amount_out: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_out(
                 who,
                 pool_id,
                 asset_in,
-                max_amount_asset_in,
+                max_asset_amount_in,
                 asset_out,
                 asset_amount_out,
                 max_price,
@@ -606,7 +757,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The fee for exiting a pool.
         #[pallet::constant]
@@ -639,13 +790,13 @@ mod pallet {
             + PartialOrd<I9F23>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = Self::MarketId,
-        >;
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                BlockNumber = Self::BlockNumber,
+                MarketId = MarketIdOf<Self>,
+            >;
 
-        type MarketId: MarketId;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -657,6 +808,9 @@ mod pallet {
         type MaxOutRatio: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
+        type MaxSwapFee: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
         type MaxTotalWeight: Get<u128>;
 
         #[pallet::constant]
@@ -666,14 +820,14 @@ mod pallet {
         /// The minimum amount of assets in a pool.
         type MinAssets: Get<u16>;
 
-        /// The minimum amount of liqudity required to bootstrap a pool.
-        #[pallet::constant]
-        type MinLiquidity: Get<BalanceOf<Self>>;
-
         /// The minimum amount of subsidy required to state transit a market into active state.
         /// Must be greater than 0, but can be arbitrarily close to 0.
         #[pallet::constant]
         type MinSubsidy: Get<BalanceOf<Self>>;
+
+        /// The minimum amount of subsidy that each subsidy provider must contribute.
+        #[pallet::constant]
+        type MinSubsidyPerAccount: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
         type MinWeight: Get<u128>;
@@ -684,22 +838,19 @@ mod pallet {
 
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
         type RikiddoSigmoidFeeMarketEma: RikiddoMVPallet<
-            Balance = BalanceOf<Self>,
-            PoolId = PoolId,
-            FU = Self::FixedTypeU,
-            Rikiddo = RikiddoSigmoidMV<
-                Self::FixedTypeU,
-                Self::FixedTypeS,
-                FeeSigmoid<Self::FixedTypeS>,
-                EmaMarketVolume<Self::FixedTypeU>,
-            >,
-        >;
+                Balance = BalanceOf<Self>,
+                PoolId = PoolId,
+                FU = Self::FixedTypeU,
+                Rikiddo = RikiddoSigmoidMV<
+                    Self::FixedTypeU,
+                    Self::FixedTypeS,
+                    FeeSigmoid<Self::FixedTypeS>,
+                    EmaMarketVolume<Self::FixedTypeU>,
+                >,
+            >;
 
-        /// The custom `MultiReservableCurrency` type
-        type Shares: ZeitgeistMultiReservableCurrency<
-            Self::AccountId,
-            CurrencyId = Asset<Self::MarketId>,
-        >;
+        /// Shares of outcome assets and native currency
+        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
 
         /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;
@@ -721,10 +872,16 @@ mod pallet {
         BelowMinimumWeight,
         /// Some funds could not be transferred due to a too low balance.
         InsufficientBalance,
+        /// Liquidity provided to new CPMM pool is less than the minimum allowed balance.
+        InsufficientLiquidity,
         /// The market was not started since the subsidy goal was not reached.
         InsufficientSubsidy,
+        /// Could not create CPMM pool since no amount was specified.
+        InvalidAmountArgument,
         /// Could not create CPMM pool since no fee was supplied.
         InvalidFeeArgument,
+        /// Dispatch called on pool with invalid status.
+        InvalidPoolStatus,
         /// A function that is only valid for pools with specific scoring rules was called for a
         /// pool with another scoring rule.
         InvalidScoringRule,
@@ -734,6 +891,10 @@ mod pallet {
         InvalidWeightArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
+        /// Subsidy amount is too small.
+        InvalidSubsidyAmount,
+        /// No limit was specified for a swap.
+        LimitMissing,
         /// A transferal of funds out of a swaps pool was below a threshhold specified by the
         /// receiver.
         LimitOut,
@@ -753,6 +914,8 @@ mod pallet {
         NoSubsidyProvided,
         /// The pool in question does not exist.
         PoolDoesNotExist,
+        /// A pool balance dropped below the allowed minimum.
+        PoolDrain,
         /// The pool in question is inactive.
         PoolIsNotActive,
         /// The CPMM pool in question does not have a fee, although it should.
@@ -763,16 +926,24 @@ mod pallet {
         PoolMissingWeight,
         /// Two vectors do not have the same length (usually CPMM pool assets and weights).
         ProvidedValuesLenMustEqualAssetsLen,
+        /// No swap fee information found for CPMM pool
+        SwapFeeMissing,
+        /// The swap fee is higher than the allowed maximum.
+        SwapFeeTooHigh,
         /// Tried to create a pool that has less assets than the lower threshhold specified by
         /// a constant.
         TooFewAssets,
         /// Tried to create a pool that has more assets than the upper threshhold specified by
         /// a constant.
         TooManyAssets,
+        /// Tried to create a pool with at least two identical assets.
+        SomeIdenticalAssets,
         /// The pool does not support swapping the assets in question.
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
+        /// Some amount in a transaction equals zero.
+        ZeroAmount,
     }
 
     #[pallet::event]
@@ -781,34 +952,47 @@ mod pallet {
     where
         T: Config,
     {
+        /// Buy-burn arbitrage was executed on a CPMM pool. \[pool_id, amount\]
+        ArbitrageBuyBurn(PoolId, BalanceOf<T>),
+        /// Mint-sell arbitrage was executed on a CPMM pool. \[pool_id, amount\]
+        ArbitrageMintSell(PoolId, BalanceOf<T>),
+        /// Arbitrage was skipped on a CPMM pool. \[pool_id\]
+        ArbitrageSkipped(PoolId),
         /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
         DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
-        /// A new pool has been created. \[CommonPoolEventParams, pool\]
+        /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount, pool_account\]
         PoolCreate(
             CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
-            Pool<BalanceOf<T>, T::MarketId>,
+            Pool<BalanceOf<T>, MarketIdOf<T>>,
+            BalanceOf<T>,
+            T::AccountId,
         ),
+        /// A pool was closed. \[pool_id\]
+        PoolClosed(PoolId),
+        /// A pool was cleaned up. \[pool_id\]
+        PoolCleanedUp(PoolId),
+        /// A pool was opened. \[pool_id\]
+        PoolActive(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
             PoolAssetsEvent<
                 <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
+                Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
         ),
-        /// Someone has (partially) exited a pool by removing subsidy. \[PoolAssetEvent, amount\]
+        /// Someone has (partially) exited a pool by removing subsidy. \[asset, bound, pool_id, who, amount\]
         PoolExitSubsidy(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
-                BalanceOf<T>,
-            >,
+            Asset<MarketIdOf<T>>,
+            BalanceOf<T>,
+            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
+            BalanceOf<T>,
         ),
         /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolExitWithExactAssetAmount(
             PoolAssetEvent<
                 <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
+                Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
         ),
@@ -816,7 +1000,7 @@ mod pallet {
         PoolExitWithExactPoolAmount(
             PoolAssetEvent<
                 <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
+                Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
         ),
@@ -824,23 +1008,21 @@ mod pallet {
         PoolJoin(
             PoolAssetsEvent<
                 <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
+                Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
         ),
-        /// Someone has joined a pool by providing subsidy. \[PoolAssetEvent, amount\]
+        /// Someone has joined a pool by providing subsidy. \[asset, amount, pool_id, who\]
         PoolJoinSubsidy(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
-                BalanceOf<T>,
-            >,
+            Asset<MarketIdOf<T>>,
+            BalanceOf<T>,
+            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
         ),
         /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolJoinWithExactAssetAmount(
             PoolAssetEvent<
                 <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
+                Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
         ),
@@ -848,19 +1030,30 @@ mod pallet {
         PoolJoinWithExactPoolAmount(
             PoolAssetEvent<
                 <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
+                Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
         ),
-        /// Total subsidy collected for a pool. \[pool_id, subsidy\]
-        SubsidyCollected(PoolId, BalanceOf<T>),
+        /// Total subsidy collected for a pool. \[pool_id, \[(provider, subsidy), ...\], total_subsidy\]
+        SubsidyCollected(
+            PoolId,
+            Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
+            BalanceOf<T>,
+        ),
+        /// Pool was manually destroyed. \[pool_id\]
+        PoolDestroyed(PoolId),
+        /// Pool destroyed due to insufficient subsidy. \[pool_id, \[(provider, subsidy), ...\]\]
+        PoolDestroyedInSubsidyPhase(
+            PoolId,
+            Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
+        ),
         /// An exact amount of an asset is entering the pool. \[SwapEvent\]
         SwapExactAmountIn(
-            SwapEvent<<T as frame_system::Config>::AccountId, Asset<T::MarketId>, BalanceOf<T>>,
+            SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
         ),
         /// An exact amount of an asset is leaving the pool. \[SwapEvent\]
         SwapExactAmountOut(
-            SwapEvent<<T as frame_system::Config>::AccountId, Asset<T::MarketId>, BalanceOf<T>>,
+            SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
         ),
     }
 
@@ -875,9 +1068,13 @@ mod pallet {
         _,
         Blake2_128Concat,
         PoolId,
-        Option<Pool<BalanceOf<T>, T::MarketId>>,
+        Option<Pool<BalanceOf<T>, MarketIdOf<T>>>,
         ValueQuery,
     >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn pools_cached_for_arbitrage)]
+    pub type PoolsCachedForArbitrage<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
     #[pallet::storage]
     #[pallet::getter(fn subsidy_providers)]
@@ -888,32 +1085,42 @@ mod pallet {
     #[pallet::getter(fn next_pool_id)]
     pub type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
 
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
+            if remaining_weight.all_lt(ON_IDLE_MIN_WEIGHT) {
+                return Weight::zero();
+            }
+            Self::execute_arbitrage_all(remaining_weight / 2)
+        }
+    }
+
     impl<T: Config> Pallet<T> {
         pub(crate) fn distribute_pool_share_rewards(
-            pool: &Pool<BalanceOf<T>, T::MarketId>,
+            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
             pool_id: PoolId,
-            base_asset: Asset<T::MarketId>,
-            winning_asset: Asset<T::MarketId>,
+            base_asset: Asset<MarketIdOf<T>>,
+            winning_asset: Asset<MarketIdOf<T>>,
             winner_payout_account: &T::AccountId,
         ) -> Weight {
             // CPMM handling of market profit not supported
             if pool.scoring_rule == ScoringRule::CPMM {
-                return 1_000_000;
+                return Weight::from_ref_time(1_000_000);
             }
 
             // Total pool shares
             let shares_id = Self::pool_shares_id(pool_id);
-            let total_pool_shares = T::Shares::total_issuance(shares_id);
+            let total_pool_shares = T::AssetManager::total_issuance(shares_id);
 
             // Total AMM balance
-            let pool_account = Self::pool_account_id(pool_id);
-            let total_amm_funds = T::Shares::free_balance(base_asset, &pool_account);
+            let pool_account = Self::pool_account_id(&pool_id);
+            let total_amm_funds = T::AssetManager::free_balance(base_asset, &pool_account);
 
             // Total winning shares
             // The pool account still holds the winning asset, burn it.
-            let free_balance = T::Shares::free_balance(winning_asset, &pool_account);
-            let _ = T::Shares::withdraw(winning_asset, &pool_account, free_balance);
-            let total_winning_assets = T::Shares::total_issuance(winning_asset);
+            let free_balance = T::AssetManager::free_balance(winning_asset, &pool_account);
+            let _ = T::AssetManager::withdraw(winning_asset, &pool_account, free_balance);
+            let total_winning_assets = T::AssetManager::total_issuance(winning_asset);
 
             // Profit = AMM balance - total winning shares
             let amm_profit_checked = total_amm_funds.checked_sub(&total_winning_assets);
@@ -936,7 +1143,7 @@ mod pallet {
 
             // Iterate through every share holder and exchange shares for rewards.
             let (total_accounts_num, share_accounts) =
-                T::Shares::accounts_by_currency_id(shares_id);
+                T::AssetManager::accounts_by_currency_id(shares_id).unwrap_or((0usize, vec![]));
             let share_accounts_num = share_accounts.len();
 
             for share_holder in share_accounts {
@@ -955,7 +1162,7 @@ mod pallet {
                 // Same for bmul.
                 let holder_reward = holder_reward_unadjusted.saturating_sub(1);
 
-                let transfer_result = T::Shares::transfer(
+                let transfer_result = T::AssetManager::transfer(
                     base_asset,
                     &pool_account,
                     &share_holder_account,
@@ -964,7 +1171,8 @@ mod pallet {
 
                 // Should be impossible.
                 if let Err(err) = transfer_result {
-                    let current_amm_holding = T::Shares::free_balance(base_asset, &pool_account);
+                    let current_amm_holding =
+                        T::AssetManager::free_balance(base_asset, &pool_account);
                     log::error!(
                         "[Swaps] The AMM failed to pay out the share holder reward.
                         market_id: {:?}, pool_id: {:?}, current AMM holding: {:?},
@@ -978,7 +1186,7 @@ mod pallet {
                     );
 
                     if current_amm_holding < holder_reward.saturated_into() {
-                        let _ = T::Shares::transfer(
+                        let _ = T::AssetManager::transfer(
                             base_asset,
                             &pool_account,
                             &share_holder_account,
@@ -990,12 +1198,16 @@ mod pallet {
                 // We can use the lightweight withdraw here, since pool shares are not reserved.
                 // We can ignore the result since the balance to transfer is the query result of
                 // the free balance (always sufficient).
-                let _ = T::Shares::withdraw(shares_id, &share_holder_account, share_holder_balance);
+                let _ = T::AssetManager::withdraw(
+                    shares_id,
+                    &share_holder_account,
+                    share_holder_balance,
+                );
             }
 
-            let remaining_pool_funds = T::Shares::free_balance(base_asset, &pool_account);
+            let remaining_pool_funds = T::AssetManager::free_balance(base_asset, &pool_account);
             // Transfer winner payout - Infallible since the balance was just read from storage.
-            let _ = T::Shares::transfer(
+            let _ = T::AssetManager::transfer(
                 base_asset,
                 &pool_account,
                 winner_payout_account,
@@ -1014,41 +1226,193 @@ mod pallet {
             )
         }
 
-        pub fn get_spot_price(
+        /// Execute arbitrage on as many cached pools until `weight` is spent.
+        ///
+        /// Arguments:
+        ///
+        /// * `weight`: The maximum amount of weight allowed to spend by this function.
+        fn execute_arbitrage_all(weight: Weight) -> Weight {
+            // The time complexity of `apply_cached_pools` is `O(pool_count)`; we calculate the
+            // minimum number of pools we can handle.
+            let overhead = T::WeightInfo::apply_to_cached_pools_execute_arbitrage(0);
+            let extra_weight_per_pool =
+                T::WeightInfo::apply_to_cached_pools_execute_arbitrage(1).saturating_sub(overhead);
+            // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
+            // the number of pools. This shouldn't ever happen, but if it does, we ensure that
+            // `pool_count` is zero (this isn't really a runtime error).
+            let pool_count = weight
+                .ref_time()
+                .saturating_sub(overhead.ref_time())
+                .checked_div(extra_weight_per_pool.ref_time())
+                .unwrap_or_else(|| {
+                    log::warn!("Unexpected zero division when calculating arbitrage weight");
+                    0_u64
+                });
+            if pool_count == 0_u64 {
+                return weight;
+            }
+            Self::apply_to_cached_pools(
+                pool_count.saturated_into(),
+                |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
+                extra_weight_per_pool,
+            )
+        }
+
+        /// Apply a `mutation` to all pools cached for arbitrage (but at most `pool_count` many)
+        /// and return the actual weight consumed.
+        ///
+        /// Arguments:
+        ///
+        /// * `pool_count`: The maximum number of pools to apply the `mutation` to.
+        /// * `mutation`: The `mutation` that is applied to the pools.
+        /// * `max_weight_per_pool`: The maximum weight consumed by `mutation` per pool.
+        pub(crate) fn apply_to_cached_pools<F>(
+            pool_count: u32,
+            mutation: F,
+            max_weight_per_pool: Weight,
+        ) -> Weight
+        where
+            F: Fn(PoolId) -> Result<Weight, DispatchError>,
+        {
+            let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
+            for (pool_id, _) in PoolsCachedForArbitrage::<T>::drain().take(pool_count as usize) {
+                // The mutation should never fail, but if it does, we just assume we
+                // consumed all the weight and rollback the pool.
+                let _ = with_transaction(|| match mutation(pool_id) {
+                    Err(err) => {
+                        log::warn!(
+                            "Arbitrage unexpectedly failed on pool {:?} with error: {:?}",
+                            pool_id,
+                            err,
+                        );
+                        total_weight = total_weight.saturating_add(max_weight_per_pool);
+                        TransactionOutcome::Rollback(err.into())
+                    }
+                    Ok(weight) => {
+                        total_weight = total_weight.saturating_add(weight);
+                        TransactionOutcome::Commit(Ok(()))
+                    }
+                });
+            }
+            total_weight
+        }
+
+        /// Execute arbitrage on a single pool.
+        ///
+        /// Arguments:
+        ///
+        /// * `pool_id`: The id of the pool to arbitrage.
+        /// * `max_iterations`: The maximum number of iterations allowed in the bisection method.
+        pub(crate) fn execute_arbitrage(
             pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
-            asset_out: Asset<T::MarketId>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+            max_iterations: usize,
+        ) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
-            ensure!(pool.assets.binary_search(&asset_in).is_ok(), Error::<T>::AssetNotInPool);
-            ensure!(pool.assets.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
+            let pool_account = Self::pool_account_id(&pool_id);
+            let balances = pool
+                .assets
+                .iter()
+                .map(|a| (*a, T::AssetManager::free_balance(*a, &pool_account)))
+                .collect::<BTreeMap<_, _>>();
+            let asset_count = pool.assets.len() as u32;
+            let outcome_tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
+            let total_spot_price = pool.calc_total_spot_price(&balances)?;
+
+            if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
+                let (amount, _) =
+                    pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
+                // Ensure that executing arbitrage doesn't decrease the base asset balance below
+                // the minimum allowed balance.
+                let balance_base_asset =
+                    balances.get(&pool.base_asset).ok_or(Error::<T>::AssetNotInPool)?;
+                let max_amount =
+                    balance_base_asset.saturating_sub(Self::min_balance(pool.base_asset));
+                let amount = amount.min(max_amount);
+                // We're faking a `buy_complete_sets` operation by transfering to the market prize
+                // pool.
+                T::AssetManager::transfer(
+                    pool.base_asset,
+                    &pool_account,
+                    &T::MarketCommons::market_account(pool.market_id),
+                    amount,
+                )?;
+                for t in outcome_tokens {
+                    T::AssetManager::deposit(*t, &pool_account, amount)?;
+                }
+                Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
+                Ok(T::WeightInfo::execute_arbitrage_mint_sell(asset_count))
+            } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
+                let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
+                // Ensure that executing arbitrage doesn't decrease the outcome asset balances below
+                // the minimum allowed balance.
+                let (smallest_outcome, smallest_outcome_balance) = balances
+                    .iter()
+                    .filter(|(k, _)| **k != pool.base_asset)
+                    .min_by(|(_, v1), (_, v2)| v1.cmp(v2))
+                    .ok_or(Error::<T>::AssetNotInPool)?;
+                let max_amount =
+                    smallest_outcome_balance.saturating_sub(Self::min_balance(*smallest_outcome));
+                let amount = amount.min(max_amount);
+                T::AssetManager::transfer(
+                    pool.base_asset,
+                    &T::MarketCommons::market_account(pool.market_id),
+                    &pool_account,
+                    amount,
+                )?;
+                for t in outcome_tokens {
+                    T::AssetManager::withdraw(*t, &pool_account, amount)?;
+                }
+                Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
+                Ok(T::WeightInfo::execute_arbitrage_buy_burn(asset_count))
+            } else {
+                Self::deposit_event(Event::ArbitrageSkipped(pool_id));
+                Ok(T::WeightInfo::execute_arbitrage_skipped(asset_count))
+            }
+        }
+
+        pub fn get_spot_price(
+            pool_id: &PoolId,
+            asset_in: &Asset<MarketIdOf<T>>,
+            asset_out: &Asset<MarketIdOf<T>>,
+            with_fees: bool,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let pool = Self::pool_by_id(*pool_id)?;
+            ensure!(pool.assets.binary_search(asset_in).is_ok(), Error::<T>::AssetNotInPool);
+            ensure!(pool.assets.binary_search(asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
 
             if pool.scoring_rule == ScoringRule::CPMM {
-                let balance_in = T::Shares::free_balance(asset_in, &pool_account);
-                let balance_out = T::Shares::free_balance(asset_out, &pool_account);
-                let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
-                let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
+                let balance_in = T::AssetManager::free_balance(*asset_in, &pool_account);
+                let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
+                let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
+                let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
+
+                let swap_fee = if with_fees {
+                    pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?
+                } else {
+                    BalanceOf::<T>::zero()
+                };
 
                 return Ok(crate::math::calc_spot_price(
                     balance_in.saturated_into(),
                     in_weight,
                     balance_out.saturated_into(),
                     out_weight,
-                    0,
+                    swap_fee.saturated_into(),
                 )?
                 .saturated_into());
             }
 
+            // TODO(#880): For now rikiddo does not respect with_fees flag.
             // Price when using Rikiddo.
             ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::PoolIsNotActive);
             let mut balances = Vec::new();
-            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+            let base_asset = pool.base_asset;
 
             // Fees are estimated here. The error scales with the fee. For the future, we'll have
             // to figure out how to extract the fee out of the price when using Rikiddo.
             if asset_in == asset_out {
-                return Ok(T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?
+                return Ok(T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?
                     .saturating_add(BASE.saturated_into()));
             }
 
@@ -1056,48 +1420,126 @@ mod pallet {
             let mut balance_out = <BalanceOf<T>>::zero();
 
             for asset in pool.assets.iter().filter(|asset| **asset != base_asset) {
-                let issuance = T::Shares::total_issuance(*asset);
+                let issuance = T::AssetManager::total_issuance(*asset);
 
-                if *asset == asset_in {
+                if asset == asset_in {
                     balance_in = issuance;
-                } else if *asset == asset_out {
+                } else if asset == asset_out {
                     balance_out = issuance;
                 }
 
                 balances.push(issuance);
             }
 
-            if asset_in == base_asset {
-                T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)
-            } else if asset_out == base_asset {
+            if *asset_in == base_asset {
+                T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)
+            } else if *asset_out == base_asset {
                 let price_with_inverse_fee = bdiv(
                     BASE,
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
+                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
                 .saturated_into();
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into();
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
                 let fee_plus_one = BASE.saturating_add(fee_pct);
                 let price_with_fee: u128 =
                     bmul(fee_plus_one, bmul(price_with_inverse_fee, fee_plus_one)?)?;
                 Ok(price_with_fee.saturated_into())
             } else {
                 let price_without_fee = bdiv(
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
+                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?
                         .saturated_into(),
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
+                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
                 .saturated_into();
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into();
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
                 let fee_plus_one = BASE.saturating_add(fee_pct);
                 let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
                 Ok(price_with_fee.saturated_into())
             }
         }
 
-        pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
-            T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
+        // Returns vector of pairs `(a, p)` where `a` ranges over all assets in the pool and `p` is
+        // the spot price of swapping the base asset for `a` (including swap fees if `with_fees` is
+        // `true`).
+        pub fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool,
+        ) -> Result<Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)>, DispatchError> {
+            let pool = Self::pool_by_id(*pool_id)?;
+            pool.assets
+                .into_iter()
+                .map(|asset| {
+                    let spot_price =
+                        Self::get_spot_price(pool_id, &pool.base_asset, &asset, with_fees)?;
+                    Ok((asset, spot_price))
+                })
+                .collect()
+        }
+
+        #[inline]
+        pub fn pool_account_id(pool_id: &PoolId) -> T::AccountId {
+            T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
+        }
+
+        /// The minimum allowed balance of `asset` in a liquidity pool.
+        pub(crate) fn min_balance(asset: Asset<MarketIdOf<T>>) -> BalanceOf<T> {
+            T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
+        }
+
+        /// Returns the minimum allowed balance allowed for a pool with id `pool_id` containing
+        /// `assets`.
+        ///
+        /// The minimum allowed balance is the maximum of all minimum allowed balances of assets
+        /// contained in the pool, _including_ the pool shares asset. This ensures that none of the
+        /// accounts involved are slashed when a pool is created with the minimum amount.
+        ///
+        /// **Should** only be called if `assets` is non-empty. Note that the existence of a pool
+        /// with the specified `pool_id` is not mandatory.
+        pub(crate) fn min_balance_of_pool(
+            pool_id: PoolId,
+            assets: &[Asset<MarketIdOf<T>>],
+        ) -> BalanceOf<T> {
+            assets
+                .iter()
+                .map(|asset| Self::min_balance(*asset))
+                .max()
+                .unwrap_or_else(|| MIN_BALANCE.saturated_into())
+                .max(Self::min_balance(Self::pool_shares_id(pool_id)))
+        }
+
+        fn ensure_minimum_liquidity_shares(
+            pool_id: PoolId,
+            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            if pool.pool_status == PoolStatus::Clean {
+                return Ok(());
+            }
+            let pool_shares_id = Self::pool_shares_id(pool_id);
+            let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
+            let max_withdraw =
+                total_issuance.saturating_sub(Self::min_balance(pool_shares_id).saturated_into());
+            ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
+            Ok(())
+        }
+
+        fn ensure_minimum_balance(
+            pool_id: PoolId,
+            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
+            asset: Asset<MarketIdOf<T>>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            // No need to prevent a clean pool from getting drained.
+            if pool.pool_status == PoolStatus::Clean {
+                return Ok(());
+            }
+            let pool_account = Self::pool_account_id(&pool_id);
+            let balance = T::AssetManager::free_balance(asset, &pool_account);
+            let max_withdraw = balance.saturating_sub(Self::min_balance(asset).saturated_into());
+            ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
+            Ok(())
         }
 
         pub(crate) fn burn_pool_shares(
@@ -1107,15 +1549,15 @@ mod pallet {
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
             // Check that the account has at least as many free shares as we wish to burn!
-            T::Shares::ensure_can_withdraw(shares_id, from, amount)
+            T::AssetManager::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
-            T::Shares::slash(shares_id, from, amount);
+            T::AssetManager::slash(shares_id, from, amount);
             Ok(())
         }
 
         #[inline]
         pub(crate) fn check_provided_values_len_must_equal_assets_len<U>(
-            assets: &[Asset<T::MarketId>],
+            assets: &[Asset<MarketIdOf<T>>],
             provided_values: &[U],
         ) -> Result<(), Error<T>>
         where
@@ -1128,12 +1570,11 @@ mod pallet {
         }
 
         pub(crate) fn check_if_pool_is_active(
-            pool: &Pool<BalanceOf<T>, T::MarketId>,
+            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
         ) -> DispatchResult {
-            if pool.pool_status == PoolStatus::Active {
-                Ok(())
-            } else {
-                Err(Error::<T>::PoolIsNotActive.into())
+            match pool.pool_status {
+                PoolStatus::Active => Ok(()),
+                _ => Err(Error::<T>::PoolIsNotActive.into()),
             }
         }
 
@@ -1143,20 +1584,20 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
-            T::Shares::deposit(shares_id, to, amount)
+            T::AssetManager::deposit(shares_id, to, amount)
         }
 
-        pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
+        pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<MarketIdOf<T>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
 
-        pub(crate) fn pool_by_id(
+        pub fn pool_by_id(
             pool_id: PoolId,
-        ) -> Result<Pool<BalanceOf<T>, T::MarketId>, Error<T>>
+        ) -> Result<Pool<BalanceOf<T>, MarketIdOf<T>>, DispatchError>
         where
             T: Config,
         {
-            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist)
+            Self::pools(pool_id).ok_or_else(|| Error::<T>::PoolDoesNotExist.into())
         }
 
         fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
@@ -1171,7 +1612,7 @@ mod pallet {
         // Mutates a stored pool. Returns `Err` if `pool_id` does not exist.
         pub(crate) fn mutate_pool<F>(pool_id: PoolId, mut cb: F) -> DispatchResult
         where
-            F: FnMut(&mut Pool<BalanceOf<T>, T::MarketId>) -> DispatchResult,
+            F: FnMut(&mut Pool<BalanceOf<T>, MarketIdOf<T>>) -> DispatchResult,
         {
             <Pools<T>>::try_mutate(pool_id, |pool| {
                 let pool = if let Some(el) = pool {
@@ -1184,8 +1625,8 @@ mod pallet {
         }
 
         fn pool_weight_rslt(
-            pool: &Pool<BalanceOf<T>, T::MarketId>,
-            asset: &Asset<T::MarketId>,
+            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
+            asset: &Asset<MarketIdOf<T>>,
         ) -> Result<u128, Error<T>> {
             pool.weights
                 .as_ref()
@@ -1194,6 +1635,73 @@ mod pallet {
                 .cloned()
                 .ok_or(Error::<T>::AssetNotBound)
         }
+
+        /// Remove losing assets from the pool and distribute Rikiddo rewards.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the pool.
+        pub(crate) fn clean_up_pool_categorical(
+            pool_id: PoolId,
+            outcome_report: &OutcomeReport,
+            winner_payout_account: &T::AccountId,
+        ) -> Result<Weight, DispatchError> {
+            let mut extra_weight = Weight::zero();
+            let mut total_assets = 0;
+
+            Self::mutate_pool(pool_id, |pool| {
+                // Find winning asset, remove losing assets from pool
+                let base_asset = pool.base_asset;
+                let mut winning_asset: Result<_, DispatchError> =
+                    Err(Error::<T>::WinningAssetNotFound.into());
+                if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
+                    pool.assets.retain(|el| {
+                        if let Asset::CategoricalOutcome(_, idx) = *el {
+                            if idx == *winning_asset_idx {
+                                winning_asset = Ok(*el);
+                                return true;
+                            };
+                        }
+
+                        *el == base_asset
+                    });
+                }
+
+                total_assets = pool.assets.len();
+
+                let winning_asset_unwrapped = winning_asset?;
+
+                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
+                    let distribute_weight = Self::distribute_pool_share_rewards(
+                        pool,
+                        pool_id,
+                        base_asset,
+                        winning_asset_unwrapped,
+                        winner_payout_account,
+                    );
+                    extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
+                    extra_weight = extra_weight.saturating_add(distribute_weight);
+                }
+
+                Ok(())
+            })?;
+
+            Ok(T::WeightInfo::clean_up_pool_categorical_without_reward_distribution(
+                total_assets.saturated_into(),
+            )
+            .saturating_add(extra_weight))
+        }
+
+        /// Calculate the exit fee percentage for `pool`.
+        fn calc_exit_fee(pool: &Pool<BalanceOf<T>, MarketIdOf<T>>) -> BalanceOf<T> {
+            // We don't charge exit fees on closed or cleaned up pools (no need to punish LPs for
+            // leaving the pool)!
+            match pool.pool_status {
+                PoolStatus::Active => T::ExitFee::get().saturated_into(),
+                _ => 0u128.saturated_into(),
+            }
+        }
     }
 
     impl<T> Swaps<T::AccountId> for Pallet<T>
@@ -1201,97 +1709,134 @@ mod pallet {
         T: Config,
     {
         type Balance = BalanceOf<T>;
-        type MarketId = T::MarketId;
+        type MarketId = MarketIdOf<T>;
 
         /// Creates an initial active pool.
         ///
         /// # Arguments
         ///
         /// * `who`: The account that is the creator of the pool. Must have enough
-        /// funds for each of the assets to cover the `MinLiqudity`.
+        ///     funds for each of the assets to cover the `amount`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
-        ///                 Optional if scoring rule is CPMM.
         /// * `market_id`: The market id of the market the pool belongs to.
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
-        /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
+        /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
+        ///     ratio (0.1 equals 10% swap fee)
+        /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
+        ///     `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
         /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
-            mut assets: Vec<Asset<T::MarketId>>,
-            base_asset: Option<Asset<T::MarketId>>,
-            market_id: Self::MarketId,
+            assets: Vec<Asset<MarketIdOf<T>>>,
+            base_asset: Asset<MarketIdOf<T>>,
+            market_id: MarketIdOf<T>,
             scoring_rule: ScoringRule,
             swap_fee: Option<BalanceOf<T>>,
+            amount: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             ensure!(assets.len() >= usize::from(T::MinAssets::get()), Error::<T>::TooFewAssets);
-            let amount = T::MinLiquidity::get();
+            ensure!(assets.contains(&base_asset), Error::<T>::BaseAssetNotFound);
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
-            let pool_account = Self::pool_account_id(next_pool_id);
+            let pool_account = Self::pool_account_id(&next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
+            let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
+            let mut sorted_assets = assets.clone();
+            sorted_assets.sort();
+            let has_duplicates = sorted_assets
+                .iter()
+                .zip(sorted_assets.iter().skip(1))
+                .fold(false, |acc, (&x, &y)| acc || x == y);
+            ensure!(!has_duplicates, Error::<T>::SomeIdenticalAssets);
 
-            if scoring_rule == ScoringRule::CPMM {
-                let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
-                let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
-                Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
+            let (pool_status, total_subsidy, total_weight, weights, pool_amount) =
+                match scoring_rule {
+                    ScoringRule::CPMM => {
+                        ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
+                        // `amount` must be larger than all minimum balances. As we deposit `amount`
+                        // liquidity shares, we must also ensure that `amount` is larger than the
+                        // existential deposit of the liquidity shares.
+                        ensure!(
+                            amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
+                            Error::<T>::InsufficientLiquidity
+                        );
+                        let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                        ensure!(
+                            swap_fee_unwrapped <= T::MaxSwapFee::get(),
+                            Error::<T>::SwapFeeTooHigh
+                        );
+                        let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
+                        Self::check_provided_values_len_must_equal_assets_len(
+                            &assets,
+                            &weights_unwrapped,
+                        )?;
 
-                for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
-                    let free_balance = T::Shares::free_balance(asset, &who);
-                    ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
-                    ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
-                    ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
-                    map.insert(asset, weight);
-                    total_weight = total_weight.check_add_rslt(&weight)?;
-                    T::Shares::transfer(asset, &who, &pool_account, amount)?;
-                }
+                        for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
+                            let free_balance = T::AssetManager::free_balance(asset, &who);
+                            ensure!(
+                                free_balance >= amount_unwrapped,
+                                Error::<T>::InsufficientBalance
+                            );
+                            ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+                            ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
+                            map.insert(asset, weight);
+                            total_weight = total_weight.check_add_rslt(&weight)?;
+                            T::AssetManager::transfer(
+                                asset,
+                                &who,
+                                &pool_account,
+                                amount_unwrapped,
+                            )?;
+                        }
 
-                ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
-                T::Shares::deposit(pool_shares_id, &who, amount)?;
-            } else {
-                let base_asset_unwrapped = base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                ensure!(assets.contains(&base_asset_unwrapped), Error::<T>::BaseAssetNotFound);
-                let mut rikiddo_instance: RikiddoSigmoidMV<
-                    T::FixedTypeU,
-                    T::FixedTypeS,
-                    FeeSigmoid<T::FixedTypeS>,
-                    EmaMarketVolume<T::FixedTypeU>,
-                > = Default::default();
-                rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
-                rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
-                rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
-                let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
-            }
+                        ensure!(
+                            total_weight <= T::MaxTotalWeight::get(),
+                            Error::<T>::MaxTotalWeight
+                        );
+                        T::AssetManager::deposit(pool_shares_id, &who, amount_unwrapped)?;
 
-            // Sort assets for future binary search, for example to check if an asset is included.
-            let sort_assets = assets.as_mut_slice();
-            sort_assets.sort();
+                        let pool_status = PoolStatus::Initialized;
+                        let total_subsidy = None;
+                        let total_weight = Some(total_weight);
+                        let weights = Some(map);
+                        let pool_amount = amount_unwrapped;
+                        (pool_status, total_subsidy, total_weight, weights, pool_amount)
+                    }
+                    ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                        let mut rikiddo_instance: RikiddoSigmoidMV<
+                            T::FixedTypeU,
+                            T::FixedTypeS,
+                            FeeSigmoid<T::FixedTypeS>,
+                            EmaMarketVolume<T::FixedTypeU>,
+                        > = Default::default();
+                        rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
+                        rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
+                        rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
+                        T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
+
+                        let pool_status = PoolStatus::CollectingSubsidy;
+                        let total_subsidy = Some(<BalanceOf<T>>::zero());
+                        let total_weight = None;
+                        let weights = None;
+                        let pool_amount = <BalanceOf<T>>::zero();
+                        (pool_status, total_subsidy, total_weight, weights, pool_amount)
+                    }
+                };
             let pool = Pool {
-                assets,
+                assets: sorted_assets,
                 base_asset,
                 market_id,
-                pool_status: if scoring_rule == ScoringRule::CPMM {
-                    PoolStatus::Active
-                } else {
-                    PoolStatus::CollectingSubsidy
-                },
+                pool_status,
                 scoring_rule,
                 swap_fee,
-                total_subsidy: if scoring_rule == ScoringRule::CPMM {
-                    None
-                } else {
-                    Some(BalanceOf::<T>::zero())
-                },
-                total_weight: if scoring_rule == ScoringRule::CPMM {
-                    Some(total_weight)
-                } else {
-                    None
-                },
-                weights: if scoring_rule == ScoringRule::CPMM { Some(map) } else { None },
+                total_subsidy,
+                total_weight,
+                weights,
             };
 
             <Pools<T>>::insert(next_pool_id, Some(pool.clone()));
@@ -1299,9 +1844,45 @@ mod pallet {
             Self::deposit_event(Event::PoolCreate(
                 CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
+                pool_amount,
+                pool_account,
             ));
 
             Ok(next_pool_id)
+        }
+
+        fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            let asset_len =
+                <Pools<T>>::try_mutate(pool_id, |pool| -> Result<u32, DispatchError> {
+                    let pool = if let Some(el) = pool {
+                        el
+                    } else {
+                        return Err(Error::<T>::PoolDoesNotExist.into());
+                    };
+                    ensure!(
+                        matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                        Error::<T>::InvalidStateTransition,
+                    );
+                    pool.pool_status = PoolStatus::Closed;
+                    Ok(pool.assets.len() as u32)
+                })?;
+            Self::deposit_event(Event::PoolClosed(pool_id));
+            Ok(T::WeightInfo::close_pool(asset_len))
+        }
+
+        fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            let pool = Self::pool_by_id(pool_id)?;
+            let pool_account = Self::pool_account_id(&pool_id);
+            let asset_len = pool.assets.len() as u32;
+            for asset in pool.assets.into_iter() {
+                let amount = T::AssetManager::free_balance(asset, &pool_account);
+                T::AssetManager::slash(asset, &pool_account, amount);
+            }
+            // NOTE: Currently we don't clean up accounts with pool_share_id.
+            // TODO(#792): Remove pool_share_id asset for accounts! It may require storage migration.
+            Pools::<T>::remove(pool_id);
+            Self::deposit_event(Event::PoolDestroyed(pool_id));
+            Ok(T::WeightInfo::destroy_pool(asset_len))
         }
 
         /// All supporters will receive their reserved funds back and the pool is destroyed.
@@ -1318,16 +1899,23 @@ mod pallet {
                     return Err(Error::<T>::InvalidStateTransition.into());
                 }
 
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let base_asset = pool.base_asset;
 
+                let mut providers_and_pool_shares = vec![];
                 for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
-                    T::Shares::unreserve(base_asset, &provider.0, provider.1);
+                    T::AssetManager::unreserve(base_asset, &provider.0, provider.1);
                     total_providers = total_providers.saturating_add(1);
+                    providers_and_pool_shares.push(provider);
                 }
 
                 if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                     T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
                 }
+
+                Self::deposit_event(Event::PoolDestroyedInSubsidyPhase(
+                    pool_id,
+                    providers_and_pool_shares,
+                ));
 
                 Ok(())
             })?;
@@ -1357,12 +1945,13 @@ mod pallet {
 
                     let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
                     ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                    let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                    let pool_account = Pallet::<T>::pool_account_id(pool_id);
+                    let base_asset = pool.base_asset;
+                    let pool_account = Pallet::<T>::pool_account_id(&pool_id);
                     let pool_shares_id = Self::pool_shares_id(pool_id);
                     let mut account_created = false;
                     let mut total_balance = <BalanceOf<T>>::zero();
                     total_assets = pool.assets.len();
+                    let mut providers_and_pool_shares = vec![];
 
                     // Transfer all reserved funds to the pool account and distribute pool shares.
                     for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
@@ -1371,42 +1960,44 @@ mod pallet {
                         let subsidy = provider.1;
 
                         if !account_created {
-                            T::Shares::unreserve(base_asset, &provider_address, subsidy);
-                            T::Shares::transfer(
+                            T::AssetManager::unreserve(base_asset, &provider_address, subsidy);
+                            T::AssetManager::transfer(
                                 base_asset,
                                 &provider_address,
                                 &pool_account,
                                 subsidy,
                             )?;
                             total_balance = subsidy;
-                            T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
+                            T::AssetManager::deposit(pool_shares_id, &provider_address, subsidy)?;
                             account_created = true;
+                            providers_and_pool_shares.push((provider_address, subsidy));
                             continue;
                         }
 
-                        let remaining = T::Shares::repatriate_reserved(
+                        let remaining = T::AssetManager::repatriate_reserved(
                             base_asset,
                             &provider_address,
                             &pool_account,
                             subsidy,
                             BalanceStatus::Free,
                         )?;
-                        let transfered = subsidy.saturating_sub(remaining);
+                        let transferred = subsidy.saturating_sub(remaining);
 
-                        if transfered != subsidy {
+                        if transferred != subsidy {
                             log::warn!(
                                 "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
                                  provided than currently reserved.
                             Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                                 pool_id,
                                 provider_address,
-                                transfered,
+                                transferred,
                                 subsidy
                             );
                         }
 
-                        T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
-                        total_balance.saturating_add(transfered);
+                        T::AssetManager::deposit(pool_shares_id, &provider_address, transferred)?;
+                        total_balance = total_balance.saturating_add(transferred);
+                        providers_and_pool_shares.push((provider_address, transferred));
                     }
 
                     ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
@@ -1421,11 +2012,19 @@ mod pallet {
                         )?;
 
                     for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                        T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
+                        T::AssetManager::deposit(
+                            *asset,
+                            &pool_account,
+                            outstanding_assets_per_event,
+                        )?;
                     }
 
                     pool.pool_status = PoolStatus::Active;
-                    Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
+                    Self::deposit_event(Event::SubsidyCollected(
+                        pool_id,
+                        providers_and_pool_shares,
+                        total_balance,
+                    ));
                     Ok(())
                 });
 
@@ -1467,6 +2066,21 @@ mod pallet {
             })
         }
 
+        fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            Self::mutate_pool(pool_id, |pool| -> DispatchResult {
+                ensure!(
+                    pool.pool_status == PoolStatus::Initialized,
+                    Error::<T>::InvalidStateTransition
+                );
+                pool.pool_status = PoolStatus::Active;
+                Ok(())
+            })?;
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
+            let asset_len = pool.assets.len() as u32;
+            Self::deposit_event(Event::PoolActive(pool_id));
+            Ok(T::WeightInfo::open_pool(asset_len))
+        }
+
         /// Pool - Exit with exact pool amount
         ///
         /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
@@ -1484,11 +2098,12 @@ mod pallet {
         fn pool_exit_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
-            asset: Asset<T::MarketId>,
+            asset: Asset<MarketIdOf<T>>,
             asset_amount: BalanceOf<T>,
             max_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
+            Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
             let pool_ref = &pool;
             let who_clone = who.clone();
 
@@ -1496,6 +2111,7 @@ mod pallet {
                 asset,
                 asset_amount: |_, _| Ok(asset_amount),
                 bound: max_pool_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 ensure_balance: |asset_balance: BalanceOf<T>| {
                     ensure!(
                         asset_amount
@@ -1519,10 +2135,12 @@ mod pallet {
                             .saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
+                    Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(pool_amount)
                 },
@@ -1532,7 +2150,7 @@ mod pallet {
                 pool: pool_ref,
             };
             let weight = T::WeightInfo::pool_exit_with_exact_asset_amount();
-            pool_exit_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
+            pool_exit_with_exact_amount::<_, _, _, _, _, T>(params).map(|_| weight)
         }
 
         /// Pool - Join with exact asset amount
@@ -1552,20 +2170,21 @@ mod pallet {
         fn pool_join_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
+            asset_in: Asset<MarketIdOf<T>>,
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
-            ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+            ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_ref = &pool;
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             let who_clone = who.clone();
 
             let params = PoolJoinWithExactAmountParams {
                 asset: asset_in,
                 asset_amount: |_, _| Ok(asset_amount),
                 bound: min_pool_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 pool_amount: move |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let mul: BalanceOf<T> = bmul(
                         asset_balance.saturated_into(),
@@ -1596,87 +2215,53 @@ mod pallet {
                 pool: pool_ref,
             };
             let weight = T::WeightInfo::pool_join_with_exact_asset_amount();
-            pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
+            pool_join_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
         }
 
-        fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError> {
-            Ok(Self::pool_by_id(pool_id)?)
+        fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, MarketIdOf<T>>, DispatchError> {
+            Self::pool_by_id(pool_id)
         }
 
-        /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
-        /// that is not ZTG or winning assets from the selected pool. Additionally, it distributes
-        /// the rewards to all pool share holders.
-        ///
-        /// Does nothing if pool is already stale. Returns `Err` if `pool_id` does not exist.
+        /// Remove losing assets and distribute Rikiddo pool share rewards.
         ///
         /// # Arguments
         ///
-        /// * `market_type`: Type of the market (e.g. categorical or scalar).
-        /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
-        /// * `outcome_report`: The resulting outcome.
+        /// * `market_type`: Type of the market.
+        /// * `pool_id`: Unique pool identifier associated with the pool to be made closed.
+        /// * `outcome_report`: The reported outcome.
         /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
+        ///
+        /// # Errors
+        ///
+        /// * Returns `Error::<T>::PoolDoesNotExist` if there is no pool with `pool_id`.
+        /// * Returns `Error::<T>::WinningAssetNotFound` if the reported asset is not found in the
+        ///   pool and the scoring rule is Rikiddo.
+        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not closed
         #[frame_support::transactional]
-        fn set_pool_as_stale(
+        fn clean_up_pool(
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut extra_weight = 0;
-            let mut total_assets = 0;
-
+            let mut weight = Weight::zero();
             Self::mutate_pool(pool_id, |pool| {
-                if pool.pool_status == PoolStatus::Stale {
-                    return Ok(());
-                }
-
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
-                let base_asset = pool.base_asset;
-                let mut winning_asset: Result<_, DispatchError> =
-                    Err(Error::<T>::WinningAssetNotFound.into());
-
-                if let MarketType::Categorical(_) = market_type {
-                    let base_asset_or_default = base_asset.unwrap_or(Asset::Ztg);
-
-                    if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
-                        pool.assets.retain(|el| {
-                            if let Asset::CategoricalOutcome(_, idx) = *el {
-                                if idx == *winning_asset_idx {
-                                    winning_asset = Ok(*el);
-                                    return true;
-                                };
-                            }
-
-                            *el == base_asset_or_default
-                        });
-                    }
-
-                    total_assets = pool.assets.len();
-                }
-
-                let winning_asset_unwrapped = winning_asset?;
-
-                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
-                    let distribute_weight = Self::distribute_pool_share_rewards(
-                        pool,
-                        pool_id,
-                        base_asset.ok_or(Error::<T>::BaseAssetNotFound)?,
-                        winning_asset_unwrapped,
-                        winner_payout_account,
-                    );
-                    extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
-                    extra_weight = extra_weight.saturating_add(distribute_weight);
-                }
-
-                pool.pool_status = PoolStatus::Stale;
+                ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
+                pool.pool_status = PoolStatus::Clean;
                 Ok(())
             })?;
-
-            Ok(T::WeightInfo::set_pool_as_stale_without_reward_distribution(
-                total_assets.saturated_into(),
-            )
-            .saturating_add(extra_weight))
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1)); // mutate_pool
+            if let MarketType::Categorical(_) = market_type {
+                let extra_weight = Self::clean_up_pool_categorical(
+                    pool_id,
+                    outcome_report,
+                    winner_payout_account,
+                )?;
+                weight = weight.saturating_add(extra_weight);
+            }
+            Self::deposit_event(Event::<T>::PoolCleanedUp(pool_id));
+            // (No extra work required for scalar markets!)
+            Ok(weight)
         }
 
         /// Swap - Exact amount in
@@ -1695,77 +2280,93 @@ mod pallet {
         fn swap_exact_amount_in(
             who: T::AccountId,
             pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
+            asset_in: Asset<MarketIdOf<T>>,
             asset_amount_in: BalanceOf<T>,
-            asset_out: Asset<T::MarketId>,
-            min_asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            asset_out: Asset<MarketIdOf<T>>,
+            min_asset_amount_out: Option<BalanceOf<T>>,
+            max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             ensure!(
-                T::Shares::free_balance(asset_in, &who) >= asset_amount_in,
+                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
                 Error::<T>::InsufficientBalance
+            );
+            ensure!(
+                min_asset_amount_out.is_some() || max_price.is_some(),
+                Error::<T>::LimitMissing,
             );
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
-                    let asset_amount_out = if pool.scoring_rule == ScoringRule::CPMM {
-                        let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-                        let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
-                        ensure!(
-                            asset_amount_in
-                                <= bmul(
-                                    balance_in.saturated_into(),
-                                    T::MaxInRatio::get().saturated_into()
-                                )?
-                                .saturated_into(),
-                            Error::<T>::MaxInRatio
-                        );
-                        crate::math::calc_out_given_in(
-                            balance_in.saturated_into(),
-                            Self::pool_weight_rslt(&pool, &asset_in)?,
-                            balance_out.saturated_into(),
-                            Self::pool_weight_rslt(&pool, &asset_out)?,
-                            asset_amount_in.saturated_into(),
-                            pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
-                        )?
-                        .saturated_into()
-                    } else {
-                        let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                        ensure!(asset_out == base_asset, Error::<T>::UnsupportedTrade);
-                        ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
-
-                        let mut outstanding_before =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
-                        let mut outstanding_after =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
-
-                        for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                            let total_amount = T::Shares::total_issuance(*asset);
-                            outstanding_before.push(total_amount);
-
-                            if *asset == asset_in {
-                                outstanding_after
-                                    .push(total_amount.saturating_sub(asset_amount_in));
-                            } else {
-                                outstanding_after.push(total_amount);
-                            }
+                    let asset_amount_out = match pool.scoring_rule {
+                        ScoringRule::CPMM => {
+                            let balance_out =
+                                T::AssetManager::free_balance(asset_out, &pool_account_id);
+                            let balance_in =
+                                T::AssetManager::free_balance(asset_in, &pool_account_id);
+                            ensure!(
+                                asset_amount_in
+                                    <= bmul(
+                                        balance_in.saturated_into(),
+                                        T::MaxInRatio::get().saturated_into()
+                                    )?
+                                    .saturated_into(),
+                                Error::<T>::MaxInRatio
+                            );
+                            crate::math::calc_out_given_in(
+                                balance_in.saturated_into(),
+                                Self::pool_weight_rslt(&pool, &asset_in)?,
+                                balance_out.saturated_into(),
+                                Self::pool_weight_rslt(&pool, &asset_out)?,
+                                asset_amount_in.saturated_into(),
+                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                            )?
+                            .saturated_into()
                         }
+                        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                            let base_asset = pool.base_asset;
+                            ensure!(asset_out == base_asset, Error::<T>::UnsupportedTrade);
+                            ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
-                        let cost_before =
-                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
-                        let cost_after =
-                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
+                            let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(
+                                pool.assets.len().saturating_sub(1),
+                            );
+                            let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(
+                                pool.assets.len().saturating_sub(1),
+                            );
+
+                            for asset in pool.assets.iter().filter(|e| **e != base_asset) {
+                                let total_amount = T::AssetManager::total_issuance(*asset);
+                                outstanding_before.push(total_amount);
+
+                                if *asset == asset_in {
+                                    outstanding_after
+                                        .push(total_amount.saturating_sub(asset_amount_in));
+                                } else {
+                                    outstanding_after.push(total_amount);
+                                }
+                            }
+
+                            let cost_before =
+                                T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                            let cost_after =
+                                T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                            cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
+                        }
                     };
-                    ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
+
+                    if let Some(maao) = min_asset_amount_out {
+                        ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
+                    }
+                    Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
                 asset_bound: min_asset_amount_out,
                 asset_in,
                 asset_out,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 event: |evt| Self::deposit_event(Event::SwapExactAmountIn(evt)),
                 max_price,
                 pool_account_id: &pool_account_id,
@@ -1773,84 +2374,97 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            let _ = swap_exact_amount::<_, _, T>(params)?;
+            swap_exact_amount::<_, _, _, T>(params)?;
 
-            if pool.scoring_rule == ScoringRule::CPMM {
-                Ok(T::WeightInfo::swap_exact_amount_in_cpmm())
-            } else {
-                Ok(T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()))
+            match pool.scoring_rule {
+                ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_in_cpmm()),
+                ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
+                    T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
+                ),
             }
         }
 
         fn swap_exact_amount_out(
             who: T::AccountId,
             pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: BalanceOf<T>,
-            asset_out: Asset<T::MarketId>,
+            asset_in: Asset<MarketIdOf<T>>,
+            max_asset_amount_in: Option<BalanceOf<T>>,
+            asset_out: Asset<MarketIdOf<T>>,
             asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
+            Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
             let params = SwapExactAmountParams {
                 asset_amounts: || {
-                    let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-                    let asset_amount_in = if pool.scoring_rule == ScoringRule::CPMM {
-                        ensure!(
-                            asset_amount_out
-                                <= bmul(
-                                    balance_out.saturated_into(),
-                                    T::MaxOutRatio::get().saturated_into()
-                                )?
-                                .saturated_into(),
-                            Error::<T>::MaxOutRatio,
-                        );
+                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
+                    let asset_amount_in = match pool.scoring_rule {
+                        ScoringRule::CPMM => {
+                            ensure!(
+                                asset_amount_out
+                                    <= bmul(
+                                        balance_out.saturated_into(),
+                                        T::MaxOutRatio::get().saturated_into()
+                                    )?
+                                    .saturated_into(),
+                                Error::<T>::MaxOutRatio,
+                            );
 
-                        let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
-                        crate::math::calc_in_given_out(
-                            balance_in.saturated_into(),
-                            Self::pool_weight_rslt(&pool, &asset_in)?,
-                            balance_out.saturated_into(),
-                            Self::pool_weight_rslt(&pool, &asset_out)?,
-                            asset_amount_out.saturated_into(),
-                            pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
-                        )?
-                        .saturated_into()
-                    } else {
-                        let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                        ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
-                        ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
-
-                        let mut outstanding_before =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
-                        let mut outstanding_after =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
-
-                        for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                            let total_amount = T::Shares::total_issuance(*asset);
-                            outstanding_before.push(total_amount);
-
-                            if *asset == asset_out {
-                                outstanding_after.push(total_amount + asset_amount_out);
-                            } else {
-                                outstanding_after.push(total_amount);
-                            }
+                            let balance_in =
+                                T::AssetManager::free_balance(asset_in, &pool_account_id);
+                            crate::math::calc_in_given_out(
+                                balance_in.saturated_into(),
+                                Self::pool_weight_rslt(&pool, &asset_in)?,
+                                balance_out.saturated_into(),
+                                Self::pool_weight_rslt(&pool, &asset_out)?,
+                                asset_amount_out.saturated_into(),
+                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                            )?
+                            .saturated_into()
                         }
+                        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                            let base_asset = pool.base_asset;
+                            ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
+                            ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
-                        let cost_before =
-                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
-                        let cost_after =
-                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                            let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(
+                                pool.assets.len().saturating_sub(1),
+                            );
+                            let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(
+                                pool.assets.len().saturating_sub(1),
+                            );
+
+                            for asset in pool.assets.iter().filter(|e| **e != base_asset) {
+                                let total_amount = T::AssetManager::total_issuance(*asset);
+                                outstanding_before.push(total_amount);
+
+                                if *asset == asset_out {
+                                    outstanding_after
+                                        .push(total_amount.saturating_add(asset_amount_out));
+                                } else {
+                                    outstanding_after.push(total_amount);
+                                }
+                            }
+
+                            let cost_before =
+                                T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                            let cost_after =
+                                T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                            cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                        }
                     };
 
-                    ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
+                    if let Some(maai) = max_asset_amount_in {
+                        ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
+                    }
                     Ok([asset_amount_in, asset_amount_out])
                 },
-                asset_bound: max_amount_asset_in,
+                asset_bound: max_asset_amount_in,
                 asset_in,
                 asset_out,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 event: |evt| Self::deposit_event(Event::SwapExactAmountOut(evt)),
                 max_price,
                 pool_account_id: &pool_account_id,
@@ -1858,12 +2472,15 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            let _ = swap_exact_amount::<_, _, T>(params)?;
+            swap_exact_amount::<_, _, _, T>(params)?;
 
-            if pool.scoring_rule == ScoringRule::CPMM {
-                Ok(T::WeightInfo::swap_exact_amount_out_cpmm())
-            } else {
-                Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(pool.assets.len().saturated_into()))
+            match pool.scoring_rule {
+                ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_out_cpmm()),
+                ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                    Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(
+                        pool.assets.len().saturated_into(),
+                    ))
+                }
             }
         }
     }

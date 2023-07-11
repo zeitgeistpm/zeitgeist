@@ -1,3 +1,26 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the license above but
+// published without copyright notice by Balancer Labs
+// (<https://balancer.finance>, contact@balancer.finance) in the
+// balancer-core repository
+// <https://github.com/balancer-labs/balancer-core>.
+
 use crate::{
     check_arithm_rslt::CheckArithmRslt,
     consts::{
@@ -379,14 +402,10 @@ mod tests {
     fn bpow_approx_returns_error_when_parameters_are_outside_of_specified_limits() {
         let test_vector: Vec<(u128, u128, DispatchError)> = vec![
             (BASE, BASE + 1, DispatchError::Other("[bpow_approx]: expected exp <= BASE")),
-            (
-                BASE / 10,
-                1 * BASE / 2,
-                DispatchError::Other("[bpow_approx]: expected base >= BASE / 4"),
-            ),
+            (BASE / 10, BASE / 2, DispatchError::Other("[bpow_approx]: expected base >= BASE / 4")),
             (
                 2 * BASE - BASE / 10,
-                1 * BASE / 2,
+                BASE / 2,
                 DispatchError::Other("[bpow_approx]: expected base <= 7 * BASE / 4"),
             ),
         ];

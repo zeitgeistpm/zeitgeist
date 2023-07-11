@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(all(feature = "mock", test))]
 
 use frame_support::assert_err;
@@ -71,14 +88,14 @@ fn fixed_point_decimal_to_fixed_type_returns_correct_result() {
     let test_vector: Vec<(u128, u8, f64)> = vec![
         (0, 0, 0.0),
         (10_000_000_000, 10, 1.0),
-        (1, 10, 0.0_000_000_001),
-        (123_456_789, 10, 0.0_123_456_789),
+        (1, 10, 0.000_000_000_1),
+        (123_456_789, 10, 0.012_345_678_9),
         (9_999, 2, 99.99),
         (736_101, 2, 7_361.01),
-        (133_733_333_333, 8, 1_337.33_333_333),
+        (133_733_333_333, 8, 1_337.333_333_33),
         (1, 1, 0.1),
-        (55, 11, 0.0_000_000_006), // Rounding behavior
-        (34, 11, 0.0_000_000_003), // Rounding behavior
+        (55, 11, 0.000_000_000_6), // Rounding behavior
+        (34, 11, 0.000_000_000_3), // Rounding behavior
     ];
 
     for (fixed_point_decimal, places, expected) in test_vector.iter() {
@@ -138,14 +155,14 @@ fn fixed_type_from_fixed_point_decimal_returns_correct_result() {
     let test_vector: Vec<(u128, u8, f64)> = vec![
         (0, 0, 0.0),
         (10_000_000_000, 10, 1.0),
-        (1, 10, 0.0_000_000_001),
-        (123_456_789, 10, 0.0_123_456_789),
+        (1, 10, 0.000_000_000_1),
+        (123_456_789, 10, 0.012_345_678_9),
         (9_999, 2, 99.99),
         (736_101, 2, 7_361.01),
-        (133_733_333_333, 8, 1_337.33_333_333),
+        (133_733_333_333, 8, 1_337.333_333_33),
         (1, 1, 0.1),
-        (55, 11, 0.0_000_000_006), // Rounding behavior
-        (34, 11, 0.0_000_000_003), // Rounding behavior
+        (55, 11, 0.000_000_000_6), // Rounding behavior
+        (34, 11, 0.000_000_000_3), // Rounding behavior
     ];
 
     for (fixed_point_decimal, places, expected) in test_vector.iter() {

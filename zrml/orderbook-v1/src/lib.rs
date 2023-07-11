@@ -1,16 +1,21 @@
-//! # Orderbook
-//!
-//! A module to trade shares using a naive on-chain orderbook.
-//!
-//! ## Overview
-//!
-//! TODO
-//!
-//! ## Interface
-//!
-//! ### Dispatches
-//!
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -65,6 +70,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
         )]
+        #[transactional]
         pub fn cancel_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
@@ -74,19 +80,19 @@ mod pallet {
             let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
-                let maker = order_data.maker.clone();
-                ensure!(sender == maker, Error::<T>::NotOrderCreator);
+                let maker = &order_data.maker;
+                ensure!(sender == *maker, Error::<T>::NotOrderCreator);
 
                 match order_data.side {
                     OrderSide::Bid => {
                         let cost = order_data.cost()?;
-                        T::Currency::unreserve(&maker, cost);
+                        T::Currency::unreserve(maker, cost);
                         let mut bids = Self::bids(asset);
                         remove_item::<T::Hash, _>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
-                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
+                        T::Shares::unreserve(order_data.asset, maker, order_data.total);
                         let mut asks = Self::asks(asset);
                         remove_item::<T::Hash, _>(&mut asks, order_hash);
                         <Asks<T>>::insert(asset, asks);
@@ -109,6 +115,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
         )]
+        #[transactional]
         pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             let mut bid = true;
@@ -179,8 +186,8 @@ mod pallet {
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
             side: OrderSide,
-            amount: BalanceOf<T>,
-            price: BalanceOf<T>,
+            #[pallet::compact] amount: BalanceOf<T>,
+            #[pallet::compact] price: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
@@ -249,15 +256,15 @@ mod pallet {
     pub trait Config: frame_system::Config {
         type Currency: ReservableCurrency<Self::AccountId>;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type MarketId: MarketId;
 
         type Shares: MultiReservableCurrency<
-            Self::AccountId,
-            Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::MarketId>,
-        >;
+                Self::AccountId,
+                Balance = BalanceOf<Self>,
+                CurrencyId = Asset<Self::MarketId>,
+            >;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
