@@ -31,12 +31,12 @@ jobs:
           # If it is a tag:
           if [ -z "${GITHUB_REF##refs/tags/*}" ] ; then
             docker build . \
-            -t zeitgeistpm/zeitgeist-nod-parachain:${GITHUB_REF#refs/tags/} \
+            -t zeitgeistpm/zeitgeist-node-parachain:${GITHUB_REF#refs/tags/} \
             -t zeitgeistpm/zeitgeist-node-parachain:latest \
             --build-arg FEATURES=parachain 
           else
             docker build . \
-            -t zeitgeistpm/zeitgeist-nod-parachain:$${GITHUB_SHA} \
+            -t zeitgeistpm/zeitgeist-node-parachain:${GITHUB_SHA} \
             -t zeitgeistpm/zeitgeist-node-parachain:latest \
             --build-arg FEATURES=parachain 
           fi
