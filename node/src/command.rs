@@ -594,7 +594,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
                 config,
                 cli.no_hardware_benchmarks,
-                rpc_config,
             )
             .map_err(sc_cli::Error::Service),
             #[cfg(all(
