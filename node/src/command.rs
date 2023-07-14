@@ -574,7 +574,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
-
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
