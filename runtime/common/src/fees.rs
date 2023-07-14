@@ -1,5 +1,6 @@
 // Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
 //
@@ -18,21 +19,18 @@
 
 #[macro_export]
 macro_rules! impl_fee_types {
-    {} => {
+    () => {
         pub struct DealWithFees;
 
         type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-        impl OnUnbalanced<NegativeImbalance> for DealWithFees
-        {
+        impl OnUnbalanced<NegativeImbalance> for DealWithFees {
             fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
                 if let Some(mut fees) = fees_then_tips.next() {
                     if let Some(tips) = fees_then_tips.next() {
                         tips.merge_into(&mut fees);
                     }
-                    let mut split = fees.ration(
-                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
-                        FEES_AND_TIPS_BURN_PERCENTAGE,
-                    );
+                    let mut split = fees
+                        .ration(FEES_AND_TIPS_TREASURY_PERCENTAGE, FEES_AND_TIPS_BURN_PERCENTAGE);
                     Treasury::on_unbalanced(split.0);
                 }
             }
@@ -40,47 +38,54 @@ macro_rules! impl_fee_types {
 
         pub struct DealWithForeignFees;
 
-        impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees
-        {
+        impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees {
             fn on_unbalanced(fees_and_tips: CreditOf<AccountId, Tokens>) {
-                debug_assert!(FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32);
-                let total_percentage = (FEES_AND_TIPS_TREASURY_PERCENTAGE.saturating_add(FEES_AND_TIPS_BURN_PERCENTAGE)) as u128;
+                debug_assert!(
+                    FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32
+                );
+                let total_percentage = (FEES_AND_TIPS_TREASURY_PERCENTAGE
+                    .saturating_add(FEES_AND_TIPS_BURN_PERCENTAGE))
+                    as u128;
                 let fees_and_tips_value = fees_and_tips.peek().clone();
                 // Split the merged imbalance into two parts
                 let (split_for_treasury, split_for_burn) = fees_and_tips.split(
-                    fees_and_tips_value * FEES_AND_TIPS_TREASURY_PERCENTAGE as u128 / total_percentage
+                    fees_and_tips_value * FEES_AND_TIPS_TREASURY_PERCENTAGE as u128
+                        / total_percentage,
                 );
                 // Handle the split imbalances
                 // on_unbalanced is not implemented for other currencies than the native currency
                 // https://github.com/paritytech/substrate/blob/85415fb3a452dba12ff564e6b093048eed4c5aad/frame/treasury/src/lib.rs#L618-L627
                 // https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/treasury/src/lib.rs#L490
-                let _ = <Tokens as Balanced<AccountId>>::resolve(&TreasuryPalletId::get().into_account_truncating(), split_for_treasury);
+                let _ = <Tokens as Balanced<AccountId>>::resolve(
+                    &TreasuryPalletId::get().into_account_truncating(),
+                    split_for_treasury,
+                );
                 // Burn the remaining part
                 drop(split_for_burn);
             }
         }
-    }
+    };
 }
 
 #[macro_export]
 macro_rules! impl_foreign_fees {
-    {} => {
-        use frame_support::unsigned::TransactionValidityError;
-        use orml_traits::arithmetic::One;
-        use orml_traits::arithmetic::Zero;
-        use frame_support::traits::fungibles::CreditOf;
-        use frame_support::traits::tokens::fungibles::Inspect;
-        use frame_support::traits::tokens::WithdrawReasons;
-        use frame_support::traits::tokens::BalanceConversion;
-        use frame_support::traits::ExistenceRequirement;
-        use frame_support::traits::tokens::WithdrawConsequence;
-        use sp_runtime::traits::DispatchInfoOf;
-        use sp_runtime::traits::PostDispatchInfoOf;
-        use frame_support::pallet_prelude::InvalidTransaction;
-        use frame_support::traits::tokens::fungibles::Balanced;
-        use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
-        use sp_runtime::traits::Convert;
+    () => {
+        use frame_support::{
+            pallet_prelude::InvalidTransaction,
+            traits::{
+                fungibles::CreditOf,
+                tokens::{
+                    fungibles::{Balanced, Inspect},
+                    BalanceConversion, WithdrawConsequence, WithdrawReasons,
+                },
+                ExistenceRequirement,
+            },
+            unsigned::TransactionValidityError,
+        };
+        use orml_traits::arithmetic::{One, Zero};
         use pallet_asset_tx_payment::HandleCredit;
+        use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
+        use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
 
         // It does foreign fees by extending transactions to include an optional `AssetId` that specifies the asset
         // to be used for payment (defaulting to the native token on `None`). So for each transaction you can specify asset id
@@ -115,11 +120,20 @@ macro_rules! impl_foreign_fees {
             asset_id: CurrencyId,
         ) -> Result<(Balance, Balance), TransactionValidityError> {
             let location = AssetConvert::convert(asset_id);
-            let metadata = location.and_then(|loc| <AssetRegistry as orml_traits::asset_registry::Inspect>::metadata_by_location(&loc))
+            let metadata = location
+                .and_then(|loc| {
+                    <AssetRegistry as orml_traits::asset_registry::Inspect>::metadata_by_location(
+                        &loc,
+                    )
+                })
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)))?;
-            let fee_factor = metadata.additional.xcm.fee_factor
+            let fee_factor = metadata
+                .additional
+                .xcm
+                .fee_factor
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)))?;
-            let base = 10u128.checked_pow(metadata.decimals)
+            let base = 10u128
+                .checked_pow(metadata.decimals)
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(4u8)))?;
             Ok((fee_factor, base))
         }
@@ -128,21 +142,32 @@ macro_rules! impl_foreign_fees {
         impl BalanceConversion<Balance, CurrencyId, Balance> for TTCBalanceToAssetBalance {
             type Error = TransactionValidityError;
 
-            fn to_asset_balance(native_fee: Balance, asset_id: CurrencyId) -> Result<Balance, Self::Error> {
+            fn to_asset_balance(
+                native_fee: Balance,
+                asset_id: CurrencyId,
+            ) -> Result<Balance, Self::Error> {
                 match asset_id {
                     Asset::Ztg => Ok(native_fee),
                     #[cfg(not(feature = "parachain"))]
-                    Asset::ForeignAsset(_) => return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(1u8))),
+                    Asset::ForeignAsset(_) => {
+                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            1u8,
+                        )));
+                    }
                     #[cfg(feature = "parachain")]
                     Asset::ForeignAsset(_) => {
                         let (fee_factor, base) = get_fee_factor_and_base(asset_id)?;
                         let converted_fee = calculate_fee(native_fee, fee_factor, base)?;
                         Ok(converted_fee)
                     }
-                    Asset::CategoricalOutcome(_, _) |
-                    Asset::ScalarOutcome(_, _) |
-                    Asset::CombinatorialOutcome |
-                    Asset::PoolShare(_) => return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8))),
+                    Asset::CategoricalOutcome(_, _)
+                    | Asset::ScalarOutcome(_, _)
+                    | Asset::CombinatorialOutcome
+                    | Asset::PoolShare(_) => {
+                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            2u8,
+                        )));
+                    }
                 }
             }
         }
@@ -154,12 +179,12 @@ macro_rules! impl_foreign_fees {
                 DealWithForeignFees::on_unbalanced(final_fee);
             }
         }
-    }
+    };
 }
 
 #[macro_export]
 macro_rules! fee_tests {
-    {} => {
+    () => {
         use crate::*;
         use frame_support::{dispatch::DispatchClass, weights::Weight};
         use sp_core::H256;
@@ -218,47 +243,45 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        #[cfg(feature = "parachain")]
         fn withdraws_correct_dot_foreign_asset_fee() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
-                #[cfg(feature = "parachain")]
-                {
-                    let fee_factor = 143_120_520;
-                    let custom_metadata = CustomMetadata {
-                        xcm: XcmMetadata { fee_factor: Some(fee_factor) },
-                        ..Default::default()
-                    };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".into(),
-                        symbol: "DOT".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
-                        additional: custom_metadata,
-                    };
-                    let dot = Asset::ForeignAsset(0);
+                let fee_factor = 143_120_520;
+                let custom_metadata = CustomMetadata {
+                    xcm: XcmMetadata { fee_factor: Some(fee_factor) },
+                    ..Default::default()
+                };
+                let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                    decimals: 10,
+                    name: "Polkadot".into(),
+                    symbol: "DOT".into(),
+                    existential_deposit: ExistentialDeposit::get(),
+                    location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
+                    additional: custom_metadata,
+                };
+                let dot = Asset::ForeignAsset(0);
 
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
+                assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
 
-                    let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);
-                    assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
+                let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);
+                assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
 
-                    let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
-                    let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
-                        weight:  frame_support::dispatch::Weight::zero(),
-                        class: DispatchClass::Normal,
-                        pays_fee:  frame_support::dispatch::Pays::Yes,
-                    };
-                    assert_eq!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
-                        &Treasury::account_id(),
-                        &mock_call,
-                        &mock_dispatch_info,
-                        dot,
-                        BASE / 2,
-                        0,
-                    ).unwrap().peek(), 71_560_260);
-                }
+                let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+                let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
+                    weight:  frame_support::dispatch::Weight::zero(),
+                    class: DispatchClass::Normal,
+                    pays_fee:  frame_support::dispatch::Pays::Yes,
+                };
+                assert_eq!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
+                    &Treasury::account_id(),
+                    &mock_call,
+                    &mock_dispatch_info,
+                    dot,
+                    BASE / 2,
+                    0,
+                ).unwrap().peek(), 71_560_260);
             });
         }
 
@@ -285,7 +308,7 @@ macro_rules! fee_tests {
                     };
                     let dot = Asset::ForeignAsset(0);
 
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
+                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(dot)));
 
 
                     assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
@@ -305,6 +328,7 @@ macro_rules! fee_tests {
                     let free_balance_alice_before = Tokens::free_balance(dot, &alice);
                     let corrected_native_fee = BASE;
                     let paid = <Tokens as Balanced<AccountId>>::issue(dot, 2 * BASE);
+                    let paid_balance = paid.peek();
                     let tip = 0u128;
                     assert_ok!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::correct_and_deposit_fee(
                         &alice,
@@ -318,8 +342,13 @@ macro_rules! fee_tests {
                     let treasury_gain = Tokens::free_balance(dot, &Treasury::account_id()) - free_balance_treasury_before;
                     let alice_gain = Tokens::free_balance(dot, &alice) - free_balance_alice_before;
 
+                    let decimals = meta.decimals;
+                    let base = 10u128.checked_pow(decimals).unwrap();
+
+                    let dot_fee = ((corrected_native_fee * fee_factor) + (base / 2)) / base;
+                    assert_eq!(dot_fee, treasury_gain);
                     assert_eq!(143_120_520, treasury_gain);
-                    assert_eq!(2 * BASE - treasury_gain, alice_gain);
+                    assert_eq!(paid_balance - treasury_gain, alice_gain);
                 }
             });
         }
