@@ -827,9 +827,6 @@ macro_rules! impl_config_traits {
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
                             )
-                            | RuntimeCall::PredictionMarkets(
-                                zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
-                            )
                     ),
                     ProxyType::BuySellCompleteSets => matches!(
                         c,
