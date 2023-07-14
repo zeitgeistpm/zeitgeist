@@ -236,7 +236,7 @@ where
     })
 }
 
-// TODO `build_relay_chain_interface` will be included in polkadot-v0.9.36 in cumulus-client-service here: https://github.com/paritytech/cumulus/commit/babf73bbc6ade358db105580b68aacb91550faa5#diff-52df5aabcc0b97cfe43ce4b88b9dcf52de661934e481f6ae935435f4941b1639R224-R252
+// TODO(#1040) `build_relay_chain_interface` will be included in polkadot-v0.9.36 in cumulus-client-service here: https://github.com/paritytech/cumulus/commit/babf73bbc6ade358db105580b68aacb91550faa5#diff-52df5aabcc0b97cfe43ce4b88b9dcf52de661934e481f6ae935435f4941b1639R224-R252
 /// Build a relay chain interface.
 /// Will return a minimal relay chain node with RPC
 /// client or an inprocess node, based on the [`CollatorOptions`] passed in.
