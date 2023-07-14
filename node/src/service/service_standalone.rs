@@ -45,7 +45,6 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 pub fn new_full<RuntimeApi, Executor>(
     mut config: Configuration,
     disable_hardware_benchmarks: bool,
-    _rpc_config: RpcConfig,
 ) -> Result<TaskManager, ServiceError>
 where
     RuntimeApi:
