@@ -18,10 +18,7 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::{
-    cli::RpcConfig,
-    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
-};
+use crate::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection};
 use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
