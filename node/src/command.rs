@@ -19,7 +19,7 @@
 
 use super::{
     benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
-    cli::{Cli, RpcConfig, Subcommand},
+    cli::{Cli, Subcommand},
     service::{new_chain_ops, new_full, IdentifyVariant},
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
@@ -39,6 +39,7 @@ use {
 };
 #[cfg(feature = "parachain")]
 use {
+    super::cli::RpcConfig,
     sc_client_api::client::BlockBackend,
     sp_core::hexdisplay::HexDisplay,
     sp_core::Encode,
