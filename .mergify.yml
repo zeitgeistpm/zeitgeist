@@ -27,4 +27,11 @@ pull_request_rules:
     actions:
         comment:
           message: This pull request is now in conflicts. Could you fix it @{{author}}? 🙏
+        label:
+          add:
+            - s:revision-needed
+          remove:
+            - s:accepted
+            - s:in-progress
+            - s:review-needed
 
