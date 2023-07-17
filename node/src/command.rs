@@ -25,6 +25,15 @@ use super::{
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
 use sp_keyring::Sr25519Keyring;
+#[cfg(feature = "parachain")]
+use {
+    super::cli::RpcConfig,
+    sc_client_api::client::BlockBackend,
+    sp_core::hexdisplay::HexDisplay,
+    sp_core::Encode,
+    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
+    std::io::Write,
+};
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
@@ -36,15 +45,6 @@ use {
 use {
     super::service::ZeitgeistExecutor,
     zeitgeist_runtime::{ExistentialDeposit as ZeitgeistED, RuntimeApi as ZeitgeistRuntimeApi},
-};
-#[cfg(feature = "parachain")]
-use {
-    super::cli::RpcConfig,
-    sc_client_api::client::BlockBackend,
-    sp_core::hexdisplay::HexDisplay,
-    sp_core::Encode,
-    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
-    std::io::Write,
 };
 
 pub fn run() -> sc_cli::Result<()> {
