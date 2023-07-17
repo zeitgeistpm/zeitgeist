@@ -94,31 +94,28 @@ macro_rules! impl_foreign_fees {
         pub(crate) fn calculate_fee(
             native_fee: Balance,
             fee_factor: Balance,
-            base: Balance,
         ) -> Result<Balance, TransactionValidityError> {
-            let bmul = |a: Balance, b: Balance, base: Balance| -> Option<Balance> {
+            let bmul = |a: Balance, b: Balance| -> Option<Balance> {
                 let c0 = a.check_mul_rslt(&b).ok()?;
                 // The addition of base / 2 before the final division is a way to round to the nearest whole number
                 // if the fractional part of (a * b) / base is 0.5 or greater, it rounds up, otherwise, it rounds down.
-                let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
-                c1.check_div_rslt(&base).ok()
+                let c1 = c0.check_add_rslt(&BASE.check_div_rslt(&2).ok()?).ok()?;
+                c1.check_div_rslt(&BASE).ok()
             };
 
-            // example DOT: decimals = 10, base = 10^10 = 10_000_000_000
-            // assume fee_factor of DOT is 143_120_520
-            // now assume fee is 1 ZTG (1 * 10^10),
-            // means DOT fee = 1 * 10^10 * 143_120_520 / dot base (10^10) = 143_120_520
-            // which is 143_120_520 / 10^10 = 0.0143120520 DOT
-            let converted_fee = bmul(native_fee, fee_factor, base)
+            // assume fee_factor of 143_120_520, now divide by BASE (10^10) = 0.0143120520 DOT per ZTG
+            // keep in mind ZTG BASE is 10_000_000_000, and because fee_factor is below that, you get less DOT per ZTG
+            // assume fee_factor is 20_000_000_000, then you would get (20_000_000_000 / 10_000_000_000 =) 2 units per ZTG
+            let converted_fee = bmul(native_fee, fee_factor)
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(0u8)))?;
 
             Ok(converted_fee)
         }
 
         #[cfg(feature = "parachain")]
-        pub(crate) fn get_fee_factor_and_base(
+        pub(crate) fn get_fee_factor(
             asset_id: CurrencyId,
-        ) -> Result<(Balance, Balance), TransactionValidityError> {
+        ) -> Result<Balance, TransactionValidityError> {
             let location = AssetConvert::convert(asset_id);
             let metadata = location
                 .and_then(|loc| {
@@ -132,10 +129,7 @@ macro_rules! impl_foreign_fees {
                 .xcm
                 .fee_factor
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)))?;
-            let base = 10u128
-                .checked_pow(metadata.decimals)
-                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(4u8)))?;
-            Ok((fee_factor, base))
+            Ok(fee_factor)
         }
 
         pub struct TTCBalanceToAssetBalance;
@@ -156,8 +150,8 @@ macro_rules! impl_foreign_fees {
                     }
                     #[cfg(feature = "parachain")]
                     Asset::ForeignAsset(_) => {
-                        let (fee_factor, base) = get_fee_factor_and_base(asset_id)?;
-                        let converted_fee = calculate_fee(native_fee, fee_factor, base)?;
+                        let fee_factor = get_fee_factor(asset_id)?;
+                        let converted_fee = calculate_fee(native_fee, fee_factor)?;
                         Ok(converted_fee)
                     }
                     Asset::CategoricalOutcome(_, _)
@@ -354,20 +348,20 @@ macro_rules! fee_tests {
         }
 
         #[test]
-        fn get_fee_factor_and_base_metadata_not_found() {
+        fn get_fee_factor_metadata_not_found() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
                 #[cfg(feature = "parachain")]
                 {
                     // no registering of dot
-                    assert_noop!(get_fee_factor_and_base(Asset::ForeignAsset(0)), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
+                    assert_noop!(get_fee_factor(Asset::ForeignAsset(0)), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
                 }
             });
         }
 
         #[test]
-        fn get_fee_factor_and_base_fee_factor_not_found() {
+        fn get_fee_factor_fee_factor_not_found() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
@@ -389,13 +383,13 @@ macro_rules! fee_tests {
 
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
 
-                    assert_noop!(get_fee_factor_and_base(dot), TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)));
+                    assert_noop!(get_fee_factor(dot), TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)));
                 }
             });
         }
 
         #[test]
-        fn get_fee_factor_and_base_none_location() {
+        fn get_fee_factor_none_location() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
@@ -417,13 +411,13 @@ macro_rules! fee_tests {
 
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(non_location_token)));
 
-                    assert_noop!(get_fee_factor_and_base(non_location_token), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
+                    assert_noop!(get_fee_factor(non_location_token), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
                 }
             });
         }
 
         #[test]
-        fn get_fee_factor_and_base_decimals_overflow() {
+        fn get_fee_factor_decimals_overflow() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
@@ -445,7 +439,7 @@ macro_rules! fee_tests {
 
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(overflow_currency)));
 
-                    assert_noop!(get_fee_factor_and_base(overflow_currency), TransactionValidityError::Invalid(InvalidTransaction::Custom(4u8)));
+                    assert_noop!(get_fee_factor(overflow_currency), TransactionValidityError::Invalid(InvalidTransaction::Custom(4u8)));
                 }
             });
         }
