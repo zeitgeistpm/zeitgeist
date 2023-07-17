@@ -29,6 +29,9 @@ macro_rules! impl_fee_types {
                     if let Some(tips) = fees_then_tips.next() {
                         tips.merge_into(&mut fees);
                     }
+                    debug_assert!(
+                        FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32
+                    );
                     let mut split = fees
                         .ration(FEES_AND_TIPS_TREASURY_PERCENTAGE, FEES_AND_TIPS_BURN_PERCENTAGE);
                     Treasury::on_unbalanced(split.0);
@@ -40,28 +43,18 @@ macro_rules! impl_fee_types {
 
         impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees {
             fn on_unbalanced(fees_and_tips: CreditOf<AccountId, Tokens>) {
-                debug_assert!(
-                    FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32
-                );
-                let total_percentage = (FEES_AND_TIPS_TREASURY_PERCENTAGE
-                    .saturating_add(FEES_AND_TIPS_BURN_PERCENTAGE))
-                    as u128;
-                let fees_and_tips_value = fees_and_tips.peek().clone();
-                // Split the merged imbalance into two parts
-                let (split_for_treasury, split_for_burn) = fees_and_tips.split(
-                    fees_and_tips_value * FEES_AND_TIPS_TREASURY_PERCENTAGE as u128
-                        / total_percentage,
-                );
+                // We have to manage the mint / burn ratio on the Zeitgeist chain, 
+                // but we do not have the responsibility and necessary knowledge to 
+                // manage the mint / burn ratio for any other chain. 
+                // Thus we should keep 100% of the foreign tokens in the treasury.
                 // Handle the split imbalances
                 // on_unbalanced is not implemented for other currencies than the native currency
                 // https://github.com/paritytech/substrate/blob/85415fb3a452dba12ff564e6b093048eed4c5aad/frame/treasury/src/lib.rs#L618-L627
                 // https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/treasury/src/lib.rs#L490
                 let _ = <Tokens as Balanced<AccountId>>::resolve(
                     &TreasuryPalletId::get().into_account_truncating(),
-                    split_for_treasury,
+                    fees_and_tips,
                 );
-                // Burn the remaining part
-                drop(split_for_burn);
             }
         }
     };
