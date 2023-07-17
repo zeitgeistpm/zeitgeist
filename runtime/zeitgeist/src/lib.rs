@@ -41,7 +41,9 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
+    traits::{
+        ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing,
+    },
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::EnsureRoot;
