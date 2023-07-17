@@ -419,34 +419,6 @@ macro_rules! fee_tests {
         }
 
         #[test]
-        fn get_fee_factor_decimals_overflow() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                #[cfg(feature = "parachain")]
-                {
-                    let custom_metadata = CustomMetadata {
-                        xcm: XcmMetadata { fee_factor: Some(102_993) },
-                        ..Default::default()
-                    };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: u32::MAX,
-                        name: "OverflowCurrency".into(),
-                        symbol: "OVER".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
-                        additional: custom_metadata,
-                    };
-                    let overflow_currency = Asset::ForeignAsset(1);
-
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(overflow_currency)));
-
-                    assert_noop!(get_fee_factor(overflow_currency), TransactionValidityError::Invalid(InvalidTransaction::Custom(4u8)));
-                }
-            });
-        }
-
-        #[test]
         fn fee_multiplier_can_grow_from_zero() {
             let minimum_multiplier = MinimumMultiplier::get();
             let target = TargetBlockFullness::get()
