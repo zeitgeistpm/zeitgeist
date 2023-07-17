@@ -1,9 +1,9 @@
 name: Rust
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+    types: [ labeled ]
+  push:
     branches: [ main ]
 
 env:
@@ -12,6 +12,7 @@ env:
 jobs:
   format:
     name: Format
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -32,6 +33,7 @@ jobs:
 
   copyright:
     name: Copyright Notices
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,6 +54,7 @@ jobs:
 
   checks:
     name: Checks
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -75,6 +78,7 @@ jobs:
 
   benchmark:
     name: Quick check benchmarks
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -87,6 +91,7 @@ jobs:
 
   test_standalone:
     name: Test standalone build
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -117,6 +122,7 @@ jobs:
 
   test_parachain:
     name: Test parachain build
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -147,6 +153,7 @@ jobs:
 
   fuzz:
     name: Fuzz
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
