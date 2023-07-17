@@ -87,6 +87,8 @@ macro_rules! impl_foreign_fees {
             NoAssetMetadata = 2,
             NoFeeFactor = 3,
             InvalidAssetId = 4,
+            // Used Some(AssetId::Ztg) instead of None for real ZTG token of pallet_balances
+            TokensZtgUsedInsteadOfPalletBalances = 5,
         }
 
         // It does calculate foreign fees by extending transactions to include an optional
@@ -143,7 +145,11 @@ macro_rules! impl_foreign_fees {
                 asset_id: CurrencyId,
             ) -> Result<Balance, Self::Error> {
                 match asset_id {
-                    Asset::Ztg => Ok(native_fee),
+                    Asset::Ztg => {
+                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            CustomTxError::TokensZtgUsedInsteadOfPalletBalances as u8,
+                        )));
+                    }
                     #[cfg(not(feature = "parachain"))]
                     Asset::ForeignAsset(_) => {
                         return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
