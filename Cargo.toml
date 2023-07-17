@@ -118,8 +118,11 @@ pallet-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0
 polkadot-cli = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-client = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-core-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-node-core-av-store = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-node-network-protocol = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-node-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-node-subsystem = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+polkadot-node-subsystem-util = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-overseer = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-parachain = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
 polkadot-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }

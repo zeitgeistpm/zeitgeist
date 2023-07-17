@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2017-2020 Parity Technologies (UK) Ltd.
 //
@@ -544,4 +545,9 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
     fn hash(&self, number: BlockNumber) -> sp_blockchain::Result<Option<Hash>> {
         match_client!(self, hash(number))
     }
+}
+
+#[cfg(feature = "parachain")]
+pub struct RpcConfig {
+    pub relay_chain_rpc_url: Option<url::Url>,
 }
