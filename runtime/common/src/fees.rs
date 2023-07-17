@@ -80,8 +80,17 @@ macro_rules! impl_foreign_fees {
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
         use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
 
+        #[repr(u8)]
+        pub enum CustomTxError {
+            FeeConversionArith = 0,
+            NoForeignAsset = 1,
+            NoAssetMetadata = 2,
+            NoFeeFactor = 3,
+            InvalidAssetId = 4,
+        }
+
         // It does calculate foreign fees by extending transactions to include an optional
-        // `AssetId` that specifies the asset to be used for payment (defaulting to the native 
+        // `AssetId` that specifies the asset to be used for payment (defaulting to the native
         // token on `None`), such that for each transaction the asset id can be specified.
         // For real ZTG `None` is used and for DOT `Some(Asset::Foreign(0))` is used.
 
@@ -95,8 +104,11 @@ macro_rules! impl_foreign_fees {
             // less DOT than ZTG is paid for fees.
             // Assume a fee_factor of 20_000_000_000, then the fee would result in
             // 20_000_000_000 / 10_000_000_000 = 2 units per ZTG
-            let converted_fee = zrml_swaps::fixed::bmul(native_fee, fee_factor)
-                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(0u8)))?;
+            let converted_fee = zrml_swaps::fixed::bmul(native_fee, fee_factor).map_err(|_| {
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::FeeConversionArith as u8,
+                ))
+            })?;
 
             Ok(converted_fee)
         }
@@ -112,12 +124,13 @@ macro_rules! impl_foreign_fees {
                         &loc,
                     )
                 })
-                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)))?;
-            let fee_factor = metadata
-                .additional
-                .xcm
-                .fee_factor
-                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)))?;
+                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::NoAssetMetadata as u8,
+                )))?;
+            let fee_factor =
+                metadata.additional.xcm.fee_factor.ok_or(TransactionValidityError::Invalid(
+                    InvalidTransaction::Custom(CustomTxError::NoFeeFactor as u8),
+                ))?;
             Ok(fee_factor)
         }
 
@@ -134,7 +147,7 @@ macro_rules! impl_foreign_fees {
                     #[cfg(not(feature = "parachain"))]
                     Asset::ForeignAsset(_) => {
                         return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            1u8,
+                            CustomTxError::NoForeignAsset as u8,
                         )));
                     }
                     #[cfg(feature = "parachain")]
@@ -148,7 +161,7 @@ macro_rules! impl_foreign_fees {
                     | Asset::CombinatorialOutcome
                     | Asset::PoolShare(_) => {
                         return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            2u8,
+                            CustomTxError::InvalidAssetId as u8,
                         )));
                     }
                 }
