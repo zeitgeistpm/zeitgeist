@@ -115,14 +115,11 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 #[derive(scale_info::TypeInfo)]
 pub struct ContractsCallfilter;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
-// dispute mechanism.
 impl Contains<RuntimeCall> for ContractsCallfilter {
     fn contains(runtime_call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match runtime_call {
             RuntimeCall::AssetManager(transfer { .. }) => true,
-            // Membership is managed by the respective Membership instance
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     buy_complete_set { .. } => true,
@@ -154,7 +151,6 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                     _ => false,
                 }
             }
-            // See "balance.set_balance"
             RuntimeCall::Swaps(inner_call) => match inner_call {
                 pool_exit { .. } => true,
                 pool_exit_subsidy { .. } => true,
