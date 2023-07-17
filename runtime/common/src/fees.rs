@@ -80,9 +80,10 @@ macro_rules! impl_foreign_fees {
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
         use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
 
-        // It does foreign fees by extending transactions to include an optional `AssetId` that specifies the asset
-        // to be used for payment (defaulting to the native token on `None`). So for each transaction you can specify asset id
-        // For real ZTG you use None and for orml_tokens ZTG you use `Some(Asset::Ztg)` and for DOT you use `Some(Asset::Foreign(0))`
+        // It does calculate foreign fees by extending transactions to include an optional
+        // `AssetId` that specifies the asset to be used for payment (defaulting to the native 
+        // token on `None`), such that for each transaction the asset id can be specified.
+        // For real ZTG `None` is used and for DOT `Some(Asset::Foreign(0))` is used.
 
         pub(crate) fn calculate_fee(
             native_fee: Balance,
