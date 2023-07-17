@@ -43,9 +43,9 @@ macro_rules! impl_fee_types {
 
         impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees {
             fn on_unbalanced(fees_and_tips: CreditOf<AccountId, Tokens>) {
-                // We have to manage the mint / burn ratio on the Zeitgeist chain, 
-                // but we do not have the responsibility and necessary knowledge to 
-                // manage the mint / burn ratio for any other chain. 
+                // We have to manage the mint / burn ratio on the Zeitgeist chain,
+                // but we do not have the responsibility and necessary knowledge to
+                // manage the mint / burn ratio for any other chain.
                 // Thus we should keep 100% of the foreign tokens in the treasury.
                 // Handle the split imbalances
                 // on_unbalanced is not implemented for other currencies than the native currency
@@ -88,19 +88,14 @@ macro_rules! impl_foreign_fees {
             native_fee: Balance,
             fee_factor: Balance,
         ) -> Result<Balance, TransactionValidityError> {
-            let bmul = |a: Balance, b: Balance| -> Option<Balance> {
-                let c0 = a.check_mul_rslt(&b).ok()?;
-                // The addition of base / 2 before the final division is a way to round to the nearest whole number
-                // if the fractional part of (a * b) / base is 0.5 or greater, it rounds up, otherwise, it rounds down.
-                let c1 = c0.check_add_rslt(&BASE.check_div_rslt(&2).ok()?).ok()?;
-                c1.check_div_rslt(&BASE).ok()
-            };
-
-            // assume fee_factor of 143_120_520, now divide by BASE (10^10) = 0.0143120520 DOT per ZTG
-            // keep in mind ZTG BASE is 10_000_000_000, and because fee_factor is below that, you get less DOT per ZTG
-            // assume fee_factor is 20_000_000_000, then you would get (20_000_000_000 / 10_000_000_000 =) 2 units per ZTG
-            let converted_fee = bmul(native_fee, fee_factor)
-                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(0u8)))?;
+            // Assume a fee_factor of 143_120_520 for DOT, now divide by
+            // BASE (10^10) = 0.0143120520 DOT per ZTG.
+            // Keep in mind that ZTG BASE is 10_000_000_000, and because fee_factor is below that,
+            // less DOT than ZTG is paid for fees.
+            // Assume a fee_factor of 20_000_000_000, then the fee would result in
+            // 20_000_000_000 / 10_000_000_000 = 2 units per ZTG
+            let converted_fee = zrml_swaps::fixed::bmul(native_fee, fee_factor)
+                .map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(0u8)))?;
 
             Ok(converted_fee)
         }
