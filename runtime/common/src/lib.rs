@@ -40,6 +40,7 @@
 #![recursion_limit = "512"]
 #![allow(clippy::crate_in_macro_def)]
 
+pub mod fees;
 pub mod weights;
 
 #[macro_export]
@@ -79,7 +80,8 @@ macro_rules! decl_common_types {
             CheckEra<Runtime>,
             CheckNonce<Runtime>,
             CheckWeight<Runtime>,
-            ChargeTransactionPayment<Runtime>,
+            // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
+            pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
         );
         pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
         pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
@@ -202,24 +204,7 @@ macro_rules! decl_common_types {
             }
         }
 
-        pub struct DealWithFees;
-
-        type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-        impl OnUnbalanced<NegativeImbalance> for DealWithFees
-        {
-            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-                if let Some(mut fees) = fees_then_tips.next() {
-                    if let Some(tips) = fees_then_tips.next() {
-                        tips.merge_into(&mut fees);
-                    }
-                    let mut split = fees.ration(
-                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
-                        FEES_AND_TIPS_BURN_PERCENTAGE,
-                    );
-                    Treasury::on_unbalanced(split.0);
-                }
-            }
-        }
+        common_runtime::impl_fee_types!();
 
         pub mod opaque {
             //! Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -282,6 +267,7 @@ macro_rules! create_runtime {
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
+                AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -943,6 +929,19 @@ macro_rules! impl_config_traits {
             #[cfg(not(feature = "parachain"))]
             type OnTimestampSet = Aura;
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
+        }
+
+        pub type TokensTxCharger = pallet_asset_tx_payment::FungiblesAdapter<
+            TTCBalanceToAssetBalance,
+            TTCHandleCredit,
+        >;
+
+        common_runtime::impl_foreign_fees!();
+
+        impl pallet_asset_tx_payment::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type Fungibles = Tokens;
+            type OnChargeAssetTransaction = TokensTxCharger;
         }
 
         impl pallet_transaction_payment::Config for Runtime {
@@ -1961,55 +1960,7 @@ macro_rules! create_common_tests {
     {} => {
         #[cfg(test)]
         mod common_tests {
-            mod fees {
-                use crate::*;
-                use frame_support::{dispatch::DispatchClass, weights::Weight};
-                use sp_core::H256;
-                use sp_runtime::traits::Convert;
-
-                fn run_with_system_weight<F>(w: Weight, mut assertions: F)
-                where
-                    F: FnMut(),
-                {
-                    let mut t: sp_io::TestExternalities =
-                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-                    t.execute_with(|| {
-                        System::set_block_consumed_resources(w, 0);
-                        assertions()
-                    });
-                }
-
-                #[test]
-                fn treasury_receives_correct_amount_of_fees_and_tips() {
-                    let mut t: sp_io::TestExternalities =
-                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-                    t.execute_with(|| {
-                        let fee_balance = 3 * ExistentialDeposit::get();
-                        let fee_imbalance = Balances::issue(fee_balance);
-                        let tip_balance = 7 * ExistentialDeposit::get();
-                        let tip_imbalance = Balances::issue(tip_balance);
-                        assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
-                        DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
-                        assert_eq!(
-                            Balances::free_balance(Treasury::account_id()),
-                            fee_balance + tip_balance,
-                        );
-                    });
-                }
-
-                #[test]
-                fn fee_multiplier_can_grow_from_zero() {
-                    let minimum_multiplier = MinimumMultiplier::get();
-                    let target = TargetBlockFullness::get()
-                        * RuntimeBlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
-                    // if the min is too small, then this will not change, and we are doomed forever.
-                    // the weight is 1/100th bigger than target.
-                    run_with_system_weight(target * 101 / 100, || {
-                        let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
-                        assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
-                    })
-                }
-            }
+            common_runtime::fee_tests!();
 
             mod dust_removal {
                 use crate::*;

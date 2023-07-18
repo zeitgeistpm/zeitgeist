@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -174,6 +175,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<
         .checked_next_power_of_two()
         .map(|c| c / 2)
         .unwrap_or(2);
+
     let extra: zeitgeist_runtime::SignedExtra = (
         zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
         zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
@@ -184,7 +186,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<
         ),
         zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
         zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
-        pallet_transaction_payment::ChargeTransactionPayment::<zeitgeist_runtime::Runtime>::from(0),
+        pallet_asset_tx_payment::ChargeAssetTxPayment::<zeitgeist_runtime::Runtime>::from(0, None),
     );
 
     let raw_payload = zeitgeist_runtime::SignedPayload::from_raw(
@@ -232,6 +234,7 @@ pub fn create_benchmark_extrinsic_battery_station<
         .checked_next_power_of_two()
         .map(|c| c / 2)
         .unwrap_or(2);
+
     let extra: battery_station_runtime::SignedExtra = (
         battery_station_runtime::CheckNonZeroSender::<battery_station_runtime::Runtime>::new(),
         battery_station_runtime::CheckSpecVersion::<battery_station_runtime::Runtime>::new(),
@@ -242,7 +245,9 @@ pub fn create_benchmark_extrinsic_battery_station<
         ),
         battery_station_runtime::CheckNonce::<battery_station_runtime::Runtime>::from(nonce.into()),
         battery_station_runtime::CheckWeight::<battery_station_runtime::Runtime>::new(),
-        pallet_transaction_payment::ChargeTransactionPayment::<battery_station_runtime::Runtime>::from(0),
+        pallet_asset_tx_payment::ChargeAssetTxPayment::<battery_station_runtime::Runtime>::from(
+            0, None,
+        ),
     );
 
     let raw_payload = battery_station_runtime::SignedPayload::from_raw(
