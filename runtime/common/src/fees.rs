@@ -51,10 +51,11 @@ macro_rules! impl_fee_types {
                 // on_unbalanced is not implemented for other currencies than the native currency
                 // https://github.com/paritytech/substrate/blob/85415fb3a452dba12ff564e6b093048eed4c5aad/frame/treasury/src/lib.rs#L618-L627
                 // https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/treasury/src/lib.rs#L490
-                let _ = <Tokens as Balanced<AccountId>>::resolve(
+                let res = <Tokens as Balanced<AccountId>>::resolve(
                     &TreasuryPalletId::get().into_account_truncating(),
                     fees_and_tips,
                 );
+                debug_assert!(res.is_ok());
             }
         }
     };
