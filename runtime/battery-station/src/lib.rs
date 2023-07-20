@@ -60,11 +60,11 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_prediction_markets::Call::{
     buy_complete_set, create_cpmm_market_and_deploy_assets, create_market,
     deploy_swap_pool_and_additional_liquidity, deploy_swap_pool_for_market, dispute, edit_market,
-    redeem_shares, report, sell_complete_set, start_global_dispute,
+    redeem_shares, report, sell_complete_set,
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zrml_swaps::Call::{
-    pool_exit, pool_exit_subsidy, pool_exit_with_exact_asset_amount,
+    pool_exit, pool_exit_with_exact_asset_amount,
     pool_exit_with_exact_pool_amount, pool_join, pool_join_with_exact_asset_amount,
     pool_join_with_exact_pool_amount, swap_exact_amount_in, swap_exact_amount_out,
 };
@@ -128,19 +128,16 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                     dispute { .. } => true,
                     // Only allow CPMM markets using Authorized or SimpleDisputes dispute mechanism
                     create_market {
-                        dispute_mechanism:
-                            MarketDisputeMechanism::Authorized,
+                        dispute_mechanism: MarketDisputeMechanism::Authorized,
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism:
-                            MarketDisputeMechanism::Authorized,
+                        dispute_mechanism: MarketDisputeMechanism::Authorized,
                         ..
                     } => true,
                     edit_market {
-                        dispute_mechanism:
-                            MarketDisputeMechanism::Authorized,
+                        dispute_mechanism: MarketDisputeMechanism::Authorized,
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
