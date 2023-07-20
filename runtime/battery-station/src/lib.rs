@@ -129,18 +129,18 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                     // Only allow CPMM markets using Authorized or SimpleDisputes dispute mechanism
                     create_market {
                         dispute_mechanism:
-                            MarketDisputeMechanism::Authorized | MarketDisputeMechanism::SimpleDisputes,
+                            MarketDisputeMechanism::Authorized,
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
                     create_cpmm_market_and_deploy_assets {
                         dispute_mechanism:
-                            MarketDisputeMechanism::Authorized | MarketDisputeMechanism::SimpleDisputes,
+                            MarketDisputeMechanism::Authorized,
                         ..
                     } => true,
                     edit_market {
                         dispute_mechanism:
-                            MarketDisputeMechanism::Authorized | MarketDisputeMechanism::SimpleDisputes,
+                            MarketDisputeMechanism::Authorized,
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
