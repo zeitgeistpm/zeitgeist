@@ -147,7 +147,6 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                     redeem_shares { .. } => true,
                     report { .. } => true,
                     sell_complete_set { .. } => true,
-                    start_global_dispute { .. } => true,
                     _ => false,
                 }
             }
