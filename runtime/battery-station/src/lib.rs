@@ -152,7 +152,6 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
             }
             RuntimeCall::Swaps(inner_call) => match inner_call {
                 pool_exit { .. } => true,
-                pool_exit_subsidy { .. } => true,
                 pool_exit_with_exact_asset_amount { .. } => true,
                 pool_exit_with_exact_pool_amount { .. } => true,
                 pool_join { .. } => true,
