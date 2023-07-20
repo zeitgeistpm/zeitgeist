@@ -64,9 +64,9 @@ use zrml_prediction_markets::Call::{
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zrml_swaps::Call::{
-    pool_exit, pool_exit_with_exact_asset_amount,
-    pool_exit_with_exact_pool_amount, pool_join, pool_join_with_exact_asset_amount,
-    pool_join_with_exact_pool_amount, swap_exact_amount_in, swap_exact_amount_out,
+    pool_exit, pool_exit_with_exact_asset_amount, pool_exit_with_exact_pool_amount, pool_join,
+    pool_join_with_exact_asset_amount, pool_join_with_exact_pool_amount, swap_exact_amount_in,
+    swap_exact_amount_out,
 };
 #[cfg(feature = "parachain")]
 use {
