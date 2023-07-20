@@ -12,9 +12,11 @@ https://keepachangelog.com/en/1.0.0/ and ⚠️ marks changes that might break
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
-## v0.4.0
+## v0.3.10
 
 [#1022]: https://github.com/zeitgeistpm/zeitgeist/pull/1022
+
+### Added
 
 - Use pallet-asset-tx-payment for allowing to pay transaction fees in foreign
   currencies ([#1022]). This requires each transaction to specify the fee
