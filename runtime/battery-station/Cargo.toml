@@ -14,7 +14,7 @@ orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "ht
 pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-bounties = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-contracts = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate", features = ["unstable-interface"] }
+pallet-contracts = { branch = "polkadot-v0.9.32", default-features = false, features = ["unstable-interface"], git = "https://github.com/paritytech/substrate" }
 pallet-contracts-primitives = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-identity = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
