@@ -22,7 +22,12 @@ use crate::{
     RuntimeOrigin, UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
-use frame_support::{parameter_types, traits::Everything, WeakBoundedVec};
+use core::marker::PhantomData;
+use frame_support::{
+    parameter_types,
+    traits::{Everything, Get},
+    WeakBoundedVec,
+};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider, MultiCurrency};
 use orml_xcm_support::{
@@ -34,7 +39,7 @@ use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
         prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, NetworkId, X1, X2},
-        Junction, MultiLocation,
+        Error as XcmError, Junction, MultiLocation, Result as XcmResult,
     },
     opaque::latest::Fungibility::Fungible,
 };
@@ -45,7 +50,7 @@ use xcm_builder::{
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
     TakeWeightCredit,
 };
-use xcm_executor::Config;
+use xcm_executor::{traits::TransactAsset, Assets, Config};
 use zeitgeist_primitives::types::Asset;
 
 pub mod battery_station {
@@ -163,52 +168,48 @@ parameter_types! {
 /// Aligns the fractional decimal places of every incoming token.
 /// Reconstructs the original number of fractional decimal places of every outgoing token.
 #[allow(clippy::type_complexity)]
-pub struct<AssetRegistry, TransactAssetDelegate> AlignedFractionalTransactAsset {
-    /// Number of fractional decimal places
-    frac_dec_places: u128,
+pub struct AlignedFractionalTransactAsset<AssetRegistry, FracDecPlaces, TransactAssetDelegate> {
+    _phantom: PhantomData<(AssetRegistry, FracDecPlaces, TransactAssetDelegate)>,
 }
 
-impl<AssetRegistry: Inspect, TransactAssetDelegate: TransactAsset> TransactAsset for AlignedFractionalTransactAsset
+impl<AssetRegistry: Inspect, FracDecPlaces: Get<u8>, TransactAssetDelegate: TransactAsset> TransactAsset
+    for AlignedFractionalTransactAsset<AssetRegistry, FracDecPlaces, TransactAssetDelegate>
 {
-	fn deposit_asset(&self, asset: &mut MultiAsset, location: &MultiLocation, context: &XcmContext) -> Result {
-        if let Fungible(amount) = asset.fun {
+    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
+        if let Fungible(mut amount) = asset.fun {
             let decimals = AssetRegistry::metadata_by_location(location)
-                .ok_or_else(|| XcmError::FailedToTransactAsset(e.into()))?
-                .decimals
+                .ok_or_else(|| XcmError::FailedToTransactAsset("Asset not in registry"))?
+                .decimals;
+            let native_decimals = u32::from(FracDecPlaces::get());
 
-            if decimals > self.frac_dec_places {
-                let power = decimals.saturating_sub(self.frac_dec_places)
-                let adjust_factor = 10.saturating_pow(power)
+            if decimals > native_decimals {
+                let power = decimals.saturating_sub(native_decimals);
+                let adjust_factor = 10u128.saturating_pow(power);
                 // Floors the adjusted token amount, thus no tokens are generated
-                amount.saturating_div(adjust_factor)
+                amount = amount.saturating_div(adjust_factor);
             } else {
-                let power = self.frac_dec_places.saturating_sub(decimals)
-                let adjust_factor = 10.saturating_pow(power)
-                amount.saturating_mul(adjust_factor)
+                let power = native_decimals.saturating_sub(decimals);
+                let adjust_factor = 10u128.saturating_pow(power);
+                amount = amount.saturating_mul(adjust_factor);
             };
         }
 
-        TransactAssetDelegate::deposit_asset(asset, location, context)
-	}
+        TransactAssetDelegate::deposit_asset(asset, location)
+    }
 
-	fn withdraw_asset(
-        &self, 
-		asset: &MultiAsset,
-		location: &MultiLocation,
-		_maybe_context: Option<&XcmContext>,
-	) -> result::Result<Assets, XcmError> {
+    fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<Assets, XcmError> {
         // TODO adjust places
-	}
+        todo!()
+    }
 
-	fn transfer_asset(
-        &self, 
-		asset: &MultiAsset,
-		from: &MultiLocation,
-		to: &MultiLocation,
-		_context: &XcmContext,
-	) -> result::Result<Assets, XcmError> {
+    fn transfer_asset(
+        asset: &MultiAsset,
+        from: &MultiLocation,
+        to: &MultiLocation,
+    ) -> Result<Assets, XcmError> {
         // TODO ???
-	}
+        todo!()
+    }
 }
 
 /// Means for transacting assets on this chain.
