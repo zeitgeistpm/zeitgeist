@@ -5,7 +5,7 @@
 
 /node/ @sea212
 /runtime/ @sea212
-# Ignore everything but mod.rs in /runtime/src/weights/
+# Ignore everything but mod.rs in /runtime/common/src/weights/
 /runtime/common/src/weights/*
 /runtime/common/src/weights/mod.rs @sea212
 /zrml/authorized/ @Chralt98
