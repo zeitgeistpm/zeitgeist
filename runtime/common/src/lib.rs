@@ -53,14 +53,6 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        // Migration for scheduler pallet to move from a plain RuntimeCall to a CallOrHash.
-        pub struct SchedulerMigrationV1toV4;
-        impl OnRuntimeUpgrade for SchedulerMigrationV1toV4 {
-            fn on_runtime_upgrade() -> frame_support::weights::Weight {
-                Scheduler::migrate_v1_to_v4()
-            }
-        }
-
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
