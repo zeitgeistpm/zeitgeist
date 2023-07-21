@@ -24,7 +24,7 @@ use crate::{
 
 use frame_support::{parameter_types, traits::Everything, WeakBoundedVec};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
-use orml_traits::{location::AbsoluteReserveProvider, MultiCurrency};
+use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider, MultiCurrency};
 use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
@@ -156,6 +156,44 @@ parameter_types! {
         ).into(),
         native_per_second(),
     );
+}
+
+/// A generic warpper around implementations of the (xcm-executor) `TransactAsset` trait.
+///
+/// Aligns the fractional decimal places of every incoming token.
+/// Reconstructs the original number of fractional decimal places of every outgoing token.
+#[allow(clippy::type_complexity)]
+pub struct<AssetRegistry, TransactAssetDelegate> AlignedFractionalTransactAsset {
+    /// Number of fractional decimal places
+    frac_dec_places: u128,
+}
+
+impl<AssetRegistry: Inspect, TransactAssetDelegate: TransactAsset> TransactAsset for AlignedFractionalTransactAsset
+{
+	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation, _context: &XcmContext) -> Result {
+        let decimals = AssetRegistry::metadata_by_location(location)
+            .ok_or_else(|| XcmError::FailedToTransactAsset(e.into()))?
+            .decimals
+
+        // TODO adjust places
+	}
+
+	fn withdraw_asset(
+		asset: &MultiAsset,
+		location: &MultiLocation,
+		_maybe_context: Option<&XcmContext>,
+	) -> result::Result<Assets, XcmError> {
+        // TODO adjust places
+	}
+
+	fn transfer_asset(
+		asset: &MultiAsset,
+		from: &MultiLocation,
+		to: &MultiLocation,
+		_context: &XcmContext,
+	) -> result::Result<Assets, XcmError> {
+        // TODO ???
+	}
 }
 
 /// Means for transacting assets on this chain.
