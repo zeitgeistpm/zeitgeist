@@ -170,15 +170,29 @@ pub struct<AssetRegistry, TransactAssetDelegate> AlignedFractionalTransactAsset 
 
 impl<AssetRegistry: Inspect, TransactAssetDelegate: TransactAsset> TransactAsset for AlignedFractionalTransactAsset
 {
-	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation, _context: &XcmContext) -> Result {
-        let decimals = AssetRegistry::metadata_by_location(location)
-            .ok_or_else(|| XcmError::FailedToTransactAsset(e.into()))?
-            .decimals
+	fn deposit_asset(&self, asset: &mut MultiAsset, location: &MultiLocation, context: &XcmContext) -> Result {
+        if let Fungible(amount) = asset.fun {
+            let decimals = AssetRegistry::metadata_by_location(location)
+                .ok_or_else(|| XcmError::FailedToTransactAsset(e.into()))?
+                .decimals
 
-        // TODO adjust places
+            if decimals > self.frac_dec_places {
+                let power = decimals.saturating_sub(self.frac_dec_places)
+                let adjust_factor = 10.saturating_pow(power)
+                // Floors the adjusted token amount, thus no tokens are generated
+                amount.saturating_div(adjust_factor)
+            } else {
+                let power = self.frac_dec_places.saturating_sub(decimals)
+                let adjust_factor = 10.saturating_pow(power)
+                amount.saturating_mul(adjust_factor)
+            };
+        }
+
+        TransactAssetDelegate::deposit_asset(asset, location, context)
 	}
 
 	fn withdraw_asset(
+        &self, 
 		asset: &MultiAsset,
 		location: &MultiLocation,
 		_maybe_context: Option<&XcmContext>,
@@ -187,6 +201,7 @@ impl<AssetRegistry: Inspect, TransactAssetDelegate: TransactAsset> TransactAsset
 	}
 
 	fn transfer_asset(
+        &self, 
 		asset: &MultiAsset,
 		from: &MultiLocation,
 		to: &MultiLocation,
