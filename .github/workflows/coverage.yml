@@ -1,9 +1,9 @@
 name: Coverage
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+    types: [ labeled ]
+  push:
     branches: [ main ]
 
 env:
@@ -12,6 +12,7 @@ env:
 jobs:
   coverage:
     name: Coverage
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:review-needed'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

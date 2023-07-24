@@ -17,17 +17,20 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
+    cli::RpcConfig,
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
     POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
+use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
-use cumulus_primitives_core::ParaId;
+use cumulus_primitives_core::{relay_chain::v2::CollatorPair, ParaId};
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
-use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
+use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
@@ -59,6 +62,7 @@ pub async fn new_full<RuntimeApi, Executor>(
     parachain_id: ParaId,
     polkadot_config: Configuration,
     hwbench: Option<sc_sysinfo::HwBench>,
+    rpc_config: RpcConfig,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -144,6 +148,7 @@ where
             }))
         },
         hwbench,
+        rpc_config,
     )
     .await
 }
@@ -231,6 +236,32 @@ where
     })
 }
 
+// TODO(#1040) `build_relay_chain_interface` will be included in polkadot-v0.9.36 in cumulus-client-service here: https://github.com/paritytech/cumulus/commit/babf73bbc6ade358db105580b68aacb91550faa5#diff-52df5aabcc0b97cfe43ce4b88b9dcf52de661934e481f6ae935435f4941b1639R224-R252
+/// Build a relay chain interface.
+/// Will return a minimal relay chain node with RPC
+/// client or an inprocess node, based on the [`CollatorOptions`] passed in.
+async fn build_relay_chain_interface(
+    polkadot_config: Configuration,
+    parachain_config: &Configuration,
+    telemetry_worker_handle: Option<TelemetryWorkerHandle>,
+    task_manager: &mut TaskManager,
+    collator_options: CollatorOptions,
+    hwbench: Option<sc_sysinfo::HwBench>,
+) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
+    match collator_options.relay_chain_rpc_url {
+        Some(relay_chain_url) => {
+            build_minimal_relay_chain_node(polkadot_config, task_manager, relay_chain_url).await
+        }
+        None => build_inprocess_relay_chain(
+            polkadot_config,
+            parachain_config,
+            telemetry_worker_handle,
+            task_manager,
+            hwbench,
+        ),
+    }
+}
+
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
@@ -241,6 +272,7 @@ async fn do_new_full<RuntimeApi, Executor, BIC>(
     id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
     hwbench: Option<sc_sysinfo::HwBench>,
+    rpc_config: RpcConfig,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -271,13 +303,18 @@ where
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) = build_inprocess_relay_chain(
+    let collator_options =
+        CollatorOptions { relay_chain_rpc_url: rpc_config.relay_chain_rpc_url.clone() };
+
+    let (relay_chain_interface, collator_key) = build_relay_chain_interface(
         polkadot_config,
         &parachain_config,
         telemetry_worker_handle,
         &mut task_manager,
+        collator_options,
         hwbench.clone(),
     )
+    .await
     .map_err(|e| match e {
         RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
         s => s.to_string().into(),

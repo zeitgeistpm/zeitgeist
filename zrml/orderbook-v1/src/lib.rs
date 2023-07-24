@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -67,6 +68,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
         )]
@@ -112,6 +114,7 @@ mod pallet {
             }
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(
             T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
         )]
@@ -178,6 +181,7 @@ mod pallet {
             }
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(
             T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
         )]

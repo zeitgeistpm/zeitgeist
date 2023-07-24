@@ -3,10 +3,8 @@ name: Publish features parachain to Docker Hub
 on:
   workflow_dispatch:
   push:
-    tags:
-    - '*'
-  pull_request:
-    branches: [ main ]
+   tags:
+      - '^v[0-9]+.[0-9]+.[0-9]+$'
 
 jobs:
   hadolint:
@@ -23,8 +21,10 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Checkout repository
-        uses: actions/checkout@v2
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
       - name: Docker meta
         id: meta
@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3.2.0
         with:
           build-args: |
             PROFILE=production
@@ -67,3 +67,24 @@ jobs:
           output: 'zeitgeist-node-parachain-report.sarif'
           severity: 'HIGH,CRITICAL'
             
+      - name: Update image version of the existing Zeitgeist network spec
+        uses: "OnFinality-io/action-onf-release@v1"
+        with:
+          onf-access-key: ${{ secrets.ONF_ACCESS_KEY }}
+          onf-secret-key: ${{ secrets.ONF_SECRET_KEY }}
+          onf-workspace-id: ${{ secrets.ONF_WORKSPACE_ID }}
+          onf-network-key: ${{ secrets.ONF_NETWORK_KEY_ZG }}
+          onf-sub-command: image
+          onf-action: add
+          image-version: ${{ steps.vars.outputs.tag }}
+          
+      - name: Update image version of the existing Battery Station network spec
+        uses: "OnFinality-io/action-onf-release@v1"
+        with:
+          onf-access-key: ${{ secrets.ONF_ACCESS_KEY }}
+          onf-secret-key: ${{ secrets.ONF_SECRET_KEY }}
+          onf-workspace-id: ${{ secrets.ONF_WORKSPACE_ID }}
+          onf-network-key: ${{ secrets.ONF_NETWORK_KEY_BS }}
+          onf-sub-command: image
+          onf-action: add
+          image-version: ${{ steps.vars.outputs.tag }}

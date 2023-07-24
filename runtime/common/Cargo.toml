@@ -5,6 +5,7 @@ frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "
 frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-currencies = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+pallet-asset-tx-payment = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-author-inherent = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 pallet-author-mapping = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
 pallet-author-slot-filter = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
@@ -47,6 +48,7 @@ std = [
     "frame-support/std",
     "orml-currencies/std",
     "orml-tokens/std",
+    "pallet-asset-tx-payment/std",
     "pallet-author-inherent?/std",
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",

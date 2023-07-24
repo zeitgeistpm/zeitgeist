@@ -11,6 +11,7 @@ orml-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, opt
 orml-currencies = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+pallet-asset-tx-payment = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-bounties = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -225,6 +226,7 @@ std = [
     "orml-currencies/std",
     "orml-tokens/std",
     "orml-traits/std",
+    "pallet-asset-tx-payment/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
@@ -342,6 +344,7 @@ try-runtime = [
     "pallet-preimage/try-runtime",
 
     # Money runtime pallets
+    "pallet-asset-tx-payment/try-runtime",
     "pallet-balances/try-runtime",
     "pallet-bounties/try-runtime",
     "pallet-transaction-payment/try-runtime",
