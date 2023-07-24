@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(clippy::type_complexity)]
-use crate::types::{Market, PoolId};
+use crate::types::{Asset, Market, PoolId};
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -36,6 +37,7 @@ type MarketOf<T> = Market<
     >>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
+    Asset<<T as MarketCommonsPalletApi>::MarketId>,
 >;
 
 /// Abstraction over storage operations for markets

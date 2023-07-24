@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -26,12 +27,14 @@ use sp_runtime::DispatchError;
 use zeitgeist_primitives::{
     traits::MarketCommonsPalletApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment, ScoringRule,
+        AccountIdTest, Asset, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
+        ScoringRule,
     },
 };
 
-const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment> = Market {
+const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> = Market {
+    base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: 0,
     creator: 0,
@@ -45,7 +48,7 @@ const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment> = Market
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
-    bonds: MarketBonds { creation: None, oracle: None },
+    bonds: MarketBonds { creation: None, oracle: None, outsider: None },
 };
 
 #[test]
@@ -335,7 +338,8 @@ fn market_counter_interacts_correctly_with_push_market_and_remove_market() {
 
 fn market_mock(
     id: AccountIdTest,
-) -> zeitgeist_primitives::types::Market<AccountIdTest, Balance, BlockNumber, Moment> {
+) -> zeitgeist_primitives::types::Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>>
+{
     let mut market = MARKET_DUMMY;
     market.oracle = id;
     market

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -20,15 +21,18 @@ use {
     cumulus_primitives_core::ParaId,
     nimbus_primitives::NimbusId,
     pallet_parachain_staking::InflationInfo,
+    sp_runtime::{Perbill, Percent},
     zeitgeist_primitives::types::{AccountId, Balance},
 };
 
 #[cfg(feature = "parachain")]
 pub struct AdditionalChainSpec {
+    pub blocks_per_round: u32,
     pub candidates: Vec<(AccountId, NimbusId, Balance)>,
-    pub crowdloan_fund_pot: Balance,
+    pub collator_commission: Perbill,
     pub inflation_info: InflationInfo<Balance>,
-    pub nominations: Vec<(AccountId, AccountId, Balance)>,
+    pub nominations: Vec<(AccountId, AccountId, Balance, Percent)>,
+    pub parachain_bond_reserve_percent: Percent,
     pub parachain_id: ParaId,
 }
 

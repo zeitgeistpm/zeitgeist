@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies Ltd.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,7 +18,7 @@
 
 #![allow(
     // Auto-generated code is a no man's land
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![allow(clippy::type_complexity)]
 #![cfg(feature = "runtime-benchmarks")]
@@ -35,7 +36,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
+    constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::Swaps,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -48,9 +49,11 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
+
+const LIQUIDITY: u128 = 100 * BASE;
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
@@ -61,8 +64,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    T::AssetManager::deposit(Asset::Ztg, &caller, (100 * MinLiquidity::get()).saturated_into())
-        .unwrap();
+    T::AssetManager::deposit(Asset::Ztg, &caller, (100u128 * LIQUIDITY).saturated_into()).unwrap();
     let oracle = caller.clone();
     let deadlines = Deadlines::<T::BlockNumber> {
         grace_period: 1_u32.into(),
@@ -77,18 +79,20 @@ fn create_market_common_parameters<T: Config>(
 }
 
 // Create a market based on common parameters
-fn create_market_common<T: Config>(
+fn create_market_common<T: Config + pallet_timestamp::Config>(
     permission: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
     period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
     let range_start: MomentOf<T> = 100_000u64.saturated_into();
     let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {
+        base_asset: Asset::Ztg,
         oracle,
         period,
         deadlines,
@@ -147,14 +151,10 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     } else if let MarketType::Scalar(range) = market_type {
         outcome = OutcomeReport::Scalar(*range.end());
     } else {
-        panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
+        panic!("setup_redeem_shares_common: Unsupported market type: {market_type:?}");
     }
 
-    Pallet::<T>::do_buy_complete_set(
-        caller.clone(),
-        market_id,
-        MinLiquidity::get().saturated_into(),
-    )?;
+    Pallet::<T>::do_buy_complete_set(caller.clone(), market_id, LIQUIDITY.saturated_into())?;
     let close_origin = T::CloseOrigin::successful_origin();
     let resolve_origin = T::ResolveOrigin::successful_origin();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
@@ -187,7 +187,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
     )?;
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
-    let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
+    let min_liquidity: BalanceOf<T> = LIQUIDITY.saturated_into();
     Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let weight_len: usize = MaxRuntimeUsize::from(categories).into();
@@ -450,7 +450,6 @@ benchmarks! {
 
     admin_move_market_to_resolved_scalar_disputed {
         let r in 0..63;
-        let d in 1..T::MaxDisputes::get();
 
         let (_, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
@@ -464,23 +463,16 @@ benchmarks! {
         })?;
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
-        if let MarketType::Scalar(range) = market.market_type {
-            assert!((d as u128) < *range.end());
-        } else {
-            panic!("Must create scalar market");
-        }
 
-        for i in 0..d {
-            let outcome = OutcomeReport::Scalar((i % 2).into());
-            let disputor = account("disputor", i + 1, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(
-                Asset::Ztg,
-                &disputor,
-                dispute_bond,
-            )?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
+        let outcome = OutcomeReport::Scalar(0);
+        let disputor = account("disputor", 1, 0);
+        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
+        T::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            dispute_bond,
+        )?;
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         let disputes = Disputes::<T>::get(market_id);
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
@@ -513,7 +505,6 @@ benchmarks! {
 
     admin_move_market_to_resolved_categorical_disputed {
         let r in 0..63;
-        let d in 1..T::MaxDisputes::get();
 
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
@@ -527,17 +518,16 @@ benchmarks! {
             Ok(())
         })?;
 
-        for i in 0..d {
-            let outcome = OutcomeReport::Categorical((i % 2).saturated_into::<u16>());
-            let disputor = account("disputor", i + 1, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(
-                Asset::Ztg,
-                &disputor,
-                dispute_bond,
-            )?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
+        let outcome = OutcomeReport::Categorical(0u16);
+        let disputor = account("disputor", 1, 0);
+        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
+        T::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            dispute_bond,
+        )?;
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+
         let disputes = Disputes::<T>::get(market_id);
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
@@ -625,6 +615,7 @@ benchmarks! {
         }
     }: _(
             RawOrigin::Signed(caller),
+            Asset::Ztg,
             oracle,
             period,
             deadlines,
@@ -647,6 +638,7 @@ benchmarks! {
         let (caller, oracle, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
         Call::<T>::create_market {
+            base_asset: Asset::Ztg,
             oracle: oracle.clone(),
             period: period.clone(),
             deadlines,
@@ -677,6 +669,7 @@ benchmarks! {
         };
     }: _(
             RawOrigin::Signed(caller),
+            Asset::Ztg,
             market_id,
             oracle,
             period,
@@ -716,7 +709,7 @@ benchmarks! {
             Pallet::<T>::calculate_time_frame_of_moment(range_start)).len();
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
-        let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
+        let min_liquidity: BalanceOf::<T> = LIQUIDITY.saturated_into();
         Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
@@ -759,7 +752,7 @@ benchmarks! {
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id.saturated_into())?;
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
-        let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
+        let min_liquidity: BalanceOf::<T> = LIQUIDITY.saturated_into();
         Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
@@ -778,13 +771,15 @@ benchmarks! {
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        let market_pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id.saturated_into())?;
+        let market_pool_id =
+            <zrml_market_commons::Pallet::<T>>::market_pool(&market_id.saturated_into())?;
         let pool = T::Swaps::pool(market_pool_id)?;
         assert_eq!(pool.pool_status, PoolStatus::Active);
     }
 
     start_global_dispute {
         let m in 1..CacheSize::get();
+        let n in 1..CacheSize::get();
 
         // no benchmarking component for max disputes here,
         // because MaxDisputes is enforced for the extrinsic
@@ -794,11 +789,16 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
 
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
+            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+            Ok(())
+        })?;
+
         // first element is the market id from above
-        let mut market_ids = BoundedVec::try_from(vec![market_id]).unwrap();
+        let mut market_ids_1: BoundedVec<MarketIdOf<T>, CacheSize> = Default::default();
         assert_eq!(market_id, 0u128.saturated_into());
         for i in 1..m {
-            market_ids.try_push(i.saturated_into()).unwrap();
+            market_ids_1.try_push(i.saturated_into()).unwrap();
         }
 
         let max_dispute_len = T::MaxDisputes::get();
@@ -815,11 +815,28 @@ benchmarks! {
             .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
         }
 
+        let market = <zrml_market_commons::Pallet<T>>::market(&market_id.saturated_into()).unwrap();
+        let disputes = Disputes::<T>::get(market_id);
+        let last_dispute = disputes.last().unwrap();
+        let dispute_duration_ends_at_block = last_dispute.at + market.deadlines.dispute_duration;
+        let mut market_ids_2: BoundedVec<MarketIdOf<T>, CacheSize> = BoundedVec::try_from(
+            vec![market_id],
+        ).unwrap();
+        for i in 1..n {
+            market_ids_2.try_push(i.saturated_into()).unwrap();
+        }
+        MarketIdsPerDisputeBlock::<T>::insert(dispute_duration_ends_at_block, market_ids_2);
+
         let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
         <frame_system::Pallet<T>>::set_block_number(current_block);
-        // the complexity depends on MarketIdsPerDisputeBlock at the current block
-        // this is because a variable number of market ids need to be decoded from the storage
-        MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
+
+        #[cfg(feature = "with-global-disputes")]
+        {
+            let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
+            // the complexity depends on MarketIdsPerDisputeBlock at the current block
+            // this is because a variable number of market ids need to be decoded from the storage
+            MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);
+        }
 
         let call = Call::<T>::start_global_dispute { market_id };
     }: {
@@ -830,9 +847,6 @@ benchmarks! {
     }
 
     dispute_authorized {
-        let d in 0..(T::MaxDisputes::get() - 1);
-        let b in 0..63;
-
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
@@ -846,28 +860,9 @@ benchmarks! {
         })?;
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
-        if let MarketType::Scalar(range) = market.market_type {
-            assert!((d as u128) < *range.end());
-        } else {
-            panic!("Must create scalar market");
-        }
-        for i in 0..d {
-            let outcome = OutcomeReport::Scalar(i.into());
-            let disputor = account("disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
 
-        let now = frame_system::Pallet::<T>::block_number();
-        let resolves_at = now.saturating_add(market.deadlines.dispute_duration);
-        for i in 0..b {
-            MarketIdsPerDisputeBlock::<T>::try_mutate(
-                resolves_at,
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
-
-        let dispute_outcome = OutcomeReport::Scalar((d + 1).into());
+        // only one dispute allowed for authorized mdm
+        let dispute_outcome = OutcomeReport::Scalar(1u128);
         let call = Call::<T>::dispute { market_id, outcome: dispute_outcome };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
@@ -902,9 +897,6 @@ benchmarks! {
     }
 
     internal_resolve_categorical_disputed {
-        // d = num. disputes
-        let d in 1..T::MaxDisputes::get();
-
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
             setup_reported_categorical_market_with_pool::<T>(
@@ -916,14 +908,11 @@ benchmarks! {
             Ok(())
         })?;
 
-        for i in 0..d {
-            let origin = caller.clone();
-            Pallet::<T>::dispute(
-                RawOrigin::Signed(origin).into(),
-                market_id,
-                OutcomeReport::Categorical((i % 2).saturated_into::<u16>()),
-            )?;
-        }
+        Pallet::<T>::dispute(
+            RawOrigin::Signed(caller).into(),
+            market_id,
+            OutcomeReport::Categorical(0),
+        )?;
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
@@ -954,8 +943,6 @@ benchmarks! {
     }
 
     internal_resolve_scalar_disputed {
-        let d in 1..T::MaxDisputes::get();
-
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
@@ -966,19 +953,11 @@ benchmarks! {
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
-        if let MarketType::Scalar(range) = market.market_type {
-            assert!((d as u128) < *range.end());
-        } else {
-            panic!("Must create scalar market");
-        }
-        for i in 0..d {
-            let origin = caller.clone();
-            Pallet::<T>::dispute(
-                RawOrigin::Signed(origin).into(),
-                market_id,
-                OutcomeReport::Scalar((i % 2).into())
-            )?;
-        }
+        Pallet::<T>::dispute(
+            RawOrigin::Signed(caller).into(),
+            market_id,
+            OutcomeReport::Scalar(1)
+        )?;
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
@@ -1116,7 +1095,7 @@ benchmarks! {
             ScoringRule::CPMM,
             None,
         )?;
-        let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
+        let amount: BalanceOf<T> = LIQUIDITY.saturated_into();
         Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,

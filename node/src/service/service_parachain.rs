@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,8 +17,9 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
+    cli::RpcConfig,
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
-    KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
+    POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
@@ -25,14 +27,16 @@ use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
-use cumulus_primitives_core::ParaId;
+use cumulus_primitives_core::{relay_chain::v2::CollatorPair, ParaId};
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
-use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
+use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_network_common::service::NetworkBlock;
+use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::SyncCryptoStorePtr;
@@ -58,6 +62,7 @@ pub async fn new_full<RuntimeApi, Executor>(
     parachain_id: ParaId,
     polkadot_config: Configuration,
     hwbench: Option<sc_sysinfo::HwBench>,
+    rpc_config: RpcConfig,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -143,6 +148,7 @@ where
             }))
         },
         hwbench,
+        rpc_config,
     )
     .await
 }
@@ -230,16 +236,43 @@ where
     })
 }
 
+// TODO(#1040) `build_relay_chain_interface` will be included in polkadot-v0.9.36 in cumulus-client-service here: https://github.com/paritytech/cumulus/commit/babf73bbc6ade358db105580b68aacb91550faa5#diff-52df5aabcc0b97cfe43ce4b88b9dcf52de661934e481f6ae935435f4941b1639R224-R252
+/// Build a relay chain interface.
+/// Will return a minimal relay chain node with RPC
+/// client or an inprocess node, based on the [`CollatorOptions`] passed in.
+async fn build_relay_chain_interface(
+    polkadot_config: Configuration,
+    parachain_config: &Configuration,
+    telemetry_worker_handle: Option<TelemetryWorkerHandle>,
+    task_manager: &mut TaskManager,
+    collator_options: CollatorOptions,
+    hwbench: Option<sc_sysinfo::HwBench>,
+) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
+    match collator_options.relay_chain_rpc_url {
+        Some(relay_chain_url) => {
+            build_minimal_relay_chain_node(polkadot_config, task_manager, relay_chain_url).await
+        }
+        None => build_inprocess_relay_chain(
+            polkadot_config,
+            parachain_config,
+            telemetry_worker_handle,
+            task_manager,
+            hwbench,
+        ),
+    }
+}
+
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-#[sc_tracing::logging::prefix_logs_with("🌔 Zeitgeist Parachain")]
+#[sc_tracing::logging::prefix_logs_with("🔮 Zeitgeist Parachain")]
 async fn do_new_full<RuntimeApi, Executor, BIC>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
     id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
     hwbench: Option<sc_sysinfo::HwBench>,
+    rpc_config: RpcConfig,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -261,10 +294,6 @@ where
         bool,
     ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
-    if matches!(parachain_config.role, Role::Light) {
-        return Err("Light client not supported!".into());
-    }
-
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
@@ -274,13 +303,18 @@ where
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) = build_inprocess_relay_chain(
+    let collator_options =
+        CollatorOptions { relay_chain_rpc_url: rpc_config.relay_chain_rpc_url.clone() };
+
+    let (relay_chain_interface, collator_key) = build_relay_chain_interface(
         polkadot_config,
         &parachain_config,
         telemetry_worker_handle,
         &mut task_manager,
+        collator_options,
         hwbench.clone(),
     )
+    .await
     .map_err(|e| match e {
         RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
         s => s.to_string().into(),
@@ -293,7 +327,7 @@ where
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
     let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-    let (network, system_rpc_tx, start_network) =
+    let (network, system_rpc_tx, tx_handler_controller, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
@@ -325,6 +359,7 @@ where
         keystore: params.keystore_container.sync_keystore(),
         network: network.clone(),
         rpc_builder,
+        tx_handler_controller,
         system_rpc_tx,
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),
@@ -349,7 +384,7 @@ where
         Arc::new(move |hash, data| network.announce_block(hash, data))
     };
 
-    let relay_chain_slot_duration = KUSAMA_BLOCK_DURATION;
+    let relay_chain_slot_duration = POLKADOT_BLOCK_DURATION;
 
     if collator {
         let parachain_consensus = build_consensus(
@@ -392,7 +427,6 @@ where
             relay_chain_interface,
             relay_chain_slot_duration,
             import_queue,
-            collator_options: CollatorOptions { relay_chain_rpc_url: Default::default() },
         };
 
         start_full_node(params)?;

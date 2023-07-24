@@ -19,7 +19,7 @@
 //!   -> create, force fee by multiple update_volume, cost, price, all_prices, clear, destroy
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::arithmetic_side_effects
 )]
 #![allow(clippy::type_complexity)]
 #![no_main]

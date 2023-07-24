@@ -1,4 +1,4 @@
-// Copyright 2022 Zeitgeist PM LLC.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,9 +17,9 @@
 
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
-    AccountId, Ancestry, AssetManager, AssetRegistry, Balance, Call, CurrencyId, MaxInstructions,
-    Origin, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork,
-    UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
+    AccountId, Ancestry, AssetManager, AssetRegistry, Balance, CurrencyId, MaxInstructions,
+    ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, RuntimeCall,
+    RuntimeOrigin, UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
 use frame_support::{parameter_types, traits::Everything, WeakBoundedVec};
@@ -50,7 +50,7 @@ use zeitgeist_primitives::types::Asset;
 
 pub mod zeitgeist {
     #[cfg(test)]
-    pub const ID: u32 = 2101;
+    pub const ID: u32 = 2092;
     pub const KEY: &[u8] = &[0, 1];
 }
 
@@ -70,7 +70,7 @@ impl Config for XcmConfig {
     /// Additional filters that specify whether the XCM instruction should be executed at all.
     type Barrier = Barrier;
     /// The outer call dispatch type.
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     /// Combinations of (Location, Asset) pairs which are trusted as reserves.
     // Trust the parent chain, sibling parachains and children chains of this chain.
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
@@ -89,7 +89,7 @@ impl Config for XcmConfig {
     /// The means of determining an XCM message's weight.
     // Adds UnitWeightCost per instruction plus the weight of each instruction.
     // The total number of instructions are bounded by MaxInstructions
-    type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
     /// How to send an onward XCM message.
     type XcmSender = XcmRouter;
 }
@@ -261,7 +261,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
+pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
@@ -282,18 +282,18 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Sovereign account converter; this attempts to derive an `AccountId` from the origin location
     // using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
     // foreign chains who want to have a local sovereign account on this chain which they control.
-    SovereignSignedViaLocation<LocationToAccountId, Origin>,
+    SovereignSignedViaLocation<LocationToAccountId, RuntimeOrigin>,
     // Native converter for Relay-chain (Parent) location; will convert to a `Relay` origin when
     // recognized.
-    RelayChainAsNative<RelayChainOrigin, Origin>,
+    RelayChainAsNative<RelayChainOrigin, RuntimeOrigin>,
     // Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
     // recognized.
-    SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
+    SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
     // Native signed account converter; this just converts an `AccountId32` origin into a normal
     // `Origin::Signed` origin of the same 32-byte value.
-    SignedAccountId32AsNative<RelayNetwork, Origin>,
+    SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
     // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
-    XcmPassthrough<Origin>,
+    XcmPassthrough<RuntimeOrigin>,
 );
 
 /// The means for routing XCM messages which are not for local execution into the right message

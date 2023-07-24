@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -38,9 +39,9 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The origin that is allowed to set the amount burned when crossing Styx.
-        type SetBurnAmountOrigin: EnsureOrigin<Self::Origin>;
+        type SetBurnAmountOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type Currency: Currency<Self::AccountId>;
 
@@ -85,6 +86,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Burns ZTG(styx.burnAmount()) to cross, granting the ability to claim your zeitgeist avatar.
         /// The signer can only cross once.
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::cross())]
         pub fn cross(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -113,6 +115,7 @@ pub mod pallet {
         /// # Arguments
         ///
         /// * `amount`: The amount of the new burn price
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::set_burn_amount())]
         pub fn set_burn_amount(
             origin: OriginFor<T>,

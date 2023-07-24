@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -28,8 +29,11 @@ use sp_runtime::RuntimeDebug;
 /// * `BA`: Balance type for bonds
 /// * `BN`: Block number
 /// * `M`: Moment (time moment)
+/// * `A`: Asset
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BA, BN, M> {
+pub struct Market<AI, BA, BN, M, A> {
+    /// Base asset of the market.
+    pub base_asset: A,
     /// Creator of this market.
     pub creator: AI,
     /// Creation type.
@@ -83,6 +87,7 @@ impl<AI, BA> Bond<AI, BA> {
 pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
+    pub outsider: Option<Bond<AI, BA>>,
 }
 
 impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
@@ -92,18 +97,20 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
             Some(bond) if bond.who == *who => bond.value,
             _ => BA::zero(),
         };
-        value_or_default(&self.creation).saturating_add(value_or_default(&self.oracle))
+        value_or_default(&self.creation)
+            .saturating_add(value_or_default(&self.oracle))
+            .saturating_add(value_or_default(&self.outsider))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None }
+        MarketBonds { creation: None, oracle: None, outsider: None }
     }
 }
 
-impl<AI, BA, BN, M> Market<AI, BA, BN, M> {
+impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -129,15 +136,17 @@ impl<AI, BA, BN, M> Market<AI, BA, BN, M> {
     }
 }
 
-impl<AI, BA, BN, M> MaxEncodedLen for Market<AI, BA, BN, M>
+impl<AI, BA, BN, M, A> MaxEncodedLen for Market<AI, BA, BN, M, A>
 where
     AI: MaxEncodedLen,
     BA: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
+    A: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
+            .saturating_add(A::max_encoded_len())
             .saturating_add(MarketCreation::max_encoded_len())
             .saturating_add(u8::max_encoded_len())
             .saturating_add(AI::max_encoded_len())
@@ -264,6 +273,12 @@ pub struct Report<AccountId, BlockNumber> {
     pub outcome: OutcomeReport,
 }
 
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct AuthorityReport<BlockNumber> {
+    pub resolve_at: BlockNumber,
+    pub outcome: OutcomeReport,
+}
+
 /// Contains a market id and the market period.
 ///
 /// * `BN`: Block Number
@@ -279,9 +294,9 @@ pub struct SubsidyUntil<BN, MO, MI> {
 
 #[cfg(test)]
 mod tests {
-    use crate::market::*;
+    use crate::{market::*, types::Asset};
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32, u32>;
+    type Market = crate::market::Market<u32, u32, u32, u32, Asset<u32>>;
 
     #[test_case(
         MarketType::Categorical(6),
@@ -337,6 +352,7 @@ mod tests {
         expected: bool,
     ) {
         let market = Market {
+            base_asset: Asset::Ztg,
             creator: 1,
             creation: MarketCreation::Permissionless,
             creator_fee: 2,

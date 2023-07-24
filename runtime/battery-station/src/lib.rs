@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -33,6 +34,8 @@ pub use frame_system::{
 };
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
+pub use pallet_balances::Call as BalancesCall;
+use pallet_collective::EnsureProportionMoreThan;
 
 #[cfg(feature = "parachain")]
 pub use crate::parachain_params::*;
@@ -40,12 +43,14 @@ pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
     traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
-    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use pallet_transaction_payment::ChargeTransactionPayment;
-use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
+use sp_runtime::{
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
+    DispatchError,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -54,10 +59,9 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
-    frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::{
-        asset_registry::{CustomAssetProcessor, CustomMetadata},
+        asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
     },
 };
@@ -74,10 +78,9 @@ use sp_runtime::{
 };
 
 #[cfg(feature = "parachain")]
-use nimbus_primitives::{CanAuthor, NimbusId};
+use nimbus_primitives::CanAuthor;
 use sp_version::RuntimeVersion;
 
-#[cfg(feature = "parachain")]
 #[cfg(test)]
 pub mod integration_tests;
 #[cfg(feature = "parachain")]
@@ -90,10 +93,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 41,
+    spec_version: 46,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 18,
+    transaction_version: 21,
     state_version: 1,
 };
 
@@ -101,8 +104,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 pub struct IsCallable;
 
 // Currently disables Court, Rikiddo and creation of markets using Court.
-impl Contains<Call> for IsCallable {
-    fn contains(call: &Call) -> bool {
+impl Contains<RuntimeCall> for IsCallable {
+    fn contains(call: &RuntimeCall) -> bool {
         use zeitgeist_primitives::types::{
             MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
@@ -112,9 +115,9 @@ impl Contains<Call> for IsCallable {
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
-            Call::Court(_) => false,
-            Call::LiquidityMining(_) => false,
-            Call::PredictionMarkets(inner_call) => {
+            RuntimeCall::Court(_) => false,
+            RuntimeCall::LiquidityMining(_) => false,
+            RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
@@ -145,8 +148,8 @@ create_runtime_with_additional_pallets!(
 );
 
 impl pallet_sudo::Config for Runtime {
-    type Call = Call;
-    type Event = Event;
+    type RuntimeCall = RuntimeCall;
+    type RuntimeEvent = RuntimeEvent;
 }
 
 impl_config_traits!();

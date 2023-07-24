@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -132,7 +133,6 @@ cfg_if::cfg_if! {
         /// Additional APIs for parachain runtimes
         pub trait AdditionalRuntimeApiCollection:
             sp_api::ApiExt<Block>
-            + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
             + nimbus_primitives::NimbusApi<Block>
             + cumulus_primitives_core::CollectCollationInfo<Block>
             + session_keys_primitives::VrfApi<Block>
@@ -144,7 +144,6 @@ cfg_if::cfg_if! {
         impl<Api> AdditionalRuntimeApiCollection for Api
         where
             Api: sp_api::ApiExt<Block>
-                + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
                 + nimbus_primitives::NimbusApi<Block>
                 + cumulus_primitives_core::CollectCollationInfo<Block>
                 + session_keys_primitives::VrfApi<Block>,
