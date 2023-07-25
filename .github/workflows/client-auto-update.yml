@@ -20,7 +20,7 @@ jobs:
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
         uses: dawidd6/action-ansible-playbook@v2.6.1
         with:
-          playbook: scripts/ansible/client-auto-update.yml 
+          playbook: scripts/ansible/client-auto-update-playbook.yml 
           directory: ./
           key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }} 
           inventory: ${{ secrets.ANSIBLE_INVENTORY }} 
