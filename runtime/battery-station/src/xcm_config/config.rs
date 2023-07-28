@@ -25,7 +25,7 @@ use crate::{
 use core::marker::PhantomData;
 use frame_support::{
     parameter_types,
-    traits::{Everything, Get},
+    traits::{ConstU8, Everything, Get},
     WeakBoundedVec,
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
@@ -51,7 +51,7 @@ use xcm_builder::{
     TakeWeightCredit,
 };
 use xcm_executor::{traits::TransactAsset, Assets, Config};
-use zeitgeist_primitives::types::Asset;
+use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::Asset};
 
 pub mod battery_station {
     #[cfg(test)]
@@ -68,7 +68,7 @@ impl Config for XcmConfig {
     /// The handler for when there is an instruction to claim assets.
     type AssetClaims = PolkadotXcm;
     /// How to withdraw and deposit an asset.
-    type AssetTransactor = MultiAssetTransactor;
+    type AssetTransactor = AlignedFractionalMultiAssetTransactor;
     /// The general asset trap - handler for when assets are left in the Holding Register at the
     /// end of execution.
     type AssetTrap = PolkadotXcm;
@@ -165,41 +165,92 @@ parameter_types! {
 
 /// A generic warpper around implementations of the (xcm-executor) `TransactAsset` trait.
 ///
-/// Aligns the fractional decimal places of every incoming token.
+/// Aligns the fractional decimal places of every incoming and outgoing token.
 /// Reconstructs the original number of fractional decimal places of every outgoing token.
+///
+/// Important: Always assume that reserve asset transfer XCM use their canonical representation.
+/// Consequently, the amount within the XCM should always be represented in the correct global
+/// representation. Only when those XCM are interpreted, adjustments happens.
 #[allow(clippy::type_complexity)]
-pub struct AlignedFractionalTransactAsset<AssetRegistry, FracDecPlaces, TransactAssetDelegate> {
-    _phantom: PhantomData<(AssetRegistry, FracDecPlaces, TransactAssetDelegate)>,
+pub struct AlignedFractionalTransactAsset<
+    AssetRegistry,
+    CurrencyIdConvert,
+    FracDecPlaces,
+    TransactAssetDelegate,
+> {
+    _phantom: PhantomData<(AssetRegistry, CurrencyIdConvert, FracDecPlaces, TransactAssetDelegate)>,
 }
 
-impl<AssetRegistry: Inspect, FracDecPlaces: Get<u8>, TransactAssetDelegate: TransactAsset> TransactAsset
-    for AlignedFractionalTransactAsset<AssetRegistry, FracDecPlaces, TransactAssetDelegate>
+impl<
+    AssetRegistry: Inspect<AssetId = CurrencyId>,
+    FracDecPlaces: Get<u8>,
+    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
+    TransactAssetDelegate: TransactAsset,
+>
+    AlignedFractionalTransactAsset<
+        AssetRegistry,
+        CurrencyIdConvert,
+        FracDecPlaces,
+        TransactAssetDelegate,
+    >
 {
-    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-        if let Fungible(mut amount) = asset.fun {
-            let decimals = AssetRegistry::metadata_by_location(location)
-                .ok_or_else(|| XcmError::FailedToTransactAsset("Asset not in registry"))?
-                .decimals;
-            let native_decimals = u32::from(FracDecPlaces::get());
+    fn modify_asset_and_delegate<R>(
+        asset: &MultiAsset,
+        location: &MultiLocation,
+        delegate: impl Fn(&MultiAsset, &MultiLocation) -> Result<R, XcmError>,
+    ) -> Result<R, XcmError> {
+        if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
+            if let Fungible(amount) = asset.fun {
+                let mut asset_updated = asset.clone();
+                let native_decimals = u32::from(FracDecPlaces::get());
+                let metadata = AssetRegistry::metadata(asset_id);
 
-            if decimals > native_decimals {
-                let power = decimals.saturating_sub(native_decimals);
-                let adjust_factor = 10u128.saturating_pow(power);
-                // Floors the adjusted token amount, thus no tokens are generated
-                amount = amount.saturating_div(adjust_factor);
-            } else {
-                let power = native_decimals.saturating_sub(decimals);
-                let adjust_factor = 10u128.saturating_pow(power);
-                amount = amount.saturating_mul(adjust_factor);
-            };
+                if let Some(metadata) = metadata {
+                    let decimals = metadata.decimals;
+
+                    asset_updated.fun = if decimals > native_decimals {
+                        let power = decimals.saturating_sub(native_decimals);
+                        let adjust_factor = 10u128.saturating_pow(power);
+                        // Floors the adjusted token amount, thus no tokens are generated
+                        Fungible(amount.saturating_div(adjust_factor))
+                    } else {
+                        let power = native_decimals.saturating_sub(decimals);
+                        let adjust_factor = 10u128.saturating_pow(power);
+                        Fungible(amount.saturating_mul(adjust_factor))
+                    };
+
+                    return delegate(&asset_updated, location);
+                }
+            }
         }
 
-        TransactAssetDelegate::deposit_asset(asset, location)
+        delegate(asset, location)
+    }
+}
+
+impl<
+    AssetRegistry: Inspect<AssetId = CurrencyId>,
+    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
+    FracDecPlaces: Get<u8>,
+    TransactAssetDelegate: TransactAsset,
+> TransactAsset
+    for AlignedFractionalTransactAsset<
+        AssetRegistry,
+        CurrencyIdConvert,
+        FracDecPlaces,
+        TransactAssetDelegate,
+    >
+{
+    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
+        Self::modify_asset_and_delegate::<()>(asset, location, TransactAssetDelegate::deposit_asset)
     }
 
     fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<Assets, XcmError> {
-        // TODO adjust places
-        todo!()
+        Self::modify_asset_and_delegate::<Assets>(
+            asset,
+            location,
+            TransactAssetDelegate::withdraw_asset,
+        )
     }
 
     fn transfer_asset(
@@ -207,10 +258,16 @@ impl<AssetRegistry: Inspect, FracDecPlaces: Get<u8>, TransactAssetDelegate: Tran
         from: &MultiLocation,
         to: &MultiLocation,
     ) -> Result<Assets, XcmError> {
-        // TODO ???
-        todo!()
+        TransactAssetDelegate::transfer_asset(asset, from, to)
     }
 }
+
+pub type AlignedFractionalMultiAssetTransactor = AlignedFractionalTransactAsset<
+    AssetRegistry,
+    AssetConvert,
+    ConstU8<{ BalanceFractionalDecimals::get() }>,
+    MultiAssetTransactor,
+>;
 
 /// Means for transacting assets on this chain.
 pub type MultiAssetTransactor = MultiCurrencyAdapter<
