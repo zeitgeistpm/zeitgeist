@@ -357,6 +357,34 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        fn get_fee_factor_works() {
+            let mut t: sp_io::TestExternalities =
+                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+            t.execute_with(|| {
+                #[cfg(feature = "parachain")]
+                {
+                    let custom_metadata = CustomMetadata {
+                        xcm: XcmMetadata { fee_factor: Some(143_120_520u128) },
+                        ..Default::default()
+                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                        decimals: 10,
+                        name: "Polkadot".into(),
+                        symbol: "DOT".into(),
+                        existential_deposit: ExistentialDeposit::get(),
+                        location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
+                        additional: custom_metadata,
+                    };
+                    let dot = Asset::ForeignAsset(0);
+
+                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
+
+                    assert_eq!(get_fee_factor(dot).unwrap(), 143_120_520u128);
+                }
+            });
+        }
+
+        #[test]
         fn get_fee_factor_metadata_not_found() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
