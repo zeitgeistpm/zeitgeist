@@ -108,6 +108,56 @@ pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
 pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
 pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
 
+#[inline]
+pub(super) const fn ztg(amount: Balance) -> Balance {
+    amount * dollar(10)
+}
+
+#[inline]
+pub(super) const fn roc(amount: Balance) -> Balance {
+    foreign(amount, 12)
+}
+
+#[inline]
+pub(super) const fn btc(amount: Balance) -> Balance {
+    foreign(amount, 8)
+}
+
+#[inline]
+pub(super) const fn foreign(amount: Balance, decimals: u32) -> Balance {
+    amount * dollar(decimals)
+}
+
+#[inline]
+pub(super) const fn dollar(decimals: u32) -> Balance {
+    10u128.saturating_pow(decimals)
+}
+
+#[inline]
+pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance, receiving: bool) -> Balance {
+    let foreign_bigger = foreign_base > ztg(1);
+
+    let adjustment = if foreign_bigger {
+        foreign_base / ztg(1)
+    } else {
+        ztg(1) / foreign_base
+    };
+
+    if receiving {
+        if foreign_bigger {
+            amount.saturating_div(adjustment)
+        } else {
+            amount.saturating_mul(adjustment)
+        }
+    } else {
+        if foreign_bigger {
+            amount.saturating_mul(adjustment)
+        } else {
+            amount.saturating_div(adjustment)
+        }
+    }
+}
+
 // Multilocations that are used to represent tokens from other chains
 #[inline]
 pub(super) fn foreign_ztg_multilocation() -> MultiLocation {
@@ -168,26 +218,6 @@ pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
     };
 
     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_PARENT_ID)));
-}
-
-#[inline]
-pub(super) fn ztg(amount: Balance) -> Balance {
-    amount * dollar(10)
-}
-
-#[inline]
-pub(super) fn roc(amount: Balance) -> Balance {
-    foreign(amount, 12)
-}
-
-#[inline]
-pub(super) fn foreign(amount: Balance, decimals: u32) -> Balance {
-    amount * dollar(decimals)
-}
-
-#[inline]
-pub(super) fn dollar(decimals: u32) -> Balance {
-    10u128.saturating_pow(decimals)
 }
 
 #[inline]

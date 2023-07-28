@@ -21,7 +21,7 @@ use crate::{
         setup::{
             register_foreign_parent, register_foreign_ztg, roc, sibling_parachain_account,
             zeitgeist_parachain_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID,
-            PARA_ID_SIBLING,
+            PARA_ID_SIBLING, adjusted_balance
         },
         test_net::{RococoNet, Sibling, TestNet, Zeitgeist},
     },
@@ -198,7 +198,9 @@ fn transfer_roc_from_relay_chain() {
     });
 
     Zeitgeist::execute_with(|| {
-        assert_eq!(Tokens::free_balance(FOREIGN_PARENT_ID, &BOB), transfer_amount - roc_fee());
+        let expected = transfer_amount - roc_fee();
+        let expected_adjusted = adjusted_balance(roc(1), expected, true);
+        assert_eq!(Tokens::free_balance(FOREIGN_PARENT_ID, &BOB), expected_adjusted);
     });
 }
 
