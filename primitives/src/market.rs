@@ -63,6 +63,8 @@ pub struct Market<AI, BA, BN, M, A> {
     pub dispute_mechanism: MarketDisputeMechanism,
     /// The bonds reserved for this market.
     pub bonds: MarketBonds<AI, BA>,
+    /// The time at which the market was closed prematurely.
+    pub premature_close: PrematureClose<BN, M>,
 }
 
 /// Tracks the status of a bond.
@@ -88,6 +90,8 @@ pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
     pub outsider: Option<Bond<AI, BA>>,
+    pub close_request: Option<Bond<AI, BA>>,
+    pub close_dispute: Option<Bond<AI, BA>>,
 }
 
 impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
@@ -100,13 +104,21 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
         value_or_default(&self.creation)
             .saturating_add(value_or_default(&self.oracle))
             .saturating_add(value_or_default(&self.outsider))
+            .saturating_add(value_or_default(&self.close_request))
+            .saturating_add(value_or_default(&self.close_dispute))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None, outsider: None }
+        MarketBonds {
+            creation: None,
+            oracle: None,
+            outsider: None,
+            close_request: None,
+            close_dispute: None,
+        }
     }
 }
 
@@ -213,6 +225,15 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
         // Since it is an enum, the biggest element is the only one of interest here.
         BN::max_encoded_len().max(M::max_encoded_len()).saturating_mul(2).saturating_add(1)
     }
+}
+
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum PrematureClose<BN, M> {
+    Non,
+    Requested { block: BN, time: M },
+    Disputed,
+    Applied { old: MarketPeriod<BN, M>, new: MarketPeriod<BN, M> },
+    Rejected,
 }
 
 /// Defines deadlines for market.
