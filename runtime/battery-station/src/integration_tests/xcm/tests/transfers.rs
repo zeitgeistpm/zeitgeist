@@ -180,7 +180,6 @@ fn transfer_btc_sibling_to_zeitgeist() {
     let zeitgeist_alice_initial_balance = btc(0);
     let initial_sovereign_balance = btc(100);
     let transfer_amount = btc(100);
-    let _ = env_logger::try_init();
 
     Zeitgeist::execute_with(|| {
         register_btc(None);
@@ -243,7 +242,6 @@ fn transfer_btc_zeitgeist_to_sibling() {
     let transfer_amount = btc(100) - btc_fee();
     let initial_sovereign_balance = 2 * btc(100);
     let sibling_bob_initial_balance = btc(0);
-    let _ = env_logger::try_init();
 
     transfer_btc_sibling_to_zeitgeist();
 
