@@ -108,6 +108,7 @@ pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
 pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
 pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
 pub const BTC_ID: Asset<u128> = CurrencyId::ForeignAsset(3);
+pub const ETH_ID: Asset<u128> = CurrencyId::ForeignAsset(4);
 
 #[inline]
 pub(super) const fn ztg(amount: Balance) -> Balance {
@@ -122,6 +123,11 @@ pub(super) const fn dot(amount: Balance) -> Balance {
 #[inline]
 pub(super) const fn btc(amount: Balance) -> Balance {
     foreign(amount, 8)
+}
+
+#[inline]
+pub(super) const fn eth(amount: Balance) -> Balance {
+    foreign(amount, 18)
 }
 
 #[inline]
@@ -184,6 +190,19 @@ pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
     };
 
     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(BTC_ID)));
+}
+
+pub(super) fn register_eth(additional_meta: Option<CustomMetadata>) {
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 18,
+        name: "Ethereum".into(),
+        symbol: "ETH".into(),
+        existential_deposit: ExistentialDeposit::get(),
+        location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(ETH_ID)));
 }
 
 pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {

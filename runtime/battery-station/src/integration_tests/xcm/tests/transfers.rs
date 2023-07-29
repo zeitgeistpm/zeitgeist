@@ -198,6 +198,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
         ));
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
+            // Target chain will interpret CurrencyId::Ztg as BTC in this context.
             CurrencyId::Ztg,
             transfer_amount,
             Box::new(
