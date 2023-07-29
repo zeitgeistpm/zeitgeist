@@ -107,6 +107,7 @@ pub const PARA_ID_SIBLING: u32 = 3000;
 pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
 pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
 pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
+pub const BTC_ID: Asset<u128> = CurrencyId::ForeignAsset(3);
 
 #[inline]
 pub(super) const fn ztg(amount: Balance) -> Balance {
@@ -135,7 +136,7 @@ pub(super) const fn dollar(decimals: u32) -> Balance {
 
 #[inline]
 pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance) -> Balance {
-    if foreign_base > ztg(1){
+    if foreign_base > ztg(1) {
         amount.saturating_div(foreign_base / ztg(1))
     } else {
         amount.saturating_mul(ztg(1) / foreign_base)
@@ -170,6 +171,19 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
     };
 
     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_ZTG_ID)));
+}
+
+pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 8,
+        name: "Bitcoin".into(),
+        symbol: "BTC".into(),
+        existential_deposit: ExistentialDeposit::get(),
+        location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(BTC_ID)));
 }
 
 pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {

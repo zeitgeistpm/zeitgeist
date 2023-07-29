@@ -456,6 +456,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "env_logger 0.9.3",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",

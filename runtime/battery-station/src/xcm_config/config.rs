@@ -165,12 +165,12 @@ parameter_types! {
 
 /// A generic warpper around implementations of the (xcm-executor) `TransactAsset` trait.
 ///
-/// Aligns the fractional decimal places of every incoming and outgoing token.
+/// Aligns the fractional decimal places of every incoming token with ZTG.
 /// Reconstructs the original number of fractional decimal places of every outgoing token.
 ///
 /// Important: Always assume that reserve asset transfer XCM use their canonical representation.
-/// Consequently, the amount within the XCM should always be represented in the correct global
-/// representation. Only when those XCM are interpreted, adjustments happens.
+/// Consequently, the amount within the XCM should always be noted in the correct global
+/// representation. Only during the interpretation of those XCM adjustments happens.
 #[allow(clippy::type_complexity)]
 pub struct AlignedFractionalTransactAsset<
     AssetRegistry,
