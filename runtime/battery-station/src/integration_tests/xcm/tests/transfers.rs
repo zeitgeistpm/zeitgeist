@@ -459,7 +459,7 @@ fn btc_fee() -> Balance {
 }
 
 #[inline]
-fn calc_fee(fee_per_second: Balance) -> Balance {
+const fn calc_fee(fee_per_second: Balance) -> Balance {
     // We divide the fee to align its unit and multiply by 8 as that seems to be the unit of
     // time the tests take.
     // NOTE: it is possible that in different machines this value may differ. We shall see.
