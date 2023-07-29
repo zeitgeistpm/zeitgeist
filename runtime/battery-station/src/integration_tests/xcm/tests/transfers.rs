@@ -199,7 +199,7 @@ fn transfer_roc_from_relay_chain() {
 
     Zeitgeist::execute_with(|| {
         let expected = transfer_amount - roc_fee();
-        let expected_adjusted = adjusted_balance(roc(1), expected, true);
+        let expected_adjusted = adjusted_balance(roc(1), expected);
         assert_eq!(Tokens::free_balance(FOREIGN_PARENT_ID, &BOB), expected_adjusted);
     });
 }
@@ -209,6 +209,7 @@ fn transfer_roc_to_relay_chain() {
     TestNet::reset();
 
     let transfer_amount: Balance = roc(1);
+    let transfer_amount_local: Balance = adjusted_balance(roc(1), transfer_amount);
     transfer_roc_from_relay_chain();
 
     Zeitgeist::execute_with(|| {
@@ -231,7 +232,7 @@ fn transfer_roc_to_relay_chain() {
 
         assert_eq!(
             Tokens::free_balance(FOREIGN_PARENT_ID, &ALICE),
-            initial_balance - transfer_amount
+            initial_balance - transfer_amount_local
         )
     });
 

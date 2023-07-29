@@ -134,27 +134,11 @@ pub(super) const fn dollar(decimals: u32) -> Balance {
 }
 
 #[inline]
-pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance, receiving: bool) -> Balance {
-    let foreign_bigger = foreign_base > ztg(1);
-
-    let adjustment = if foreign_bigger {
-        foreign_base / ztg(1)
+pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance) -> Balance {
+    if foreign_base > ztg(1){
+        amount.saturating_div(foreign_base / ztg(1))
     } else {
-        ztg(1) / foreign_base
-    };
-
-    if receiving {
-        if foreign_bigger {
-            amount.saturating_div(adjustment)
-        } else {
-            amount.saturating_mul(adjustment)
-        }
-    } else {
-        if foreign_bigger {
-            amount.saturating_mul(adjustment)
-        } else {
-            amount.saturating_div(adjustment)
-        }
+        amount.saturating_mul(ztg(1) / foreign_base)
     }
 }
 
