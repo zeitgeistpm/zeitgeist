@@ -39,8 +39,7 @@ use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
         prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, NetworkId, X1, X2},
-        Junction, MultiLocation,
-        Error as XcmError,  Result as XcmResult,
+        Error as XcmError, Junction, MultiLocation, Result as XcmResult,
     },
     opaque::latest::Fungibility::Fungible,
 };

@@ -19,9 +19,9 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            adjusted_balance, btc, eth, register_btc, register_foreign_parent, register_foreign_ztg,
-            dot, sibling_parachain_account, zeitgeist_parachain_account, ztg, ALICE, BOB, BTC_ID,
-            FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,register_eth,ETH_ID
+            adjusted_balance, btc, dot, eth, register_btc, register_eth, register_foreign_parent,
+            register_foreign_ztg, sibling_parachain_account, zeitgeist_parachain_account, ztg,
+            ALICE, BOB, BTC_ID, ETH_ID, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,
         },
         test_net::{PolkadotNet, Sibling, TestNet, Zeitgeist},
     },
