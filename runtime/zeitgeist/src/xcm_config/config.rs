@@ -240,12 +240,12 @@ impl<
 {
     fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
         let asset_adjusted = Self::adjust_fractional_places(asset);
-        TransactAssetDelegate::deposit_asset(&asset_adjusted, &location)
+        TransactAssetDelegate::deposit_asset(&asset_adjusted, location)
     }
 
     fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
-        TransactAssetDelegate::withdraw_asset(&asset_adjusted, &location)
+        TransactAssetDelegate::withdraw_asset(&asset_adjusted, location)
     }
 
     fn transfer_asset(
@@ -254,7 +254,7 @@ impl<
         to: &MultiLocation,
     ) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
-        TransactAssetDelegate::transfer_asset(&asset_adjusted, &from, &to)
+        TransactAssetDelegate::transfer_asset(&asset_adjusted, from, to)
     }
 }
 
