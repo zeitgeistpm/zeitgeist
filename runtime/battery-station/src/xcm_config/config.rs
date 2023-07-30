@@ -195,9 +195,7 @@ impl<
         TransactAssetDelegate,
     >
 {
-    fn adjust_fractional_places(
-        asset: &MultiAsset,
-    ) -> MultiAsset {
+    fn adjust_fractional_places(asset: &MultiAsset) -> MultiAsset {
         if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
             if let Fungible(amount) = asset.fun {
                 let mut asset_updated = asset.clone();
