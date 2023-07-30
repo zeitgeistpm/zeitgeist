@@ -163,14 +163,15 @@ parameter_types! {
     );
 }
 
-// A generic warpper around implementations of the (xcm-executor) `TransactAsset` trait.
+/// A generic warpper around implementations of the (xcm-executor) `TransactAsset` trait.
 ///
 /// Aligns the fractional decimal places of every incoming token with ZTG.
 /// Reconstructs the original number of fractional decimal places of every outgoing token.
 ///
-/// Important: Always assume that reserve asset transfer XCM use their canonical representation.
-/// Consequently, the amount within the XCM should always be noted in the correct global
-/// representation. Only during the interpretation of those XCM adjustments happens.
+/// Important: Always use the global canonical representation of token balances in XCM.
+/// Only during the interpretation of those XCM adjustments happens.
+///
+/// Important: The implementation does not support teleports.
 #[allow(clippy::type_complexity)]
 pub struct AlignedFractionalTransactAsset<
     AssetRegistry,
@@ -194,11 +195,9 @@ impl<
         TransactAssetDelegate,
     >
 {
-    fn modify_asset_and_delegate<R>(
+    fn adjust_fractional_places(
         asset: &MultiAsset,
-        location: &MultiLocation,
-        delegate: impl Fn(&MultiAsset, &MultiLocation) -> Result<R, XcmError>,
-    ) -> Result<R, XcmError> {
+    ) -> MultiAsset {
         if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
             if let Fungible(amount) = asset.fun {
                 let mut asset_updated = asset.clone();
@@ -219,12 +218,12 @@ impl<
                         Fungible(amount.saturating_mul(adjust_factor))
                     };
 
-                    return delegate(&asset_updated, location);
+                    return asset_updated;
                 }
             }
         }
 
-        delegate(asset, location)
+        asset.clone()
     }
 }
 
@@ -242,15 +241,13 @@ impl<
     >
 {
     fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-        Self::modify_asset_and_delegate::<()>(asset, location, TransactAssetDelegate::deposit_asset)
+        let asset_adjusted = Self::adjust_fractional_places(asset);
+        TransactAssetDelegate::deposit_asset(&asset_adjusted, &location)
     }
 
     fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<Assets, XcmError> {
-        Self::modify_asset_and_delegate::<Assets>(
-            asset,
-            location,
-            TransactAssetDelegate::withdraw_asset,
-        )
+        let asset_adjusted = Self::adjust_fractional_places(asset);
+        TransactAssetDelegate::withdraw_asset(&asset_adjusted, &location)
     }
 
     fn transfer_asset(
@@ -258,7 +255,8 @@ impl<
         from: &MultiLocation,
         to: &MultiLocation,
     ) -> Result<Assets, XcmError> {
-        TransactAssetDelegate::transfer_asset(asset, from, to)
+        let asset_adjusted = Self::adjust_fractional_places(asset);
+        TransactAssetDelegate::transfer_asset(&asset_adjusted, &from, &to)
     }
 }
 

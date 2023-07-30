@@ -279,7 +279,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
         // Verify that Bob now has initial balance + amount transferred - fee
         assert_eq!(Balances::free_balance(&BOB), sibling_bob_initial_balance + expected,);
 
-        // Verify that the amount transferred is now subsumed from the zeitgeist account at sibling
+        // Verify that the amount transferred is now subtracted from the zeitgeist account at sibling
         assert_eq!(
             Balances::free_balance(zeitgeist_parachain_account()),
             initial_sovereign_balance - transfer_amount
