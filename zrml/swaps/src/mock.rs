@@ -30,6 +30,7 @@
 
 use crate as zrml_swaps;
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
+use sp_arithmetic::Perbill;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -45,9 +46,12 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
+        ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -219,13 +223,20 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut storage =
+            frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
-            .assimilate_storage(&mut t)
+            .assimilate_storage(&mut storage)
             .unwrap();
 
-        t.into()
+        let mut ext = sp_io::TestExternalities::from(storage);
+
+        ext.execute_with(|| {
+            MarketCommons::push_market(mock_market(4)).unwrap();
+        });
+
+        ext
     }
 }
 
@@ -256,5 +267,27 @@ sp_api::mock_impl_runtime_apis! {
         ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
             Swaps::get_all_spot_prices(pool_id, with_fees)
         }
+    }
+}
+
+pub(super) fn mock_market(
+    categories: u16,
+) -> Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> {
+    Market {
+        base_asset: Asset::Ztg,
+        creation: MarketCreation::Permissionless,
+        creator_fee: Perbill::from_parts(0),
+        creator: ALICE,
+        market_type: MarketType::Categorical(categories),
+        dispute_mechanism: MarketDisputeMechanism::Authorized,
+        metadata: vec![0; 50],
+        oracle: ALICE,
+        period: MarketPeriod::Block(0..1),
+        deadlines: Deadlines::default(),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: MarketStatus::Active,
+        bonds: MarketBonds::default(),
     }
 }

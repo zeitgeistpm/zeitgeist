@@ -44,9 +44,7 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
-        OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -1035,7 +1033,6 @@ fn admin_clean_up_pool_fails_if_origin_is_not_root() {
     ExtBuilder::default().build().execute_with(|| {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
-        assert_ok!(MarketCommons::push_market(mock_market(69)));
         assert_ok!(MarketCommons::insert_market_pool(0, 0));
         assert_noop!(
             Swaps::admin_clean_up_pool(alice_signed(), 0, OutcomeReport::Categorical(idx)),
@@ -1191,7 +1188,6 @@ fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
-        assert_ok!(MarketCommons::push_market(mock_market(69)));
         assert_ok!(MarketCommons::insert_market_pool(0, 0));
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
@@ -3589,26 +3585,4 @@ fn subsidize_and_start_rikiddo_pool(
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(RuntimeOrigin::signed(*who), pool_id, min_subsidy));
     assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
-}
-
-fn mock_market(
-    categories: u16,
-) -> Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> {
-    Market {
-        base_asset: Asset::Ztg,
-        creation: MarketCreation::Permissionless,
-        creator_fee: 0,
-        creator: ALICE,
-        market_type: MarketType::Categorical(categories),
-        dispute_mechanism: MarketDisputeMechanism::Authorized,
-        metadata: vec![0; 50],
-        oracle: ALICE,
-        period: MarketPeriod::Block(0..1),
-        deadlines: Deadlines::default(),
-        report: None,
-        resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
-        status: MarketStatus::Active,
-        bonds: MarketBonds::default(),
-    }
 }

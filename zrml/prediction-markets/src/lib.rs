@@ -805,7 +805,7 @@ mod pallet {
             let market = Self::construct_market(
                 base_asset,
                 sender.clone(),
-                0_u8,
+                T::CreatorFee::get(),
                 oracle,
                 period,
                 deadlines,
@@ -1570,6 +1570,9 @@ mod pallet {
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        /// A fee that is charged each trade and given to the market creator.
+        type CreatorFee: Get<Perbill>;
 
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
@@ -3025,7 +3028,7 @@ mod pallet {
         fn construct_market(
             base_asset: Asset<MarketIdOf<T>>,
             creator: T::AccountId,
-            creator_fee: u8,
+            creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,

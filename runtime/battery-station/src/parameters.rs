@@ -168,6 +168,8 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
+    /// Creator fee, fraction per trade volume that is moved to the market creator
+    pub const CreatorFee: Balance = Perbill::from_perthousand(1);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.

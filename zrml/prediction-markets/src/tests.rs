@@ -33,6 +33,7 @@ use frame_support::{
 use test_case::test_case;
 
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_arithmetic::Perbill;
 use sp_runtime::traits::{AccountIdConversion, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK},
@@ -5157,7 +5158,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.creator, creator);
         assert_eq!(market.creation, creation);
-        assert_eq!(market.creator_fee, 0);
+        assert_eq!(market.creator_fee, Perbill::from_parts(0));
         assert_eq!(market.oracle, oracle);
         assert_eq!(market.metadata, multihash);
         assert_eq!(market.market_type, market_type);

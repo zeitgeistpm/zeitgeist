@@ -955,6 +955,8 @@ mod pallet {
         WinningAssetNotFound,
         /// Some amount in a transaction equals zero.
         ZeroAmount,
+        /// The sum of all fees is too high (including market fees)
+        TotalFeeTooHigh,
     }
 
     #[pallet::event]
@@ -1755,6 +1757,7 @@ mod pallet {
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             let pool_account = Self::pool_account_id(&next_pool_id);
             let mut map = BTreeMap::new();
+            let market = T::MarketCommons::market(&market_id)?;
             let mut total_weight = 0;
             let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
             let mut sorted_assets = assets.clone();
@@ -1776,11 +1779,20 @@ mod pallet {
                             amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
                             Error::<T>::InsufficientLiquidity
                         );
+
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                        let total_fee = market.creator_fee.mul_floor(BASE).checked_add(
+                            swap_fee_unwrapped
+                                .try_into()
+                                .or_else(|_| Err(Error::<T>::TotalFeeTooHigh))?,
+                        ).ok_or_else(|| Error::<T>::TotalFeeTooHigh)?;
+
                         ensure!(
                             swap_fee_unwrapped <= T::MaxSwapFee::get(),
                             Error::<T>::SwapFeeTooHigh
                         );
+                        ensure!(total_fee <= BASE, Error::<T>::TotalFeeTooHigh);
+
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
                             &assets,

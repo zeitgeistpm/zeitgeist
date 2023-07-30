@@ -25,6 +25,7 @@ use crate::{
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
+use sp_arithmetic::Perbill;
 
 // Authorized
 parameter_types! {
@@ -58,6 +59,7 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
+    pub const CreatorFee: Perbill = Perbill::from_parts(0);
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
