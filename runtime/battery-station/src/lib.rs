@@ -47,7 +47,6 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use pallet_transaction_payment::ChargeTransactionPayment;
 use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
     DispatchError,
@@ -94,10 +93,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 46,
+    spec_version: 47,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 21,
+    transaction_version: 22,
     state_version: 1,
 };
 

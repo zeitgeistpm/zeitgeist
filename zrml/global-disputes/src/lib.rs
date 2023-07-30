@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -209,8 +209,9 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of owner(s) of the winner outcome
         /// in the case that this gets called for an already finished global dispute.
-        #[frame_support::transactional]
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::add_vote_outcome(T::MaxOwners::get()))]
+        #[frame_support::transactional]
         pub fn add_vote_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -258,11 +259,12 @@ mod pallet {
         ///
         /// Complexity: `O(n)`,
         /// where `n` is the number of all existing outcomes for a global dispute.
-        #[frame_support::transactional]
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::purge_outcomes(
             T::RemoveKeysLimit::get(),
             T::MaxOwners::get(),
         ))]
+        #[frame_support::transactional]
         pub fn purge_outcomes(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -314,12 +316,13 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of owners for the winning outcome.
-        #[frame_support::transactional]
+        #[pallet::call_index(2)]
         #[pallet::weight(
             T::WeightInfo::reward_outcome_owner_no_funds(T::MaxOwners::get()).max(
                 T::WeightInfo::reward_outcome_owner_with_funds(T::MaxOwners::get()),
             )
         )]
+        #[frame_support::transactional]
         pub fn reward_outcome_owner(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -396,11 +399,12 @@ mod pallet {
         ///
         /// Complexity: `O(n + m)`, where `n` is the number of all current votes on global disputes,
         /// and `m` is the number of owners for the specified outcome.
-        #[frame_support::transactional]
+        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::vote_on_outcome(
             T::MaxOwners::get(),
             T::MaxGlobalDisputeVotes::get(),
         ))]
+        #[frame_support::transactional]
         pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -482,7 +486,7 @@ mod pallet {
         ///
         /// Complexity: `O(n + m)`, where `n` is the number of all current votes on global disputes,
         /// and `m` is the number of owners for the winning outcome.
-        #[frame_support::transactional]
+        #[pallet::call_index(4)]
         #[pallet::weight(
             T::WeightInfo::unlock_vote_balance_set(
                 T::MaxGlobalDisputeVotes::get(),
@@ -493,6 +497,7 @@ mod pallet {
                 T::MaxOwners::get(),
             ))
         )]
+        #[frame_support::transactional]
         pub fn unlock_vote_balance(
             origin: OriginFor<T>,
             voter: AccountIdLookupOf<T>,

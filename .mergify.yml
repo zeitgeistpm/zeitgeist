@@ -1,13 +1,18 @@
 pull_request_rules:
   - name: Auto merge
     conditions:
-      - base=main
       - "#approved-reviews-by>=1"
       - "#changes-requested-reviews-by=0"
-      - check-success=format
-      - check-success=tests
-      - check-success=fuzz
-      - check-success=benchmark
+      - check-success=Coverage / Coverage
+      - check-success=Rust / Format
+      - check-success=Rust / Copyright Notices
+      - check-success=Rust / Checks (clippy)
+      - check-success=Rust / Checks (parachain)
+      - check-success=Rust / Checks (standalone)
+      - check-success=Rust / Quick check benchmarks
+      - check-success=Rust / Test standalone build
+      - check-success=Rust / Test parachain build
+      - check-success=Rust / Fuzz
       - label=s:accepted
     actions:
       label:
@@ -22,4 +27,11 @@ pull_request_rules:
     actions:
         comment:
           message: This pull request is now in conflicts. Could you fix it @{{author}}? 🙏
+        label:
+          add:
+            - s:revision-needed
+          remove:
+            - s:accepted
+            - s:in-progress
+            - s:review-needed
 

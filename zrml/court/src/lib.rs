@@ -101,6 +101,7 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         // MARK(non-transactional): `remove_juror_from_all_courts_of_all_markets` is infallible.
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::exit_court())]
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -111,6 +112,7 @@ mod pallet {
         }
 
         // MARK(non-transactional): Once `reserve_named` is successful, `insert` won't fail.
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::join_court())]
         pub fn join_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -128,6 +130,7 @@ mod pallet {
         }
 
         // MARK(non-transactional): No fallible storage operation is performed.
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::vote())]
         pub fn vote(
             origin: OriginFor<T>,

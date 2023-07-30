@@ -76,12 +76,13 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Overwrites already provided outcomes for the same market and account.
-        #[frame_support::transactional]
+        #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::authorize_market_outcome_first_report(CacheSize::get()).max(
                 T::WeightInfo::authorize_market_outcome_existing_report(),
             )
         )]
+        #[frame_support::transactional]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
