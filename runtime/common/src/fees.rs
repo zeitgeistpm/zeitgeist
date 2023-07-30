@@ -191,8 +191,6 @@ macro_rules! fee_tests {
         use zeitgeist_primitives::constants::BASE;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use frame_support::{assert_noop, assert_ok};
-        #[cfg(feature = "parachain")]
-        use orml_asset_registry::AssetMetadata;
 
         fn run_with_system_weight<F>(w: Weight, mut assertions: F)
         where
@@ -241,56 +239,188 @@ macro_rules! fee_tests {
         }
 
         #[test]
-        #[cfg(feature = "parachain")]
-        fn withdraws_correct_dot_foreign_asset_fee() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                let fee_factor = 143_120_520;
-                let custom_metadata = CustomMetadata {
-                    xcm: XcmMetadata { fee_factor: Some(fee_factor) },
-                    ..Default::default()
-                };
-                let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                    decimals: 10,
-                    name: "Polkadot".into(),
-                    symbol: "DOT".into(),
-                    existential_deposit: ExistentialDeposit::get(),
-                    location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
-                    additional: custom_metadata,
-                };
-                let dot = Asset::ForeignAsset(0);
-
-                assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
-
-                let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);
-                assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
-
-                let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
-                let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
-                    weight:  frame_support::dispatch::Weight::zero(),
-                    class: DispatchClass::Normal,
-                    pays_fee:  frame_support::dispatch::Pays::Yes,
-                };
-                assert_eq!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
-                    &Treasury::account_id(),
-                    &mock_call,
-                    &mock_dispatch_info,
-                    dot,
-                    BASE / 2,
-                    0,
-                ).unwrap().peek(), 71_560_260);
-            });
+        fn fee_multiplier_can_grow_from_zero() {
+            let minimum_multiplier = MinimumMultiplier::get();
+            let target = TargetBlockFullness::get()
+                * RuntimeBlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
+            // if the min is too small, then this will not change, and we are doomed forever.
+            // the weight is 1/100th bigger than target.
+            run_with_system_weight(target * 101 / 100, || {
+                let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
+                assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
+            })
         }
 
-        #[test]
         #[cfg(feature = "parachain")]
-        fn correct_and_deposit_fee_dot_foreign_asset() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                {
-                    let alice =  AccountId::from([0u8; 32]);
+        mod parachain {
+            use super::*;
+            use orml_asset_registry::AssetMetadata;
+            
+            #[test]
+            fn correct_and_deposit_fee_dot_foreign_asset() {
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                t.execute_with(|| {
+                    {
+                        let alice =  AccountId::from([0u8; 32]);
+                        let fee_factor = 143_120_520;
+                        let custom_metadata = CustomMetadata {
+                            xcm: XcmMetadata { fee_factor: Some(fee_factor) },
+                            ..Default::default()
+                        };
+                        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".into(),
+                            symbol: "DOT".into(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
+                            additional: custom_metadata,
+                        };
+                        let dot = Asset::ForeignAsset(0);
+    
+                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(dot)));
+    
+    
+                        assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
+    
+                        let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+                        let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
+                            weight:  frame_support::dispatch::Weight::zero(),
+                            class: DispatchClass::Normal,
+                            pays_fee:  frame_support::dispatch::Pays::Yes,
+                        };
+                        let mock_post_info = frame_support::dispatch::PostDispatchInfo {
+                            actual_weight:  Some(frame_support::dispatch::Weight::zero()),
+                            pays_fee:  frame_support::dispatch::Pays::Yes,
+                        };
+    
+                        let free_balance_treasury_before = Tokens::free_balance(dot, &Treasury::account_id());
+                        let free_balance_alice_before = Tokens::free_balance(dot, &alice);
+                        let corrected_native_fee = BASE;
+                        let paid = <Tokens as Balanced<AccountId>>::issue(dot, 2 * BASE);
+                        let paid_balance = paid.peek();
+                        let tip = 0u128;
+                        assert_ok!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::correct_and_deposit_fee(
+                            &alice,
+                            &mock_dispatch_info,
+                            &mock_post_info,
+                            corrected_native_fee,
+                            tip,
+                            paid,
+                        ));
+    
+                        let treasury_gain = Tokens::free_balance(dot, &Treasury::account_id()) - free_balance_treasury_before;
+                        let alice_gain = Tokens::free_balance(dot, &alice) - free_balance_alice_before;
+    
+                        let decimals = meta.decimals;
+                        let base = 10u128.checked_pow(decimals).unwrap();
+    
+                        let dot_fee = ((corrected_native_fee * fee_factor) + (base / 2)) / base;
+                        assert_eq!(dot_fee, treasury_gain);
+                        assert_eq!(143_120_520, treasury_gain);
+                        assert_eq!(paid_balance - treasury_gain, alice_gain);
+                    }
+                });
+            }
+    
+            #[test]
+            fn get_fee_factor_works() {
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                t.execute_with(|| {
+                    {
+                        let custom_metadata = CustomMetadata {
+                            xcm: XcmMetadata { fee_factor: Some(143_120_520u128) },
+                            ..Default::default()
+                        };
+                        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".into(),
+                            symbol: "DOT".into(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
+                            additional: custom_metadata,
+                        };
+                        let dot = Asset::ForeignAsset(0);
+    
+                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
+    
+                        assert_eq!(get_fee_factor(dot).unwrap(), 143_120_520u128);
+                    }
+                });
+            }
+    
+            #[test]
+            fn get_fee_factor_metadata_not_found() {
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                t.execute_with(|| {
+                    {
+                        // no registering of dot
+                        assert_noop!(get_fee_factor(Asset::ForeignAsset(0)), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
+                    }
+                });
+            }
+    
+            #[test]
+            fn get_fee_factor_fee_factor_not_found() {
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                t.execute_with(|| {
+                    {
+                        let custom_metadata = CustomMetadata {
+                            xcm: XcmMetadata { fee_factor: None },
+                            ..Default::default()
+                        };
+                        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".into(),
+                            symbol: "DOT".into(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
+                            additional: custom_metadata,
+                        };
+                        let dot = Asset::ForeignAsset(0);
+    
+                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
+    
+                        assert_noop!(get_fee_factor(dot), TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)));
+                    }
+                });
+            }
+    
+            #[test]
+            fn get_fee_factor_none_location() {
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                t.execute_with(|| {
+                    {
+                        let custom_metadata = CustomMetadata {
+                            xcm: XcmMetadata { fee_factor: Some(10_393) },
+                            ..Default::default()
+                        };
+                        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                            decimals: 10,
+                            name: "NoneLocationToken".into(),
+                            symbol: "NONE".into(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: None,
+                            additional: custom_metadata,
+                        };
+                        let non_location_token = Asset::ForeignAsset(1);
+    
+                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(non_location_token)));
+    
+                        assert_ok!(get_fee_factor(non_location_token));
+                    }
+                });
+            }
+
+            #[test]
+            fn withdraws_correct_dot_foreign_asset_fee() {
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                t.execute_with(|| {
                     let fee_factor = 143_120_520;
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
@@ -305,160 +435,28 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot = Asset::ForeignAsset(0);
-
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(dot)));
-
-
+    
+                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
+    
+                    let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);
                     assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
-
+    
                     let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
                     let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
                         weight:  frame_support::dispatch::Weight::zero(),
                         class: DispatchClass::Normal,
                         pays_fee:  frame_support::dispatch::Pays::Yes,
                     };
-                    let mock_post_info = frame_support::dispatch::PostDispatchInfo {
-                        actual_weight:  Some(frame_support::dispatch::Weight::zero()),
-                        pays_fee:  frame_support::dispatch::Pays::Yes,
-                    };
-
-                    let free_balance_treasury_before = Tokens::free_balance(dot, &Treasury::account_id());
-                    let free_balance_alice_before = Tokens::free_balance(dot, &alice);
-                    let corrected_native_fee = BASE;
-                    let paid = <Tokens as Balanced<AccountId>>::issue(dot, 2 * BASE);
-                    let paid_balance = paid.peek();
-                    let tip = 0u128;
-                    assert_ok!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::correct_and_deposit_fee(
-                        &alice,
+                    assert_eq!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
+                        &Treasury::account_id(),
+                        &mock_call,
                         &mock_dispatch_info,
-                        &mock_post_info,
-                        corrected_native_fee,
-                        tip,
-                        paid,
-                    ));
-
-                    let treasury_gain = Tokens::free_balance(dot, &Treasury::account_id()) - free_balance_treasury_before;
-                    let alice_gain = Tokens::free_balance(dot, &alice) - free_balance_alice_before;
-
-                    let decimals = meta.decimals;
-                    let base = 10u128.checked_pow(decimals).unwrap();
-
-                    let dot_fee = ((corrected_native_fee * fee_factor) + (base / 2)) / base;
-                    assert_eq!(dot_fee, treasury_gain);
-                    assert_eq!(143_120_520, treasury_gain);
-                    assert_eq!(paid_balance - treasury_gain, alice_gain);
-                }
-            });
-        }
-
-        #[test]
-        #[cfg(feature = "parachain")]
-        fn get_fee_factor_works() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                {
-                    let custom_metadata = CustomMetadata {
-                        xcm: XcmMetadata { fee_factor: Some(143_120_520u128) },
-                        ..Default::default()
-                    };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".into(),
-                        symbol: "DOT".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
-                        additional: custom_metadata,
-                    };
-                    let dot = Asset::ForeignAsset(0);
-
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
-
-                    assert_eq!(get_fee_factor(dot).unwrap(), 143_120_520u128);
-                }
-            });
-        }
-
-        #[test]
-        #[cfg(feature = "parachain")]
-        fn get_fee_factor_metadata_not_found() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                {
-                    // no registering of dot
-                    assert_noop!(get_fee_factor(Asset::ForeignAsset(0)), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
-                }
-            });
-        }
-
-        #[test]
-        #[cfg(feature = "parachain")]
-        fn get_fee_factor_fee_factor_not_found() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                {
-                    let custom_metadata = CustomMetadata {
-                        xcm: XcmMetadata { fee_factor: None },
-                        ..Default::default()
-                    };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".into(),
-                        symbol: "DOT".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
-                        additional: custom_metadata,
-                    };
-                    let dot = Asset::ForeignAsset(0);
-
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(dot)));
-
-                    assert_noop!(get_fee_factor(dot), TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8)));
-                }
-            });
-        }
-
-        #[test]
-        #[cfg(feature = "parachain")]
-        fn get_fee_factor_none_location() {
-            let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-            t.execute_with(|| {
-                {
-                    let custom_metadata = CustomMetadata {
-                        xcm: XcmMetadata { fee_factor: Some(10_393) },
-                        ..Default::default()
-                    };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "NoneLocationToken".into(),
-                        symbol: "NONE".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: None,
-                        additional: custom_metadata,
-                    };
-                    let non_location_token = Asset::ForeignAsset(1);
-
-                    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(non_location_token)));
-
-                    assert_ok!(get_fee_factor(non_location_token));
-                }
-            });
-        }
-
-        #[test]
-        fn fee_multiplier_can_grow_from_zero() {
-            let minimum_multiplier = MinimumMultiplier::get();
-            let target = TargetBlockFullness::get()
-                * RuntimeBlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
-            // if the min is too small, then this will not change, and we are doomed forever.
-            // the weight is 1/100th bigger than target.
-            run_with_system_weight(target * 101 / 100, || {
-                let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
-                assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
-            })
+                        dot,
+                        BASE / 2,
+                        0,
+                    ).unwrap().peek(), 71_560_260);
+                });
+            }
         }
     }
 }
