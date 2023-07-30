@@ -69,14 +69,14 @@ macro_rules! impl_foreign_fees {
             traits::{
                 fungibles::CreditOf,
                 tokens::{
-                    fungibles::{Balanced, Inspect},
+                    fungibles::Balanced,
                     BalanceConversion, WithdrawConsequence, WithdrawReasons,
                 },
                 ExistenceRequirement,
             },
             unsigned::TransactionValidityError,
         };
-        use orml_traits::arithmetic::{One, Zero};
+        use orml_traits::{asset_registry::Inspect, arithmetic::{One, Zero}};
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
         use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
@@ -120,16 +120,11 @@ macro_rules! impl_foreign_fees {
         pub(crate) fn get_fee_factor(
             asset_id: CurrencyId,
         ) -> Result<Balance, TransactionValidityError> {
-            let location = AssetConvert::convert(asset_id);
-            let metadata = location
-                .and_then(|loc| {
-                    <AssetRegistry as orml_traits::asset_registry::Inspect>::metadata_by_location(
-                        &loc,
-                    )
-                })
-                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+            let metadata = <AssetRegistry as Inspect>::metadata(&asset_id).ok_or(
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::NoAssetMetadata as u8,
-                )))?;
+                )),
+            )?;
             let fee_factor =
                 metadata.additional.xcm.fee_factor.ok_or(TransactionValidityError::Invalid(
                     InvalidTransaction::Custom(CustomTxError::NoFeeFactor as u8),
@@ -289,11 +284,11 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        #[cfg(feature = "parachain")]
         fn correct_and_deposit_fee_dot_foreign_asset() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
-                #[cfg(feature = "parachain")]
                 {
                     let alice =  AccountId::from([0u8; 32]);
                     let fee_factor = 143_120_520;
@@ -357,11 +352,11 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        #[cfg(feature = "parachain")]
         fn get_fee_factor_works() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
-                #[cfg(feature = "parachain")]
                 {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(143_120_520u128) },
@@ -385,11 +380,11 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        #[cfg(feature = "parachain")]
         fn get_fee_factor_metadata_not_found() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
-                #[cfg(feature = "parachain")]
                 {
                     // no registering of dot
                     assert_noop!(get_fee_factor(Asset::ForeignAsset(0)), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
@@ -398,11 +393,11 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        #[cfg(feature = "parachain")]
         fn get_fee_factor_fee_factor_not_found() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
-                #[cfg(feature = "parachain")]
                 {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: None },
@@ -426,11 +421,11 @@ macro_rules! fee_tests {
         }
 
         #[test]
+        #[cfg(feature = "parachain")]
         fn get_fee_factor_none_location() {
             let mut t: sp_io::TestExternalities =
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
-                #[cfg(feature = "parachain")]
                 {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(10_393) },
@@ -448,7 +443,7 @@ macro_rules! fee_tests {
 
                     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(non_location_token)));
 
-                    assert_noop!(get_fee_factor(non_location_token), TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8)));
+                    assert_ok!(get_fee_factor(non_location_token));
                 }
             });
         }
