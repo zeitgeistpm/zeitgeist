@@ -444,7 +444,7 @@ macro_rules! fee_tests {
                         Some(non_location_token)
                     ));
 
-                    assert_ok!(get_fee_factor(non_location_token));
+                    assert_eq!(get_fee_factor(non_location_token).unwrap(), 10_393);
                 });
             }
 
