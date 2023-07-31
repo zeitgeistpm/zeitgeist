@@ -74,10 +74,10 @@ impl<
         };
 
         if native_decimals > foreign_decimals {
-            let power = native_decimals - foreign_decimals;
+            let power = native_decimals.saturating_sub(foreign_decimals);
             Some(fee_unadjusted.checked_div(10u128.checked_pow(power)?)?)
         } else {
-            let power = foreign_decimals - native_decimals;
+            let power = foreign_decimals.saturating_sub(native_decimals);
             Some(fee_unadjusted.checked_mul(10u128.checked_pow(power)?)?)
         }
     }
