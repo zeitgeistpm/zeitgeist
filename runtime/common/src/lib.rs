@@ -923,11 +923,6 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
         }
 
-        pub type TokensTxCharger = pallet_asset_tx_payment::FungiblesAdapter<
-            TTCBalanceToAssetBalance,
-            TTCHandleCredit,
-        >;
-
         common_runtime::impl_foreign_fees!();
 
         impl pallet_asset_tx_payment::Config for Runtime {
