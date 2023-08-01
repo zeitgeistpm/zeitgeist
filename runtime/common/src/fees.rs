@@ -144,15 +144,19 @@ macro_rules! impl_foreign_fees {
                 native_fee: Balance,
                 asset_id: TxPaymentAssetId,
             ) -> Result<Balance, Self::Error> {
-                if !cfg!(feature = "parachain") {
-                    return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                        CustomTxError::NoForeignAssetsOnStandaloneChain as u8,
-                    )));
+                #[cfg(feature = "parachain")]
+                {
+                    let currency_id = Asset::ForeignAsset(asset_id);
+                    let fee_factor = get_fee_factor(currency_id)?;
+                    let converted_fee = calculate_fee(native_fee, fee_factor)?;
+                    Ok(converted_fee)
                 }
-                let currency_id = Asset::ForeignAsset(asset_id);
-                let fee_factor = get_fee_factor(currency_id)?;
-                let converted_fee = calculate_fee(native_fee, fee_factor)?;
-                Ok(converted_fee)
+                #[cfg(not(feature = "parachain"))]
+                {
+                    Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                        CustomTxError::NoForeignAssetsOnStandaloneChain as u8,
+                    )))
+                }
             }
         }
 
