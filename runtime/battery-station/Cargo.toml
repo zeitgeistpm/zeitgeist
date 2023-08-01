@@ -88,7 +88,7 @@ sp-consensus-aura = { workspace = true }
 sp-finality-grandpa = { workspace = true }
 
 # Utility
-cfg-if = { version = "1.0.0" }
+cfg-if = { workspace = true }
 hex-literal = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 

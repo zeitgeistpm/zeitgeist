@@ -31,7 +31,7 @@ pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
 
 # Utility
-cfg-if = { version = "1.0.0" }
+cfg-if = { workspace = true }
 
 [features]
 default = ["std"]
