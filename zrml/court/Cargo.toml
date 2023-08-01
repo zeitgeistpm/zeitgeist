@@ -11,8 +11,8 @@ zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
 [dev-dependencies]
-pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
 pallet-balances = { workspace = true, features = ["default"] }
+pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }

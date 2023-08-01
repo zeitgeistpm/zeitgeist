@@ -30,7 +30,7 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
-parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"]}
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 polkadot-primitives = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 sp-api = { workspace = true }
