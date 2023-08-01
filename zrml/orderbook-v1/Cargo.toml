@@ -4,18 +4,18 @@ frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-traits = { workspace = true }
-parity-scale-codec = 
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 
 # Mock
-orml-tokens = { workspace = true, optional = true }
-pallet-balances = { workspace = true, optional = true }
-sp-io = { workspace = true, optional = true }
+orml-tokens = { workspace = true, features = ["std"], optional = true }
+pallet-balances = { workspace = true, features = ["std"], optional = true }
+sp-io = { workspace = true, features = ["std"], optional = true }
 
 [dev-dependencies]
-zrml-orderbook-v1 = { workspace = true, features = ["mock"] }
+zrml-orderbook-v1 = { workspace = true, features = ["mock", "std"] }
 
 [features]
 default = ["std"]

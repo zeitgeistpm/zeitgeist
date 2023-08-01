@@ -12,7 +12,7 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 
 [dev-dependencies]
-test-case = "2.0.2"
+test-case = { workspace = true }
 
 [features]
 default = ["std"]

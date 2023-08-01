@@ -71,12 +71,12 @@ path = "rikiddo_with_initial_fee.rs"
 test = false
 
 [dependencies]
-arbitrary = { workspace = true, features = ["derive"] }
-frame-support = { workspace = true }
-frame-system = { workspace = true }
+arbitrary = { workspace = true, features = ["derive", "std"] }
+frame-support = { workspace = true, features = ["std"] }
+frame-system = { workspace = true, features = ["std"] }
 libfuzzer-sys = "0.4"
-substrate-fixed = { workspace = true }
-zrml-rikiddo = { workspace = true, features = ["arbitrary", "mock"] }
+substrate-fixed = { workspace = true, features = ["std"] }
+zrml-rikiddo = { workspace = true, features = ["arbitrary", "mock", "std"] }
 
 [package]
 authors = ["Automatically generated"]

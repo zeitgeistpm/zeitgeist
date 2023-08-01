@@ -56,6 +56,86 @@ resolver = "2"
 # probably concerns this list.
 #
 # This list is ordered alphabetically.
+
+[workspace.dependencies]
+# Dependencies are split into 2 groups: wasm and client.
+# - "wasm" dependencies requires to be no_std compatible, which often requires
+#   `default-features = false`. When used in a client-side crate the "std" feature should be enabled
+#   there if it exists.
+# - "client" dependencies are only used in the client, and thus don't need to be no_std compatible.
+
+# Cumulus / Nimbus (client)
+
+# Cumulus / Nimbus (wasm)
+
+# ORML (client)
+
+# ORML (wasm)
+orml-asset-registry = { branch = "polkadot-v0.9.32", default-features = false , git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-currencies = { branch = "polkadot-v0.9.32", default-features = false , git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+
+# Substrate (client)
+
+# Substrate (wasm)
+frame-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-randomness-collective-flip = { branch = "polkadot-v0.9.32", default-features = false , git = "https://github.com/paritytech/substrate" }
+pallet-timestamp = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-treasury = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { default-features = false, version = "3.0.0" }
+scale-info = { version = "2.1.1", default-features = false }
+sp-api = { branch = "polkadot-v0.9.32", default-features = false , git = "https://github.com/paritytech/substrate" }
+sp-arithmetic = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "polkadot-v0.9.32", default-features = false , git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false  }
+
+# Polkadot / XCM (client)
+
+# Polkadot / XCM (wasm)
+xcm = { branch = "release-v0.9.32", git = "https://github.com/paritytech/polkadot", default-features = false }
+
+# Zeitgeist (client)
+zrml-prediction-markets-fuzz = { path = "zrml/prediction-markets/fuzz" }
+zrml-rikiddo-fuzz = { path = "zrml/rikkido/fuzz" }
+zrml-swaps-fuzz = { path = "zrml/swaps/fuzz" }
+
+# Zeitgeist (wasm)
+zeitgeist-primitives = { path = "primitives", default-features = false }
+zrml-authorized = { path = "zrml/authorized", default-features = false }
+zrml-court = { path = "zrml/court", default-features = false }
+zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
+zrml-liquidity-mining = { path = "zrml/liquidity-mining", default-features = false }
+zrml-market-commons = { path = "zrml/market-commons", default-features = false }
+zrml-orderbook-v1 = { path = "zrml/orderbook-v1", default-features = false }
+zrml-prediction-markets = { path = "zrml/prediction-markets", default-features = false }
+zrml-prediction-markets-runtime-api = { path = "zrml/prediction-markets/runtime-api", default-features = false }
+zrml-simple-disputes = { path = "zrml/simple-disputes", default-features = false }
+zrml-styx = { path = "zrml/styx", default-features = false }
+zrml-swaps = { path = "zrml/swaps", default-features = false }
+zrml-swaps-rpc = { path = "zrml/swaps/rpc", default-features = false }
+zrml-swaps-runtime-api = { path = "zrml/swaps/runtime-api", default-features = false }
+
+# Other (client)
+libfuzzer-sys = "0.4"
+more-asserts = "0.2"
+test-case = "2.0.2"
+
+# Other (wasm)
+arbitrary = { default-features = false, version = "1.0" }
+arrayvec = { default-features = false, version = "0.7" }
+cfg-if = { version = "1.0.0", default-features = false }
+hashbrown = { default-features = true, version = "0.11" }
+num-traits = { version = "0.2.15", default-features = false }
+rand = { default-features = false, version = "0.8.4" }
+serde = { default-features = false, version = "1.0.144" }
+
 [profile.dev.package]
 blake2 = { opt-level = 3 }
 blake2-rfc = { opt-level = 3 }

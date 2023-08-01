@@ -13,17 +13,17 @@ zrml-rikiddo = { workspace = true }
 
 # Mock
 
-orml-currencies = { workspace = true, optional = true }
-orml-tokens = { workspace = true, optional = true }
-pallet-balances = { workspace = true, optional = true }
-pallet-timestamp = { workspace = true, optional = true }
-sp-api = { workspace = true, optional = true }
-sp-io = { workspace = true, optional = true }
-zrml-swaps-runtime-api = { workspace = true, optional = true }
+orml-currencies = { workspace = true, features = ["std"], optional = true }
+orml-tokens = { workspace = true, features = ["std"], optional = true }
+pallet-balances = { workspace = true, features = ["std"], optional = true }
+pallet-timestamp = { workspace = true, features = ["std"], optional = true }
+sp-api = { workspace = true, features = ["std"], optional = true }
+sp-io = { workspace = true, features = ["std"], optional = true }
+zrml-swaps-runtime-api = { workspace = true, features = ["std"], optional = true }
 
 [dev-dependencies]
-more-asserts = "0.2"
-test-case = "2.0.2"
+more-asserts = { workspace = true }
+test-case = { workspace = true }
 zrml-swaps = { workspace = true, features = ["mock"] }
 
 [features]

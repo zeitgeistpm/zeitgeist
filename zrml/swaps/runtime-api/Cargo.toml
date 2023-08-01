@@ -1,5 +1,5 @@
 [dependencies]
-parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len", "std"] }
 sp-api = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }

@@ -18,25 +18,25 @@ zrml-simple-disputes = { workspace = true }
 
 # Mock
 
-orml-asset-registry = { workspace = true, optional = true }
-orml-currencies = { workspace = true, optional = true }
-orml-tokens = { workspace = true, optional = true }
-pallet-balances = { workspace = true, optional = true }
-pallet-randomness-collective-flip = { workspace = true, optional = true }
-pallet-timestamp = { workspace = true, optional = true }
-pallet-treasury = { workspace = true, optional = true }
-sp-api = { workspace = true, optional = true }
-sp-io = { workspace = true, optional = true }
-substrate-fixed = { workspace = true, optional = true }
-xcm = { workspace = true, optional = true }
+orml-asset-registry = { workspace = true, features = ["std"], optional = true }
+orml-currencies = { workspace = true, features = ["std"], optional = true }
+orml-tokens = { workspace = true, features = ["std"], optional = true }
+pallet-balances = { workspace = true, features = ["std"], optional = true }
+pallet-randomness-collective-flip = { workspace = true, features = ["std"], optional = true }
+pallet-timestamp = { workspace = true, features = ["std"], optional = true }
+pallet-treasury = { workspace = true, features = ["std"], optional = true }
+sp-api = { workspace = true, features = ["std"], optional = true }
+sp-io = { workspace = true, features = ["std"], optional = true }
+substrate-fixed = { workspace = true, features = ["std"], optional = true }
+xcm = { workspace = true, features = ["std"], optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, features = ["std"], optional = true }
-zrml-rikiddo = { workspace = true, optional = true }
-zrml-swaps = { workspace = true, optional = true }
+zrml-rikiddo = { workspace = true, features = ["std"], optional = true }
+zrml-swaps = { workspace = true, features = ["std"], optional = true }
 
 [dev-dependencies]
-more-asserts = "0.2"
-test-case = "2.0.2"
-zrml-prediction-markets = { workspace = true, features = ["mock"] }
+more-asserts = { workspace = true }
+test-case = { workspace = true }
+zrml-prediction-markets = { workspace = true, features = ["mock", "std"] }
 
 [features]
 default = ["std"]

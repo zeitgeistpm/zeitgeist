@@ -14,12 +14,12 @@ num-traits = { workspace = true, optional = true }
 
 
 [dev-dependencies]
-pallet-balances = { workspace = true }
-pallet-timestamp = { workspace = true }
-sp-io = { workspace = true }
-zeitgeist-primitives = { workspace = true, features = ["mock"] }
+pallet-balances = { workspace = true, features = ["std"] }
+pallet-timestamp = { workspace = true, features = ["std"] }
+sp-io = { workspace = true, features = ["std"] }
+zeitgeist-primitives = { workspace = true, features = ["mock", "std"] }
 
-test-case = "2.0.2"
+test-case = { workspace = true }
 
 [features]
 default = ["std"]
