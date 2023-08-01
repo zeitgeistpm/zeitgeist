@@ -7,6 +7,7 @@ hashbrown = { workspace = true }
 pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
 sp-core = { workspace = true }
 sp-io = { workspace = true, optional = true }
 sp-runtime = { workspace = true }
@@ -19,9 +20,9 @@ zrml-rikiddo = { workspace = true, features = ["mock", "std"] }
 [features]
 default = ["std"]
 mock = [
-    "pallet-balances",
-    "pallet-timestamp",
-    "sp-io",
+    "pallet-balances/std",
+    "pallet-timestamp/std",
+    "sp-io/std",
     "zeitgeist-primitives/mock",
 ]
 std = [

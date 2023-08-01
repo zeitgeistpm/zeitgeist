@@ -4,6 +4,7 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
 substrate-fixed = { workspace = true }
 zeitgeist-primitives = { workspace = true }
@@ -13,13 +14,13 @@ zrml-rikiddo = { workspace = true }
 
 # Mock
 
-orml-currencies = { workspace = true, features = ["std"], optional = true }
-orml-tokens = { workspace = true, features = ["std"], optional = true }
-pallet-balances = { workspace = true, features = ["std"], optional = true }
-pallet-timestamp = { workspace = true, features = ["std"], optional = true }
-sp-api = { workspace = true, features = ["std"], optional = true }
-sp-io = { workspace = true, features = ["std"], optional = true }
-zrml-swaps-runtime-api = { workspace = true, features = ["std"], optional = true }
+orml-currencies = { workspace = true, optional = true }
+orml-tokens = { workspace = true, optional = true }
+pallet-balances = { workspace = true, optional = true }
+pallet-timestamp = { workspace = true, optional = true }
+sp-api = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
+zrml-swaps-runtime-api = { workspace = true, optional = true }
 
 [dev-dependencies]
 more-asserts = { workspace = true }
@@ -29,14 +30,15 @@ zrml-swaps = { workspace = true, features = ["mock"] }
 [features]
 default = ["std"]
 mock = [
-    "orml-currencies",
-    "orml-tokens",
-    "pallet-balances",
-    "pallet-timestamp",
-    "sp-api",
-    "sp-io",
+    "orml-currencies/std",
+    "orml-tokens/std",
+    "pallet-balances/std",
+    "pallet-timestamp/std",
+    "sp-api/std",
+    "sp-io/std",
+    "std",
     "zeitgeist-primitives/mock",
-    "zrml-swaps-runtime-api",
+    "zrml-swaps-runtime-api/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

@@ -10,9 +10,9 @@ sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 
 # Mock
-orml-tokens = { workspace = true, features = ["std"], optional = true }
-pallet-balances = { workspace = true, features = ["std"], optional = true }
-sp-io = { workspace = true, features = ["std"], optional = true }
+orml-tokens = { workspace = true, optional = true }
+pallet-balances = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
 
 [dev-dependencies]
 zrml-orderbook-v1 = { workspace = true, features = ["mock", "std"] }
@@ -20,9 +20,10 @@ zrml-orderbook-v1 = { workspace = true, features = ["mock", "std"] }
 [features]
 default = ["std"]
 mock = [
-    "orml-tokens",
-    "pallet-balances",
-    "sp-io",
+    "orml-tokens/std",
+    "pallet-balances/std",
+    "sp-io/std",
+    "std",
     "zeitgeist-primitives/mock",
 ]
 runtime-benchmarks = [

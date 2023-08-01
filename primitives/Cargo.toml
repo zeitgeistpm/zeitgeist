@@ -16,7 +16,7 @@ test-case = { workspace = true }
 
 [features]
 default = ["std"]
-mock = []
+mock = ["std"]
 std = [
     "frame-support/std",
     "frame-system/std",
