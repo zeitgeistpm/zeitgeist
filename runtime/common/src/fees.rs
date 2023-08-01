@@ -67,7 +67,7 @@ macro_rules! impl_foreign_fees {
         use frame_support::{
             pallet_prelude::InvalidTransaction,
             traits::{
-                fungibles::CreditOf,
+                fungibles::{CreditOf, Inspect},
                 tokens::{
                     fungibles::Balanced, BalanceConversion, WithdrawConsequence, WithdrawReasons,
                 },
@@ -77,7 +77,7 @@ macro_rules! impl_foreign_fees {
         };
         use orml_traits::{
             arithmetic::{One, Zero},
-            asset_registry::Inspect,
+            asset_registry::Inspect as AssetRegistryInspect,
         };
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
@@ -121,7 +121,7 @@ macro_rules! impl_foreign_fees {
         pub(crate) fn get_fee_factor(
             currency_id: CurrencyId,
         ) -> Result<Balance, TransactionValidityError> {
-            let metadata = <AssetRegistry as Inspect>::metadata(&asset_id).ok_or(
+            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id).ok_or(
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::NoAssetMetadata as u8,
                 )),
