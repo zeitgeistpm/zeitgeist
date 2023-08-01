@@ -42,22 +42,22 @@ zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 [features]
 default = ["std"]
 mock = [
-    "orml-currencies",
-    "orml-tokens",
+    "orml-currencies/default",
+    "orml-tokens/default",
     "pallet-balances",
-    "pallet-randomness-collective-flip",
-    "pallet-timestamp",
-    "pallet-treasury",
+    "pallet-randomness-collective-flip/default",
+    "pallet-timestamp/default",
+    "pallet-treasury/default",
     "serde",
-    "sp-api",
-    "sp-io",
+    "sp-api/default",
+    "sp-io/default",
     "substrate-fixed",
     "zeitgeist-primitives/mock",
-    "zrml-prediction-markets-runtime-api",
-    "zrml-rikiddo",
-    "zrml-swaps",
-    "xcm",
-    "orml-asset-registry",
+    "zrml-prediction-markets-runtime-api/default",
+    "zrml-rikiddo/default",
+    "zrml-swaps/default",
+    "xcm/default",
+    "orml-asset-registry/default",
 ]
 parachain = []
 runtime-benchmarks = [

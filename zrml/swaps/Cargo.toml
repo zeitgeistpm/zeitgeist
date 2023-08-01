@@ -30,14 +30,14 @@ zrml-swaps = { workspace = true, features = ["mock"] }
 [features]
 default = ["std"]
 mock = [
-    "orml-currencies",
-    "orml-tokens",
-    "pallet-balances",
-    "pallet-timestamp",
-    "sp-api",
-    "sp-io",
+    "orml-currencies/default",
+    "orml-tokens/default",
+    "pallet-balances/default",
+    "pallet-timestamp/default",
+    "sp-api/default",
+    "sp-io/default",
     "zeitgeist-primitives/mock",
-    "zrml-swaps-runtime-api",
+    "zrml-swaps-runtime-api/default",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

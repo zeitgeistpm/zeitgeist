@@ -20,9 +20,9 @@ zrml-orderbook-v1 = { workspace = true, features = ["mock", "default"] }
 [features]
 default = ["std"]
 mock = [
-    "orml-tokens",
-    "pallet-balances",
-    "sp-io",
+    "orml-tokens/default",
+    "pallet-balances/default",
+    "sp-io/default",
     "zeitgeist-primitives/mock",
 ]
 runtime-benchmarks = [
