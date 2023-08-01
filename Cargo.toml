@@ -247,6 +247,7 @@ url = "2.2.2"
 arbitrary = { default-features = false, version = "1.0" }
 arrayvec = { default-features = false, version = "0.7" }
 cfg-if = { version = "1.0.0"  }
+# Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { default-features = true, version = "0.11" }
 hex-literal = { default-features = false, version = "0.3.4" }
 log = { version = "0.4.18", default-features = false }
