@@ -54,13 +54,13 @@ test = false
 
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"] }
-frame-support = { workspace = true, features = ["std"] }
+frame-support = { workspace = true, features = ["default"] }
 libfuzzer-sys = { workspace = true }
-orml-traits = { workspace = true, features = ["std"] }
-rand = { workspace = true, features = ["std"] }
-sp-runtime = { workspace = true, features = ["std"] }
-zeitgeist-primitives = { workspace = true, features = ["mock", "std"] }
-zrml-swaps = { workspace = true, features = ["mock", "std"] }
+orml-traits = { workspace = true, features = ["default"] }
+rand = { workspace = true, features = ["default"] }
+sp-runtime = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
+zrml-swaps = { workspace = true, features = ["mock", "default"] }
 
 [package]
 authors = ["Automatically generated"]

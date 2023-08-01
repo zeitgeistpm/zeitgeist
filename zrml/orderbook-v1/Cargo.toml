@@ -15,7 +15,7 @@ pallet-balances = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 
 [dev-dependencies]
-zrml-orderbook-v1 = { workspace = true, features = ["mock", "std"] }
+zrml-orderbook-v1 = { workspace = true, features = ["mock", "default"] }
 
 [features]
 default = ["std"]

@@ -6,10 +6,10 @@ path = "./src/main.rs"
 substrate-build-script-utils = { workspace = true }
 
 [dependencies]
-pallet-asset-tx-payment = { workspace = true, features = ["std"] }
-pallet-transaction-payment = { workspace = true, features = ["std"] }
+pallet-asset-tx-payment = { workspace = true, features = ["default"] }
+pallet-transaction-payment = { workspace = true, features = ["default"] }
 pallet-transaction-payment-rpc = { workspace = true }
-pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["std"] }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["default"] }
 sc-basic-authorship = { workspace = true }
 sc-cli = { workspace = true, features = ["wasmtime"] }
 sc-client-api = { workspace = true }
@@ -23,19 +23,19 @@ sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-transaction-pool = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
-sp-api = { workspace = true, features = ["std"] }
-sp-block-builder = { workspace = true, features = ["std"] }
+sp-api = { workspace = true, features = ["default"] }
+sp-block-builder = { workspace = true, features = ["default"] }
 sp-blockchain = { workspace = true }
 sp-consensus = { workspace = true }
-sp-core = { workspace = true, features = ["std"] }
-sp-inherents = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["default"] }
+sp-inherents = { workspace = true, features = ["default"] }
 sp-keyring = { workspace = true }
-sp-offchain = { workspace = true, features = ["std"] }
-sp-runtime = { workspace = true, features = ["std"] }
-sp-session = { workspace = true, features = ["std"] }
+sp-offchain = { workspace = true, features = ["default"] }
+sp-runtime = { workspace = true, features = ["default"] }
+sp-session = { workspace = true, features = ["default"] }
 sp-storage = { workspace = true }
 sp-timestamp = { workspace = true }
-sp-transaction-pool = { workspace = true, features = ["std"] }
+sp-transaction-pool = { workspace = true, features = ["default"] }
 sp-trie = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
 
@@ -45,7 +45,7 @@ try-runtime-cli = { workspace = true, optional = true }
 
 # Benchmark
 
-frame-benchmarking = { workspace = true, features = ["std"], optional = true }
+frame-benchmarking = { workspace = true, features = ["default"], optional = true }
 frame-benchmarking-cli = { workspace = true }
 
 # Cumulus
@@ -56,7 +56,7 @@ cumulus-client-consensus-common = { workspace = true, optional = true }
 cumulus-client-consensus-relay-chain = { workspace = true, optional = true }
 cumulus-client-network = { workspace = true, optional = true }
 cumulus-client-service = { workspace = true, optional = true }
-cumulus-primitives-core = { workspace = true, features = ["std"], optional = true }
+cumulus-primitives-core = { workspace = true, features = ["default"], optional = true }
 cumulus-primitives-parachain-inherent = { workspace = true, optional = true }
 cumulus-relay-chain-inprocess-interface = { workspace = true, optional = true }
 cumulus-relay-chain-interface = { workspace = true, optional = true }
@@ -67,24 +67,24 @@ cumulus-relay-chain-rpc-interface = { workspace = true, optional = true }
 
 moonbeam-vrf = { workspace = true, optional = true }
 nimbus-consensus = { workspace = true, optional = true }
-nimbus-primitives = { workspace = true, features = ["std"], optional = true }
-pallet-author-inherent = { workspace = true, features = ["std"], optional = true }
-pallet-parachain-staking = { workspace = true, features = ["std"], optional = true }
-parity-scale-codec = { workspace = true, features = ["std"], optional = true }
+nimbus-primitives = { workspace = true, features = ["default"], optional = true }
+pallet-author-inherent = { workspace = true, features = ["default"], optional = true }
+pallet-parachain-staking = { workspace = true, features = ["default"], optional = true }
+parity-scale-codec = { workspace = true, features = ["default"], optional = true }
 sc-chain-spec = { workspace = true, optional = true }
 sc-network = { workspace = true, optional = true }
 sc-network-common = { workspace = true, optional = true }
 sc-tracing = { workspace = true, optional = true }
-serde = { workspace = true, features = ["std"], optional = true }
-session-keys-primitives = { workspace = true, features = ["std"], optional = true }
+serde = { workspace = true, features = ["default"], optional = true }
+session-keys-primitives = { workspace = true, features = ["default"], optional = true }
 sp-keystore = { workspace = true, optional = true }
 substrate-prometheus-endpoint = { workspace = true, optional = true }
 
 # Polkadot
 
 polkadot-cli = { workspace = true, optional = true }
-polkadot-parachain = { workspace = true, features = ["std"], optional = true }
-polkadot-primitives = { workspace = true, features = ["std"], optional = true }
+polkadot-parachain = { workspace = true, features = ["default"], optional = true }
+polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
 polkadot-test-service = { workspace = true, optional = true }
 
@@ -93,22 +93,22 @@ polkadot-test-service = { workspace = true, optional = true }
 sc-consensus-aura = { workspace = true }
 sc-finality-grandpa = { workspace = true }
 sp-consensus-aura = { workspace = true }
-sp-finality-grandpa = { workspace = true, features = ["std"] }
+sp-finality-grandpa = { workspace = true, features = ["default"] }
 
 # Utility
 cfg-if = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 hex-literal = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
-log = { workspace = true, features = ["std"], optional = true }
+log = { workspace = true, optional = true }
 url = { workspace = true }
 
 # Zeitgeist
 
 battery-station-runtime = { workspace = true, optional = true }
-zeitgeist-primitives = { workspace = true, features = ["std"] }
+zeitgeist-primitives = { workspace = true, features = ["default"] }
 zeitgeist-runtime = { workspace = true, optional = true }
-zrml-liquidity-mining = { workspace = true, features = ["std"] }
+zrml-liquidity-mining = { workspace = true, features = ["default"] }
 zrml-swaps-rpc = { workspace = true }
 
 [features]

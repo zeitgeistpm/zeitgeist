@@ -37,7 +37,7 @@ zrml-swaps = { workspace = true, optional = true }
 [dev-dependencies]
 more-asserts = { workspace = true }
 test-case = { workspace = true }
-zrml-prediction-markets = { workspace = true, features = ["mock", "std"] }
+zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 
 [features]
 default = ["std"]

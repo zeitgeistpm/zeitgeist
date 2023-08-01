@@ -9,10 +9,10 @@ zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
 [dev-dependencies]
-pallet-balances = { workspace = true, features = ["std"] }
-pallet-timestamp = { workspace = true, features = ["std"] }
-sp-io = { workspace = true, features = ["std"] }
-zeitgeist-primitives = { workspace = true, features = ["mock", "std"] }
+pallet-balances = { workspace = true, features = ["default"] }
+pallet-timestamp = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
 
 [features]
 default = ["std"]

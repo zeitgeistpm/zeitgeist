@@ -15,7 +15,7 @@ substrate-fixed = { workspace = true, features = ["serde"] }
 zeitgeist-primitives = { workspace = true }
 
 [dev-dependencies]
-zrml-rikiddo = { workspace = true, features = ["mock", "std"] }
+zrml-rikiddo = { workspace = true, features = ["mock", "default"] }
 
 [features]
 default = ["std"]
