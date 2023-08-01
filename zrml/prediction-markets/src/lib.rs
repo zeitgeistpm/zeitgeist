@@ -530,6 +530,7 @@ mod pallet {
                 },
                 PrematureClose::Disputed
                 | PrematureClose::Non
+                | PrematureClose::Rejected
                 | PrematureClose::Applied { old: _, new: _ } => {
                     return Err(Error::<T>::NoEarlyCloseRequested.into());
                 }
