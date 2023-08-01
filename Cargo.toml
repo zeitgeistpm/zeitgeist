@@ -114,23 +114,23 @@ opt-level = 3
 panic = "unwind"
 
 [patch."https://github.com/paritytech/polkadot"]
-pallet-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-cli = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-client = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-core-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-node-core-av-store = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-node-network-protocol = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-node-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-node-subsystem = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-node-subsystem-util = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-overseer = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-parachain = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-primitives = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-runtime = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-runtime-parachains = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-service = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-polkadot-test-service = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-rococo-runtime = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-xcm-builder = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
-xcm-executor = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.32-recent-bootnodes" }
+pallet-xcm = { workspace = true }
+polkadot-cli = { workspace = true }
+polkadot-client = { workspace = true }
+polkadot-core-primitives = { workspace = true }
+polkadot-node-core-av-store = { workspace = true }
+polkadot-node-network-protocol = { workspace = true }
+polkadot-node-primitives = { workspace = true }
+polkadot-node-subsystem = { workspace = true }
+polkadot-node-subsystem-util = { workspace = true }
+polkadot-overseer = { workspace = true }
+polkadot-parachain = { workspace = true }
+polkadot-primitives = { workspace = true }
+polkadot-runtime = { workspace = true }
+polkadot-runtime-parachains = { workspace = true }
+polkadot-service = { workspace = true }
+polkadot-test-service = { workspace = true }
+rococo-runtime = { workspace = true }
+xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
