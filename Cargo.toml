@@ -246,7 +246,7 @@ url = "2.2.2"
 # Other (wasm)
 arbitrary = { default-features = false, version = "1.0" }
 arrayvec = { default-features = false, version = "0.7" }
-cfg-if = { version = "1.0.0"  }
+cfg-if = { version = "1.0.0" }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { default-features = true, version = "0.11" }
 hex-literal = { default-features = false, version = "0.3.4" }

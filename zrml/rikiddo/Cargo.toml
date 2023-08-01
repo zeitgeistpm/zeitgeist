@@ -20,9 +20,9 @@ zrml-rikiddo = { workspace = true, features = ["mock", "std"] }
 [features]
 default = ["std"]
 mock = [
-    "pallet-balances/std",
-    "pallet-timestamp/std",
-    "sp-io/std",
+    "pallet-balances",
+    "pallet-timestamp",
+    "sp-io",
     "zeitgeist-primitives/mock",
 ]
 std = [
