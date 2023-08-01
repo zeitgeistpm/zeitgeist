@@ -88,6 +88,7 @@ pub mod parameters;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
@@ -98,6 +99,12 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 22,
     state_version: 1,
 };
+
+/// The version information used to identify this runtime when compiled natively.
+#[cfg(feature = "std")]
+pub fn native_version() -> NativeVersion {
+	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
+}
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;

@@ -177,7 +177,7 @@ pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 parity-scale-codec = { version = "3.0.0", default-features = false }
-scale-info = { version = "2.1.1", default-features = false }
+scale-info = { version = "2.3.1", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }

@@ -257,9 +257,6 @@ std = [
     "sp-version/std",
     "substrate-fixed/std",
 
-    # Try-Runtime
-    "frame-try-runtime/std",
-
     # Benchmark
 
     "frame-benchmarking?/std",
@@ -322,7 +319,7 @@ std = [
 ]
 try-runtime = [
     "frame-executive/try-runtime",
-    "frame-try-runtime",
+    "frame-try-runtime/try-runtime",
 
     # For every pallet in the runtime include try-runtime
 
