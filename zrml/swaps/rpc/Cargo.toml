@@ -1,6 +1,6 @@
 [dependencies]
 jsonrpsee = { workspace = true, features = ["server", "macros"] }
-parity-scale-codec = { default-features = false, version = "3.0.0" }
+parity-scale-codec = { workspace = true, features = ["std"] }
 sp-api = { workspace = true }
 sp-blockchain = { workspace = true }
 sp-runtime = { workspace = true }

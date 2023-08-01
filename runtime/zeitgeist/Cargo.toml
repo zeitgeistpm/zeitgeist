@@ -119,7 +119,7 @@ zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
-sp-io = { workspace = true }
+sp-io = { workspace = true, features = ["std"] }
 test-case = { workspace = true }
 xcm-emulator = { workspace = true }
 

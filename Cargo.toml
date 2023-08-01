@@ -185,7 +185,7 @@ sp-core = { branch = "polkadot-v0.9.32", default-features = false, git = "https:
 sp-consensus-aura = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-finality-grandpa = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-inherents = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.32", default-features = false , git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-offchain = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-session = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -216,6 +216,7 @@ zeitgeist-runtime = { path = "runtime/zeitgeist" }
 zrml-prediction-markets-fuzz = { path = "zrml/prediction-markets/fuzz" }
 zrml-rikiddo-fuzz = { path = "zrml/rikkido/fuzz" }
 zrml-swaps-fuzz = { path = "zrml/swaps/fuzz" }
+zrml-swaps-rpc = { path = "zrml/swaps/rpc" }
 
 # Zeitgeist (wasm)
 common-runtime = { path = "runtime/common", default-features = false }
@@ -232,7 +233,6 @@ zrml-rikiddo = { path = "zrml/rikiddo", default-features = false }
 zrml-simple-disputes = { path = "zrml/simple-disputes", default-features = false }
 zrml-styx = { path = "zrml/styx", default-features = false }
 zrml-swaps = { path = "zrml/swaps", default-features = false }
-zrml-swaps-rpc = { path = "zrml/swaps/rpc", default-features = false }
 zrml-swaps-runtime-api = { path = "zrml/swaps/runtime-api", default-features = false }
 
 # Other (client)
@@ -246,7 +246,7 @@ url = "2.2.2"
 # Other (wasm)
 arbitrary = { default-features = false, version = "1.0" }
 arrayvec = { default-features = false, version = "0.7" }
-cfg-if = { default-features = false, version = "1.0.0"  }
+cfg-if = { version = "1.0.0"  }
 hashbrown = { default-features = true, version = "0.11" }
 hex-literal = { default-features = false, version = "0.3.4" }
 log = { version = "0.4.18", default-features = false }
