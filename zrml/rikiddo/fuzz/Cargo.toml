@@ -71,7 +71,7 @@ path = "rikiddo_with_initial_fee.rs"
 test = false
 
 [dependencies]
-arbitrary = { workspace = true, features = ["derive", "std"] }
+arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["std"] }
 frame-system = { workspace = true, features = ["std"] }
 libfuzzer-sys = "0.4"

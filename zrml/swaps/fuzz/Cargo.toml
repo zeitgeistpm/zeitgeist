@@ -53,7 +53,7 @@ path = "pool_exit.rs"
 test = false
 
 [dependencies]
-arbitrary = { workspace = true, features = ["derive", "std"] }
+arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["std"] }
 libfuzzer-sys = { workspace = true }
 orml-traits = { workspace = true, features = ["std"] }

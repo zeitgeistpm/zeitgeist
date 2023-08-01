@@ -5,7 +5,7 @@ path = "pm_full_workflow.rs"
 test = false
 
 [dependencies]
-arbitrary = { workspace = true, features = ["derive", "std"] }
+arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["std"] }
 libfuzzer-sys = "0.4"
 zeitgeist-primitives = { workspace = true, features = ["arbitrary", "mock", "std"] }

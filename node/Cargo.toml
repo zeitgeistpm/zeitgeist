@@ -96,9 +96,9 @@ sp-consensus-aura = { workspace = true }
 sp-finality-grandpa = { workspace = true, features = ["std"] }
 
 # Utility
-cfg-if = { workspace = true, features = ["std"] }
+cfg-if = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
-hex-literal = { workspace = true, features = ["std"] }
+hex-literal = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
 log = { workspace = true, features = ["std"], optional = true }
 url = { workspace = true }
@@ -109,7 +109,7 @@ battery-station-runtime = { workspace = true, optional = true }
 zeitgeist-primitives = { workspace = true, features = ["std"] }
 zeitgeist-runtime = { workspace = true, optional = true }
 zrml-liquidity-mining = { workspace = true, features = ["std"] }
-zrml-swaps-rpc = { workspace = true, features = ["std"] }
+zrml-swaps-rpc = { workspace = true }
 
 [features]
 default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
