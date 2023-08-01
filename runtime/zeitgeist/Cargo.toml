@@ -374,7 +374,6 @@ try-runtime = [
 
     # Parachain
     "pallet-author-mapping?/try-runtime",
-    "pallet-author-inherent?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
     "pallet-parachain-staking?/try-runtime",
     # Required by pallet-parachain-staking@v0.26.1
