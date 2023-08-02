@@ -55,12 +55,18 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+        type Migrations = (
+            pallet_contracts::Migration<Runtime>,
+            pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
+        );
+
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
+            Migrations,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
