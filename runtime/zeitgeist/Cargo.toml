@@ -381,7 +381,7 @@ try-runtime = [
     "pallet-grandpa/try-runtime",
     "pallet-aura/try-runtime",
     "pallet-xcm?/try-runtime",
-    
+
     # Cumulus
     "cumulus-pallet-dmp-queue?/try-runtime",
     "cumulus-pallet-parachain-system?/try-runtime",
