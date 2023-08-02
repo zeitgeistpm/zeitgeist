@@ -13,6 +13,7 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["de
 sc-basic-authorship = { workspace = true }
 sc-cli = { workspace = true }
 sc-client-api = { workspace = true }
+sc-client-db = { workspace = true }
 sc-consensus = { workspace = true }
 sc-executor = { workspace = true }
 sc-keystore = { workspace = true }
