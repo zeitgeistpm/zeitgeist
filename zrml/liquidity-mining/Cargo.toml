@@ -27,7 +27,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "parity-scale-codec/std",
-    "serde/std",
+    "serde/default",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
     "zrml-market-commons/std",

@@ -74,7 +74,7 @@ test = false
 arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["default"] }
 frame-system = { workspace = true, features = ["default"] }
-libfuzzer-sys = "0.4"
+libfuzzer-sys = { workspace = true }
 substrate-fixed = { workspace = true }
 zrml-rikiddo = { workspace = true, features = ["arbitrary", "mock", "default"] }
 

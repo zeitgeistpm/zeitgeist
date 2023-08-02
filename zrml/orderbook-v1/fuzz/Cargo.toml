@@ -6,10 +6,10 @@ test = false
 
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"] }
-frame-system = { workspace = true }
-libfuzzer-sys = "0.4"
-zeitgeist-primitives = { workspace = true }
-zrml-orderbook-v1 = { workspace = true, features = ["mock"] }
+frame-system = { workspace = true, features = ["default"] }
+libfuzzer-sys = { workspace = true }
+zeitgeist-primitives = { workspace = true, features = ["default"] }
+zrml-orderbook-v1 = { workspace = true, features = ["default", "mock"] }
 
 [package]
 authors = ["Automatically generated"]

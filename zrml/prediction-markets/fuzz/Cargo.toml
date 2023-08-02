@@ -7,7 +7,7 @@ test = false
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["default"] }
-libfuzzer-sys = "0.4"
+libfuzzer-sys = { workspace = true }
 zeitgeist-primitives = { workspace = true, features = ["arbitrary", "mock", "default"] }
 zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 zrml-simple-disputes = { workspace = true, features = ["default"] }
