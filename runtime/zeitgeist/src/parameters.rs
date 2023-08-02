@@ -48,8 +48,8 @@ use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
-	WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-	polkadot_primitives::v2::MAX_POV_SIZE as u64,
+    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    polkadot_primitives::v2::MAX_POV_SIZE as u64,
 );
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
@@ -93,6 +93,8 @@ parameter_types! {
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 123 * 1024;
     pub const ContractsMaxStorageKeyLen: u32 = 128;
+    pub const ContractsMaxDebugBufferLen: u32 = 2 * 1024 * 1024;
+    pub const ContractsUnsafeUnstableInterface: bool = false;
     pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
@@ -322,6 +324,8 @@ parameter_types! {
     pub const Burn: Permill = Permill::from_percent(10);
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
+    /// Maximum amount a verified origin can spend
+    pub const MaxTreasurySpend: Balance = Balance::max_value();
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);

@@ -41,10 +41,10 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureWithSuccess};
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
 use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
@@ -99,12 +99,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 22,
     state_version: 1,
 };
-
-/// The version information used to identify this runtime when compiled natively.
-#[cfg(feature = "std")]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
