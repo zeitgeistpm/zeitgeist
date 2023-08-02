@@ -1,11 +1,11 @@
 [dependencies]
-jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
-parity-scale-codec = { default-features = false, version = "3.0.0" }
-sp-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-blockchain = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { default-features = false, path = "../../../primitives" }
-zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "../runtime-api" }
+jsonrpsee = { workspace = true, features = ["server", "macros"] }
+parity-scale-codec = { workspace = true, features = ["default"] }
+sp-api = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-runtime = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+zrml-swaps-runtime-api = { workspace = true, features = ["default"] }
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

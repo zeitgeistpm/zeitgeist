@@ -1,25 +1,25 @@
 [dependencies]
-frame-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-std = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-zrml-market-commons = { default-features = false, path = "../market-commons" }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+zrml-market-commons = { workspace = true }
 
 # Benchmark
-num-traits = { version = "0.2.15", default-features = false, optional = true }
+num-traits = { workspace = true, optional = true }
 
 
 [dev-dependencies]
-pallet-balances = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { default-features = false, features = ["mock"], path = "../../primitives" }
+pallet-balances = { workspace = true, features = ["default"] }
+pallet-timestamp = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
 
-test-case = "2.0.2"
+test-case = { workspace = true }
 
 [features]
 default = ["std"]

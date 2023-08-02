@@ -1,43 +1,43 @@
 [dependencies]
-frame-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
-zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
-zrml-market-commons = { default-features = false, path = "../market-commons" }
-zrml-rikiddo = { default-features = false, path = "../rikiddo" }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+orml-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+substrate-fixed = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+zrml-liquidity-mining = { workspace = true }
+zrml-market-commons = { workspace = true }
+zrml-rikiddo = { workspace = true }
 
 # Mock
 
-orml-currencies = { branch = "polkadot-v0.9.32", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "polkadot-v0.9.32", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
-pallet-timestamp = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
-sp-api = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
-sp-io = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
-zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
+orml-currencies = { workspace = true, optional = true }
+orml-tokens = { workspace = true, optional = true }
+pallet-balances = { workspace = true, optional = true }
+pallet-timestamp = { workspace = true, optional = true }
+sp-api = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
+zrml-swaps-runtime-api = { workspace = true, optional = true }
 
 [dev-dependencies]
-more-asserts = "0.2"
-test-case = "2.0.2"
-zrml-swaps = { features = ["mock"], path = "." }
+more-asserts = { workspace = true }
+test-case = { workspace = true }
+zrml-swaps = { workspace = true, features = ["mock"] }
 
 [features]
 default = ["std"]
 mock = [
-    "orml-currencies",
-    "orml-tokens",
-    "pallet-balances",
-    "pallet-timestamp",
-    "sp-api",
-    "sp-io",
+    "orml-currencies/default",
+    "orml-tokens/default",
+    "pallet-balances/default",
+    "pallet-timestamp/default",
+    "sp-api/default",
+    "sp-io/default",
     "zeitgeist-primitives/mock",
-    "zrml-swaps-runtime-api",
+    "zrml-swaps-runtime-api/default",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

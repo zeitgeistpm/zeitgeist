@@ -1,9 +1,9 @@
 [dependencies]
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
-sp-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-std = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { default-features = false, path = "../../../primitives" }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+sp-api = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+zeitgeist-primitives = { workspace = true }
 
 [features]
 default = ["std"]

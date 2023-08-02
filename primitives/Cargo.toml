@@ -1,18 +1,18 @@
 [dependencies]
-arbitrary = { default-features = false, optional = true, version = "1.0" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-currencies = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-serde = { default-features = false, features = ["derive"], optional = true, version = "1.0.144" }
-sp-core = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+arbitrary = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+orml-currencies = { workspace = true }
+orml-tokens = { workspace = true }
+orml-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"], optional = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 
 [dev-dependencies]
-test-case = "2.0.2"
+test-case = { workspace = true }
 
 [features]
 default = ["std"]

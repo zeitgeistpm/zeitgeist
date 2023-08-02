@@ -1,28 +1,28 @@
 
 [dependencies]
-frame-benchmarking = { branch = "polkadot-v0.9.32", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+orml-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+zeitgeist-primitives = { workspace = true }
 
 # Mock
-orml-tokens = { branch = "polkadot-v0.9.32", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
-sp-io = { branch = "polkadot-v0.9.32", git = "https://github.com/paritytech/substrate", optional = true }
+orml-tokens = { workspace = true, optional = true }
+pallet-balances = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
 
 [dev-dependencies]
-zrml-orderbook-v1 = { features = ["mock"], path = "." }
+zrml-orderbook-v1 = { workspace = true, features = ["mock", "default"] }
 
 [features]
 default = ["std"]
 mock = [
-    "orml-tokens",
-    "pallet-balances",
-    "sp-io",
+    "orml-tokens/default",
+    "pallet-balances/default",
+    "sp-io/default",
     "zeitgeist-primitives/mock",
 ]
 runtime-benchmarks = [

@@ -1,37 +1,37 @@
 [dependencies]
 # Pallets
-cumulus-pallet-xcmp-queue = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-currencies = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-tokens = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-asset-tx-payment = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-author-inherent = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
-pallet-author-mapping = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
-pallet-author-slot-filter = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
-pallet-balances = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-bounties = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-collective = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-contracts = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-contracts-primitives = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-democracy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-identity = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-membership = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-multisig = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-parachain-staking = { default-features = false, git = "https://github.com/zeitgeistpm/external", optional = true }
-pallet-preimage = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-proxy = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-randomness-collective-flip = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-scheduler = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-transaction-payment = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-transaction-payment-rpc-runtime-api = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-treasury = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-utility = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-vesting = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
+cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+orml-currencies = { workspace = true }
+orml-tokens = { workspace = true }
+pallet-asset-tx-payment = { workspace = true }
+pallet-author-inherent = { workspace = true, optional = true }
+pallet-author-mapping = { workspace = true, optional = true }
+pallet-author-slot-filter = { workspace = true, optional = true }
+pallet-balances = { workspace = true }
+pallet-bounties = { workspace = true }
+pallet-collective = { workspace = true }
+pallet-contracts = { workspace = true }
+pallet-contracts-primitives = { workspace = true }
+pallet-democracy = { workspace = true }
+pallet-identity = { workspace = true }
+pallet-membership = { workspace = true }
+pallet-multisig = { workspace = true }
+pallet-parachain-staking = { workspace = true, optional = true }
+pallet-preimage = { workspace = true }
+pallet-proxy = { workspace = true }
+pallet-randomness-collective-flip = { workspace = true }
+pallet-scheduler = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-transaction-payment = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+pallet-treasury = { workspace = true }
+pallet-utility = { workspace = true }
+pallet-vesting = { workspace = true }
 
 # Utility
-cfg-if = { version = "1.0.0" }
+cfg-if = { workspace = true }
 
 [features]
 default = ["std"]
