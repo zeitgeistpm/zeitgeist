@@ -424,6 +424,8 @@ pub fn run() -> sc_cli::Result<()> {
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
+            use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+
             let runner = cli.create_runner(cmd)?;
             let chain_spec = &runner.config().chain_spec;
 
@@ -440,7 +442,10 @@ pub fn run() -> sc_cli::Result<()> {
                                     sc_cli::Error::Service(sc_service::Error::Prometheus(e))
                                 })?;
                         return Ok((
-                            cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config),
+                            cmd.run::<zeitgeist_runtime::Block, ExtendedHostFunctions<
+                                sp_io::SubstrateHostFunctions,
+                                <ZeitgeistExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+                            >>(),
                             task_manager,
                         ));
                     })
@@ -454,7 +459,10 @@ pub fn run() -> sc_cli::Result<()> {
                                 sc_cli::Error::Service(sc_service::Error::Prometheus(e))
                             })?;
                     return Ok((
-                        cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(config),
+                        cmd.run::<battery_station_runtime::Block, ExtendedHostFunctions<
+                            sp_io::SubstrateHostFunctions,
+                            <BatteryStationExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+                        >>(),
                         task_manager,
                     ));
                 }),

@@ -12639,6 +12639,7 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#6f
 dependencies = [
  "clap",
  "frame-remote-externalities",
+ "frame-try-runtime",
  "hex",
  "log",
  "parity-scale-codec",
@@ -14133,6 +14134,7 @@ dependencies = [
  "cumulus-relay-chain-rpc-interface",
  "frame-benchmarking",
  "frame-benchmarking-cli",
+ "futures 0.3.28",
  "hex-literal",
  "jsonrpsee",
  "log",
@@ -14180,6 +14182,7 @@ dependencies = [
  "sp-core",
  "sp-finality-grandpa",
  "sp-inherents",
+ "sp-io",
  "sp-keyring",
  "sp-keystore",
  "sp-offchain",
