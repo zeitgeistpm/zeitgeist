@@ -371,6 +371,7 @@ try-runtime = [
     "zrml-swaps/try-runtime",
 
     # Parachain
+    "pallet-author-inherent?/try-runtime",
     "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
     "pallet-parachain-staking?/try-runtime",
@@ -379,9 +380,9 @@ try-runtime = [
     "pallet-proxy/try-runtime",
     "pallet-grandpa/try-runtime",
     "pallet-aura/try-runtime",
-    "pallet-xcm/try-runtime",
+    "pallet-xcm?/try-runtime",
+    
     # Cumulus
-
     "cumulus-pallet-dmp-queue?/try-runtime",
     "cumulus-pallet-parachain-system?/try-runtime",
     "cumulus-pallet-xcm?/try-runtime",

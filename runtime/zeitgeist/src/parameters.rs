@@ -47,7 +47,7 @@ use zeitgeist_primitives::{constants::*, types::*};
 use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
     WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
     polkadot_primitives::v2::MAX_POV_SIZE as u64,
 );

@@ -946,11 +946,12 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.79"
+version = "1.0.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
+checksum = "51f1226cd9da55587234753d1245dd5b132343ea240f26b6a9003d68706141ba"
 dependencies = [
  "jobserver",
+ "libc",
 ]
 
 [[package]]
@@ -5032,7 +5033,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-vrf"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#3fed08c65cd1d8e79dcc7d7a44b1a8cae7661a39"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
 dependencies = [
  "nimbus-primitives",
  "parity-scale-codec",
@@ -5275,7 +5276,7 @@ dependencies = [
 [[package]]
 name = "nimbus-consensus"
 version = "0.9.0"
-source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#cee08fe1fe1b6affb69edc013352584784608e19"
+source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#908bad91acfd3bf1c161ddd5a5ba251767e9f440"
 dependencies = [
  "async-trait",
  "cumulus-client-consensus-common",
@@ -5306,7 +5307,7 @@ dependencies = [
 [[package]]
 name = "nimbus-primitives"
 version = "0.9.0"
-source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#cee08fe1fe1b6affb69edc013352584784608e19"
+source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#908bad91acfd3bf1c161ddd5a5ba251767e9f440"
 dependencies = [
  "async-trait",
  "frame-benchmarking",
@@ -5753,7 +5754,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-inherent"
 version = "0.9.0"
-source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#cee08fe1fe1b6affb69edc013352584784608e19"
+source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#908bad91acfd3bf1c161ddd5a5ba251767e9f440"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5773,7 +5774,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#3fed08c65cd1d8e79dcc7d7a44b1a8cae7661a39"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5791,7 +5792,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-slot-filter"
 version = "0.9.0"
-source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#cee08fe1fe1b6affb69edc013352584784608e19"
+source = "git+https://github.com/zeitgeistpm/nimbus?branch=polkadot-v0.9.37-use-paritytech-dependencies#908bad91acfd3bf1c161ddd5a5ba251767e9f440"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6379,7 +6380,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#3fed08c65cd1d8e79dcc7d7a44b1a8cae7661a39"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10711,7 +10712,7 @@ dependencies = [
 [[package]]
 name = "session-keys-primitives"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#3fed08c65cd1d8e79dcc7d7a44b1a8cae7661a39"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -13914,9 +13915,9 @@ checksum = "1a515f5799fe4961cb532f983ce2b23082366b898e52ffbce459c86f67c8378a"
 
 [[package]]
 name = "winnow"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bd122eb777186e60c3fdf765a58ac76e41c582f1f535fbf3314434c6b58f3f7"
+checksum = "f46aab759304e4d7b2075a9aecba26228bb073ee8c50db796b2c72c676b5d807"
 dependencies = [
  "memchr",
 ]
