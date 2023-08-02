@@ -217,6 +217,7 @@ std = [
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
+    "frame-try-runtime/std",
     "hex-literal",
     "log/std",
     "orml-benchmarking/std",
