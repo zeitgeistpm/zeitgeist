@@ -21,7 +21,7 @@ use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
 use xcm::latest::MultiLocation;
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::CustomMetadata};
-use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
+use zrml_swaps::fixed::bmul;
 
 /// The fee cost per second for transferring the native token in cents.
 pub fn native_per_second() -> Balance {
@@ -48,14 +48,9 @@ pub fn cent(decimals: u32) -> Balance {
     dollar(decimals).saturating_div(100)
 }
 
-pub fn bmul(a: u128, b: u128, base: u128) -> Option<u128> {
-    let c0 = a.check_mul_rslt(&b).ok()?;
-    let c1 = c0.check_add_rslt(&base.check_div_rslt(&2).ok()?).ok()?;
-    c1.check_div_rslt(&base).ok()
-}
-
-/// Our FixedConversionRateProvider, used to charge XCM-related fees for tokens registered in
+/// The FixedConversionRateProvider is used to charge XCM-related fees for tokens registered in
 /// the asset registry that were not already handled by native Trader rules.
+/// Assumes that the fee factor is stored in the native base.
 pub struct FixedConversionRateProvider<AssetRegistry>(PhantomData<AssetRegistry>);
 
 impl<
@@ -68,13 +63,22 @@ impl<
 {
     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
         let metadata = AssetRegistry::metadata_by_location(location)?;
-        let default_per_second = default_per_second(metadata.decimals);
+        let default_per_second = native_per_second();
+        let native_decimals: u32 = BalanceFractionalDecimals::get().into();
+        let foreign_decimals = metadata.decimals;
 
-        if let Some(fee_factor) = metadata.additional.xcm.fee_factor {
-            let base = 10u128.checked_pow(metadata.decimals)?;
-            bmul(default_per_second, fee_factor, base)
+        let fee_unadjusted = if let Some(fee_factor) = metadata.additional.xcm.fee_factor {
+            bmul(default_per_second, fee_factor).ok()?
         } else {
-            Some(default_per_second)
+            default_per_second
+        };
+
+        if native_decimals > foreign_decimals {
+            let power = native_decimals.saturating_sub(foreign_decimals);
+            Some(fee_unadjusted.checked_div(10u128.checked_pow(power)?)?)
+        } else {
+            let power = foreign_decimals.saturating_sub(native_decimals);
+            Some(fee_unadjusted.checked_mul(10u128.checked_pow(power)?)?)
         }
     }
 }
