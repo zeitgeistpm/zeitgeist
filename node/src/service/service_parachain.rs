@@ -82,7 +82,6 @@ where
         parachain_id,
         |client,
          backend,
-         block_import,
          prometheus_registry,
          telemetry,
          task_manager,
@@ -145,7 +144,7 @@ where
                 para_id: parachain_id,
                 backend,
                 proposer_factory,
-                block_import,
+                block_import: client.clone(),
                 parachain_client: client,
                 keystore,
                 skip_prediction: force_authoring,
@@ -267,7 +266,6 @@ where
     BIC: FnOnce(
         Arc<FullClient<RuntimeApi, Executor>>,
         Arc<sc_client_db::Backend<Block>>,
-        ParachainBlockImport<RuntimeApi, Executor>,
         Option<&Registry>,
         Option<TelemetryHandle>,
         &TaskManager,
@@ -281,7 +279,7 @@ where
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
-    let (import_queue, mut telemetry, telemetry_worker_handle) = params.other;
+    let (_, mut telemetry, telemetry_worker_handle) = params.other;
 
     let client = params.client.clone();
     let backend = params.backend.clone();
@@ -380,7 +378,6 @@ where
         let parachain_consensus = build_consensus(
             client.clone(),
             backend,
-            import_queue,
             prometheus_registry.as_ref(),
             telemetry.as_ref().map(|t| t.handle()),
             &task_manager,
