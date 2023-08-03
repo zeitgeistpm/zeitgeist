@@ -12,6 +12,23 @@ https://keepachangelog.com/en/1.0.0/ and ⚠️ marks changes that might break
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.3.11
+
+[#1049]: https://github.com/zeitgeistpm/zeitgeist/pull/1049
+
+### Changed
+
+- ⚠️ All tokens now use 10 fractional decimal places.
+  - cross-consensus messages (XCM) assume the global canonical representation for token balances.
+- The token metadata in the asset registry now assumes that the existential deposit and fee factor
+  are stored in base 10,000,000,000.
+
+### Added
+
+- Use pallet-asset-tx-payment for allowing to pay transaction fees in foreign
+  currencies ([#1022]). This requires each transaction to specify the fee
+  payment token with `asset_id` (`None` is ZTG).
+
 ## v0.3.10
 
 [#1022]: https://github.com/zeitgeistpm/zeitgeist/pull/1022

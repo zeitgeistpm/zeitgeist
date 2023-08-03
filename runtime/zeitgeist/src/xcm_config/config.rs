@@ -22,9 +22,14 @@ use crate::{
     RuntimeOrigin, UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
-use frame_support::{parameter_types, traits::Everything, WeakBoundedVec};
+use core::marker::PhantomData;
+use frame_support::{
+    parameter_types,
+    traits::{ConstU8, Everything, Get},
+    WeakBoundedVec,
+};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
-use orml_traits::{location::AbsoluteReserveProvider, MultiCurrency};
+use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider, MultiCurrency};
 use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
@@ -34,7 +39,7 @@ use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
         prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, NetworkId, X1, X2},
-        Junction, MultiLocation,
+        Error as XcmError, Junction, MultiLocation, Result as XcmResult,
     },
     opaque::latest::Fungibility::Fungible,
 };
@@ -45,8 +50,8 @@ use xcm_builder::{
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
     TakeWeightCredit,
 };
-use xcm_executor::Config;
-use zeitgeist_primitives::types::Asset;
+use xcm_executor::{traits::TransactAsset, Assets, Config};
+use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::Asset};
 
 pub mod zeitgeist {
     #[cfg(test)]
@@ -63,7 +68,7 @@ impl Config for XcmConfig {
     /// The handler for when there is an instruction to claim assets.
     type AssetClaims = PolkadotXcm;
     /// How to withdraw and deposit an asset.
-    type AssetTransactor = MultiAssetTransactor;
+    type AssetTransactor = AlignedFractionalMultiAssetTransactor;
     /// The general asset trap - handler for when assets are left in the Holding Register at the
     /// end of execution.
     type AssetTrap = PolkadotXcm;
@@ -157,6 +162,108 @@ parameter_types! {
         native_per_second(),
     );
 }
+
+/// A generic warpper around implementations of the (xcm-executor) `TransactAsset` trait.
+///
+/// Aligns the fractional decimal places of every incoming token with ZTG.
+/// Reconstructs the original number of fractional decimal places of every outgoing token.
+///
+/// Important: Always use the global canonical representation of token balances in XCM.
+/// Only during the interpretation of those XCM adjustments happens.
+///
+/// Important: The implementation does not support teleports.
+#[allow(clippy::type_complexity)]
+pub struct AlignedFractionalTransactAsset<
+    AssetRegistry,
+    CurrencyIdConvert,
+    FracDecPlaces,
+    TransactAssetDelegate,
+> {
+    _phantom: PhantomData<(AssetRegistry, CurrencyIdConvert, FracDecPlaces, TransactAssetDelegate)>,
+}
+
+impl<
+    AssetRegistry: Inspect<AssetId = CurrencyId>,
+    FracDecPlaces: Get<u8>,
+    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
+    TransactAssetDelegate: TransactAsset,
+>
+    AlignedFractionalTransactAsset<
+        AssetRegistry,
+        CurrencyIdConvert,
+        FracDecPlaces,
+        TransactAssetDelegate,
+    >
+{
+    fn adjust_fractional_places(asset: &MultiAsset) -> MultiAsset {
+        if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
+            if let Fungible(amount) = asset.fun {
+                let mut asset_updated = asset.clone();
+                let native_decimals = u32::from(FracDecPlaces::get());
+                let metadata = AssetRegistry::metadata(asset_id);
+
+                if let Some(metadata) = metadata {
+                    let decimals = metadata.decimals;
+
+                    asset_updated.fun = if decimals > native_decimals {
+                        let power = decimals.saturating_sub(native_decimals);
+                        let adjust_factor = 10u128.saturating_pow(power);
+                        // Floors the adjusted token amount, thus no tokens are generated
+                        Fungible(amount.saturating_div(adjust_factor))
+                    } else {
+                        let power = native_decimals.saturating_sub(decimals);
+                        let adjust_factor = 10u128.saturating_pow(power);
+                        Fungible(amount.saturating_mul(adjust_factor))
+                    };
+
+                    return asset_updated;
+                }
+            }
+        }
+
+        asset.clone()
+    }
+}
+
+impl<
+    AssetRegistry: Inspect<AssetId = CurrencyId>,
+    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
+    FracDecPlaces: Get<u8>,
+    TransactAssetDelegate: TransactAsset,
+> TransactAsset
+    for AlignedFractionalTransactAsset<
+        AssetRegistry,
+        CurrencyIdConvert,
+        FracDecPlaces,
+        TransactAssetDelegate,
+    >
+{
+    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
+        let asset_adjusted = Self::adjust_fractional_places(asset);
+        TransactAssetDelegate::deposit_asset(&asset_adjusted, location)
+    }
+
+    fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<Assets, XcmError> {
+        let asset_adjusted = Self::adjust_fractional_places(asset);
+        TransactAssetDelegate::withdraw_asset(&asset_adjusted, location)
+    }
+
+    fn transfer_asset(
+        asset: &MultiAsset,
+        from: &MultiLocation,
+        to: &MultiLocation,
+    ) -> Result<Assets, XcmError> {
+        let asset_adjusted = Self::adjust_fractional_places(asset);
+        TransactAssetDelegate::transfer_asset(&asset_adjusted, from, to)
+    }
+}
+
+pub type AlignedFractionalMultiAssetTransactor = AlignedFractionalTransactAsset<
+    AssetRegistry,
+    AssetConvert,
+    ConstU8<{ BalanceFractionalDecimals::get() }>,
+    MultiAssetTransactor,
+>;
 
 /// Means for transacting assets on this chain.
 pub type MultiAssetTransactor = MultiCurrencyAdapter<
