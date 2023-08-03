@@ -19,7 +19,7 @@ APIs/RPC interface.
 ### Changed
 
 - ⚠️ All tokens now use 10 fractional decimal places.
-  - cross-consensus messages (XCM) assume the global canonical representation for token balances.
+- Cross-consensus messages (XCM) assume the global canonical representation for token balances.
 - The token metadata in the asset registry now assumes that the existential deposit and fee factor
   are stored in base 10,000,000,000.
 
