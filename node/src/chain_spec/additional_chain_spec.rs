@@ -34,6 +34,7 @@ pub struct AdditionalChainSpec {
     pub nominations: Vec<(AccountId, AccountId, Balance, Percent)>,
     pub parachain_bond_reserve_percent: Percent,
     pub parachain_id: ParaId,
+    pub num_selected_candidates: u32,
 }
 
 #[cfg(not(feature = "parachain"))]

@@ -11,14 +11,15 @@ pallet-transaction-payment = { workspace = true, features = ["default"] }
 pallet-transaction-payment-rpc = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["default"] }
 sc-basic-authorship = { workspace = true }
-sc-cli = { workspace = true, features = ["wasmtime"] }
+sc-cli = { workspace = true }
 sc-client-api = { workspace = true }
+sc-client-db = { workspace = true }
 sc-consensus = { workspace = true }
-sc-executor = { workspace = true, features = ["wasmtime"] }
+sc-executor = { workspace = true }
 sc-keystore = { workspace = true }
 sc-rpc = { workspace = true }
 sc-rpc-api = { workspace = true }
-sc-service = { workspace = true, features = ["wasmtime"] }
+sc-service = { workspace = true }
 sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-transaction-pool = { workspace = true }
@@ -29,6 +30,7 @@ sp-blockchain = { workspace = true }
 sp-consensus = { workspace = true }
 sp-core = { workspace = true, features = ["default"] }
 sp-inherents = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
 sp-keyring = { workspace = true }
 sp-offchain = { workspace = true, features = ["default"] }
 sp-runtime = { workspace = true, features = ["default"] }
@@ -98,6 +100,7 @@ sp-finality-grandpa = { workspace = true, features = ["default"] }
 # Utility
 cfg-if = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+futures = { workspace = true, features = ["thread-pool"] }
 hex-literal = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
 log = { workspace = true, optional = true }
@@ -170,7 +173,7 @@ runtime-benchmarks = [
 try-runtime = [
     "battery-station-runtime?/try-runtime",
     "zeitgeist-runtime?/try-runtime",
-    "try-runtime-cli",
+    "try-runtime-cli/try-runtime",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]
