@@ -41,7 +41,7 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
@@ -57,7 +57,7 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -99,6 +99,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 22,
     state_version: 1,
 };
+
+pub type ContractsCallfilter = Nothing;
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
