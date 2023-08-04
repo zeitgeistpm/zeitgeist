@@ -217,6 +217,7 @@ std = [
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
+    "frame-try-runtime/std",
     "hex-literal",
     "log/std",
     "orml-benchmarking/std",
@@ -256,9 +257,6 @@ std = [
     "sp-transaction-pool/std",
     "sp-version/std",
     "substrate-fixed/std",
-
-    # Try-Runtime
-    "frame-try-runtime/std",
 
     # Benchmark
 
@@ -322,7 +320,7 @@ std = [
 ]
 try-runtime = [
     "frame-executive/try-runtime",
-    "frame-try-runtime",
+    "frame-try-runtime/try-runtime",
 
     # For every pallet in the runtime include try-runtime
 
@@ -373,8 +371,8 @@ try-runtime = [
     "zrml-swaps/try-runtime",
 
     # Parachain
-    "pallet-author-mapping?/try-runtime",
     "pallet-author-inherent?/try-runtime",
+    "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
     "pallet-parachain-staking?/try-runtime",
     # Required by pallet-parachain-staking@v0.26.1
@@ -382,9 +380,9 @@ try-runtime = [
     "pallet-proxy/try-runtime",
     "pallet-grandpa/try-runtime",
     "pallet-aura/try-runtime",
-    "pallet-xcm/try-runtime",
-    # Cumulus
+    "pallet-xcm?/try-runtime",
 
+    # Cumulus
     "cumulus-pallet-dmp-queue?/try-runtime",
     "cumulus-pallet-parachain-system?/try-runtime",
     "cumulus-pallet-xcm?/try-runtime",

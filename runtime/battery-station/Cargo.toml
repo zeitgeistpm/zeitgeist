@@ -331,7 +331,7 @@ std = [
 ]
 try-runtime = [
     "frame-executive/try-runtime",
-    "frame-try-runtime",
+    "frame-try-runtime/try-runtime",
 
     # For every pallet in the runtime include try-runtime
 
@@ -382,12 +382,10 @@ try-runtime = [
     "zrml-swaps/try-runtime",
 
     # Parachain
-    "pallet-author-mapping?/try-runtime",
     "pallet-author-inherent?/try-runtime",
+    "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
     "pallet-parachain-staking?/try-runtime",
-    # Required by pallet-parachain-staking@v0.26.1
-    "parity-scale-codec/full",
     "pallet-proxy/try-runtime",
     "pallet-grandpa/try-runtime",
     "pallet-aura/try-runtime",

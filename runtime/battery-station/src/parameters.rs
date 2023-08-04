@@ -28,7 +28,7 @@ use frame_support::{
     parameter_types,
     traits::WithdrawReasons,
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
         Weight,
     },
     PalletId,
@@ -47,9 +47,10 @@ use zeitgeist_primitives::{constants::*, types::*};
 use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
-    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2)
-        .set_proof_size(polkadot_primitives::v2::MAX_POV_SIZE as u64);
+pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    polkadot_primitives::v2::MAX_POV_SIZE as u64,
+);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
@@ -91,7 +92,9 @@ parameter_types! {
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 246 * 1024;
+    pub const ContractsMaxDebugBufferLen: u32 = 2 * 1024 * 1024;
     pub const ContractsMaxStorageKeyLen: u32 = 128;
+    pub const ContractsUnsafeUnstableInterface: bool = true;
     pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
@@ -317,6 +320,8 @@ parameter_types! {
     pub const Burn: Permill = Permill::from_percent(10);
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
+    /// Maximum amount a verified origin can spend
+    pub const MaxTreasurySpend: Balance = Balance::max_value();
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);

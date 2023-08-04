@@ -17,22 +17,23 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    cli::RpcConfig,
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
     POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
-use cumulus_client_consensus_common::ParachainConsensus;
+use cumulus_client_consensus_common::{
+    ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
+};
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
-    prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
+    build_relay_chain_interface, prepare_node_config, start_collator, start_full_node,
+    StartCollatorParams, StartFullNodeParams,
 };
-use cumulus_primitives_core::{relay_chain::v2::CollatorPair, ParaId};
-use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
-use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
-use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
+use cumulus_primitives_core::ParaId;
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
 use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
+use sc_consensus::ImportQueue;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_network::NetworkService;
 use sc_network_common::service::NetworkBlock;
@@ -53,8 +54,10 @@ pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
     (),
     sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
     sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
-    (Option<Telemetry>, Option<TelemetryWorkerHandle>),
+    (ParachainBlockImport<RuntimeApi, Executor>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
 >;
+type ParachainBlockImport<RuntimeApi, Executor> =
+    TParachainBlockImport<Block, Arc<FullClient<RuntimeApi, Executor>>, FullBackend>;
 
 /// Start a parachain node.
 pub async fn new_full<RuntimeApi, Executor>(
@@ -62,7 +65,7 @@ pub async fn new_full<RuntimeApi, Executor>(
     parachain_id: ParaId,
     polkadot_config: Configuration,
     hwbench: Option<sc_sysinfo::HwBench>,
-    rpc_config: RpcConfig,
+    collator_options: CollatorOptions,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -78,6 +81,7 @@ where
         polkadot_config,
         parachain_id,
         |client,
+         backend,
          prometheus_registry,
          telemetry,
          task_manager,
@@ -138,6 +142,7 @@ where
 
             Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
                 para_id: parachain_id,
+                backend,
                 proposer_factory,
                 block_import: client.clone(),
                 parachain_client: client,
@@ -148,7 +153,7 @@ where
             }))
         },
         hwbench,
-        rpc_config,
+        collator_options,
     )
     .await
 }
@@ -212,9 +217,11 @@ where
         client.clone(),
     );
 
+    let block_import =
+        ParachainBlockImport::<RuntimeApi, Executor>::new(client.clone(), backend.clone());
     let import_queue = nimbus_consensus::import_queue(
         client.clone(),
-        client.clone(),
+        block_import.clone(),
         move |_, _| async move {
             let time = sp_timestamp::InherentDataProvider::from_system_time();
             Ok((time,))
@@ -232,34 +239,8 @@ where
         task_manager,
         transaction_pool,
         select_chain: (),
-        other: (telemetry, telemetry_worker_handle),
+        other: (block_import, telemetry, telemetry_worker_handle),
     })
-}
-
-// TODO(#1040) `build_relay_chain_interface` will be included in polkadot-v0.9.36 in cumulus-client-service here: https://github.com/paritytech/cumulus/commit/babf73bbc6ade358db105580b68aacb91550faa5#diff-52df5aabcc0b97cfe43ce4b88b9dcf52de661934e481f6ae935435f4941b1639R224-R252
-/// Build a relay chain interface.
-/// Will return a minimal relay chain node with RPC
-/// client or an inprocess node, based on the [`CollatorOptions`] passed in.
-async fn build_relay_chain_interface(
-    polkadot_config: Configuration,
-    parachain_config: &Configuration,
-    telemetry_worker_handle: Option<TelemetryWorkerHandle>,
-    task_manager: &mut TaskManager,
-    collator_options: CollatorOptions,
-    hwbench: Option<sc_sysinfo::HwBench>,
-) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
-    match collator_options.relay_chain_rpc_url {
-        Some(relay_chain_url) => {
-            build_minimal_relay_chain_node(polkadot_config, task_manager, relay_chain_url).await
-        }
-        None => build_inprocess_relay_chain(
-            polkadot_config,
-            parachain_config,
-            telemetry_worker_handle,
-            task_manager,
-            hwbench,
-        ),
-    }
 }
 
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
@@ -272,7 +253,7 @@ async fn do_new_full<RuntimeApi, Executor, BIC>(
     id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
     hwbench: Option<sc_sysinfo::HwBench>,
-    rpc_config: RpcConfig,
+    collator_options: CollatorOptions,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -284,6 +265,7 @@ where
     Executor: NativeExecutionDispatch + 'static,
     BIC: FnOnce(
         Arc<FullClient<RuntimeApi, Executor>>,
+        Arc<sc_client_db::Backend<Block>>,
         Option<&Registry>,
         Option<TelemetryHandle>,
         &TaskManager,
@@ -297,14 +279,11 @@ where
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
-    let (mut telemetry, telemetry_worker_handle) = params.other;
+    let (_, mut telemetry, telemetry_worker_handle) = params.other;
 
     let client = params.client.clone();
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
-
-    let collator_options =
-        CollatorOptions { relay_chain_rpc_url: rpc_config.relay_chain_rpc_url.clone() };
 
     let (relay_chain_interface, collator_key) = build_relay_chain_interface(
         polkadot_config,
@@ -326,19 +305,28 @@ where
     let collator = parachain_config.role.is_authority();
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
-    let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
+    let import_queue_service = params.import_queue.service();
     let (network, system_rpc_tx, tx_handler_controller, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
             transaction_pool: transaction_pool.clone(),
             spawn_handle: task_manager.spawn_handle(),
-            import_queue: import_queue.clone(),
+            import_queue: params.import_queue,
             block_announce_validator_builder: Some(Box::new(|_| {
                 Box::new(block_announce_validator)
             })),
             warp_sync: None,
         })?;
+
+    if parachain_config.offchain_worker.enabled {
+        sc_service::build_offchain_workers(
+            &parachain_config,
+            task_manager.spawn_handle(),
+            client.clone(),
+            network.clone(),
+        );
+    }
 
     let rpc_builder = {
         let client = client.clone();
@@ -389,6 +377,7 @@ where
     if collator {
         let parachain_consensus = build_consensus(
             client.clone(),
+            backend,
             prometheus_registry.as_ref(),
             telemetry.as_ref().map(|t| t.handle()),
             &task_manager,
@@ -410,7 +399,7 @@ where
             relay_chain_interface,
             spawner,
             parachain_consensus,
-            import_queue,
+            import_queue: import_queue_service,
             collator_key: collator_key.ok_or_else(|| {
                 sc_service::error::Error::Other("Collator Key is None".to_string())
             })?,
@@ -426,7 +415,7 @@ where
             para_id: id,
             relay_chain_interface,
             relay_chain_slot_duration,
-            import_queue,
+            import_queue: import_queue_service,
         };
 
         start_full_node(params)?;

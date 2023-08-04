@@ -41,10 +41,10 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureWithSuccess};
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
 use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
@@ -88,6 +88,7 @@ pub mod parameters;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),

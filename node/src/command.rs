@@ -25,15 +25,6 @@ use super::{
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
 use sp_keyring::Sr25519Keyring;
-#[cfg(feature = "parachain")]
-use {
-    super::cli::RpcConfig,
-    sc_client_api::client::BlockBackend,
-    sp_core::hexdisplay::HexDisplay,
-    sp_core::Encode,
-    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
-    std::io::Write,
-};
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
@@ -45,6 +36,14 @@ use {
 use {
     super::service::ZeitgeistExecutor,
     zeitgeist_runtime::{ExistentialDeposit as ZeitgeistED, RuntimeApi as ZeitgeistRuntimeApi},
+};
+#[cfg(feature = "parachain")]
+use {
+    sc_client_api::client::BlockBackend,
+    sp_core::hexdisplay::HexDisplay,
+    sp_core::Encode,
+    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
+    std::io::Write,
 };
 
 pub fn run() -> sc_cli::Result<()> {
@@ -288,12 +287,23 @@ pub fn run() -> sc_cli::Result<()> {
         }
         #[cfg(feature = "parachain")]
         Some(Subcommand::ExportHeader(cmd)) => {
+            use sp_runtime::generic::BlockId;
+
             let runner = cli.create_runner(cmd)?;
 
             runner.sync_run(|mut config| {
                 let (client, _, _, _) = new_chain_ops(&mut config)?;
+                let block_number: BlockId<zeitgeist_runtime::Block> = cmd.input.parse()?;
+                let block_hash = match block_number {
+                    BlockId::Hash(hash) => hash,
+                    BlockId::Number(number) => match client.block_hash(number) {
+                        Ok(Some(hash)) => hash,
+                        Ok(None) => return Err("Unknown block".into()),
+                        Err(e) => return Err(format!("Error reading block: {:?}", e).into()),
+                    },
+                };
 
-                match client.block(&cmd.input.parse()?) {
+                match client.block(block_hash) {
                     Ok(Some(block)) => {
                         println!("0x{:?}", HexDisplay::from(&block.block.header.encode()));
                         Ok(())
@@ -424,6 +434,8 @@ pub fn run() -> sc_cli::Result<()> {
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
+            use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+
             let runner = cli.create_runner(cmd)?;
             let chain_spec = &runner.config().chain_spec;
 
@@ -440,7 +452,10 @@ pub fn run() -> sc_cli::Result<()> {
                                     sc_cli::Error::Service(sc_service::Error::Prometheus(e))
                                 })?;
                         return Ok((
-                            cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config),
+                            cmd.run::<zeitgeist_runtime::Block, ExtendedHostFunctions<
+                                sp_io::SubstrateHostFunctions,
+                                <ZeitgeistExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+                            >>(),
                             task_manager,
                         ));
                     })
@@ -454,7 +469,10 @@ pub fn run() -> sc_cli::Result<()> {
                                 sc_cli::Error::Service(sc_service::Error::Prometheus(e))
                             })?;
                     return Ok((
-                        cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(config),
+                        cmd.run::<battery_station_runtime::Block, ExtendedHostFunctions<
+                            sp_io::SubstrateHostFunctions,
+                            <BatteryStationExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+                        >>(),
                         task_manager,
                     ));
                 }),
@@ -488,23 +506,18 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         let chain_spec = &parachain_config.chain_spec;
         let parachain_id_extension =
             crate::chain_spec::Extensions::try_get(&**chain_spec).map(|e| e.parachain_id);
-
         let polkadot_cli = crate::cli::RelayChainCli::new(
             &parachain_config,
             [crate::cli::RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
         );
-
-        let rpc_config = RpcConfig { relay_chain_rpc_url: cli.run.relay_chain_rpc_url.clone() };
-
+        let collator_options = cli.run.collator_options();
         let parachain_id = cumulus_primitives_core::ParaId::from(
             cli.parachain_id.or(parachain_id_extension).unwrap_or(super::POLKADOT_PARACHAIN_ID),
         );
-
         let parachain_account =
             AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(
                 &parachain_id,
             );
-
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
             cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
@@ -534,7 +547,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             if parachain_config.role.is_authority() { "yes" } else { "no" }
         );
 
-        if rpc_config.relay_chain_rpc_url.is_some() && !cli.relaychain_args.is_empty() {
+        if !collator_options.relay_chain_rpc_urls.is_empty() && !cli.relaychain_args.is_empty() {
             log::warn!(
                 "Detected relay chain node arguments together with --relay-chain-rpc-url. This \
                  command starts a minimal Polkadot node that only uses a network-related subset \
@@ -549,7 +562,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_id,
                 polkadot_config,
                 hwbench,
-                rpc_config,
+                collator_options,
             )
             .await
             .map(|r| r.0)
@@ -560,7 +573,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_id,
                 polkadot_config,
                 hwbench,
-                rpc_config,
+                collator_options,
             )
             .await
             .map(|r| r.0)
