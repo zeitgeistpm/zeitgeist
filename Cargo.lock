@@ -462,6 +462,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
+name = "az"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
+
+[[package]]
 name = "backtrace"
 version = "0.3.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -532,6 +538,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex",
  "hex-literal",
  "log",
  "nimbus-primitives",
@@ -594,6 +601,12 @@ dependencies = [
  "sp-version",
  "substrate-fixed",
  "substrate-wasm-builder",
+ "sygma-access-segregator",
+ "sygma-basic-feehandler",
+ "sygma-bridge",
+ "sygma-fee-handler-router",
+ "sygma-runtime-api",
+ "sygma-traits",
  "test-case",
  "xcm",
  "xcm-builder",
@@ -732,7 +745,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bc2832c24239b0141d5674bb9174f9d68a8b5b3f2753311927c172ca46f7e9c"
 dependencies = [
- "funty",
+ "funty 2.0.0",
  "radium",
  "tap",
  "wyz",
@@ -889,6 +902,12 @@ name = "byte-tools"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
+
+[[package]]
+name = "bytemuck"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17febce684fd15d89027105661fec94afb475cb995fbc59d2865198446ba2eea"
 
 [[package]]
 name = "byteorder"
@@ -2562,6 +2581,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethabi"
+version = "18.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7413c5f74cc903ea37386a8965a936cbeb334bd270862fdece542c1b2dcbc898"
+dependencies = [
+ "ethereum-types",
+ "hex",
+ "serde",
+ "sha3",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
+name = "ethbloom"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c22d4b5885b6aa2fe5e8b9329fb8d232bf739e434e6b87347c63bdd00c120f60"
+dependencies = [
+ "crunchy",
+ "fixed-hash",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d215cbf040552efcbe99a38372fe80ab9d00268e20012b79fcd0f073edd8ee"
+dependencies = [
+ "ethbloom",
+ "fixed-hash",
+ "primitive-types",
+ "uint",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2714,6 +2770,18 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "scale-info",
+]
+
+[[package]]
+name = "fixed"
+version = "1.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79386fdcec5e0fde91b1a6a5bcd89677d1f9304f7f986b154a1b9109038854d9"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3071,6 +3139,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
+name = "funty"
+version = "3.0.0-rc2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa590387383a574eb0a02370ad4b29c72e6ddd6b0afc2f6e2890bdb4be6d3a92"
+
+[[package]]
 name = "futures"
 version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3343,6 +3417,16 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+]
+
+[[package]]
+name = "half"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc52e53916c08643f1b56ec082790d1e86a32e58dc5268f897f313fbae7b4872"
+dependencies = [
+ "cfg-if",
+ "crunchy",
 ]
 
 [[package]]
@@ -5731,6 +5815,21 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#6fa7fe1326ecaab9921c2c3888530ad679cfbb87"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
  "sp-runtime",
  "sp-std",
 ]
@@ -11983,6 +12082,107 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
+name = "sygma-access-segregator"
+version = "0.1.0"
+source = "git+https://github.com/sygmaprotocol/sygma-substrate-pallets?rev=1590c91d84b2e5fa92650ae8bc5b23162dfd6f99#1590c91d84b2e5fa92650ae8bc5b23162dfd6f99"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std",
+]
+
+[[package]]
+name = "sygma-basic-feehandler"
+version = "0.1.0"
+source = "git+https://github.com/sygmaprotocol/sygma-substrate-pallets?rev=1590c91d84b2e5fa92650ae8bc5b23162dfd6f99#1590c91d84b2e5fa92650ae8bc5b23162dfd6f99"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std",
+ "sygma-access-segregator",
+ "sygma-traits",
+ "xcm",
+ "xcm-builder",
+]
+
+[[package]]
+name = "sygma-bridge"
+version = "0.1.0"
+source = "git+https://github.com/sygmaprotocol/sygma-substrate-pallets?rev=1590c91d84b2e5fa92650ae8bc5b23162dfd6f99#1590c91d84b2e5fa92650ae8bc5b23162dfd6f99"
+dependencies = [
+ "arrayref",
+ "ethabi",
+ "fixed",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "funty 3.0.0-rc2",
+ "hex",
+ "log",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sygma-access-segregator",
+ "sygma-traits",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
+name = "sygma-fee-handler-router"
+version = "0.1.0"
+source = "git+https://github.com/sygmaprotocol/sygma-substrate-pallets?rev=1590c91d84b2e5fa92650ae8bc5b23162dfd6f99#1590c91d84b2e5fa92650ae8bc5b23162dfd6f99"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std",
+ "sygma-access-segregator",
+ "sygma-basic-feehandler",
+ "sygma-traits",
+ "xcm",
+ "xcm-builder",
+]
+
+[[package]]
+name = "sygma-runtime-api"
+version = "0.1.0"
+source = "git+https://github.com/sygmaprotocol/sygma-substrate-pallets?rev=1590c91d84b2e5fa92650ae8bc5b23162dfd6f99#1590c91d84b2e5fa92650ae8bc5b23162dfd6f99"
+dependencies = [
+ "sp-api",
+ "sygma-bridge",
+ "sygma-traits",
+]
+
+[[package]]
+name = "sygma-traits"
+version = "0.1.0"
+source = "git+https://github.com/sygmaprotocol/sygma-substrate-pallets?rev=1590c91d84b2e5fa92650ae8bc5b23162dfd6f99#1590c91d84b2e5fa92650ae8bc5b23162dfd6f99"
+dependencies = [
+ "ethabi",
+ "frame-support",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12261,6 +12461,15 @@ dependencies = [
  "unicode-normalization",
  "wasm-bindgen",
  "zeroize",
+]
+
+[[package]]
+name = "tiny-keccak"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
+dependencies = [
+ "crunchy",
 ]
 
 [[package]]
@@ -14242,6 +14451,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex",
  "hex-literal",
  "log",
  "nimbus-primitives",
@@ -14303,6 +14513,12 @@ dependencies = [
  "sp-version",
  "substrate-fixed",
  "substrate-wasm-builder",
+ "sygma-access-segregator",
+ "sygma-basic-feehandler",
+ "sygma-bridge",
+ "sygma-fee-handler-router",
+ "sygma-runtime-api",
+ "sygma-traits",
  "test-case",
  "xcm",
  "xcm-builder",

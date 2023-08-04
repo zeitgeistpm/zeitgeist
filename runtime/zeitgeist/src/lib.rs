@@ -180,6 +180,10 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            RuntimeCall::SygmaAccessSegregator(_) => false,
+            RuntimeCall::SygmaBasicFeeHandler(_) => false,
+            RuntimeCall::SygmaFeeHandlerRouter(_) => false,
+            RuntimeCall::SygmaBridge(_) => false,
             RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.

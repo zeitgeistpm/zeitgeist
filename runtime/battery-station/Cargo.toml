@@ -47,6 +47,14 @@ sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
 substrate-fixed = { workspace = true, features = ["serde"] }
 
+# Sygma Bridge
+sygma-traits = { workspace = true }
+sygma-basic-feehandler = { workspace = true }
+sygma-bridge = { workspace = true }
+sygma-access-segregator = { workspace = true }
+sygma-fee-handler-router = { workspace = true }
+sygma-runtime-api = { workspace = true }
+
 # Try-Runtime
 
 frame-try-runtime = { workspace = true, optional = true }
@@ -89,6 +97,7 @@ sp-finality-grandpa = { workspace = true }
 
 # Utility
 cfg-if = { workspace = true }
+hex = { workspace = true }
 hex-literal = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 
@@ -261,6 +270,14 @@ std = [
     "sp-version/std",
     "substrate-fixed/std",
 
+    # Sygma Bridge
+    "sygma-basic-feehandler/std",
+	"sygma-traits/std",
+	"sygma-bridge/std",
+	"sygma-access-segregator/std",
+	"sygma-fee-handler-router/std",
+	"sygma-runtime-api/std",
+
     # Try-Runtime
     "frame-try-runtime/std",
 
@@ -368,6 +385,9 @@ try-runtime = [
     "orml-tokens/try-runtime",
     "orml-unknown-tokens?/try-runtime",
     "orml-xtokens?/try-runtime",
+
+    # Sygma Bridge
+	"sygma-bridge/try-runtime",
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",

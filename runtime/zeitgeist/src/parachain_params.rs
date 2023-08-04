@@ -27,11 +27,15 @@ use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
+use sygma_types::{ChainID as SygmaChainID, VerifyingContractAddress};
 use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,
 };
+
+// This address is provided by Sygma bridge
+pub(crate) const DEST_VERIFYING_CONTRACT_ADDRESS: &str = "6CdE2Cd82a4F8B74693Ff5e194c19CA08c2d1c68";
 
 parameter_types! {
     // Author-Mapping
@@ -91,6 +95,42 @@ parameter_types! {
     pub const MaxInstructions: u32 = 100;
     // Relative self location
     pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+
+    // Sygma bridge
+    // Make sure put same value with `construct_runtime`
+    pub const SygmaAccessSegregatorPalletIndex: u8 = 140;
+    pub const SygmaBasicFeeHandlerPalletIndex: u8 = 141;
+    pub const SygmaBridgePalletIndex: u8 = 142;
+    pub const SygmaFeeHandlerRouterPalletIndex: u8 = 143;
+    // RegisteredExtrinsics here registers all valid (pallet index, extrinsic_name) paris
+    // make sure to update this when adding new access control extrinsic
+    pub RegisteredExtrinsics: Vec<(u8, Vec<u8>)> = [
+        (SygmaAccessSegregatorPalletIndex::get(), b"grant_access".to_vec()),
+        (SygmaBasicFeeHandlerPalletIndex::get(), b"set_fee".to_vec()),
+        (SygmaBridgePalletIndex::get(), b"set_mpc_address".to_vec()),
+        (SygmaBridgePalletIndex::get(), b"pause_bridge".to_vec()),
+        (SygmaBridgePalletIndex::get(), b"unpause_bridge".to_vec()),
+        (SygmaBridgePalletIndex::get(), b"register_domain".to_vec()),
+        (SygmaBridgePalletIndex::get(), b"unregister_domain".to_vec()),
+        (SygmaBridgePalletIndex::get(), b"retry".to_vec()),
+        (SygmaFeeHandlerRouterPalletIndex::get(), b"set_fee_handler".to_vec()),
+    ].to_vec();
+    pub const SygmaBridgePalletId: PalletId = PalletId(*b"sygma/01");
+    // SygmaBridgeAccount is an account for holding transferred asset collection
+    // SygmaBridgeAccount address: 5EYCAe5jLbHcAAMKvLFSXgCTbPrLgBJusvPwfKcaKzuf5X5e
+    pub SygmaBridgeAccount: AccountId = SygmaBridgePalletId::get().into_account_truncating();
+    // SygmaBridgeFeeAccountKey Address: 44NmbpHjqbz9FcXfVzFUbMFJh5q7qsKAcSTJvFAdYPqQ62Qv
+    pub SygmaBridgeFeeAccountKey: [u8; 32] = hex_literal::hex!("a63f9ccf857e1ab9e806366e3c46ae650de853503d772a987197ab7e22c8f88c");
+    pub SygmaBridgeFeeAccount: AccountId = SygmaBridgeFeeAccountKey::get().into();
+    // SygmaBridgeAdminAccountKey Address: 44NmbpHjqbz9FcXfVzFUbMFJh5q7qsKAcSTJvFAdYPqQ62Qv
+    pub SygmaBridgeAdminAccountKey: [u8; 32] = hex_literal::hex!("a63f9ccf857e1ab9e806366e3c46ae650de853503d772a987197ab7e22c8f88c");
+    pub SygmaBridgeAdminAccount: AccountId = SygmaBridgeAdminAccountKey::get().into();
+    // EIP712ChainID is the chainID that pallet is assigned with, used in EIP712 typed data domain
+    pub EIP712ChainID: SygmaChainID = U256::from(5233);
+    // DestVerifyingContractAddress is a H160 address that is used in proposal signature verification, specifically EIP712 typed data
+    // When relayers signing, this address will be included in the EIP712Domain
+    // As long as the relayer and pallet configured with the same address, EIP712Domain should be recognized properly.
+    pub DestVerifyingContractAddress: VerifyingContractAddress = primitive_types::H160::from_slice(hex::decode(DEST_VERIFYING_CONTRACT_ADDRESS).ok().unwrap().as_slice());
 }
 
 parameter_type_with_key! {

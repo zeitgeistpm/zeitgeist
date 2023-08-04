@@ -109,6 +109,14 @@ orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-m
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 
+# Sygma (wasm)
+sygma-traits = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+sygma-basic-feehandler = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+sygma-bridge = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+sygma-access-segregator = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+sygma-fee-handler-router = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+sygma-runtime-api = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+
 # Substrate (client)
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 futures = { version = "0.3.21" }
@@ -251,6 +259,7 @@ arrayvec = { version = "0.7.2", default-features = false }
 cfg-if = { version = "1.0.0" }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.12.3", default-features = true }
+hex = { version = "0.4.3", default-features = false }
 hex-literal = { version = "0.3.4", default-features = false }
 log = { version = "0.4.17", default-features = false }
 num-traits = { version = "0.2.15", default-features = false }
