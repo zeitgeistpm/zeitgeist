@@ -46,6 +46,7 @@ use frame_support::{
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
+use orml_currencies::Call::transfer;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
@@ -55,7 +56,17 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
+use zrml_prediction_markets::Call::{
+    buy_complete_set, create_cpmm_market_and_deploy_assets, create_market,
+    deploy_swap_pool_and_additional_liquidity, deploy_swap_pool_for_market, dispute, edit_market,
+    redeem_shares, report, sell_complete_set,
+};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
+use zrml_swaps::Call::{
+    pool_exit, pool_exit_with_exact_asset_amount, pool_exit_with_exact_pool_amount, pool_join,
+    pool_join_with_exact_asset_amount, pool_join_with_exact_pool_amount, swap_exact_amount_in,
+    swap_exact_amount_out,
+};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
@@ -102,18 +113,62 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 };
 
 #[derive(scale_info::TypeInfo)]
+pub struct ContractsCallfilter;
+
+impl Contains<RuntimeCall> for ContractsCallfilter {
+    fn contains(runtime_call: &RuntimeCall) -> bool {
+        #[allow(clippy::match_like_matches_macro)]
+        match runtime_call {
+            RuntimeCall::AssetManager(transfer { .. }) => true,
+            RuntimeCall::PredictionMarkets(inner_call) => {
+                match inner_call {
+                    buy_complete_set { .. } => true,
+                    deploy_swap_pool_and_additional_liquidity { .. } => true,
+                    deploy_swap_pool_for_market { .. } => true,
+                    dispute { .. } => true,
+                    // Only allow CPMM markets using Authorized or SimpleDisputes dispute mechanism
+                    create_market {
+                        dispute_mechanism: MarketDisputeMechanism::Authorized,
+                        scoring_rule: ScoringRule::CPMM,
+                        ..
+                    } => true,
+                    create_cpmm_market_and_deploy_assets {
+                        dispute_mechanism: MarketDisputeMechanism::Authorized,
+                        ..
+                    } => true,
+                    edit_market {
+                        dispute_mechanism: MarketDisputeMechanism::Authorized,
+                        scoring_rule: ScoringRule::CPMM,
+                        ..
+                    } => true,
+                    redeem_shares { .. } => true,
+                    report { .. } => true,
+                    sell_complete_set { .. } => true,
+                    _ => false,
+                }
+            }
+            RuntimeCall::Swaps(inner_call) => match inner_call {
+                pool_exit { .. } => true,
+                pool_exit_with_exact_asset_amount { .. } => true,
+                pool_exit_with_exact_pool_amount { .. } => true,
+                pool_join { .. } => true,
+                pool_join_with_exact_asset_amount { .. } => true,
+                pool_join_with_exact_pool_amount { .. } => true,
+                swap_exact_amount_in { .. } => true,
+                swap_exact_amount_out { .. } => true,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+}
+
+#[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
 // Currently disables Court, Rikiddo and creation of markets using Court.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(call: &RuntimeCall) -> bool {
-        use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
-        };
-        use zrml_prediction_markets::Call::{
-            create_cpmm_market_and_deploy_assets, create_market, edit_market,
-        };
-
         #[allow(clippy::match_like_matches_macro)]
         match call {
             RuntimeCall::Court(_) => false,
@@ -121,12 +176,19 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    create_market {
+                        scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
+                    } => false,
+                    edit_market {
+                        scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
+                    } => false,
                     // Disable Court dispute resolution mechanism
-                    create_market { dispute_mechanism: Court, .. } => false,
-                    create_cpmm_market_and_deploy_assets { dispute_mechanism: Court, .. } => false,
-                    edit_market { dispute_mechanism: Court, .. } => false,
+                    create_market { dispute_mechanism: MarketDisputeMechanism::Court, .. } => false,
+                    create_cpmm_market_and_deploy_assets {
+                        dispute_mechanism: MarketDisputeMechanism::Court,
+                        ..
+                    } => false,
+                    edit_market { dispute_mechanism: MarketDisputeMechanism::Court, .. } => false,
                     _ => true,
                 }
             }

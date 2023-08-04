@@ -638,7 +638,7 @@ macro_rules! impl_config_traits {
 
         impl pallet_contracts::Config for Runtime {
             type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
-            type CallFilter = frame_support::traits::Nothing;
+            type CallFilter = ContractsCallfilter;
             type CallStack = [pallet_contracts::Frame::<Runtime>; 5];
             type ChainExtension = ();
             type Currency = Balances;
