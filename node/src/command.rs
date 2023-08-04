@@ -547,7 +547,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             if parachain_config.role.is_authority() { "yes" } else { "no" }
         );
 
-        if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relaychain_args.len() > 0 {
+        if !collator_options.relay_chain_rpc_urls.is_empty() && !cli.relaychain_args.is_empty() {
             log::warn!(
                 "Detected relay chain node arguments together with --relay-chain-rpc-url. This \
                  command starts a minimal Polkadot node that only uses a network-related subset \
