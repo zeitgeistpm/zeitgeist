@@ -5033,7 +5033,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-vrf"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
 dependencies = [
  "nimbus-primitives",
  "parity-scale-codec",
@@ -5774,7 +5774,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6380,7 +6380,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10712,7 +10712,7 @@ dependencies = [
 [[package]]
 name = "session-keys-primitives"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies#f869fd30031eb55f4a89ac261b36f639bd20473b"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
 dependencies = [
  "async-trait",
  "frame-support",
