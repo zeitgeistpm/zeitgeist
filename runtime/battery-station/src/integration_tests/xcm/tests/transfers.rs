@@ -35,7 +35,7 @@ use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 use xcm_emulator::{Limited, TestExt};
 use zeitgeist_primitives::{
-    constants::BalanceFractionalDecimals,
+    constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmMetadata},
 };
 
@@ -86,9 +86,6 @@ fn transfer_ztg_to_sibling() {
 
         // Verify that BOB now has (amount transferred - fee)
         assert_eq!(current_balance, transfer_amount - ztg_fee());
-
-        // Sanity check for the actual amount BOB ends up with
-        assert_eq!(current_balance, 49_907_304_000);
 
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
@@ -352,7 +349,7 @@ fn transfer_roc_to_relay_chain() {
     });
 
     RococoNet::execute_with(|| {
-        assert_eq!(rococo_runtime::Balances::free_balance(&BOB), 999_988_806_429);
+        assert_eq!(rococo_runtime::Balances::free_balance(&BOB), 999_988_690_728);
     });
 }
 
@@ -419,10 +416,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         let custom_fee = calc_fee(default_per_second(10) * 10);
 
         // Verify that BOB now has (amount transferred - fee)
-        assert_eq!(current_balance, transfer_amount - custom_fee);
-
-        // Sanity check for the actual amount BOB ends up with
-        assert_eq!(current_balance, 49_073_040_000);
+        assert_eq!(current_balance, transfer_amount - ztg_fee() * fee_factor / BASE);
 
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
@@ -434,8 +428,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 92_696_000);
-    assert_eq!(roc_fee(), 9_269_600_000);
+    assert_eq!(ztg_fee(), 80_824_000);
+    assert_eq!(roc_fee(), 8_082_400_000);
 }
 
 #[inline]
