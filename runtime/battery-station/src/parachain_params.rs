@@ -24,6 +24,10 @@
 )]
 #![cfg(feature = "parachain")]
 
+extern crate alloc;
+
+use alloc::vec::Vec;
+use frame_support::PalletId;
 use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
@@ -32,7 +36,7 @@ use sygma_types::{ChainID as SygmaChainID, VerifyingContractAddress};
 use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
-    types::Balance,
+    types::{Balance, AccountId},
 };
 
 // This address is defined in the substrate E2E test of sygma-relayer
@@ -134,7 +138,7 @@ parameter_types! {
     pub SygmaBridgeAdminAccount: AccountId = SygmaBridgeAdminAccountKey::get().into();
     // TODO: How should the EIP712Chain id look like? Is it controlled by Zeitgeist?
     // EIP712ChainID is the chainID that pallet is assigned with, used in EIP712 typed data domain
-    pub EIP712ChainID: SygmaChainID = U256::from(5233);
+    pub EIP712ChainID: SygmaChainID = sp_core::U256::from(5233);
     // DestVerifyingContractAddress is a H160 address that is used in proposal signature verification, specifically EIP712 typed data
     // When relayers signing, this address will be included in the EIP712Domain
     // As long as the relayer and pallet configured with the same address, EIP712Domain should be recognized properly.

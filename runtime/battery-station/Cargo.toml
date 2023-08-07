@@ -98,7 +98,7 @@ sp-finality-grandpa = { workspace = true }
 # Utility
 cfg-if = { workspace = true }
 hex = { workspace = true }
-hex-literal = { workspace = true, optional = true }
+hex-literal = { workspace = true }
 log = { workspace = true, optional = true }
 
 # XCM
@@ -184,7 +184,6 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
-    "hex-literal",
     "orml-asset-registry?/runtime-benchmarks",
     "orml-tokens/runtime-benchmarks",
     "orml-benchmarking",
@@ -229,7 +228,6 @@ std = [
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
-    "hex-literal",
     "log/std",
     "orml-benchmarking/std",
     "orml-currencies/std",
