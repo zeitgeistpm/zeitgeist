@@ -57,11 +57,13 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
     C::Api: zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     C::Api: BlockBuilder<Block>,
+    C::Api: sygma_runtime_api::SygmaBridgeApi<Block>,
     P: TransactionPool + Sync + Send + 'static,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
     use substrate_frame_rpc_system::{System, SystemApiServer};
     use zrml_swaps_rpc::{Swaps, SwapsApiServer};
+    use sygma_rpc::{SygmaBridgeRpcServer, SygmaBridgeStorage};
 
     let mut io = RpcModule::new(());
     let FullDeps { client, pool, deny_unsafe } = deps;
@@ -69,6 +71,7 @@ where
     io.merge(System::new(Arc::clone(&client), Arc::clone(&pool), deny_unsafe).into_rpc())?;
     io.merge(TransactionPayment::new(Arc::clone(&client)).into_rpc())?;
     io.merge(Swaps::new(client).into_rpc())?;
+    io.merge(SygmaBridgeStorage::new(client).into_rpc())?;
 
     Ok(io)
 }

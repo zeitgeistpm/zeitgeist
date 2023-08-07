@@ -116,6 +116,7 @@ sygma-bridge = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets
 sygma-access-segregator = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
 sygma-fee-handler-router = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
 sygma-runtime-api = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
+sygma-rpc = { git = "https://github.com/sygmaprotocol/sygma-substrate-pallets", rev="1590c91d84b2e5fa92650ae8bc5b23162dfd6f99", default-features = false }
 
 # Substrate (client)
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }

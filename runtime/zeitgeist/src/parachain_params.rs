@@ -1,5 +1,6 @@
 // Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2022 Sygma.
 //
 // This file is part of Zeitgeist.
 //
@@ -34,6 +35,7 @@ use zeitgeist_primitives::{
     types::Balance,
 };
 
+// This address is defined in the substrate E2E test of sygma-relayer
 // This address is provided by Sygma bridge
 pub(crate) const DEST_VERIFYING_CONTRACT_ADDRESS: &str = "6CdE2Cd82a4F8B74693Ff5e194c19CA08c2d1c68";
 
@@ -97,6 +99,9 @@ parameter_types! {
     pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
 
     // Sygma bridge
+    pub NativeAssetLocation: MultiLocation = MultiLocation::here();
+    // TODO this is the resource id of Phala currently
+	pub NativeAssetSygmaResourceId: [u8; 32] = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000001");
     // Make sure put same value with `construct_runtime`
     pub const SygmaAccessSegregatorPalletIndex: u8 = 140;
     pub const SygmaBasicFeeHandlerPalletIndex: u8 = 141;
@@ -119,12 +124,15 @@ parameter_types! {
     // SygmaBridgeAccount is an account for holding transferred asset collection
     // SygmaBridgeAccount address: 5EYCAe5jLbHcAAMKvLFSXgCTbPrLgBJusvPwfKcaKzuf5X5e
     pub SygmaBridgeAccount: AccountId = SygmaBridgePalletId::get().into_account_truncating();
+    // TODO: How should the sygma bridge fee account public key look like? Is it an account controlled by Zeitgeist?
     // SygmaBridgeFeeAccountKey Address: 44NmbpHjqbz9FcXfVzFUbMFJh5q7qsKAcSTJvFAdYPqQ62Qv
     pub SygmaBridgeFeeAccountKey: [u8; 32] = hex_literal::hex!("a63f9ccf857e1ab9e806366e3c46ae650de853503d772a987197ab7e22c8f88c");
     pub SygmaBridgeFeeAccount: AccountId = SygmaBridgeFeeAccountKey::get().into();
+    // TODO: How should the sygma bridge admin account public key look like? Is it an account controlled by Zeitgeist?
     // SygmaBridgeAdminAccountKey Address: 44NmbpHjqbz9FcXfVzFUbMFJh5q7qsKAcSTJvFAdYPqQ62Qv
     pub SygmaBridgeAdminAccountKey: [u8; 32] = hex_literal::hex!("a63f9ccf857e1ab9e806366e3c46ae650de853503d772a987197ab7e22c8f88c");
     pub SygmaBridgeAdminAccount: AccountId = SygmaBridgeAdminAccountKey::get().into();
+    // TODO: How should the EIP712Chain id look like? Is it controlled by Zeitgeist?
     // EIP712ChainID is the chainID that pallet is assigned with, used in EIP712 typed data domain
     pub EIP712ChainID: SygmaChainID = U256::from(5233);
     // DestVerifyingContractAddress is a H160 address that is used in proposal signature verification, specifically EIP712 typed data

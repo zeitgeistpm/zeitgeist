@@ -41,6 +41,10 @@ sp-transaction-pool = { workspace = true, features = ["default"] }
 sp-trie = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
 
+# Sygma bridge
+sygma-runtime-api = { workspace = true }
+sygma-rpc = { workspace = true }
+
 # Try-Runtime
 
 try-runtime-cli = { workspace = true, optional = true }

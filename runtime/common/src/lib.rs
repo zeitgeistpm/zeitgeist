@@ -1,6 +1,7 @@
 // Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
+// Copyright 2022 Sygma.
 //
 // This file is part of Zeitgeist.
 //
@@ -1191,205 +1192,203 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
         }
 
-        #[cfg(feature = "parachain")]
-        pub struct SygmaAdminMembers;
+        // all things related to sygma bridge
+        #[cfg(feature = "parachain")] {
+            pub struct SygmaAdminMembers;
 
-        #[cfg(feature = "parachain")]
-        impl SortedMembers<AccountId> for SygmaAdminMembers {
-            fn sorted_members() -> Vec<AccountId> {
-                [SygmaBridgeAdminAccount::get()].to_vec()
-            }
-        }
-
-        #[cfg(feature = "parachain")]
-        impl sygma_access_segregator::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type BridgeCommitteeOrigin = EnsureSignedBy<SygmaAdminMembers, AccountId>;
-            type PalletIndex = SygmaAccessSegregatorPalletIndex;
-            type Extrinsics = RegisteredExtrinsics;
-            type WeightInfo = sygma_access_segregator::weights::SygmaWeightInfo<Runtime>;
-        }
-
-        #[cfg(feature = "parachain")]
-        impl sygma_basic_feehandler::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type PalletIndex = SygmaBasicFeeHandlerPalletIndex;
-            type WeightInfo = sygma_basic_feehandler::weights::SygmaWeightInfo<Runtime>;
-        }
-
-        #[cfg(feature = "parachain")]
-        impl sygma_fee_handler_router::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type BasicFeeHandler = SygmaBasicFeeHandler;
-            type DynamicFeeHandler = ();
-            type PalletIndex = SygmaFeeHandlerRouterPalletIndex;
-            type WeightInfo = sygma_fee_handler_router::weights::SygmaWeightInfo<Runtime>;
-        }
-
-        use xcm::latest::AssetId as XcmAssetId;
-        use sygma_traits::ResourceId as SygmaResourceId;
-        struct SygmaResourcePairs;
-        impl<T: Config> Get<Vec<(XcmAssetId, SygmaResourceId)>> for SygmaResourcePairs {
-            fn get() -> Vec<(XcmAssetId, SygmaResourceId)> {
-                // TODO register native sygma ZTG asset here
-                let pairs = vec![];
-
-                // TODO use asset registry to push more pairs
-
-                log::trace!("Get sygma asset pairs: ${:?}.", &pairs);
-                pairs
-            }
-	    }
-
-        use xcm::latest::{MultiAsset, MultiLocation};
-        use xcm_executor::traits::FilterAssetLocation;
-        use orml_xcm_support::MultiNativeAsset;
-        use orml_traits::location::AbsoluteReserveProvider;
-
-        struct SygmaAssetReserveChecker;
-        impl FilterAssetLocation for SygmaAssetReserveChecker {
-            fn filter_asset_location(
-                asset: &MultiAsset,
-                origin: &MultiLocation,
-            ) -> bool {
-                MultiNativeAsset::<AbsoluteReserveProvider>::contains(asset, origin)
-            }
-        }
-
-        use sygma_traits::{ExtractDestinationData, DomainID};
-        /// const used to indicate sygma bridge path. str "sygma"
-	    pub const SYGMA_PATH_KEY: &[u8] = &[0x73, 0x79, 0x67, 0x6d, 0x61];
-
-        struct SygmaDestination;
-        impl ExtractDestinationData for SygmaDestination {
-            fn extract_dest(dest: &MultiLocation) -> Option<(Vec<u8>, DomainID)> {
-                match (dest.parents, &dest.interior) {
-                    (
-                        0,
-                        Junctions::X3(
-                            GeneralKey(sygma_path),
-                            GeneralIndex(dest_domain_id),
-                            GeneralKey(recipient),
-                        ),
-                    ) => {
-                        if sygma_path.clone().into_inner() == SYGMA_PATH_KEY.to_vec() {
-                            return Some((recipient.to_vec(), dest_domain_id.as_u8()));
-                        }
-                        None
-                    }
-                    _ => None,
+            impl SortedMembers<AccountId> for SygmaAdminMembers {
+                fn sorted_members() -> Vec<AccountId> {
+                    [SygmaBridgeAdminAccount::get()].to_vec()
                 }
             }
-        }
-
-        use sygma_traits::DecimalConverter;
-        struct SygmaDecimalConverter;
-        impl DecimalConverter for SygmaDecimalConverter {
-            fn convert_to(asset: &MultiAsset) -> Option<u128> {
-                match (&asset.fun, &asset.id) {
-                    (Fungible(amount), Concrete(location)) => {
-                        let maybe_metadata = <orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect>::metadata_by_location(location);
-                        if let Some(metadata) = maybe_metadata {
-                            let decimal = metadata.decimals;
-
-                            return if *decimal == 18 {
-                                Some(*amount)
-                            } else {
-                                type U112F16 = FixedU128<U16>;
-                                if *decimal > 18 {
-                                    let a = U112F16::from_num(
-                                        10u128.saturating_pow(*decimal as u32 - 18),
-                                    );
-                                    let b = U112F16::from_num(*amount).checked_div(a);
-                                    let r: u128 =
-                                        b.unwrap_or_else(|| U112F16::from_num(0)).to_num();
-                                    if r == 0 {
-                                        return None;
-                                    }
-                                    Some(r)
-                                } else {
-                                    // Max is 5192296858534827628530496329220095
-                                    // if source asset decimal is 12, the max amount sending to sygma
-                                    // relayer is 5192296858534827.628530496329
-                                    if *amount > U112F16::MAX {
-                                        return None;
-                                    }
-                                    let a = U112F16::from_num(
-                                        10u128.saturating_pow(18 - *decimal as u32),
-                                    );
-                                    let b = U112F16::from_num(*amount).saturating_mul(a);
-                                    Some(b.to_num())
+    
+            impl sygma_access_segregator::Config for Runtime {
+                type RuntimeEvent = RuntimeEvent;
+                type BridgeCommitteeOrigin = EnsureSignedBy<SygmaAdminMembers, AccountId>;
+                type PalletIndex = SygmaAccessSegregatorPalletIndex;
+                type Extrinsics = RegisteredExtrinsics;
+                type WeightInfo = sygma_access_segregator::weights::SygmaWeightInfo<Runtime>;
+            }
+    
+            impl sygma_basic_feehandler::Config for Runtime {
+                type RuntimeEvent = RuntimeEvent;
+                type PalletIndex = SygmaBasicFeeHandlerPalletIndex;
+                type WeightInfo = sygma_basic_feehandler::weights::SygmaWeightInfo<Runtime>;
+            }
+    
+            impl sygma_fee_handler_router::Config for Runtime {
+                type RuntimeEvent = RuntimeEvent;
+                type BasicFeeHandler = SygmaBasicFeeHandler;
+                type DynamicFeeHandler = ();
+                type PalletIndex = SygmaFeeHandlerRouterPalletIndex;
+                type WeightInfo = sygma_fee_handler_router::weights::SygmaWeightInfo<Runtime>;
+            }
+    
+            use xcm::latest::AssetId as XcmAssetId;
+            use sygma_traits::ResourceId as SygmaResourceId;
+            struct SygmaResourcePairs;
+            impl<T: Config> Get<Vec<(XcmAssetId, SygmaResourceId)>> for SygmaResourcePairs {
+                fn get() -> Vec<(XcmAssetId, SygmaResourceId)> {
+                    let mut pairs: Vec<(XcmAssetId, SygmaResourceId)> = vec![(
+                        Concrete(T::NativeAssetLocation::get()).into(),
+                        T::NativeAssetSygmaResourceId::get(),
+                    )];
+    
+                    // TODO use asset registry to push more pairs
+                    /*
+                    Those are the fields required:
+    
+                    asset_id: T::AssetId,
+                    resource_id: [u8; 32],
+                    domain_id: DomainID,
+                    is_mintable: bool,
+                    metadata: Box<Vec<u8>>,
+                    */
+    
+                    log::trace!("Get sygma asset pairs: ${:?}.", &pairs);
+                    pairs
+                }
+            }
+    
+            use xcm::latest::{MultiAsset, MultiLocation};
+            use sygma_traits::{ExtractDestinationData, DomainID};
+            /// const used to indicate sygma bridge path. str "sygma"
+            pub const SYGMA_PATH_KEY: &[u8] = &[0x73, 0x79, 0x67, 0x6d, 0x61];
+    
+            struct SygmaDestination;
+            impl ExtractDestinationData for SygmaDestination {
+                fn extract_dest(dest: &MultiLocation) -> Option<(Vec<u8>, DomainID)> {
+                    match (dest.parents, &dest.interior) {
+                        (
+                            0,
+                            Junctions::X3(
+                                GeneralKey(sygma_path),
+                                GeneralIndex(dest_domain_id),
+                                GeneralKey(recipient),
+                            ),
+                        ) => {
+                            if sygma_path.clone().into_inner() == SYGMA_PATH_KEY.to_vec() {
+                                return Some((recipient.to_vec(), dest_domain_id.as_u8()));
+                            }
+                            None
+                        }
+                        _ => None,
+                    }
+                }
+            }
+    
+            use sygma_traits::DecimalConverter;
+            // TODO is an implementation for this even needed? because we saved all XCM incoming assets already in orml_tokens with a base of the native currency (base ten) 
+            struct SygmaDecimalConverter;
+            impl DecimalConverter for SygmaDecimalConverter {
+                fn convert_to(asset: &MultiAsset) -> Option<u128> {
+                    match (&asset.fun, &asset.id) {
+                        (Fungible(amount), Concrete(location)) => {
+                            let metadata = <orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect>::metadata_by_location(location)?;
+                            let decimals = metadata.decimals;
+    
+                            let native_decimals: u32 = BalanceFractionalDecimals::get().into();
+                            if decimals == native_decimals {
+                                return Some(*amount);
+                            }
+                            // TODO: I don't think we need the following code, because `adjust_fractional_places` already does it
+                            // TODO: https://github.com/sygmaprotocol/sygma-substrate-pallets/blob/1590c91d84b2e5fa92650ae8bc5b23162dfd6f99/bridge/src/lib.rs#L469-L486
+                            // TODO: `convert_to` is just used to propagate the converted amount in the event `Deposit`
+                            // TODO: Do we want to show the converted amount or the actual `deposit` amount?
+                            // TODO: If we want to show the actual `deposit` amount, just return `amount` like above but in any case
+                            type U112F16 = FixedU128<U16>;
+                            if decimals > native_decimals {
+                                let a = U112F16::from_num(
+                                    10u128.saturating_pow(decimals.saturating_sub(native_decimals)),
+                                );
+                                let b = U112F16::from_num(*amount).checked_div(a);
+                                let r: u128 =
+                                    b.unwrap_or_else(|| U112F16::from_num(0)).to_num();
+                                if r == 0 {
+                                    return None;
                                 }
-                            };
-                        }
-
-                        None
-                    }
-                    _ => None,
-                }
-            }
-
-            fn convert_from(asset: &MultiAsset) -> Option<MultiAsset> {
-                match (&asset.fun, &asset.id) {
-                    (Fungible(amount), Concrete(location)) => {
-                        let maybe_metadata = <orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect>::metadata_by_location(location);
-                        if let Some(metadata) = maybe_metadata {
-                            let decimal = metadata.decimals;
-
-                            return if *decimal == 18 {
-                                Some((asset.id.clone(), *amount).into())
+                                return Some(r);
                             } else {
-                                type U112F16 = FixedU128<U16>;
-                                if *decimal > 18 {
-                                    // Max is 5192296858534827628530496329220095
-                                    // if dest asset decimal is 24, the max amount coming from sygma
-                                    // relayer is 5192296858.534827628530496329
-                                    if *amount > U112F16::MAX {
-                                        return None;
-                                    }
-                                    let a = U112F16::from_num(
-                                        10u128.saturating_pow(*decimal as u32 - 18),
-                                    );
-                                    let b = U112F16::from_num(*amount).saturating_mul(a);
-                                    let r: u128 = b.to_num();
-                                    Some((asset.id.clone(), r).into())
-                                } else {
-                                    let a = U112F16::from_num(
-                                        10u128.saturating_pow(18 - *decimal as u32),
-                                    );
-                                    let b = U112F16::from_num(*amount).checked_div(a);
-                                    let r: u128 =
-                                        b.unwrap_or_else(|| U112F16::from_num(0)).to_num();
-                                    if r == 0 {
-                                        return None;
-                                    }
-                                    Some((asset.id.clone(), r).into())
+                                // Max is 5192296858534827628530496329220095
+                                // if source asset decimal is 12, the max amount sending to sygma
+                                // relayer is 5192296858534827.628530496329
+                                if *amount > U112F16::MAX {
+                                    return None;
                                 }
-                            };
+                                let a = U112F16::from_num(
+                                    10u128.saturating_pow(native_decimals.saturating_sub(decimals)),
+                                );
+                                let b = U112F16::from_num(*amount).saturating_mul(a);
+                                return Some(b.to_num());
+                            }
                         }
-                        None
+                        _ => None,
                     }
-                    _ => None,
+                }
+    
+                fn convert_from(asset: &MultiAsset) -> Option<MultiAsset> {
+                    match (&asset.fun, &asset.id) {
+                        (Fungible(amount), Concrete(location)) => {
+                            let metadata = <orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect>::metadata_by_location(location)?;
+                            let decimals = metadata.decimals;
+                            let native_decimals: u32 = BalanceFractionalDecimals::get().into();
+                            if decimals == native_decimals {
+                                return Some((asset.id.clone(), *amount).into());
+                            }
+                            // TODO: I don't think we need the following code, because `adjust_fractional_places` already does it
+                            // TODO: https://github.com/sygmaprotocol/sygma-substrate-pallets/blob/1590c91d84b2e5fa92650ae8bc5b23162dfd6f99/bridge/src/lib.rs#L802-L809
+                            // TODO: here it's pretty clear that we don't want to convert, since it would be a duplicated conversion
+                            type U112F16 = FixedU128<U16>;
+                            if decimals > native_decimals {
+                                // Max is 5192296858534827628530496329220095
+                                // if dest asset decimal is 24, the max amount coming from sygma
+                                // relayer is 5192296858.534827628530496329
+                                if *amount > U112F16::MAX {
+                                    return None;
+                                }
+                                let a = U112F16::from_num(
+                                    10u128.saturating_pow(decimals.saturating_sub(native_decimals)),
+                                );
+                                let b = U112F16::from_num(*amount).saturating_mul(a);
+                                let r: u128 = b.to_num();
+                                return Some((asset.id.clone(), r).into());
+                            } else {
+                                let a = U112F16::from_num(
+                                    10u128.saturating_pow(native_decimals.saturating_sub(decimals)),
+                                );
+                                let b = U112F16::from_num(*amount).checked_div(a);
+                                let r: u128 =
+                                    b.unwrap_or_else(|| U112F16::from_num(0)).to_num();
+                                if r == 0 {
+                                    return None;
+                                }
+                                return Some((asset.id.clone(), r).into());
+                            }
+                        }
+                        _ => None,
+                    }
                 }
             }
-        }
 
-        #[cfg(feature = "parachain")]
-        impl sygma_bridge::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type TransferReserveAccount = SygmaBridgeAccount;
-            type FeeReserveAccount = SygmaBridgeFeeAccount;
-            type EIP712ChainID = EIP712ChainID;
-            type DestVerifyingContractAddress = DestVerifyingContractAddress;
-            type FeeHandler = SygmaFeeHandlerRouter;
-            type AssetTransactor = AlignedFractionalMultiAssetTransactor;
-            type ResourcePairs = SygmaResourcePairs;
-            type IsReserve = SygmaAssetReserveChecker;
-            type ExtractDestData = SygmaDestination;
-            type PalletId = SygmaBridgePalletId;
-            type PalletIndex = SygmaBridgePalletIndex;
-            type DecimalConverter = SygmaDecimalConverter;
-            type WeightInfo = sygma_bridge::weights::SygmaWeightInfo<Runtime>;
+            use orml_xcm_support::MultiNativeAsset;
+            use orml_traits::location::AbsoluteReserveProvider;
+    
+            impl sygma_bridge::Config for Runtime {
+                type RuntimeEvent = RuntimeEvent;
+                type TransferReserveAccount = SygmaBridgeAccount;
+                type FeeReserveAccount = SygmaBridgeFeeAccount;
+                type EIP712ChainID = EIP712ChainID;
+                type DestVerifyingContractAddress = DestVerifyingContractAddress;
+                type FeeHandler = SygmaFeeHandlerRouter;
+                type AssetTransactor = AlignedFractionalMultiAssetTransactor;
+                type ResourcePairs = SygmaResourcePairs;
+                type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+                type ExtractDestData = SygmaDestination;
+                type PalletId = SygmaBridgePalletId;
+                type PalletIndex = SygmaBridgePalletIndex;
+                type DecimalConverter = SygmaDecimalConverter;
+                type WeightInfo = sygma_bridge::weights::SygmaWeightInfo<Runtime>;
+            }
         }
     }
 }

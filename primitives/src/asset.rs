@@ -50,7 +50,6 @@ pub enum Asset<MI: MaxEncodedLen> {
     #[default]
     Ztg,
     ForeignAsset(u32),
-    SygmaAsset(u32),
 }
 
 /// In a scalar market, users can either choose a `Long` position,
