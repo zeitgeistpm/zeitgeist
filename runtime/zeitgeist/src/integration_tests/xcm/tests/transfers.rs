@@ -35,7 +35,7 @@ use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
 use xcm_emulator::{Limited, TestExt};
 use zeitgeist_primitives::{
-    constants::{BASE, BalanceFractionalDecimals},
+    constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmMetadata},
 };
 
