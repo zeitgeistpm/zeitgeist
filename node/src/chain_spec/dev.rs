@@ -93,7 +93,7 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                     nominations: vec![],
                     parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
                     parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
-                    num_selected_candidates: 1,
+                    num_selected_candidates: 8,
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
