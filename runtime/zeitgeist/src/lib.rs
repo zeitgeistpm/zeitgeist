@@ -41,13 +41,15 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
-    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureWithSuccess};
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
-use pallet_transaction_payment::ChargeTransactionPayment;
-use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
+use sp_runtime::{
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
+    DispatchError,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -55,7 +57,7 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -86,16 +88,19 @@ pub mod parameters;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 45,
+    spec_version: 48,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 20,
+    transaction_version: 23,
     state_version: 1,
 };
+
+pub type ContractsCallfilter = Nothing;
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
@@ -103,7 +108,7 @@ pub struct IsCallable;
 // Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
-    fn contains(call: &RuntimeCall) -> bool {
+    fn contains(runtime_call: &RuntimeCall) -> bool {
         #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
@@ -112,6 +117,10 @@ impl Contains<RuntimeCall> for IsCallable {
         use orml_currencies::Call::update_balance;
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
+        use pallet_contracts::Call::{
+            call, call_old_weight, instantiate, instantiate_old_weight, remove_code,
+            set_code as set_code_contracts,
+        };
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
@@ -123,7 +132,7 @@ impl Contains<RuntimeCall> for IsCallable {
         };
 
         #[allow(clippy::match_like_matches_macro)]
-        match call {
+        match runtime_call {
             // Membership is managed by the respective Membership instance
             RuntimeCall::AdvisoryCommittee(set_members { .. }) => false,
             // See "balance.set_balance"
@@ -142,6 +151,16 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            // Permissioned contracts: Only deployable via utility.dispatch_as(...)
+            RuntimeCall::Contracts(inner_call) => match inner_call {
+                call { .. } => true,
+                call_old_weight { .. } => true,
+                instantiate { .. } => true,
+                instantiate_old_weight { .. } => true,
+                remove_code { .. } => true,
+                set_code_contracts { .. } => true,
+                _ => false,
+            },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
             RuntimeCall::Court(_) => false,

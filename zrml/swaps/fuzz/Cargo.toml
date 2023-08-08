@@ -53,14 +53,14 @@ path = "pool_exit.rs"
 test = false
 
 [dependencies]
-arbitrary = { features = ["derive"], version = "1.0" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-libfuzzer-sys = "0.4"
-orml-traits = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-rand = "0.8.4"
-sp-runtime = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { features = ["mock"], path = "../../../primitives" }
-zrml-swaps = { features = ["mock"], path = ".." }
+arbitrary = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true, features = ["default"] }
+libfuzzer-sys = { workspace = true }
+orml-traits = { workspace = true, features = ["default"] }
+rand = { workspace = true, features = ["default"] }
+sp-runtime = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
+zrml-swaps = { workspace = true, features = ["mock", "default"] }
 
 [package]
 authors = ["Automatically generated"]

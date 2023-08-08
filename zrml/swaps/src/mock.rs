@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -33,6 +33,7 @@ use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    DispatchError,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
@@ -247,6 +248,13 @@ sp_api::mock_impl_runtime_apis! {
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
+        }
+
+        fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool
+        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+            Swaps::get_all_spot_prices(pool_id, with_fees)
         }
     }
 }

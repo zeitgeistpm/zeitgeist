@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -36,6 +37,13 @@ pub enum ProxyType {
     CancelProxy,
     Governance,
     Staking,
+    CreateEditMarket,
+    ReportOutcome,
+    Dispute,
+    ProvideLiquidity,
+    BuySellCompleteSets,
+    Trading,
+    HandleAssets,
 }
 
 impl Default for ProxyType {

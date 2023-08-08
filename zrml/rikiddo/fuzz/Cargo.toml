@@ -71,12 +71,12 @@ path = "rikiddo_with_initial_fee.rs"
 test = false
 
 [dependencies]
-arbitrary = { features = ["derive"], version = "1.0" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-libfuzzer-sys = "0.4"
-substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
-zrml-rikiddo = { features = ["arbitrary", "mock"], path = ".." }
+arbitrary = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true, features = ["default"] }
+frame-system = { workspace = true, features = ["default"] }
+libfuzzer-sys = { workspace = true }
+substrate-fixed = { workspace = true }
+zrml-rikiddo = { workspace = true, features = ["arbitrary", "mock", "default"] }
 
 [package]
 authors = ["Automatically generated"]
