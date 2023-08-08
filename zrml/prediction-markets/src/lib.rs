@@ -304,6 +304,7 @@ mod pallet {
         ///
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
         /// exception. Can currently only be used for destroying CPMM markets.
+        #[pallet::call_index(0)]
         #[pallet::weight((
             T::WeightInfo::admin_destroy_reported_market(
                 T::MaxCategories::get().into(),
@@ -406,6 +407,7 @@ mod pallet {
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
+        #[pallet::call_index(1)]
         #[pallet::weight((
             T::WeightInfo::admin_move_market_to_closed(
                 CacheSize::get(), CacheSize::get()), Pays::No
@@ -439,6 +441,7 @@ mod pallet {
         ///
         /// Complexity: `O(n + m)`, where `n` is the number of market ids
         /// per dispute / report block, m is the number of disputes.
+        #[pallet::call_index(2)]
         #[pallet::weight((
             T::WeightInfo::admin_move_market_to_resolved_scalar_reported(CacheSize::get())
             .max(
@@ -499,6 +502,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)`
+        #[pallet::call_index(3)]
         #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
         #[transactional]
         pub fn approve_market(
@@ -551,6 +555,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(edit_reason.len())`
+        #[pallet::call_index(4)]
         #[pallet::weight((
             T::WeightInfo::request_edit(edit_reason.len() as u32),
             Pays::No,
@@ -596,6 +601,7 @@ mod pallet {
         // The worst-case scenario is assumed
         // and the correct weight is calculated at the end of this function.
         // This also occurs in numerous other functions.
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))]
         #[transactional]
         pub fn buy_complete_set(
@@ -612,6 +618,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
+        #[pallet::call_index(6)]
         #[pallet::weight(
             T::WeightInfo::dispute_authorized().saturating_add(
                 T::Court::on_dispute_max_weight().saturating_add(
@@ -688,6 +695,7 @@ mod pallet {
         /// where `n` is the number of outcome assets for the categorical market
         /// and `m` is the number of market ids,
         /// which open at the same time as the specified market.
+        #[pallet::call_index(7)]
         #[pallet::weight(
             T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
@@ -750,6 +758,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of market ids,
         /// which close at the same time as the specified market.
+        #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::create_market(CacheSize::get()))]
         #[transactional]
         pub fn create_market(
@@ -838,6 +847,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of markets
         /// which end at the same time as the market before the edit.
+        #[pallet::call_index(9)]
         #[pallet::weight(T::WeightInfo::edit_market(CacheSize::get()))]
         #[transactional]
         pub fn edit_market(
@@ -914,6 +924,7 @@ mod pallet {
         /// where `n` is the number of outcome assets for the categorical market,
         /// and `m` is the number of market ids,
         /// which open at the same time as the specified market.
+        #[pallet::call_index(10)]
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
             .saturating_add(
@@ -965,6 +976,7 @@ mod pallet {
         /// where `n` is the number of outcome assets for the categorical market,
         /// and `m` is the number of market ids,
         /// which open at the same time as the specified market.
+        #[pallet::call_index(11)]
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
             .max(
@@ -1072,6 +1084,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)`
+        #[pallet::call_index(12)]
         #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
             .max(T::WeightInfo::redeem_shares_scalar())
         )]
@@ -1216,6 +1229,7 @@ mod pallet {
         /// which open at the same time as the specified market,
         /// and `m` is the number of market ids,
         /// which close at the same time as the specified market.
+        #[pallet::call_index(13)]
         #[pallet::weight((
             T::WeightInfo::reject_market(
                 CacheSize::get(),
@@ -1253,6 +1267,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of market ids,
         /// which reported at the same time as the specified market.
+        #[pallet::call_index(14)]
         #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
         #[transactional]
         pub fn report(
@@ -1364,6 +1379,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of assets for a categorical market.
+        #[pallet::call_index(15)]
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
@@ -1419,6 +1435,8 @@ mod pallet {
         /// NOTE:
         /// The returned outcomes of the market dispute mechanism and the report outcome
         /// are added to the global dispute voting outcomes.
+        /// The bond of each dispute is the initial vote amount.
+        #[pallet::call_index(16)]
         #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get(), CacheSize::get()))]
         #[transactional]
         pub fn start_global_dispute(

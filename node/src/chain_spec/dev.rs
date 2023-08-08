@@ -38,8 +38,10 @@ use zeitgeist_primitives::{
 use {
     super::battery_station::inflation_config,
     sp_runtime::Perbill,
-    zeitgeist_primitives::constants::ztg::STAKING_PTD,
-    zeitgeist_primitives::constants::{ztg::TOTAL_INITIAL_ZTG, BASE},
+    zeitgeist_primitives::constants::{
+        ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
+        BASE,
+    },
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
@@ -91,6 +93,7 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
                     nominations: vec![],
                     parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
                     parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
+                    num_selected_candidates: 8,
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {

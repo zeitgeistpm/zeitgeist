@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -19,9 +19,13 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, MaxEncodedLen};
-use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
-use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
+use sp_runtime::{
+    traits::{MaybeDisplay, MaybeFromStr},
+    DispatchError,
+};
+use sp_std::vec::Vec;
+use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
@@ -29,6 +33,7 @@ sp_api::decl_runtime_apis! {
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen,
         MarketId: Codec + MaxEncodedLen,
+        Pool<Balance, MarketId>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
         fn pool_account_id(pool_id: &PoolId) -> AccountId;
@@ -38,5 +43,9 @@ sp_api::decl_runtime_apis! {
             asset_out: &Asset<MarketId>,
             with_fees: bool,
         ) -> SerdeWrapper<Balance>;
+        fn get_all_spot_prices(
+            pool_id: &PoolId,
+            with_fees: bool
+        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError>;
     }
 }

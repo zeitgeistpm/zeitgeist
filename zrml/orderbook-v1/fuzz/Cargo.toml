@@ -5,11 +5,11 @@ path = "orderbook_v1_full_workflow.rs"
 test = false
 
 [dependencies]
-arbitrary = { features = ["derive"], version = "1.0" }
-frame-system = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-libfuzzer-sys = "0.4"
-zeitgeist-primitives = { path = "../../../primitives" }
-zrml-orderbook-v1 = { features = ["mock"], path = ".." }
+arbitrary = { workspace = true, features = ["derive"] }
+frame-system = { workspace = true, features = ["default"] }
+libfuzzer-sys = { workspace = true }
+zeitgeist-primitives = { workspace = true, features = ["default"] }
+zrml-orderbook-v1 = { workspace = true, features = ["default", "mock"] }
 
 [package]
 authors = ["Automatically generated"]

@@ -491,6 +491,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::join_court(T::MaxCourtParticipants::get()))]
         #[transactional]
         pub fn join_court(
@@ -524,6 +525,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::delegate(T::MaxCourtParticipants::get(), delegations.len() as u32))]
         #[transactional]
         pub fn delegate(
@@ -575,6 +577,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::prepare_exit_court(T::MaxCourtParticipants::get()))]
         #[transactional]
         pub fn prepare_exit_court(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
@@ -616,6 +619,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of jurors in the stake-weighted pool.
+        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::exit_court_set().max(T::WeightInfo::exit_court_remove()))]
         #[transactional]
         pub fn exit_court(
@@ -672,6 +676,7 @@ mod pallet {
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of participants
         /// in the list of random selections (draws).
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::vote(T::MaxSelectedDraws::get()))]
         #[transactional]
         pub fn vote(
@@ -737,6 +742,7 @@ mod pallet {
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of selected draws
         /// in the specified court.
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::denounce_vote(T::MaxSelectedDraws::get()))]
         #[transactional]
         pub fn denounce_vote(
@@ -818,6 +824,7 @@ mod pallet {
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of selected draws
         /// in the specified court.
+        #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::reveal_vote(T::MaxSelectedDraws::get()))]
         #[transactional]
         pub fn reveal_vote(
@@ -888,6 +895,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: It depends heavily on the complexity of `select_participants`.
+        #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::appeal(
             T::MaxCourtParticipants::get(),
             T::MaxAppeals::get(),
@@ -977,6 +985,7 @@ mod pallet {
         ///
         /// Complexity: It depends heavily on the number of delegations
         /// and the number of selected draws.
+        #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::reassign_court_stakes(T::MaxSelectedDraws::get()))]
         #[transactional]
         pub fn reassign_court_stakes(
@@ -1092,6 +1101,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)`
+        #[pallet::call_index(9)]
         #[pallet::weight(T::WeightInfo::set_inflation())]
         #[transactional]
         pub fn set_inflation(origin: OriginFor<T>, inflation: Perbill) -> DispatchResult {
