@@ -26,17 +26,16 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use frame_support::PalletId;
 use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
-use frame_support::{parameter_types, weights::Weight};
+use alloc::vec::Vec;
+use frame_support::{parameter_types, weights::Weight, PalletId};
 use orml_traits::parameter_type_with_key;
-use sp_runtime::{Perbill, Percent};
-use sygma_types::{ChainID as SygmaChainID, VerifyingContractAddress};
+use sp_runtime::{traits::AccountIdConversion, Perbill, Percent};
+use sygma_traits::{ChainID, VerifyingContractAddress};
 use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
-    types::{Balance, AccountId},
+    types::{AccountId, Balance},
 };
 
 // This address is defined in the substrate E2E test of sygma-relayer
@@ -105,7 +104,7 @@ parameter_types! {
     // Sygma bridge
     pub NativeAssetLocation: MultiLocation = MultiLocation::here();
     // TODO this is the resource id of Phala currently
-	pub NativeAssetSygmaResourceId: [u8; 32] = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000001");
+    pub NativeAssetSygmaResourceId: [u8; 32] = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000001");
     // Make sure put same value with `construct_runtime`
     pub const SygmaAccessSegregatorPalletIndex: u8 = 140;
     pub const SygmaBasicFeeHandlerPalletIndex: u8 = 141;
@@ -138,11 +137,11 @@ parameter_types! {
     pub SygmaBridgeAdminAccount: AccountId = SygmaBridgeAdminAccountKey::get().into();
     // TODO: How should the EIP712Chain id look like? Is it controlled by Zeitgeist?
     // EIP712ChainID is the chainID that pallet is assigned with, used in EIP712 typed data domain
-    pub EIP712ChainID: SygmaChainID = sp_core::U256::from(5233);
+    pub EIP712ChainID: ChainID = sp_core::U256::from(5233);
     // DestVerifyingContractAddress is a H160 address that is used in proposal signature verification, specifically EIP712 typed data
     // When relayers signing, this address will be included in the EIP712Domain
     // As long as the relayer and pallet configured with the same address, EIP712Domain should be recognized properly.
-    pub DestVerifyingContractAddress: VerifyingContractAddress = primitive_types::H160::from_slice(hex::decode(DEST_VERIFYING_CONTRACT_ADDRESS).ok().unwrap().as_slice());
+    pub DestVerifyingContractAddress: VerifyingContractAddress = sp_core::H160::from_slice(hex::decode(DEST_VERIFYING_CONTRACT_ADDRESS).ok().unwrap().as_slice());
 }
 
 parameter_type_with_key! {

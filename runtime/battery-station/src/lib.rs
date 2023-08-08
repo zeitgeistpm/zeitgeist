@@ -54,6 +54,8 @@ use sp_runtime::{
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
+#[cfg(feature = "parachain")]
+use substrate_fixed::types::extra::U16;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_prediction_markets::Call::{

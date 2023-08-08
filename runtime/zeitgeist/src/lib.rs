@@ -52,7 +52,12 @@ use sp_runtime::{
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
-use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
+#[cfg(feature = "parachain")]
+use substrate_fixed::types::extra::U16;
+use substrate_fixed::{
+    types::extra::{U33},
+    FixedI128, FixedU128,
+};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]

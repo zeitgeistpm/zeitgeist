@@ -46,12 +46,12 @@ sp-version = { workspace = true }
 substrate-fixed = { workspace = true, features = ["serde"] }
 
 # Sygma Bridge
-sygma-traits = { workspace = true }
-sygma-basic-feehandler = { workspace = true }
-sygma-bridge = { workspace = true }
-sygma-access-segregator = { workspace = true }
-sygma-fee-handler-router = { workspace = true }
-sygma-runtime-api = { workspace = true }
+sygma-traits = { workspace = true, optional = true }
+sygma-basic-feehandler = { workspace = true, optional = true }
+sygma-bridge = { workspace = true, optional = true }
+sygma-access-segregator = { workspace = true, optional = true }
+sygma-fee-handler-router = { workspace = true, optional = true }
+sygma-runtime-api = { workspace = true, optional = true }
 
 # Try-Runtime
 
@@ -266,12 +266,12 @@ std = [
     "substrate-fixed/std",
 
     # Sygma Bridge
-    "sygma-basic-feehandler/std",
-	"sygma-traits/std",
-	"sygma-bridge/std",
-	"sygma-access-segregator/std",
-	"sygma-fee-handler-router/std",
-	"sygma-runtime-api/std",
+    "sygma-basic-feehandler?/std",
+	"sygma-traits?/std",
+	"sygma-bridge?/std",
+	"sygma-access-segregator?/std",
+	"sygma-fee-handler-router?/std",
+	"sygma-runtime-api?/std",
 
     # Benchmark
 
@@ -374,7 +374,7 @@ try-runtime = [
     "orml-xtokens?/try-runtime",
 
     # Sygma Bridge
-	"sygma-bridge/try-runtime",
+	"sygma-bridge?/try-runtime",
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",

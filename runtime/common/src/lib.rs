@@ -1193,10 +1193,23 @@ macro_rules! impl_config_traits {
         }
 
         #[cfg(feature = "parachain")]
-        pub struct SygmaAdminMembers;
+        use {
+            frame_support::traits::SortedMembers,
+            xcm::latest::{AssetId as XcmAssetId, Fungibility},
+            sygma_traits::ResourceId as SygmaResourceId,
+            sp_runtime::traits::Get,
+            xcm::latest::{MultiAsset, MultiLocation},
+            sygma_traits::{ExtractDestinationData, DomainID},
+            sygma_traits::DecimalConverter,
+            orml_xcm_support::MultiNativeAsset,
+            orml_traits::location::AbsoluteReserveProvider,
+            frame_system::EnsureSignedBy,
+            xcm::opaque::latest::{Junctions, Junction::{GeneralKey, GeneralIndex}},
+        };
 
         #[cfg(feature = "parachain")]
-        use frame_support::traits::SortedMembers;
+        pub struct SygmaAdminMembers;
+
         #[cfg(feature = "parachain")]
         impl SortedMembers<AccountId> for SygmaAdminMembers {
             fn sorted_members() -> Vec<AccountId> {
@@ -1210,39 +1223,32 @@ macro_rules! impl_config_traits {
             type BridgeCommitteeOrigin = EnsureSignedBy<SygmaAdminMembers, AccountId>;
             type PalletIndex = SygmaAccessSegregatorPalletIndex;
             type Extrinsics = RegisteredExtrinsics;
-            type WeightInfo = sygma_access_segregator::weights::SygmaWeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
         impl sygma_basic_feehandler::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
+            type BridgeCommitteeOrigin = EnsureSignedBy<SygmaAdminMembers, AccountId>;
             type PalletIndex = SygmaBasicFeeHandlerPalletIndex;
-            type WeightInfo = sygma_basic_feehandler::weights::SygmaWeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
         impl sygma_fee_handler_router::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
+            type BridgeCommitteeOrigin = EnsureSignedBy<SygmaAdminMembers, AccountId>;
             type BasicFeeHandler = SygmaBasicFeeHandler;
             type DynamicFeeHandler = ();
             type PalletIndex = SygmaFeeHandlerRouterPalletIndex;
-            type WeightInfo = sygma_fee_handler_router::weights::SygmaWeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
-        use xcm::latest::AssetId as XcmAssetId;
-        #[cfg(feature = "parachain")]
-        use sygma_traits::ResourceId as SygmaResourceId;
-        #[cfg(feature = "parachain")]
-        use sp_runtime::traits::Get;
-        #[cfg(feature = "parachain")]
         struct SygmaResourcePairs;
         #[cfg(feature = "parachain")]
-        impl<T: Config> Get<Vec<(XcmAssetId, SygmaResourceId)>> for SygmaResourcePairs {
+        impl Get<Vec<(XcmAssetId, SygmaResourceId)>> for SygmaResourcePairs {
             fn get() -> Vec<(XcmAssetId, SygmaResourceId)> {
                 let mut pairs: Vec<(XcmAssetId, SygmaResourceId)> = vec![(
-                    Concrete(T::NativeAssetLocation::get()).into(),
-                    T::NativeAssetSygmaResourceId::get(),
+                    XcmAssetId::Concrete(NativeAssetLocation::get()),
+                    NativeAssetSygmaResourceId::get(),
                 )];
 
                 // TODO add USDC as it is ready on the sygma side
@@ -1252,18 +1258,12 @@ macro_rules! impl_config_traits {
             }
         }
 
-        #[cfg(feature = "parachain")]
-        use xcm::latest::{MultiAsset, MultiLocation};
-        #[cfg(feature = "parachain")]
-        use sygma_traits::{ExtractDestinationData, DomainID};
         /// const used to indicate sygma bridge path. str "sygma"
         #[cfg(feature = "parachain")]
         pub const SYGMA_PATH_KEY: &[u8] = &[0x73, 0x79, 0x67, 0x6d, 0x61];
 
         #[cfg(feature = "parachain")]
         struct SygmaDestination;
-        #[cfg(feature = "parachain")]
-        use xcm::opaque::latest::{Junctions, Junction::{GeneralKey, GeneralIndex}};
         #[cfg(feature = "parachain")]
         impl ExtractDestinationData for SygmaDestination {
             fn extract_dest(dest: &MultiLocation) -> Option<(Vec<u8>, DomainID)> {
@@ -1277,7 +1277,7 @@ macro_rules! impl_config_traits {
                         ),
                     ) => {
                         if sygma_path.clone().into_inner() == SYGMA_PATH_KEY.to_vec() {
-                            return Some((recipient.to_vec(), dest_domain_id.as_u8()));
+                            return Some((recipient.to_vec(), *dest_domain_id as u8));
                         }
                         None
                     }
@@ -1286,20 +1286,15 @@ macro_rules! impl_config_traits {
             }
         }
 
-        #[cfg(feature = "parachain")]
-        use sygma_traits::DecimalConverter;
-        // TODO is an implementation for this even needed? because we saved all XCM incoming assets already in orml_tokens with a base of the native currency (base ten) 
+        // TODO is an implementation for this even needed? because we saved all XCM incoming assets already in orml_tokens with a base of the native currency (base ten)
         #[cfg(feature = "parachain")]
         struct SygmaDecimalConverter;
-
-        #[cfg(feature = "parachain")]
-        use fixed::{types::extra::U16, FixedU128};
 
         #[cfg(feature = "parachain")]
         impl DecimalConverter for SygmaDecimalConverter {
             fn convert_to(asset: &MultiAsset) -> Option<u128> {
                 match (&asset.fun, &asset.id) {
-                    (Fungible(amount), XcmAssetId::Concrete(location)) => {
+                    (Fungibility::Fungible(amount), XcmAssetId::Concrete(location)) => {
                         let metadata = <orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect>::metadata_by_location(location)?;
                         let decimals = metadata.decimals;
 
@@ -1328,7 +1323,7 @@ macro_rules! impl_config_traits {
                             // Max is 5192296858534827628530496329220095
                             // if source asset decimal is 12, the max amount sending to sygma
                             // relayer is 5192296858534827.628530496329
-                            if *amount > U112F16::MAX {
+                            if *amount > U112F16::max_value() {
                                 return None;
                             }
                             let a = U112F16::from_num(
@@ -1344,7 +1339,7 @@ macro_rules! impl_config_traits {
 
             fn convert_from(asset: &MultiAsset) -> Option<MultiAsset> {
                 match (&asset.fun, &asset.id) {
-                    (Fungible(amount), XcmAssetId::Concrete(location)) => {
+                    (Fungibility::Fungible(amount), XcmAssetId::Concrete(location)) => {
                         let metadata = <orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect>::metadata_by_location(location)?;
                         let decimals = metadata.decimals;
                         let native_decimals: u32 = BalanceFractionalDecimals::get().into();
@@ -1359,7 +1354,7 @@ macro_rules! impl_config_traits {
                             // Max is 5192296858534827628530496329220095
                             // if dest asset decimal is 24, the max amount coming from sygma
                             // relayer is 5192296858.534827628530496329
-                            if *amount > U112F16::MAX {
+                            if *amount > U112F16::max_value() {
                                 return None;
                             }
                             let a = U112F16::from_num(
@@ -1387,15 +1382,9 @@ macro_rules! impl_config_traits {
         }
 
         #[cfg(feature = "parachain")]
-        use orml_xcm_support::MultiNativeAsset;
-        #[cfg(feature = "parachain")]
-        use orml_traits::location::AbsoluteReserveProvider;
-        #[cfg(feature = "parachain")]
-        use frame_system::EnsureSignedBy;
-
-        #[cfg(feature = "parachain")]
         impl sygma_bridge::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
+            type BridgeCommitteeOrigin = EnsureSignedBy<SygmaAdminMembers, AccountId>;
             type TransferReserveAccount = SygmaBridgeAccount;
             type FeeReserveAccount = SygmaBridgeFeeAccount;
             type EIP712ChainID = EIP712ChainID;
@@ -1408,7 +1397,6 @@ macro_rules! impl_config_traits {
             type PalletId = SygmaBridgePalletId;
             type PalletIndex = SygmaBridgePalletIndex;
             type DecimalConverter = SygmaDecimalConverter;
-            type WeightInfo = sygma_bridge::weights::SygmaWeightInfo<Runtime>;
         }
     }
 }

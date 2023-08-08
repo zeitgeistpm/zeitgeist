@@ -62,8 +62,8 @@ where
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
     use substrate_frame_rpc_system::{System, SystemApiServer};
-    use zrml_swaps_rpc::{Swaps, SwapsApiServer};
     use sygma_rpc::{SygmaBridgeRpcServer, SygmaBridgeStorage};
+    use zrml_swaps_rpc::{Swaps, SwapsApiServer};
 
     let mut io = RpcModule::new(());
     let FullDeps { client, pool, deny_unsafe } = deps;
