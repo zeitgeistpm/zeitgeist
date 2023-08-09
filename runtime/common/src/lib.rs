@@ -55,10 +55,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (
-            pallet_contracts::Migration<Runtime>,
-            pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
-        );
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
