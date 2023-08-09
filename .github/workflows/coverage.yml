@@ -14,8 +14,8 @@ jobs:
     name: Coverage
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:

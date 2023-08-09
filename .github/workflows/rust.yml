@@ -14,8 +14,8 @@ jobs:
     name: Format
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     steps:
       - name: Checkout repository
@@ -38,8 +38,8 @@ jobs:
     name: Copyright Notices
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     steps:
       - name: Checkout repository
@@ -62,8 +62,8 @@ jobs:
     name: Checks
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     strategy:
       matrix:
@@ -89,8 +89,8 @@ jobs:
     name: Quick check benchmarks
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     steps:
       - name: Checkout repository
@@ -105,8 +105,8 @@ jobs:
     name: Test standalone build
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     steps:
       - name: Checkout repository
@@ -139,8 +139,8 @@ jobs:
     name: Test parachain build
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     steps:
       - name: Checkout repository
@@ -173,8 +173,8 @@ jobs:
     name: Fuzz
     if: |
       github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed' ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted') ||
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
     steps:
       - name: Checkout repository
