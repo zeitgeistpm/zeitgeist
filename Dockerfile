@@ -13,10 +13,12 @@ WORKDIR /zeitgeist
 COPY . /zeitgeist
 
 RUN apt-get update && \
-    apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold"
-
+    apt-get upgrade -y -o Dpkg::Options::="--force-confold"
+    
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ./scripts/init.sh nosudo
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN . "$HOME/.cargo/env" && cargo build --profile "$PROFILE" --features "$FEATURES"
 
 # ==== SECOND STAGE ====
