@@ -3,16 +3,16 @@ pull_request_rules:
     conditions:
       - "#approved-reviews-by>=1"
       - "#changes-requested-reviews-by=0"
-      - check-success=Coverage / Coverage (pull_request)
-      - check-success=Rust / Format (pull_request)
-      - check-success=Rust / Copyright Notices (pull_request)
-      - check-success=Rust / Checks (clippy) (pull_request)
-      - check-success=Rust / Checks (parachain) (pull_request)
-      - check-success=Rust / Checks (standalone) (pull_request)
-      - check-success=Rust / Quick check benchmarks (pull_request)
-      - check-success=Rust / Test standalone build (pull_request)
-      - check-success=Rust / Test parachain build (pull_request)
-      - check-success=Rust / Fuzz (pull_request)
+      - check-success=Coverage
+      - check-success=Format
+      - check-success=Copyright Notices
+      - check-success=Checks (clippy)
+      - check-success=Checks (parachain)
+      - check-success=Checks (standalone)
+      - check-success=Quick check benchmarks
+      - check-success=Test standalone build
+      - check-success=Test parachain build
+      - check-success=Fuzz
       - label=s:accepted
     actions:
       label:
