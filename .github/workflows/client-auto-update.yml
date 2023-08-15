@@ -2,7 +2,8 @@ name: Deploy
 on:
   workflow_dispatch:
   push:
-    tags: [ '*' ]
+    tags:
+      - v*
   
 jobs:
   auto-update-client:
