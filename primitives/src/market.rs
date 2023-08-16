@@ -64,7 +64,7 @@ pub struct Market<AI, BA, BN, M, A> {
     /// The bonds reserved for this market.
     pub bonds: MarketBonds<AI, BA>,
     /// The time at which the market was closed prematurely.
-    pub premature_close: PrematureClose<BN, M>,
+    pub premature_close: Option<PrematureClose<BN, M>>,
 }
 
 /// Tracks the status of a bond.
@@ -227,12 +227,18 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
     }
 }
 
-#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum PrematureClose<BN, M> {
-    Non,
-    Requested { block: BN, time: M },
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct PrematureClose<BN, M> {
+    pub old: MarketPeriod<BN, M>,
+    pub new: MarketPeriod<BN, M>,
+    pub state: PrematureCloseState,
+}
+
+#[derive(Clone, Decode, Encode, Eq, PartialEq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
+pub enum PrematureCloseState {
+    ScheduledAsMarketCreator,
+    ScheduledAsOther,
     Disputed,
-    Applied { old: MarketPeriod<BN, M>, new: MarketPeriod<BN, M> },
     Rejected,
 }
 
