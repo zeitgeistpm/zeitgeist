@@ -145,7 +145,7 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-xcm-emulator = { rev = "6847a58888e483f0ed2e0b72f90e00767ea0ecac", git = "https://github.com/shaunxw/xcm-simulator" }
+xcm-emulator = { rev = "92d371839f6d5c52dd35b7e3d61cbdefc792cc42", git = "https://github.com/shaunxw/xcm-simulator" }
 
 # Substrate (wasm)
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -178,7 +178,7 @@ pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/parityt
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-parity-scale-codec = { version = "3.0.0", default-features = false }
+parity-scale-codec = { version = "3.2.2", default-features = false }
 scale-info = { version = "2.3.1", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
