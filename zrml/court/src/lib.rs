@@ -1232,53 +1232,54 @@ mod pallet {
         // Handle the external incentivisation of the court system.
         pub(crate) fn handle_inflation(now: T::BlockNumber) -> Weight {
             let inflation_period = T::InflationPeriod::get();
-            if (now % inflation_period).is_zero() {
-                let yearly_inflation_rate = <YearlyInflation<T>>::get();
-                let yearly_inflation_amount = yearly_inflation_rate * T::Currency::total_issuance();
-                let blocks_per_year = T::BlocksPerYear::get()
-                    .saturated_into::<u128>()
-                    .saturated_into::<BalanceOf<T>>();
-                debug_assert!(!T::BlocksPerYear::get().is_zero());
-                let issue_per_block = yearly_inflation_amount / blocks_per_year.max(One::one());
+            if !(now % inflation_period).is_zero() {
+                return Weight::zero();
+            }
+            
+            let yearly_inflation_rate = <YearlyInflation<T>>::get();
+            let yearly_inflation_amount =
+                yearly_inflation_rate.mul_floor(T::Currency::total_issuance());
+            let blocks_per_year = T::BlocksPerYear::get()
+                .saturated_into::<u128>()
+                .saturated_into::<BalanceOf<T>>();
+            debug_assert!(!T::BlocksPerYear::get().is_zero());
+            let issue_per_block = yearly_inflation_amount / blocks_per_year.max(One::one());
 
-                let inflation_period_mint = issue_per_block.saturating_mul(
-                    inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>(),
-                );
+            let inflation_period_mint = issue_per_block.saturating_mul(
+                inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>(),
+            );
 
-                let pool = <CourtPool<T>>::get();
-                let pool_len = pool.len() as u32;
-                let at_least_one_inflation_period =
-                    |joined_at| now.saturating_sub(joined_at) >= T::InflationPeriod::get();
-                let total_stake = pool
-                    .iter()
-                    .filter(|pool_item| at_least_one_inflation_period(pool_item.joined_at))
-                    .fold(0u128, |acc, pool_item| {
-                        acc.saturating_add(pool_item.stake.saturated_into::<u128>())
-                    });
-                for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
-                    if !at_least_one_inflation_period(joined_at) {
-                        // participants who joined and didn't wait
-                        // at least one full inflation period won't get a reward
-                        continue;
-                    }
-                    let share =
-                        Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
-                    let mint = share * inflation_period_mint.saturated_into::<u128>();
-                    if let Ok(imb) = T::Currency::deposit_into_existing(
-                        &court_participant,
-                        mint.saturated_into::<BalanceOf<T>>(),
-                    ) {
-                        Self::deposit_event(Event::MintedInCourt {
-                            court_participant: court_participant.clone(),
-                            amount: imb.peek(),
-                        });
-                    }
+            let pool = <CourtPool<T>>::get();
+            let pool_len = pool.len() as u32;
+            let at_least_one_inflation_period =
+                |joined_at| now.saturating_sub(joined_at) >= T::InflationPeriod::get();
+            let total_stake = pool
+                .iter()
+                .filter(|pool_item| at_least_one_inflation_period(pool_item.joined_at))
+                .fold(0u128, |acc, pool_item| {
+                    acc.saturating_add(pool_item.stake.saturated_into::<u128>())
+                });
+            for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
+                if !at_least_one_inflation_period(joined_at) {
+                    // participants who joined and didn't wait
+                    // at least one full inflation period won't get a reward
+                    continue;
                 }
-
-                return T::WeightInfo::handle_inflation(pool_len);
+                let share =
+                    Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
+                let mint = share.mul_floor(inflation_period_mint.saturated_into::<u128>());
+                if let Ok(imb) = T::Currency::deposit_into_existing(
+                    &court_participant,
+                    mint.saturated_into::<BalanceOf<T>>(),
+                ) {
+                    Self::deposit_event(Event::MintedInCourt {
+                        court_participant: court_participant.clone(),
+                        amount: imb.peek(),
+                    });
+                }
             }
 
-            Weight::zero()
+            return T::WeightInfo::handle_inflation(pool_len);
         }
 
         // Get `n` unique and ordered random `MinJurorStake` section ends
