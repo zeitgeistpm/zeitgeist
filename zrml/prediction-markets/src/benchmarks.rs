@@ -46,6 +46,7 @@ use zeitgeist_primitives::{
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
 use zrml_market_commons::MarketCommonsPalletApi;
+use zeitgeist_primitives::traits::DisputeApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
 
@@ -838,7 +839,6 @@ benchmarks! {
         .dispatch_bypass_filter(RawOrigin::Signed(disputor).into())?;
 
         let market = <zrml_market_commons::Pallet<T>>::market(&market_id.saturated_into()).unwrap();
-        use zeitgeist_primitives::traits::DisputeApi;
         let appeal_end = T::Court::get_auto_resolve(&market_id, &market).result.unwrap();
         let mut market_ids_2: BoundedVec<MarketIdOf<T>, CacheSize> = BoundedVec::try_from(
             vec![market_id],
