@@ -86,7 +86,10 @@ fn deposit<T>(caller: &T::AccountId)
 where
     T: Config,
 {
-    let _ = T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value());
+    let _ = T::Currency::deposit_creating(
+        caller,
+        BalanceOf::<T>::max_value() / BalanceOf::<T>::from(2u8),
+    );
 }
 
 fn fill_pool<T>(number: u32) -> Result<(), &'static str>
