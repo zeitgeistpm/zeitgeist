@@ -1258,6 +1258,8 @@ mod pallet {
                 return Weight::zero();
             }
 
+            let mut total_mint = T::Currency::issue(inflation_period_mint);
+
             let pool = <CourtPool<T>>::get();
             let pool_len = pool.len() as u32;
             let at_least_one_inflation_period =
@@ -1276,13 +1278,13 @@ mod pallet {
                 }
                 let share = Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
                 let mint = share.mul_floor(inflation_period_mint.saturated_into::<u128>());
-                if let Ok(imb) = T::Currency::deposit_into_existing(
-                    &court_participant,
-                    mint.saturated_into::<BalanceOf<T>>(),
-                ) {
+                let (mint_imb, remainder) = total_mint.split(mint.saturated_into::<BalanceOf<T>>());
+                let mint_amount = mint_imb.peek();
+                total_mint = remainder;
+                if let Ok(()) = T::Currency::resolve_into_existing(&court_participant, mint_imb) {
                     Self::deposit_event(Event::MintedInCourt {
                         court_participant: court_participant.clone(),
-                        amount: imb.peek(),
+                        amount: mint_amount,
                     });
                 }
             }
