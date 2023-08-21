@@ -1747,20 +1747,17 @@ macro_rules! create_common_benchmark_logic {
                     AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit,
                     GetNativeCurrencyId, Runtime
                 };
+                use frame_benchmarking::{account, vec, whitelisted_caller};
+                use frame_system::RawOrigin;
+                use sp_runtime::traits::UniqueSaturatedInto;
+                use orml_benchmarking::runtime_benchmarks;
+                use orml_traits::MultiCurrency;
                 use zeitgeist_primitives::{
                     constants::BASE,
                     types::Asset,
                 };
 
-                use frame_benchmarking::{account, whitelisted_caller};
-                use frame_system::RawOrigin;
-                use sp_runtime::traits::UniqueSaturatedInto;
-
-                use orml_benchmarking::runtime_benchmarks;
-                use orml_traits::MultiCurrency;
-
                 const SEED: u32 = 0;
-
                 const NATIVE: CurrencyId = GetNativeCurrencyId::get();
                 const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
 
@@ -1863,7 +1860,7 @@ macro_rules! create_common_benchmark_logic {
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
                 use crate::{AccountId, Balance, CurrencyId, Tokens, Runtime};
-                use frame_benchmarking::{account, whitelisted_caller};
+                use frame_benchmarking::{account, vec, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
