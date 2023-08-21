@@ -196,8 +196,8 @@ mod pallet {
     const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
-    // Weight used to increase the number of jurors for subsequent appeals
-    // of the same court.
+    /// Weight used to increase the number of jurors for subsequent appeals
+    /// of the same court.
     const APPEAL_BASIS: usize = 2;
     // Basis used to increase the bond for subsequent appeals of the same market.
     const APPEAL_BOND_BASIS: u32 = 2;
