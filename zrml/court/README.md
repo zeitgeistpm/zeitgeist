@@ -9,14 +9,24 @@ A pallet for stake-weighted plurality decision making.
 
 ## Overview
 
-Court is a market dispute resolution mechanism. It allows jurors to make decisions. 
-If a juror does not vote with the plurality of the other jurors, the juror will be punished, 
-while those who did vote with the plurality will be rewarded.
+Court is a market dispute resolution mechanism. It allows jurors to make
+decisions. If a juror does not vote with the plurality of the other jurors, the
+juror will be punished, while those who did vote with the plurality will be
+rewarded.
 
 ## Terminology
 
 - **Aggregation Period:** The period in which the actively participating jurors
   need to reveal their vote secrets.
+- **Appeal Period:** The period in which the jurors can appeal the decision of
+  the last court round.
+- **Court:** The court is a dispute resolution mechanism to find the resolution
+  outcome of a market.
+- **Delegator:** A delegator is a court participant who delegates their voting
+  power to an actively participating juror.
+- **Juror:** A juror is a court participant who votes inside court cases.
+- **Reveal Period / Aggregation Period:** The period in which the actively
+  participating jurors need to reveal their vote secrets.
 
 ## Interface
 
