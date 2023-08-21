@@ -192,7 +192,7 @@ mod pallet {
         type WeightInfo: WeightInfoZeitgeist;
     }
 
-    // Number of draws for the initial court round.
+    /// Number of draws for the initial court round.
     const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
