@@ -586,6 +586,7 @@ benchmarks! {
 
     on_dispute {
         let j in 31..T::MaxCourtParticipants::get();
+        // the number of market ids inside MarketIdsPerCloseBlock at the appeal end block
         let r in 0..62;
 
         let now = <frame_system::Pallet<T>>::block_number();
