@@ -1240,17 +1240,21 @@ mod pallet {
             // example: 1049272791644671442
             let total_supply = T::Currency::total_issuance();
             // example: 0.02 * 1049272791644671442 = 20985455832893428
-            let yearly_inflation_amount = yearly_inflation_rate.mul_floor(total_supply);
-            let blocks_per_year =
-                T::BlocksPerYear::get().saturated_into::<u128>().saturated_into::<BalanceOf<T>>();
+            let yearly_inflation_amount =
+                yearly_inflation_rate.mul_floor(total_supply).saturated_into::<u128>();
+            let blocks_per_year = T::BlocksPerYear::get().saturated_into::<u128>();
             debug_assert!(!T::BlocksPerYear::get().is_zero());
             // example: 20985455832893428 / 2629800 = 7979867607
-            let issue_per_block = yearly_inflation_amount / blocks_per_year.max(One::one());
+            let issue_per_block =
+                yearly_inflation_amount.saturating_div(blocks_per_year.max(One::one()));
+            
+            let yearly_inflation_amount = yearly_inflation_amount.saturated_into::<BalanceOf<T>>();
+            let issue_per_block = issue_per_block.saturated_into::<BalanceOf<T>>();
+            let inflation_period =
+                inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>();
 
             // example: 7979867607 * 7200 * 30 = 1723651403112000
-            let inflation_period_mint = issue_per_block.saturating_mul(
-                inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>(),
-            );
+            let inflation_period_mint = issue_per_block.saturating_mul(inflation_period);
 
             // safe guard: inflation per period should never exceed the yearly inflation amount
             if inflation_period_mint > yearly_inflation_amount {
