@@ -422,7 +422,9 @@ benchmarks! {
         // from 255 because in the last appeal round we need at least 255 jurors
         let j in 255..T::MaxCourtParticipants::get();
         let a in 0..(T::MaxAppeals::get() - 2);
+        // the number of market ids inside MarketIdsPerCloseBlock at the old appeal end block
         let r in 0..62;
+        // the number of market ids inside MarketIdsPerCloseBlock at the new appeal end block
         let f in 0..62;
 
         let necessary_draws_weight = Court::<T>::necessary_draws_weight((T::MaxAppeals::get() - 1) as usize);
