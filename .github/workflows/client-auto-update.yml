@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - v*
+      - v[0-9]+.[0-9]+.[0-9]+*
   
 jobs:
   auto-update-client:
@@ -17,7 +17,7 @@ jobs:
           RELEASE_VERSION: ${{ github.ref_name }}
         uses: dawidd6/action-ansible-playbook@v2.6.1
         with:
-          playbook: scripts/ansible/client-auto-update-playbook.yml 
+          playbook: scripts/ansible/client-auto-update-playbook.yml
           directory: ./
-          key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }} 
-          inventory: ${{ secrets.ANSIBLE_INVENTORY }} 
+          key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
+          inventory: ${{ secrets.ANSIBLE_INVENTORY }}
