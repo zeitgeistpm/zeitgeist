@@ -818,7 +818,7 @@ benchmarks! {
             <T as pallet::Config>::AssetManager::deposit(
                 Asset::Ztg,
                 &juror,
-                u128::MAX.saturated_into(),
+                (u128::MAX / 2).saturated_into(),
             ).unwrap();
             <zrml_court::Pallet<T>>::join_court(
                 RawOrigin::Signed(juror.clone()).into(),
