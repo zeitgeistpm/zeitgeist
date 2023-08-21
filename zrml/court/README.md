@@ -9,7 +9,7 @@ A pallet for stake-weighted plurality decision making.
 
 ## Overview
 
-Court is a market dispute resolution mechanism. It allows jurors to make decisions. 
+Court is a market dispute resolution mechanism. It allows jurors to discover the truth. 
 If a juror does not vote with the plurality of the other jurors, the juror will be punished, 
 while those who did vote with the plurality will be rewarded.
 
