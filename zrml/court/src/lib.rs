@@ -983,8 +983,7 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: It depends heavily on the number of delegations
-        /// and the number of selected draws.
+        /// Complexity: O(N + M), with `N` being the number of draws and `M` being the total number of valid winners and losers.
         #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::reassign_court_stakes(T::MaxSelectedDraws::get()))]
         #[transactional]
