@@ -37,7 +37,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
-    traits::Swaps,
+    traits::{DisputeApi, Swaps},
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus, ScoringRule,
@@ -46,7 +46,6 @@ use zeitgeist_primitives::{
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
 use zrml_market_commons::MarketCommonsPalletApi;
-use zeitgeist_primitives::traits::DisputeApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
 

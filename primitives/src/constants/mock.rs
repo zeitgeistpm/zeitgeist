@@ -36,7 +36,7 @@ parameter_types! {
 parameter_types! {
     pub const AppealBond: Balance = 5 * BASE;
     pub const AppealBondFactor: Balance = 2 * BASE;
-    pub const BlocksPerYear: BlockNumber = 100;
+    pub const BlocksPerYear: BlockNumber = 10000;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
     pub const RequestInterval: BlockNumber = 15;
     pub const VotePeriod: BlockNumber = 3;

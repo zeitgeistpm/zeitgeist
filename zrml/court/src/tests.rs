@@ -3062,19 +3062,19 @@ fn handle_inflation_works() {
         Court::handle_inflation(now);
 
         let free_balance_after_0 = Balances::free_balance(jurors_list[0]);
-        assert_eq!(free_balance_after_0 - free_balances_before[&jurors_list[0]], 43_286_841);
+        assert_eq!(free_balance_after_0 - free_balances_before[&jurors_list[0]], 432_012);
 
         let free_balance_after_1 = Balances::free_balance(jurors_list[1]);
-        assert_eq!(free_balance_after_1 - free_balances_before[&jurors_list[1]], 432_868_409);
+        assert_eq!(free_balance_after_1 - free_balances_before[&jurors_list[1]], 4_320_129);
 
         let free_balance_after_2 = Balances::free_balance(jurors_list[2]);
-        assert_eq!(free_balance_after_2 - free_balances_before[&jurors_list[2]], 4_328_684_088);
+        assert_eq!(free_balance_after_2 - free_balances_before[&jurors_list[2]], 43_201_302);
 
         let free_balance_after_3 = Balances::free_balance(jurors_list[3]);
-        assert_eq!(free_balance_after_3 - free_balances_before[&jurors_list[3]], 43_286_840_884);
+        assert_eq!(free_balance_after_3 - free_balances_before[&jurors_list[3]], 432_013_038);
 
         let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
-        assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 432_868_408_838);
+        assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 4_320_130_393);
     });
 }
 

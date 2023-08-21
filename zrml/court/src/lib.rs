@@ -1235,19 +1235,28 @@ mod pallet {
             if !(now % inflation_period).is_zero() {
                 return Weight::zero();
             }
-            
+
             let yearly_inflation_rate = <YearlyInflation<T>>::get();
-            let yearly_inflation_amount =
-                yearly_inflation_rate.mul_floor(T::Currency::total_issuance());
-            let blocks_per_year = T::BlocksPerYear::get()
-                .saturated_into::<u128>()
-                .saturated_into::<BalanceOf<T>>();
+            // example: 1049272791644671442
+            let total_supply = T::Currency::total_issuance();
+            // example: 0.02 * 1049272791644671442 = 20985455832893428
+            let yearly_inflation_amount = yearly_inflation_rate.mul_floor(total_supply);
+            let blocks_per_year =
+                T::BlocksPerYear::get().saturated_into::<u128>().saturated_into::<BalanceOf<T>>();
             debug_assert!(!T::BlocksPerYear::get().is_zero());
+            // example: 20985455832893428 / 2629800 = 7979867607
             let issue_per_block = yearly_inflation_amount / blocks_per_year.max(One::one());
 
+            // example: 7979867607 * 7200 * 30 = 1723651403112000
             let inflation_period_mint = issue_per_block.saturating_mul(
                 inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>(),
             );
+
+            // safe guard: inflation per period should never exceed the yearly inflation amount
+            if inflation_period_mint > yearly_inflation_amount {
+                debug_assert!(false);
+                return Weight::zero();
+            }
 
             let pool = <CourtPool<T>>::get();
             let pool_len = pool.len() as u32;
@@ -1265,8 +1274,7 @@ mod pallet {
                     // at least one full inflation period won't get a reward
                     continue;
                 }
-                let share =
-                    Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
+                let share = Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
                 let mint = share.mul_floor(inflation_period_mint.saturated_into::<u128>());
                 if let Ok(imb) = T::Currency::deposit_into_existing(
                     &court_participant,
@@ -1279,7 +1287,7 @@ mod pallet {
                 }
             }
 
-            return T::WeightInfo::handle_inflation(pool_len);
+            T::WeightInfo::handle_inflation(pool_len)
         }
 
         // Get `n` unique and ordered random `MinJurorStake` section ends
