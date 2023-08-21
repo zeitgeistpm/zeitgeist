@@ -1,4 +1,5 @@
 // Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2023 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
 //
@@ -17,16 +18,16 @@
 
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
-    AccountId, Ancestry, AssetManager, AssetRegistry, Balance, CurrencyId, MaxInstructions,
+    AccountId, AssetManager, AssetRegistry, Balance, CurrencyId, MaxInstructions,
     ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, RuntimeCall,
-    RuntimeOrigin, UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
+    RuntimeOrigin, UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,UniversalLocation,MaxAssetsIntoHolding
 };
 
-use core::marker::PhantomData;
+use alloc::vec::Vec;
+use core::{cmp::min, marker::PhantomData};
 use frame_support::{
     parameter_types,
-    traits::{ConstU8, Everything, Get},
-    WeakBoundedVec,
+    traits::{ConstU8, Everything, Nothing, Get},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider, MultiCurrency};
@@ -38,14 +39,14 @@ use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
-        prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, NetworkId, X1, X2},
+        prelude::{XcmContext, AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, X1, X2},
         Error as XcmError, Junction, MultiLocation, Result as XcmResult,
     },
     opaque::latest::Fungibility::Fungible,
 };
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, LocationInverter,
+    AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds,
     ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
     TakeWeightCredit,
@@ -81,8 +82,6 @@ impl Config for XcmConfig {
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
-    /// Means of inverting a location.
-    type LocationInverter = LocationInverter<Ancestry>;
     /// How to get a call origin from a `OriginKind` value.
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
     /// Module that handles responses of queries.
@@ -91,12 +90,33 @@ impl Config for XcmConfig {
     type SubscriptionService = PolkadotXcm;
     /// The means of purchasing weight credit for XCM execution.
     type Trader = Trader;
+    /// This chain's Universal Location.
+    type UniversalLocation = UniversalLocation;
     /// The means of determining an XCM message's weight.
     // Adds UnitWeightCost per instruction plus the weight of each instruction.
     // The total number of instructions are bounded by MaxInstructions
     type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
     /// How to send an onward XCM message.
     type XcmSender = XcmRouter;
+    /// XCM will use this to dispatch any calls
+    type CallDispatcher = RuntimeCall;
+    /// Information on all pallets.
+    type PalletInstancesInfo = crate::AllPalletsWithSystem;
+    /// Maximum amount of tokens the holding register can store
+    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
+    /// Handler for asset locking.
+    type AssetLocker = ();
+    /// Handler for exchanging assets.
+    type AssetExchanger = ();
+    /// Configure the fees.
+    type FeeManager = ();
+    /// The method of exporting a message.
+    type MessageExporter = ();
+    /// The origin locations and specific universal junctions to which they are allowed to elevate
+    /// themselves.
+    type UniversalAliases = Nothing;
+    /// The safe call filter for `Transact`.
+    type SafeCallFilter = Nothing;
 }
 
 /// Additional filters that specify whether the XCM instruction should be executed at all.
@@ -146,20 +166,22 @@ impl TakeRevenue for ToTreasury {
 parameter_types! {
     pub CheckAccount: AccountId = PolkadotXcm::check_account();
     /// The amount of ZTG charged per second of execution (canonical multilocation).
-    pub ZtgPerSecondCanonical: (AssetId, u128) = (
+    pub ZtgPerSecondCanonical: (AssetId, u128, u128) = (
         MultiLocation::new(
             0,
             X1(general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
+        0
     );
     /// The amount of ZTG charged per second of execution.
-    pub ZtgPerSecond: (AssetId, u128) = (
+    pub ZtgPerSecond: (AssetId, u128, u128) = (
         MultiLocation::new(
             1,
             X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
+        0
     );
 }
 
@@ -238,23 +260,24 @@ impl<
         TransactAssetDelegate,
     >
 {
-    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
+    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation, context: &XcmContext) -> XcmResult {
         let asset_adjusted = Self::adjust_fractional_places(asset);
-        TransactAssetDelegate::deposit_asset(&asset_adjusted, location)
+        TransactAssetDelegate::deposit_asset(&asset_adjusted, location, context)
     }
 
-    fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<Assets, XcmError> {
+    fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation, maybe_context: Option<&XcmContext>) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
-        TransactAssetDelegate::withdraw_asset(&asset_adjusted, location)
+        TransactAssetDelegate::withdraw_asset(&asset_adjusted, location, maybe_context)
     }
 
     fn transfer_asset(
         asset: &MultiAsset,
         from: &MultiLocation,
         to: &MultiLocation,
+        context: &XcmContext
     ) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
-        TransactAssetDelegate::transfer_asset(&asset_adjusted, from, to)
+        TransactAssetDelegate::transfer_asset(&asset_adjusted, from, to, context)
     }
 }
 
@@ -317,7 +340,9 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
-            MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => {
+            MultiLocation { parents: 0, interior: X1(GeneralKey { data, length }) } => {
+                let key = &data[..data.len().min(length as usize)];
+
                 if &key[..] == zeitgeist::KEY {
                     return Ok(CurrencyId::Ztg);
                 }
@@ -326,8 +351,10 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
             }
             MultiLocation {
                 parents: 1,
-                interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
+                interior: X2(Junction::Parachain(para_id), GeneralKey { data, length }),
             } => {
+                let key = &data[..data.len().min(length as usize)];
+
                 if para_id == u32::from(ParachainInfo::parachain_id()) {
                     if &key[..] == zeitgeist::KEY {
                         return Ok(CurrencyId::Ztg);
@@ -363,7 +390,7 @@ pub struct AccountIdToMultiLocation;
 
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
     fn convert(account: AccountId) -> MultiLocation {
-        X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
+        X1(AccountId32 { network: None, id: account.into() }).into()
     }
 }
 
@@ -407,12 +434,27 @@ pub type XcmOriginToTransactDispatchOrigin = (
 /// queues.
 pub type XcmRouter = (
     // Two routers - use UMP to communicate with the relay chain:
-    cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
+    cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
     // ..and XCMP to communicate with the sibling chains.
     XcmpQueue,
 );
 
-#[inline]
-pub(crate) fn general_key(key: &[u8]) -> Junction {
-    GeneralKey(WeakBoundedVec::force_from(key.to_vec(), None))
+/// Build a fixed-size array using as many elements from `src` as possible
+/// without overflowing and ensuring that the array is 0 padded in the case
+/// where `src.len()` is smaller than S.
+fn vec_to_fixed_array<const S: usize>(src: Vec<u8>) -> [u8; S] {
+	let mut dest = [0; S];
+	let len = min(src.len(), S);
+	dest[..len].copy_from_slice(&src.as_slice()[..len]);
+
+	dest
+}
+
+/// A utils function to un-bloat and simplify the instantiation of
+/// `GeneralKey` values
+pub fn general_key(data: &[u8]) -> Junction {
+    GeneralKey {
+        length: data.len().min(32) as u8,
+        data: vec_to_fixed_array(data.to_vec()),
+    }
 }
