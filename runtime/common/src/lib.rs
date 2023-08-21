@@ -62,7 +62,6 @@ macro_rules! decl_common_types {
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
         );
 
-        // TODO: Reconsider the migrations here. Why AddOutsiderAndDisputeBond and AddOutsiderBond? Only one AddOutsiderAndDisputeBond enough?
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
