@@ -66,8 +66,12 @@ pub struct XcmConfig;
 /// This is where we configure the core of our XCM integrations: how tokens are transferred,
 /// how fees are calculated, what barriers we impose on incoming XCM messages, etc.
 impl Config for XcmConfig {
+    /// Handler for exchanging assets.
+    type AssetExchanger = ();
     /// The handler for when there is an instruction to claim assets.
     type AssetClaims = PolkadotXcm;
+    /// Handler for asset locking.
+    type AssetLocker = ();
     /// How to withdraw and deposit an asset.
     type AssetTransactor = AlignedFractionalMultiAssetTransactor;
     /// The general asset trap - handler for when assets are left in the Holding Register at the
@@ -75,21 +79,36 @@ impl Config for XcmConfig {
     type AssetTrap = PolkadotXcm;
     /// Additional filters that specify whether the XCM instruction should be executed at all.
     type Barrier = Barrier;
-    /// The outer call dispatch type.
-    type RuntimeCall = RuntimeCall;
+    /// XCM will use this to dispatch any calls
+    type CallDispatcher = RuntimeCall;
+    /// Configure the fees.
+    type FeeManager = ();
     /// Combinations of (Location, Asset) pairs which are trusted as reserves.
     // Trust the parent chain, sibling parachains and children chains of this chain.
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
+    /// Maximum amount of tokens the holding register can store
+    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
+    /// The method of exporting a message.
+    type MessageExporter = ();
     /// How to get a call origin from a `OriginKind` value.
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
+    /// Information on all pallets.
+    type PalletInstancesInfo = crate::AllPalletsWithSystem;
     /// Module that handles responses of queries.
     type ResponseHandler = PolkadotXcm;
+    /// The outer call dispatch type.
+    type RuntimeCall = RuntimeCall;
+    /// The safe call filter for `Transact`.
+    type SafeCallFilter = Nothing;
     /// Module that handles subscription requests.
     type SubscriptionService = PolkadotXcm;
     /// The means of purchasing weight credit for XCM execution.
     type Trader = Trader;
+    /// The origin locations and specific universal junctions to which they are allowed to elevate
+    /// themselves.
+    type UniversalAliases = Nothing;
     /// This chain's Universal Location.
     type UniversalLocation = UniversalLocation;
     /// The means of determining an XCM message's weight.
@@ -98,25 +117,6 @@ impl Config for XcmConfig {
     type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
     /// How to send an onward XCM message.
     type XcmSender = XcmRouter;
-    /// XCM will use this to dispatch any calls
-    type CallDispatcher = RuntimeCall;
-    /// Information on all pallets.
-    type PalletInstancesInfo = crate::AllPalletsWithSystem;
-    /// Maximum amount of tokens the holding register can store
-    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
-    /// Handler for asset locking.
-    type AssetLocker = ();
-    /// Handler for exchanging assets.
-    type AssetExchanger = ();
-    /// Configure the fees.
-    type FeeManager = ();
-    /// The method of exporting a message.
-    type MessageExporter = ();
-    /// The origin locations and specific universal junctions to which they are allowed to elevate
-    /// themselves.
-    type UniversalAliases = Nothing;
-    /// The safe call filter for `Transact`.
-    type SafeCallFilter = Nothing;
 }
 
 /// Additional filters that specify whether the XCM instruction should be executed at all.
@@ -172,7 +172,7 @@ parameter_types! {
             X1(general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
-        0
+        0,
     );
     /// The amount of ZTG charged per second of execution.
     pub ZtgPerSecond: (AssetId, u128, u128) = (
@@ -181,7 +181,7 @@ parameter_types! {
             X2(Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
-        0
+        0,
     );
 }
 
