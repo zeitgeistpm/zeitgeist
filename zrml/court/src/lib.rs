@@ -1262,7 +1262,7 @@ mod pallet {
                 .saturated_into::<u128>()
                 .saturated_into::<BalanceOf<T>>();
             if inflation_period_mint >= log_threshold {
-                log::error!(
+                log::warn!(
                     "Inflation per period is greater than the threshold. Inflation per period: \
                      {:?}, threshold: {:?}",
                     inflation_period_mint,
