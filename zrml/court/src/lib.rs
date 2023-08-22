@@ -1247,7 +1247,7 @@ mod pallet {
             // example: 20985455832893428 / 2629800 = 7979867607
             let issue_per_block =
                 yearly_inflation_amount.saturating_div(blocks_per_year.max(One::one()));
-            
+
             let yearly_inflation_amount = yearly_inflation_amount.saturated_into::<BalanceOf<T>>();
             let issue_per_block = issue_per_block.saturated_into::<BalanceOf<T>>();
             let inflation_period =
@@ -1255,6 +1255,21 @@ mod pallet {
 
             // example: 7979867607 * 7200 * 30 = 1723651403112000
             let inflation_period_mint = issue_per_block.saturating_mul(inflation_period);
+
+            // inflation_period_mint shouldn't exceed 0.5% of the total issuance
+            let log_threshold = Perbill::from_perthousand(5u32)
+                .mul_floor(total_supply)
+                .saturated_into::<u128>()
+                .saturated_into::<BalanceOf<T>>();
+            if inflation_period_mint >= log_threshold {
+                log::error!(
+                    "Inflation per period is greater than the threshold. Inflation per period: \
+                     {:?}, threshold: {:?}",
+                    inflation_period_mint,
+                    log_threshold
+                );
+                debug_assert!(false);
+            }
 
             // safe guard: inflation per period should never exceed the yearly inflation amount
             if inflation_period_mint > yearly_inflation_amount {
