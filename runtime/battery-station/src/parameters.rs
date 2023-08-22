@@ -98,7 +98,7 @@ parameter_types! {
             .unwrap_or(RuntimeBlockWeights::get().max_block);
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
-    pub const ContractsMaxCodeLen: u32 = 246 * 1024;
+    pub const ContractsMaxCodeLen: u32 = 123 * 1024;
     pub const ContractsMaxDebugBufferLen: u32 = 2 * 1024 * 1024;
     pub const ContractsMaxStorageKeyLen: u32 = 128;
     pub const ContractsUnsafeUnstableInterface: bool = true;

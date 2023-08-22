@@ -336,7 +336,7 @@ macro_rules! fee_tests {
                             name: "Polkadot".into(),
                             symbol: "DOT".into(),
                             existential_deposit: ExistentialDeposit::get(),
-                            location: Some(xcm::VersionedMultiLocation::V1(xcm::latest::MultiLocation::parent())),
+                            location: Some(xcm::VersionedMultiLocation::V3(xcm::latest::MultiLocation::parent())),
                             additional: custom_metadata,
                         };
                         let dot = Asset::ForeignAsset(0);
@@ -402,7 +402,7 @@ macro_rules! fee_tests {
                         name: "Polkadot".into(),
                         symbol: "DOT".into(),
                         existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(
+                        location: Some(xcm::VersionedMultiLocation::V3(
                             xcm::latest::MultiLocation::parent(),
                         )),
                         additional: custom_metadata,
@@ -453,7 +453,7 @@ macro_rules! fee_tests {
                         name: "Polkadot".into(),
                         symbol: "DOT".into(),
                         existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(
+                        location: Some(xcm::VersionedMultiLocation::V3(
                             xcm::latest::MultiLocation::parent(),
                         )),
                         additional: custom_metadata,
@@ -522,7 +522,7 @@ macro_rules! fee_tests {
                         name: "Polkadot".into(),
                         symbol: "DOT".into(),
                         existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V1(
+                        location: Some(xcm::VersionedMultiLocation::V3(
                             xcm::latest::MultiLocation::parent(),
                         )),
                         additional: custom_metadata,
