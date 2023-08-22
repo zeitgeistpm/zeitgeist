@@ -28,7 +28,7 @@ All things about Global Disputes Fix ⚠️ :
 ### Removed
 
 All things about Global Disputes Fix ⚠️ :
-- Removed the following event:
+- Remove the following event:
   - `OutcomeOwnersRewardedWithNoFunds`
 
 ### Added
@@ -70,21 +70,21 @@ All things about Global Disputes Fix ⚠️ :
 
 All things about Global Disputes Fix ⚠️ :
 
-- Added new dispatchable function:
+- Add new dispatchable function:
   - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
     was destroyed.
-- Added the following events:
+- Add the following events:
   - `OutcomeOwnerRewarded` for `Possession::Paid`
   - `OutcomeOwnersRewarded` for `Possession::Shared`
   - `OutcomesFullyCleaned` and `OutcomesPartiallyCleaned` for extrinsic
     `refund_vote_fees`
-- Added enum `Possession` with variants:
+- Add enum `Possession` with variants:
 - `Paid { owner: AccountId, fee: Balance }`
 - `Shared { owners: BoundedVec }`
 - `OutcomeInfo` has the following fields:
   - `outcome_sum: Balance`
   - `possession: Possession`
-- Added `GdStatus` with the following enum variants:
+- Add `GdStatus` with the following enum variants:
   - `Active { add_outcome_end: BlockNumber, vote_end: BlockNumber }`
   - `Finished`
   - `Destroyed`
