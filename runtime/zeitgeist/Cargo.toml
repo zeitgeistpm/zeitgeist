@@ -122,6 +122,7 @@ zrml-swaps-runtime-api = { workspace = true }
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
 xcm-emulator = { workspace = true }
+env_logger = "0.9"
 
 [features]
 default = ["std"]

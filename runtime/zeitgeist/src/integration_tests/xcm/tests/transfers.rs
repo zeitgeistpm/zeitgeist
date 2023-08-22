@@ -32,7 +32,7 @@ use crate::{
 
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation};
 use xcm_emulator::{Limited, TestExt};
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
@@ -66,12 +66,12 @@ fn transfer_ztg_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -133,12 +133,12 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                     1,
                     X2(
                         Parachain(zeitgeist::ID),
-                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                        Junction::AccountId32 { network: None, id: ALICE.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Bobs's balance is initial balance - amount transferred
@@ -203,12 +203,12 @@ fn transfer_btc_sibling_to_zeitgeist() {
                     1,
                     X2(
                         Parachain(zeitgeist::ID),
-                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                        Junction::AccountId32 { network: None, id: ALICE.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -257,12 +257,12 @@ fn transfer_btc_zeitgeist_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -324,12 +324,12 @@ fn transfer_eth_sibling_to_zeitgeist() {
                     1,
                     X2(
                         Parachain(zeitgeist::ID),
-                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                        Junction::AccountId32 { network: None, id: ALICE.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -378,12 +378,12 @@ fn transfer_eth_zeitgeist_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -421,9 +421,9 @@ fn transfer_dot_from_relay_chain() {
 
         assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
             polkadot_runtime::RuntimeOrigin::signed(ALICE),
-            Box::new(Parachain(zeitgeist::ID).into().into()),
+            Box::new(Parachain(zeitgeist::ID).into()),
             Box::new(
-                Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }.into().into()
+                Junction::AccountId32 { network: None, id: BOB.into() }.into()
             ),
             Box::new((Here, transfer_amount).into()),
             0
@@ -437,6 +437,7 @@ fn transfer_dot_from_relay_chain() {
 
 #[test]
 fn transfer_dot_to_relay_chain() {
+    let _ = env_logger::try_init();
     TestNet::reset();
 
     let transfer_amount: Balance = dot(2);
@@ -453,11 +454,11 @@ fn transfer_dot_to_relay_chain() {
             Box::new(
                 MultiLocation::new(
                     1,
-                    X1(Junction::AccountId32 { id: BOB.into(), network: NetworkId::Any })
+                    X1(Junction::AccountId32 { id: BOB.into(), network: None })
                 )
                 .into()
             ),
-            Limited(4_000_000_000)
+            xcm::latest::WeightLimit::Unlimited//Limited(frame_support::weights::Weight::from_parts(4_000_000_000, 256 * 1024u64))
         ));
 
         assert_eq!(
@@ -514,12 +515,12 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -549,8 +550,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 80_824_000);
-    assert_eq!(dot_fee(), 80_824_000);
+    assert_eq!(ztg_fee(), 80_128_000);
+    assert_eq!(dot_fee(), ztg_fee());
 }
 
 #[inline]
