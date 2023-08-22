@@ -28,6 +28,7 @@ All things about Global Disputes Fix ⚠️ :
 ### Removed
 
 All things about Global Disputes Fix ⚠️ :
+
 - Remove the following event:
   - `OutcomeOwnersRewardedWithNoFunds`
 
