@@ -45,7 +45,6 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
-#[cfg(feature = "with-global-disputes")]
 use zrml_global_disputes::GlobalDisputesPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
 

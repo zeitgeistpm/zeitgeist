@@ -2298,39 +2298,50 @@ mod pallet {
                 Error::<T>::MarketDoesNotHaveCourtMechanism
             );
 
-            let court_id = <MarketIdToCourtId<T>>::get(market_id)
-                .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;
+            // oracle outcome is added by pm-pallet
+            let mut gd_outcomes: Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>> =
+                Vec::new();
 
-            let court = <Courts<T>>::get(court_id).ok_or(Error::<T>::CourtNotFound)?;
+            let mut appeals_len = 0u32;
+            let mut draws_len = 0u32;
 
-            let report = market.report.as_ref().ok_or(Error::<T>::MarketReportNotFound)?;
-            let oracle_outcome = &report.outcome;
+            // None case can happen if no dispute could be created,
+            // because there is not enough juror and delegator stake,
+            // in this case allow a global dispute
+            if let Some(court_id) = <MarketIdToCourtId<T>>::get(market_id) {
+                let court = <Courts<T>>::get(court_id).ok_or(Error::<T>::CourtNotFound)?;
 
-            let appeals_len = court.appeals.len() as u32;
+                appeals_len = court.appeals.len() as u32;
 
-            let gd_outcomes = court
-                .appeals
-                .iter()
-                .filter_map(|a| {
-                    match a.appealed_vote_item.clone().into_outcome() {
-                        // oracle outcome is added by pm pallet
-                        Some(outcome) if outcome != *oracle_outcome => Some(GlobalDisputeItem {
-                            outcome,
-                            // we have no better global dispute outcome owner
-                            owner: Self::treasury_account_id(),
-                            // initial vote amount
-                            initial_vote_amount: <BalanceOf<T>>::zero(),
-                        }),
-                        _ => None,
-                    }
-                })
-                .collect::<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>();
+                let report = market.report.as_ref().ok_or(Error::<T>::MarketReportNotFound)?;
+                let oracle_outcome = &report.outcome;
 
-            let old_draws = SelectedDraws::<T>::get(court_id);
-            let draws_len = old_draws.len() as u32;
-            Self::unlock_participants_from_last_draw(court_id, old_draws);
-            <SelectedDraws<T>>::remove(court_id);
-            <Courts<T>>::remove(court_id);
+                gd_outcomes = court
+                    .appeals
+                    .iter()
+                    .filter_map(|a| {
+                        match a.appealed_vote_item.clone().into_outcome() {
+                            // oracle outcome is added by pm pallet
+                            Some(outcome) if outcome != *oracle_outcome => {
+                                Some(GlobalDisputeItem {
+                                    outcome,
+                                    // we have no better global dispute outcome owner
+                                    owner: Self::treasury_account_id(),
+                                    // initial vote amount
+                                    initial_vote_amount: <BalanceOf<T>>::zero(),
+                                })
+                            }
+                            _ => None,
+                        }
+                    })
+                    .collect::<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>();
+
+                let old_draws = SelectedDraws::<T>::get(court_id);
+                draws_len = old_draws.len() as u32;
+                Self::unlock_participants_from_last_draw(court_id, old_draws);
+                <SelectedDraws<T>>::remove(court_id);
+                <Courts<T>>::remove(court_id);
+            }
 
             let res = ResultWithWeightInfo {
                 result: gd_outcomes,

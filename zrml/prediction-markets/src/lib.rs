@@ -97,7 +97,6 @@ mod pallet {
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
-    #[cfg(feature = "with-global-disputes")]
     type InitialItemOf<T> = InitialItem<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
 
     macro_rules! impl_unreserve_bond {
@@ -344,7 +343,6 @@ mod pallet {
                 MarketIdsForEdit::<T>::remove(market_id);
             }
 
-            #[cfg(feature = "with-global-disputes")]
             if T::GlobalDisputes::is_active(&market_id) {
                 T::GlobalDisputes::destroy_global_dispute(&market_id)?;
             }
@@ -1453,7 +1451,10 @@ mod pallet {
             ensure_signed(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+            ensure!(
+                matches!(market.status, MarketStatus::Disputed | MarketStatus::Reported),
+                Error::<T>::InvalidMarketStatus
+            );
 
             ensure!(
                 matches!(market.dispute_mechanism, MarketDisputeMechanism::Court),
@@ -1513,6 +1514,15 @@ mod pallet {
 
             // ignore first of tuple because we always have max disputes
             let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
+
+            if market.status == MarketStatus::Reported {
+                // this is the case that a dispute can not be initiated,
+                // because court has not enough juror and delegator stake (dispute errors)
+                <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
+                    m.status = MarketStatus::Disputed;
+                    Ok(())
+                })?;
+            }
 
             // global disputes uses DisputeResolution API to control its resolution
             let ids_len_1 =

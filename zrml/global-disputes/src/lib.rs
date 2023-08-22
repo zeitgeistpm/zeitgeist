@@ -38,7 +38,6 @@ pub type InitialItemOf<T> = crate::types::InitialItem<AccountIdOf<T>, BalanceOf<
 #[frame_support::pallet]
 mod pallet {
     use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi, InitialItemOf};
-    use alloc::collections::BTreeSet;
     use core::marker::PhantomData;
     use frame_support::{
         ensure, log,
@@ -221,8 +220,6 @@ mod pallet {
     pub enum Error<T> {
         /// Sender tried to vote with an amount below a defined minimum.
         AmountTooLow,
-        /// To start a global dispute, at least two outcomes are required.
-        AtLeastTwoUniqueOutcomesRequired,
         /// The global dispute status is invalid for this operation.
         InvalidGlobalDisputeStatus,
         /// Sender does not have enough funds for the vote on an outcome.
@@ -332,11 +329,12 @@ mod pallet {
         ///
         /// Complexity: `O(n)`,
         /// where `n` is the number of all existing outcomes for a global dispute.
-        #[frame_support::transactional]
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::refund_vote_fees(
             T::RemoveKeysLimit::get(),
             T::MaxOwners::get(),
         ))]
+        #[frame_support::transactional]
         pub fn refund_vote_fees(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -814,19 +812,6 @@ mod pallet {
                 <GlobalDisputesInfo<T>>::get(market_id).is_none(),
                 Error::<T>::GlobalDisputeAlreadyExists
             );
-
-            let mut outcome_set = BTreeSet::new();
-            // insert returns true if the outcome is already present
-            let outcome_count = initial_items
-                .iter()
-                // insert returns true if the outcome was not already present (unqiue)
-                .filter(|item| outcome_set.insert(item.outcome.clone()))
-                .take(2) // Limit the iterator to at most two unique outcomes
-                .count();
-
-            if outcome_count < 2 {
-                return Err(Error::<T>::AtLeastTwoUniqueOutcomesRequired.into());
-            }
 
             for InitialItem { outcome, owner, amount } in initial_items {
                 ensure!(market.matches_outcome_report(outcome), Error::<T>::OutcomeMismatch);

@@ -50,7 +50,10 @@ use zeitgeist_primitives::{
         Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
     },
 };
-use zrml_global_disputes::GlobalDisputesPalletApi;
+use zrml_global_disputes::{
+    types::{OutcomeInfo, Possession},
+    GlobalDisputesPalletApi, Outcomes, PossessionOf,
+};
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_swaps::Pools;
 const LIQUIDITY: u128 = 100 * BASE;
@@ -3447,7 +3450,6 @@ fn it_appeals_a_court_market_to_global_dispute() {
             OutcomeReport::Categorical(0)
         ));
 
-        let dispute_block = report_at;
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), market_id,));
 
         for _ in 0..(MaxAppeals::get() - 1) {
@@ -3472,87 +3474,41 @@ fn it_appeals_a_court_market_to_global_dispute() {
             CError::<Runtime>::MaxAppealsReached
         );
 
-        assert!(!GlobalDisputes::is_started(&market_id));
+        assert!(!GlobalDisputes::does_exist(&market_id));
 
         assert_ok!(PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(BOB), market_id));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
 
-        assert!(GlobalDisputes::is_started(&market_id));
+        assert!(GlobalDisputes::does_exist(&market_id));
         System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
 
-        #[cfg(feature = "with-global-disputes")]
-        {
-            use zrml_global_disputes::{
-                types::{OutcomeInfo, Possession},
-                GlobalDisputesPalletApi, Outcomes, PossessionOf,
-            };
-
-            let now = <frame_system::Pallet<Runtime>>::block_number();
-            assert_ok!(PredictionMarkets::start_global_dispute(
-                RuntimeOrigin::signed(CHARLIE),
-                market_id
-            ));
-
-            // report check
-            let possession: PossessionOf<Runtime> = Possession::Shared {
-                owners: frame_support::BoundedVec::try_from(vec![BOB]).unwrap(),
-            };
-            let outcome_info = OutcomeInfo { outcome_sum: Zero::zero(), possession };
-            assert_eq!(
-                Outcomes::<Runtime>::get(market_id, &OutcomeReport::Categorical(0)).unwrap(),
-                outcome_info
-            );
-            let possession: PossessionOf<Runtime> = Possession::Shared {
-                owners: frame_support::BoundedVec::try_from(vec![CHARLIE]).unwrap(),
-            };
-            for i in 1..=<Runtime as Config>::MaxDisputes::get() {
-                let dispute_bond = crate::default_dispute_bond::<Runtime>((i - 1).into());
-                let outcome_info =
-                    OutcomeInfo { outcome_sum: dispute_bond, possession: possession.clone() };
-                assert_eq!(
-                    Outcomes::<Runtime>::get(
-                        market_id,
-                        &OutcomeReport::Categorical(i.saturated_into())
-                    )
-                    .unwrap(),
-                    outcome_info
-                );
-            }
-
-            // remove_last_dispute_from_market_ids_per_dispute_block works
-            let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
-            assert_eq!(removable_market_ids.len(), 0);
-
-            let add_outcome_end = now + GlobalDisputes::get_add_outcome_period();
-            let vote_end = add_outcome_end + GlobalDisputes::get_vote_period();
-            let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(vote_end);
-            assert_eq!(market_ids, vec![market_id]);
-            assert!(GlobalDisputes::is_active(&market_id));
-            System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
-
-            assert_noop!(
-                PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id),
-                Error::<Runtime>::GlobalDisputeExistsAlready
-            );
-        }
-
-        // remove_last_dispute_from_market_ids_per_dispute_block works
-        let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
-        assert_eq!(removable_market_ids.len(), 0);
-
-        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(
-            now + <Runtime as Config>::GlobalDisputePeriod::get(),
+        // report check
+        let possession: PossessionOf<Runtime> =
+            Possession::Shared { owners: frame_support::BoundedVec::try_from(vec![BOB]).unwrap() };
+        let outcome_info = OutcomeInfo { outcome_sum: Zero::zero(), possession };
+        assert_eq!(
+            Outcomes::<Runtime>::get(market_id, &OutcomeReport::Categorical(0)).unwrap(),
+            outcome_info
         );
+
+        let add_outcome_end = now + GlobalDisputes::get_add_outcome_period();
+        let vote_end = add_outcome_end + GlobalDisputes::get_vote_period();
+        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(vote_end);
         assert_eq!(market_ids, vec![market_id]);
-        assert!(GlobalDisputes::is_started(&market_id));
-        System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
+        assert!(GlobalDisputes::is_active(&market_id));
 
         assert_noop!(
             PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id),
-            Error::<Runtime>::GlobalDisputeAlreadyStarted
+            Error::<Runtime>::GlobalDisputeExistsAlready
         );
-        }
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
     });
 }
 
