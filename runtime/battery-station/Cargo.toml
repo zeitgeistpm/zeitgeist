@@ -73,8 +73,8 @@ pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
 pallet-author-slot-filter = { workspace = true, optional = true }
 pallet-parachain-staking = { workspace = true, optional = true }
-session-keys-primitives = { workspace = true, optional = true }
 pallet-randomness = { workspace = true, optional = true }
+session-keys-primitives = { workspace = true, optional = true }
 
 # Polkadot
 
