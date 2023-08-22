@@ -4950,7 +4950,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-vrf"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix-randomness-fix#25e9981528393b35519e82943bb3e71e35783dc6"
 dependencies = [
  "nimbus-primitives",
  "parity-scale-codec",
@@ -5696,7 +5696,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix-randomness-fix#25e9981528393b35519e82943bb3e71e35783dc6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6352,7 +6352,7 @@ dependencies = [
 [[package]]
 name = "pallet-randomness"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/external#bcb133c4c655263f1e1e492a8c64b54aa476819b"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix-randomness-fix#25e9981528393b35519e82943bb3e71e35783dc6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10624,7 +10624,7 @@ dependencies = [
 [[package]]
 name = "session-keys-primitives"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix#4bfc6efcf614266927e92c1b64b0ef8a322426c6"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.37-use-paritytech-dependencies-bench-fix-randomness-fix#25e9981528393b35519e82943bb3e71e35783dc6"
 dependencies = [
  "async-trait",
  "frame-support",
