@@ -26,7 +26,7 @@ use crate::{market_mock, BalanceOf, Call, Config, CurrencyOf, Pallet as Court, P
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
-use sp_runtime::traits::Bounded;
+use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{traits::DisputeApi, types::OutcomeReport};
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -34,7 +34,7 @@ fn deposit<T>(caller: &T::AccountId)
 where
     T: Config,
 {
-    let _ = CurrencyOf::<T>::deposit_creating(caller, BalanceOf::<T>::max_value());
+    let _ = CurrencyOf::<T>::deposit_creating(caller, u128::MAX.saturated_into::<BalanceOf<T>>());
 }
 
 fn deposit_and_join_court<T>(caller: &T::AccountId)

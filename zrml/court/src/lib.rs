@@ -105,6 +105,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(3)]
         #[pallet::weight(1_000_000_000_000)]
         pub fn appeal(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             // TODO take a bond from the caller

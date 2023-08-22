@@ -621,6 +621,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
+        #[pallet::call_index(6)]
         #[pallet::weight(
             T::WeightInfo::dispute_authorized().saturating_add(
                 T::Court::on_dispute_max_weight().saturating_add(
