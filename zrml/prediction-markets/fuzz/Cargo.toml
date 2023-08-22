@@ -5,12 +5,12 @@ path = "pm_full_workflow.rs"
 test = false
 
 [dependencies]
-arbitrary = { features = ["derive"], version = "1.0" }
-frame-support = { branch = "polkadot-v0.9.32", default-features = false, git = "https://github.com/paritytech/substrate" }
-libfuzzer-sys = "0.4"
-zeitgeist-primitives = { features = ["arbitrary", "mock"], default-features = false, path = "../../../primitives" }
-zrml-prediction-markets = { features = ["mock"], path = ".." }
-zrml-simple-disputes = { path = "../../simple-disputes" }
+arbitrary = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true, features = ["default"] }
+libfuzzer-sys = { workspace = true }
+zeitgeist-primitives = { workspace = true, features = ["arbitrary", "mock", "default"] }
+zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
+zrml-simple-disputes = { workspace = true, features = ["default"] }
 
 [package]
 authors = ["Automatically generated"]
