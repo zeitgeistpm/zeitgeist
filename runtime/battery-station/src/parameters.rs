@@ -113,7 +113,7 @@ parameter_types! {
     /// The court lock identifier.
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
     /// The time in which the inflation is periodically issued.
-    pub const InflationPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
+    pub const InflationPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 4;
     /// The maximum number of delegations per juror account.
