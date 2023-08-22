@@ -97,6 +97,7 @@ moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polk
 # Moonbeam (wasm)
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.37-use-paritytech-dependencies-bench-fix", default-features = false }
 pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.37-use-paritytech-dependencies-bench-fix", default-features = false }
+pallet-randomness = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.37-use-paritytech-dependencies-bench-fix", default-features = false }
 session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.37-use-paritytech-dependencies-bench-fix", default-features = false }
 
 # ORML (wasm)
