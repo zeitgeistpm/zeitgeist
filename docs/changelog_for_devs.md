@@ -20,29 +20,16 @@ APIs/RPC interface.
 
 All things about Global Disputes Fix ⚠️ :
 
-- Added new dispatchable function:
-  - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
-    was destroyed.
-- Added the following events:
-  - `OutcomeOwnerRewarded` for `Possession::Paid`
-  - `OutcomeOwnersRewarded` for `Possession::Shared`
-  - `OutcomesFullyCleaned` and `OutcomesPartiallyCleaned` for extrinsic
-    `refund_vote_fees`
-- Removed the following events:
-- Added enum `Possession` with variants:
-  - `Paid { owner: AccountId, fee: Balance }`
-  - `Shared { owners: BoundedVec }`
-- `OutcomeInfo` has the following fields:
-  - `outcome_sum: Balance`
-  - `possession: Possession`
 - Replace `WinnerInfo` by `GlobalDisputeInfo` with the following fields:
   - `winner_outcome: OutcomeReport`
   - `outcome_info: OutcomeInfo`
   - `status: GdStatus`
-- Added `GdStatus` with the following enum variants:
-  - `Active { add_outcome_end: BlockNumber, vote_end: BlockNumber }`
-  - `Finished`
-  - `Destroyed`
+
+### Removed
+
+All things about Global Disputes Fix ⚠️ :
+- Removed the following event:
+  - `OutcomeOwnersRewardedWithNoFunds`
 
 ### Added
 
@@ -80,6 +67,27 @@ All things about Global Disputes Fix ⚠️ :
     by the losers. The losing jurors are those, who did not vote, or did not
     vote with the plurality, were denounced or did not reveal their vote.
   - `InflationSet` - The yearly inflation rate of the court system was set.
+
+All things about Global Disputes Fix ⚠️ :
+
+- Added new dispatchable function:
+  - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
+    was destroyed.
+- Added the following events:
+  - `OutcomeOwnerRewarded` for `Possession::Paid`
+  - `OutcomeOwnersRewarded` for `Possession::Shared`
+  - `OutcomesFullyCleaned` and `OutcomesPartiallyCleaned` for extrinsic
+    `refund_vote_fees`
+- Added enum `Possession` with variants:
+- `Paid { owner: AccountId, fee: Balance }`
+- `Shared { owners: BoundedVec }`
+- `OutcomeInfo` has the following fields:
+  - `outcome_sum: Balance`
+  - `possession: Possession`
+- Added `GdStatus` with the following enum variants:
+  - `Active { add_outcome_end: BlockNumber, vote_end: BlockNumber }`
+  - `Finished`
+  - `Destroyed`
 
 ## v0.3.11
 
