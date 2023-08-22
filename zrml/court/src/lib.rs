@@ -1311,12 +1311,12 @@ mod pallet {
             let remainder = total_mint.peek();
             if total_mint.drop_zero().is_err() {
                 log::warn!(
-                    "Total issued tokens were not completely distributed, total: \
-                     {:?}, leftover: {:?}",
+                    "Total issued tokens were not completely distributed, total: {:?}, leftover: \
+                     {:?}",
                     inflation_period_mint,
                     remainder
                 );
-                
+
                 T::Currency::burn(remainder);
                 debug_assert!(false);
             }
