@@ -958,9 +958,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.82"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "305fe645edc1442a0fa8b6726ba61d422798d37a52e12eaecf4b022ebbb88f01"
+checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
 dependencies = [
  "jobserver",
  "libc",
@@ -1794,7 +1794,7 @@ dependencies = [
  "frame-system",
  "log",
  "parity-scale-codec",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.38)",
+ "polkadot-runtime-common",
  "rand_chacha 0.3.1",
  "scale-info",
  "sp-io",
@@ -1865,7 +1865,7 @@ dependencies = [
  "frame-support",
  "log",
  "parity-scale-codec",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.38)",
+ "polkadot-runtime-common",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -3372,9 +3372,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.20"
+version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97ec8491ebaf99c8eaa73058b045fe58073cd6be7f596ac993ced0b0a0c01049"
+checksum = "91fc23aa11be92976ef4729127f1a74adf36d8436f7816b185d18df956790833"
 dependencies = [
  "bytes",
  "fnv",
@@ -4102,7 +4102,7 @@ dependencies = [
  "pallet-xcm-benchmarks",
  "parity-scale-codec",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "rustc-hex",
  "scale-info",
@@ -4141,7 +4141,7 @@ source = "git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-
 dependencies = [
  "frame-support",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "smallvec",
  "sp-core",
  "sp-runtime",
@@ -7112,12 +7112,12 @@ dependencies = [
 
 [[package]]
 name = "petgraph"
-version = "0.6.3"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dd7d28ee937e54fe3080c91faa1c3a46c06de6252988a7f4592ba2310ef22a4"
+checksum = "e1d3afd2628e69da2be385eb6f2fd57c8ac7977ceeff6dc166ff1657b0e386a9"
 dependencies = [
  "fixedbitset",
- "indexmap 1.9.3",
+ "indexmap 2.0.0",
 ]
 
 [[package]]
@@ -7304,7 +7304,7 @@ dependencies = [
  "polkadot-node-core-parachains-inherent",
  "polkadot-primitives",
  "polkadot-runtime",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "sc-client-api",
  "sc-consensus",
  "sc-executor",
@@ -8093,7 +8093,7 @@ dependencies = [
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "polkadot-runtime-constants",
  "polkadot-runtime-parachains",
  "rustc-hex",
@@ -8123,53 +8123,6 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
-]
-
-[[package]]
-name = "polkadot-runtime-common"
-version = "0.9.38"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.38#097ffd245c42aeff28cf80f8a3568e1bee2e7da7"
-dependencies = [
- "bitvec",
- "frame-election-provider-support",
- "frame-support",
- "frame-system",
- "impl-trait-for-tuples",
- "libsecp256k1",
- "log",
- "pallet-authorship",
- "pallet-bags-list",
- "pallet-balances",
- "pallet-beefy-mmr",
- "pallet-election-provider-multi-phase",
- "pallet-fast-unstake",
- "pallet-session",
- "pallet-staking",
- "pallet-staking-reward-fn",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-treasury",
- "pallet-vesting",
- "parity-scale-codec",
- "polkadot-primitives",
- "polkadot-runtime-parachains",
- "rustc-hex",
- "scale-info",
- "serde",
- "serde_derive",
- "slot-range-helper 0.9.38 (git+https://github.com/paritytech/polkadot?branch=release-v0.9.38)",
- "sp-api",
- "sp-beefy",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-npos-elections",
- "sp-runtime",
- "sp-session",
- "sp-staking",
- "sp-std",
- "static_assertions",
- "xcm",
 ]
 
 [[package]]
@@ -8206,7 +8159,7 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_derive",
- "slot-range-helper 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "slot-range-helper",
  "sp-api",
  "sp-beefy",
  "sp-core",
@@ -8228,7 +8181,7 @@ source = "git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-
 dependencies = [
  "frame-support",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "smallvec",
  "sp-core",
  "sp-runtime",
@@ -8460,7 +8413,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "rustc-hex",
  "scale-info",
@@ -8508,7 +8461,7 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-primitives",
  "polkadot-rpc",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "polkadot-service",
  "polkadot-test-runtime",
@@ -9248,7 +9201,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "rococo-runtime-constants",
  "scale-info",
@@ -9285,7 +9238,7 @@ source = "git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-
 dependencies = [
  "frame-support",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "smallvec",
  "sp-core",
  "sp-runtime",
@@ -10835,18 +10788,18 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.183"
+version = "1.0.185"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32ac8da02677876d532745a130fc9d8e6edfa81a269b107c5b00829b91d8eb3c"
+checksum = "be9b6f69f1dfd54c3b568ffa45c310d6973a5e5148fd40cf515acaf38cf5bc31"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.183"
+version = "1.0.185"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aafe972d60b0b9bee71a91b92fee2d4fb3c9d7e8f6b179aa99f27203d99a4816"
+checksum = "dc59dfdcbad1437773485e0367fea4b090a2e0a16d9ffc46af47764536a298ec"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11021,18 +10974,6 @@ name = "slice-group-by"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "826167069c09b99d56f31e9ae5c99049e932a98c9dc2dac47645b08dbbf76ba7"
-
-[[package]]
-name = "slot-range-helper"
-version = "0.9.38"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.38#097ffd245c42aeff28cf80f8a3568e1bee2e7da7"
-dependencies = [
- "enumn",
- "parity-scale-codec",
- "paste",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "slot-range-helper"
@@ -12274,7 +12215,7 @@ source = "git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-
 dependencies = [
  "frame-support",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "smallvec",
  "sp-core",
  "sp-runtime",
@@ -13757,7 +13698,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "rustc-hex",
  "scale-info",
@@ -13795,7 +13736,7 @@ source = "git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-
 dependencies = [
  "frame-support",
  "polkadot-primitives",
- "polkadot-runtime-common 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
+ "polkadot-runtime-common",
  "smallvec",
  "sp-core",
  "sp-runtime",
