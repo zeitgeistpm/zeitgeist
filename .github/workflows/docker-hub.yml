@@ -7,7 +7,17 @@ on:
     tags: [ '*' ]
 
 jobs:
+  hadolint:
+    runs-on: ubuntu-20.04
+    name: "Hadolint"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: "./Dockerfile"
+
   publish:
+    needs: hadolint
     name: Publish
     runs-on: ubuntu-latest
     steps:
@@ -28,3 +38,11 @@ jobs:
           else
             ./scripts/docker-hub-publish.sh ${GITHUB_SHA}
           fi
+
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'zeitgeistpm/zeitgeist-node:latest'
+          format: 'sarif'
+          output: 'zetgeist-node-report.sarif'
+          severity: 'HIGH,CRITICAL'

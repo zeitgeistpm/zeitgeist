@@ -40,25 +40,22 @@
 #![recursion_limit = "512"]
 #![allow(clippy::crate_in_macro_def)]
 
+pub mod fees;
 pub mod weights;
 
 #[macro_export]
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
+        #[cfg(feature = "try-runtime")]
+        use frame_try_runtime::{UpgradeCheckSelect, TryStateSelect};
+        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        // Migration for scheduler pallet to move from a plain RuntimeCall to a CallOrHash.
-        pub struct SchedulerMigrationV1toV4;
-        impl OnRuntimeUpgrade for SchedulerMigrationV1toV4 {
-            fn on_runtime_upgrade() -> frame_support::weights::Weight {
-                Scheduler::migrate_v1_to_v4()
-            }
-        }
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -87,7 +84,8 @@ macro_rules! decl_common_types {
             CheckEra<Runtime>,
             CheckNonce<Runtime>,
             CheckWeight<Runtime>,
-            ChargeTransactionPayment<Runtime>,
+            // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
+            pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
         );
         pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
         pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
@@ -169,6 +167,7 @@ macro_rules! decl_common_types {
         >;
 
         #[cfg(feature = "std")]
+        /// The version information used to identify this runtime when compiled natively.
         pub fn native_version() -> NativeVersion {
             NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
         }
@@ -210,24 +209,7 @@ macro_rules! decl_common_types {
             }
         }
 
-        pub struct DealWithFees;
-
-        type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-        impl OnUnbalanced<NegativeImbalance> for DealWithFees
-        {
-            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-                if let Some(mut fees) = fees_then_tips.next() {
-                    if let Some(tips) = fees_then_tips.next() {
-                        tips.merge_into(&mut fees);
-                    }
-                    let mut split = fees.ration(
-                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
-                        FEES_AND_TIPS_BURN_PERCENTAGE,
-                    );
-                    Treasury::on_unbalanced(split.0);
-                }
-            }
-        }
+        common_runtime::impl_fee_types!();
 
         pub mod opaque {
             //! Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -290,6 +272,7 @@ macro_rules! create_runtime {
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
+                AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -304,6 +287,7 @@ macro_rules! create_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 31,
                 Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
+                Contracts: pallet_contracts = 33,
 
                 // Third-party
                 AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
@@ -658,6 +642,29 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
 
+        impl pallet_contracts::Config for Runtime {
+            type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+            type CallFilter = ContractsCallfilter;
+            type CallStack = [pallet_contracts::Frame::<Runtime>; 5];
+            type ChainExtension = ();
+            type Currency = Balances;
+            type DeletionQueueDepth = ContractsDeletionQueueDepth;
+            type DeletionWeightLimit = ContractsDeletionWeightLimit;
+            type DepositPerItem = ContractsDepositPerItem;
+            type DepositPerByte = ContractsDepositPerByte;
+            type MaxCodeLen = ContractsMaxCodeLen;
+            type MaxDebugBufferLen = ContractsMaxDebugBufferLen;
+            type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
+            type Randomness = RandomnessCollectiveFlip;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeCall = RuntimeCall;
+            type Schedule = ContractsSchedule;
+            type Time = Timestamp;
+            type UnsafeUnstableInterface = ContractsUnsafeUnstableInterface;
+            type WeightPrice = pallet_transaction_payment::Pallet<Runtime>;
+            type WeightInfo = weights::pallet_contracts::WeightInfo<Runtime>;
+        }
+
         impl pallet_democracy::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
@@ -761,7 +768,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type DepositBase = DepositBase;
             type DepositFactor = DepositFactor;
-            type MaxSignatories = ConstU16<100>;
+            type MaxSignatories = ConstU32<100>;
             type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
         }
 
@@ -793,6 +800,61 @@ macro_rules! impl_config_traits {
                     ProxyType::Staking => matches!(c, RuntimeCall::ParachainStaking(..)),
                     #[cfg(not(feature = "parachain"))]
                     ProxyType::Staking => false,
+                    ProxyType::CreateEditMarket => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::create_market { .. })
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::edit_market { .. }
+                            )
+                    ),
+                    ProxyType::ReportOutcome => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::report { .. })
+                    ),
+                    ProxyType::Dispute => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::dispute { .. })
+                    ),
+                    ProxyType::ProvideLiquidity => matches!(
+                        c,
+                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
+                            )
+                    ),
+                    ProxyType::BuySellCompleteSets => matches!(
+                        c,
+                        RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::buy_complete_set { .. }
+                        ) | RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::sell_complete_set { .. }
+                        )
+                    ),
+                    ProxyType::Trading => matches!(
+                        c,
+                        RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                    ),
+                    ProxyType::HandleAssets => matches!(
+                        c,
+                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
+                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::buy_complete_set { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::sell_complete_set { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
+                            )
+                            | RuntimeCall::PredictionMarkets(
+                                zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
+                            )
+                    ),
                 }
             }
 
@@ -921,6 +983,14 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
         }
 
+        common_runtime::impl_foreign_fees!();
+
+        impl pallet_asset_tx_payment::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type Fungibles = Tokens;
+            type OnChargeAssetTransaction = TokensTxCharger;
+        }
+
         impl pallet_transaction_payment::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
@@ -945,7 +1015,7 @@ macro_rules! impl_config_traits {
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
-            type SpendOrigin = NeverEnsureOrigin<Balance>;
+            type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
         }
@@ -1177,6 +1247,10 @@ macro_rules! impl_config_traits {
 #[macro_export]
 macro_rules! create_runtime_api {
     ($($additional_apis:tt)*) => {
+        // Prints debug output of the `contracts` pallet to stdout if the node is
+        // started with `-lruntime::contracts=debug`.
+        const CONTRACTS_DEBUG_OUTPUT: bool = true;
+
         impl_runtime_apis! {
             #[cfg(feature = "parachain")]
             impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1257,6 +1331,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
+                    list_benchmark!(list, extra, pallet_contracts, Contracts);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
                     list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
@@ -1337,6 +1412,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
+                    add_benchmark!(params, batches, pallet_contracts, Contracts);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
                     add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
@@ -1384,6 +1460,76 @@ macro_rules! create_runtime_api {
             impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
                 fn account_nonce(account: AccountId) -> Index {
                     System::account_nonce(account)
+                }
+            }
+
+            impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
+                for Runtime
+            {
+                fn call(
+                    origin: AccountId,
+                    dest: AccountId,
+                    value: Balance,
+                    gas_limit: Option<Weight>,
+                    storage_deposit_limit: Option<Balance>,
+                    input_data: Vec<u8>,
+                ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+                    let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+                    Contracts::bare_call(
+                        origin,
+                        dest,
+                        value,
+                        gas_limit,
+                        storage_deposit_limit,
+                        input_data,
+                        CONTRACTS_DEBUG_OUTPUT,
+                        pallet_contracts::Determinism::Deterministic,
+                    )
+                }
+
+                fn instantiate(
+                    origin: AccountId,
+                    value: Balance,
+                    gas_limit: Option<Weight>,
+                    storage_deposit_limit: Option<Balance>,
+                    code: pallet_contracts_primitives::Code<Hash>,
+                    data: Vec<u8>,
+                    salt: Vec<u8>,
+                ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
+                {
+                    let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+                    Contracts::bare_instantiate(
+                        origin,
+                        value,
+                        gas_limit,
+                        storage_deposit_limit,
+                        code,
+                        data,
+                        salt,
+                        CONTRACTS_DEBUG_OUTPUT,
+                    )
+                }
+
+                fn upload_code(
+                    origin: AccountId,
+                    code: Vec<u8>,
+                    storage_deposit_limit: Option<Balance>,
+                    determinism: pallet_contracts::Determinism,
+                ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+                {
+                    Contracts::bare_upload_code(
+                        origin,
+                        code,
+                        storage_deposit_limit,
+                        determinism,
+                    )
+                }
+
+                fn get_storage(
+                    address: AccountId,
+                    key: Vec<u8>,
+                ) -> pallet_contracts_primitives::GetStorageResult {
+                    Contracts::get_storage(address, key)
                 }
             }
 
@@ -1564,27 +1710,31 @@ macro_rules! create_runtime_api {
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
                 }
+
+                fn get_all_spot_prices(
+                    pool_id: &PoolId,
+                    with_fees: bool,
+                ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+                    Swaps::get_all_spot_prices(pool_id, with_fees)
+                }
             }
 
             #[cfg(feature = "try-runtime")]
             impl frame_try_runtime::TryRuntime<Block> for Runtime {
-                fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
-                    log::info!("try-runtime::on_runtime_upgrade.");
-                    let weight = Executive::try_runtime_upgrade().unwrap();
+                fn on_runtime_upgrade(checks: UpgradeCheckSelect) -> (Weight, Weight) {
+                    let weight = Executive::try_runtime_upgrade(checks).unwrap();
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
 
-                fn execute_block(block: Block, state_root_check: bool, try_state: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
-                    log::info!(
-                        "try-runtime: executing block #{} {:?} / root checks: {:?} / try-state-select: {:?}",
-                        block.header.number,
-                        block.header.hash(),
-                        state_root_check,
-                        try_state,
-                    );
+                fn execute_block(
+                    block: Block,
+                    state_root_check: bool,
+                    signature_check: bool,
+                    select: TryStateSelect,
+                ) -> Weight {
                     // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
                     // have a backtrace here.
-                    Executive::try_execute_block(block, state_root_check, try_state).expect("execute-block failed")
+                    Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
                 }
             }
 
@@ -1872,55 +2022,7 @@ macro_rules! create_common_tests {
     {} => {
         #[cfg(test)]
         mod common_tests {
-            mod fees {
-                use crate::*;
-                use frame_support::{dispatch::DispatchClass, weights::Weight};
-                use sp_core::H256;
-                use sp_runtime::traits::Convert;
-
-                fn run_with_system_weight<F>(w: Weight, mut assertions: F)
-                where
-                    F: FnMut(),
-                {
-                    let mut t: sp_io::TestExternalities =
-                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-                    t.execute_with(|| {
-                        System::set_block_consumed_resources(w, 0);
-                        assertions()
-                    });
-                }
-
-                #[test]
-                fn treasury_receives_correct_amount_of_fees_and_tips() {
-                    let mut t: sp_io::TestExternalities =
-                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
-                    t.execute_with(|| {
-                        let fee_balance = 3 * ExistentialDeposit::get();
-                        let fee_imbalance = Balances::issue(fee_balance);
-                        let tip_balance = 7 * ExistentialDeposit::get();
-                        let tip_imbalance = Balances::issue(tip_balance);
-                        assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
-                        DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
-                        assert_eq!(
-                            Balances::free_balance(Treasury::account_id()),
-                            fee_balance + tip_balance,
-                        );
-                    });
-                }
-
-                #[test]
-                fn fee_multiplier_can_grow_from_zero() {
-                    let minimum_multiplier = MinimumMultiplier::get();
-                    let target = TargetBlockFullness::get()
-                        * RuntimeBlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
-                    // if the min is too small, then this will not change, and we are doomed forever.
-                    // the weight is 1/100th bigger than target.
-                    run_with_system_weight(target * 101 / 100, || {
-                        let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
-                        assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
-                    })
-                }
-            }
+            common_runtime::fee_tests!();
 
             mod dust_removal {
                 use crate::*;

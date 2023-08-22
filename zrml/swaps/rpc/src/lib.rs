@@ -34,6 +34,7 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
+use std::collections::BTreeMap;
 use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
@@ -42,8 +43,9 @@ pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 pub trait SwapsApi<BlockHash, BlockNumber, PoolId, AccountId, Balance, MarketId>
 where
     Balance: FromStr + Display + parity_scale_codec::MaxEncodedLen,
-    MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen,
+    MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen + Ord,
     PoolId: FromStr + Display,
+    BlockNumber: Ord + parity_scale_codec::MaxEncodedLen + Display + FromStr,
 {
     #[method(name = "swaps_poolSharesId", aliases = ["swaps_poolSharesIdAt"])]
     async fn pool_shares_id(
@@ -75,6 +77,14 @@ where
         with_fees: bool,
         blocks: Vec<BlockNumber>,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
+
+    #[method(name = "swaps_getAllSpotPrices")]
+    async fn get_all_spot_prices(
+        &self,
+        pool_id: PoolId,
+        with_fees: bool,
+        blocks: Vec<BlockNumber>,
+    ) -> RpcResult<BTreeMap<BlockNumber, Vec<(Asset<MarketId>, Balance)>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -110,12 +120,13 @@ impl<C, Block, PoolId, AccountId, Balance, MarketId>
     for Swaps<C, Block>
 where
     Block: BlockT,
+    NumberFor<Block>: MaxEncodedLen,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr + Send + 'static,
     AccountId: Clone + Display + Codec + Send + 'static,
     Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
-    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
+    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Ord + Send + 'static,
 {
     async fn pool_shares_id(
         &self,
@@ -204,5 +215,39 @@ where
                 Ok(res)
             })
             .collect()
+    }
+
+    async fn get_all_spot_prices(
+        &self,
+        pool_id: PoolId,
+        with_fees: bool,
+        blocks: Vec<NumberFor<Block>>,
+    ) -> RpcResult<BTreeMap<NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>>> {
+        let api = self.client.runtime_api();
+        Ok(blocks
+            .into_iter()
+            .map(
+                |block| -> Result<(NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>), CallError> {
+                    let hash = BlockId::number(block);
+                    let prices: Vec<(Asset<MarketId>, Balance)> = api
+                        .get_all_spot_prices(&hash, &pool_id, with_fees)
+                        .map_err(|e| {
+                            CallError::Custom(ErrorObject::owned(
+                                Error::RuntimeError.into(),
+                                "Unable to get_all_spot_prices: ApiError.",
+                                Some(format!("{:?}", e)),
+                            ))
+                        })?
+                        .map_err(|e| {
+                            CallError::Custom(ErrorObject::owned(
+                                Error::RuntimeError.into(),
+                                "Unable to get_all_spot_prices: DispatchError.",
+                                Some(format!("{:?}", e)),
+                            ))
+                        })?;
+                    Ok((block, prices))
+                },
+            )
+            .collect::<Result<BTreeMap<_, _>, _>>()?)
     }
 }

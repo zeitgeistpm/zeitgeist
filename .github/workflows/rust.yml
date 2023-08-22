@@ -1,9 +1,9 @@
 name: Rust
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+    types: [ labeled ]
+  push:
     branches: [ main ]
 
 env:
@@ -12,6 +12,11 @@ env:
 jobs:
   format:
     name: Format
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -30,8 +35,38 @@ jobs:
       - name: Format
         run: ./scripts/tests/format.sh --check
 
+  copyright:
+    name: Copyright Notices
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+      - name: Install check-license and dependencies
+        run: |
+          pip install scripts/check-license
+          pip install -r scripts/check-license/requirements.txt
+      - name: Query files changed
+        id: files_changed
+        uses: Ana06/get-changed-files@v1.2
+        with:
+          filter: '*.rs$'
+      - name: Check copyright notices
+        run: check-license ${{ steps.files_changed.outputs.added_modified }}
+
   checks:
     name: Checks
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -55,6 +90,11 @@ jobs:
 
   benchmark:
     name: Quick check benchmarks
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -65,8 +105,13 @@ jobs:
       
       - run: ./scripts/benchmarks/quick_check.sh
 
-  tests:
-    name: Tests
+  test_standalone:
+    name: Test standalone build
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -93,10 +138,50 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Tests
-        run: ./scripts/tests/test.sh
+        run: ./scripts/tests/test_standalone.sh
+
+  test_parachain:
+    name: Test parachain build
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
+      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+      - name: Free up disk space on GitHub hosted runners
+        run: |
+          # Ensure context is GitHub hosted runner
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
+            echo "Freeing up space in GitHub hosted runner"
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /opt/ghc
+            sudo rm -rf "/usr/local/share/boost"
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          fi
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Tests
+        run: ./scripts/tests/test_parachain.sh
 
   fuzz:
     name: Fuzz
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -113,4 +198,4 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
-      - run: ./scripts/tests/fuzz.sh
+      - run: ./scripts/tests/fuzz.sh --verbose
