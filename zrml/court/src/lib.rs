@@ -1274,7 +1274,7 @@ mod pallet {
             // safe guard: inflation per period should never exceed the yearly inflation amount
             if inflation_period_mint > yearly_inflation_amount {
                 debug_assert!(false);
-                return Weight::zero();
+                return T::WeightInfo::handle_inflation(0u32);
             }
 
             let mut total_mint = T::Currency::issue(inflation_period_mint);
@@ -1289,6 +1289,9 @@ mod pallet {
                 .fold(0u128, |acc, pool_item| {
                     acc.saturating_add(pool_item.stake.saturated_into::<u128>())
                 });
+            if total_stake.is_zero() {
+                return T::WeightInfo::handle_inflation(0u32);
+            }
             for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
                 if !at_least_one_inflation_period(joined_at) {
                     // participants who joined and didn't wait
@@ -1310,7 +1313,7 @@ mod pallet {
 
             let remainder = total_mint.peek();
             if total_mint.drop_zero().is_err() {
-                log::warn!(
+                log::debug!(
                     "Total issued tokens were not completely distributed, total: {:?}, leftover: \
                      {:?}",
                     inflation_period_mint,
@@ -1318,7 +1321,6 @@ mod pallet {
                 );
 
                 T::Currency::burn(remainder);
-                debug_assert!(false);
             }
 
             T::WeightInfo::handle_inflation(pool_len)
