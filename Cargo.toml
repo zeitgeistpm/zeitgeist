@@ -128,6 +128,7 @@ sc-network-common = { git = "https://github.com/paritytech/substrate", branch = 
 sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sc-storage-monitor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sc-sysinfo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
@@ -138,7 +139,6 @@ sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
-sc-storage-monitor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
