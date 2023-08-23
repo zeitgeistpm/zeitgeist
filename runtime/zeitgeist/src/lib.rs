@@ -105,7 +105,7 @@ pub type ContractsCallfilter = Nothing;
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Rikiddo and creation of markets using SimpleDisputes
+// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
