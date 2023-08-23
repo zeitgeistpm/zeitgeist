@@ -1262,7 +1262,7 @@ mod pallet {
                 .saturated_into::<u128>()
                 .saturated_into::<BalanceOf<T>>();
             if inflation_period_mint >= log_threshold {
-                log::error!(
+                log::warn!(
                     "Inflation per period is greater than the threshold. Inflation per period: \
                      {:?}, threshold: {:?}",
                     inflation_period_mint,
@@ -1274,10 +1274,8 @@ mod pallet {
             // safe guard: inflation per period should never exceed the yearly inflation amount
             if inflation_period_mint > yearly_inflation_amount {
                 debug_assert!(false);
-                return Weight::zero();
+                return T::WeightInfo::handle_inflation(0u32);
             }
-
-            let mut total_mint = T::Currency::issue(inflation_period_mint);
 
             let pool = <CourtPool<T>>::get();
             let pool_len = pool.len() as u32;
@@ -1289,6 +1287,12 @@ mod pallet {
                 .fold(0u128, |acc, pool_item| {
                     acc.saturating_add(pool_item.stake.saturated_into::<u128>())
                 });
+            if total_stake.is_zero() {
+                return T::WeightInfo::handle_inflation(0u32);
+            }
+
+            let mut total_mint = T::Currency::issue(inflation_period_mint);
+
             for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
                 if !at_least_one_inflation_period(joined_at) {
                     // participants who joined and didn't wait
@@ -1308,6 +1312,18 @@ mod pallet {
                 }
             }
 
+            let remainder = total_mint.peek();
+            if total_mint.drop_zero().is_err() {
+                log::debug!(
+                    "Total issued tokens were not completely distributed, total: {:?}, leftover: \
+                     {:?}",
+                    inflation_period_mint,
+                    remainder
+                );
+
+                T::Currency::burn(remainder);
+            }
+
             T::WeightInfo::handle_inflation(pool_len)
         }
 
@@ -1316,10 +1332,7 @@ mod pallet {
         // Uses Partial Fisher Yates shuffle and drawing without replacement.
         // The time complexity is O(n).
         // Return a vector of n unique random numbers between ´MinJurorStake´ and ´max´ (inclusive).
-        pub(crate) fn get_n_random_section_ends(
-            n: usize,
-            max: u128,
-        ) -> Result<BTreeSet<u128>, DispatchError> {
+        pub(crate) fn get_n_random_section_ends(n: usize, max: u128) -> BTreeSet<u128> {
             let mut rng = Self::rng();
 
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
@@ -1351,7 +1364,7 @@ mod pallet {
 
             debug_assert!(random_section_ends.len() == n);
 
-            Ok(random_section_ends)
+            random_section_ends
         }
 
         // Adds active lock amount.
@@ -1656,7 +1669,7 @@ mod pallet {
                 Error::<T>::NotEnoughJurorsAndDelegatorsStake
             );
             let random_section_ends =
-                Self::get_n_random_section_ends(draw_weight, total_unconsumed)?;
+                Self::get_n_random_section_ends(draw_weight, total_unconsumed);
             let selections =
                 Self::get_selections(&mut pool, random_section_ends, cumulative_section_ends);
             <CourtPool<T>>::put(pool);
