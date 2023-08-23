@@ -401,7 +401,15 @@ mod pallet {
         MaxCourtIdReached,
         /// The caller has not enough funds to join the court with the specified amount.
         AmountExceedsBalance,
-        /// After the first join of the court the amount has to be higher than the current stake.
+        /// After the first join of the court the amount has to be equal or higher than the current stake.
+        /// This is to ensure the slashable amount in active court rounds 
+        /// is still smaller or equal to the stake.
+        /// It is also necessary to calculate the `unconsumed` stake properly.
+        /// Otherwise a juror could just reduce the probability to get selected whenever they want.
+        /// But this has to be done by `prepare_exit_court` and `exit_court`.
+        /// Additionally, the `join_court` and `delegate` extrinsics 
+        /// use `extend_lock` and not `set_lock` or `remove_lock`.
+        /// This means those extrinsics are not meant to get out, but only to get into the court.
         AmountBelowLastJoin,
         /// The amount is too low to kick the lowest juror out of the stake-weighted pool.
         AmountBelowLowestJuror,
@@ -1161,7 +1169,7 @@ mod pallet {
             let mut joined_at = now;
 
             if let Some(prev_p_info) = <Participants<T>>::get(who) {
-                ensure!(amount > prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
+                ensure!(amount >= prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
 
                 if let Some((index, pool_item)) = Self::get_pool_item(&pool, prev_p_info.stake, who)
                 {

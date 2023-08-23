@@ -58,7 +58,8 @@ macro_rules! decl_common_types {
         type Migrations = (
             pallet_contracts::Migration<Runtime>,
             pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
-            zrml_prediction_markets::migrations::AddOutsiderAndDisputeBond<Runtime>,
+            // IMPORTANT that AddDisputeBond comes before MoveDataToSimpleDisputes!!!
+            zrml_prediction_markets::migrations::AddDisputeBond<Runtime>,
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
             // TODO check when to execute this migration and what happens for main-net, since global-disputes was only present on battery station
             zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
