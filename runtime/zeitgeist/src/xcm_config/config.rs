@@ -348,11 +348,11 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
 /// correctly convert their `MultiLocation` representation into our internal `Asset` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-        match location.clone() {
+        match location {
             MultiLocation { parents: 0, interior: X1(GeneralKey { data, length }) } => {
                 let key = &data[..data.len().min(length as usize)];
 
-                if &key[..] == zeitgeist::KEY {
+                if key == zeitgeist::KEY {
                     return Ok(CurrencyId::Ztg);
                 }
 
@@ -365,16 +365,16 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
                 let key = &data[..data.len().min(length as usize)];
 
                 if para_id == u32::from(ParachainInfo::parachain_id()) {
-                    if &key[..] == zeitgeist::KEY {
+                    if key == zeitgeist::KEY {
                         return Ok(CurrencyId::Ztg);
                     }
 
                     return Err(location);
                 }
 
-                AssetRegistry::location_to_asset_id(location.clone()).ok_or(location)
+                AssetRegistry::location_to_asset_id(location).ok_or(location)
             }
-            _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
+            _ => AssetRegistry::location_to_asset_id(location).ok_or(location),
         }
     }
 }
