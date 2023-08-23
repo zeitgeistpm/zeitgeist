@@ -32,8 +32,8 @@ use crate::{
 
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation};
-use xcm_emulator::{Limited, TestExt};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
+use xcm_emulator::{TestExt};
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmMetadata},
@@ -71,7 +71,7 @@ fn transfer_ztg_to_sibling() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -138,7 +138,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Bobs's balance is initial balance - amount transferred
@@ -208,7 +208,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -262,7 +262,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -329,7 +329,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -383,7 +383,7 @@ fn transfer_eth_zeitgeist_to_sibling() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -458,7 +458,7 @@ fn transfer_dot_to_relay_chain() {
                 )
                 .into()
             ),
-            xcm::latest::WeightLimit::Unlimited//Limited(frame_support::weights::Weight::from_parts(4_000_000_000, 256 * 1024u64))
+            WeightLimit::Unlimited,
         ));
 
         assert_eq!(
@@ -468,7 +468,7 @@ fn transfer_dot_to_relay_chain() {
     });
 
     PolkadotNet::execute_with(|| {
-        assert_eq!(polkadot_runtime::Balances::free_balance(&BOB), 19_578_565_860);
+        assert_eq!(polkadot_runtime::Balances::free_balance(&BOB), 19_637_471_000);
     });
 }
 
@@ -520,7 +520,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
                 )
                 .into()
             ),
-            Limited(4_000_000_000.into()),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
