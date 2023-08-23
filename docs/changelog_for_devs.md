@@ -111,7 +111,6 @@ All things about Global Disputes Fix ⚠️ :
 - Use pallet-asset-tx-payment for allowing to pay transaction fees in foreign
   currencies ([#1022]). This requires each transaction to specify the fee
   payment token with `asset_id` (`None` is ZTG).
-  > > > > > > > chralt98-court-overhaul
 
 ## v0.3.9
 
@@ -123,9 +122,6 @@ All things about Global Disputes Fix ⚠️ :
 
 - ⚠️ Add `outsider` field to `MarketBonds` struct. In particular, the `Market`
   struct's layout has changed ([#903]).
-
-  # v0.3.9
-
 - Adjust `deposit` function used to calculate storage fees for the following
   pallets: identity, multisig, preimage, proxy. The cost of adding an identity
   reduced from a minimum of 125 ZTG to a minimum of 1.5243 ZTG ([#1011])

@@ -47,8 +47,8 @@ const MARKET_COMMONS: &[u8] = b"MarketCommons";
 #[cfg(any(feature = "try-runtime", test))]
 const MARKETS: &[u8] = b"Markets";
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 5;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 6;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 6;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 7;
 
 #[derive(Clone, Decode, Encode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct OldMarketBonds<AI, BA> {

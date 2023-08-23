@@ -186,17 +186,10 @@ impl Contains<RuntimeCall> for IsCallable {
                     edit_market {
                         scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
                     } => false,
-                    // Disable Court dispute resolution mechanism
-                    create_market { dispute_mechanism: MarketDisputeMechanism::Court, .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: MarketDisputeMechanism::Court,
-                        ..
-                    } => false,
                     create_cpmm_market_and_deploy_assets {
                         dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
                         ..
                     } => false,
-                    edit_market { dispute_mechanism: MarketDisputeMechanism::Court, .. } => false,
                     edit_market {
                         dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
                         ..
