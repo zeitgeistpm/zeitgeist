@@ -54,6 +54,7 @@ const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 6;
 pub struct OldMarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
+    pub outsider: Option<Bond<AI, BA>>,
 }
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
@@ -91,21 +92,21 @@ pub(crate) type Markets<T: Config> = StorageMap<
     OldMarketOf<T>,
 >;
 
-pub struct AddOutsiderAndDisputeBond<T>(PhantomData<T>);
+pub struct AddDisputeBond<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAndDisputeBond<T> {
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBond<T> {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "AddOutsiderAndDisputeBond: market-commons version is {:?}, but {:?} is required",
+                "AddDisputeBond: market-commons version is {:?}, but {:?} is required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("AddOutsiderAndDisputeBond: Starting...");
+        log::info!("AddDisputeBond: Starting...");
 
         let mut translated = 0u64;
         zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(
@@ -141,7 +142,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
                     bonds: MarketBonds {
                         creation: old_market.bonds.creation,
                         oracle: old_market.bonds.oracle,
-                        outsider: None,
+                        outsider: old_market.bonds.outsider,
                         dispute: dispute_bond,
                     },
                 };
@@ -149,13 +150,13 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
                 Some(new_market)
             },
         );
-        log::info!("AddOutsiderAndDisputeBond: Upgraded {} markets.", translated);
+        log::info!("AddDisputeBond: Upgraded {} markets.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("AddOutsiderAndDisputeBond: Done!");
+        log::info!("AddDisputeBond: Done!");
         total_weight
     }
 
@@ -211,8 +212,8 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
             assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
             assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
             assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
+            assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
             // new fields
-            assert_eq!(new_market.bonds.outsider, None);
             // other dispute mechanisms are regarded in the migration after this migration
             if let MarketDisputeMechanism::Authorized = new_market.dispute_mechanism {
                 let old_disputes = crate::Disputes::<T>::get(market_id);
@@ -233,7 +234,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddOutsiderAn
         }
 
         log::info!(
-            "AddOutsiderAndDisputeBond: Market Counter post-upgrade is {}!",
+            "AddDisputeBond: Market Counter post-upgrade is {}!",
             new_market_count
         );
         assert!(new_market_count > 0);
@@ -257,7 +258,7 @@ mod tests {
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            AddOutsiderAndDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBond::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -275,7 +276,7 @@ mod tests {
                 MARKETS,
                 new_markets.clone(),
             );
-            AddOutsiderAndDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBond::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -291,7 +292,7 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            AddOutsiderAndDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBond::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -313,7 +314,7 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            AddOutsiderAndDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBond::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -344,12 +345,13 @@ mod tests {
         let old_bonds = OldMarketBonds {
             creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
+            outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
         };
         let dispute_bond = disputor.map(|disputor| Bond::new(disputor, DisputeBond::get()));
         let new_bonds = MarketBonds {
             creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
-            outsider: None,
+            outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
             dispute: dispute_bond,
         };
 
