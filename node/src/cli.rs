@@ -206,6 +206,10 @@ pub struct Cli {
     #[cfg(feature = "parachain")]
     #[clap(long)]
     pub parachain_id: Option<u32>,
+
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub storage_monitor: sc_storage_monitor::StorageMonitorParams,
 }
 
 impl SubstrateCli for Cli {
@@ -485,7 +489,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         prefix: Option<&'a StorageKey>,
         start_key: Option<&StorageKey>,
     ) -> sp_blockchain::Result<
-        KeyIterator<'a, <FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+        KeyIterator<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
     > {
         match_client!(self, storage_keys_iter(hash, prefix, start_key))
     }
@@ -515,7 +519,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         prefix: Option<&'a StorageKey>,
         start_key: Option<&StorageKey>,
     ) -> sp_blockchain::Result<
-        KeyIterator<'a, <FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+        KeyIterator<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
     > {
         match_client!(self, child_storage_keys_iter(hash, child_info, prefix, start_key))
     }

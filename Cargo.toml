@@ -138,6 +138,7 @@ sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
+sc-storage-monitor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38" }
