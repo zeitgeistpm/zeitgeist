@@ -1292,7 +1292,7 @@ mod pallet {
             }
 
             let mut total_mint = T::Currency::issue(inflation_period_mint);
-            
+
             for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
                 if !at_least_one_inflation_period(joined_at) {
                     // participants who joined and didn't wait
@@ -1332,10 +1332,7 @@ mod pallet {
         // Uses Partial Fisher Yates shuffle and drawing without replacement.
         // The time complexity is O(n).
         // Return a vector of n unique random numbers between ´MinJurorStake´ and ´max´ (inclusive).
-        pub(crate) fn get_n_random_section_ends(
-            n: usize,
-            max: u128,
-        ) -> Result<BTreeSet<u128>, DispatchError> {
+        pub(crate) fn get_n_random_section_ends(n: usize, max: u128) -> BTreeSet<u128> {
             let mut rng = Self::rng();
 
             let min_juror_stake = T::MinJurorStake::get().saturated_into::<u128>();
@@ -1367,7 +1364,7 @@ mod pallet {
 
             debug_assert!(random_section_ends.len() == n);
 
-            Ok(random_section_ends)
+            random_section_ends
         }
 
         // Adds active lock amount.
@@ -1672,7 +1669,7 @@ mod pallet {
                 Error::<T>::NotEnoughJurorsAndDelegatorsStake
             );
             let random_section_ends =
-                Self::get_n_random_section_ends(draw_weight, total_unconsumed)?;
+                Self::get_n_random_section_ends(draw_weight, total_unconsumed);
             let selections =
                 Self::get_selections(&mut pool, random_section_ends, cumulative_section_ends);
             <CourtPool<T>>::put(pool);
