@@ -20,7 +20,7 @@ check-dummy:
 	RUST_LOG=runtime=trace,try-runtime::cli=trace,executor=trace \
 		cargo run \
 		--bin=zeitgeist \
-		--features=parachain,try-runtime${ADDITIONAL_FEATURES} \
+		--features=parachain,try-runtime \
 		try-runtime \
 		--chain=${TRYRUNTIME_CHAIN} \
 		--runtime=${RUNTIME_PATH} \
