@@ -483,7 +483,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match_client!(self, storage_pairs(hash, key_prefix))
     }
 
-    fn storage_keys_iter<>(
+    fn storage_keys_iter(
         &self,
         hash: <Block as BlockT>::Hash,
         prefix: Option<&StorageKey>,
