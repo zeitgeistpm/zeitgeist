@@ -55,7 +55,17 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = ();
+        #[cfg(feature = "parachain")]
+        type Migrations = (
+            orml_asset_registry::Migration<Runtime>,
+            orml_unknown_tokens::Migration<Runtime>,
+            pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+        );
+
+        #[cfg(not(feature = "parachain"))]
+        type Migrations = (
+            pallet_grandpa::migrations::CleanupSetIdSessionMap<Runtime>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,
