@@ -124,7 +124,8 @@ impl Contains<RuntimeCall> for IsCallable {
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::RikiddoSigmoidFeeMarketEma,
+            MarketDisputeMechanism::{Court, SimpleDisputes},
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{
             create_cpmm_market_and_deploy_assets, create_market, edit_market,
