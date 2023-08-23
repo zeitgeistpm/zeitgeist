@@ -1277,8 +1277,6 @@ mod pallet {
                 return T::WeightInfo::handle_inflation(0u32);
             }
 
-            let mut total_mint = T::Currency::issue(inflation_period_mint);
-
             let pool = <CourtPool<T>>::get();
             let pool_len = pool.len() as u32;
             let at_least_one_inflation_period =
@@ -1292,6 +1290,9 @@ mod pallet {
             if total_stake.is_zero() {
                 return T::WeightInfo::handle_inflation(0u32);
             }
+
+            let mut total_mint = T::Currency::issue(inflation_period_mint);
+            
             for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
                 if !at_least_one_inflation_period(joined_at) {
                     // participants who joined and didn't wait
