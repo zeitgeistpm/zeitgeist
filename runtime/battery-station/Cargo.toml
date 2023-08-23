@@ -102,6 +102,7 @@ polkadot-runtime-parachains = { workspace = true, optional = true }
 rococo-runtime = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
+xcm-emulator = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
 
 # Zeitgeist
@@ -123,7 +124,6 @@ zrml-swaps-runtime-api = { workspace = true }
 [dev-dependencies]
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
-xcm-emulator = { workspace = true }
 
 [features]
 default = ["std"]
@@ -160,6 +160,7 @@ parachain = [
     "polkadot-runtime-parachains",
     "rococo-runtime",
     "xcm-builder",
+    "xcm-emulator",
     "xcm-executor",
     "xcm",
 
