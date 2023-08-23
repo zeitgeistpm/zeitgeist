@@ -500,7 +500,7 @@ fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::R
 
 #[cfg(feature = "parachain")]
 fn none_command(cli: Cli) -> sc_cli::Result<()> {
-    let runner = cli.create_runner(cli.run.normalize())?;
+    let runner = cli.create_runner(&cli.run.normalize())?;
 
     runner.run_node_until_exit(|parachain_config| async move {
         let chain_spec = &parachain_config.chain_spec;

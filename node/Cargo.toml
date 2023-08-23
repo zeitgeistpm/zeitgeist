@@ -169,6 +169,7 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
+    "polkadot-test-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [
