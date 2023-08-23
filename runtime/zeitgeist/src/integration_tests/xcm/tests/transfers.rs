@@ -33,7 +33,7 @@ use crate::{
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
-use xcm_emulator::{TestExt};
+use xcm_emulator::TestExt;
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmMetadata},
@@ -422,9 +422,7 @@ fn transfer_dot_from_relay_chain() {
         assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
             polkadot_runtime::RuntimeOrigin::signed(ALICE),
             Box::new(Parachain(zeitgeist::ID).into()),
-            Box::new(
-                Junction::AccountId32 { network: None, id: BOB.into() }.into()
-            ),
+            Box::new(Junction::AccountId32 { network: None, id: BOB.into() }.into()),
             Box::new((Here, transfer_amount).into()),
             0
         ));
@@ -452,11 +450,8 @@ fn transfer_dot_to_relay_chain() {
             FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
-                MultiLocation::new(
-                    1,
-                    X1(Junction::AccountId32 { id: BOB.into(), network: None })
-                )
-                .into()
+                MultiLocation::new(1, X1(Junction::AccountId32 { id: BOB.into(), network: None }))
+                    .into()
             ),
             WeightLimit::Unlimited,
         ));

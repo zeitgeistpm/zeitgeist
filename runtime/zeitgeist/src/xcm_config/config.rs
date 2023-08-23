@@ -18,16 +18,17 @@
 
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
-    AccountId, AssetManager, AssetRegistry, Balance, CurrencyId, MaxInstructions,
-    ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, RuntimeCall,
-    RuntimeOrigin, UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,UniversalLocation,MaxAssetsIntoHolding
+    AccountId, AssetManager, AssetRegistry, Balance, CurrencyId, MaxAssetsIntoHolding,
+    MaxInstructions, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork,
+    RuntimeCall, RuntimeOrigin, UnitWeightCost, UniversalLocation, UnknownTokens, XcmpQueue,
+    ZeitgeistTreasuryAccount,
 };
 
 use alloc::vec::Vec;
 use core::{cmp::min, marker::PhantomData};
 use frame_support::{
     parameter_types,
-    traits::{ConstU8, Everything, Nothing, Get},
+    traits::{ConstU8, Everything, Get, Nothing},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider, MultiCurrency};
@@ -39,15 +40,15 @@ use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
-        prelude::{XcmContext, AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, X1, X2},
+        prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, XcmContext, X1, X2},
         Error as XcmError, Junction, MultiLocation, Result as XcmResult,
     },
     opaque::latest::Fungibility::Fungible,
 };
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds,
-    ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+    AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, ParentIsPreset,
+    RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
     TakeWeightCredit,
 };
@@ -260,12 +261,20 @@ impl<
         TransactAssetDelegate,
     >
 {
-    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation, context: &XcmContext) -> XcmResult {
+    fn deposit_asset(
+        asset: &MultiAsset,
+        location: &MultiLocation,
+        context: &XcmContext,
+    ) -> XcmResult {
         let asset_adjusted = Self::adjust_fractional_places(asset);
         TransactAssetDelegate::deposit_asset(&asset_adjusted, location, context)
     }
 
-    fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation, maybe_context: Option<&XcmContext>) -> Result<Assets, XcmError> {
+    fn withdraw_asset(
+        asset: &MultiAsset,
+        location: &MultiLocation,
+        maybe_context: Option<&XcmContext>,
+    ) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
         TransactAssetDelegate::withdraw_asset(&asset_adjusted, location, maybe_context)
     }
@@ -274,7 +283,7 @@ impl<
         asset: &MultiAsset,
         from: &MultiLocation,
         to: &MultiLocation,
-        context: &XcmContext
+        context: &XcmContext,
     ) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
         TransactAssetDelegate::transfer_asset(&asset_adjusted, from, to, context)
@@ -443,18 +452,15 @@ pub type XcmRouter = (
 /// without overflowing and ensuring that the array is 0 padded in the case
 /// where `src.len()` is smaller than S.
 fn vec_to_fixed_array<const S: usize>(src: Vec<u8>) -> [u8; S] {
-	let mut dest = [0; S];
-	let len = min(src.len(), S);
-	dest[..len].copy_from_slice(&src.as_slice()[..len]);
+    let mut dest = [0; S];
+    let len = min(src.len(), S);
+    dest[..len].copy_from_slice(&src.as_slice()[..len]);
 
-	dest
+    dest
 }
 
 /// A utils function to un-bloat and simplify the instantiation of
 /// `GeneralKey` values
 pub fn general_key(data: &[u8]) -> Junction {
-    GeneralKey {
-        length: data.len().min(32) as u8,
-        data: vec_to_fixed_array(data.to_vec()),
-    }
+    GeneralKey { length: data.len().min(32) as u8, data: vec_to_fixed_array(data.to_vec()) }
 }

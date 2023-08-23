@@ -37,7 +37,10 @@ use sc_consensus::ImportQueue;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_network::NetworkService;
 use sc_network_common::service::NetworkBlock;
-use sc_service::{error::{Result as ServiceResult, Error as ServiceError}, Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
+use sc_service::{
+    error::{Error as ServiceError, Result as ServiceResult},
+    Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager,
+};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::SyncCryptoStorePtr;
@@ -396,9 +399,8 @@ where
             spawner,
             parachain_consensus,
             import_queue: import_queue_service,
-            collator_key: collator_key.ok_or_else(|| {
-                ServiceError::Other("Collator Key is None".to_string())
-            })?,
+            collator_key: collator_key
+                .ok_or_else(|| ServiceError::Other("Collator Key is None".to_string()))?,
             relay_chain_slot_duration,
         };
 

@@ -33,7 +33,7 @@ use crate::{
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
-use xcm_emulator::{TestExt};
+use xcm_emulator::TestExt;
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmMetadata},
@@ -301,9 +301,7 @@ fn transfer_roc_from_relay_chain() {
         assert_ok!(rococo_runtime::XcmPallet::reserve_transfer_assets(
             rococo_runtime::RuntimeOrigin::signed(ALICE),
             Box::new(Parachain(battery_station::ID).into()),
-            Box::new(
-                Junction::AccountId32 { network: None, id: BOB.into() }.into()
-            ),
+            Box::new(Junction::AccountId32 { network: None, id: BOB.into() }.into()),
             Box::new((Here, transfer_amount).into()),
             0
         ));
@@ -333,11 +331,8 @@ fn transfer_roc_to_relay_chain() {
             FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
-                MultiLocation::new(
-                    1,
-                    X1(Junction::AccountId32 { id: BOB.into(), network: None })
-                )
-                .into()
+                MultiLocation::new(1, X1(Junction::AccountId32 { id: BOB.into(), network: None }))
+                    .into()
             ),
             WeightLimit::Limited(4_000_000_000.into())
         ));

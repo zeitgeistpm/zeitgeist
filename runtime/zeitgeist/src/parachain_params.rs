@@ -27,7 +27,11 @@ use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
-use xcm::latest::{prelude::{X1, X2, GlobalConsensus, InteriorMultiLocation}, Junction::Parachain, MultiLocation, NetworkId};
+use xcm::latest::{
+    prelude::{GlobalConsensus, InteriorMultiLocation, X1, X2},
+    Junction::Parachain,
+    MultiLocation, NetworkId,
+};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,

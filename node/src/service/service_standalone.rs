@@ -18,7 +18,10 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::{cli::Cli, service::{AdditionalRuntimeApiCollection, RuntimeApiCollection}};
+use crate::{
+    cli::Cli,
+    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
+};
 use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
@@ -52,11 +55,12 @@ where
         >,
     Executor: NativeExecutionDispatch + 'static,
 {
-    let hwbench = (cli.no_hardware_benchmarks).then_some(
-        config.database.path().map(|database_path| {
+    let hwbench = (cli.no_hardware_benchmarks)
+        .then_some(config.database.path().map(|database_path| {
             let _ = std::fs::create_dir_all(&database_path);
             sc_sysinfo::gather_hwbench(Some(database_path))
-    })).flatten();
+        }))
+        .flatten();
 
     let sc_service::PartialComponents {
         client,
