@@ -23,7 +23,7 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("dev"), DB CACHE: 1024
 
 // Executed Command:
-// ./target/production/zeitgeist
+// ./target/release/zeitgeist
 // benchmark
 // pallet
 // --chain=dev
@@ -34,8 +34,8 @@
 // --execution=wasm
 // --wasm-execution=compiled
 // --heap-pages=4096
-// --template=./misc/weight_template.hbs
 // --output=./zrml/global-disputes/src/weights.rs
+// --template=./misc/weight_template.hbs
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
@@ -50,15 +50,16 @@ pub trait WeightInfoZeitgeist {
     fn unlock_vote_balance_set(l: u32, o: u32) -> Weight;
     fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight;
     fn add_vote_outcome(w: u32) -> Weight;
-    fn reward_outcome_owner_with_funds(o: u32) -> Weight;
-    fn reward_outcome_owner_no_funds(o: u32) -> Weight;
+    fn reward_outcome_owner_shared_possession(o: u32) -> Weight;
+    fn reward_outcome_owner_paid_possession() -> Weight;
     fn purge_outcomes(k: u32, o: u32) -> Weight;
+    fn refund_vote_fees(k: u32, o: u32) -> Weight;
 }
 
 /// Weight functions for zrml_global_disputes (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
-    // Storage: GlobalDisputes Winners (r:1 w:1)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:1 w:1)
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
@@ -72,7 +73,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:5 w:0)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:5 w:0)
     fn unlock_vote_balance_set(l: u32, o: u32) -> Weight {
         Weight::from_ref_time(54_445_996)
             // Standard Error: 8_942
@@ -86,7 +87,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:5 w:0)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:5 w:0)
     fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight {
         Weight::from_ref_time(61_165_913)
             // Standard Error: 9_374
@@ -97,7 +98,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(l.into())))
             .saturating_add(T::DbWeight::get().writes(2))
     }
-    // Storage: GlobalDisputes Winners (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:0)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn add_vote_outcome(_w: u32) -> Weight {
@@ -106,24 +108,26 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(3))
     }
     // Storage: GlobalDisputes Outcomes (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:1 w:0)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
     // Storage: System Account (r:2 w:2)
-    fn reward_outcome_owner_with_funds(o: u32) -> Weight {
-        Weight::from_ref_time(86_274_827)
-            // Standard Error: 107_080
-            .saturating_add(Weight::from_ref_time(31_467_061).saturating_mul(o.into()))
+    fn reward_outcome_owner_shared_possession(o: u32) -> Weight {
+        Weight::from_ref_time(36_741_000)
+            // Standard Error: 20_000
+            .saturating_add(Weight::from_ref_time(22_017_000).saturating_mul(o.into()))
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(o.into())))
             .saturating_add(T::DbWeight::get().writes(1))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(o.into())))
     }
     // Storage: GlobalDisputes Outcomes (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:1 w:0)
-    // Storage: System Account (r:1 w:0)
-    fn reward_outcome_owner_no_funds(_o: u32) -> Weight {
-        Weight::from_ref_time(54_754_528).saturating_add(T::DbWeight::get().reads(3))
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
+    // Storage: System Account (r:2 w:2)
+    fn reward_outcome_owner_paid_possession() -> Weight {
+        Weight::from_ref_time(56_000_000)
+            .saturating_add(T::DbWeight::get().reads(4))
+            .saturating_add(T::DbWeight::get().writes(2))
     }
-    // Storage: GlobalDisputes Winners (r:1 w:1)
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:1)
     // Storage: GlobalDisputes Outcomes (r:3 w:2)
     fn purge_outcomes(k: u32, _o: u32) -> Weight {
         Weight::from_ref_time(168_932_238)
@@ -132,6 +136,17 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(k.into())))
             .saturating_add(T::DbWeight::get().writes(2))
+            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(k.into())))
+    }
+    // Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
+    // Storage: GlobalDisputes Outcomes (r:3 w:2)
+    fn refund_vote_fees(k: u32, _o: u32) -> Weight {
+        Weight::from_ref_time(31_076_000)
+            // Standard Error: 4_000
+            .saturating_add(Weight::from_ref_time(13_543_000).saturating_mul(k.into()))
+            .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(k.into())))
+            .saturating_add(T::DbWeight::get().writes(1))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(k.into())))
     }
 }

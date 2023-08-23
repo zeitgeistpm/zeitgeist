@@ -70,7 +70,7 @@ mod pallet {
             ScoringRule, SubsidyUntil,
         },
     };
-    use zrml_global_disputes::GlobalDisputesPalletApi;
+    use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -97,6 +97,7 @@ mod pallet {
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
+    type InitialItemOf<T> = InitialItem<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
 
     macro_rules! impl_unreserve_bond {
         ($fn_name:ident, $bond_type:ident) => {
@@ -340,6 +341,10 @@ mod pallet {
 
             if market_status == MarketStatus::Proposed {
                 MarketIdsForEdit::<T>::remove(market_id);
+            }
+
+            if T::GlobalDisputes::is_active(&market_id) {
+                T::GlobalDisputes::destroy_global_dispute(&market_id)?;
             }
 
             // NOTE: Currently we don't clean up outcome assets.
@@ -1446,7 +1451,10 @@ mod pallet {
             ensure_signed(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+            ensure!(
+                matches!(market.status, MarketStatus::Disputed | MarketStatus::Reported),
+                Error::<T>::InvalidMarketStatus
+            );
 
             ensure!(
                 matches!(market.dispute_mechanism, MarketDisputeMechanism::Court),
@@ -1454,8 +1462,8 @@ mod pallet {
             );
 
             ensure!(
-                T::GlobalDisputes::is_not_started(&market_id),
-                Error::<T>::GlobalDisputeAlreadyStarted
+                !T::GlobalDisputes::does_exist(&market_id),
+                Error::<T>::GlobalDisputeExistsAlready
             );
 
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
@@ -1482,43 +1490,47 @@ mod pallet {
                 }
             };
 
-            T::GlobalDisputes::push_voting_outcome(
-                &market_id,
-                report.outcome.clone(),
-                &report.by,
-                <BalanceOf<T>>::zero(),
-            )?;
+            let mut initial_items: Vec<InitialItemOf<T>> = Vec::new();
+
+            initial_items.push(InitialItemOf::<T> {
+                outcome: report.outcome.clone(),
+                owner: report.by.clone(),
+                amount: <BalanceOf<T>>::zero(),
+            });
 
             let gd_items = res_1.result;
 
             // push vote outcomes other than the report outcome
             for GlobalDisputeItem { outcome, owner, initial_vote_amount } in gd_items {
-                T::GlobalDisputes::push_voting_outcome(
-                    &market_id,
+                initial_items.push(InitialItemOf::<T> {
                     outcome,
-                    &owner,
-                    initial_vote_amount,
-                )?;
+                    owner,
+                    amount: initial_vote_amount,
+                });
             }
 
             // ensure, that global disputes controls the resolution now
             // it does not end after the dispute period now, but after the global dispute end
+
             // ignore first of tuple because we always have max disputes
             let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
 
-            let now = <frame_system::Pallet<T>>::block_number();
-            let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
-            let market_ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
-                global_dispute_end,
-                |ids| -> Result<u32, DispatchError> {
-                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                    Ok(ids.len() as u32)
-                },
-            )?;
+            if market.status == MarketStatus::Reported {
+                // this is the case that a dispute can not be initiated,
+                // because court has not enough juror and delegator stake (dispute errors)
+                <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
+                    m.status = MarketStatus::Disputed;
+                    Ok(())
+                })?;
+            }
+
+            // global disputes uses DisputeResolution API to control its resolution
+            let ids_len_1 =
+                T::GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice())?;
 
             Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-            Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len, ids_len_2)).into())
+            Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
         }
     }
 
@@ -1587,10 +1599,12 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// See [`GlobalDisputesPalletApi`].
-        type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, Self::AccountId, BalanceOf<Self>>;
-
-        /// The number of blocks the global dispute period remains open.
-        type GlobalDisputePeriod: Get<Self::BlockNumber>;
+        type GlobalDisputes: GlobalDisputesPalletApi<
+                MarketIdOf<Self>,
+                Self::AccountId,
+                BalanceOf<Self>,
+                Self::BlockNumber,
+            >;
 
         type LiquidityMining: LiquidityMiningPalletApi<
                 AccountId = Self::AccountId,
@@ -1794,12 +1808,12 @@ mod pallet {
         OracleDurationGreaterThanMaxOracleDuration,
         /// The weights length has to be equal to the assets length.
         WeightsLenMustEqualAssetsLen,
-        /// The start of the global dispute for this market happened already.
-        GlobalDisputeAlreadyStarted,
         /// Provided base_asset is not allowed to be used as base_asset.
         InvalidBaseAsset,
         /// A foreign asset in not registered in AssetRegistry.
         UnregisteredForeignAsset,
+        /// The start of the global dispute for this market happened already.
+        GlobalDisputeExistsAlready,
     }
 
     #[pallet::event]

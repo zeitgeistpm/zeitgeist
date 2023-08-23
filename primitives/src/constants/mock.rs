@@ -53,12 +53,14 @@ parameter_types! {
 
 // Global disputes parameters
 parameter_types! {
+    pub const AddOutcomePeriod: BlockNumber = 20;
     pub const GlobalDisputeLockId: LockIdentifier = *b"zge/vote";
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
     pub const MaxGlobalDisputeVotes: u32 = 50;
     pub const MaxOwners: u32 = 10;
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     pub const RemoveKeysLimit: u32 = 250;
+    pub const GdVotingPeriod: BlockNumber = 140;
     pub const VotingOutcomeFee: Balance = 100 * CENT;
 }
 
@@ -70,8 +72,8 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const DisputeBond: Balance = 20 * BASE;
-    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const DisputeBond: Balance = 5 * BASE;
+    pub const DisputeFactor: Balance = 2 * BASE;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputeDuration: BlockNumber = 50;
     pub const MaxDisputes: u16 = 6;

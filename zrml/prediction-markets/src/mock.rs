@@ -57,8 +57,8 @@ use zeitgeist_primitives::{
 };
 
 use zeitgeist_primitives::constants::mock::{
-    GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
-    MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
+    AddOutcomePeriod, GdVotingPeriod, GlobalDisputeLockId, GlobalDisputesPalletId,
+    MaxGlobalDisputeVotes, MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
 };
 
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -124,7 +124,6 @@ impl crate::Config for Runtime {
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
-    type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
@@ -314,7 +313,9 @@ impl zrml_simple_disputes::Config for Runtime {
 }
 
 impl zrml_global_disputes::Config for Runtime {
+    type AddOutcomePeriod = AddOutcomePeriod;
     type RuntimeEvent = RuntimeEvent;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -323,6 +324,7 @@ impl zrml_global_disputes::Config for Runtime {
     type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
+    type GdVotingPeriod = GdVotingPeriod;
     type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }

@@ -61,6 +61,8 @@ macro_rules! decl_common_types {
             // IMPORTANT that AddDisputeBond comes before MoveDataToSimpleDisputes!!!
             zrml_prediction_markets::migrations::AddDisputeBond<Runtime>,
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
+            // TODO check when to execute this migration and what happens for main-net, since global-disputes was only present on battery station
+            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
         );
 
         pub type Executive = frame_executive::Executive<
@@ -1094,7 +1096,6 @@ macro_rules! impl_config_traits {
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
             type GlobalDisputes = GlobalDisputes;
-            type GlobalDisputePeriod = GlobalDisputePeriod;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
@@ -1156,7 +1157,9 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_global_disputes::Config for Runtime {
+            type AddOutcomePeriod = AddOutcomePeriod;
             type Currency = Balances;
+            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type RuntimeEvent = RuntimeEvent;
             type GlobalDisputeLockId = GlobalDisputeLockId;
             type GlobalDisputesPalletId = GlobalDisputesPalletId;
@@ -1165,6 +1168,7 @@ macro_rules! impl_config_traits {
             type MaxOwners = MaxOwners;
             type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
             type RemoveKeysLimit = RemoveKeysLimit;
+            type GdVotingPeriod = GdVotingPeriod;
             type VotingOutcomeFee = VotingOutcomeFee;
             type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
         }
