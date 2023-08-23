@@ -435,7 +435,6 @@ fn transfer_dot_from_relay_chain() {
 
 #[test]
 fn transfer_dot_to_relay_chain() {
-    let _ = env_logger::try_init();
     TestNet::reset();
 
     let transfer_amount: Balance = dot(2);

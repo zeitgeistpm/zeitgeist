@@ -120,7 +120,6 @@ zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
-env_logger = "0.9"
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
 
