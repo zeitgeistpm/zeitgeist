@@ -34,9 +34,21 @@ parameter_types! {
 
 // Court
 parameter_types! {
-    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    pub const AppealBond: Balance = 5 * BASE;
+    pub const AppealBondFactor: Balance = 2 * BASE;
+    pub const BlocksPerYear: BlockNumber = 10000;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-    pub const StakeWeight: u128 = 2 * BASE;
+    pub const RequestInterval: BlockNumber = 15;
+    pub const VotePeriod: BlockNumber = 3;
+    pub const AggregationPeriod: BlockNumber = 4;
+    pub const AppealPeriod: BlockNumber = 5;
+    pub const LockId: LockIdentifier = *b"zge/cloc";
+    pub const MaxAppeals: u32 = 4;
+    pub const MaxDelegations: u32 = 5;
+    pub const MaxSelectedDraws: u32 = 510;
+    pub const MaxCourtParticipants: u32 = 1_000;
+    pub const MinJurorStake: Balance = 50 * CENT;
+    pub const InflationPeriod: BlockNumber = 20;
 }
 
 // Global disputes parameters

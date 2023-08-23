@@ -26,7 +26,7 @@ use super::{Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
-    traits::WithdrawReasons,
+    traits::{LockIdentifier, WithdrawReasons},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
         Weight,
@@ -42,9 +42,6 @@ use sp_runtime::{
 };
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
-
-#[cfg(feature = "with-global-disputes")]
-use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
@@ -98,13 +95,37 @@ parameter_types! {
     pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
-    /// Duration of a single court case.
-    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    /// (Slashable) Bond that is provided for overriding the last appeal.
+    /// This bond increases exponentially with the number of appeals.
+    /// Slashed in case the final outcome does match the appealed outcome for which the `AppealBond`
+    /// was deposited.
+    pub const AppealBond: Balance = 5 * BASE;
+    /// The blocks per year required to calculate the yearly inflation for court incentivisation.
+    pub const BlocksPerYear: BlockNumber = BLOCKS_PER_YEAR;
     /// Pallet identifier, mainly used for named balance reserves.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
-    /// This value is multiplied by the current number of jurors to determine the stake
-    /// the juror has to pay.
-    pub const StakeWeight: u128 = 2 * BASE;
+    /// The time in which the jurors can cast their secret vote.
+    pub const CourtVotePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The time in which the jurors should reveal their secret vote.
+    pub const CourtAggregationPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The time in which a court case can get appealed.
+    pub const CourtAppealPeriod: BlockNumber = BLOCKS_PER_DAY;
+    /// The court lock identifier.
+    pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
+    /// The time in which the inflation is periodically issued.
+    pub const InflationPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The maximum number of appeals until the court fails.
+    pub const MaxAppeals: u32 = 4;
+    /// The maximum number of delegations per juror account.
+    pub const MaxDelegations: u32 = 5;
+    /// The maximum number of randomly selected `MinJurorStake` draws / atoms of jurors for a dispute.
+    pub const MaxSelectedDraws: u32 = 510;
+    /// The maximum number of jurors / delegators that can be registered.
+    pub const MaxCourtParticipants: u32 = 1_000;
+    /// The minimum stake a user needs to reserve to become a juror.
+    pub const MinJurorStake: Balance = 500 * BASE;
+    /// The interval for requesting multiple court votes at once.
+    pub const RequestInterval: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.
@@ -379,7 +400,6 @@ parameter_types! {
          WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
-#[cfg(feature = "with-global-disputes")]
 parameter_types! {
     // Global Disputes
     /// Vote lock identifier, mainly used for the LockableCurrency on the native token.

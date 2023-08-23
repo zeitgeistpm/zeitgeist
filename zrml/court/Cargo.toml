@@ -5,7 +5,9 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 rand = { workspace = true, features = ["alloc", "std_rng"] }
+rand_chacha = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
+sp-arithmetic = { workspace = true }
 sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
@@ -14,8 +16,11 @@ zrml-market-commons = { workspace = true }
 pallet-balances = { workspace = true, features = ["default"] }
 pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
+pallet-treasury = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
+
+test-case = { workspace = true }
 
 [features]
 default = ["std"]

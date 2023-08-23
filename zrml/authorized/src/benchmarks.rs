@@ -134,7 +134,7 @@ benchmarks! {
         let report = AuthorityReport { resolve_at: 0u32.into(), outcome: OutcomeReport::Scalar(0) };
         AuthorizedOutcomeReports::<T>::insert(market_id, report);
     }: {
-        Authorized::<T>::get_auto_resolve(&market_id, &market).unwrap();
+        Authorized::<T>::get_auto_resolve(&market_id, &market);
     }
 
     has_failed_weight {

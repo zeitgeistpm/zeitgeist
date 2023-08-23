@@ -105,7 +105,7 @@ pub type ContractsCallfilter = Nothing;
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
+// Currently disables Rikiddo and creation of markets using SimpleDisputes
 // dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
@@ -124,8 +124,7 @@ impl Contains<RuntimeCall> for IsCallable {
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            MarketDisputeMechanism::SimpleDisputes, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{
             create_cpmm_market_and_deploy_assets, create_market, edit_market,
@@ -163,7 +162,6 @@ impl Contains<RuntimeCall> for IsCallable {
             },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
-            RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
             RuntimeCall::LiquidityMining(_) => false,
@@ -172,11 +170,11 @@ impl Contains<RuntimeCall> for IsCallable {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                    // Disable SimpleDisputes dispute resolution mechanism
+                    create_market { dispute_mechanism: SimpleDisputes, .. } => false,
+                    edit_market { dispute_mechanism: SimpleDisputes, .. } => false,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
+                        dispute_mechanism: SimpleDisputes,
                         ..
                     } => false,
                     _ => true,
@@ -214,12 +212,6 @@ impl Contains<RuntimeCall> for IsCallable {
 
 decl_common_types!();
 
-#[cfg(feature = "with-global-disputes")]
-create_runtime_with_additional_pallets!(
-    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
-);
-
-#[cfg(not(feature = "with-global-disputes"))]
 create_runtime_with_additional_pallets!();
 
 impl_config_traits!();

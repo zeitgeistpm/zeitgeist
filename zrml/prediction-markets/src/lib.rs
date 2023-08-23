@@ -60,20 +60,17 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
-        traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
+        traits::{
+            DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
+        },
         types::{
-            Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-            MarketPeriod, MarketStatus, MarketType, MultiHash, OldMarketDispute, OutcomeReport,
-            Report, ResultWithWeightInfo, ScalarPosition, ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
+            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
+            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
+            ScoringRule, SubsidyUntil,
         },
     };
-    #[cfg(feature = "with-global-disputes")]
-    use {
-        zeitgeist_primitives::types::GlobalDisputeItem,
-        zrml_global_disputes::GlobalDisputesPalletApi,
-    };
-
-    use zeitgeist_primitives::traits::DisputeMaxWeightApi;
+    use zrml_global_disputes::GlobalDisputesPalletApi;
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -1429,15 +1426,14 @@ mod pallet {
             Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
 
-        /// When the `MaxDisputes` amount of disputes is reached,
-        /// this allows to start a global dispute.
+        /// Start a global dispute, if the market dispute mechanism fails.
         ///
         /// # Arguments
         ///
         /// * `market_id`: The identifier of the market.
         ///
         /// NOTE:
-        /// The outcomes of the disputes and the report outcome
+        /// The returned outcomes of the market dispute mechanism and the report outcome
         /// are added to the global dispute voting outcomes.
         /// The bond of each dispute is the initial vote amount.
         #[pallet::call_index(16)]
@@ -1445,98 +1441,84 @@ mod pallet {
         #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
-            #[allow(dead_code, unused)]
-            #[pallet::compact]
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            #[cfg(feature = "with-global-disputes")]
-            {
-                let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-                ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
-                ensure!(
-                    market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                    Error::<T>::InvalidDisputeMechanism
-                );
+            ensure!(
+                matches!(market.dispute_mechanism, MarketDisputeMechanism::Court),
+                Error::<T>::InvalidDisputeMechanism
+            );
 
-                ensure!(
-                    T::GlobalDisputes::is_not_started(&market_id),
-                    Error::<T>::GlobalDisputeAlreadyStarted
-                );
+            ensure!(
+                T::GlobalDisputes::is_not_started(&market_id),
+                Error::<T>::GlobalDisputeAlreadyStarted
+            );
 
-                let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
-                // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
+            let res_0 = match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    T::Authorized::has_failed(&market_id, &market)?
+                }
+                MarketDisputeMechanism::Court => T::Court::has_failed(&market_id, &market)?,
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::has_failed(&market_id, &market)?
+                }
+            };
+            let has_failed = res_0.result;
+            ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-                let res_0 = match market.dispute_mechanism {
-                    MarketDisputeMechanism::Authorized => {
-                        T::Authorized::has_failed(&market_id, &market)?
-                    }
-                    MarketDisputeMechanism::Court => T::Court::has_failed(&market_id, &market)?,
-                    MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::has_failed(&market_id, &market)?
-                    }
-                };
-                let has_failed = res_0.result;
-                ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
+            let res_1 = match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized => {
+                    T::Authorized::on_global_dispute(&market_id, &market)?
+                }
+                MarketDisputeMechanism::Court => T::Court::on_global_dispute(&market_id, &market)?,
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::on_global_dispute(&market_id, &market)?
+                }
+            };
 
-                let res_1 = match market.dispute_mechanism {
-                    MarketDisputeMechanism::Authorized => {
-                        T::Authorized::on_global_dispute(&market_id, &market)?
-                    }
-                    MarketDisputeMechanism::Court => {
-                        T::Court::on_global_dispute(&market_id, &market)?
-                    }
-                    MarketDisputeMechanism::SimpleDisputes => {
-                        T::SimpleDisputes::on_global_dispute(&market_id, &market)?
-                    }
-                };
+            T::GlobalDisputes::push_voting_outcome(
+                &market_id,
+                report.outcome.clone(),
+                &report.by,
+                <BalanceOf<T>>::zero(),
+            )?;
 
-                let gd_items = res_1.result;
+            let gd_items = res_1.result;
 
+            // push vote outcomes other than the report outcome
+            for GlobalDisputeItem { outcome, owner, initial_vote_amount } in gd_items {
                 T::GlobalDisputes::push_voting_outcome(
                     &market_id,
-                    report.outcome.clone(),
-                    &report.by,
-                    <BalanceOf<T>>::zero(),
+                    outcome,
+                    &owner,
+                    initial_vote_amount,
                 )?;
-
-                // push vote outcomes other than the report outcome
-                for GlobalDisputeItem { outcome, owner, initial_vote_amount } in gd_items {
-                    T::GlobalDisputes::push_voting_outcome(
-                        &market_id,
-                        outcome,
-                        &owner,
-                        initial_vote_amount,
-                    )?;
-                }
-
-                // TODO(#372): Allow court with global disputes.
-                // ensure, that global disputes controls the resolution now
-                // it does not end after the dispute period now, but after the global dispute end
-
-                // ignore first of tuple because we always have max disputes
-                let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
-
-                let now = <frame_system::Pallet<T>>::block_number();
-                let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
-                let market_ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
-                    global_dispute_end,
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?;
-
-                Self::deposit_event(Event::GlobalDisputeStarted(market_id));
-
-                Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len, ids_len_2)).into())
             }
 
-            #[cfg(not(feature = "with-global-disputes"))]
-            Err(Error::<T>::GlobalDisputesDisabled.into())
+            // ensure, that global disputes controls the resolution now
+            // it does not end after the dispute period now, but after the global dispute end
+            // ignore first of tuple because we always have max disputes
+            let (_, ids_len_2) = Self::clear_auto_resolve(&market_id)?;
+
+            let now = <frame_system::Pallet<T>>::block_number();
+            let global_dispute_end = now.saturating_add(T::GlobalDisputePeriod::get());
+            let market_ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
+                global_dispute_end,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
+
+            Self::deposit_event(Event::GlobalDisputeStarted(market_id));
+
+            Ok(Some(T::WeightInfo::start_global_dispute(market_ids_len, ids_len_2)).into())
         }
     }
 
@@ -1605,11 +1587,9 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// See [`GlobalDisputesPalletApi`].
-        #[cfg(feature = "with-global-disputes")]
         type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, Self::AccountId, BalanceOf<Self>>;
 
         /// The number of blocks the global dispute period remains open.
-        #[cfg(feature = "with-global-disputes")]
         type GlobalDisputePeriod: Get<Self::BlockNumber>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
@@ -1732,8 +1712,6 @@ mod pallet {
         EditorNotCreator,
         /// EditReason's length greater than MaxEditReasonLen.
         EditReasonLengthExceedsMaxEditReasonLen,
-        /// The global dispute resolution system is disabled.
-        GlobalDisputesDisabled,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
@@ -2240,13 +2218,13 @@ mod pallet {
                     let ResultWithWeightInfo { result: auto_resolve_block_opt, weight: _ } =
                         match market.dispute_mechanism {
                             MarketDisputeMechanism::Authorized => {
-                                T::Authorized::get_auto_resolve(market_id, &market)?
+                                T::Authorized::get_auto_resolve(market_id, &market)
                             }
                             MarketDisputeMechanism::Court => {
-                                T::Court::get_auto_resolve(market_id, &market)?
+                                T::Court::get_auto_resolve(market_id, &market)
                             }
                             MarketDisputeMechanism::SimpleDisputes => {
-                                T::SimpleDisputes::get_auto_resolve(market_id, &market)?
+                                T::SimpleDisputes::get_auto_resolve(market_id, &market)
                             }
                         };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
@@ -2615,7 +2593,6 @@ mod pallet {
             let mut resolved_outcome_option = None;
             let mut weight = Weight::zero();
 
-            #[cfg(feature = "with-global-disputes")]
             if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
                 resolved_outcome_option = Some(o);
             }

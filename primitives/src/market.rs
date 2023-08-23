@@ -178,6 +178,7 @@ pub enum MarketCreation {
 }
 
 /// Defines a global dispute item for the initialisation of a global dispute.
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct GlobalDisputeItem<AccountId, Balance> {
     /// The account that already paid somehow for the outcome.
     pub owner: AccountId,
