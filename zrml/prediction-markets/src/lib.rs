@@ -1994,6 +1994,7 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
+    // TODO after storage migration of release-dispute-system branch is complete, delete this Disputes storage item
     /// For each market, this holds the dispute information for each dispute that's
     /// been issued.
     #[pallet::storage]

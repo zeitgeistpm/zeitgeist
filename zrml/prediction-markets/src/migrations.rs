@@ -233,10 +233,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
             }
         }
 
-        log::info!(
-            "AddDisputeBond: Market Counter post-upgrade is {}!",
-            new_market_count
-        );
+        log::info!("AddDisputeBond: Market Counter post-upgrade is {}!", new_market_count);
         assert!(new_market_count > 0);
         Ok(())
     }
