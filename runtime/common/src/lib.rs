@@ -47,11 +47,15 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin, TryStateSelect};
+        #[cfg(feature = "try-runtime")]
+        use frame_try_runtime::{UpgradeCheckSelect, TryStateSelect};
+        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
+
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -59,6 +63,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
+            Migrations,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -155,6 +160,7 @@ macro_rules! decl_common_types {
         >;
 
         #[cfg(feature = "std")]
+        /// The version information used to identify this runtime when compiled natively.
         pub fn native_version() -> NativeVersion {
             NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
         }
@@ -629,7 +635,7 @@ macro_rules! impl_config_traits {
 
         impl pallet_contracts::Config for Runtime {
             type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
-            type CallFilter = frame_support::traits::Nothing;
+            type CallFilter = ContractsCallfilter;
             type CallStack = [pallet_contracts::Frame::<Runtime>; 5];
             type ChainExtension = ();
             type Currency = Balances;
@@ -638,12 +644,14 @@ macro_rules! impl_config_traits {
             type DepositPerItem = ContractsDepositPerItem;
             type DepositPerByte = ContractsDepositPerByte;
             type MaxCodeLen = ContractsMaxCodeLen;
+            type MaxDebugBufferLen = ContractsMaxDebugBufferLen;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
             type Randomness = RandomnessCollectiveFlip;
             type RuntimeEvent = RuntimeEvent;
             type RuntimeCall = RuntimeCall;
             type Schedule = ContractsSchedule;
             type Time = Timestamp;
+            type UnsafeUnstableInterface = ContractsUnsafeUnstableInterface;
             type WeightPrice = pallet_transaction_payment::Pallet<Runtime>;
             type WeightInfo = weights::pallet_contracts::WeightInfo<Runtime>;
         }
@@ -751,7 +759,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type DepositBase = DepositBase;
             type DepositFactor = DepositFactor;
-            type MaxSignatories = ConstU16<100>;
+            type MaxSignatories = ConstU32<100>;
             type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
         }
 
@@ -923,11 +931,6 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
         }
 
-        pub type TokensTxCharger = pallet_asset_tx_payment::FungiblesAdapter<
-            TTCBalanceToAssetBalance,
-            TTCHandleCredit,
-        >;
-
         common_runtime::impl_foreign_fees!();
 
         impl pallet_asset_tx_payment::Config for Runtime {
@@ -960,7 +963,7 @@ macro_rules! impl_config_traits {
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
-            type SpendOrigin = NeverEnsureOrigin<Balance>;
+            type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
         }
@@ -1418,6 +1421,7 @@ macro_rules! create_runtime_api {
                         storage_deposit_limit,
                         input_data,
                         CONTRACTS_DEBUG_OUTPUT,
+                        pallet_contracts::Determinism::Deterministic,
                     )
                 }
 
@@ -1448,9 +1452,15 @@ macro_rules! create_runtime_api {
                     origin: AccountId,
                     code: Vec<u8>,
                     storage_deposit_limit: Option<Balance>,
+                    determinism: pallet_contracts::Determinism,
                 ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
                 {
-                    Contracts::bare_upload_code(origin, code, storage_deposit_limit)
+                    Contracts::bare_upload_code(
+                        origin,
+                        code,
+                        storage_deposit_limit,
+                        determinism,
+                    )
                 }
 
                 fn get_storage(
@@ -1649,23 +1659,20 @@ macro_rules! create_runtime_api {
 
             #[cfg(feature = "try-runtime")]
             impl frame_try_runtime::TryRuntime<Block> for Runtime {
-                fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
-                    log::info!("try-runtime::on_runtime_upgrade.");
-                    let weight = Executive::try_runtime_upgrade().unwrap();
+                fn on_runtime_upgrade(checks: UpgradeCheckSelect) -> (Weight, Weight) {
+                    let weight = Executive::try_runtime_upgrade(checks).unwrap();
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
 
-                fn execute_block(block: Block, state_root_check: bool, try_state: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
-                    log::info!(
-                        "try-runtime: executing block #{} {:?} / root checks: {:?} / try-state-select: {:?}",
-                        block.header.number,
-                        block.header.hash(),
-                        state_root_check,
-                        try_state,
-                    );
+                fn execute_block(
+                    block: Block,
+                    state_root_check: bool,
+                    signature_check: bool,
+                    select: TryStateSelect,
+                ) -> Weight {
                     // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
                     // have a backtrace here.
-                    Executive::try_execute_block(block, state_root_check, try_state).expect("execute-block failed")
+                    Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
                 }
             }
 
