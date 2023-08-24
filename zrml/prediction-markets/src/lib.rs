@@ -723,6 +723,7 @@ mod pallet {
         pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
             base_asset: Asset<MarketIdOf<T>>,
+            creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -738,6 +739,7 @@ mod pallet {
             let create_market_weight = Self::create_market(
                 origin.clone(),
                 base_asset,
+                creator_fee,
                 oracle,
                 period,
                 deadlines,
@@ -1819,6 +1821,8 @@ mod pallet {
         InvalidBaseAsset,
         /// A foreign asset in not registered in AssetRegistry.
         UnregisteredForeignAsset,
+        /// Fee to high
+        FeeTooHigh,
     }
 
     #[pallet::event]
@@ -3055,7 +3059,7 @@ mod pallet {
                 _ => false,
             };
 
-            ensure!(creator_fee <= T::MaxCreatorFee::get())
+            ensure!(creator_fee <= T::MaxCreatorFee::get(), Error::<T>::FeeTooHigh);
             ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
