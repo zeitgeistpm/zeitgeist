@@ -1375,7 +1375,7 @@ macro_rules! create_runtime_api {
                         hex_literal::hex!(  "a686a3043d0adcf2fa655e57bc595a78"
                                             "13792e785168f725b60e2969c7fc2552")
                             .to_vec().into(),
-                        // Treasury Account (zhe/tsry)
+                        // Treasury Account (zge/tsry)
                         hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
                                             "b99d880ec681799c0cf30e8886371da9"
                                             "7be2919ac397ba499ea5e57132180ec6"
