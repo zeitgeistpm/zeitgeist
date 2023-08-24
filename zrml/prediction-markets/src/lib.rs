@@ -777,6 +777,7 @@ mod pallet {
         pub fn create_market(
             origin: OriginFor<T>,
             base_asset: Asset<MarketIdOf<T>>,
+            creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -805,7 +806,7 @@ mod pallet {
             let market = Self::construct_market(
                 base_asset,
                 sender.clone(),
-                T::CreatorFee::get(),
+                creator_fee,
                 oracle,
                 period,
                 deadlines,
@@ -1571,9 +1572,6 @@ mod pallet {
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// A fee that is charged each trade and given to the market creator.
-        type CreatorFee: Get<Perbill>;
-
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
                 AccountId = Self::AccountId,
@@ -1625,6 +1623,9 @@ mod pallet {
         /// The minimum number of categories available for categorical markets.
         #[pallet::constant]
         type MinCategories: Get<u16>;
+
+        /// A upper bound for the fee that is charged each trade and given to the market creator.
+        type MaxCreatorFee: Get<Perbill>;
 
         /// The shortest period of collecting subsidy for a Rikiddo market.
         #[pallet::constant]
@@ -3054,6 +3055,7 @@ mod pallet {
                 _ => false,
             };
 
+            ensure!(creator_fee <= T::MaxCreatorFee::get())
             ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);

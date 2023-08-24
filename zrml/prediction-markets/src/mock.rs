@@ -39,7 +39,7 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
-        CourtCaseDuration, CourtPalletId, CreatorFee, DisputeFactor, ExistentialDeposit,
+        CourtCaseDuration, CourtPalletId, MaxCreatorFee, DisputeFactor, ExistentialDeposit,
         ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals,
         MaxAssets, MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
         MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
@@ -146,7 +146,7 @@ impl crate::Config for Runtime {
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type CreatorFee = CreatorFee;
+    type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;

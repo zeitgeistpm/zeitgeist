@@ -59,11 +59,11 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const CreatorFee: Perbill = Perbill::from_parts(0);
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
+    pub const MaxCreatorFee: Perbill = Perbill::from_percent(1);
     pub const MaxDisputeDuration: BlockNumber = 50;
     pub const MaxDisputes: u16 = 6;
     pub const MaxEditReasonLen: u32 = 1024;

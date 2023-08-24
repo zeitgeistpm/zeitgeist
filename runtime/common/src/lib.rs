@@ -1071,7 +1071,6 @@ macro_rules! impl_config_traits {
             type Authorized = Authorized;
             type Court = Court;
             type CloseOrigin = EnsureRoot<AccountId>;
-            type CreatorFee = CreatorFee;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
@@ -1085,6 +1084,7 @@ macro_rules! impl_config_traits {
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
             type MaxCategories = MaxCategories;
+            type MaxCreatorFee = MaxCreatorFee;
             type MaxDisputes = MaxDisputes;
             type MaxMarketLifetime = MaxMarketLifetime;
             type MinDisputeDuration = MinDisputeDuration;

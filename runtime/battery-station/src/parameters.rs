@@ -171,8 +171,6 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
-    /// Creator fee, fraction per trade volume that is moved to the market creator
-    pub const CreatorFee: Balance = Perbill::from_perthousand(1);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
@@ -181,6 +179,8 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
+    /// Max creator fee, bounds the fraction per trade volume that is moved to the market creator.
+    pub const MaxCreatorFee: Balance = Perbill::from_percent(1);
     /// Maximum block period for a dispute.
     pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
     /// Maximum number of disputes.
