@@ -60,8 +60,6 @@ macro_rules! decl_common_types {
             orml_asset_registry::Migration<Runtime>,
             orml_unknown_tokens::Migration<Runtime>,
             pallet_xcm::migration::v1::MigrateToV1<Runtime>,
-            pallet_contracts::Migration<Runtime>,
-            pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
             // IMPORTANT that AddDisputeBond comes before MoveDataToSimpleDisputes!!!
             zrml_prediction_markets::migrations::AddDisputeBond<Runtime>,
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
@@ -71,8 +69,6 @@ macro_rules! decl_common_types {
         #[cfg(not(feature = "parachain"))]
         type Migrations = (
             pallet_grandpa::migrations::CleanupSetIdSessionMap<Runtime>,
-            pallet_contracts::Migration<Runtime>,
-            pallet_scheduler::migration::v4::CleanupAgendas<Runtime>,
             // IMPORTANT that AddDisputeBond comes before MoveDataToSimpleDisputes!!!
             zrml_prediction_markets::migrations::AddDisputeBond<Runtime>,
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
