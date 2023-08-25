@@ -87,14 +87,13 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        traits::{Swaps, ZeitgeistAssetManager},
+        traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
-            ScoringRule, SerdeWrapper,
+            Asset, Market, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
+            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
-    use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoMVPallet,
@@ -107,6 +106,13 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+    type MarketOf<T> = Market<
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::AccountId,
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency,
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::BlockNumber,
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment,
+        Asset<MarketIdOf<T>>,
+    >;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
@@ -1555,6 +1561,24 @@ mod pallet {
             Ok(())
         }
 
+        fn handle_creator_fees(
+            amount: BalanceOf<T>,
+            base_asset: &Asset<MarketIdOf<T>>,
+            fee: Perbill,
+            fee_asset: &Asset<MarketIdOf<T>>,
+            payer: &T::AccountId,
+            pool_id: &PoolId,
+            receiver: &T::AccountId,
+        ) -> DispatchResult {
+            let fee_amount = fee.mul_floor(amount);
+            T::AssetManager::transfer(base_asset, payer, receiver, fee_amount)?;
+
+            if asset != pool.base_asset {
+                // TODO: Remove LP fees.
+                Self::swap_exact_amount_in(receiver, pool_id, fee_asset, fee_amount, base_asset, None, Some(BalanceOf<T>::MAX))
+            }
+        }
+
         pub(crate) fn burn_pool_shares(
             pool_id: PoolId,
             from: &T::AccountId,
@@ -1781,11 +1805,15 @@ mod pallet {
                         );
 
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
-                        let total_fee = market.creator_fee.mul_floor(BASE).checked_add(
-                            swap_fee_unwrapped
-                                .try_into()
-                                .or_else(|_| Err(Error::<T>::TotalFeeTooHigh))?,
-                        ).ok_or_else(|| Error::<T>::TotalFeeTooHigh)?;
+                        let total_fee = market
+                            .creator_fee
+                            .mul_floor(BASE)
+                            .checked_add(
+                                swap_fee_unwrapped
+                                    .try_into()
+                                    .or_else(|_| Err(Error::<T>::TotalFeeTooHigh))?,
+                            )
+                            .ok_or_else(|| Error::<T>::TotalFeeTooHigh)?;
 
                         ensure!(
                             swap_fee_unwrapped <= T::MaxSwapFee::get(),
@@ -2416,6 +2444,7 @@ mod pallet {
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
+            //let market = T::MarketCommons::market(&market_id)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);

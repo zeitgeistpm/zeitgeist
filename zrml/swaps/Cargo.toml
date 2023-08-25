@@ -10,7 +10,6 @@ sp-runtime = { workspace = true }
 substrate-fixed = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-liquidity-mining = { workspace = true }
-zrml-market-commons = { workspace = true }
 zrml-rikiddo = { workspace = true }
 
 # Mock
@@ -54,7 +53,6 @@ std = [
     "sp-runtime/std",
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
-    "zrml-market-commons/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",
 ]
