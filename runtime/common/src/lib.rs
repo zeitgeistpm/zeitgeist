@@ -55,7 +55,17 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = ();
+        #[cfg(feature = "parachain")]
+        type Migrations = (
+            orml_asset_registry::Migration<Runtime>,
+            orml_unknown_tokens::Migration<Runtime>,
+            pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+        );
+
+        #[cfg(not(feature = "parachain"))]
+        type Migrations = (
+            pallet_grandpa::migrations::CleanupSetIdSessionMap<Runtime>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -382,8 +392,9 @@ macro_rules! impl_config_traits {
             type ChannelInfo = ParachainSystem;
             type ControllerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-            type RuntimeEvent = RuntimeEvent;
             type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
+            type PriceForSiblingDelivery = ();
+            type RuntimeEvent = RuntimeEvent;
             type VersionWrapper = ();
             type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
@@ -451,6 +462,10 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_author_slot_filter::WeightInfo<Runtime>;
         }
 
+        frame_support::parameter_types! {
+            pub const MaxSetIdSessionEntries: u32 = 12;
+        }
+
         #[cfg(not(feature = "parachain"))]
         impl pallet_grandpa::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
@@ -467,6 +482,7 @@ macro_rules! impl_config_traits {
                 )>>::IdentificationTuple;
             type HandleEquivocation = ();
             type MaxAuthorities = MaxAuthorities;
+            type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
             // Currently the benchmark does yield an invalid weight implementation
             // type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
             type WeightInfo = ();
@@ -474,20 +490,29 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl pallet_xcm::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-            type XcmRouter = XcmRouter;
             type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+            type RuntimeCall = RuntimeCall;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeOrigin = RuntimeOrigin;
+            type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+            type UniversalLocation = UniversalLocation;
+            type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
             type XcmExecuteFilter = Nothing;
             // ^ Disable dispatchable execute on the XCM pallet.
             // Needs to be `Everything` for local testing.
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
             type XcmTeleportFilter = Everything;
             type XcmReserveTransferFilter = Nothing;
-            type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-            type LocationInverter = LocationInverter<Ancestry>;
-            type RuntimeOrigin = RuntimeOrigin;
-            type RuntimeCall = RuntimeCall;
+            type XcmRouter = XcmRouter;
+
+            type Currency = Balances;
+            type CurrencyMatcher = ();
+            type TrustedLockers = ();
+            type SovereignAccountOf = LocationToAccountId;
+            type MaxLockers = ConstU32<8>;
+            type WeightInfo = pallet_xcm::TestWeightInfo;
+            #[cfg(feature = "runtime-benchmarks")]
+            type ReachableDest = ReachableDest;
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
             // ^ Override for AdvertisedXcmVersion default
@@ -578,12 +603,12 @@ macro_rules! impl_config_traits {
             type CurrencyId = CurrencyId;
             type CurrencyIdConvert = AssetConvert;
             type RuntimeEvent = RuntimeEvent;
-            type LocationInverter = LocationInverter<Ancestry>;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
             type MinXcmFee = ParachainMinFee;
             type MultiLocationsFilter = Everything;
             type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
             type SelfLocation = SelfLocation;
+            type UniversalLocation = UniversalLocation;
             type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
@@ -1322,23 +1347,45 @@ macro_rules! create_runtime_api {
                     impl BaselineConfig for Runtime {}
 
                     let whitelist: Vec<TrackedStorageKey> = vec![
-                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
-                            .to_vec()
-                            .into(),
-                        hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80")
-                            .to_vec()
-                            .into(),
-                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a")
-                            .to_vec()
-                            .into(),
-                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850")
-                            .to_vec()
-                            .into(),
-                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7")
-                            .to_vec()
-                            .into(),
-                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
-                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
+                        // Block Number
+                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
+                                            "02a5c1b19ab7a04f536c519aca4983ac")
+                            .to_vec().into(),
+                        // Total Issuance
+                        hex_literal::hex!(  "c2261276cc9d1f8598ea4b6a74b15c2f"
+                                            "57c875e4cff74148e4628f264b974c80")
+                            .to_vec().into(),
+                        // Execution Phase
+                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
+                                            "ff553b5a9862a516939d82b3d3d8661a")
+                            .to_vec().into(),
+                        // Event Count
+                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
+                                            "0a98fdbe9ce6c55837576c60c7af3850")
+                            .to_vec().into(),
+                        // System Events
+                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
+                                            "80d41e5e16056765bc8461851072c9d7")
+                            .to_vec().into(),
+                        // System BlockWeight
+                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
+                                            "34abf5cb34d6244378cddbf18e849d96")
+                            .to_vec().into(),
+                        // ParachainStaking Round
+                        hex_literal::hex!(  "a686a3043d0adcf2fa655e57bc595a78"
+                                            "13792e785168f725b60e2969c7fc2552")
+                            .to_vec().into(),
+                        // Treasury Account (zge/tsry)
+                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
+                                            "b99d880ec681799c0cf30e8886371da9"
+                                            "7be2919ac397ba499ea5e57132180ec6"
+                                            "6d6f646c7a67652f7473727900000000"
+                                            "00000000000000000000000000000000"
+                        ).to_vec().into(),
+                        // ParachainInfo ParachainId
+                        hex_literal::hex!(  "0d715f2646c8f85767b5d2764bb27826"
+                                            "04a74d81251e398fd8a0a4d55023bb3f")
+                            .to_vec().into(),
                     ];
 
                     let mut batches = Vec::<BenchmarkBatch>::new();
@@ -1484,6 +1531,14 @@ macro_rules! create_runtime_api {
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
                 }
+
+                fn query_weight_to_fee(weight: Weight) -> Balance {
+                    TransactionPayment::weight_to_fee(weight)
+                }
+
+                fn query_length_to_fee(length: u32) -> Balance {
+                    TransactionPayment::length_to_fee(length)
+                }
             }
 
             impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, RuntimeCall>
@@ -1495,11 +1550,20 @@ macro_rules! create_runtime_api {
                 ) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_call_info(call, len)
                 }
+
                 fn query_call_fee_details(
                     call: RuntimeCall,
                     len: u32,
                 ) -> pallet_transaction_payment::FeeDetails<Balance> {
                     TransactionPayment::query_call_fee_details(call, len)
+                }
+
+                fn query_weight_to_fee(weight: Weight) -> Balance {
+                    TransactionPayment::weight_to_fee(weight)
+                }
+
+                fn query_length_to_fee(length: u32) -> Balance {
+                    TransactionPayment::length_to_fee(length)
                 }
             }
 
@@ -1725,20 +1789,17 @@ macro_rules! create_common_benchmark_logic {
                     AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit,
                     GetNativeCurrencyId, Runtime
                 };
+                use frame_benchmarking::{account, vec, whitelisted_caller};
+                use frame_system::RawOrigin;
+                use sp_runtime::traits::UniqueSaturatedInto;
+                use orml_benchmarking::runtime_benchmarks;
+                use orml_traits::MultiCurrency;
                 use zeitgeist_primitives::{
                     constants::BASE,
                     types::Asset,
                 };
 
-                use frame_benchmarking::{account, whitelisted_caller};
-                use frame_system::RawOrigin;
-                use sp_runtime::traits::UniqueSaturatedInto;
-
-                use orml_benchmarking::runtime_benchmarks;
-                use orml_traits::MultiCurrency;
-
                 const SEED: u32 = 0;
-
                 const NATIVE: CurrencyId = GetNativeCurrencyId::get();
                 const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
 
@@ -1841,7 +1902,7 @@ macro_rules! create_common_benchmark_logic {
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
                 use crate::{AccountId, Balance, CurrencyId, Tokens, Runtime};
-                use frame_benchmarking::{account, whitelisted_caller};
+                use frame_benchmarking::{account, vec, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;

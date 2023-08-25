@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -110,7 +110,7 @@ fn convert_unkown_multilocation() {
         MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(&[42])));
 
     Zeitgeist::execute_with(|| {
-        assert!(<AssetConvert as C1<_, _>>::convert(unknown_location.clone()).is_err());
+        assert!(<AssetConvert as C1<_, _>>::convert(unknown_location).is_err());
     });
 }
 

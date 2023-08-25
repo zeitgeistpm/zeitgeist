@@ -41,7 +41,7 @@ benchmarks! {
     authorize_market_outcome_first_report {
         let m in 1..63;
 
-        let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let origin = T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap();
         let market_id = 0u32.into();
         let market = market_mock::<T>();
         T::MarketCommons::push_market(market).unwrap();
@@ -69,7 +69,7 @@ benchmarks! {
     }
 
     authorize_market_outcome_existing_report {
-        let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let origin = T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap();
         let market_id = 0u32.into();
         let market = market_mock::<T>();
         T::MarketCommons::push_market(market).unwrap();

@@ -484,7 +484,7 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
                                              You can enable it with `--features try-runtime`."
             .into()),
-        None => none_command(&cli),
+        None => none_command(cli),
     }
 }
 
@@ -499,7 +499,7 @@ fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::R
 }
 
 #[cfg(feature = "parachain")]
-fn none_command(cli: &Cli) -> sc_cli::Result<()> {
+fn none_command(cli: Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run.normalize())?;
 
     runner.run_node_until_exit(|parachain_config| async move {
@@ -533,14 +533,12 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain Account: {}", parachain_account);
         log::info!("Parachain genesis state: {}", genesis_state);
 
-        let hwbench = if !cli.no_hardware_benchmarks {
-            parachain_config.database.path().map(|database_path| {
+        let hwbench = (!cli.no_hardware_benchmarks)
+            .then_some(parachain_config.database.path().map(|database_path| {
                 let _ = std::fs::create_dir_all(database_path);
                 sc_sysinfo::gather_hwbench(Some(database_path))
-            })
-        } else {
-            None
-        };
+            }))
+            .flatten();
 
         log::info!(
             "Is collating: {}",
@@ -585,31 +583,24 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 }
 
 #[cfg(not(feature = "parachain"))]
-fn none_command(cli: &Cli) -> sc_cli::Result<()> {
+fn none_command(cli: Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
-            spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
-                config,
-                cli.no_hardware_benchmarks,
-            )
-            .map_err(sc_cli::Error::Service),
+            spec if spec.is_zeitgeist() => {
+                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config, cli)
+                    .map_err(sc_cli::Error::Service)
+            }
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
-                config,
-                cli.no_hardware_benchmarks,
-            )
-            .map_err(sc_cli::Error::Service),
+            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(config, cli)
+                .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 feature = "with-zeitgeist-runtime"
             ))]
-            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
-                config,
-                cli.no_hardware_benchmarks,
-            )
-            .map_err(sc_cli::Error::Service),
+            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config, cli)
+                .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 not(feature = "with-zeitgeist-runtime")

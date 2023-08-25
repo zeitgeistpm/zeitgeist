@@ -55,13 +55,20 @@ pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 
+#[cfg(not(feature = "parachain"))]
+parameter_types! {
+    // Aura
+    pub const MaxAuthorities: u32 = 32;
+
+    // Grandpa
+    // Can be 0, as equivocation handling is not enabled (HandleEquivocation = ())
+    pub const MaxSetIdSessionEntries: u32 = 0;
+}
+
 parameter_types! {
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
     pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
-
-    // Authority
-    pub const MaxAuthorities: u32 = 32;
 
     // Balance
     pub const ExistentialDeposit: u128 = 5 * MILLI;

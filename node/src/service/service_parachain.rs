@@ -30,14 +30,17 @@ use cumulus_client_service::{
     StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
+use cumulus_relay_chain_interface::RelayChainInterface;
 use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use sc_consensus::ImportQueue;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_network::NetworkService;
 use sc_network_common::service::NetworkBlock;
-use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
+use sc_service::{
+    error::{Error as ServiceError, Result as ServiceResult},
+    Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager,
+};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::SyncCryptoStorePtr;
@@ -66,7 +69,7 @@ pub async fn new_full<RuntimeApi, Executor>(
     polkadot_config: Configuration,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
@@ -165,7 +168,7 @@ where
 #[allow(clippy::type_complexity)]
 pub fn new_partial<RuntimeApi, Executor>(
     config: &Configuration,
-) -> Result<ParachainPartialComponents<Executor, RuntimeApi>, sc_service::error::Error>
+) -> Result<ParachainPartialComponents<Executor, RuntimeApi>, ServiceError>
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
@@ -254,7 +257,7 @@ async fn do_new_full<RuntimeApi, Executor, BIC>(
     build_consensus: BIC,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
@@ -274,7 +277,7 @@ where
         Arc<NetworkService<Block, Hash>>,
         SyncCryptoStorePtr,
         bool,
-    ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+    ) -> Result<Box<dyn ParachainConsensus<Block>>, ServiceError>,
 {
     let parachain_config = prepare_node_config(parachain_config);
 
@@ -294,13 +297,9 @@ where
         hwbench.clone(),
     )
     .await
-    .map_err(|e| match e {
-        RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
-        s => s.to_string().into(),
-    })?;
+    .map_err(|e| ServiceError::Application(Box::new(e) as Box<_>))?;
 
     let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
-
     let force_authoring = parachain_config.force_authoring;
     let collator = parachain_config.role.is_authority();
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
@@ -400,9 +399,8 @@ where
             spawner,
             parachain_consensus,
             import_queue: import_queue_service,
-            collator_key: collator_key.ok_or_else(|| {
-                sc_service::error::Error::Other("Collator Key is None".to_string())
-            })?,
+            collator_key: collator_key
+                .ok_or_else(|| ServiceError::Other("Collator Key is None".to_string()))?,
             relay_chain_slot_duration,
         };
 

@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies Ltd.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -118,7 +118,7 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     let (caller, market_id) =
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
     Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
+        .dispatch_bypass_filter(T::CloseOrigin::try_successful_origin().unwrap())?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
@@ -155,8 +155,8 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     }
 
     Pallet::<T>::do_buy_complete_set(caller.clone(), market_id, LIQUIDITY.saturated_into())?;
-    let close_origin = T::CloseOrigin::successful_origin();
-    let resolve_origin = T::ResolveOrigin::successful_origin();
+    let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+    let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
@@ -201,7 +201,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
     )?;
 
     Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
+        .dispatch_bypass_filter(T::CloseOrigin::try_successful_origin().unwrap())?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
@@ -284,7 +284,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let destroy_origin = T::DestroyOrigin::successful_origin();
+        let destroy_origin = T::DestroyOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_destroy_market { market_id };
     }: {
         call.dispatch_bypass_filter(destroy_origin)?
@@ -339,7 +339,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let destroy_origin = T::DestroyOrigin::successful_origin();
+        let destroy_origin = T::DestroyOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_destroy_market { market_id };
     }: {
         call.dispatch_bypass_filter(destroy_origin)?
@@ -376,7 +376,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_closed { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }
 
@@ -400,7 +400,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -436,7 +436,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -477,7 +477,7 @@ benchmarks! {
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Scalar(0),
         )?;
@@ -491,7 +491,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -532,7 +532,7 @@ benchmarks! {
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Categorical(0),
         )?;
@@ -547,7 +547,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -567,7 +567,7 @@ benchmarks! {
             None,
         )?;
 
-        let approve_origin = T::ApproveOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::approve_market { market_id };
     }: { call.dispatch_bypass_filter(approve_origin)? }
 
@@ -580,7 +580,7 @@ benchmarks! {
             None,
         )?;
 
-        let approve_origin = T::ApproveOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
     }: { call.dispatch_bypass_filter(approve_origin)? } verify {}
@@ -651,7 +651,7 @@ benchmarks! {
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         let market_id = <zrml_market_commons::Pallet::<T>>::latest_market_id()?;
 
-        let approve_origin = T::ApproveOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; 1024];
         Call::<T>::request_edit{ market_id, edit_reason }
         .dispatch_bypass_filter(approve_origin)?;
@@ -916,7 +916,7 @@ benchmarks! {
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Categorical(0),
         )?;
@@ -961,7 +961,7 @@ benchmarks! {
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Scalar(0),
         )?;
@@ -1037,7 +1037,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let reject_origin = T::RejectOrigin::successful_origin();
+        let reject_origin = T::RejectOrigin::try_successful_origin().unwrap();
         let reject_reason: Vec<u8> = vec![0; r as usize];
         let call = Call::<T>::reject_market { market_id, reject_reason };
     }: { call.dispatch_bypass_filter(reject_origin)? }
@@ -1062,7 +1062,7 @@ benchmarks! {
         })?;
 
         let outcome = OutcomeReport::Categorical(0);
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         let end : u32 = match market.period {

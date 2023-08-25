@@ -27,7 +27,11 @@ use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin};
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
-use xcm::latest::{prelude::X1, Junction::Parachain, MultiLocation, NetworkId};
+use xcm::latest::{
+    prelude::{GlobalConsensus, InteriorMultiLocation, X1, X2},
+    Junction::Parachain,
+    MultiLocation, NetworkId,
+};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,
@@ -35,17 +39,16 @@ use zeitgeist_primitives::{
 
 parameter_types! {
     // Author-Mapping
-    /// The amount that should be taken as a security deposit when registering a NimbusId.
+    /// The amount that should be taken as a security deposit when registering a NimbusId
     pub const CollatorDeposit: Balance = 2 * BASE;
 
     // Cumulus and Polkadot
-    pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
-    pub const RelayLocation: MultiLocation = MultiLocation::parent();
     pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub UnitWeightCost: u64 = 200_000_000;
+    pub UnitWeightCost: Weight = Weight::from_parts(200_000_000u64, 0);
+
 
     // Staking
     /// Rounds before the candidate bond increase/decrease can be executed
@@ -83,14 +86,26 @@ parameter_types! {
 
     // XCM
     /// Base weight for XCM execution
-    pub const BaseXcmWeight: u64 = 200_000_000;
+    pub const BaseXcmWeight: Weight = Weight::from_parts(200_000_000u64, 0);
     /// The maximum number of distinct assets allowed to be transferred in a
-    /// single helper extrinsic.
+    /// single helper extrinsic
     pub const MaxAssetsForTransfer: usize = 2;
+    /// Maximum amount of tokens the holding register can store
+    pub const MaxAssetsIntoHolding: u32 = 64;
     /// Max instructions per XCM
     pub const MaxInstructions: u32 = 100;
-    // Relative self location
+
+    /// Relative self location
     pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+    /// This chain's Universal Location
+    pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+    // XCM
+    /// A `MultiLocation` that can be reached via `XcmRouter`. Used only in benchmarks.
+    pub ReachableDest: Option<MultiLocation> = Some(xcm::latest::prelude::Parent.into());
 }
 
 parameter_type_with_key! {
