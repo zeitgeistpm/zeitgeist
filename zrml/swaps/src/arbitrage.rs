@@ -427,8 +427,7 @@ mod tests {
             .map(|i| Asset::CategoricalOutcome(fake_market_id, i as u16))
             .collect::<Vec<_>>();
         let total_weight = weights.iter().sum();
-        let weights =
-            assets.clone().into_iter().zip(weights).collect::<BTreeMap<_, _>>();
+        let weights = assets.clone().into_iter().zip(weights).collect::<BTreeMap<_, _>>();
         Pool {
             assets: assets.clone(),
             base_asset: assets[0],
