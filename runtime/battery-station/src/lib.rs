@@ -70,7 +70,7 @@ use zrml_swaps::Call::{
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
-    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},

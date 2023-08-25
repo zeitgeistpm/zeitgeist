@@ -850,7 +850,7 @@ mod pallet {
             let ids_len = T::DisputeResolution::add_auto_resolve(market_id, vote_end)?;
 
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| -> DispatchResult {
-                let mut raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
+                let raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
                 raw_gd_info.status = GdStatus::Active { add_outcome_end, vote_end };
                 *gd_info = Some(raw_gd_info.clone());
                 Ok(())
@@ -861,7 +861,7 @@ mod pallet {
 
         fn destroy_global_dispute(market_id: &MarketIdOf<T>) -> Result<(), DispatchError> {
             <GlobalDisputesInfo<T>>::try_mutate(market_id, |gd_info| {
-                let mut raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
+                let raw_gd_info = gd_info.as_mut().ok_or(Error::<T>::GlobalDisputeNotFound)?;
 
                 // in case the global dispute is already finished nothing needs to be done
                 if let GdStatus::Active { add_outcome_end: _, vote_end } = raw_gd_info.status {

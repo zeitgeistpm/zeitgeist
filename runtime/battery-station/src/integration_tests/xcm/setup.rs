@@ -166,7 +166,7 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         name: "Zeitgeist".into(),
         symbol: "ZTG".into(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V1(foreign_ztg_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_ztg_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -179,7 +179,7 @@ pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
         name: "Bitcoin".into(),
         symbol: "BTC".into(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -193,7 +193,7 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         name: "Sibling".into(),
         symbol: "SBL".into(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -211,7 +211,7 @@ pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
         name: "Rococo".into(),
         symbol: "ROC".into(),
         existential_deposit: 33_333_333, // 0.0033333333
-        location: Some(VersionedMultiLocation::V1(foreign_parent_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_parent_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 

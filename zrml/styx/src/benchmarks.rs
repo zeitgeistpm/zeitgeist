@@ -44,7 +44,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller))
 
     set_burn_amount {
-        let origin = T::SetBurnAmountOrigin::successful_origin();
+        let origin = T::SetBurnAmountOrigin::try_successful_origin().unwrap();
         let caller: T::AccountId = whitelisted_caller();
         let balance = (10_000 * BASE).saturated_into();
         let amount = (20 * BASE).saturated_into();

@@ -3037,7 +3037,7 @@ fn handle_inflation_works() {
     ExtBuilder::default().build().execute_with(|| {
         let mut jurors = <CourtPool<Runtime>>::get();
         let mut free_balances_before = BTreeMap::new();
-        let jurors_list = vec![1000, 10_000, 100_000, 1_000_000, 10_000_000];
+        let jurors_list = [1000, 10_000, 100_000, 1_000_000, 10_000_000];
         run_to_block(InflationPeriod::get());
         let joined_at = <frame_system::Pallet<Runtime>>::block_number();
         for number in jurors_list.iter() {
@@ -3083,7 +3083,7 @@ fn handle_inflation_without_waiting_one_inflation_period() {
     ExtBuilder::default().build().execute_with(|| {
         let mut jurors = <CourtPool<Runtime>>::get();
         let mut free_balances_before = BTreeMap::new();
-        let jurors_list = vec![1000, 10_000, 100_000, 1_000_000, 10_000_000];
+        let jurors_list = [1000, 10_000, 100_000, 1_000_000, 10_000_000];
         run_to_block(InflationPeriod::get());
         let joined_at = <frame_system::Pallet<Runtime>>::block_number();
         for number in jurors_list.iter() {

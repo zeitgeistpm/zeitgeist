@@ -58,7 +58,7 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything},
-    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
