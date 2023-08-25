@@ -428,7 +428,7 @@ mod tests {
             .collect::<Vec<_>>();
         let total_weight = weights.iter().sum();
         let weights =
-            assets.clone().into_iter().zip(weights.into_iter()).collect::<BTreeMap<_, _>>();
+            assets.clone().into_iter().zip(weights).collect::<BTreeMap<_, _>>();
         Pool {
             assets: assets.clone(),
             base_asset: assets[0],
@@ -446,6 +446,6 @@ mod tests {
         assets: Vec<Asset<MarketId>>,
         balances: Vec<Balance>,
     ) -> BTreeMap<Asset<MarketId>, Balance> {
-        assets.into_iter().zip(balances.into_iter()).collect::<BTreeMap<_, _>>()
+        assets.into_iter().zip(balances).collect::<BTreeMap<_, _>>()
     }
 }
