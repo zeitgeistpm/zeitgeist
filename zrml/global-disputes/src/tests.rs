@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,8 +20,9 @@
 use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     mock::*,
-    types::{OutcomeInfo, WinnerInfo},
-    Error, Event, Locks, MarketIdOf, Outcomes, Winners,
+    types::{GdStatus, GlobalDisputeInfo, InitialItem, OutcomeInfo, Possession},
+    utils::market_mock,
+    BalanceOf, Error, Event, GlobalDisputesInfo, InitialItemOf, Locks, MarketIdOf, Outcomes,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -29,11 +30,15 @@ use frame_support::{
     BoundedVec,
 };
 use pallet_balances::{BalanceLock, Error as BalancesError};
-use sp_runtime::traits::Zero;
+use sp_runtime::{traits::Zero, SaturatedConversion};
+use test_case::test_case;
 use zeitgeist_primitives::{
-    constants::mock::{GlobalDisputeLockId, MinOutcomeVoteAmount, VotingOutcomeFee, BASE},
-    types::OutcomeReport,
+    constants::mock::{
+        GlobalDisputeLockId, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee, BASE,
+    },
+    types::{BlockNumber, OutcomeReport},
 };
+use zrml_market_commons::{Error as MarketError, Markets};
 
 const SETUP_AMOUNT: u128 = 100 * BASE;
 
@@ -41,17 +46,20 @@ fn the_lock(amount: u128) -> BalanceLock<u128> {
     BalanceLock { id: GlobalDisputeLockId::get(), amount, reasons: pallet_balances::Reasons::Misc }
 }
 
-fn setup_vote_outcomes_with_hundred(market_id: &MarketIdOf<Runtime>) {
-    GlobalDisputes::push_voting_outcome(market_id, OutcomeReport::Scalar(0), &ALICE, SETUP_AMOUNT)
-        .unwrap();
+fn get_initial_items() -> Vec<InitialItemOf<Runtime>> {
+    vec![
+        InitialItem { outcome: OutcomeReport::Scalar(0), owner: ALICE, amount: SETUP_AMOUNT },
+        InitialItem { outcome: OutcomeReport::Scalar(20), owner: ALICE, amount: SETUP_AMOUNT },
+        InitialItem { outcome: OutcomeReport::Scalar(40), owner: ALICE, amount: SETUP_AMOUNT },
+        InitialItem { outcome: OutcomeReport::Scalar(60), owner: ALICE, amount: SETUP_AMOUNT },
+    ]
+}
 
-    GlobalDisputes::push_voting_outcome(market_id, OutcomeReport::Scalar(20), &ALICE, SETUP_AMOUNT)
-        .unwrap();
-    GlobalDisputes::push_voting_outcome(market_id, OutcomeReport::Scalar(40), &ALICE, SETUP_AMOUNT)
-        .unwrap();
-
-    GlobalDisputes::push_voting_outcome(market_id, OutcomeReport::Scalar(60), &ALICE, SETUP_AMOUNT)
-        .unwrap();
+fn set_vote_period() {
+    let now = <frame_system::Pallet<Runtime>>::block_number();
+    <frame_system::Pallet<Runtime>>::set_block_number(
+        now + <Runtime as crate::Config>::AddOutcomePeriod::get() + 1,
+    );
 }
 
 fn check_outcome_sum(
@@ -63,7 +71,7 @@ fn check_outcome_sum(
         <Outcomes<Runtime>>::get(market_id, outcome).unwrap(),
         OutcomeInfo {
             outcome_sum: SETUP_AMOUNT + post_setup_amount,
-            owners: BoundedVec::try_from(vec![ALICE]).unwrap()
+            possession: Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() }
         }
     );
 }
@@ -72,26 +80,25 @@ fn check_outcome_sum(
 fn add_vote_outcome_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
         let free_balance_alice_before = Balances::free_balance(ALICE);
         let free_balance_reward_account =
             Balances::free_balance(GlobalDisputes::reward_account(&market_id));
         assert_ok!(GlobalDisputes::add_vote_outcome(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            OutcomeReport::Scalar(20),
+            OutcomeReport::Scalar(80),
         ));
         System::assert_last_event(
             Event::<Runtime>::AddedVotingOutcome {
                 market_id,
                 owner: ALICE,
-                outcome: OutcomeReport::Scalar(20),
+                outcome: OutcomeReport::Scalar(80),
             }
             .into(),
         );
@@ -106,28 +113,316 @@ fn add_vote_outcome_works() {
     });
 }
 
-#[test]
-fn add_vote_outcome_fails_if_no_global_dispute_present() {
+#[test_case(GdStatus::Finished; "finished")]
+#[test_case(GdStatus::Destroyed; "destroyed")]
+fn is_active_works(status: GdStatus<BlockNumber>) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        assert_noop!(
-            GlobalDisputes::add_vote_outcome(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                OutcomeReport::Scalar(20),
-            ),
-            Error::<Runtime>::NoGlobalDisputeStarted
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        assert!(!GlobalDisputes::is_active(&market_id));
+
+        let outcome_info = OutcomeInfo {
+            outcome_sum: 0,
+            possession: Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() },
+        };
+        <GlobalDisputesInfo<Runtime>>::insert(
+            market_id,
+            GlobalDisputeInfo {
+                winner_outcome: OutcomeReport::Scalar(0),
+                outcome_info: outcome_info.clone(),
+                status,
+            },
+        );
+
+        assert!(!GlobalDisputes::is_active(&market_id));
+
+        <GlobalDisputesInfo<Runtime>>::insert(
+            market_id,
+            GlobalDisputeInfo {
+                winner_outcome: OutcomeReport::Scalar(0),
+                outcome_info,
+                status: GdStatus::Active { add_outcome_end: 0, vote_end: 0 },
+            },
+        );
+
+        assert!(GlobalDisputes::is_active(&market_id));
+    });
+}
+
+#[test]
+fn destroy_global_dispute_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        assert_ok!(GlobalDisputes::destroy_global_dispute(&market_id));
+
+        assert_eq!(
+            <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap().status,
+            GdStatus::Destroyed
         );
     });
 }
 
 #[test]
-fn add_vote_outcome_fails_if_global_dispute_finished() {
+fn start_global_dispute_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let mut winner_info = WinnerInfo::new(OutcomeReport::Scalar(0), 10 * BASE);
-        winner_info.is_finished = true;
-        <Winners<Runtime>>::insert(market_id, winner_info);
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        let outcome_info = OutcomeInfo {
+            outcome_sum: SETUP_AMOUNT,
+            possession: Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() },
+        };
+        assert_eq!(
+            <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap(),
+            GlobalDisputeInfo {
+                winner_outcome: OutcomeReport::Scalar(60),
+                outcome_info,
+                status: GdStatus::Active { add_outcome_end: 21, vote_end: 161 },
+            }
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_fails_if_outcome_mismatch() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = vec![
+            InitialItem { outcome: OutcomeReport::Scalar(0), owner: ALICE, amount: SETUP_AMOUNT },
+            InitialItem { outcome: OutcomeReport::Scalar(20), owner: ALICE, amount: SETUP_AMOUNT },
+            // categorical outcome mismatch
+            InitialItem {
+                outcome: OutcomeReport::Categorical(40),
+                owner: ALICE,
+                amount: SETUP_AMOUNT,
+            },
+            InitialItem { outcome: OutcomeReport::Scalar(60), owner: ALICE, amount: SETUP_AMOUNT },
+        ];
+        assert_eq!(
+            GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
+            Err(Error::<Runtime>::OutcomeMismatch.into())
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_fails_if_already_exists() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()).unwrap();
+        assert_eq!(
+            GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
+            Err(Error::<Runtime>::GlobalDisputeAlreadyExists.into())
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_fails_if_max_owner_reached() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() + 1 {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42),
+                owner: i.into(),
+                amount: SETUP_AMOUNT,
+            });
+        }
+
+        assert_eq!(
+            GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
+            Err(Error::<Runtime>::MaxOwnersReached.into())
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_fails_if_shared_possession_required() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let outcome_info = OutcomeInfo {
+            outcome_sum: SETUP_AMOUNT,
+            possession: Possession::Paid { owner: ALICE, fee: VotingOutcomeFee::get() },
+        };
+        <Outcomes<Runtime>>::insert(market_id, OutcomeReport::Scalar(0), outcome_info);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() + 1 {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42),
+                owner: i.into(),
+                amount: SETUP_AMOUNT,
+            });
+        }
+
+        assert_eq!(
+            GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()),
+            Err(Error::<Runtime>::SharedPossessionRequired.into())
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_adds_owners_for_existing_outcome() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42),
+                owner: i.into(),
+                amount: SETUP_AMOUNT,
+            });
+        }
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        let outcome_info = <Outcomes<Runtime>>::get(market_id, OutcomeReport::Scalar(42)).unwrap();
+        assert_eq!(
+            outcome_info.possession,
+            Possession::Shared { owners: vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9].try_into().unwrap() }
+        );
+    });
+}
+
+#[test]
+fn start_global_dispute_updates_to_highest_winner() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let mut initial_items = Vec::new();
+        initial_items.push(InitialItem {
+            outcome: OutcomeReport::Scalar(0),
+            owner: 0u128,
+            amount: SETUP_AMOUNT,
+        });
+        for i in 0..MaxOwners::get() {
+            initial_items.push(InitialItem {
+                outcome: OutcomeReport::Scalar(42 + i.saturated_into::<u128>()),
+                owner: i.into(),
+                amount: SETUP_AMOUNT + i.saturated_into::<u128>(),
+            });
+        }
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        let gd_info = <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap();
+        assert_eq!(gd_info.outcome_info.outcome_sum, SETUP_AMOUNT + 9);
+        assert_eq!(gd_info.winner_outcome, OutcomeReport::Scalar(51));
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_with_outcome_mismatch() {
+    ExtBuilder::default().build().execute_with(|| {
+        // create scalar market
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                OutcomeReport::Categorical(0u16),
+            ),
+            Error::<Runtime>::OutcomeMismatch
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_with_non_existing_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                OutcomeReport::Scalar(80),
+            ),
+            MarketError::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_if_no_global_dispute_present() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                OutcomeReport::Scalar(20),
+            ),
+            Error::<Runtime>::GlobalDisputeNotFound
+        );
+    });
+}
+
+#[test_case(GdStatus::Finished; "finished")]
+#[test_case(GdStatus::Destroyed; "destroyed")]
+fn add_vote_outcome_fails_if_global_dispute_is_in_wrong_state(status: GdStatus<BlockNumber>) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+        let possession = Possession::Shared { owners: BoundedVec::try_from(vec![ALICE]).unwrap() };
+        let mut gd_info = GlobalDisputeInfo::new(OutcomeReport::Scalar(0), possession, 10 * BASE);
+        gd_info.status = status;
+        <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
@@ -135,7 +430,7 @@ fn add_vote_outcome_fails_if_global_dispute_finished() {
                 market_id,
                 OutcomeReport::Scalar(20),
             ),
-            Error::<Runtime>::GlobalDisputeAlreadyFinished
+            Error::<Runtime>::InvalidGlobalDisputeStatus
         );
     });
 }
@@ -144,17 +439,18 @@ fn add_vote_outcome_fails_if_global_dispute_finished() {
 fn add_vote_outcome_fails_if_outcome_already_exists() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
         <Outcomes<Runtime>>::insert(
             market_id,
             OutcomeReport::Scalar(20),
-            OutcomeInfo { outcome_sum: Zero::zero(), owners: Default::default() },
+            OutcomeInfo {
+                outcome_sum: Zero::zero(),
+                possession: Possession::Shared { owners: Default::default() },
+            },
         );
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
@@ -171,18 +467,17 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
 fn add_vote_outcome_fails_if_balance_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
         assert_noop!(
             GlobalDisputes::add_vote_outcome(
                 RuntimeOrigin::signed(POOR_PAUL),
                 market_id,
-                OutcomeReport::Scalar(20),
+                OutcomeReport::Scalar(80),
             ),
             BalancesError::<Runtime>::InsufficientBalance
         );
@@ -198,19 +493,24 @@ fn reward_outcome_owner_works_for_multiple_owners() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE]).unwrap(),
+                possession: Possession::Shared {
+                    owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE]).unwrap(),
+                },
             },
         );
         let _ = Balances::deposit_creating(
             &GlobalDisputes::reward_account(&market_id),
             3 * VotingOutcomeFee::get(),
         );
-        let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(20),
-            is_finished: true,
-            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
+        let gd_info = GlobalDisputeInfo {
+            winner_outcome: OutcomeReport::Scalar(20),
+            status: GdStatus::Finished,
+            outcome_info: OutcomeInfo {
+                outcome_sum: 10 * BASE,
+                possession: Possession::Shared { owners: Default::default() },
+            },
         };
-        <Winners<Runtime>>::insert(market_id, winner_info);
+        <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
         let free_balance_alice_before = Balances::free_balance(ALICE);
         let free_balance_bob_before = Balances::free_balance(BOB);
@@ -252,17 +552,22 @@ fn reward_outcome_owner_has_dust() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE, EVE, POOR_PAUL, DAVE])
-                    .unwrap(),
+                possession: Possession::Shared {
+                    owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE, EVE, POOR_PAUL, DAVE])
+                        .unwrap(),
+                },
             },
         );
         let _ = Balances::deposit_creating(&GlobalDisputes::reward_account(&market_id), 100 * BASE);
-        let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(20),
-            is_finished: true,
-            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
+        let gd_info = GlobalDisputeInfo {
+            winner_outcome: OutcomeReport::Scalar(20),
+            status: GdStatus::Finished,
+            outcome_info: OutcomeInfo {
+                outcome_sum: 10 * BASE,
+                possession: Possession::Shared { owners: Default::default() },
+            },
         };
-        <Winners<Runtime>>::insert(market_id, winner_info);
+        <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
         assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
@@ -283,19 +588,24 @@ fn reward_outcome_owner_works_for_one_owner() {
             OutcomeReport::Scalar(20),
             OutcomeInfo {
                 outcome_sum: Zero::zero(),
-                owners: BoundedVec::try_from(vec![ALICE]).unwrap(),
+                possession: Possession::Shared {
+                    owners: BoundedVec::try_from(vec![ALICE]).unwrap(),
+                },
             },
         );
         let _ = Balances::deposit_creating(
             &GlobalDisputes::reward_account(&market_id),
             3 * VotingOutcomeFee::get(),
         );
-        let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(20),
-            is_finished: true,
-            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
+        let gd_info = GlobalDisputeInfo {
+            winner_outcome: OutcomeReport::Scalar(20),
+            status: GdStatus::Finished,
+            outcome_info: OutcomeInfo {
+                outcome_sum: 10 * BASE,
+                possession: Possession::Shared { owners: BoundedVec::try_from(vec![]).unwrap() },
+            },
         };
-        <Winners<Runtime>>::insert(market_id, winner_info);
+        <GlobalDisputesInfo<Runtime>>::insert(market_id, gd_info);
 
         assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
 
@@ -319,75 +629,14 @@ fn reward_outcome_owner_works_for_one_owner() {
 }
 
 #[test]
-fn reward_outcome_owner_works_for_no_reward_funds() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-
-        setup_vote_outcomes_with_hundred(&market_id);
-
-        let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(20),
-            is_finished: true,
-            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
-        };
-        <Winners<Runtime>>::insert(market_id, winner_info);
-
-        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
-
-        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
-
-        let free_balance_alice_before = Balances::free_balance(ALICE);
-
-        let reward_account_free_balance =
-            Balances::free_balance(GlobalDisputes::reward_account(&market_id));
-        // this case happens, when add_vote_outcome wasn't called
-        // so no loosers, who provided the VotingOutcomeFee
-        assert!(reward_account_free_balance.is_zero());
-
-        assert_ok!(GlobalDisputes::reward_outcome_owner(RuntimeOrigin::signed(ALICE), market_id));
-
-        System::assert_last_event(
-            Event::<Runtime>::OutcomeOwnersRewardedWithNoFunds { market_id }.into(),
-        );
-
-        assert_eq!(Balances::free_balance(ALICE), free_balance_alice_before);
-        assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
-        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_none());
-    });
-}
-
-#[test]
 fn vote_fails_if_amount_below_min_outcome_vote_amount() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            &ALICE,
-            20 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(40),
-            &ALICE,
-            30 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(60),
-            &ALICE,
-            40 * BASE,
-        )
-        .unwrap();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -405,20 +654,12 @@ fn vote_fails_if_amount_below_min_outcome_vote_amount() {
 fn vote_fails_for_insufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            &ALICE,
-            20 * BASE,
-        )
-        .unwrap();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
         // Paul does not have 50 * BASE
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -436,8 +677,13 @@ fn vote_fails_for_insufficient_funds() {
 fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonical_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -481,8 +727,13 @@ fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_c
 fn vote_on_outcome_check_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(EVE),
@@ -507,6 +758,8 @@ fn vote_on_outcome_check_event() {
 fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
@@ -519,21 +772,22 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
             free_balance_disputor_before - reserved_balance_disputor
         );
 
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            reserved_balance_disputor,
-        )
-        .unwrap();
+        let initial_items = vec![
+            InitialItem {
+                outcome: OutcomeReport::Scalar(0),
+                owner: ALICE,
+                amount: reserved_balance_disputor,
+            },
+            InitialItem {
+                outcome: OutcomeReport::Scalar(20),
+                owner: ALICE,
+                amount: reserved_balance_disputor * 2,
+            },
+        ];
 
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            &ALICE,
-            reserved_balance_disputor * 2,
-        )
-        .unwrap();
+        GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()).unwrap();
+
+        set_vote_period();
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -565,8 +819,13 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
 fn transfer_fails_with_fully_locked_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
@@ -597,8 +856,13 @@ fn transfer_fails_with_fully_locked_balance() {
 fn reserve_fails_with_fully_locked_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
@@ -629,8 +893,13 @@ fn reserve_fails_with_fully_locked_balance() {
 fn determine_voting_winner_works_four_outcome_votes() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -668,7 +937,10 @@ fn determine_voting_winner_works_four_outcome_votes() {
             OutcomeReport::Scalar(40)
         );
 
-        assert!(<Winners<Runtime>>::get(market_id).unwrap().is_finished);
+        assert_eq!(
+            <GlobalDisputesInfo<Runtime>>::get(market_id).unwrap().status,
+            GdStatus::Finished
+        );
     });
 }
 
@@ -676,8 +948,13 @@ fn determine_voting_winner_works_four_outcome_votes() {
 fn determine_voting_winner_works_three_outcome_votes() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -720,8 +997,13 @@ fn determine_voting_winner_works_three_outcome_votes() {
 fn determine_voting_winner_works_two_outcome_votes() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -764,8 +1046,13 @@ fn determine_voting_winner_works_two_outcome_votes() {
 fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -819,11 +1106,16 @@ fn determine_voting_winner_works_with_accumulated_votes_for_alice() {
 }
 
 #[test]
-fn reward_outcome_owner_cleans_outcome_info() {
+fn purge_outcomes_fully_cleaned_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -852,9 +1144,102 @@ fn reward_outcome_owner_cleans_outcome_info() {
 
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
-        assert_ok!(GlobalDisputes::reward_outcome_owner(RuntimeOrigin::signed(BOB), market_id,));
+        assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
+    });
+}
+
+#[test]
+fn purge_outcomes_partially_cleaned_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let mut initial_items = Vec::new();
+        for i in 0..(2 * RemoveKeysLimit::get()) {
+            initial_items.push(InitialItem {
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(i.into()),
+                amount: SETUP_AMOUNT,
+            });
+        }
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
+
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesPartiallyCleaned { market_id }.into());
+
+        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_some());
+
+        assert_ok!(GlobalDisputes::purge_outcomes(RuntimeOrigin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
 
         assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
+    });
+}
+
+#[test]
+fn refund_vote_fees_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, &market);
+
+        let pushed_outcome_1 = 0;
+        let pushed_outcome_2 = 20;
+
+        let initial_items = vec![
+            InitialItem {
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(pushed_outcome_1),
+                amount: SETUP_AMOUNT,
+            },
+            InitialItem {
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(pushed_outcome_2),
+                amount: SETUP_AMOUNT,
+            },
+        ];
+
+        let offset = pushed_outcome_1.max(pushed_outcome_2) + 1;
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        let mut overall_fees = <BalanceOf<Runtime>>::zero();
+        // minus 2 because of the above push_vote_outcome calls
+        for i in 0..(2 * RemoveKeysLimit::get() - 2) {
+            assert_ok!(GlobalDisputes::add_vote_outcome(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                // offset to not conflict with pushed outcomes
+                OutcomeReport::Scalar(offset + i as u128),
+            ));
+            overall_fees = overall_fees.saturating_add(VotingOutcomeFee::get());
+        }
+
+        assert_ok!(GlobalDisputes::destroy_global_dispute(&market_id));
+
+        let alice_free_balance_before = Balances::free_balance(ALICE);
+        assert_ok!(GlobalDisputes::refund_vote_fees(RuntimeOrigin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesPartiallyCleaned { market_id }.into());
+
+        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_some());
+
+        assert_ok!(GlobalDisputes::refund_vote_fees(RuntimeOrigin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
+        assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
+
+        assert_eq!(
+            Balances::free_balance(ALICE),
+            alice_free_balance_before.saturating_add(overall_fees)
+        );
     });
 }
 
@@ -862,8 +1247,13 @@ fn reward_outcome_owner_cleans_outcome_info() {
 fn unlock_clears_lock_info() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             RuntimeOrigin::signed(ALICE),
@@ -886,34 +1276,19 @@ fn unlock_clears_lock_info() {
 fn vote_fails_if_outcome_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(0),
-            &ALICE,
-            10 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            &ALICE,
-            20 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(40),
-            &ALICE,
-            30 * BASE,
-        )
-        .unwrap();
-        GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(60),
-            &ALICE,
-            40 * BASE,
-        )
-        .unwrap();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let initial_items = vec![
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(0), amount: 10 * BASE },
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(20), amount: 20 * BASE },
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(40), amount: 30 * BASE },
+            InitialItem { owner: ALICE, outcome: OutcomeReport::Scalar(60), amount: 40 * BASE },
+        ];
+
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -931,8 +1306,13 @@ fn vote_fails_if_outcome_does_not_exist() {
 fn locking_works_for_one_market() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
 
-        setup_vote_outcomes_with_hundred(&market_id);
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
@@ -1017,10 +1397,19 @@ fn locking_works_for_one_market() {
 fn locking_works_for_two_markets_with_stronger_first_unlock() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id_1 = 0u128;
-        let market_id_2 = 1u128;
+        let market_1 = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id_1, market_1);
 
-        setup_vote_outcomes_with_hundred(&market_id_1);
-        setup_vote_outcomes_with_hundred(&market_id_2);
+        let market_id_2 = 1u128;
+        let market_2 = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id_2, market_2);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1, initial_items.as_slice()));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
@@ -1107,10 +1496,19 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
 fn locking_works_for_two_markets_with_weaker_first_unlock() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id_1 = 0u128;
-        let market_id_2 = 1u128;
+        let market_1 = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id_1, market_1);
 
-        setup_vote_outcomes_with_hundred(&market_id_1);
-        setup_vote_outcomes_with_hundred(&market_id_2);
+        let market_id_2 = 1u128;
+        let market_2 = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id_2, market_2);
+
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_1, initial_items.as_slice()));
+        let initial_items = get_initial_items();
+        assert_ok!(GlobalDisputes::start_global_dispute(&market_id_2, initial_items.as_slice()));
+
+        set_vote_period();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());

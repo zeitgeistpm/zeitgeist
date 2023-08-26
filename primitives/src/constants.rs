@@ -30,11 +30,11 @@ use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
 // Definitions for time
-pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100;
-pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
+pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100; // 2_629_800
+pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24; // 7_200
 pub const MILLISECS_PER_BLOCK: u32 = 12000;
-pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
+pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber); // 5
+pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 300
 
 // Definitions for currency
 pub const BASE: u128 = 10_000_000_000;
@@ -70,6 +70,8 @@ pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 // Court
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
+/// Lock identifier, mainly used for the locks on the accounts.
+pub const COURT_LOCK_ID: [u8; 8] = *b"zge/colk";
 
 // Global Disputes
 pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");

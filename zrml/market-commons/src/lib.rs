@@ -51,7 +51,7 @@ mod pallet {
     use zeitgeist_primitives::types::{Asset, Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(6);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
 
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

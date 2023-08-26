@@ -22,7 +22,7 @@ mod market_id;
 mod swaps;
 mod zeitgeist_multi_reservable_currency;
 
-pub use dispute_api::{DisputeApi, DisputeResolutionApi};
+pub use dispute_api::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi};
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
 pub use swaps::Swaps;

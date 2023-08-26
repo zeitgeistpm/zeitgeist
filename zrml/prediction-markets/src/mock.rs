@@ -27,7 +27,7 @@ use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
-use frame_system::EnsureSignedBy;
+use frame_system::{EnsureRoot, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
 use sp_arithmetic::per_things::Percent;
@@ -38,15 +38,17 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
-        CourtCaseDuration, CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
-        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets,
-        MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod,
-        MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen,
-        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinDisputeDuration, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
-        MinWeight, MinimumPeriod, OutsiderBond, PmPalletId, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId, BalanceFractionalDecimals,
+        BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId, ExistentialDeposit,
+        ExistentialDeposits, ExitFee, GetNativeCurrencyId, InflationPeriod,
+        LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
+        MaxCourtParticipants, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
+        MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
+        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
+        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval, SimpleDisputesPalletId,
+        SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -54,10 +56,9 @@ use zeitgeist_primitives::{
     },
 };
 
-#[cfg(feature = "with-global-disputes")]
 use zeitgeist_primitives::constants::mock::{
-    GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
-    MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
+    AddOutcomePeriod, GdVotingPeriod, GlobalDisputeLockId, GlobalDisputesPalletId,
+    MaxGlobalDisputeVotes, MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
 };
 
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -84,7 +85,6 @@ parameter_types! {
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
-#[cfg(feature = "with-global-disputes")]
 construct_runtime!(
     pub enum Runtime
     where
@@ -111,32 +111,6 @@ construct_runtime!(
     }
 );
 
-#[cfg(not(feature = "with-global-disputes"))]
-construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Court: zrml_court::{Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
-        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
-        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
-    }
-);
-
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
@@ -148,12 +122,8 @@ impl crate::Config for Runtime {
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
     type RuntimeEvent = RuntimeEvent;
-    #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
-    #[cfg(feature = "with-global-disputes")]
-    type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
@@ -275,13 +245,27 @@ impl zrml_authorized::Config for Runtime {
 }
 
 impl zrml_court::Config for Runtime {
-    type CourtCaseDuration = CourtCaseDuration;
+    type AppealBond = AppealBond;
+    type BlocksPerYear = BlocksPerYear;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type VotePeriod = VotePeriod;
+    type AggregationPeriod = AggregationPeriod;
+    type AppealPeriod = AppealPeriod;
+    type LockId = LockId;
+    type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
+    type InflationPeriod = InflationPeriod;
     type MarketCommons = MarketCommons;
+    type MaxAppeals = MaxAppeals;
+    type MaxDelegations = MaxDelegations;
+    type MaxSelectedDraws = MaxSelectedDraws;
+    type MaxCourtParticipants = MaxCourtParticipants;
+    type MinJurorStake = MinJurorStake;
+    type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
-    type StakeWeight = StakeWeight;
+    type RequestInterval = RequestInterval;
+    type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }
@@ -317,15 +301,21 @@ impl zrml_rikiddo::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
+    type AssetManager = AssetManager;
     type RuntimeEvent = RuntimeEvent;
+    type OutcomeBond = OutcomeBond;
+    type OutcomeFactor = OutcomeFactor;
     type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
+    type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
+    type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
-#[cfg(feature = "with-global-disputes")]
 impl zrml_global_disputes::Config for Runtime {
+    type AddOutcomePeriod = AddOutcomePeriod;
     type RuntimeEvent = RuntimeEvent;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -334,6 +324,7 @@ impl zrml_global_disputes::Config for Runtime {
     type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
+    type GdVotingPeriod = GdVotingPeriod;
     type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
@@ -458,11 +449,13 @@ impl ExtBuilder {
 pub fn run_to_block(n: BlockNumber) {
     while System::block_number() < n {
         Balances::on_finalize(System::block_number());
+        Court::on_finalize(System::block_number());
         PredictionMarkets::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
         PredictionMarkets::on_initialize(System::block_number());
+        Court::on_initialize(System::block_number());
         Balances::on_initialize(System::block_number());
     }
 }

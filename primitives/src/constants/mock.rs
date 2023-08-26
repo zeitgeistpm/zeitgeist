@@ -34,19 +34,33 @@ parameter_types! {
 
 // Court
 parameter_types! {
-    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    pub const AppealBond: Balance = 5 * BASE;
+    pub const AppealBondFactor: Balance = 2 * BASE;
+    pub const BlocksPerYear: BlockNumber = 10000;
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-    pub const StakeWeight: u128 = 2 * BASE;
+    pub const RequestInterval: BlockNumber = 15;
+    pub const VotePeriod: BlockNumber = 3;
+    pub const AggregationPeriod: BlockNumber = 4;
+    pub const AppealPeriod: BlockNumber = 5;
+    pub const LockId: LockIdentifier = *b"zge/cloc";
+    pub const MaxAppeals: u32 = 4;
+    pub const MaxDelegations: u32 = 5;
+    pub const MaxSelectedDraws: u32 = 510;
+    pub const MaxCourtParticipants: u32 = 1_000;
+    pub const MinJurorStake: Balance = 50 * CENT;
+    pub const InflationPeriod: BlockNumber = 20;
 }
 
 // Global disputes parameters
 parameter_types! {
+    pub const AddOutcomePeriod: BlockNumber = 20;
     pub const GlobalDisputeLockId: LockIdentifier = *b"zge/vote";
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
     pub const MaxGlobalDisputeVotes: u32 = 50;
     pub const MaxOwners: u32 = 10;
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     pub const RemoveKeysLimit: u32 = 250;
+    pub const GdVotingPeriod: BlockNumber = 140;
     pub const VotingOutcomeFee: Balance = 100 * CENT;
 }
 
@@ -60,7 +74,6 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
-    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputeDuration: BlockNumber = 50;
     pub const MaxDisputes: u16 = 6;
@@ -85,6 +98,8 @@ parameter_types! {
 // Simple disputes parameters
 parameter_types! {
     pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
+    pub const OutcomeBond: Balance = 5 * BASE;
+    pub const OutcomeFactor: Balance = 2 * BASE;
 }
 
 // Swaps parameters

@@ -166,29 +166,34 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court.
+// Currently disables Rikiddo.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match call {
-            RuntimeCall::Court(_) => false,
+            RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
-                    // Disable Rikiddo markets
+                    // Disable Rikiddo and SimpleDisputes markets
                     create_market {
                         scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
+                    } => false,
+                    create_market {
+                        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+                        ..
                     } => false,
                     edit_market {
                         scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
                     } => false,
-                    // Disable Court dispute resolution mechanism
-                    create_market { dispute_mechanism: MarketDisputeMechanism::Court, .. } => false,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: MarketDisputeMechanism::Court,
+                        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
                         ..
                     } => false,
-                    edit_market { dispute_mechanism: MarketDisputeMechanism::Court, .. } => false,
+                    edit_market {
+                        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+                        ..
+                    } => false,
                     _ => true,
                 }
             }
@@ -199,13 +204,6 @@ impl Contains<RuntimeCall> for IsCallable {
 
 decl_common_types!();
 
-#[cfg(feature = "with-global-disputes")]
-create_runtime_with_additional_pallets!(
-    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
-    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
-);
-
-#[cfg(not(feature = "with-global-disputes"))]
 create_runtime_with_additional_pallets!(
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
