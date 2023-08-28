@@ -73,11 +73,14 @@ mod pallet {
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
-    use sp_arithmetic::Perbill;
-    use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
+    use sp_arithmetic::{
+        traits::{
+            CheckedSub, Saturating, UniqueSaturatedFrom,
+            Zero,
+        },
+        Perbill,
     };
+    use sp_runtime::{traits::AccountIdConversion, ArithmeticError, DispatchError, DispatchResult, SaturatedConversion};
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
         types::{
@@ -90,7 +93,7 @@ mod pallet {
         constants::{BASE, CENT},
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Market, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
             ResultWithWeightInfo, ScoringRule, SerdeWrapper,
         },
     };
@@ -107,13 +110,6 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
-    type MarketOf<T> = Market<
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::AccountId,
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency,
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::BlockNumber,
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment,
-        Asset<MarketIdOf<T>>,
-    >;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
@@ -1573,22 +1569,23 @@ mod pallet {
             receiver: T::AccountId,
         ) -> DispatchResult {
             let fee_amount = fee.mul_floor(amount);
-            T::AssetManager::transfer(base_asset, &payer, &receiver, fee_amount)?;
 
             if fee_asset != base_asset {
-                // TODO: Remove LP fees.
-                return <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
-                    receiver,
+                <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
+                    payer.clone(),
                     pool_id,
                     fee_asset,
                     fee_amount,
                     base_asset,
                     None,
-                    Some(BalanceOf::<T>::from(u128::MAX)),
+                    Some(<BalanceOf<T> as UniqueSaturatedFrom<u128>>::unique_saturated_from(
+                        u128::MAX,
+                    )),
                     Some(0),
-                )
-                .into();
+                )?;
             }
+
+            T::AssetManager::transfer(base_asset, &payer, &receiver, fee_amount)?;
 
             Ok(())
         }
@@ -2369,7 +2366,7 @@ mod pallet {
             if asset_in == pool.base_asset {
                 let asset_amount_in_new = creator_fee.mul_floor(asset_amount_in);
                 let fee_amount = asset_amount_in.saturating_sub(asset_amount_in_new);
-                T::AssetManager::transfer(asset_in, &who, &market.creator, fee_amount);
+                T::AssetManager::transfer(asset_in, &who, &market.creator, fee_amount)?;
             }
 
             let params = SwapExactAmountParams {
@@ -2449,7 +2446,7 @@ mod pallet {
                         who.clone(),
                         pool_id.clone(),
                         market.creator.clone(),
-                    );
+                    )?;
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
@@ -2462,7 +2459,7 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who,
+                who: who.clone(),
             };
             swap_exact_amount::<_, _, _, T>(params)?;
 
