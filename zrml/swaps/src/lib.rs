@@ -74,13 +74,13 @@ mod pallet {
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
     use sp_arithmetic::{
-        traits::{
-            CheckedSub, Saturating, UniqueSaturatedFrom,
-            Zero,
-        },
+        traits::{CheckedSub, Saturating, Zero},
         Perbill,
     };
-    use sp_runtime::{traits::AccountIdConversion, ArithmeticError, DispatchError, DispatchResult, SaturatedConversion};
+    use sp_runtime::{
+        traits::AccountIdConversion, ArithmeticError, DispatchError, DispatchResult,
+        SaturatedConversion,
+    };
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
         types::{
@@ -93,8 +93,8 @@ mod pallet {
         constants::{BASE, CENT},
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
-            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
+            ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -1405,9 +1405,17 @@ mod pallet {
                 let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
                 let swap_fee = if with_fees {
-                    pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?
+                    let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
+                    let market = T::MarketCommons::market(&pool.market_id)?;
+                    market
+                        .creator_fee
+                        .mul_floor(BASE)
+                        .checked_add(
+                            swap_fee.try_into().or_else(|_| Err(Error::<T>::TotalFeeTooHigh))?,
+                        )
+                        .ok_or_else(|| Error::<T>::TotalFeeTooHigh)?
                 } else {
-                    BalanceOf::<T>::zero()
+                    BalanceOf::<T>::zero().saturated_into()
                 };
 
                 return Ok(crate::math::calc_spot_price(
@@ -1415,7 +1423,7 @@ mod pallet {
                     in_weight,
                     balance_out.saturated_into(),
                     out_weight,
-                    swap_fee.saturated_into(),
+                    swap_fee,
                 )?
                 .saturated_into());
             }
@@ -1578,9 +1586,7 @@ mod pallet {
                     fee_amount,
                     base_asset,
                     None,
-                    Some(<BalanceOf<T> as UniqueSaturatedFrom<u128>>::unique_saturated_from(
-                        u128::MAX,
-                    )),
+                    Some(<BalanceOf<T>>::saturated_from(u128::MAX)),
                     Some(0),
                 )?;
             }

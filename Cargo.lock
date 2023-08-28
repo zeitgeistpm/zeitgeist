@@ -14612,6 +14612,7 @@ dependencies = [
  "test-case",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
+ "zrml-market-commons",
  "zrml-rikiddo",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
