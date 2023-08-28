@@ -1821,7 +1821,7 @@ mod pallet {
         InvalidBaseAsset,
         /// A foreign asset in not registered in AssetRegistry.
         UnregisteredForeignAsset,
-        /// Fee to high
+        /// The fee is too high.
         FeeTooHigh,
     }
 

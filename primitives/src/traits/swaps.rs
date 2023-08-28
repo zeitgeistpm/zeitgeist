@@ -152,6 +152,7 @@ pub trait Swaps<AccountId> {
     /// * `asset_out`: Asset leaving the pool.
     /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
     /// * `max_price`: Market price must be equal or less than the provided value.
+    /// * `override_swap_fee`: Optional parameter to override the swap fee
     fn swap_exact_amount_in(
         who: AccountId,
         pool_id: PoolId,
@@ -160,6 +161,7 @@ pub trait Swaps<AccountId> {
         asset_out: Asset<Self::MarketId>,
         min_asset_amount_out: Option<Self::Balance>,
         max_price: Option<Self::Balance>,
+        override_swap_fee: Option<u128>,
     ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount out

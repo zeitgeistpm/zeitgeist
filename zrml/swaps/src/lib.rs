@@ -73,6 +73,7 @@ mod pallet {
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
+    use sp_arithmetic::Perbill;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
         ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
@@ -723,6 +724,7 @@ mod pallet {
                 asset_out,
                 min_asset_amount_out,
                 max_price,
+                None,
             )?;
             Ok(Some(weight).into())
         }
@@ -1563,20 +1565,32 @@ mod pallet {
 
         fn handle_creator_fees(
             amount: BalanceOf<T>,
-            base_asset: &Asset<MarketIdOf<T>>,
+            base_asset: Asset<MarketIdOf<T>>,
             fee: Perbill,
-            fee_asset: &Asset<MarketIdOf<T>>,
-            payer: &T::AccountId,
-            pool_id: &PoolId,
-            receiver: &T::AccountId,
+            fee_asset: Asset<MarketIdOf<T>>,
+            payer: T::AccountId,
+            pool_id: PoolId,
+            receiver: T::AccountId,
         ) -> DispatchResult {
             let fee_amount = fee.mul_floor(amount);
-            T::AssetManager::transfer(base_asset, payer, receiver, fee_amount)?;
+            T::AssetManager::transfer(base_asset, &payer, &receiver, fee_amount)?;
 
-            if asset != pool.base_asset {
+            if fee_asset != base_asset {
                 // TODO: Remove LP fees.
-                Self::swap_exact_amount_in(receiver, pool_id, fee_asset, fee_amount, base_asset, None, Some(BalanceOf<T>::MAX))
+                return <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
+                    receiver,
+                    pool_id,
+                    fee_asset,
+                    fee_amount,
+                    base_asset,
+                    None,
+                    Some(BalanceOf::<T>::from(u128::MAX)),
+                    Some(0),
+                )
+                .into();
             }
+
+            Ok(())
         }
 
         pub(crate) fn burn_pool_shares(
@@ -2328,6 +2342,7 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
+        /// * `override_swap_fee`: Optional parameter to override the swap fee
         fn swap_exact_amount_in(
             who: T::AccountId,
             pool_id: PoolId,
@@ -2336,6 +2351,7 @@ mod pallet {
             asset_out: Asset<MarketIdOf<T>>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
+            override_swap_fee: Option<u128>,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
@@ -2347,6 +2363,14 @@ mod pallet {
                 min_asset_amount_out.is_some() || max_price.is_some(),
                 Error::<T>::LimitMissing,
             );
+            let market = T::MarketCommons::market(&pool.market_id)?;
+            let creator_fee = market.creator_fee;
+
+            if asset_in == pool.base_asset {
+                let asset_amount_in_new = creator_fee.mul_floor(asset_amount_in);
+                let fee_amount = asset_amount_in.saturating_sub(asset_amount_in_new);
+                T::AssetManager::transfer(asset_in, &who, &market.creator, fee_amount);
+            }
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
@@ -2365,13 +2389,18 @@ mod pallet {
                                     .saturated_into(),
                                 Error::<T>::MaxInRatio
                             );
+                            let swap_fee = if let Some(ofee) = override_swap_fee {
+                                ofee
+                            } else {
+                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into()
+                            };
                             crate::math::calc_out_given_in(
                                 balance_in.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_in)?,
                                 balance_out.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_out)?,
                                 asset_amount_in.saturated_into(),
-                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                                swap_fee,
                             )?
                             .saturated_into()
                         }
@@ -2412,6 +2441,16 @@ mod pallet {
                     }
                     Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
 
+                    Self::handle_creator_fees(
+                        asset_amount_out,
+                        pool.base_asset,
+                        creator_fee,
+                        asset_out,
+                        who.clone(),
+                        pool_id.clone(),
+                        market.creator.clone(),
+                    );
+
                     Ok([asset_amount_in, asset_amount_out])
                 },
                 asset_bound: min_asset_amount_out,
@@ -2444,11 +2483,11 @@ mod pallet {
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
-            //let market = T::MarketCommons::market(&market_id)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
             Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
+            let market = T::MarketCommons::market(&pool.market_id)?;
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
