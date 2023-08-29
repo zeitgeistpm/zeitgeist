@@ -8,9 +8,87 @@ and does not represent a complete changelog for the zeitgeistpm/zeitgeist
 repository.
 
 As of 0.3.9, the changelog's format is based on
-https://keepachangelog.com/en/1.0.0/ and ⚠️ marks changes that might break
+<https://keepachangelog.com/en/1.0.0/> and ⚠️ marks changes that might break
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
+
+## v0.4.0
+
+[#976]: https://github.com/zeitgeistpm/zeitgeist/pull/976
+
+### Changed
+
+All things about Global Disputes Fix ⚠️ :
+
+- Replace `WinnerInfo` by `GlobalDisputeInfo` with the following fields:
+  - `winner_outcome: OutcomeReport`
+  - `outcome_info: OutcomeInfo`
+  - `status: GdStatus`
+
+### Removed
+
+All things about Global Disputes Fix ⚠️ :
+
+- Remove the following event:
+  - `OutcomeOwnersRewardedWithNoFunds`
+
+### Added
+
+- ⚠️ Add court production implementation ([#976]). Dispatchable calls are:
+  - `join_court` - Join the court with a stake to become a juror in order to get
+    the stake-weighted chance to be selected for decision making.
+  - `delegate` - Join the court with a stake to become a delegator in order to
+    delegate the voting power to actively participating jurors.
+  - `prepare_exit_court` - Prepare as a court participant to leave the court
+    system.
+  - `exit_court` - Exit the court system in order to get the stake back.
+  - `vote` - An actively participating juror votes secretely on a specific court
+    case, in which the juror got selected.
+  - `denounce_vote` - Denounce a selected and active juror, if the secret and
+    vote is known before the actual reveal period.
+  - `reveal_vote` - An actively participating juror reveals the previously
+    casted secret vote.
+  - `appeal` - After the reveal phase (aggregation period), the jurors decision
+    can be appealed.
+  - `reassign_juror_stakes` - After the appeal period is over, losers pay the
+    winners for the jurors and delegators.
+  - `set_inflation` - Set the yearly inflation rate of the court system. Events
+    are:
+  - `JurorJoined` - A juror joined the court system.
+  - `ExitPrepared` - A court participant prepared to exit the court system.
+  - `ExitedCourt` - A court participant exited the court system.
+  - `JurorVoted` - A juror voted on a specific court case.
+  - `JurorRevealedVote` - A juror revealed the previously casted secret vote.
+  - `DenouncedJurorVote` - A juror was denounced.
+  - `DelegatorJoined` - A delegator joined the court system.
+  - `CourtAppealed` - A court case was appealed.
+  - `MintedInCourt` - A court participant was rewarded with newly minted tokens.
+  - `StakesReassigned` - The juror and delegator stakes have been reassigned.
+    The losing jurors have been slashed. The winning jurors have been rewarded
+    by the losers. The losing jurors are those, who did not vote, or did not
+    vote with the plurality, were denounced or did not reveal their vote.
+  - `InflationSet` - The yearly inflation rate of the court system was set.
+
+All things about Global Disputes Fix ⚠️ :
+
+- Add new dispatchable function:
+  - `refund_vote_fees` - Return all vote funds and fees, when a global dispute
+    was destroyed.
+- Add the following events:
+  - `OutcomeOwnerRewarded` for `Possession::Paid`
+  - `OutcomeOwnersRewarded` for `Possession::Shared`
+  - `OutcomesFullyCleaned` and `OutcomesPartiallyCleaned` for extrinsic
+    `refund_vote_fees`
+- Add enum `Possession` with variants:
+- `Paid { owner: AccountId, fee: Balance }`
+- `Shared { owners: BoundedVec }`
+- `OutcomeInfo` has the following fields:
+  - `outcome_sum: Balance`
+  - `possession: Possession`
+- Add `GdStatus` with the following enum variants:
+  - `Active { add_outcome_end: BlockNumber, vote_end: BlockNumber }`
+  - `Finished`
+  - `Destroyed`
 
 ## v0.3.11
 
@@ -19,9 +97,10 @@ APIs/RPC interface.
 ### Changed
 
 - ⚠️ All tokens now use 10 fractional decimal places ([#1049]).
-- Cross-consensus messages (XCM) assume the global canonical representation for token balances.
-- The token metadata in the asset registry now assumes that the existential deposit and fee factor
-  are stored in base 10,000,000,000.
+- Cross-consensus messages (XCM) assume the global canonical representation for
+  token balances.
+- The token metadata in the asset registry now assumes that the existential
+  deposit and fee factor are stored in base 10,000,000,000.
 
 ## v0.3.10
 
@@ -113,7 +192,7 @@ APIs/RPC interface.
   - Added xTokens pallet to transfer tokens accross chains
   - Added AssetRegistry pallet to register foreign asset
   - Added UnknownTokens pallet to handle unknown foreign assets
-  - More information at https://github.com/zeitgeistpm/zeitgeist/pull/661#top
+  - More information at <https://github.com/zeitgeistpm/zeitgeist/pull/661#top>
 
 - Transformed integer scalar markets to fixed point with ten digits after the
   decimal point. As soon as this update is deployed, the interpretation of the
@@ -212,8 +291,8 @@ APIs/RPC interface.
 - The `MarketCounter` of the `market-commons` pallet is incremented by one. This
   means that `MarketCounter` is now equal to the total number of markets ever
   created, instead of equal to the id of the last market created. For details
-  regarding this fix, see https://github.com/zeitgeistpm/zeitgeist/pull/636 and
-  https://github.com/zeitgeistpm/zeitgeist/issues/365.
+  regarding this fix, see <https://github.com/zeitgeistpm/zeitgeist/pull/636>
+  and <https://github.com/zeitgeistpm/zeitgeist/issues/365>.
 
 - Made the `min_asset_amount_out` and `max_price` parameters of
   `swap_exact_amount_in` and the `max_asset_amount_in` and `max_price`

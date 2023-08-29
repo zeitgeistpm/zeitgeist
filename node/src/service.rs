@@ -201,7 +201,7 @@ pub fn new_chain_ops(
 
 #[allow(clippy::type_complexity)]
 fn new_chain_ops_inner<RuntimeApi, Executor>(
-    mut config: &mut Configuration,
+    config: &mut Configuration,
 ) -> Result<
     (
         Arc<Client>,

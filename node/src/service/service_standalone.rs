@@ -18,7 +18,10 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection};
+use crate::{
+    cli::Cli,
+    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
+};
 use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
@@ -41,7 +44,7 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 /// Builds a new service for a full client.
 pub fn new_full<RuntimeApi, Executor>(
     mut config: Configuration,
-    disable_hardware_benchmarks: bool,
+    cli: Cli,
 ) -> Result<TaskManager, ServiceError>
 where
     RuntimeApi:
@@ -52,14 +55,12 @@ where
         >,
     Executor: NativeExecutionDispatch + 'static,
 {
-    let hwbench = if !disable_hardware_benchmarks {
-        config.database.path().map(|database_path| {
+    let hwbench = (cli.no_hardware_benchmarks)
+        .then_some(config.database.path().map(|database_path| {
             let _ = std::fs::create_dir_all(&database_path);
             sc_sysinfo::gather_hwbench(Some(database_path))
-        })
-    } else {
-        None
-    };
+        }))
+        .flatten();
 
     let sc_service::PartialComponents {
         client,
@@ -122,6 +123,7 @@ where
     let name = config.network.node_name.clone();
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
+    let database = config.database.clone();
 
     let rpc_builder = {
         let client = client.clone();
@@ -145,7 +147,7 @@ where
         tx_handler_controller: tx_handler_controller,
         backend,
         system_rpc_tx,
-        config,
+        config: config,
         telemetry: telemetry.as_mut(),
     })?;
 
@@ -201,6 +203,12 @@ where
                 telemetry: telemetry.as_ref().map(|x| x.handle()),
                 compatibility_mode: Default::default(),
             },
+        )?;
+
+        sc_storage_monitor::StorageMonitorService::try_spawn(
+            cli.storage_monitor,
+            database,
+            &task_manager.spawn_essential_handle(),
         )?;
 
         // the AURA authoring task is considered essential, i.e. if it

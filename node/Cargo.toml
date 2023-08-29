@@ -20,6 +20,7 @@ sc-keystore = { workspace = true }
 sc-rpc = { workspace = true }
 sc-rpc-api = { workspace = true }
 sc-service = { workspace = true }
+sc-storage-monitor = { workspace = true }
 sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-transaction-pool = { workspace = true }
@@ -168,6 +169,7 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
+    "polkadot-test-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [

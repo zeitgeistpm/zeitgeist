@@ -32,8 +32,8 @@ use crate::{
 
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId};
-use xcm_emulator::{Limited, TestExt};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
+use xcm_emulator::TestExt;
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmMetadata},
@@ -66,12 +66,12 @@ fn transfer_ztg_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -133,12 +133,12 @@ fn transfer_ztg_sibling_to_zeitgeist() {
                     1,
                     X2(
                         Parachain(battery_station::ID),
-                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                        Junction::AccountId32 { network: None, id: ALICE.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Bobs's balance is initial balance - amount transferred
@@ -203,12 +203,12 @@ fn transfer_btc_sibling_to_zeitgeist() {
                     1,
                     X2(
                         Parachain(battery_station::ID),
-                        Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() }
+                        Junction::AccountId32 { network: None, id: ALICE.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -257,12 +257,12 @@ fn transfer_btc_zeitgeist_to_sibling() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -300,10 +300,8 @@ fn transfer_roc_from_relay_chain() {
 
         assert_ok!(rococo_runtime::XcmPallet::reserve_transfer_assets(
             rococo_runtime::RuntimeOrigin::signed(ALICE),
-            Box::new(Parachain(battery_station::ID).into().into()),
-            Box::new(
-                Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }.into().into()
-            ),
+            Box::new(Parachain(battery_station::ID).into()),
+            Box::new(Junction::AccountId32 { network: None, id: BOB.into() }.into()),
             Box::new((Here, transfer_amount).into()),
             0
         ));
@@ -333,13 +331,10 @@ fn transfer_roc_to_relay_chain() {
             FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
-                MultiLocation::new(
-                    1,
-                    X1(Junction::AccountId32 { id: BOB.into(), network: NetworkId::Any })
-                )
-                .into()
+                MultiLocation::new(1, X1(Junction::AccountId32 { id: BOB.into(), network: None }))
+                    .into()
             ),
-            Limited(4_000_000_000)
+            WeightLimit::Limited(4_000_000_000.into())
         ));
 
         assert_eq!(
@@ -349,7 +344,7 @@ fn transfer_roc_to_relay_chain() {
     });
 
     RococoNet::execute_with(|| {
-        assert_eq!(rococo_runtime::Balances::free_balance(&BOB), 999_988_690_728);
+        assert_eq!(rococo_runtime::Balances::free_balance(&BOB), 999_990_415_728);
     });
 }
 
@@ -396,12 +391,12 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
                     1,
                     X2(
                         Parachain(PARA_ID_SIBLING),
-                        Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+                        Junction::AccountId32 { network: None, id: BOB.into() }
                     )
                 )
                 .into()
             ),
-            Limited(4_000_000_000),
+            WeightLimit::Limited(4_000_000_000.into()),
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
@@ -428,8 +423,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 80_824_000);
-    assert_eq!(roc_fee(), 8_082_400_000);
+    assert_eq!(ztg_fee(), 80_128_000);
+    assert_eq!(roc_fee(), 8_012_800_000);
 }
 
 #[inline]

@@ -1,3 +1,4 @@
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -234,7 +235,7 @@ fn rikiddo_all_prices_returns_correct_result() -> Result<(), &'static str> {
     let param: Vec<FixedU128<U64>> =
         vec![param_f64[0].to_fixed(), param_f64[1].to_fixed(), param_f64[2].to_fixed()];
     let rikiddo_prices = rikiddo.all_prices(&param)?;
-    let rikiddo_prices_f64 = vec![
+    let rikiddo_prices_f64 = [
         price(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[0]),
         price(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[1]),
         price(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[2]),

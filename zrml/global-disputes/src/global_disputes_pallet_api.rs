@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,46 +17,32 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use sp_runtime::DispatchResult;
+use crate::types::InitialItem;
+use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::OutcomeReport;
 
 /// The trait to initiate and resolve the global disputes.
-pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
-    /// Push a voting outcome for one global dispute.
-    ///
-    /// # Arguments
-    /// - `market_id` - The id of the market.
-    /// - `outcome` - The voting outcome to push.
-    /// - `owner` - The owner of the outcome.
-    /// - `initial_vote_balance` - The initial vote amount for the specified outcome.
-    ///
-    /// # Returns
-    ///
-    /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
-    /// returned, this means that the dispute could not be resolved.
-    fn push_voting_outcome(
-        market_id: &MarketId,
-        outcome: OutcomeReport,
-        owner: &AccountId,
-        initial_vote_balance: Balance,
-    ) -> DispatchResult;
+pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance, BlockNumber> {
+    /// Return the `AddOutcomePeriod` parameter.
+    fn get_add_outcome_period() -> BlockNumber;
 
-    /// Get the information about a voting outcome for a global dispute.
+    /// Return the `GdVotingPeriod` parameter.
+    fn get_vote_period() -> BlockNumber;
+
+    /// Start a global dispute.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    /// - `outcome` - The voting outcome to get.
-    ///
-    /// # Returns
-    ///
-    /// Returns the information stored for a particular outcome.
-    /// - outcome_sum - The current sum of all locks on this outcome.
-    /// - owners - The vector of owners of the outcome.
-    fn get_voting_outcome_info(
+    /// - `initial_items` - The initial vote options (outcome, owner, amount)
+    /// to add to the global dispute. One initial item consists of the vote outcome,
+    ///  the owner of the outcome who is rewarded in case of a win,
+    /// and the initial vote amount for this outcome.
+    /// It is required to add at least two unique outcomes.
+    /// In case of a duplicated outcome, the owner and amount is added to the pre-existing outcome.
+    fn start_global_dispute(
         market_id: &MarketId,
-        outcome: &OutcomeReport,
-    ) -> Option<(Balance, Vec<AccountId>)>;
+        initial_items: &[InitialItem<AccountId, Balance>],
+    ) -> Result<u32, DispatchError>;
 
     /// Determine the winner of a global dispute.
     ///
@@ -68,17 +54,19 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// Returns the winning outcome.
     fn determine_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
-    /// Check if global dispute started.
-    ///
-    /// # Arguments
-    /// - `market_id` - The id of the market.
-    fn is_started(market_id: &MarketId) -> bool;
+    /// Check if a global dispute exists for the specified market.
+    fn does_exist(market_id: &MarketId) -> bool;
 
-    /// Check if a global dispute has not already been started.
+    /// Check if global dispute is active.
+    /// This call is useful to check if a global dispute is ready for a destruction.
     ///
     /// # Arguments
     /// - `market_id` - The id of the market.
-    fn is_not_started(market_id: &MarketId) -> bool {
-        !Self::is_started(market_id)
-    }
+    fn is_active(market_id: &MarketId) -> bool;
+
+    /// Destroy a global dispute and allow to return all funds of the participants.
+    ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    fn destroy_global_dispute(market_id: &MarketId) -> Result<(), DispatchError>;
 }

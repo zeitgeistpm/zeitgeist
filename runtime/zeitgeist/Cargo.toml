@@ -313,7 +313,7 @@ std = [
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
-    "zrml-global-disputes?/std",
+    "zrml-global-disputes/std",
     "zrml-swaps-runtime-api/std",
     "zrml-styx/std",
     "zrml-swaps/std",
@@ -366,7 +366,7 @@ try-runtime = [
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
-    "zrml-global-disputes?/try-runtime",
+    "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
 
@@ -388,11 +388,6 @@ try-runtime = [
     "cumulus-pallet-xcm?/try-runtime",
     "cumulus-pallet-xcmp-queue?/try-runtime",
     "parachain-info?/try-runtime",
-]
-with-global-disputes = [
-    "zrml-global-disputes",
-    "common-runtime/with-global-disputes",
-    "zrml-prediction-markets/with-global-disputes",
 ]
 
 [package]

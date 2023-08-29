@@ -58,7 +58,7 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything},
-    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
@@ -166,6 +166,7 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
+            RuntimeCall::GlobalDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
@@ -182,6 +183,7 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
@@ -213,12 +215,6 @@ impl Contains<RuntimeCall> for IsCallable {
 
 decl_common_types!();
 
-#[cfg(feature = "with-global-disputes")]
-create_runtime_with_additional_pallets!(
-    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
-);
-
-#[cfg(not(feature = "with-global-disputes"))]
 create_runtime_with_additional_pallets!();
 
 impl_config_traits!();
