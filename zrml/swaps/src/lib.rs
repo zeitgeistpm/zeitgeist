@@ -1072,6 +1072,13 @@ mod pallet {
         SwapExactAmountOut(
             SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
         ),
+        /// Fees were paid to the market creators. \[payer, payee, amount, asset\]
+        MarketCreatorFeesPaid(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::AccountId,
+            BalanceOf<T>,
+            Asset<MarketIdOf<T>>,
+        ),
     }
 
     #[pallet::pallet]
@@ -1569,17 +1576,18 @@ mod pallet {
 
         fn handle_creator_fees(
             amount: BalanceOf<T>,
+            fee_asset: Asset<MarketIdOf<T>>,
             base_asset: Asset<MarketIdOf<T>>,
             fee: Perbill,
-            fee_asset: Asset<MarketIdOf<T>>,
+            payee: T::AccountId,
             payer: T::AccountId,
             pool_id: PoolId,
-            receiver: T::AccountId,
         ) -> DispatchResult {
-            let fee_amount = fee.mul_floor(amount);
+            let mut fee_amount = fee.mul_floor(amount);
 
             if fee_asset != base_asset {
-                <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
+                let balance_before = T::AssetManager::free_balance(base_asset, &payer);
+                let swap_result = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
                     payer.clone(),
                     pool_id,
                     fee_asset,
@@ -1588,10 +1596,27 @@ mod pallet {
                     None,
                     Some(<BalanceOf<T>>::saturated_from(u128::MAX)),
                     Some(0),
-                )?;
+                );
+
+                if swap_result.is_err() {
+                    T::AssetManager::transfer(fee_asset, &payer, &payee, fee_amount)?;
+
+                    Self::deposit_event(Event::MarketCreatorFeesPaid(
+                        payer,
+                        payee,
+                        fee_amount,
+                        fee_asset,
+                    ));
+
+                    return Ok(());
+                }
+
+                let balance_after = T::AssetManager::free_balance(base_asset, &payer);
+                fee_amount = balance_after.saturating_sub(balance_before);
             }
 
-            T::AssetManager::transfer(base_asset, &payer, &receiver, fee_amount)?;
+            T::AssetManager::transfer(base_asset, &payer, &payee, fee_amount)?;
+            Self::deposit_event(Event::MarketCreatorFeesPaid(payer, payee, fee_amount, base_asset));
 
             Ok(())
         }
@@ -2350,7 +2375,7 @@ mod pallet {
             who: T::AccountId,
             pool_id: PoolId,
             asset_in: Asset<MarketIdOf<T>>,
-            asset_amount_in: BalanceOf<T>,
+            mut asset_amount_in: BalanceOf<T>,
             asset_out: Asset<MarketIdOf<T>>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
@@ -2370,9 +2395,18 @@ mod pallet {
             let creator_fee = market.creator_fee;
 
             if asset_in == pool.base_asset {
-                let asset_amount_in_new = creator_fee.mul_floor(asset_amount_in);
-                let fee_amount = asset_amount_in.saturating_sub(asset_amount_in_new);
-                T::AssetManager::transfer(asset_in, &who, &market.creator, fee_amount)?;
+                let fee_amount = creator_fee.mul_floor(asset_amount_in);
+                asset_amount_in = asset_amount_in.saturating_sub(fee_amount);
+
+                Self::handle_creator_fees(
+                    asset_amount_in,
+                    asset_in,
+                    pool.base_asset,
+                    creator_fee,
+                    market.creator.clone(),
+                    who.clone(),
+                    pool_id.clone(),
+                )?;
             }
 
             let params = SwapExactAmountParams {
@@ -2444,15 +2478,17 @@ mod pallet {
                     }
                     Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
 
-                    Self::handle_creator_fees(
-                        asset_amount_out,
-                        pool.base_asset,
-                        creator_fee,
-                        asset_out,
-                        who.clone(),
-                        pool_id.clone(),
-                        market.creator.clone(),
-                    )?;
+                    if override_swap_fee.is_none() && asset_in != pool.base_asset {
+                        Self::handle_creator_fees(
+                            asset_amount_out,
+                            asset_out,
+                            pool.base_asset,
+                            creator_fee,
+                            market.creator.clone(),
+                            who.clone(),
+                            pool_id.clone(),
+                        )?;
+                    }
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
