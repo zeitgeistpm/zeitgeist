@@ -38,18 +38,6 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-<<<<<<< HEAD
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CorrectionPeriod,
-        CourtCaseDuration, CourtPalletId, MaxCreatorFee, DisputeFactor, ExistentialDeposit,
-        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals,
-        MaxAssets, MaxCategories, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
-        MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinOracleDuration, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutsiderBond, PmPalletId,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT,
-        MILLISECS_PER_BLOCK,
-=======
         AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId, BalanceFractionalDecimals,
         BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId, ExistentialDeposit,
         ExistentialDeposits, ExitFee, GetNativeCurrencyId, InflationPeriod,
@@ -60,8 +48,7 @@ use zeitgeist_primitives::{
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
         MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
         OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval, SimpleDisputesPalletId,
-        SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT, MILLISECS_PER_BLOCK,
->>>>>>> main
+        SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT, MILLISECS_PER_BLOCK, MaxCreatorFee,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
