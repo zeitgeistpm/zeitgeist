@@ -38,7 +38,7 @@ use frame_support::{
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_arithmetic::{traits::SaturatedConversion, Perbill};
-use sp_runtime::DispatchResult;
+use sp_runtime::{DispatchResult};
 #[allow(unused_imports)]
 use test_case::test_case;
 use zeitgeist_primitives::{
@@ -225,7 +225,7 @@ fn allows_the_full_user_lifecycle() {
 
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             _1,
             ASSET_B,
@@ -256,7 +256,7 @@ fn allows_the_full_user_lifecycle() {
 
         assert_ok!(Swaps::swap_exact_amount_out(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             Some(_2),
             ASSET_B,
@@ -1312,7 +1312,7 @@ fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
         assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
         assert_ok!(Swaps::admin_clean_up_pool(
             RuntimeOrigin::root(),
-            0,
+            DEFAULT_POOL_ID,
             OutcomeReport::Categorical(65),
         ));
         assert_ok!(Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1),));
@@ -1476,7 +1476,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values(
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             asset_amount_joined,
             0
@@ -1486,7 +1486,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values(
 
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             pool_amount,
             bound,
@@ -1536,7 +1536,7 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values(
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             asset_amount_joined,
             0
@@ -1552,7 +1552,7 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values(
 
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             asset_amount,
             bound,
@@ -1806,7 +1806,7 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values(
         let alice_sent = _1;
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             asset_amount,
             bound,
@@ -1843,7 +1843,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values(
         let bound = _5;
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             pool_amount,
             bound,
@@ -1977,7 +1977,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             _1,
             ASSET_B,
@@ -2193,7 +2193,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
         assert_ok!(Swaps::swap_exact_amount_out(
             alice_signed(),
-            0,
+            DEFAULT_POOL_ID,
             ASSET_A,
             asset_bound,
             ASSET_B,
@@ -2521,7 +2521,7 @@ fn join_pool_exit_pool_does_not_create_extra_tokens() {
         let amount = 123_456_789_123; // Strange number to force rounding errors!
         assert_ok!(Swaps::pool_join(
             RuntimeOrigin::signed(CHARLIE),
-            0,
+            DEFAULT_POOL_ID,
             amount,
             vec![_10000, _10000, _10000, _10000]
         ));
@@ -3666,29 +3666,46 @@ fn execute_arbitrage_observes_min_balances_mint_sell() {
     });
 }
 
-/*
-#[test_case(BASE_ASSET, ASSET_B; "in_base_asset")]
-#[test_case(ASSET_B, BASE_ASSET; "out_base_asset")]
-#[test_case(ASSET_B, ASSET_C; "no_base_assset")]
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
 fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
     asset_in: Asset<MarketId>,
     asset_out: Asset<MarketId>,
 ) {
-    set_creator_fee(0, Perbill::from_percent(1))?;
-    create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(<BalanceOf<Runtime>>::zero()), true);
-    let alice_initial_base_balance = AssetManager::free_balance(BASE_ASSET, &ALICE);
-    fn swap_exact_amount_in(
-        ALICE,
-        0,
-        asset_in: Asset<MarketIdOf<T>>,
-        mut asset_amount_in: BalanceOf<T>,
-        asset_out: Asset<MarketIdOf<T>>,
-        min_asset_amount_out: Option<BalanceOf<T>>,
-        max_price: Option<BalanceOf<T>>,
-        handle_fees: bool,
-    )
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+
+        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(
+            ScoringRule::CPMM,
+            Some(0),
+            true,
+        );
+
+        let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
+        let market_creator_balance_before = AssetManager::free_balance(BASE_ASSET, &market_creator);
+        let asset_amount_in = _1;
+        let min_asset_amount_out = Some(0);
+        let max_price = None;
+        let expected_fee = creator_fee.mul_floor(asset_amount_in);
+
+        assert_ok!(Swaps::swap_exact_amount_in(
+            alice_signed(),
+            DEFAULT_POOL_ID,
+            asset_in,
+            asset_amount_in,
+            asset_out,
+            min_asset_amount_out,
+            max_price,
+        ));
+
+        let market_creator_balance_after = AssetManager::free_balance(BASE_ASSET, &market_creator);
+        let max_deviation_pct = Perbill::from_perthousand(1);
+        //assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
+        assert_approx!(market_creator_balance_after - market_creator_balance_before, expected_fee, max_deviation_pct.mul_floor(expected_fee));
+    });
 }
-*/
 
 fn alice_signed() -> RuntimeOrigin {
     RuntimeOrigin::signed(ALICE)
@@ -3710,7 +3727,7 @@ fn create_initial_pool(
         BOB,
         ASSETS.to_vec(),
         BASE_ASSET,
-        0,
+        DEFAULT_MARKET_ID,
         scoring_rule,
         swap_fee,
         if scoring_rule == ScoringRule::CPMM { Some(LIQUIDITY) } else { None },
