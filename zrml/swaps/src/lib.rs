@@ -2534,7 +2534,7 @@ mod pallet {
             asset_in: Asset<MarketIdOf<T>>,
             max_asset_amount_in: Option<BalanceOf<T>>,
             asset_out: Asset<MarketIdOf<T>>,
-            asset_amount_out: BalanceOf<T>,
+            mut asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
             handle_fees: bool,
         ) -> Result<Weight, DispatchError> {
@@ -2544,6 +2544,16 @@ mod pallet {
             Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
             let market = T::MarketCommons::market(&pool.market_id)?;
             let creator_fee = market.creator_fee;
+            let mut fee_amount = <BalanceOf<T>>::zero();
+
+            let to_adjust_in_value = if asset_in == pool.base_asset {
+                // Can't adjust the value inside the anonymous function for asset_amounts
+                true
+            } else {
+                fee_amount = creator_fee.mul_floor(asset_amount_out);
+                asset_amount_out = asset_amount_out.saturating_add(fee_amount);
+                false
+            };
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
@@ -2554,6 +2564,7 @@ mod pallet {
                                 asset_amount_out
                                     <= bmul(
                                         balance_out.saturated_into(),
+                          
                                         T::MaxOutRatio::get().saturated_into()
                                     )?
                                     .saturated_into(),
@@ -2573,7 +2584,7 @@ mod pallet {
                                 balance_out.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_out)?,
                                 asset_amount_out.saturated_into(),
-                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                                swap_fee,
                             )?
                             .saturated_into()
                         }
@@ -2609,8 +2620,27 @@ mod pallet {
                         }
                     };
 
+                    if asset_in == pool.base_asset && !handle_fees && to_adjust_in_value {
+                        Self::handle_creator_fees(
+                            asset_amount_in,
+                            asset_in,
+                            pool.base_asset,
+                            creator_fee,
+                            market.creator.clone(),
+                            who.clone(),
+                            pool_id.clone(),
+                        )?;
+                    }
+
                     if let Some(maai) = max_asset_amount_in {
-                        ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
+                        let asset_amount_in_check = if to_adjust_in_value {
+                            let fee_amount = creator_fee.mul_floor(asset_amount_in);
+                            asset_amount_in.saturating_add(fee_amount)
+                        } else {
+                            asset_amount_in
+                        };
+
+                        ensure!(asset_amount_in_check <= maai, Error::<T>::LimitIn);
                     }
 
                     Ok([asset_amount_in, asset_amount_out])
@@ -2624,9 +2654,23 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who,
+                who: who.clone(),
             };
             swap_exact_amount::<_, _, _, T>(params)?;
+
+            if !to_adjust_in_value && !handle_fees {
+                let asset_amount_out = asset_amount_out.saturating_sub(fee_amount);
+
+                Self::handle_creator_fees(
+                    asset_amount_out,
+                    asset_out,
+                    pool.base_asset,
+                    creator_fee,
+                    market.creator.clone(),
+                    who.clone(),
+                    pool_id.clone(),
+                )?;
+            }
 
             match pool.scoring_rule {
                 ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_out_cpmm()),
