@@ -57,6 +57,11 @@ pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
 pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
 
 pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+pub const BASE_ASSET: Asset<MarketId> = if let Some(asset) = ASSETS.last() {
+    *asset
+} else {
+    panic!("Invalid asset vector");
+};
 
 pub const SENTINEL_AMOUNT: u128 = 123456789;
 
@@ -311,14 +316,13 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(next_pool_before, 0);
 
         let amount = LIQUIDITY;
-        let base_asset = ASSETS.last().unwrap();
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount));
         });
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *base_asset,
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(1),
@@ -332,7 +336,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         let pool = Swaps::pools(0).unwrap();
 
         assert_eq!(pool.assets, ASSETS);
-        assert_eq!(pool.base_asset, *base_asset);
+        assert_eq!(pool.base_asset, BASE_ASSET);
         assert_eq!(pool.market_id, 0);
         assert_eq!(pool.pool_status, PoolStatus::Initialized);
         assert_eq!(pool.scoring_rule, ScoringRule::CPMM);
@@ -721,7 +725,7 @@ fn get_spot_price_returns_correct_results_cpmm(
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(swap_fee),
@@ -762,12 +766,12 @@ fn get_spot_price_returns_correct_results_rikiddo() {
 
         // Asset out, base currency in. Should receive about 1/3 -> price about 3
         let price_base_in =
-            Swaps::get_spot_price(&pool_id, &ASSETS[0], ASSETS.last().unwrap(), true).unwrap();
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &BASE_ASSET, true).unwrap();
         // Between 0.3 and 0.4
         assert!(price_base_in > 28 * BASE / 10 && price_base_in < 31 * BASE / 10);
         // Base currency in, asset out. Price about 3.
         let price_base_out =
-            Swaps::get_spot_price(&pool_id, ASSETS.last().unwrap(), &ASSETS[0], true).unwrap();
+            Swaps::get_spot_price(&pool_id, &BASE_ASSET, &ASSETS[0], true).unwrap();
         // Between 2.9 and 3.1
         assert!(price_base_out > 3 * BASE / 10 && price_base_out < 4 * BASE / 10);
         // Asset in, asset out. Price about 1.
@@ -832,7 +836,7 @@ fn get_all_spot_prices_returns_correct_results_cpmm(
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(swap_fee),
@@ -892,7 +896,7 @@ fn pool_exit_with_exact_asset_amount_satisfies_max_out_ratio_constraints() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -927,7 +931,7 @@ fn pool_exit_with_exact_pool_amount_satisfies_max_in_ratio_constraints() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -962,7 +966,7 @@ fn pool_join_with_exact_asset_amount_satisfies_max_in_ratio_constraints() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -1003,7 +1007,7 @@ fn pool_join_with_exact_pool_amount_satisfies_max_out_ratio_constraints() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -1890,7 +1894,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm_with_fees() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(BASE / 10),
@@ -2092,7 +2096,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm_with_fees() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(BASE / 10),
@@ -2397,7 +2401,7 @@ fn create_pool_fails_on_weight_below_minimum_weight() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.to_vec(),
-                *ASSETS.last().unwrap(),
+                BASE_ASSET,
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -2419,7 +2423,7 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.to_vec(),
-                *ASSETS.last().unwrap(),
+                BASE_ASSET,
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -2442,7 +2446,7 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.to_vec(),
-                *ASSETS.last().unwrap(),
+                BASE_ASSET,
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -2465,7 +2469,7 @@ fn create_pool_fails_on_insufficient_liquidity() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.to_vec(),
-                *ASSETS.last().unwrap(),
+                BASE_ASSET,
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -2489,7 +2493,7 @@ fn create_pool_succeeds_on_min_liquidity() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -2516,7 +2520,7 @@ fn create_pool_transfers_the_correct_amount_of_tokens() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.to_vec(),
-            *ASSETS.last().unwrap(),
+            BASE_ASSET,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -3528,7 +3532,7 @@ fn create_initial_pool(
     assert_ok!(Swaps::create_pool(
         BOB,
         ASSETS.to_vec(),
-        *ASSETS.last().unwrap(),
+        BASE_ASSET,
         0,
         scoring_rule,
         swap_fee,
