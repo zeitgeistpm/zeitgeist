@@ -2564,7 +2564,6 @@ mod pallet {
                                 asset_amount_out
                                     <= bmul(
                                         balance_out.saturated_into(),
-                          
                                         T::MaxOutRatio::get().saturated_into()
                                     )?
                                     .saturated_into(),
