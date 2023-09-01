@@ -27,6 +27,7 @@
 
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
+    math::{calc_in_given_out, calc_out_given_in},
     mock::*,
     BalanceOf, Config, Event, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
     ARBITRAGE_MAX_ITERATIONS,
@@ -97,10 +98,11 @@ const _900: u128 = 900 * BASE;
 const _1234: u128 = 1234 * BASE;
 const _10000: u128 = 10000 * BASE;
 
-pub const DEFAULT_POOL_ID: PoolId = 0;
-pub const DEFAULT_MARKET_ID: MarketId = 0;
+const DEFAULT_POOL_ID: PoolId = 0;
+const DEFAULT_MARKET_ID: MarketId = 0;
 
-const LIQUIDITY: u128 = _100;
+const DEFAULT_LIQUIDITY: u128 = _100;
+const DEFAULT_WEIGHT: u128 = _2;
 
 type MarketOf<Runtime> = zeitgeist_primitives::types::Market<
     AccountIdTest,
@@ -147,8 +149,8 @@ fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<MarketIdOf<Runtime>
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
-                Some(vec![_2; asset_count]),
+                Some(DEFAULT_LIQUIDITY),
+                Some(vec![DEFAULT_WEIGHT; asset_count]),
             ),
             crate::Error::<Runtime>::SomeIdenticalAssets
         );
@@ -213,11 +215,11 @@ fn allows_the_full_user_lifecycle() {
         let in_balance = Currencies::free_balance(ASSET_A, &pool_account);
         assert_eq!(in_balance, _105);
 
-        let expected = crate::math::calc_out_given_in(
+        let expected = calc_out_given_in(
             in_balance,
-            _2,
+            DEFAULT_WEIGHT,
             Currencies::free_balance(ASSET_B, &pool_account),
-            _2,
+            DEFAULT_WEIGHT,
             _1,
             0,
         )
@@ -244,9 +246,9 @@ fn allows_the_full_user_lifecycle() {
         // swap_exact_amount_out
         let expected_in = crate::math::calc_in_given_out(
             Currencies::free_balance(ASSET_A, &pool_account),
-            _2,
+            DEFAULT_WEIGHT,
             Currencies::free_balance(ASSET_B, &pool_account),
-            _2,
+            DEFAULT_WEIGHT,
             _1,
             0,
         )
@@ -371,7 +373,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         let next_pool_before = Swaps::next_pool_id();
         assert_eq!(next_pool_before, 0);
 
-        let amount = LIQUIDITY;
+        let amount = DEFAULT_LIQUIDITY;
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount));
         });
@@ -814,7 +816,7 @@ fn get_spot_price_returns_correct_results_cpmm(
 ) {
     ExtBuilder::default().build().execute_with(|| {
         // We always swap ASSET_A for ASSET_B, but we vary the weights, balances and swap fees.
-        let amount_in_pool = LIQUIDITY;
+        let amount_in_pool = DEFAULT_LIQUIDITY;
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount_in_pool));
         });
@@ -981,7 +983,7 @@ fn pool_exit_with_exact_asset_amount_satisfies_max_out_ratio_constraints() {
     ExtBuilder::default().build().execute_with(|| {
         // We make sure that the individual asset weights don't divide total weight so we trigger
         // the calculation of exp using the binomial series.
-        let amount_in_pool = LIQUIDITY;
+        let amount_in_pool = DEFAULT_LIQUIDITY;
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount_in_pool));
         });
@@ -1015,7 +1017,7 @@ fn pool_exit_with_exact_pool_amount_satisfies_max_in_ratio_constraints() {
     ExtBuilder::default().build().execute_with(|| {
         // We make sure that the individual asset weights don't divide total weight so we trigger
         // the calculation of exp using the binomial series.
-        let amount_in_pool = LIQUIDITY;
+        let amount_in_pool = DEFAULT_LIQUIDITY;
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount_in_pool));
         });
@@ -1049,7 +1051,7 @@ fn pool_join_with_exact_asset_amount_satisfies_max_in_ratio_constraints() {
     ExtBuilder::default().build().execute_with(|| {
         // We make sure that the individual asset weights don't divide total weight so we trigger
         // the calculation of exp using the binomial series.
-        let amount_in_pool = LIQUIDITY;
+        let amount_in_pool = DEFAULT_LIQUIDITY;
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount_in_pool));
         });
@@ -1064,7 +1066,7 @@ fn pool_join_with_exact_asset_amount_satisfies_max_in_ratio_constraints() {
             Some(vec!(_2, _2, _2, _5)),
         ));
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
-        let asset_amount = LIQUIDITY;
+        let asset_amount = DEFAULT_LIQUIDITY;
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, asset_amount));
 
         assert_noop!(
@@ -1089,7 +1091,7 @@ fn pool_join_with_exact_pool_amount_satisfies_max_out_ratio_constraints() {
     ExtBuilder::default().build().execute_with(|| {
         // We make sure that the individual asset weights don't divide total weight so we trigger
         // the calculation of exp using the binomial series.
-        let amount_in_pool = LIQUIDITY;
+        let amount_in_pool = DEFAULT_LIQUIDITY;
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount_in_pool));
         });
@@ -1230,8 +1232,13 @@ fn pool_exit_decreases_correct_pool_parameters() {
         assert_all_parameters(
             [_25 + 1, _25 + 1, _25 + 1, _25 + 1],
             0,
-            [LIQUIDITY - 1, LIQUIDITY - 1, LIQUIDITY - 1, LIQUIDITY - 1],
-            LIQUIDITY,
+            [
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY - 1,
+            ],
+            DEFAULT_LIQUIDITY,
         );
     })
 }
@@ -1280,12 +1287,12 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
         assert_eq!(Currencies::free_balance(ASSET_B, &BOB), _9);
         assert_eq!(Currencies::free_balance(ASSET_C, &BOB), _9);
         assert_eq!(Currencies::free_balance(ASSET_D, &BOB), _9);
-        assert_eq!(Currencies::free_balance(pool_shares_id, &BOB), LIQUIDITY - _10);
-        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account), LIQUIDITY - _9);
-        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account), LIQUIDITY - _9);
-        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account), LIQUIDITY - _9);
-        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account), LIQUIDITY - _9);
-        assert_eq!(Currencies::total_issuance(pool_shares_id), LIQUIDITY - _10);
+        assert_eq!(Currencies::free_balance(pool_shares_id, &BOB), DEFAULT_LIQUIDITY - _10);
+        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::total_issuance(pool_shares_id), DEFAULT_LIQUIDITY - _10);
 
         System::assert_last_event(
             Event::PoolExit(PoolAssetsEvent {
@@ -1332,8 +1339,13 @@ fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
             0,
             // Note: Although the asset is deleted from the pool, the assets B/C still remain on the
             // pool account.
-            [LIQUIDITY - 1, LIQUIDITY + _1, LIQUIDITY + _1, LIQUIDITY - 1],
-            LIQUIDITY,
+            [
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY + _1,
+                DEFAULT_LIQUIDITY + _1,
+                DEFAULT_LIQUIDITY - 1,
+            ],
+            DEFAULT_LIQUIDITY,
         );
     })
 }
@@ -1505,12 +1517,12 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values(
             [_25 - asset_amount_joined + asset_amount_expected, _25, _25, _25],
             0,
             [
-                LIQUIDITY + asset_amount_joined - asset_amount_expected,
-                LIQUIDITY,
-                LIQUIDITY,
-                LIQUIDITY,
+                DEFAULT_LIQUIDITY + asset_amount_joined - asset_amount_expected,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
             ],
-            LIQUIDITY,
+            DEFAULT_LIQUIDITY,
         )
     });
 }
@@ -1570,8 +1582,13 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values(
         assert_all_parameters(
             [_25 - asset_amount_joined + asset_amount, _25, _25, _25],
             dust,
-            [LIQUIDITY + asset_amount_joined - asset_amount, LIQUIDITY, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY + dust,
+            [
+                DEFAULT_LIQUIDITY + asset_amount_joined - asset_amount,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY + dust,
         )
     });
 }
@@ -1824,8 +1841,13 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values(
         assert_all_parameters(
             [_25 - asset_amount, _25, _25, _25],
             pool_amount_expected,
-            [LIQUIDITY + alice_sent, LIQUIDITY, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY + pool_amount_expected,
+            [
+                DEFAULT_LIQUIDITY + alice_sent,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY + pool_amount_expected,
         );
     });
 }
@@ -1861,8 +1883,13 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values(
         assert_all_parameters(
             [_25 - asset_amount_expected, _25, _25, _25],
             pool_amount,
-            [LIQUIDITY + asset_amount_expected, LIQUIDITY, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY + pool_amount,
+            [
+                DEFAULT_LIQUIDITY + asset_amount_expected,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY + pool_amount,
         );
     });
 }
@@ -1999,8 +2026,13 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
         assert_all_parameters(
             [_24, _25 + 9900990100, _25, _25],
             0,
-            [LIQUIDITY + _1, LIQUIDITY - 9900990100, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY,
+            [
+                DEFAULT_LIQUIDITY + _1,
+                DEFAULT_LIQUIDITY - 9900990100,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY,
         );
     });
 }
@@ -2020,8 +2052,8 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm_with_fees() {
             0,
             ScoringRule::CPMM,
             Some(BASE / 10),
-            Some(LIQUIDITY),
-            Some(vec!(_2, _2, _2, _2)),
+            Some(DEFAULT_LIQUIDITY),
+            Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
         ));
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
 
@@ -2055,8 +2087,13 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm_with_fees() {
         assert_all_parameters(
             [_25 - asset_amount_in, _25 + asset_amount_out, _25, _25],
             0,
-            [LIQUIDITY + asset_amount_in, LIQUIDITY - asset_amount_out, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY,
+            [
+                DEFAULT_LIQUIDITY + asset_amount_in,
+                DEFAULT_LIQUIDITY - asset_amount_out,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY,
         );
     });
 }
@@ -2215,8 +2252,13 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
         assert_all_parameters(
             [239898989900, _26, _25, _25],
             0,
-            [LIQUIDITY + _1 + 101010100, LIQUIDITY - _1, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY,
+            [
+                DEFAULT_LIQUIDITY + _1 + 101010100,
+                DEFAULT_LIQUIDITY - _1,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY,
         );
     });
 }
@@ -2236,8 +2278,8 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm_with_fees() {
             0,
             ScoringRule::CPMM,
             Some(BASE / 10),
-            Some(LIQUIDITY),
-            Some(vec!(_2, _2, _2, _2)),
+            Some(DEFAULT_LIQUIDITY),
+            Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
         ));
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
 
@@ -2269,8 +2311,13 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm_with_fees() {
         assert_all_parameters(
             [_25 - asset_amount_in, _25 + asset_amount_out, _25, _25],
             0,
-            [LIQUIDITY + asset_amount_in, LIQUIDITY - asset_amount_out, LIQUIDITY, LIQUIDITY],
-            LIQUIDITY,
+            [
+                DEFAULT_LIQUIDITY + asset_amount_in,
+                DEFAULT_LIQUIDITY - asset_amount_out,
+                DEFAULT_LIQUIDITY,
+                DEFAULT_LIQUIDITY,
+            ],
+            DEFAULT_LIQUIDITY,
         );
     });
 }
@@ -2403,7 +2450,7 @@ fn create_pool_fails_on_too_many_assets() {
         let length = <Runtime as crate::Config>::MaxAssets::get();
         let assets: Vec<Asset<MarketId>> =
             (0..=length).map(|x| Asset::CategoricalOutcome(0, x)).collect::<Vec<_>>();
-        let weights = vec![_2; length.into()];
+        let weights = vec![DEFAULT_WEIGHT; length.into()];
 
         assets.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, _100);
@@ -2417,7 +2464,7 @@ fn create_pool_fails_on_too_many_assets() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
+                Some(DEFAULT_LIQUIDITY),
                 Some(weights),
             ),
             crate::Error::<Runtime>::TooManyAssets
@@ -2436,8 +2483,8 @@ fn create_pool_fails_on_too_few_assets() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
-                Some(vec!(_2, _2, _2, _2)),
+                Some(DEFAULT_LIQUIDITY),
+                Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
             crate::Error::<Runtime>::TooFewAssets
         );
@@ -2455,8 +2502,8 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
-                Some(vec!(_2, _2, _2)),
+                Some(DEFAULT_LIQUIDITY),
+                Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
             crate::Error::<Runtime>::BaseAssetNotFound
         );
@@ -2479,7 +2526,7 @@ fn create_pool_fails_if_swap_fee_is_too_high() {
                 ScoringRule::CPMM,
                 Some(<Runtime as crate::Config>::MaxSwapFee::get() + 1),
                 Some(amount),
-                Some(vec!(_2, _2, _2)),
+                Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
             crate::Error::<Runtime>::SwapFeeTooHigh
         );
@@ -2502,7 +2549,7 @@ fn create_pool_fails_if_swap_fee_is_unspecified_for_cpmm() {
                 ScoringRule::CPMM,
                 None,
                 Some(amount),
-                Some(vec!(_2, _2, _2)),
+                Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
             crate::Error::<Runtime>::InvalidFeeArgument
         );
@@ -2560,8 +2607,13 @@ fn create_pool_fails_on_weight_below_minimum_weight() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
-                Some(vec!(_2, <Runtime as crate::Config>::MinWeight::get() - 1, _2, _2)),
+                Some(DEFAULT_LIQUIDITY),
+                Some(vec!(
+                    DEFAULT_WEIGHT,
+                    <Runtime as crate::Config>::MinWeight::get() - 1,
+                    DEFAULT_WEIGHT,
+                    DEFAULT_WEIGHT
+                )),
             ),
             crate::Error::<Runtime>::BelowMinimumWeight,
         );
@@ -2582,8 +2634,13 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
-                Some(vec!(_2, <Runtime as crate::Config>::MaxWeight::get() + 1, _2, _2)),
+                Some(DEFAULT_LIQUIDITY),
+                Some(vec!(
+                    DEFAULT_WEIGHT,
+                    <Runtime as crate::Config>::MaxWeight::get() + 1,
+                    DEFAULT_WEIGHT,
+                    DEFAULT_WEIGHT
+                )),
             ),
             crate::Error::<Runtime>::AboveMaximumWeight,
         );
@@ -2605,7 +2662,7 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
-                Some(LIQUIDITY),
+                Some(DEFAULT_LIQUIDITY),
                 Some(vec![weight; 4]),
             ),
             crate::Error::<Runtime>::MaxTotalWeight,
@@ -2629,7 +2686,7 @@ fn create_pool_fails_on_insufficient_liquidity() {
                 ScoringRule::CPMM,
                 Some(0),
                 Some(min_balance - 1),
-                Some(vec!(_2, _2, _2, _2)),
+                Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
             crate::Error::<Runtime>::InsufficientLiquidity,
         );
@@ -2653,7 +2710,7 @@ fn create_pool_succeeds_on_min_liquidity() {
             ScoringRule::CPMM,
             Some(0),
             Some(min_balance),
-            Some(vec!(_2, _2, _2, _2)),
+            Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
         ));
         assert_all_parameters(
             [0; 4],
@@ -2680,7 +2737,7 @@ fn create_pool_transfers_the_correct_amount_of_tokens() {
             ScoringRule::CPMM,
             Some(0),
             Some(_1234),
-            Some(vec!(_2, _2, _2, _2)),
+            Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
         ));
 
         let pool_shares_id = Swaps::pool_shares_id(DEFAULT_POOL_ID);
@@ -2911,7 +2968,7 @@ fn create_pool_correctly_associates_weights_with_assets() {
             0,
             ScoringRule::CPMM,
             Some(0),
-            Some(LIQUIDITY),
+            Some(DEFAULT_LIQUIDITY),
             Some(vec!(_1, _2, _3, _4)),
         ));
         let pool = Swaps::pool(0).unwrap();
@@ -3407,7 +3464,7 @@ fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
             0,
             ScoringRule::CPMM,
             Some(0),
-            Some(LIQUIDITY),
+            Some(DEFAULT_LIQUIDITY),
             Some(vec![_3, _1, _1, _1]),
         ));
         // Force the pool into the cache.
@@ -3689,11 +3746,11 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
         let asset_amount_in = _1;
         let min_asset_amount_out = Some(0);
         let max_price = None;
-        let expected_out_without_fee = crate::math::calc_out_given_in(
+        let expected_out_without_fee = calc_out_given_in(
             pool_balance_in_before,
-            _2,
+            DEFAULT_WEIGHT,
             pool_balance_out_before,
-            _2,
+            DEFAULT_WEIGHT,
             asset_amount_in,
             swap_fee,
         )
@@ -3717,11 +3774,11 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
             creator_fee.mul_floor(expected_out_without_fee)
         } else {
             let fee_before_swap = creator_fee.mul_floor(expected_out_without_fee);
-            crate::math::calc_out_given_in(
-                LIQUIDITY - expected_out_without_fee,
-                _2,
+            calc_out_given_in(
+                DEFAULT_LIQUIDITY - expected_out_without_fee,
+                DEFAULT_WEIGHT,
                 pool_balance_base_out_before,
-                _2,
+                DEFAULT_WEIGHT,
                 fee_before_swap,
                 swap_fee,
             )
@@ -3731,6 +3788,15 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
         assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
     });
 }
+
+/*
+#[test]
+fn swap_exact_amount_in_creator_fee_respects_max_out_amount() {
+    ExtBuilder::default()
+        .build()
+        .execute_with(|| calc_in_given_out(DEFAULT_LIQUIDITY, DEFAULT_WEIGHT));
+}
+*/
 
 fn alice_signed() -> RuntimeOrigin {
     RuntimeOrigin::signed(ALICE)
@@ -3755,8 +3821,12 @@ fn create_initial_pool(
         DEFAULT_MARKET_ID,
         scoring_rule,
         swap_fee,
-        if scoring_rule == ScoringRule::CPMM { Some(LIQUIDITY) } else { None },
-        if scoring_rule == ScoringRule::CPMM { Some(vec!(_2, _2, _2, _2)) } else { None },
+        if scoring_rule == ScoringRule::CPMM { Some(DEFAULT_LIQUIDITY) } else { None },
+        if scoring_rule == ScoringRule::CPMM {
+            Some(vec![DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT])
+        } else {
+            None
+        },
     ));
     if scoring_rule == ScoringRule::CPMM {
         assert_ok!(Swaps::open_pool(pool_id));
