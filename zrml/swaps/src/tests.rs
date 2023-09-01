@@ -4001,6 +4001,67 @@ fn swap_exact_amount_out_creator_fee_respects_max_amount_in(
     });
 }
 
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_out_creator_fee_respects_max_price(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    let mut max_spot_price = 0;
+    let asset_amount_out = _1;
+
+    ExtBuilder::default().build().execute_with(|| {
+        let swap_fee = 0;
+
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+        assert_ok!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            DEFAULT_POOL_ID,
+            asset_in,
+            None,
+            asset_out,
+            asset_amount_out,
+            Some(u128::MAX),
+        ),);
+
+        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+        let pool_balance_in_after = Currencies::free_balance(asset_in, &pool_account);
+        let pool_balance_out_after = Currencies::free_balance(asset_out, &pool_account);
+
+        // Does not regard market creator fee
+        max_spot_price = calc_spot_price(
+            pool_balance_in_after,
+            DEFAULT_WEIGHT,
+            pool_balance_out_after,
+            DEFAULT_WEIGHT,
+            swap_fee,
+        )
+        .unwrap();
+    });
+
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+
+        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+
+        assert_err!(
+            Swaps::swap_exact_amount_out(
+                alice_signed(),
+                DEFAULT_POOL_ID,
+                asset_in,
+                None,
+                asset_out,
+                asset_amount_out,
+                Some(max_spot_price),
+            ),
+            Error::<Runtime>::BadLimitPrice
+        );
+    });
+}
+
 fn alice_signed() -> RuntimeOrigin {
     RuntimeOrigin::signed(ALICE)
 }
