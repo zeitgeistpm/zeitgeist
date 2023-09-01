@@ -1617,7 +1617,7 @@ mod pallet {
                 }
 
                 let balance_after = T::AssetManager::free_balance(base_asset, &payer);
-                fee_amount = fee.mul_floor(balance_after.saturating_sub(balance_before));
+                fee_amount = balance_after.saturating_sub(balance_before);
             }
 
             T::AssetManager::transfer(base_asset, &payer, &payee, fee_amount)?;
@@ -2397,9 +2397,7 @@ mod pallet {
             let creator_fee = market.creator_fee;
             let mut fees_handled = false;
 
-            println!("1");
             if asset_in == pool.base_asset && !handle_fees {
-                println!("1a");
                 Self::handle_creator_fees(
                     asset_amount_in,
                     asset_in,
@@ -2409,12 +2407,9 @@ mod pallet {
                     who.clone(),
                     pool_id.clone(),
                 )?;
-                println!("1b");
 
-                println!("asset_amount_in before: {:?}", asset_amount_in);
                 let fee_amount = creator_fee.mul_floor(asset_amount_in);
                 asset_amount_in = asset_amount_in.saturating_sub(fee_amount);
-                println!("asset_amount_in after: {:?}", asset_amount_in);
                 fees_handled = true;
             }
 
@@ -2423,7 +2418,6 @@ mod pallet {
                 Error::<T>::InsufficientBalance
             );
 
-            println!("2");
             let balance_before = T::AssetManager::free_balance(asset_out, &who);
             let params = SwapExactAmountParams {
                 asset_amounts: || {
@@ -2501,10 +2495,7 @@ mod pallet {
                         ensure!(asset_amount_out_check >= maao, Error::<T>::LimitOut);
                     }
 
-                    println!("4b");
-
                     Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
-                    println!("4ba");
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
@@ -2519,15 +2510,11 @@ mod pallet {
                 pool: &pool,
                 who: who.clone(),
             };
-            println!("4c");
             swap_exact_amount::<_, _, _, T>(params)?;
 
-            println!("5");
             if !fees_handled && !handle_fees {
                 let balance_after = T::AssetManager::free_balance(asset_out, &who);
-                println!("5a: {:?}", balance_after);
                 let asset_amount_out = balance_after.saturating_sub(balance_before);
-                println!("5b: {:?}", asset_amount_out);
 
                 Self::handle_creator_fees(
                     asset_amount_out,
@@ -2538,10 +2525,7 @@ mod pallet {
                     who.clone(),
                     pool_id.clone(),
                 )?;
-
-                println!("5c");
             }
-            println!("6");
 
             match pool.scoring_rule {
                 ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_in_cpmm()),

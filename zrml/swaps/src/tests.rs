@@ -38,7 +38,7 @@ use frame_support::{
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_arithmetic::{traits::SaturatedConversion, Perbill};
-use sp_runtime::{DispatchResult};
+use sp_runtime::DispatchResult;
 #[allow(unused_imports)]
 use test_case::test_case;
 use zeitgeist_primitives::{
@@ -3675,20 +3675,29 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
 ) {
     ExtBuilder::default().build().execute_with(|| {
         let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
 
         assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
-        create_initial_pool_with_funds_for_alice(
-            ScoringRule::CPMM,
-            Some(0),
-            true,
-        );
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
-        let market_creator_balance_before = AssetManager::free_balance(BASE_ASSET, &market_creator);
+        let market_creator_balance_before = Currencies::free_balance(BASE_ASSET, &market_creator);
+        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+        let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
+        let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
+        let pool_balance_base_out_before = Currencies::free_balance(BASE_ASSET, &pool_account);
         let asset_amount_in = _1;
         let min_asset_amount_out = Some(0);
         let max_price = None;
-        let expected_fee = creator_fee.mul_floor(asset_amount_in);
+        let expected_out_without_fee = crate::math::calc_out_given_in(
+            pool_balance_in_before,
+            _2,
+            pool_balance_out_before,
+            _2,
+            asset_amount_in,
+            swap_fee,
+        )
+        .unwrap();
 
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
@@ -3700,10 +3709,26 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
             max_price,
         ));
 
-        let market_creator_balance_after = AssetManager::free_balance(BASE_ASSET, &market_creator);
-        let max_deviation_pct = Perbill::from_perthousand(1);
-        //assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
-        assert_approx!(market_creator_balance_after - market_creator_balance_before, expected_fee, max_deviation_pct.mul_floor(expected_fee));
+        let market_creator_balance_after = Currencies::free_balance(BASE_ASSET, &market_creator);
+
+        let expected_fee = if asset_in == BASE_ASSET {
+            creator_fee.mul_floor(asset_amount_in)
+        } else if asset_out == BASE_ASSET {
+            creator_fee.mul_floor(expected_out_without_fee)
+        } else {
+            let fee_before_swap = creator_fee.mul_floor(expected_out_without_fee);
+            crate::math::calc_out_given_in(
+                LIQUIDITY - expected_out_without_fee,
+                _2,
+                pool_balance_base_out_before,
+                _2,
+                fee_before_swap,
+                swap_fee,
+            )
+            .unwrap()
+        };
+
+        assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
     });
 }
 

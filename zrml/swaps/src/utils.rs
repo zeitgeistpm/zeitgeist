@@ -241,7 +241,11 @@ where
         ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
     }
 
-    println!("MATH_APPROX3: {:?} <= {:?}", spot_price_before, bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()));
+    println!(
+        "MATH_APPROX3: {:?} <= {:?}",
+        spot_price_before,
+        bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())
+    );
     match p.pool.scoring_rule {
         ScoringRule::CPMM => ensure!(
             spot_price_before_without_fees
