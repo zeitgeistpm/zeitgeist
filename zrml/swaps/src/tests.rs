@@ -3841,11 +3841,9 @@ fn swap_exact_amount_in_creator_fee_respects_max_price(
     let asset_amount_in = _1;
 
     ExtBuilder::default().build().execute_with(|| {
-        let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
-
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
             DEFAULT_POOL_ID,
@@ -3890,6 +3888,72 @@ fn swap_exact_amount_in_creator_fee_respects_max_price(
             ),
             Error::<Runtime>::BadLimitPrice
         );
+    });
+}
+
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_out_creator_fee_gets_charged_correctly(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+
+        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+
+        let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
+        let market_creator_balance_before = Currencies::free_balance(BASE_ASSET, &market_creator);
+        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+        let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
+        let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
+        let pool_balance_base_out_before = Currencies::free_balance(BASE_ASSET, &pool_account);
+        let asset_amount_out = _1;
+        let max_asset_amount_in = Some(u128::MAX);
+        let max_price = None;
+        let expected_in_without_fee = calc_in_given_out(
+            pool_balance_in_before,
+            DEFAULT_WEIGHT,
+            pool_balance_out_before,
+            DEFAULT_WEIGHT,
+            asset_amount_out,
+            swap_fee,
+        )
+        .unwrap();
+
+        assert_ok!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            DEFAULT_POOL_ID,
+            asset_in,
+            max_asset_amount_in,
+            asset_out,
+            asset_amount_out,
+            max_price,
+        ));
+
+        let market_creator_balance_after = Currencies::free_balance(BASE_ASSET, &market_creator);
+
+        let expected_fee = if asset_in == BASE_ASSET {
+            creator_fee.mul_floor(expected_in_without_fee)
+        } else if asset_out == BASE_ASSET {
+            creator_fee.mul_floor(asset_amount_out)
+        } else {
+            let fee_before_swap = creator_fee.mul_floor(asset_amount_out);
+            calc_out_given_in(
+                DEFAULT_LIQUIDITY - asset_amount_out,
+                DEFAULT_WEIGHT,
+                pool_balance_base_out_before,
+                DEFAULT_WEIGHT,
+                fee_before_swap,
+                swap_fee,
+            )
+            .unwrap()
+        };
+
+        assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
     });
 }
 
