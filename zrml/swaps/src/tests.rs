@@ -3723,7 +3723,7 @@ fn execute_arbitrage_observes_min_balances_mint_sell() {
 #[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
 #[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
 #[test_case(ASSET_B, ASSET_C; "no_base_asset")]
-fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
+fn swap_exact_amount_in_creator_fee_charged_correctly(
     asset_in: Asset<MarketId>,
     asset_out: Asset<MarketId>,
 ) {
@@ -3789,7 +3789,7 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
 #[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
 #[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
 #[test_case(ASSET_B, ASSET_C; "no_base_asset")]
-fn swap_exact_amount_in_creator_fee_respects_max_out_amount(
+fn swap_exact_amount_in_creator_fee_respects_min_amount_out(
     asset_in: Asset<MarketId>,
     asset_out: Asset<MarketId>,
 ) {
@@ -3894,7 +3894,7 @@ fn swap_exact_amount_in_creator_fee_respects_max_price(
 #[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
 #[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
 #[test_case(ASSET_B, ASSET_C; "no_base_asset")]
-fn swap_exact_amount_out_creator_fee_gets_charged_correctly(
+fn swap_exact_amount_out_creator_fee_charged_correctly(
     asset_in: Asset<MarketId>,
     asset_out: Asset<MarketId>,
 ) {
@@ -3954,6 +3954,50 @@ fn swap_exact_amount_out_creator_fee_gets_charged_correctly(
         };
 
         assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
+    });
+}
+
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_out_creator_fee_respects_max_amount_in(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+
+        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+
+        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+        let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
+        let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
+        let max_asset_amount_in = _1;
+        // Does not regard market creator fee
+        let asset_amount_out = calc_out_given_in(
+            pool_balance_in_before,
+            DEFAULT_WEIGHT,
+            pool_balance_out_before,
+            DEFAULT_WEIGHT,
+            max_asset_amount_in,
+            swap_fee,
+        )
+        .unwrap();
+
+        assert_err!(
+            Swaps::swap_exact_amount_out(
+                alice_signed(),
+                DEFAULT_POOL_ID,
+                asset_in,
+                Some(max_asset_amount_in),
+                asset_out,
+                asset_amount_out,
+                None,
+            ),
+            Error::<Runtime>::LimitIn
+        );
     });
 }
 
