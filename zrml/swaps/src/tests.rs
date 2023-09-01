@@ -4062,6 +4062,40 @@ fn swap_exact_amount_out_creator_fee_respects_max_price(
     });
 }
 
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_out_creator_fee_swaps_correct_amount_out(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+
+        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+
+        let alice_balance_out_before = Currencies::free_balance(asset_out, &ALICE);
+        let asset_amount_out = _1;
+
+        assert_ok!(
+            Swaps::swap_exact_amount_out(
+                alice_signed(),
+                DEFAULT_POOL_ID,
+                asset_in,
+                Some(u128::MAX),
+                asset_out,
+                asset_amount_out,
+                None,
+            )
+        );
+
+        let alice_balance_out_after = Currencies::free_balance(asset_out, &ALICE);
+        assert_eq!(alice_balance_out_after - alice_balance_out_before, asset_amount_out);
+    });
+}
+
 fn alice_signed() -> RuntimeOrigin {
     RuntimeOrigin::signed(ALICE)
 }
