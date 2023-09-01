@@ -3943,7 +3943,7 @@ fn swap_exact_amount_out_creator_fee_gets_charged_correctly(
         } else {
             let fee_before_swap = creator_fee.mul_floor(asset_amount_out);
             calc_out_given_in(
-                DEFAULT_LIQUIDITY - asset_amount_out,
+                DEFAULT_LIQUIDITY - asset_amount_out - fee_before_swap,
                 DEFAULT_WEIGHT,
                 pool_balance_base_out_before,
                 DEFAULT_WEIGHT,

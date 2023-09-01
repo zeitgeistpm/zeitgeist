@@ -2665,7 +2665,7 @@ mod pallet {
             swap_exact_amount::<_, _, _, T>(params)?;
 
             if !to_adjust_in_value && !handle_fees {
-                let asset_amount_out = asset_amount_out.saturating_sub(fee_amount);
+                asset_amount_out = asset_amount_out.saturating_sub(fee_amount);
 
                 Self::handle_creator_fees(
                     asset_amount_out,
