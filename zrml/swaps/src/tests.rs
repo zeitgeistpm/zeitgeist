@@ -3720,6 +3720,42 @@ fn execute_arbitrage_observes_min_balances_mint_sell() {
     });
 }
 
+#[test_case(
+        0, 
+        Perbill::from_parts(
+            u32::try_from(1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000) / BASE)).unwrap()
+        ); "creator_fee_only"
+    )
+]
+#[test_case(
+    1 + BASE * 5, 
+    Perbill::from_parts(
+        u32::try_from(1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000 / 2) / BASE)).unwrap()
+    ); "sum_of_all_fees"
+)
+]
+fn create_pool_respects_total_fee_limits(swap_fee: u128, creator_fee: Perbill) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
+        ASSETS.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        assert_err!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.to_vec(),
+                BASE_ASSET,
+                DEFAULT_MARKET_ID,
+                ScoringRule::CPMM,
+                Some(swap_fee),
+                Some(DEFAULT_LIQUIDITY),
+                Some(vec![DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT]),
+            ),
+            Error::<Runtime>::SwapFeeTooHigh
+        );
+    });
+}
+
 #[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
 #[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
 #[test_case(ASSET_B, ASSET_C; "no_base_asset")]
@@ -3731,7 +3767,7 @@ fn swap_exact_amount_in_creator_fee_charged_correctly(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
@@ -3797,7 +3833,7 @@ fn swap_exact_amount_in_creator_fee_respects_min_amount_out(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
@@ -3873,7 +3909,7 @@ fn swap_exact_amount_in_creator_fee_respects_max_price(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         assert_err!(
@@ -3902,7 +3938,7 @@ fn swap_exact_amount_out_creator_fee_charged_correctly(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
@@ -3968,7 +4004,7 @@ fn swap_exact_amount_out_creator_fee_respects_max_amount_in(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
@@ -4044,7 +4080,7 @@ fn swap_exact_amount_out_creator_fee_respects_max_price(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         assert_err!(
@@ -4073,23 +4109,21 @@ fn swap_exact_amount_out_creator_fee_swaps_correct_amount_out(
         let creator_fee = Perbill::from_percent(1);
         let swap_fee = 0;
 
-        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
         let alice_balance_out_before = Currencies::free_balance(asset_out, &ALICE);
         let asset_amount_out = _1;
 
-        assert_ok!(
-            Swaps::swap_exact_amount_out(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                asset_in,
-                Some(u128::MAX),
-                asset_out,
-                asset_amount_out,
-                None,
-            )
-        );
+        assert_ok!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            DEFAULT_POOL_ID,
+            asset_in,
+            Some(u128::MAX),
+            asset_out,
+            asset_amount_out,
+            None,
+        ));
 
         let alice_balance_out_after = Currencies::free_balance(asset_out, &ALICE);
         assert_eq!(alice_balance_out_after - alice_balance_out_before, asset_amount_out);

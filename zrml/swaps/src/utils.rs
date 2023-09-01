@@ -221,12 +221,9 @@ where
     let spot_price_after =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
 
-    println!("in: {:?}, out: {:?}", asset_amount_in, asset_amount_out);
-
     // Allow little tolerance
     match p.pool.scoring_rule {
         ScoringRule::CPMM => {
-            println!("MATH_APPROX");
             ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation)
         }
         ScoringRule::RikiddoSigmoidFeeMarketEma => ensure!(
@@ -235,17 +232,10 @@ where
         ),
     }
 
-    println!("MATH_APPROX2");
-
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
     }
 
-    println!(
-        "MATH_APPROX3: {:?} <= {:?}",
-        spot_price_before,
-        bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())
-    );
     match p.pool.scoring_rule {
         ScoringRule::CPMM => ensure!(
             spot_price_before_without_fees
@@ -261,7 +251,6 @@ where
             T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
         }
     }
-    println!("MATH_APPROX4");
 
     (p.event)(SwapEvent {
         asset_amount_in,

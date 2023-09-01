@@ -960,8 +960,6 @@ mod pallet {
         WinningAssetNotFound,
         /// Some amount in a transaction equals zero.
         ZeroAmount,
-        /// The sum of all fees is too high (including market fees)
-        TotalFeeTooHigh,
     }
 
     #[pallet::event]
@@ -1419,9 +1417,9 @@ mod pallet {
                         .creator_fee
                         .mul_floor(BASE)
                         .checked_add(
-                            swap_fee.try_into().or_else(|_| Err(Error::<T>::TotalFeeTooHigh))?,
+                            swap_fee.try_into().or_else(|_| Err(Error::<T>::SwapFeeTooHigh))?,
                         )
-                        .ok_or_else(|| Error::<T>::TotalFeeTooHigh)?
+                        .ok_or_else(|| Error::<T>::SwapFeeTooHigh)?
                 } else {
                     BalanceOf::<T>::zero().saturated_into()
                 };
@@ -1588,12 +1586,9 @@ mod pallet {
                 return Ok(());
             };
 
-            println!("amount: {:?}", amount);
             let mut fee_amount = fee.mul_floor(amount);
-            println!("fee_amount: {:?}", fee_amount);
 
             if fee_asset != base_asset {
-                println!("Handling non-fee asset");
                 let balance_before = T::AssetManager::free_balance(base_asset, &payer);
                 let swap_result = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
                     payer.clone(),
@@ -1858,15 +1853,17 @@ mod pallet {
                             .checked_add(
                                 swap_fee_unwrapped
                                     .try_into()
-                                    .or_else(|_| Err(Error::<T>::TotalFeeTooHigh))?,
+                                    .or_else(|_| Err(Error::<T>::SwapFeeTooHigh))?,
                             )
-                            .ok_or_else(|| Error::<T>::TotalFeeTooHigh)?;
+                            .ok_or_else(|| Error::<T>::SwapFeeTooHigh)?;
+
+                        let total_fee_as_balance = <BalanceOf<T>>::try_from(total_fee).map_err(|_| Error::<T>::SwapFeeTooHigh)?;
 
                         ensure!(
-                            swap_fee_unwrapped <= T::MaxSwapFee::get(),
+                            total_fee_as_balance <= T::MaxSwapFee::get(),
                             Error::<T>::SwapFeeTooHigh
                         );
-                        ensure!(total_fee <= BASE, Error::<T>::TotalFeeTooHigh);
+                        ensure!(total_fee <= BASE, Error::<T>::SwapFeeTooHigh);
 
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
@@ -2482,8 +2479,6 @@ mod pallet {
                             cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                         }
                     };
-
-                    println!("4");
 
                     if let Some(maao) = min_asset_amount_out {
                         let asset_amount_out_check = if fees_handled {
