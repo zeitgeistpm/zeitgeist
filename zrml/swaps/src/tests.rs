@@ -29,7 +29,7 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     math::{calc_in_given_out, calc_out_given_in},
     mock::*,
-    BalanceOf, Config, Event, Error, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
+    BalanceOf, Config, Error, Event, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
     ARBITRAGE_MAX_ITERATIONS,
 };
 use frame_support::{
@@ -2806,10 +2806,7 @@ fn open_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
             pool.pool_status = pool_status;
             Ok(())
         }));
-        assert_noop!(
-            Swaps::open_pool(DEFAULT_POOL_ID),
-            Error::<Runtime>::InvalidStateTransition
-        );
+        assert_noop!(Swaps::open_pool(DEFAULT_POOL_ID), Error::<Runtime>::InvalidStateTransition);
     });
 }
 
@@ -3789,7 +3786,6 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
     });
 }
 
-/*
 #[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
 #[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
 #[test_case(ASSET_B, ASSET_C; "no_base_asset")]
@@ -3804,21 +3800,33 @@ fn swap_exact_amount_in_creator_fee_respects_max_out_amount(
         assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
+        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
         let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
         let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
-        let in_amount = calc_in_given_out(
+        let min_asset_amount_out = _1;
+        let asset_amount_in = calc_in_given_out(
             pool_balance_in_before,
             DEFAULT_WEIGHT,
             pool_balance_out_before,
             DEFAULT_WEIGHT,
-            _1,
-            swap_fee
-        ) - 1;
+            min_asset_amount_out,
+            swap_fee,
+        ).unwrap();
 
-        assert_err
+        assert_err!(
+            Swaps::swap_exact_amount_in(
+                alice_signed(),
+                DEFAULT_POOL_ID,
+                asset_in,
+                asset_amount_in,
+                asset_out,
+                Some(min_asset_amount_out),
+                None,
+            ),
+            Error::<Runtime>::LimitOut
+        );
     });
 }
-*/
 
 fn alice_signed() -> RuntimeOrigin {
     RuntimeOrigin::signed(ALICE)
