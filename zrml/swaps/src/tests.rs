@@ -29,7 +29,7 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     math::{calc_in_given_out, calc_out_given_in},
     mock::*,
-    BalanceOf, Config, Event, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
+    BalanceOf, Config, Event, Error, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
     ARBITRAGE_MAX_ITERATIONS,
 };
 use frame_support::{
@@ -152,7 +152,7 @@ fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<MarketIdOf<Runtime>
                 Some(DEFAULT_LIQUIDITY),
                 Some(vec![DEFAULT_WEIGHT; asset_count]),
             ),
-            crate::Error::<Runtime>::SomeIdenticalAssets
+            Error::<Runtime>::SomeIdenticalAssets
         );
     });
 }
@@ -161,7 +161,7 @@ fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<MarketIdOf<Runtime>
 fn destroy_pool_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
-        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(Swaps::destroy_pool(42), Error::<Runtime>::PoolDoesNotExist);
     });
 }
 
@@ -176,7 +176,7 @@ fn destroy_pool_correctly_cleans_up_pool() {
             Currencies::free_balance(ASSET_D, &ALICE),
         ];
         assert_ok!(Swaps::destroy_pool(DEFAULT_POOL_ID));
-        assert_err!(Swaps::pool(DEFAULT_POOL_ID), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_err!(Swaps::pool(DEFAULT_POOL_ID), Error::<Runtime>::PoolDoesNotExist);
         // Ensure that funds _outside_ of the pool are not impacted!
         // TODO(#792): Remove pool shares.
         let total_pool_shares = Currencies::total_issuance(Swaps::pool_shares_id(DEFAULT_POOL_ID));
@@ -293,7 +293,7 @@ fn assets_must_be_bounded() {
                 Some(1),
                 Some(1)
             ),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
         assert_noop!(
             Swaps::swap_exact_amount_in(
@@ -305,7 +305,7 @@ fn assets_must_be_bounded() {
                 Some(1),
                 Some(1)
             ),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
 
         assert_noop!(
@@ -318,7 +318,7 @@ fn assets_must_be_bounded() {
                 1,
                 Some(1)
             ),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -330,7 +330,7 @@ fn assets_must_be_bounded() {
                 1,
                 Some(1)
             ),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
 
         assert_noop!(
@@ -341,16 +341,16 @@ fn assets_must_be_bounded() {
                 1,
                 1
             ),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_B, 1, 1),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_B, 1, 1),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
@@ -360,7 +360,7 @@ fn assets_must_be_bounded() {
                 1,
                 1
             ),
-            crate::Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotBound
         );
     });
 }
@@ -450,12 +450,12 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
         // Errors trigger correctly.
         assert_noop!(
             Swaps::destroy_pool_in_subsidy_phase(DEFAULT_POOL_ID),
-            crate::Error::<Runtime>::PoolDoesNotExist
+            Error::<Runtime>::PoolDoesNotExist
         );
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
         assert_noop!(
             Swaps::destroy_pool_in_subsidy_phase(DEFAULT_POOL_ID),
-            crate::Error::<Runtime>::InvalidStateTransition
+            Error::<Runtime>::InvalidStateTransition
         );
 
         create_initial_pool_with_funds_for_alice(
@@ -560,9 +560,9 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
         assert_noop!(
             Swaps::end_subsidy_phase(DEFAULT_POOL_ID),
-            crate::Error::<Runtime>::InvalidStateTransition
+            Error::<Runtime>::InvalidStateTransition
         );
-        assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(Swaps::end_subsidy_phase(1), Error::<Runtime>::PoolDoesNotExist);
         create_initial_pool_with_funds_for_alice(
             ScoringRule::RikiddoSigmoidFeeMarketEma,
             None,
@@ -640,7 +640,7 @@ fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status:
                 _1,
                 _2
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(
@@ -650,7 +650,7 @@ fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status:
                 _1,
                 _1_2
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::pool_join_with_exact_asset_amount(
@@ -660,11 +660,11 @@ fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status:
                 1,
                 1
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_E, 1, 1),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
         assert_noop!(
@@ -677,7 +677,7 @@ fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status:
                 Some(_1),
                 Some(_1),
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -689,7 +689,7 @@ fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status:
                 _1,
                 Some(_1),
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
     });
 }
@@ -706,7 +706,7 @@ fn pool_join_fails_if_pool_is_closed() {
                 _1,
                 vec![_1, _1, _1, _1]
             ),
-            crate::Error::<Runtime>::InvalidPoolStatus,
+            Error::<Runtime>::InvalidPoolStatus,
         );
     });
 }
@@ -729,7 +729,7 @@ fn most_operations_fail_if_pool_is_clean() {
 
         assert_noop!(
             Swaps::pool_join(RuntimeOrigin::signed(ALICE), DEFAULT_POOL_ID, _1, vec![_10]),
-            crate::Error::<Runtime>::InvalidPoolStatus,
+            Error::<Runtime>::InvalidPoolStatus,
         );
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
@@ -739,7 +739,7 @@ fn most_operations_fail_if_pool_is_clean() {
                 _1,
                 _2
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(
@@ -749,7 +749,7 @@ fn most_operations_fail_if_pool_is_clean() {
                 _1,
                 _1_2
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::pool_join_with_exact_asset_amount(
@@ -759,11 +759,11 @@ fn most_operations_fail_if_pool_is_clean() {
                 1,
                 1
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_E, 1, 1),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
         assert_noop!(
@@ -776,7 +776,7 @@ fn most_operations_fail_if_pool_is_clean() {
                 Some(_1),
                 Some(_1),
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -788,7 +788,7 @@ fn most_operations_fail_if_pool_is_clean() {
                 _1,
                 Some(_1),
             ),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
     });
 }
@@ -856,7 +856,7 @@ fn get_spot_price_returns_correct_results_rikiddo() {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
         assert_noop!(
             Swaps::get_spot_price(&DEFAULT_POOL_ID, &ASSETS[0], &ASSETS[0], true),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         subsidize_and_start_rikiddo_pool(DEFAULT_POOL_ID, &ALICE, 0);
 
@@ -884,7 +884,7 @@ fn get_all_spot_price_returns_correct_results_rikiddo() {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
         assert_noop!(
             Swaps::get_spot_price(&DEFAULT_POOL_ID, &ASSETS[0], &ASSETS[0], true),
-            crate::Error::<Runtime>::PoolIsNotActive
+            Error::<Runtime>::PoolIsNotActive
         );
         subsidize_and_start_rikiddo_pool(DEFAULT_POOL_ID, &ALICE, 0);
 
@@ -973,7 +973,7 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
                 Some(_1),
                 Some(_1),
             ),
-            crate::Error::<Runtime>::MaxInRatio
+            Error::<Runtime>::MaxInRatio
         );
     });
 }
@@ -1007,7 +1007,7 @@ fn pool_exit_with_exact_asset_amount_satisfies_max_out_ratio_constraints() {
                 _50,
                 _10000,
             ),
-            crate::Error::<Runtime>::MaxOutRatio,
+            Error::<Runtime>::MaxOutRatio,
         );
     });
 }
@@ -1041,7 +1041,7 @@ fn pool_exit_with_exact_pool_amount_satisfies_max_in_ratio_constraints() {
                 _50,
                 _10000,
             ),
-            crate::Error::<Runtime>::MaxInRatio,
+            Error::<Runtime>::MaxInRatio,
         );
     });
 }
@@ -1077,7 +1077,7 @@ fn pool_join_with_exact_asset_amount_satisfies_max_in_ratio_constraints() {
                 asset_amount,
                 0,
             ),
-            crate::Error::<Runtime>::MaxInRatio,
+            Error::<Runtime>::MaxInRatio,
         );
     });
 }
@@ -1117,7 +1117,7 @@ fn pool_join_with_exact_pool_amount_satisfies_max_out_ratio_constraints() {
                 _100,
                 max_asset_amount,
             ),
-            crate::Error::<Runtime>::MaxOutRatio,
+            Error::<Runtime>::MaxOutRatio,
         );
     });
 }
@@ -1154,7 +1154,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
                 _50,
                 Some(_1),
             ),
-            crate::Error::<Runtime>::MaxOutRatio
+            Error::<Runtime>::MaxOutRatio
         );
     });
 }
@@ -1166,17 +1166,17 @@ fn pool_join_or_exit_raises_on_zero_value() {
 
         assert_noop!(
             Swaps::pool_join(alice_signed(), DEFAULT_POOL_ID, 0, vec!(_1, _1, _1, _1)),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, 0, vec!(_1, _1, _1, _1)),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_A, 0, 0),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
@@ -1187,12 +1187,12 @@ fn pool_join_or_exit_raises_on_zero_value() {
                 0,
                 0
             ),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_A, 0, 0),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
@@ -1203,7 +1203,7 @@ fn pool_join_or_exit_raises_on_zero_value() {
                 0,
                 0
             ),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
     });
 }
@@ -1429,7 +1429,7 @@ fn pool_exit_subsidy_fails_if_no_subsidy_is_provided() {
         );
         assert_noop!(
             Swaps::pool_exit_subsidy(alice_signed(), DEFAULT_POOL_ID, _1),
-            crate::Error::<Runtime>::NoSubsidyProvided
+            Error::<Runtime>::NoSubsidyProvided
         );
     });
 }
@@ -1444,7 +1444,7 @@ fn pool_exit_subsidy_fails_if_amount_is_zero() {
         );
         assert_noop!(
             Swaps::pool_exit_subsidy(alice_signed(), DEFAULT_POOL_ID, 0),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
     });
 }
@@ -1454,7 +1454,7 @@ fn pool_exit_subsidy_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Swaps::pool_exit_subsidy(alice_signed(), DEFAULT_POOL_ID, _1),
-            crate::Error::<Runtime>::PoolDoesNotExist
+            Error::<Runtime>::PoolDoesNotExist
         );
     });
 }
@@ -1465,7 +1465,7 @@ fn pool_exit_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
         assert_noop!(
             Swaps::pool_exit_subsidy(alice_signed(), DEFAULT_POOL_ID, _1),
-            crate::Error::<Runtime>::InvalidScoringRule
+            Error::<Runtime>::InvalidScoringRule
         );
     });
 }
@@ -1602,14 +1602,14 @@ fn pool_exit_is_not_allowed_with_insufficient_funds() {
         // Alice has no pool shares!
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _1, vec!(0, 0, 0, 0)),
-            crate::Error::<Runtime>::InsufficientBalance,
+            Error::<Runtime>::InsufficientBalance,
         );
 
         // Now Alice has 25 pool shares!
         let _ = Currencies::deposit(Swaps::pool_shares_id(DEFAULT_POOL_ID), &ALICE, _25);
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _26, vec!(0, 0, 0, 0)),
-            crate::Error::<Runtime>::InsufficientBalance,
+            Error::<Runtime>::InsufficientBalance,
         );
     })
 }
@@ -1711,7 +1711,7 @@ fn pool_join_subsidy_fails_if_amount_is_zero() {
         );
         assert_noop!(
             Swaps::pool_join_subsidy(alice_signed(), DEFAULT_POOL_ID, 0),
-            crate::Error::<Runtime>::ZeroAmount
+            Error::<Runtime>::ZeroAmount
         );
     });
 }
@@ -1721,7 +1721,7 @@ fn pool_join_subsidy_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Swaps::pool_join_subsidy(alice_signed(), DEFAULT_POOL_ID, _1),
-            crate::Error::<Runtime>::PoolDoesNotExist
+            Error::<Runtime>::PoolDoesNotExist
         );
     });
 }
@@ -1732,7 +1732,7 @@ fn pool_join_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
         assert_noop!(
             Swaps::pool_join_subsidy(alice_signed(), DEFAULT_POOL_ID, _1),
-            crate::Error::<Runtime>::InvalidScoringRule
+            Error::<Runtime>::InvalidScoringRule
         );
     });
 }
@@ -1751,7 +1751,7 @@ fn pool_join_subsidy_fails_if_subsidy_is_below_min_per_account() {
                 0,
                 <Runtime as Config>::MinSubsidyPerAccount::get() - 1
             ),
-            crate::Error::<Runtime>::InvalidSubsidyAmount,
+            Error::<Runtime>::InvalidSubsidyAmount,
         );
     });
 }
@@ -1900,11 +1900,11 @@ fn provided_values_len_must_equal_assets_len() {
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
         assert_noop!(
             Swaps::pool_join(alice_signed(), DEFAULT_POOL_ID, _5, vec![]),
-            crate::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
+            Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
         );
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _5, vec![]),
-            crate::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
+            Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
         );
     });
 }
@@ -1973,7 +1973,7 @@ fn clean_up_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
                 &OutcomeReport::Categorical(cat_idx),
                 &Default::default()
             ),
-            crate::Error::<Runtime>::InvalidStateTransition
+            Error::<Runtime>::InvalidStateTransition
         );
     });
 }
@@ -1990,7 +1990,7 @@ fn clean_up_pool_fails_if_winning_asset_is_not_found() {
                 &OutcomeReport::Categorical(1337),
                 &Default::default()
             ),
-            crate::Error::<Runtime>::WinningAssetNotFound
+            Error::<Runtime>::WinningAssetNotFound
         );
     });
 }
@@ -2113,7 +2113,7 @@ fn swap_exact_amount_in_fails_if_no_limit_is_specified() {
                 None,
                 None,
             ),
-            crate::Error::<Runtime>::LimitMissing
+            Error::<Runtime>::LimitMissing
         );
     });
 }
@@ -2135,7 +2135,7 @@ fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm
                 Some(expected_amount + 1), // We expect 1 more than we will actually receive!
                 None,
             ),
-            crate::Error::<Runtime>::LimitOut,
+            Error::<Runtime>::LimitOut,
         );
     });
 }
@@ -2156,7 +2156,7 @@ fn swap_exact_amount_in_fails_if_max_price_is_not_satisfied_with_cpmm() {
                 None,
                 Some(_1)
             ),
-            crate::Error::<Runtime>::BadLimitPrice,
+            Error::<Runtime>::BadLimitPrice,
         );
     });
 }
@@ -2181,7 +2181,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
                 Some(_1 / 2),
                 Some(_2),
             ),
-            crate::Error::<Runtime>::UnsupportedTrade
+            Error::<Runtime>::UnsupportedTrade
         );
         assert_noop!(
             Swaps::swap_exact_amount_in(
@@ -2193,7 +2193,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
                 Some(_1 / 2),
                 Some(_2),
             ),
-            crate::Error::<Runtime>::UnsupportedTrade
+            Error::<Runtime>::UnsupportedTrade
         );
         assert_ok!(Currencies::withdraw(ASSET_D, &ALICE, _1));
 
@@ -2337,7 +2337,7 @@ fn swap_exact_amount_out_fails_if_no_limit_is_specified() {
                 _1,
                 None,
             ),
-            crate::Error::<Runtime>::LimitMissing
+            Error::<Runtime>::LimitMissing
         );
     });
 }
@@ -2359,7 +2359,7 @@ fn swap_exact_amount_out_fails_if_min_asset_amount_out_is_not_satisfied_with_cpm
                 _1,
                 None,
             ),
-            crate::Error::<Runtime>::LimitIn,
+            Error::<Runtime>::LimitIn,
         );
     });
 }
@@ -2380,7 +2380,7 @@ fn swap_exact_amount_out_fails_if_max_price_is_not_satisfied_with_cpmm() {
                 _1,
                 Some(_1)
             ),
-            crate::Error::<Runtime>::BadLimitPrice,
+            Error::<Runtime>::BadLimitPrice,
         );
     });
 }
@@ -2405,7 +2405,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
                 _1,
                 Some(_20),
             ),
-            crate::Error::<Runtime>::UnsupportedTrade
+            Error::<Runtime>::UnsupportedTrade
         );
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -2417,7 +2417,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
                 _1,
                 Some(_2),
             ),
-            crate::Error::<Runtime>::UnsupportedTrade
+            Error::<Runtime>::UnsupportedTrade
         );
 
         // Check if the trade is executed.
@@ -2467,7 +2467,7 @@ fn create_pool_fails_on_too_many_assets() {
                 Some(DEFAULT_LIQUIDITY),
                 Some(weights),
             ),
-            crate::Error::<Runtime>::TooManyAssets
+            Error::<Runtime>::TooManyAssets
         );
     });
 }
@@ -2486,7 +2486,7 @@ fn create_pool_fails_on_too_few_assets() {
                 Some(DEFAULT_LIQUIDITY),
                 Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
-            crate::Error::<Runtime>::TooFewAssets
+            Error::<Runtime>::TooFewAssets
         );
     });
 }
@@ -2505,7 +2505,7 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
                 Some(DEFAULT_LIQUIDITY),
                 Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
-            crate::Error::<Runtime>::BaseAssetNotFound
+            Error::<Runtime>::BaseAssetNotFound
         );
     });
 }
@@ -2528,7 +2528,7 @@ fn create_pool_fails_if_swap_fee_is_too_high() {
                 Some(amount),
                 Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
-            crate::Error::<Runtime>::SwapFeeTooHigh
+            Error::<Runtime>::SwapFeeTooHigh
         );
     });
 }
@@ -2551,7 +2551,7 @@ fn create_pool_fails_if_swap_fee_is_unspecified_for_cpmm() {
                 Some(amount),
                 Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
-            crate::Error::<Runtime>::InvalidFeeArgument
+            Error::<Runtime>::InvalidFeeArgument
         );
     });
 }
@@ -2615,7 +2615,7 @@ fn create_pool_fails_on_weight_below_minimum_weight() {
                     DEFAULT_WEIGHT
                 )),
             ),
-            crate::Error::<Runtime>::BelowMinimumWeight,
+            Error::<Runtime>::BelowMinimumWeight,
         );
     });
 }
@@ -2642,7 +2642,7 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
                     DEFAULT_WEIGHT
                 )),
             ),
-            crate::Error::<Runtime>::AboveMaximumWeight,
+            Error::<Runtime>::AboveMaximumWeight,
         );
     });
 }
@@ -2665,7 +2665,7 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
                 Some(DEFAULT_LIQUIDITY),
                 Some(vec![weight; 4]),
             ),
-            crate::Error::<Runtime>::MaxTotalWeight,
+            Error::<Runtime>::MaxTotalWeight,
         );
     });
 }
@@ -2688,7 +2688,7 @@ fn create_pool_fails_on_insufficient_liquidity() {
                 Some(min_balance - 1),
                 Some(vec!(DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT, DEFAULT_WEIGHT)),
             ),
-            crate::Error::<Runtime>::InsufficientLiquidity,
+            Error::<Runtime>::InsufficientLiquidity,
         );
     });
 }
@@ -2758,7 +2758,7 @@ fn create_pool_transfers_the_correct_amount_of_tokens() {
 #[test]
 fn close_pool_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(Swaps::close_pool(0), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(Swaps::close_pool(0), Error::<Runtime>::PoolDoesNotExist);
     });
 }
 
@@ -2772,7 +2772,7 @@ fn close_pool_fails_if_pool_is_not_active_or_initialized(pool_status: PoolStatus
             pool.pool_status = pool_status;
             Ok(())
         }));
-        assert_noop!(Swaps::close_pool(0), crate::Error::<Runtime>::InvalidStateTransition);
+        assert_noop!(Swaps::close_pool(0), Error::<Runtime>::InvalidStateTransition);
     });
 }
 
@@ -2791,7 +2791,7 @@ fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
 #[test]
 fn open_pool_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(Swaps::open_pool(0), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(Swaps::open_pool(0), Error::<Runtime>::PoolDoesNotExist);
     });
 }
 
@@ -2808,7 +2808,7 @@ fn open_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
         }));
         assert_noop!(
             Swaps::open_pool(DEFAULT_POOL_ID),
-            crate::Error::<Runtime>::InvalidStateTransition
+            Error::<Runtime>::InvalidStateTransition
         );
     });
 }
@@ -2844,7 +2844,7 @@ fn pool_join_fails_if_max_assets_in_is_violated() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
         assert_noop!(
             Swaps::pool_join(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1, _1 - 1, _1)),
-            crate::Error::<Runtime>::LimitIn,
+            Error::<Runtime>::LimitIn,
         );
     });
 }
@@ -2863,7 +2863,7 @@ fn pool_join_with_exact_asset_amount_fails_if_min_pool_tokens_is_violated() {
                 _1,
                 expected_pool_amount + 1, // We expect 1 pool share than we will actually receive.
             ),
-            crate::Error::<Runtime>::LimitOut,
+            Error::<Runtime>::LimitOut,
         );
     });
 }
@@ -2882,7 +2882,7 @@ fn pool_join_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
                 _1,
                 expected_asset_amount - 1, // We want to pay 1 less than we actually have to pay.
             ),
-            crate::Error::<Runtime>::LimitIn,
+            Error::<Runtime>::LimitIn,
         );
     });
 }
@@ -2894,7 +2894,7 @@ fn pool_exit_fails_if_min_assets_out_is_violated() {
         assert_ok!(Swaps::pool_join(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1, _1, _1)));
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1, _1 + 1, _1)),
-            crate::Error::<Runtime>::LimitOut,
+            Error::<Runtime>::LimitOut,
         );
     });
 }
@@ -2921,7 +2921,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_min_pool_amount_is_violated() {
                 pool_amount,
                 expected_amount + 100,
             ),
-            crate::Error::<Runtime>::LimitOut,
+            Error::<Runtime>::LimitOut,
         );
     });
 }
@@ -2950,7 +2950,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
                 exit_amount,
                 expected_amount - 100,
             ),
-            crate::Error::<Runtime>::LimitIn,
+            Error::<Runtime>::LimitIn,
         );
     });
 }
@@ -3116,7 +3116,7 @@ fn pool_exit_fails_if_balances_drop_too_low() {
         // We withdraw 99% of it, leaving 0.01 of each asset, which is below minimum balance.
         assert_noop!(
             Swaps::pool_exit(RuntimeOrigin::signed(BOB), DEFAULT_POOL_ID, _10, vec![0; 4]),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3144,7 +3144,7 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
                 _100 - Swaps::min_balance(Swaps::pool_shares_id(DEFAULT_POOL_ID)) + 1,
                 vec![0; 4]
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3188,7 +3188,7 @@ fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
                 Some(0),
                 None,
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3232,7 +3232,7 @@ fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
                 Swaps::min_balance(ASSET_B) / 10,
                 None,
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3274,7 +3274,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
                 _1,
                 0
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3305,7 +3305,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_liquidity_drops_too_low() {
                 ten_percent_of_pool,
                 0,
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3348,7 +3348,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_balances_drop_too_low() {
                 ten_percent_of_balance,
                 _100,
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3372,7 +3372,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
                 _25,
                 _100,
             ),
-            crate::Error::<Runtime>::PoolDrain,
+            Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -3790,11 +3790,33 @@ fn swap_exact_amount_in_creator_fee_gets_charged_correctly(
 }
 
 /*
-#[test]
-fn swap_exact_amount_in_creator_fee_respects_max_out_amount() {
-    ExtBuilder::default()
-        .build()
-        .execute_with(|| calc_in_given_out(DEFAULT_LIQUIDITY, DEFAULT_WEIGHT));
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_in_creator_fee_respects_max_out_amount(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+
+        assert_ok!(set_creator_fee(DEFAULT_POOL_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+
+        let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
+        let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
+        let in_amount = calc_in_given_out(
+            pool_balance_in_before,
+            DEFAULT_WEIGHT,
+            pool_balance_out_before,
+            DEFAULT_WEIGHT,
+            _1,
+            swap_fee
+        ) - 1;
+
+        assert_err
+    });
 }
 */
 
