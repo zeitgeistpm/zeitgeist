@@ -14628,6 +14628,7 @@ dependencies = [
  "arbitrary",
  "frame-support",
  "libfuzzer-sys",
+ "sp-arithmetic",
  "zeitgeist-primitives",
  "zrml-prediction-markets",
  "zrml-simple-disputes",
