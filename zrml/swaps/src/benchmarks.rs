@@ -110,7 +110,7 @@ fn push_default_market<T: Config>(caller: T::AccountId, oracle: T::AccountId) ->
         market_type: MarketType::Categorical(3),
         dispute_mechanism: MarketDisputeMechanism::Authorized,
         metadata: vec![0; 50],
-        oracle: oracle,
+        oracle,
         period: MarketPeriod::Block(0u32.into()..1u32.into()),
         deadlines: Deadlines {
             grace_period: 1_u32.into(),
