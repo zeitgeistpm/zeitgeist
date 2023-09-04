@@ -5667,6 +5667,95 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
     });
 }
 
+#[test]
+fn create_market_functions_respect_fee_boundaries() {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator = ALICE;
+        let oracle = BOB;
+        let base_asset = Asset::Ztg;
+        let mut creator_fee = <Runtime as crate::Config>::MaxCreatorFee::get();
+        let period = MarketPeriod::Block(1..2);
+        let deadlines = Deadlines {
+            grace_period: 1,
+            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+        };
+        let metadata = gen_metadata(0x99);
+        let category_count = 3;
+        let weight = <Runtime as zrml_swaps::Config>::MinWeight::get();
+        let weights = vec![weight; category_count.into()];
+        let scoring_rule = ScoringRule::CPMM;
+        let market_type = MarketType::Categorical(category_count);
+        let creation_type = MarketCreation::Permissionless;
+        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let lp_fee = 0;
+
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(creator),
+            base_asset,
+            creator_fee,
+            oracle,
+            period.clone(),
+            deadlines,
+            metadata.clone(),
+            creation_type.clone(),
+            market_type.clone(),
+            dispute_mechanism.clone(),
+            scoring_rule,
+        ));
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            RuntimeOrigin::signed(creator),
+            base_asset,
+            creator_fee,
+            oracle,
+            period.clone(),
+            deadlines,
+            metadata.clone(),
+            market_type.clone(),
+            dispute_mechanism.clone(),
+            lp_fee,
+            LIQUIDITY,
+            weights.clone(),
+        ));
+
+        creator_fee = creator_fee + Perbill::from_parts(1);
+
+        assert_err!(
+            PredictionMarkets::create_market(
+                RuntimeOrigin::signed(creator),
+                base_asset,
+                creator_fee,
+                oracle,
+                period.clone(),
+                deadlines,
+                metadata.clone(),
+                creation_type.clone(),
+                market_type.clone(),
+                dispute_mechanism.clone(),
+                scoring_rule,
+            ),
+            Error::<Runtime>::FeeTooHigh
+        );
+        assert_err!(
+            PredictionMarkets::create_cpmm_market_and_deploy_assets(
+                RuntimeOrigin::signed(creator),
+                base_asset,
+                creator_fee,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                market_type,
+                dispute_mechanism,
+                lp_fee,
+                LIQUIDITY,
+                weights,
+            ),
+            Error::<Runtime>::FeeTooHigh
+        );
+    });
+}
+
 fn deploy_swap_pool(
     market: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<u128>>,
     market_id: u128,
