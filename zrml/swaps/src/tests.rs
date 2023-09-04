@@ -3730,11 +3730,11 @@ fn execute_arbitrage_observes_min_balances_mint_sell() {
     )
 ]
 #[test_case(
-        1 + BASE * 5,
+        1 + BASE / 100 * 5,
         Perbill::from_parts(
             u32::try_from(
-                1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000 / 2
-            ) / BASE)).unwrap()
+                (<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000 / 2
+            ) / BASE).unwrap()
         ); "sum_of_all_fees"
     )
 ]
