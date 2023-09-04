@@ -949,7 +949,7 @@ mod pallet {
         TooManyAssets,
         /// Tried to create a pool with at least two identical assets.
         SomeIdenticalAssets,
-        /// The pool does not support swapping the assets in question.
+        /// The pool does not support swapping the assets in question, at least via this pallet.
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
@@ -1837,6 +1837,9 @@ mod pallet {
                         let pool_amount = <BalanceOf<T>>::zero();
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
                     }
+                    _ => {
+                        return Err(Error::<T>::UnsupportedTrade.into());
+                    }
                 };
             let pool = Pool {
                 assets: sorted_assets,
@@ -2365,6 +2368,9 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                         }
+                        _ => {
+                            return Err(Error::<T>::UnsupportedTrade.into());
+                        }
                     };
 
                     if let Some(maao) = min_asset_amount_out {
@@ -2392,6 +2398,7 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
+                _ => Err(Error::<T>::UnsupportedTrade.into()),
             }
         }
 
@@ -2465,6 +2472,9 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                         }
+                        _ => {
+                            return Err(Error::<T>::UnsupportedTrade.into());
+                        }
                     };
 
                     if let Some(maai) = max_asset_amount_in {
@@ -2491,6 +2501,9 @@ mod pallet {
                     Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(
                         pool.assets.len().saturated_into(),
                     ))
+                }
+                _ => {
+                    return Err(Error::<T>::UnsupportedTrade.into());
                 }
             }
         }

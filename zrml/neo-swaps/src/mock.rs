@@ -15,28 +15,38 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the license above but
+// published without copyright notice by Balancer Labs
+// (<https://balancer.finance>, contact@balancer.finance) in the
+// balancer-core repository
+// <https://github.com/balancer-labs/balancer-core>.
 
+#![cfg(feature = "mock")]
 #![allow(
     // Mocks are only used for fuzzing and unit tests
     clippy::arithmetic_side_effects
 )]
-#![cfg(feature = "mock")]
 
-use crate as prediction_markets;
+use crate as zrml_neo_swaps;
+#[cfg(feature = "parachain")]
+use crate::consts::{_100};
+use crate::consts::MAX_ASSETS;
+use crate::{AssetOf, MarketIdOf};
+use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
+    traits::{Contains, Everything, NeverEnsureOrigin},
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
-use sp_arithmetic::per_things::Percent;
+use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
-    DispatchError, DispatchResult,
+    traits::{BlakeTwo256, Get, IdentityLookup},
+    DispatchResult, Percent, SaturatedConversion,
 };
-use std::cell::RefCell;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
@@ -44,22 +54,23 @@ use zeitgeist_primitives::{
         BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId,
         ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories, MaxCourtParticipants,
-        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners,
+        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCourtParticipants, MaxDelegations,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
+        MaxInRatio, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners,
         MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
         MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit,
-        RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod,
-        VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
+use zrml_neo_swaps::{traits::DistributeFees, BalanceOf};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -67,91 +78,93 @@ pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
-pub const FRED: AccountIdTest = 5;
-pub const SUDO: AccountIdTest = 69;
+pub const FEE_ACCOUNT: AccountIdTest = 5;
+pub const SUDO: AccountIdTest = 123456;
+pub const EXTERNAL_FEES: Balance = CENT;
 
-pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
+pub const FOREIGN_ASSET: Asset<MarketId> = Asset::ForeignAsset(1);
 
-#[allow(unused)]
-pub struct DeployPoolMock;
-
-#[allow(unused)]
-#[derive(Clone)]
-pub struct DeployPoolArgs {
-    who: AccountIdTest,
-    market_id: MarketId,
-    amount: Balance,
-    swap_prices: Vec<Balance>,
-    swap_fee: Balance,
+parameter_types! {
+    pub const FeeAccount: AccountIdTest = FEE_ACCOUNT;
+}
+ord_parameter_types! {
+    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+ord_parameter_types! {
+    pub const Sudo: AccountIdTest = SUDO;
+}
+parameter_types! {
+    // pub storage NeoExitFee: Balance = BASE / 10;
+    pub storage NeoMinSwapFee: Balance = 0;
+}
+parameter_types! {
+    pub const MinSubsidyPerAccount: Balance = BASE;
+    pub const AdvisoryBond: Balance = 0 * CENT;
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
+    pub const OracleBond: Balance = 0 * CENT;
+    pub const ValidityBond: Balance = 0 * CENT;
+    pub const DisputeBond: Balance = 0 * CENT;
+    pub const MaxCategories: u16 = MAX_ASSETS + 1;
 }
 
-thread_local! {
-    pub static DEPLOY_POOL_CALL_DATA: RefCell<Vec<DeployPoolArgs>> = RefCell::new(vec![]);
-    pub static DEPLOY_POOL_RETURN_VALUE: RefCell<DispatchResult> = RefCell::new(Ok(()));
-}
+pub struct DeployPoolNoop;
 
-#[allow(unused)]
-impl DeployPoolApi for DeployPoolMock {
+impl DeployPoolApi for DeployPoolNoop {
     type AccountId = AccountIdTest;
     type Balance = Balance;
     type MarketId = MarketId;
 
     fn deploy_pool(
-        who: Self::AccountId,
-        market_id: Self::MarketId,
-        amount: Self::Balance,
-        swap_prices: Vec<Self::Balance>,
-        swap_fee: Self::Balance,
+        _who: Self::AccountId,
+        _market_id: Self::MarketId,
+        _amount: Self::Balance,
+        _swap_prices: Vec<Self::Balance>,
+        _swap_fee: Self::Balance,
     ) -> DispatchResult {
-        DEPLOY_POOL_CALL_DATA.with(|value| {
-            value.borrow_mut().push(DeployPoolArgs {
-                who,
-                market_id,
-                amount,
-                swap_prices,
-                swap_fee,
-            })
-        });
-        DEPLOY_POOL_RETURN_VALUE.with(|v| v.borrow().clone())
+        Ok(())
     }
 }
 
-#[allow(unused)]
-impl DeployPoolMock {
-    pub fn called_once_with(
-        who: AccountIdTest,
-        market_id: MarketId,
-        amount: Balance,
-        swap_prices: Vec<Balance>,
-        swap_fee: Balance,
-    ) -> bool {
-        if DEPLOY_POOL_CALL_DATA.with(|value| value.borrow().len()) != 1 {
-            return false;
-        }
-        let args = DEPLOY_POOL_CALL_DATA.with(|value| value.borrow()[0].clone());
-        args.who == who
-            && args.market_id == market_id
-            && args.amount == amount
-            && args.swap_prices == swap_prices
-            && args.swap_fee == swap_fee
-    }
+pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
 
-    pub fn return_error() {
-        DEPLOY_POOL_RETURN_VALUE
-            .with(|value| *value.borrow_mut() = Err(DispatchError::Other("neo-swaps")));
+impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
+where
+    F: Get<T::AccountId>,
+{
+    type Asset = AssetOf<T>;
+    type AccountId = T::AccountId;
+    type Balance = BalanceOf<T>;
+    type MarketId = MarketIdOf<T>;
+
+    fn distribute(
+        _market_id: Self::MarketId,
+        asset: Self::Asset,
+        account: Self::AccountId,
+        amount: Self::Balance,
+    ) -> Self::Balance {
+        let fees = zeitgeist_primitives::math::fixed::bmul(
+            amount.saturated_into(),
+            EXTERNAL_FEES.saturated_into(),
+        )
+        .unwrap()
+        .saturated_into();
+        T::AssetManager::transfer(asset, &account, &F::get(), fees).unwrap();
+        fees
     }
 }
 
-ord_parameter_types! {
-    pub const Sudo: AccountIdTest = SUDO;
-}
-parameter_types! {
-    pub const MinSubsidyPerAccount: Balance = BASE;
-    pub const AdvisoryBond: Balance = 11 * CENT;
-    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
-    pub const OracleBond: Balance = 25 * CENT;
-    pub const ValidityBond: Balance = 53 * CENT;
-    pub const DisputeBond: Balance = 109 * CENT;
+pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
+
+// Accounts protected from being deleted due to a too low amount of funds.
+pub struct DustRemovalWhitelist;
+
+impl Contains<AccountIdTest> for DustRemovalWhitelist
+// where
+//     frame_support::PalletId: AccountIdConversion<AccountIdTest>,
+{
+    fn contains(account_id: &AccountIdTest) -> bool {
+        *account_id == FEE_ACCOUNT
+    }
 }
 
 construct_runtime!(
@@ -159,15 +172,16 @@ construct_runtime!(
     where
         Block = BlockTest<Runtime>,
         NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsic,
     {
+        NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet},
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
-        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        PredictionMarkets: zrml_prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
@@ -181,6 +195,35 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
+    type AssetManager = AssetManager;
+    type CompleteSetOperations = PredictionMarkets;
+    type ExternalFees = ExternalFees<Runtime, FeeAccount>;
+    type MarketCommons = MarketCommons;
+    type RuntimeEvent = RuntimeEvent;
+    // type ExitFee = NeoExitFee;
+    type MaxSwapFee = NeoMaxSwapFee;
+    type PalletId = NeoSwapsPalletId;
+    type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
+}
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
+impl zrml_rikiddo::Config for Runtime {
+    type Timestamp = Timestamp;
+    type Balance = Balance;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = BalanceFractionalDecimals;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
+}
+
+impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -189,8 +232,8 @@ impl crate::Config for Runtime {
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
+    type DeployPool = DeployPoolNoop;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type DeployPool = DeployPoolMock;
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
@@ -219,7 +262,52 @@ impl crate::Config for Runtime {
     type Slash = Treasury;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
-    type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
+    type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_authorized::Config for Runtime {
+    type AuthorizedDisputeResolutionOrigin =
+        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
+    type CorrectionPeriod = CorrectionPeriod;
+    type RuntimeEvent = RuntimeEvent;
+    type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
+    type MarketCommons = MarketCommons;
+    type PalletId = AuthorizedPalletId;
+    type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_court::Config for Runtime {
+    type AppealBond = AppealBond;
+    type BlocksPerYear = BlocksPerYear;
+    type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
+    type VotePeriod = VotePeriod;
+    type AggregationPeriod = AggregationPeriod;
+    type AppealPeriod = AppealPeriod;
+    type LockId = LockId;
+    type Currency = Balances;
+    type RuntimeEvent = RuntimeEvent;
+    type InflationPeriod = InflationPeriod;
+    type MarketCommons = MarketCommons;
+    type MaxAppeals = MaxAppeals;
+    type MaxDelegations = MaxDelegations;
+    type MaxSelectedDraws = MaxSelectedDraws;
+    type MaxCourtParticipants = MaxCourtParticipants;
+    type MinJurorStake = MinJurorStake;
+    type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
+    type PalletId = CourtPalletId;
+    type Random = RandomnessCollectiveFlip;
+    type RequestInterval = RequestInterval;
+    type Slash = Treasury;
+    type TreasuryPalletId = TreasuryPalletId;
+    type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_liquidity_mining::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MarketCommons = MarketCommons;
+    type MarketId = MarketId;
+    type PalletId = LiquidityMiningPalletId;
+    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
@@ -260,22 +348,14 @@ impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
     type CurrencyId = CurrencyId;
-    type DustRemovalWhitelist = Everything;
+    type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-}
-
-#[cfg(feature = "parachain")]
-crate::orml_asset_registry::impl_mock_registry! {
-    MockRegistry,
-    CurrencyId,
-    Balance,
-    zeitgeist_primitives::types::CustomMetadata
 }
 
 impl pallet_balances::Config for Runtime {
@@ -284,68 +364,10 @@ impl pallet_balances::Config for Runtime {
     type DustRemoval = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-}
-
-impl pallet_randomness_collective_flip::Config for Runtime {}
-
-impl pallet_timestamp::Config for Runtime {
-    type MinimumPeriod = MinimumPeriod;
-    type Moment = Moment;
-    type OnTimestampSet = ();
-    type WeightInfo = ();
-}
-
-ord_parameter_types! {
-    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
-}
-
-impl zrml_authorized::Config for Runtime {
-    type AuthorizedDisputeResolutionOrigin =
-        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
-    type CorrectionPeriod = CorrectionPeriod;
-    type RuntimeEvent = RuntimeEvent;
-    type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type MarketCommons = MarketCommons;
-    type PalletId = AuthorizedPalletId;
-    type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
-}
-
-impl zrml_court::Config for Runtime {
-    type AppealBond = AppealBond;
-    type BlocksPerYear = BlocksPerYear;
-    type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type VotePeriod = VotePeriod;
-    type AggregationPeriod = AggregationPeriod;
-    type AppealPeriod = AppealPeriod;
-    type LockId = LockId;
-    type Currency = Balances;
-    type RuntimeEvent = RuntimeEvent;
-    type InflationPeriod = InflationPeriod;
-    type MarketCommons = MarketCommons;
-    type MaxAppeals = MaxAppeals;
-    type MaxDelegations = MaxDelegations;
-    type MaxSelectedDraws = MaxSelectedDraws;
-    type MaxCourtParticipants = MaxCourtParticipants;
-    type MinJurorStake = MinJurorStake;
-    type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
-    type PalletId = CourtPalletId;
-    type Random = RandomnessCollectiveFlip;
-    type RequestInterval = RequestInterval;
-    type Slash = Treasury;
-    type TreasuryPalletId = TreasuryPalletId;
-    type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
-}
-
-impl zrml_liquidity_mining::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
-    type PalletId = LiquidityMiningPalletId;
-    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_market_commons::Config for Runtime {
@@ -355,19 +377,11 @@ impl zrml_market_commons::Config for Runtime {
     type Timestamp = Timestamp;
 }
 
-impl zrml_rikiddo::Config for Runtime {
-    type Timestamp = Timestamp;
-    type Balance = Balance;
-    type FixedTypeU = FixedU128<U33>;
-    type FixedTypeS = FixedI128<U33>;
-    type BalanceFractionalDecimals = BalanceFractionalDecimals;
-    type PoolId = PoolId;
-    type Rikiddo = RikiddoSigmoidMV<
-        Self::FixedTypeU,
-        Self::FixedTypeS,
-        FeeSigmoid<Self::FixedTypeS>,
-        EmaMarketVolume<Self::FixedTypeU>,
-    >;
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type WeightInfo = ();
 }
 
 impl zrml_simple_disputes::Config for Runtime {
@@ -375,7 +389,7 @@ impl zrml_simple_disputes::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type OutcomeBond = OutcomeBond;
     type OutcomeFactor = OutcomeFactor;
-    type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type PalletId = SimpleDisputesPalletId;
@@ -385,7 +399,7 @@ impl zrml_simple_disputes::Config for Runtime {
 impl zrml_global_disputes::Config for Runtime {
     type AddOutcomePeriod = AddOutcomePeriod;
     type RuntimeEvent = RuntimeEvent;
-    type DisputeResolution = prediction_markets::Pallet<Runtime>;
+    type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputeLockId = GlobalDisputeLockId;
@@ -441,31 +455,28 @@ impl pallet_treasury::Config for Runtime {
     type WeightInfo = ();
 }
 
+#[cfg(feature = "parachain")]
+zrml_prediction_markets::impl_mock_registry! {
+    MockRegistry,
+    CurrencyId,
+    Balance,
+    zeitgeist_primitives::types::CustomMetadata
+}
+
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
 
+// FIXME Remove this in favor of adding whatever the account need in the individual tests.
 impl Default for ExtBuilder {
     fn default() -> Self {
-        DEPLOY_POOL_CALL_DATA.with(|value| value.borrow_mut().clear());
-        Self {
-            balances: vec![
-                (ALICE, INITIAL_BALANCE),
-                (BOB, INITIAL_BALANCE),
-                (CHARLIE, INITIAL_BALANCE),
-                (DAVE, INITIAL_BALANCE),
-                (EVE, INITIAL_BALANCE),
-                (FRED, INITIAL_BALANCE),
-                (SUDO, INITIAL_BALANCE),
-            ],
-        }
+        Self { balances: vec![(ALICE, 100 * BASE), (CHARLIE, BASE), (DAVE, BASE), (EVE, BASE)] }
     }
 }
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
@@ -473,9 +484,8 @@ impl ExtBuilder {
         use frame_support::traits::GenesisBuild;
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
-            balances: (0..69)
-                .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
-                .collect(),
+            balances: vec![(ALICE, FOREIGN_ASSET, _100)],
+            // balances: (0..69).map(|idx| (idx, FOREIGN_ASSET, _100)).collect(),
         }
         .assimilate_storage(&mut t)
         .unwrap();
@@ -486,30 +496,17 @@ impl ExtBuilder {
         };
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
-            metadata: vec![
-                (
-                    CurrencyId::ForeignAsset(100),
-                    AssetMetadata {
-                        decimals: 18,
-                        name: "ACALA USD".as_bytes().to_vec(),
-                        symbol: "AUSD".as_bytes().to_vec(),
-                        existential_deposit: 0,
-                        location: None,
-                        additional: custom_metadata,
-                    },
-                ),
-                (
-                    CurrencyId::ForeignAsset(420),
-                    AssetMetadata {
-                        decimals: 18,
-                        name: "FANCY_TOKEN".as_bytes().to_vec(),
-                        symbol: "FTK".as_bytes().to_vec(),
-                        existential_deposit: 0,
-                        location: None,
-                        additional: zeitgeist_primitives::types::CustomMetadata::default(),
-                    },
-                ),
-            ],
+            metadata: vec![(
+                FOREIGN_ASSET,
+                AssetMetadata {
+                    decimals: 18,
+                    name: "MKL".as_bytes().to_vec(),
+                    symbol: "MKL".as_bytes().to_vec(),
+                    existential_deposit: 0,
+                    location: None,
+                    additional: custom_metadata,
+                },
+            )],
         }
         .assimilate_storage(&mut t)
         .unwrap();
@@ -517,68 +514,32 @@ impl ExtBuilder {
     }
 }
 
-pub fn run_to_block(n: BlockNumber) {
-    while System::block_number() < n {
-        Balances::on_finalize(System::block_number());
-        Court::on_finalize(System::block_number());
-        PredictionMarkets::on_finalize(System::block_number());
-        System::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        PredictionMarkets::on_initialize(System::block_number());
-        Court::on_initialize(System::block_number());
-        Balances::on_initialize(System::block_number());
-    }
-}
-
-pub fn run_blocks(n: BlockNumber) {
-    run_to_block(System::block_number() + n);
-}
-
-// Our `on_initialize` compensates for the fact that `on_initialize` takes the timestamp from the
-// previous block. Therefore, manually setting timestamp during tests becomes cumbersome without a
-// utility function like this.
-pub fn set_timestamp_for_on_initialize(time: Moment) {
-    Timestamp::set_timestamp(time - MILLISECS_PER_BLOCK as u64);
-}
-
-sp_api::mock_impl_runtime_apis! {
-    impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<BlockTest<Runtime>, MarketId, Hash> for Runtime {
-        fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
-            Asset::PoolShare(SerdeWrapper(1))
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Config;
-
-    // We run this test to ensure that bonds are mutually non-equal (some of the tests in
-    // `tests.rs` require this to be true).
-    #[test]
-    fn test_bonds_are_pairwise_non_equal() {
-        assert_ne!(
-            <Runtime as Config>::AdvisoryBond::get(),
-            <Runtime as Config>::OracleBond::get()
-        );
-        assert_ne!(
-            <Runtime as Config>::AdvisoryBond::get(),
-            <Runtime as Config>::ValidityBond::get()
-        );
-        assert_ne!(
-            <Runtime as Config>::AdvisoryBond::get(),
-            <Runtime as Config>::DisputeBond::get()
-        );
-        assert_ne!(
-            <Runtime as Config>::OracleBond::get(),
-            <Runtime as Config>::ValidityBond::get()
-        );
-        assert_ne!(<Runtime as Config>::OracleBond::get(), <Runtime as Config>::DisputeBond::get());
-        assert_ne!(
-            <Runtime as Config>::ValidityBond::get(),
-            <Runtime as Config>::DisputeBond::get()
-        );
-    }
-}
+// sp_api::mock_impl_runtime_apis! {
+//     impl zrml_neo_swaps_runtime_api::SwapsApi<BlockTest<Runtime>, PoolId, AccountIdTest, Balance, MarketId>
+//       for Runtime
+//     {
+//         fn get_spot_price(
+//             pool_id: &PoolId,
+//             asset_in: &Asset<MarketId>,
+//             asset_out: &Asset<MarketId>,
+//             with_fees: bool,
+//         ) -> SerdeWrapper<Balance> {
+//             SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
+//         }
+//
+//         fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
+//             Swaps::pool_account_id(pool_id)
+//         }
+//
+//         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
+//             Asset::PoolShare(SerdeWrapper(pool_id))
+//         }
+//
+//         fn get_all_spot_prices(
+//             pool_id: &PoolId,
+//             with_fees: bool
+//         ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
+//             Swaps::get_all_spot_prices(pool_id, with_fees)
+//         }
+//     }
+// }

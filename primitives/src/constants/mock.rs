@@ -69,6 +69,13 @@ parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
 }
 
+// NeoSwaps
+parameter_types! {
+    pub storage NeoExitFee: Balance = CENT;
+    pub const NeoMaxSwapFee: Balance = 3 * CENT;
+    pub const NeoSwapsPalletId: PalletId = PalletId(*b"zge/neos");
+}
+
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;

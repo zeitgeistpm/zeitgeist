@@ -10,6 +10,7 @@ default-members = [
     "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
+    "zrml/neo-swaps",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
     "zrml/prediction-markets/runtime-api",
@@ -31,6 +32,7 @@ members = [
     "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
+    "zrml/neo-swaps",
     "zrml/orderbook-v1",
     "zrml/orderbook-v1/fuzz",
     "zrml/prediction-markets",
@@ -229,6 +231,7 @@ zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
 zrml-liquidity-mining = { path = "zrml/liquidity-mining", default-features = false }
 zrml-market-commons = { path = "zrml/market-commons", default-features = false }
+zrml-neo-swaps = { path = "zrml/neo-swaps", default-features = false }
 zrml-orderbook-v1 = { path = "zrml/orderbook-v1", default-features = false }
 zrml-prediction-markets = { path = "zrml/prediction-markets", default-features = false }
 zrml-prediction-markets-runtime-api = { path = "zrml/prediction-markets/runtime-api", default-features = false }
@@ -250,6 +253,9 @@ url = "2.2.2"
 arbitrary = { version = "1.3.0", default-features = false }
 arrayvec = { version = "0.7.4", default-features = false }
 cfg-if = { version = "1.0.0" }
+fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
+# Using math code directly from the HydraDX node repository as https://github.com/galacticcouncil/hydradx-math is outdated and has been archived in May 2023.
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", package = "hydra-dx-math", tag = "v18.0.0", default-features = false }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.12.3", default-features = true }
 hex-literal = { version = "0.3.4", default-features = false }
@@ -258,6 +264,7 @@ num-traits = { version = "0.2.15", default-features = false }
 rand = { version = "0.8.5", default-features = false }
 rand_chacha = { version = "0.3.1", default-features = false }
 serde = { version = "1.0.152", default-features = false }
+typenum = { version = "1.15.0", default-features = false }
 
 [profile.dev.package]
 blake2 = { opt-level = 3 }
