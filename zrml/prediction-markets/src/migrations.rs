@@ -35,7 +35,7 @@ use frame_support::{
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_runtime::{Perbill, traits::Saturating};
+use sp_runtime::{traits::Saturating, Perbill};
 use zeitgeist_primitives::types::{
     Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -94,13 +94,16 @@ pub(crate) type Markets<T: Config> = StorageMap<
 
 pub struct AddDisputeBondAndConvertCreatorFee<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBondAndConvertCreatorFee<T> {
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
+    for AddDisputeBondAndConvertCreatorFee<T>
+{
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "AddDisputeBondAndConvertCreatorFee: market-commons version is {:?}, but {:?} is required",
+                "AddDisputeBondAndConvertCreatorFee: market-commons version is {:?}, but {:?} is \
+                 required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
@@ -234,7 +237,10 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
             }
         }
 
-        log::info!("AddDisputeBondAndConvertCreatorFee: Market Counter post-upgrade is {}!", new_market_count);
+        log::info!(
+            "AddDisputeBondAndConvertCreatorFee: Market Counter post-upgrade is {}!",
+            new_market_count
+        );
         assert!(new_market_count > 0);
         Ok(())
     }

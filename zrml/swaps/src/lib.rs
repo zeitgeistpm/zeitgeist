@@ -1416,9 +1416,7 @@ mod pallet {
                     market
                         .creator_fee
                         .mul_floor(BASE)
-                        .checked_add(
-                            swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?,
-                        )
+                        .checked_add(swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
                         .ok_or(Error::<T>::SwapFeeTooHigh)?
                 } else {
                     BalanceOf::<T>::zero().saturated_into()

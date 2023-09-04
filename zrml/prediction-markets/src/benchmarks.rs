@@ -34,7 +34,10 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::{Perbill, traits::{One, SaturatedConversion, Saturating, Zero}};
+use sp_runtime::{
+    traits::{One, SaturatedConversion, Saturating, Zero},
+    Perbill,
+};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::{DisputeApi, Swaps},

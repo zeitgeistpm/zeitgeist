@@ -40,7 +40,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
-    traits::{Swaps as _, MarketCommonsPalletApi},
+    traits::{MarketCommonsPalletApi, Swaps as _},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
         MarketPeriod, MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
