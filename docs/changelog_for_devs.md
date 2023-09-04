@@ -47,10 +47,11 @@ All things about Global Disputes Fix ⚠️ :
     sum of all fees, currently the liqudity provider fee and the market creator
     fee. It is checked during the execution of the public function
     `create_pool`.
-  - Fees are always transferred from the traders account to the market creator's
-    account either before or after the trade. The base asset is always preferred
-    to pay fees. If the trade does not include the base asset, the pallet will
-    try to convert the outcome asset to the base asset by executing a swap.
+  - Fees are always transferred from the trader's account to the market
+    creator's account either before or after the trade. The base asset is always
+    preferred to pay fees. If the trade does not include the base asset, the
+    pallet will try to convert the outcome asset to the base asset by executing
+    a swap.
   - A new event `MarketCreatorFeesPaid` is emitted by the swaps pallet after
     successful payment of fees to the market creator. It contains the fields
     `\[payer, payee, amount, asset\]`.
