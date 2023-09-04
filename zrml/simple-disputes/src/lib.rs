@@ -538,7 +538,7 @@ mod pallet {
     }
 }
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
+#[cfg(feature = "runtime-benchmarks")]
 pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
