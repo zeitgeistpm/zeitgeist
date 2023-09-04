@@ -153,6 +153,7 @@ pub trait Swaps<AccountId> {
     /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
     /// * `max_price`: Market price must be equal or less than the provided value.
     /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
+    #[allow(clippy::too_many_arguments)]
     fn swap_exact_amount_in(
         who: AccountId,
         pool_id: PoolId,
@@ -178,6 +179,7 @@ pub trait Swaps<AccountId> {
     /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
     /// * `max_price`: Market price must be equal or less than the provided value.
     /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
+    #[allow(clippy::too_many_arguments)]
     fn swap_exact_amount_out(
         who: AccountId,
         pool_id: PoolId,

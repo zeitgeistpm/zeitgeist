@@ -1417,9 +1417,9 @@ mod pallet {
                         .creator_fee
                         .mul_floor(BASE)
                         .checked_add(
-                            swap_fee.try_into().or_else(|_| Err(Error::<T>::SwapFeeTooHigh))?,
+                            swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?,
                         )
-                        .ok_or_else(|| Error::<T>::SwapFeeTooHigh)?
+                        .ok_or(Error::<T>::SwapFeeTooHigh)?
                 } else {
                     BalanceOf::<T>::zero().saturated_into()
                 };
@@ -1853,11 +1853,12 @@ mod pallet {
                             .checked_add(
                                 swap_fee_unwrapped
                                     .try_into()
-                                    .or_else(|_| Err(Error::<T>::SwapFeeTooHigh))?,
+                                    .map_err(|_| Error::<T>::SwapFeeTooHigh)?,
                             )
-                            .ok_or_else(|| Error::<T>::SwapFeeTooHigh)?;
+                            .ok_or(Error::<T>::SwapFeeTooHigh)?;
 
-                        let total_fee_as_balance = <BalanceOf<T>>::try_from(total_fee).map_err(|_| Error::<T>::SwapFeeTooHigh)?;
+                        let total_fee_as_balance = <BalanceOf<T>>::try_from(total_fee)
+                            .map_err(|_| Error::<T>::SwapFeeTooHigh)?;
 
                         ensure!(
                             total_fee_as_balance <= T::MaxSwapFee::get(),
@@ -2372,7 +2373,8 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        /// * `override_swap_fee`: Optional parameter to override the swap fee
+        /// * `handle_fees`: Optional parameter to override the swap fee
+        #[allow(clippy::too_many_arguments)]
         fn swap_exact_amount_in(
             who: T::AccountId,
             pool_id: PoolId,
@@ -2402,7 +2404,7 @@ mod pallet {
                     creator_fee,
                     market.creator.clone(),
                     who.clone(),
-                    pool_id.clone(),
+                    pool_id,
                 )?;
 
                 let fee_amount = creator_fee.mul_floor(asset_amount_in);
@@ -2518,7 +2520,7 @@ mod pallet {
                     creator_fee,
                     market.creator.clone(),
                     who.clone(),
-                    pool_id.clone(),
+                    pool_id,
                 )?;
             }
 
@@ -2530,6 +2532,21 @@ mod pallet {
             }
         }
 
+        /// Swap - Exact amount out
+        ///
+        /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `who`: The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool.
+        /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
+        /// * `asset_out`: Asset leaving the pool.
+        /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
+        /// * `max_price`: Market price must be equal or less than the provided value.
+        /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
+        #[allow(clippy::too_many_arguments)]
         fn swap_exact_amount_out(
             who: T::AccountId,
             pool_id: PoolId,
@@ -2629,7 +2646,7 @@ mod pallet {
                             creator_fee,
                             market.creator.clone(),
                             who.clone(),
-                            pool_id.clone(),
+                            pool_id,
                         )?;
                     }
 
@@ -2669,7 +2686,7 @@ mod pallet {
                     creator_fee,
                     market.creator.clone(),
                     who.clone(),
-                    pool_id.clone(),
+                    pool_id,
                 )?;
             }
 

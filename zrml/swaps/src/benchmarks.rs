@@ -40,13 +40,12 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
-    traits::Swaps as _,
+    traits::{Swaps as _, MarketCommonsPalletApi},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
         MarketPeriod, MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
 
 const LIQUIDITY: u128 = 100 * BASE;
 
@@ -179,7 +178,7 @@ benchmarks! {
             Market {
                 base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
-                creator_fee: 0,
+                creator_fee: sp_runtime::Perbill::zero(),
                 creator: caller.clone(),
                 market_type: MarketType::Categorical(category_count),
                 dispute_mechanism: MarketDisputeMechanism::Authorized,
@@ -220,7 +219,7 @@ benchmarks! {
             Market {
                 base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
-                creator_fee: 0,
+                creator_fee: sp_runtime::Perbill::zero(),
                 creator: caller.clone(),
                 market_type: MarketType::Scalar(0..=99),
                 dispute_mechanism: MarketDisputeMechanism::Authorized,

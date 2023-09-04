@@ -23,7 +23,7 @@ use crate::{
     MarketCounter, Markets,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::MarketCommonsPalletApi,
     types::{
@@ -36,7 +36,7 @@ use zeitgeist_primitives::{
 const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> = Market {
     base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
-    creator_fee: 0,
+    creator_fee: Perbill::zero(),
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
     dispute_mechanism: MarketDisputeMechanism::Authorized,

@@ -3721,18 +3721,22 @@ fn execute_arbitrage_observes_min_balances_mint_sell() {
 }
 
 #[test_case(
-        0, 
+        0,
         Perbill::from_parts(
-            u32::try_from(1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000) / BASE)).unwrap()
+            u32::try_from(
+                1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000
+            ) / BASE)).unwrap()
         ); "creator_fee_only"
     )
 ]
 #[test_case(
-    1 + BASE * 5, 
-    Perbill::from_parts(
-        u32::try_from(1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000 / 2) / BASE)).unwrap()
-    ); "sum_of_all_fees"
-)
+        1 + BASE * 5,
+        Perbill::from_parts(
+            u32::try_from(
+                1 + ((<Runtime as Config>::MaxSwapFee::get() * 1_000_000_000 / 2
+            ) / BASE)).unwrap()
+        ); "sum_of_all_fees"
+    )
 ]
 fn create_pool_respects_total_fee_limits(swap_fee: u128, creator_fee: Perbill) {
     ExtBuilder::default().build().execute_with(|| {

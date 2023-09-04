@@ -108,6 +108,7 @@ fn simple_create_categorical_market(
     assert_ok!(PredictionMarkets::create_market(
         RuntimeOrigin::signed(ALICE),
         base_asset,
+        Perbill::zero(),
         BOB,
         MarketPeriod::Block(period),
         get_deadlines(),
@@ -128,6 +129,7 @@ fn simple_create_scalar_market(
     assert_ok!(PredictionMarkets::create_market(
         RuntimeOrigin::signed(ALICE),
         base_asset,
+        Perbill::zero(),
         BOB,
         MarketPeriod::Block(period),
         get_deadlines(),
@@ -178,6 +180,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -254,6 +257,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(22..66),
             get_deadlines(),
@@ -267,6 +271,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(33..66),
             get_deadlines(),
@@ -280,6 +285,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(22..33),
             get_deadlines(),
@@ -310,6 +316,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 get_deadlines(),
@@ -336,6 +343,7 @@ fn create_market_fails_on_min_dispute_period() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -362,6 +370,7 @@ fn create_market_fails_on_min_oracle_duration() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -388,6 +397,7 @@ fn create_market_fails_on_max_dispute_period() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -414,6 +424,7 @@ fn create_market_fails_on_max_grace_period() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -440,6 +451,7 @@ fn create_market_fails_on_max_oracle_duration() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -470,6 +482,7 @@ fn create_market_with_foreign_assets() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::ForeignAsset(420),
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -486,6 +499,7 @@ fn create_market_with_foreign_assets() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::ForeignAsset(50),
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
                 deadlines,
@@ -501,6 +515,7 @@ fn create_market_with_foreign_assets() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::ForeignAsset(100),
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(123..456),
             deadlines,
@@ -1003,6 +1018,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(0..42),
             get_deadlines(),
@@ -1068,6 +1084,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(22..66),
             get_deadlines(),
@@ -1081,6 +1098,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(33..66),
             get_deadlines(),
@@ -1094,6 +1112,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(22..33),
             get_deadlines(),
@@ -1287,6 +1306,7 @@ fn it_does_not_create_market_with_too_few_categories() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(0..100),
                 get_deadlines(),
@@ -1308,6 +1328,7 @@ fn it_does_not_create_market_with_too_many_categories() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(0..100),
                 get_deadlines(),
@@ -1789,6 +1810,7 @@ fn on_market_open_successfully_auto_opens_market_pool_with_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(start..end),
             get_deadlines(),
@@ -1820,6 +1842,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -1858,6 +1881,7 @@ fn on_market_open_successfully_auto_opens_market_with_timestamps() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1892,6 +1916,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1938,6 +1963,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1951,6 +1977,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -1983,6 +2010,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -1996,6 +2024,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -2035,6 +2064,7 @@ fn on_initialize_skips_the_genesis_block() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             get_deadlines(),
@@ -2128,6 +2158,7 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(3..3),
                 get_deadlines(),
@@ -2158,6 +2189,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 period,
                 get_deadlines(),
@@ -2181,6 +2213,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(0..end_block),
                 get_deadlines(),
@@ -2198,6 +2231,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Timestamp(0..end_time),
                 get_deadlines(),
@@ -2539,6 +2573,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -2697,6 +2732,7 @@ fn dispute_fails_disputed_already() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -2737,6 +2773,7 @@ fn dispute_fails_if_market_not_reported() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -2771,6 +2808,7 @@ fn dispute_reserves_dispute_bond() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -2816,6 +2854,7 @@ fn dispute_updates_market() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -2862,6 +2901,7 @@ fn dispute_emits_event() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3162,6 +3202,7 @@ fn it_resolves_a_disputed_court_market() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3429,6 +3470,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -3548,6 +3590,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..2),
             get_deadlines(),
@@ -3642,6 +3685,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             oracle,
             period,
             get_deadlines(),
@@ -4009,6 +4053,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -4048,6 +4093,7 @@ fn full_scalar_market_lifecycle() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -4256,6 +4302,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4297,6 +4344,7 @@ fn authorized_correctly_resolves_disputed_market() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4442,6 +4490,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -4480,6 +4529,7 @@ fn deploy_swap_pool_correctly_sets_weight_of_base_asset() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             ALICE,
             MarketPeriod::Block(0..42),
             get_deadlines(),
@@ -4506,6 +4556,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -4543,6 +4594,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -4583,6 +4635,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4628,6 +4681,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..100),
             get_deadlines(),
@@ -4693,6 +4747,7 @@ fn outsider_reports_wrong_outcome() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4771,6 +4826,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4816,6 +4872,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4862,6 +4919,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4912,6 +4970,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -4963,6 +5022,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -5022,6 +5082,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -5079,6 +5140,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -5150,6 +5212,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             get_deadlines(),
@@ -5216,6 +5279,7 @@ fn report_fails_on_market_state_proposed() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -5238,6 +5302,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -5260,6 +5325,7 @@ fn report_fails_on_market_state_collecting_subsidy() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             get_deadlines(),
@@ -5282,6 +5348,7 @@ fn report_fails_on_market_state_insufficient_subsidy() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             get_deadlines(),
@@ -5308,6 +5375,7 @@ fn report_fails_on_market_state_active() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -5330,6 +5398,7 @@ fn report_fails_on_market_state_suspended() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -5356,6 +5425,7 @@ fn report_fails_on_market_state_resolved() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -5382,6 +5452,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             get_deadlines(),
@@ -5422,6 +5493,7 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(start..end),
             get_deadlines(),
@@ -5449,6 +5521,7 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
             get_deadlines(),
@@ -5476,6 +5549,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(start..end),
                 get_deadlines(),
@@ -5506,6 +5580,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Timestamp(start..end),
                 get_deadlines(),
@@ -5564,6 +5639,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(creator),
             Asset::Ztg,
+            Perbill::zero(),
             oracle,
             period.clone(),
             deadlines,
