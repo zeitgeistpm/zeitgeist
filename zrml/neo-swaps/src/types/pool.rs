@@ -94,10 +94,9 @@ where
 {
     fn max_encoded_len() -> usize {
         let len_account_id = T::AccountId::max_encoded_len();
-        let len_balances =
-            1usize.saturating_add((MAX_ASSETS as usize).saturating_mul(
-                <AssetOf<T>>::max_encoded_len().saturating_add(BalanceOf::<T>::max_encoded_len()),
-            ));
+        let len_balances = 1usize.saturating_add((MAX_ASSETS as usize).saturating_mul(
+            <AssetOf<T>>::max_encoded_len().saturating_add(BalanceOf::<T>::max_encoded_len()),
+        ));
         let len_collateral = AssetOf::<T>::max_encoded_len();
         let len_liquidity_parameter = BalanceOf::<T>::max_encoded_len();
         let len_liquidity_shares_manager = LSM::max_encoded_len();

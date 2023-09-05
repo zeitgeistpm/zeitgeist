@@ -30,9 +30,8 @@
 
 use crate as zrml_neo_swaps;
 #[cfg(feature = "parachain")]
-use crate::consts::{_100};
-use crate::consts::MAX_ASSETS;
-use crate::{AssetOf, MarketIdOf};
+use crate::consts::_100;
+use crate::{consts::MAX_ASSETS, AssetOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,

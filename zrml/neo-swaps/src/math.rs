@@ -105,9 +105,7 @@ mod detail {
     use super::*;
     use zeitgeist_primitives::{
         constants::DECIMALS,
-        math::{
-            fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
-        },
+        math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
     };
 
     /// Calculate b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x
