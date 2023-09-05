@@ -238,11 +238,11 @@ macro_rules! decl_common_types {
             type MarketId = MarketId;
 
             fn deploy_pool(
-                who: Self::AccountId,
-                market_id: Self::MarketId,
-                amount: Self::Balance,
-                swap_prices: Vec<Self::Balance>,
-                swap_fee: Self::Balance,
+                _who: Self::AccountId,
+                _market_id: Self::MarketId,
+                _amount: Self::Balance,
+                _swap_prices: Vec<Self::Balance>,
+                _swap_fee: Self::Balance,
             ) -> DispatchResult {
                 Err(DispatchError::Other("Not implemented"))
             }
@@ -251,10 +251,10 @@ macro_rules! decl_common_types {
         common_runtime::impl_fee_types!();
 
         pub mod opaque {
-            //! Opaque types. These are used by the CLI to instantiate machinery that don't need to know
-            //! the specifics of the runtime. They can then be made to be agnostic over specific formats
-            //! of data like extrinsics, allowing for them to continue syncing the network through upgrades
-            //! to even the core data structures.
+            //! Opaque types. These are used by the CLI to instantiate machinery that don't need to
+            //! know the specifics of the runtime. They can then be made to be agnostic over
+            //! specific formats of data like extrinsics, allowing for them to continue syncing the
+            //! network through upgrades to even the core data structures.
 
             use super::Header;
             use alloc::vec::Vec;

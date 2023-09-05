@@ -25,7 +25,8 @@
 #![cfg(feature = "mock")]
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::arithmetic_side_effects
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
 )]
 
 use crate as zrml_neo_swaps;
@@ -98,11 +99,11 @@ parameter_types! {
 }
 parameter_types! {
     pub const MinSubsidyPerAccount: Balance = BASE;
-    pub const AdvisoryBond: Balance = 0 * CENT;
+    pub const AdvisoryBond: Balance = 0;
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
-    pub const OracleBond: Balance = 0 * CENT;
-    pub const ValidityBond: Balance = 0 * CENT;
-    pub const DisputeBond: Balance = 0 * CENT;
+    pub const OracleBond: Balance = 0;
+    pub const ValidityBond: Balance = 0;
+    pub const DisputeBond: Balance = 0;
     pub const MaxCategories: u16 = MAX_ASSETS + 1;
 }
 

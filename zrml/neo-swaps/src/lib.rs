@@ -37,7 +37,7 @@ mod pallet {
         consts::MAX_ASSETS,
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, DistributeFees, LiquiditySharesManager},
-        types::{Pool, SoloLp},
+        types::{FeeDistribution, Pool, SoloLp},
         weights::*,
     };
     use alloc::collections::BTreeMap;
@@ -467,7 +467,7 @@ mod pallet {
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes() as u32;
             ensure!(spot_prices.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::deploy_pool(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::deploy_pool(asset_count)).into())
         }
     }
 
@@ -483,7 +483,7 @@ mod pallet {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |mut pool| {
+            Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
                 // Defensive check (shouldn't ever happen)!
                 ensure!(
@@ -492,8 +492,11 @@ mod pallet {
                 );
                 ensure!(amount_in <= pool.calculate_max_amount_in(), Error::<T>::NumericalLimits);
                 T::AssetManager::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
-                let (amount_in_minus_fees, swap_fee_amount, external_fee_amount) =
-                    Self::distribute_fees(market_id, &mut pool, amount_in)?;
+                let FeeDistribution {
+                    remaining: amount_in_minus_fees,
+                    swap_fees: swap_fee_amount,
+                    external_fees: external_fee_amount,
+                } = Self::distribute_fees(market_id, pool, amount_in)?;
                 let swap_amount_out =
                     pool.calculate_swap_amount_out_for_buy(asset_out, amount_in_minus_fees)?;
                 let amount_out = swap_amount_out.saturating_add(amount_in_minus_fees);
@@ -507,7 +510,7 @@ mod pallet {
                     amount_in_minus_fees,
                 )?;
                 T::AssetManager::transfer(asset_out, &pool.account_id, &who, amount_out)?;
-                for (&asset, balance) in pool.balances.iter_mut() {
+                for (&asset, balance) in pool.reserves.iter_mut() {
                     *balance =
                         balance.checked_add(&amount_in_minus_fees).ok_or(Error::<T>::MathError)?;
                     if asset == asset_out {
@@ -543,7 +546,7 @@ mod pallet {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |mut pool| {
+            Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
                 // Defensive check (shouldn't ever happen)!
                 ensure!(
@@ -565,8 +568,11 @@ mod pallet {
                     market_id,
                     amount_out,
                 )?;
-                let (amount_out_minus_fees, swap_fee_amount, external_fee_amount) =
-                    Self::distribute_fees(market_id, &mut pool, amount_out)?;
+                let FeeDistribution {
+                    remaining: amount_out_minus_fees,
+                    swap_fees: swap_fee_amount,
+                    external_fees: external_fee_amount,
+                } = Self::distribute_fees(market_id, pool, amount_out)?;
                 ensure!(amount_out_minus_fees >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 T::AssetManager::transfer(
                     pool.collateral,
@@ -574,7 +580,7 @@ mod pallet {
                     &who,
                     amount_out_minus_fees,
                 )?;
-                for (&asset, balance) in pool.balances.iter_mut() {
+                for (&asset, balance) in pool.reserves.iter_mut() {
                     if asset == asset_in {
                         *balance = balance.checked_add(&amount_in).ok_or(Error::<T>::MathError)?;
                     }
@@ -623,7 +629,7 @@ mod pallet {
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
                     T::AssetManager::transfer(asset, &who, &pool.account_id, amount_in)?;
                 }
-                for ((_, balance), &amount_in) in pool.balances.iter_mut().zip(amounts_in.iter()) {
+                for ((_, balance), &amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
                     *balance = balance.saturating_add(amount_in);
                 }
                 pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
@@ -631,7 +637,7 @@ mod pallet {
                     bmul(ratio.saturated_into(), pool.liquidity_parameter.saturated_into())?
                         .saturated_into(),
                 );
-                pool.liquidity_parameter = new_liquidity_parameter.clone();
+                pool.liquidity_parameter = new_liquidity_parameter;
                 Pools::<T>::insert(market_id, pool);
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
@@ -653,7 +659,7 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let _ = T::MarketCommons::market(&market_id)?;
-            Pools::<T>::try_mutate_exists(&market_id, |maybe_pool| {
+            Pools::<T>::try_mutate_exists(market_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
                 ensure!(
@@ -673,7 +679,7 @@ mod pallet {
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::AssetManager::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
-                for ((_, balance), &amount_out) in pool.balances.iter_mut().zip(amounts_out.iter())
+                for ((_, balance), &amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter())
                 {
                     *balance = balance.saturating_sub(amount_out);
                 }
@@ -703,7 +709,7 @@ mod pallet {
                         new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
                         Error::<T>::LiquidityTooLow
                     );
-                    pool.liquidity_parameter = new_liquidity_parameter.clone();
+                    pool.liquidity_parameter = new_liquidity_parameter;
                     Pools::<T>::insert(market_id, pool);
                     Self::deposit_event(Event::<T>::ExitExecuted {
                         who: who.clone(),
@@ -775,14 +781,14 @@ mod pallet {
             );
             let pool_account_id = Self::pool_account_id(&market_id);
             let assets = Self::outcomes(market_id)?;
-            let mut balances = BTreeMap::new();
+            let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(assets.iter()) {
                 T::AssetManager::transfer(asset, &who, &pool_account_id, amount_in)?;
-                let _ = balances.insert(asset, amount_in);
+                let _ = reserves.insert(asset, amount_in);
             }
             let pool = Pool {
                 account_id: pool_account_id,
-                balances,
+                reserves,
                 collateral: market.base_asset,
                 liquidity_parameter,
                 liquidity_shares_manager: SoloLp::new(who.clone(), amount),
@@ -819,7 +825,7 @@ mod pallet {
         //     Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound.into())
         // }
 
-        /// Distributes swap fees and external fees and returns the remaining amount.
+        /// Distribute swap fees and external fees and returns the remaining amount.
         ///
         /// # Arguments
         ///
@@ -834,7 +840,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             pool: &mut PoolOf<T>,
             amount: BalanceOf<T>,
-        ) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
+        ) -> Result<FeeDistribution<T>, DispatchError> {
             let swap_fees_u128 = bmul(pool.swap_fee.saturated_into(), amount.saturated_into())?;
             let swap_fees = swap_fees_u128.saturated_into();
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
@@ -846,7 +852,7 @@ mod pallet {
             );
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
-            Ok((remaining, swap_fees, external_fees))
+            Ok(FeeDistribution { remaining, swap_fees, external_fees })
         }
 
         // FIXME Carbon copy of a function in prediction-markets. To be removed later.
@@ -869,15 +875,12 @@ mod pallet {
             })
         }
 
-        fn try_mutate_pool<F>(market_id: &MarketIdOf<T>, mut mutator: F) -> DispatchResult
+        fn try_mutate_pool<F>(market_id: &MarketIdOf<T>, mutator: F) -> DispatchResult
         where
             F: FnMut(&mut PoolOf<T>) -> DispatchResult,
         {
             Pools::<T>::try_mutate(market_id, |maybe_pool| {
-                maybe_pool
-                    .as_mut()
-                    .ok_or(Error::<T>::PoolNotFound.into())
-                    .and_then(|pool| mutator(pool))
+                maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)
             })
         }
     }

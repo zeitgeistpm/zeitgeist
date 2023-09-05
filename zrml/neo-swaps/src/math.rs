@@ -148,11 +148,10 @@ mod detail {
     ) -> Option<(u128, Vec<u128>)> {
         let (liquidity_fixed, reserve_fixed) = calculate_reserve_from_spot_prices_fixed(
             to_fixed(amount)?,
-            spot_prices.into_iter().map(|p| to_fixed(p)).collect::<Option<Vec<_>>>()?,
+            spot_prices.into_iter().map(to_fixed).collect::<Option<Vec<_>>>()?,
         )?;
         let liquidity = from_fixed(liquidity_fixed)?;
-        let reserve =
-            reserve_fixed.into_iter().map(|p| from_fixed(p)).collect::<Option<Vec<_>>>()?;
+        let reserve = reserve_fixed.into_iter().map(from_fixed).collect::<Option<Vec<_>>>()?;
         Some((liquidity, reserve))
     }
 

@@ -34,7 +34,7 @@ where
     LSM: LiquiditySharesManager<T>,
 {
     pub account_id: T::AccountId,
-    pub balances: BTreeMap<AssetOf<T>, BalanceOf<T>>,
+    pub reserves: BTreeMap<AssetOf<T>, BalanceOf<T>>,
     pub collateral: AssetOf<T>,
     pub liquidity_parameter: BalanceOf<T>,
     pub liquidity_shares_manager: LSM,
@@ -46,15 +46,15 @@ where
     BalanceOf<T>: SaturatedConversion,
 {
     fn assets(&self) -> Vec<AssetOf<T>> {
-        self.balances.keys().cloned().collect()
+        self.reserves.keys().cloned().collect()
     }
 
     fn contains(&self, asset: &AssetOf<T>) -> bool {
-        self.balances.contains_key(asset)
+        self.reserves.contains_key(asset)
     }
 
     fn reserve_of(&self, asset: &AssetOf<T>) -> Result<BalanceOf<T>, DispatchError> {
-        Ok(*self.balances.get(asset).ok_or(Error::<T>::AssetNotFound)?)
+        Ok(*self.reserves.get(asset).ok_or(Error::<T>::AssetNotFound)?)
     }
 
     fn calculate_swap_amount_out_for_buy(
@@ -94,7 +94,7 @@ where
 {
     fn max_encoded_len() -> usize {
         let len_account_id = T::AccountId::max_encoded_len();
-        let len_balances = 1usize.saturating_add((MAX_ASSETS as usize).saturating_mul(
+        let len_reserves = 1usize.saturating_add((MAX_ASSETS as usize).saturating_mul(
             <AssetOf<T>>::max_encoded_len().saturating_add(BalanceOf::<T>::max_encoded_len()),
         ));
         let len_collateral = AssetOf::<T>::max_encoded_len();
@@ -102,7 +102,7 @@ where
         let len_liquidity_shares_manager = LSM::max_encoded_len();
         let len_swap_fee = BalanceOf::<T>::max_encoded_len();
         len_account_id
-            .saturating_add(len_balances)
+            .saturating_add(len_reserves)
             .saturating_add(len_collateral)
             .saturating_add(len_liquidity_parameter)
             .saturating_add(len_liquidity_shares_manager)

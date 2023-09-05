@@ -143,11 +143,8 @@ fn deploy_pool_works_with_scalar_marktes() {
         assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount);
         assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
         assert_eq!(AssetManager::free_balance(assets[1], &ALICE), amount - expected_amounts[1]);
-        let price_sum = pool
-            .assets()
-            .iter()
-            .map(|&a| pool.calculate_spot_price(a).unwrap())
-            .fold(0u128, |acc, val: u128| acc + val);
+        let price_sum =
+            pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
         assert_eq!(price_sum, _1);
         System::assert_last_event(
             Event::PoolDeployed {
@@ -191,7 +188,7 @@ fn buy_works() {
         let pool_liquidity_before = pool.liquidity_parameter;
         let asset_out = pool.assets()[0];
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
-        // Deposit some stuff in the pool account to check that the pools `balances` fields tracks
+        // Deposit some stuff in the pool account to check that the pools `reserves` fields tracks
         // the reserve correctly.
         assert_ok!(AssetManager::deposit(asset_out, &pool.account_id, _100));
         assert_ok!(NeoSwaps::buy(
@@ -239,7 +236,7 @@ fn buy_works() {
             .assets()
             .iter()
             .map(|&a| pool.calculate_spot_price(a).unwrap())
-            .fold(0u128, |acc, val| acc + val);
+            .sum::<u128>();
         assert_eq!(price_sum, _1);
         System::assert_last_event(
             Event::BuyExecuted {
@@ -332,11 +329,8 @@ fn sell_works() {
             AssetManager::total_issuance(pool.assets()[1]),
             liquidity + amount_in - expected_amount_out
         );
-        let price_sum = pool
-            .assets()
-            .iter()
-            .map(|&a| pool.calculate_spot_price(a).unwrap())
-            .fold(0u128, |acc, val| acc + val);
+        let price_sum =
+            pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
         assert_eq!(price_sum, _1);
         System::assert_last_event(
             Event::SellExecuted {
@@ -431,7 +425,7 @@ fn exit_works() {
         );
         let pool_shares_amount = _4; // Remove 40% to the pool.
         let pool_before = Pools::<Runtime>::get(market_id).unwrap();
-        let alice_outcomes_before = vec![
+        let alice_outcomes_before = [
             AssetManager::free_balance(pool_before.assets()[0], &ALICE),
             AssetManager::free_balance(pool_before.assets()[1], &ALICE),
         ];
@@ -451,7 +445,7 @@ fn exit_works() {
             bmul(ratio, pool_outcomes_before[0]).unwrap(),
             bmul(ratio, pool_outcomes_before[1]).unwrap(),
         ];
-        let alice_outcomes_after = vec![
+        let alice_outcomes_after = [
             AssetManager::free_balance(pool_after.assets()[0], &ALICE),
             AssetManager::free_balance(pool_after.assets()[1], &ALICE),
         ];
@@ -489,17 +483,17 @@ fn exit_destroys_pool() {
             vec![_1_6, _5_6 + 1],
             CENT,
         );
-        let pool = Pools::<Runtime>::get(&market_id).unwrap();
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
         let amounts_out = vec![
             pool.reserve_of(&pool.assets()[0]).unwrap(),
             pool.reserve_of(&pool.assets()[1]).unwrap(),
         ];
-        let alice_before = vec![
+        let alice_before = [
             AssetManager::free_balance(pool.assets()[0], &ALICE),
             AssetManager::free_balance(pool.assets()[1], &ALICE),
         ];
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
-        assert!(!Pools::<Runtime>::contains_key(&market_id));
+        assert!(!Pools::<Runtime>::contains_key(market_id));
         assert_eq!(AssetManager::free_balance(pool.assets()[0], &pool.account_id), 0);
         assert_eq!(AssetManager::free_balance(pool.assets()[1], &pool.account_id), 0);
         assert_eq!(
@@ -672,7 +666,7 @@ fn buy_fails_on_market_not_found() {
             vec![_1_2, _1_2],
             CENT,
         );
-        Markets::<Runtime>::remove(&market_id);
+        Markets::<Runtime>::remove(market_id);
         assert_noop!(
             NeoSwaps::buy(
                 RuntimeOrigin::signed(BOB),
@@ -698,7 +692,7 @@ fn sell_fails_on_market_not_found() {
             vec![_1_2, _1_2],
             CENT,
         );
-        Markets::<Runtime>::remove(&market_id);
+        Markets::<Runtime>::remove(market_id);
         assert_noop!(
             NeoSwaps::sell(
                 RuntimeOrigin::signed(BOB),
@@ -724,7 +718,7 @@ fn join_fails_on_market_not_found() {
             vec![_1_2, _1_2],
             CENT,
         );
-        Markets::<Runtime>::remove(&market_id);
+        Markets::<Runtime>::remove(market_id);
         assert_noop!(
             NeoSwaps::join(RuntimeOrigin::signed(ALICE), market_id, _1, vec![u128::MAX, u128::MAX]),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
@@ -743,7 +737,7 @@ fn exit_fails_on_market_not_found() {
             vec![_1_2, _1_2],
             CENT,
         );
-        Markets::<Runtime>::remove(&market_id);
+        Markets::<Runtime>::remove(market_id);
         assert_noop!(
             NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _1, vec![0, 0]),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
@@ -1060,7 +1054,7 @@ fn buy_fails_on_numerical_limits() {
             vec![_1_2, _1_2],
             CENT,
         );
-        let pool = Pools::<Runtime>::get(&market_id).unwrap();
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
         let amount_in = 100 * pool.liquidity_parameter;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
         assert_noop!(
@@ -1088,7 +1082,7 @@ fn sell_fails_on_numerical_limits() {
             vec![_1_2, _1_2],
             CENT,
         );
-        let pool = Pools::<Runtime>::get(&market_id).unwrap();
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
         let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
         let amount_in = 100 * pool.liquidity_parameter;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));

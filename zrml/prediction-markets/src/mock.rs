@@ -112,7 +112,7 @@ impl DeployPoolApi for DeployPoolMock {
                 swap_fee,
             })
         });
-        DEPLOY_POOL_RETURN_VALUE.with(|v| v.borrow().clone())
+        DEPLOY_POOL_RETURN_VALUE.with(|v| *v.borrow())
     }
 }
 

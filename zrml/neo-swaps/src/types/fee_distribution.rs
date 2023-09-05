@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Config, BalanceOf};
+use crate::{BalanceOf, Config};
 
 pub(crate) struct FeeDistribution<T: Config> {
     pub(crate) remaining: BalanceOf<T>,

@@ -2502,9 +2502,7 @@ mod pallet {
                         pool.assets.len().saturated_into(),
                     ))
                 }
-                _ => {
-                    return Err(Error::<T>::UnsupportedTrade.into());
-                }
+                _ => Err(Error::<T>::UnsupportedTrade.into()),
             }
         }
     }

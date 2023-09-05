@@ -24,18 +24,18 @@ sp-io = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 pallet-randomness-collective-flip = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+substrate-fixed = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
+zrml-authorized = { workspace = true, optional = true }
+zrml-court = { workspace = true, optional = true }
+zrml-global-disputes = { workspace = true, optional = true }
+zrml-liquidity-mining = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 zrml-rikiddo = { workspace = true, optional = true }
+zrml-simple-disputes = { workspace = true, optional = true }
 zrml-swaps = { workspace = true, optional = true }
-substrate-fixed = { workspace = true, optional = true }
-zrml-global-disputes = { workspace = true, optional = true }
-zrml-liquidity-mining = { workspace = true, optional = true }
-zrml-authorized = { workspace = true, optional = true }
-zrml-court = { workspace = true, optional = true }
-zrml-simple-disputes = { workspace = true, optional = true } 
-serde = { workspace = true, optional = true }
 
 
 [dev-dependencies]
