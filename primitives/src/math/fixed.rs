@@ -30,10 +30,10 @@ use crate::{
         },
     },
 };
-use alloc::{borrow::ToOwned, string::ToString, vec::Vec};
+use alloc::{borrow::ToOwned, format, string::ToString, vec::Vec};
 use core::convert::TryFrom;
 use fixed::{traits::Fixed, ParseFixedError};
-use frame_support::dispatch::{DispatchError};
+use frame_support::dispatch::DispatchError;
 
 pub fn btoi(a: u128) -> Result<u128, DispatchError> {
     a.check_div_rslt(&BASE)
