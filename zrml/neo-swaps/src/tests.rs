@@ -1109,7 +1109,6 @@ fn buy_fails_on_insufficient_funds() {
         let expected_error = pallet_balances::Error::<Runtime>::InsufficientBalance;
         #[cfg(feature = "parachain")]
         let expected_error = orml_tokens::Error::<Runtime>::BalanceTooLow;
-        println!("{:?}", expected_error);
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in - 1));
         assert_noop!(
             NeoSwaps::buy(
