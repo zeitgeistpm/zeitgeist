@@ -45,11 +45,14 @@ pub mod weights;
 
 #[macro_export]
 macro_rules! decl_common_types {
-    {} => {
-        use sp_runtime::generic;
+    () => {
+        use frame_support::traits::{
+            Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced,
+        };
         #[cfg(feature = "try-runtime")]
-        use frame_try_runtime::{UpgradeCheckSelect, TryStateSelect};
-        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin};
+        use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
+        use sp_runtime::{generic, DispatchResult};
+        use zeitgeist_primitives::traits::DeployPoolApi;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -99,7 +102,8 @@ macro_rules! decl_common_types {
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
         );
         pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
-        pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+        pub type UncheckedExtrinsic =
+            generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
         // Governance
         type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -111,20 +115,28 @@ macro_rules! decl_common_types {
 
         // Council vote proportions
         // At least 50%
-        type EnsureRootOrHalfCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
+        type EnsureRootOrHalfCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>,
+        >;
 
         // At least 66%
-        type EnsureRootOrTwoThirdsCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
+        type EnsureRootOrTwoThirdsCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>,
+        >;
 
         // At least 75%
-        type EnsureRootOrThreeFourthsCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
+        type EnsureRootOrThreeFourthsCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>,
+        >;
 
         // At least 100%
-        type EnsureRootOrAllCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
+        type EnsureRootOrAllCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>,
+        >;
 
         // Technical committee vote proportions
         // At least 50%
@@ -218,6 +230,24 @@ macro_rules! decl_common_types {
             }
         }
 
+        pub struct DeployPoolNoop;
+
+        impl DeployPoolApi for DeployPoolNoop {
+            type AccountId = AccountId;
+            type Balance = Balance;
+            type MarketId = MarketId;
+
+            fn deploy_pool(
+                who: Self::AccountId,
+                market_id: Self::MarketId,
+                amount: Self::Balance,
+                swap_prices: Vec<Self::Balance>,
+                swap_fee: Self::Balance,
+            ) -> DispatchResult {
+                Err(DispatchError::Other("Not implemented"))
+            }
+        }
+
         common_runtime::impl_fee_types!();
 
         pub mod opaque {
@@ -248,7 +278,7 @@ macro_rules! decl_common_types {
                 }
             }
         }
-    }
+    };
 }
 
 // Construct runtime
@@ -1118,6 +1148,7 @@ macro_rules! impl_config_traits {
             type Court = Court;
             type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
+            type DeployPool = DeployPoolNoop;
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
             type GlobalDisputes = GlobalDisputes;

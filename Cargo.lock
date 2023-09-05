@@ -1234,6 +1234,7 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
