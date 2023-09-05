@@ -17,8 +17,6 @@
 
 use sp_runtime::DispatchResult;
 
-// TODO What's the difference between using generics and type aliases? Try using aliases and check
-// if type inference works a little bit better.
 pub trait CompleteSetOperationsApi {
     type AccountId;
     type Balance;
