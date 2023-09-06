@@ -1,0 +1,120 @@
+\documentclass[12pt]{article}
+
+% Packages
+\usepackage{amsmath}    % Advanced math typesetting
+\usepackage{amsfonts}   % Math fonts
+\usepackage{amssymb}    % Math symbols
+\usepackage{graphicx}   % Graphics package
+\usepackage{hyperref}   % Hyperlinks
+\usepackage{geometry}   % Page layout
+\geometry{a4paper, margin=1in}
+
+\title{zrml-neo-swaps Documentation}
+\date{0.4.1 (\today)}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This document provides the mathematical and technical details for zrml-neo-swaps. The automatic market maker (AMM) implemented by zrml-neo-swaps is a variant of the Logarithmic Market Scoring Rule (LMSR; \cite{rh}) which was first developed by Gnosis (see \url{https://docs.gnosis.io/conditionaltokens/docs/introduction3/}).
+
+Unlike the typical implementation using a cost function (see \cite{chen-vaughan}), this implementation of LMSR is a \emph{constant-function market maker} (CFMM), similar to the classical constant product market maker, which allows us to implement \emph{dynamic liquidity}. In other words, liquidity providers (LPs) can come and go as they please, allowing the market to self-regulate how much price resistance the AMM should provide.
+
+\section{The Trading Funciton}
+
+We consider a prediction market with $n$ outcomes, denoted by $1, \ldots, n$ for simplicity. Every complete set of outcome tokens is backed a unit of collateral, denotes by \$. The AMM operates on a \emph{liquidity pool} (or just \emph{pool}), which consists of a \emph{reserve} $(r_1, \ldots, r_n)$ of outcome tokens and a \emph{liquidity parameter} $b$. The trading function is defined as
+\[
+    \varphi(b, r) = \sum_i e^{-r_i/b}.
+\]
+In fact, $\varphi(b, r)$ must always equal $1$. This means that a trader may change the reserve from $r$ to $r'$ and receive the delta provided that $\varphi(b, r') = 1$. We denote such a trade by $r \rightarrow r'$. We call these outcome-to-outcome (O2O) swaps.
+
+However, we do not allow users to execute these types of trades. Instead, we only allow \emph{buys} (exchange collateral for outcome tokens) and \emph{sells} (exchange outcome tokens for collateral).
+
+\section{Buying and Selling}
+
+Buying and selling is implemented by combining complete set operations (exchange $x$ units of collateral for $x$ units of every outcome) and O2O swaps.
+
+Alice wants to swap $x$ units of collateral for units of outcome $i$. This is done by exchanging $x$ units of collateral for $x$ complete sets and then selling all outcomes $k \neq i$ for more $i$ using an O2O swap $r \rightarrow r'$, which yields $y(x)$ additional units of $i$. \emph{Ignoring swap fees}, this modifies the reserve to $r'$, where $r_k' = r_k + x$ for $k \neq i$ and $r_i' = r_i - y(x)$. As trades don't change the invariant, we have $1 = \sum_k e^{-r_k'/b}$. Thus, using $1 = \varphi(b, r) = \sum_k e^{-r_k/b}$,
+\begin{align*}
+    1 &= \sum_k e^{-r_k'/b} \\
+    &= \sum_{k \neq i} e^{-(r_k + x)/b} + e^{-(r_i-y(x))/b} \\
+    &= e^{-x/b} \sum_{k \neq i} e^{-r_k/b} + e^{y(x)/b} e^{-r_i/b} \\
+    &= e^{-x/b} (1 - e^{-r_i/b}) + e^{y(x)/b} e^{-r_i/b}.
+\end{align*}
+Rearranging these terms gives
+\[
+    e^{y(x)/b} = e^{r_i/b} (1 - e^{-x/b}(1 - e^{-r_i/b})),
+\]
+and, thus,
+\begin{align*}
+    y(x) &= b \ln(e^{r_i/b} (1 - e^{-x/b}(1 - e^{-r_i/b}))) \\
+    &= b \ln (1 - e^{-x/b}(1 - e^{-r_i/b})) + r_i \\
+    &= b \ln (e^{x/b} - 1 + e^{-r_i/b}) + r_i - x.
+\end{align*}
+
+Note that the total amount of outcome $i$ that Alice receives is $y(x)$ from the O2O trade and $x$ from the complete set operation. We denote this by $z(x) = y(x) + x$.
+
+This allows us to calculate the \emph{spot price} of outcome $i$ 
+\[
+    \phi_i(b, r) = \lim_{x \rightarrow 0} \frac{x}{z(x)} = \frac{1}{z'(0)} = \frac{1}{y'(0) + 1}.
+\]
+Calculating the derivative of $y$ yields
+\[
+    y'(x) = \frac{e^{x/b}}{e^{x/b} - 1 + e^{-r_i/b}} - 1
+\]
+and thus $y'(0) = e^{r_i/b} - 1$, which yields $\phi_i(b, r) = e^{-r_i/b}$.
+
+Trading fees are specified as fractional (a fee of $f = .01$ measn that $1\%$ are charged) and deducted from the amount of collateral before the complete set operations are executed. In other words, the liquidity providers receive $fx$ units of collateral (fees are distributed pro rata amongst the liquidity providers) and Alice goes through the entire process described above with $\tilde x = (1-f)x$ in place of $x$. The spot price taking the fees into account is (as expected)
+\[
+    \phi_i(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
+\]
+
+Trading fees
+
+
+\section{Dynamic Liquidity}
+
+Exit fee
+pro rata share
+
+Fee distribution
+Transferring the fees into the pool (like the constant product market maker does) wouldn't make any sense here as collateral is not directly traded on the pool.
+
+
+\section{Creating Pools}
+
+
+\section{Implementation Details}
+
+Numerical issues, limitation to two assets.
+
+
+Let \( A \) and \( B \) be sets, and let \( f: A \to B \) be a function. The function \( f \) can be represented as follows:
+\[
+f(x) = ax^2 + bx + c
+\]
+
+\section{Implementation}
+The Substrate pallet is implemented in Rust. Below is a sample code snippet:
+
+\section{Conclusion}
+This is a minimal example to get you started on documenting a math-heavy Substrate pallet.
+
+% LMSR Reference
+% Reference to Gnosis
+% https://arxiv.org/pdf/1003.0034.pdf
+
+\begin{thebibliography}{9}
+
+\bibitem{source_code}
+  Author Name,
+  \emph{Substrate Pallet Source Code},
+  GitHub Repository,
+  Year.
+  \url{https://github.com/your-repo}
+
+\end{thebibliography}
+
+\end{document}
