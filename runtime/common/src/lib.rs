@@ -1403,6 +1403,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
+                    list_benchmark!(list, extra, zrml_neo_swaps, NeoSwaps);
 
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
@@ -1504,6 +1505,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);
+                    add_benchmark!(params, batches, zrml_neo_swaps, NeoSwaps);
 
 
                     cfg_if::cfg_if! {

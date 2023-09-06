@@ -1734,16 +1734,6 @@ fn deploy_pool_fails_on_liquidity_too_low() {
     });
 }
 
-#[test]
-fn split_is_noop() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            NeoSwaps::split(RuntimeOrigin::signed(ALICE), 0, BOB, _1),
-            Error::<Runtime>::NotImplemented
-        );
-    });
-}
-
 fn create_market(
     creator: AccountIdTest,
     base_asset: Asset<MarketId>,

@@ -23,7 +23,6 @@ pub trait WeightInfoZeitgeist {
     fn sell(a: u32) -> Weight;
     fn join(a: u32) -> Weight;
     fn exit(a: u32) -> Weight;
-    fn split() -> Weight;
     fn withdraw_fees() -> Weight;
     fn deploy_pool(a: u32) -> Weight;
 }
@@ -40,9 +39,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         Weight::from_ref_time(1u64)
     }
     fn exit(_a: u32) -> Weight {
-        Weight::from_ref_time(1u64)
-    }
-    fn split() -> Weight {
         Weight::from_ref_time(1u64)
     }
     fn withdraw_fees() -> Weight {

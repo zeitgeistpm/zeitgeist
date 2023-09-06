@@ -18,26 +18,198 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::{consts::*, Pallet as NeoSwaps};
+use crate::{
+    consts::*, traits::liquidity_shares_manager::LiquiditySharesManager, AssetOf, BalanceOf,
+    MarketIdOf, Pallet as NeoSwaps, Pools,
+};
 use frame_benchmarking::v2::*;
+use frame_support::assert_ok;
 use frame_system::RawOrigin;
+use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
-use zeitgeist_primitives::types::Asset;
+use zeitgeist_primitives::{
+    constants::CENT,
+    traits::CompleteSetOperationsApi,
+    types::{
+        Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, ScoringRule,
+    },
+};
+use zrml_market_commons::MarketCommonsPalletApi;
+
+fn create_market<T: Config>(
+    caller: T::AccountId,
+    base_asset: AssetOf<T>,
+    asset_count: IndexType,
+) -> MarketIdOf<T> {
+    let market = Market {
+        base_asset,
+        creation: MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: caller.clone(),
+        oracle: caller,
+        metadata: vec![0, 50],
+        market_type: MarketType::Categorical(asset_count as u16),
+        period: MarketPeriod::Block(0u32.into()..1u32.into()),
+        deadlines: Default::default(),
+        scoring_rule: ScoringRule::Lmsr,
+        status: MarketStatus::Active,
+        report: None,
+        resolved_outcome: None,
+        dispute_mechanism: MarketDisputeMechanism::Court,
+        bonds: Default::default(),
+    };
+    let maybe_market_id = T::MarketCommons::push_market(market);
+    maybe_market_id.unwrap()
+}
+
+fn create_market_and_deploy_pool<T: Config>(
+    caller: T::AccountId,
+    base_asset: AssetOf<T>,
+    asset_count: IndexType,
+    amount: BalanceOf<T>,
+) -> MarketIdOf<T> {
+    let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
+    assert_ok!(T::AssetManager::deposit(base_asset, &caller, amount));
+    assert_ok!(T::CompleteSetOperations::buy_complete_set(caller.clone(), market_id, amount));
+    assert_ok!(NeoSwaps::<T>::deploy_pool(
+        RawOrigin::Signed(caller).into(),
+        market_id,
+        amount,
+        vec![_1_2.saturated_into(), _1_2.saturated_into()],
+        CENT.saturated_into(),
+    ));
+    market_id
+}
 
 #[benchmarks]
 mod benchmarks {
     use super::*;
 
     #[benchmark]
-    fn buy(a: Linear<2, 2>) {
-        let caller: T::AccountId = whitelisted_caller();
-        let market_id = 0u8.into(); // TODO
+    fn buy() {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2u32;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            _10.saturated_into(),
+        );
         let asset_out = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
+        let bob: T::AccountId = whitelisted_caller();
+        assert_ok!(T::AssetManager::deposit(base_asset, &bob, amount_in));
+
         #[extrinsic_call]
-        _(RawOrigin::Signed(caller.clone()), market_id, 2, asset_out, amount_in, min_amount_out);
+        _(RawOrigin::Signed(bob), market_id, asset_count, asset_out, amount_in, min_amount_out);
+    }
+
+    #[benchmark]
+    fn sell() {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let market_id =
+            create_market_and_deploy_pool::<T>(alice, base_asset, 2u32, _10.saturated_into());
+        let asset_in = Asset::CategoricalOutcome(market_id, 0);
+        let amount_in = _1.saturated_into();
+        let min_amount_out = 0u8.saturated_into();
+
+        let bob: T::AccountId = whitelisted_caller();
+        assert_ok!(T::AssetManager::deposit(asset_in, &bob, amount_in));
+
+        #[extrinsic_call]
+        _(RawOrigin::Signed(bob), market_id, 2, asset_in, amount_in, min_amount_out);
+    }
+
+    #[benchmark]
+    fn join() {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice.clone(),
+            base_asset,
+            2u32,
+            _10.saturated_into(),
+        );
+        let pool_shares_amount = _1.saturated_into();
+        let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
+
+        assert_ok!(T::AssetManager::deposit(base_asset, &alice, pool_shares_amount));
+        assert_ok!(T::CompleteSetOperations::buy_complete_set(
+            alice.clone(),
+            market_id,
+            pool_shares_amount
+        ));
+
+        #[extrinsic_call]
+        _(RawOrigin::Signed(alice), market_id, pool_shares_amount, max_amounts_in);
+    }
+
+    // There are two execution paths in `exit`: 1) Keep pool alive or 2) destroy it. Clearly 1) is
+    // heavier.
+    #[benchmark]
+    fn exit() {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice.clone(),
+            base_asset,
+            2u32,
+            _10.saturated_into(),
+        );
+        let pool_shares_amount = _1.saturated_into();
+        let min_amounts_out = vec![0u8.saturated_into(), 0u8.saturated_into()];
+
+        #[extrinsic_call]
+        _(RawOrigin::Signed(alice), market_id, pool_shares_amount, min_amounts_out);
+
+        assert!(Pools::<T>::contains_key(market_id)); // Ensure we took the right turn.
+    }
+
+    #[benchmark]
+    fn withdraw_fees() {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice.clone(),
+            base_asset,
+            2u32,
+            _10.saturated_into(),
+        );
+        let fee_amount = _1.saturated_into();
+
+        // Mock up some fees.
+        let mut pool = Pools::<T>::get(market_id).unwrap();
+        assert_ok!(T::AssetManager::deposit(base_asset, &pool.account_id, fee_amount));
+        assert_ok!(pool.liquidity_shares_manager.deposit_fees(fee_amount));
+        Pools::<T>::insert(market_id, pool);
+
+        #[extrinsic_call]
+        _(RawOrigin::Signed(alice), market_id);
+    }
+
+    #[benchmark]
+    fn deploy_pool() {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+        let amount = _10.saturated_into();
+
+        assert_ok!(T::AssetManager::deposit(base_asset, &alice, amount));
+        assert_ok!(T::CompleteSetOperations::buy_complete_set(alice.clone(), market_id, amount));
+
+        #[extrinsic_call]
+        _(
+            RawOrigin::Signed(alice),
+            market_id,
+            amount,
+            vec![_1_2.saturated_into(), _1_2.saturated_into()],
+            CENT.saturated_into(),
+        );
     }
 
     impl_benchmark_test_suite!(

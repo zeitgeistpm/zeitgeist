@@ -398,18 +398,6 @@ mod pallet {
             Ok(Some(T::WeightInfo::exit(asset_count as u32)).into())
         }
 
-        #[pallet::call_index(4)]
-        #[pallet::weight(T::WeightInfo::split())]
-        #[transactional]
-        pub fn split(
-            _origin: OriginFor<T>,
-            #[pallet::compact] _market_id: MarketIdOf<T>,
-            _receiver: T::AccountId,
-            #[pallet::compact] _pool_shares_amount: BalanceOf<T>,
-        ) -> DispatchResult {
-            Err(Error::<T>::NotImplemented.into())
-        }
-
         /// Withdraw swap fees from the specified market.
         ///
         /// The transaction will fail if the caller is not a liquidity provider. Should always be
@@ -422,7 +410,7 @@ mod pallet {
         /// # Complexity
         ///
         /// `O(1)`.
-        #[pallet::call_index(5)]
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::withdraw_fees())]
         #[transactional]
         pub fn withdraw_fees(
@@ -454,7 +442,7 @@ mod pallet {
         /// # Complexity
         ///
         /// `O(n)` where `n` is the number of outcomes in the specified market.
-        #[pallet::call_index(6)]
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::deploy_pool(spot_prices.len() as u32))]
         #[transactional]
         pub fn deploy_pool(

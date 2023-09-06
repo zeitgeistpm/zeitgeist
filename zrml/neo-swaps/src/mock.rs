@@ -148,7 +148,7 @@ where
         )
         .unwrap()
         .saturated_into();
-        T::AssetManager::transfer(asset, &account, &F::get(), fees).unwrap();
+        let _ = T::AssetManager::transfer(asset, &account, &F::get(), fees);
         fees
     }
 }
