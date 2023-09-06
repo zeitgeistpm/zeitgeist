@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod distribute_fees;
+pub mod distribute_fees;
 pub(crate) mod liquidity_shares_manager;
-pub mod pool_operations;
+pub(crate) mod pool_operations;
 
-pub(crate) use distribute_fees::DistributeFees;
+pub use distribute_fees::DistributeFees;
 pub(crate) use liquidity_shares_manager::LiquiditySharesManager;
 pub(crate) use pool_operations::PoolOperations;

@@ -190,6 +190,10 @@ parameter_types! {
     // Additional storage item size of 32 bytes.
     pub const DepositFactor: Balance = deposit(0, 32);
 
+    // NeoSwaps
+    pub const NeoSwapsMaxSwapFee: Balance = 10 * CENT;
+    pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
+
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
 

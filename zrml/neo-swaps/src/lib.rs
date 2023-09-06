@@ -20,14 +20,15 @@
 
 extern crate alloc;
 
+mod benchmarking;
 mod consts;
 mod macros;
 mod math;
 pub mod mock;
 mod tests;
-mod traits;
+pub mod traits;
 mod types;
-mod weights;
+pub mod weights;
 
 pub use pallet::*;
 
@@ -40,7 +41,7 @@ mod pallet {
         types::{FeeDistribution, Pool, SoloLp},
         weights::*,
     };
-    use alloc::collections::BTreeMap;
+    use alloc::{collections::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,

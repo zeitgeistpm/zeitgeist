@@ -248,6 +248,24 @@ macro_rules! decl_common_types {
             }
         }
 
+        pub struct ExternalFeesNoop;
+
+        impl zrml_neo_swaps::traits::DistributeFees for ExternalFeesNoop {
+            type Asset = Asset<MarketId>;
+            type AccountId = AccountId;
+            type Balance = Balance;
+            type MarketId = MarketId;
+
+            fn distribute(
+                _market_id: Self::MarketId,
+                _asset: Self::Asset,
+                _account: Self::AccountId,
+                _amount: Self::Balance,
+            ) -> Balance {
+                0u128.into()
+            }
+        }
+
         common_runtime::impl_fee_types!();
 
         pub mod opaque {
@@ -343,6 +361,7 @@ macro_rules! create_runtime {
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
                 GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+                NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
 
                 $($additional_pallets)*
             }
@@ -1260,6 +1279,17 @@ macro_rules! impl_config_traits {
             type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
             type Currency = Balances;
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_neo_swaps::Config for Runtime {
+            type AssetManager = AssetManager;
+            type CompleteSetOperations = PredictionMarkets;
+            type ExternalFees = ExternalFeesNoop;
+            type MarketCommons = MarketCommons;
+            type RuntimeEvent = RuntimeEvent;
+            type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
+            type MaxSwapFee = NeoSwapsMaxSwapFee;
+            type PalletId = NeoSwapsPalletId;
         }
     }
 }

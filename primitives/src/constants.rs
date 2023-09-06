@@ -83,6 +83,9 @@ pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 /// Pallet identifier, mainly used for named balance reserves.
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
+// NeoSwaps
+pub const NS_PALLET_ID: PalletId = PalletId(*b"zge/neos");
+
 // Prediction Markets
 /// The maximum allowed market life time, measured in blocks.
 pub const MAX_MARKET_LIFETIME: BlockNumber = 4 * BLOCKS_PER_YEAR;
