@@ -1,7 +1,6 @@
 [build-dependencies]
 substrate-wasm-builder = { workspace = true }
 
-
 [dependencies]
 frame-executive = { workspace = true }
 frame-support = { workspace = true }
@@ -178,8 +177,8 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "hex-literal",
     "orml-asset-registry?/runtime-benchmarks",
-    "orml-tokens/runtime-benchmarks",
     "orml-benchmarking",
+    "orml-tokens/runtime-benchmarks",
     "orml-xtokens?/runtime-benchmarks",
     "pallet-author-inherent?/runtime-benchmarks",
     "pallet-author-mapping?/runtime-benchmarks",
