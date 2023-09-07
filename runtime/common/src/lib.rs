@@ -230,24 +230,6 @@ macro_rules! decl_common_types {
             }
         }
 
-        pub struct DeployPoolNoop;
-
-        impl DeployPoolApi for DeployPoolNoop {
-            type AccountId = AccountId;
-            type Balance = Balance;
-            type MarketId = MarketId;
-
-            fn deploy_pool(
-                _who: Self::AccountId,
-                _market_id: Self::MarketId,
-                _amount: Self::Balance,
-                _swap_prices: Vec<Self::Balance>,
-                _swap_fee: Self::Balance,
-            ) -> DispatchResult {
-                Err(DispatchError::Other("Not implemented"))
-            }
-        }
-
         pub struct ExternalFeesNoop;
 
         impl zrml_neo_swaps::traits::DistributeFees for ExternalFeesNoop {
@@ -1167,7 +1149,7 @@ macro_rules! impl_config_traits {
             type Court = Court;
             type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
-            type DeployPool = DeployPoolNoop;
+            type DeployPool = NeoSwaps;
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
             type GlobalDisputes = GlobalDisputes;
