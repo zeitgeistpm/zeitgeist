@@ -99,8 +99,6 @@ const _1234: u128 = 1234 * BASE;
 const _10000: u128 = 10000 * BASE;
 
 const DEFAULT_POOL_ID: PoolId = 0;
-const DEFAULT_MARKET_ID: MarketId = 0;
-
 const DEFAULT_LIQUIDITY: u128 = _100;
 const DEFAULT_WEIGHT: u128 = _2;
 

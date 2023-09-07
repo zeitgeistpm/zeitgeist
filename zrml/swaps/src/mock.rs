@@ -60,7 +60,7 @@ pub const CHARLIE: AccountIdTest = 2;
 pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 
-pub const MOCK_MARKET_ID: MarketId = 0;
+pub const DEFAULT_MARKET_ID: MarketId = 0;
 
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
