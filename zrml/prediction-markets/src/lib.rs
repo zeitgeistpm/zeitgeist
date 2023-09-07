@@ -1470,8 +1470,10 @@ mod pallet {
             Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
         }
 
-        // TODO Formatting
-        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(CacheSize::get(), spot_prices.len() as u32))]
+        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(
+            CacheSize::get(),
+            spot_prices.len() as u32,
+        ))]
         #[transactional]
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(

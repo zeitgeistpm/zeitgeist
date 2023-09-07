@@ -1252,6 +1252,36 @@ benchmarks! {
         let _ = <Pallet<T>>::process_subsidy_collecting_markets(current_block, current_time);
     }
 
+    create_market_and_deploy_pool {
+        let m in 0..63; // Number of markets closing on the same block.
+
+        let range_end = (100 * MILLISECS_PER_BLOCK) as u64;
+        let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..range_end);
+        let market_type = MarketType::Categorical(2);
+        let (caller, oracle, deadlines, metadata, _) =
+            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+        let price = (BASE / 2).saturated_into();
+
+        for i in 0..m {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+    }: _(
+            RawOrigin::Signed(caller),
+            Asset::Ztg,
+            oracle,
+            period,
+            deadlines,
+            metadata,
+            MarketType::Categorical(2),
+            MarketDisputeMechanism::SimpleDisputes,
+            (10 * BASE).saturated_into(),
+            vec![price, price],
+            (BASE / 100).saturated_into()
+    )
+
     impl_benchmark_test_suite!(
         PredictionMarket,
         crate::mock::ExtBuilder::default().build(),
