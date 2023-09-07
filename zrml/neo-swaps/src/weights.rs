@@ -19,32 +19,32 @@ use core::marker::PhantomData;
 use frame_support::weights::Weight;
 
 pub trait WeightInfoZeitgeist {
-    fn buy(a: u32) -> Weight;
-    fn sell(a: u32) -> Weight;
-    fn join(a: u32) -> Weight;
-    fn exit(a: u32) -> Weight;
+    fn buy() -> Weight;
+    fn sell() -> Weight;
+    fn join() -> Weight;
+    fn exit() -> Weight;
     fn withdraw_fees() -> Weight;
-    fn deploy_pool(a: u32) -> Weight;
+    fn deploy_pool() -> Weight;
 }
 
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
-    fn buy(_a: u32) -> Weight {
+    fn buy() -> Weight {
         Weight::from_ref_time(1u64)
     }
-    fn sell(_a: u32) -> Weight {
+    fn sell() -> Weight {
         Weight::from_ref_time(1u64)
     }
-    fn join(_a: u32) -> Weight {
+    fn join() -> Weight {
         Weight::from_ref_time(1u64)
     }
-    fn exit(_a: u32) -> Weight {
+    fn exit() -> Weight {
         Weight::from_ref_time(1u64)
     }
     fn withdraw_fees() -> Weight {
         Weight::from_ref_time(1u64)
     }
-    fn deploy_pool(_a: u32) -> Weight {
+    fn deploy_pool() -> Weight {
         Weight::from_ref_time(1u64)
     }
 }

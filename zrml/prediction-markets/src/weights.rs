@@ -78,7 +78,7 @@ pub trait WeightInfoZeitgeist {
     fn market_status_manager(b: u32, f: u32) -> Weight;
     fn market_resolution_manager(r: u32, d: u32) -> Weight;
     fn process_subsidy_collecting_markets_dummy() -> Weight;
-    fn create_market_and_deploy_pool(a: u32, b: u32) -> Weight;
+    fn create_market_and_deploy_pool(a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -481,7 +481,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().writes(1))
     }
-    fn create_market_and_deploy_pool(_a: u32, _b: u32) -> Weight {
-        Weight::from_ref_time(9_390_000)
+    fn create_market_and_deploy_pool(_a: u32) -> Weight {
+        Weight::from_ref_time(1)
     }
 }

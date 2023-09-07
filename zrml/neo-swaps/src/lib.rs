@@ -264,7 +264,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canoncial implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy(*asset_count))]
+        #[pallet::weight(T::WeightInfo::buy())]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -278,7 +278,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes() as u32;
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::buy(asset_count_real)).into())
+            Ok(Some(T::WeightInfo::buy()).into())
         }
 
         /// Sell outcome tokens to the specified market.
@@ -301,7 +301,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canoncial implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell(*asset_count))]
+        #[pallet::weight(T::WeightInfo::sell())]
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -315,7 +315,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes() as u32;
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::sell(asset_count_real)).into())
+            Ok(Some(T::WeightInfo::sell()).into())
         }
 
         /// Join the liquidity pool for the specified market.
@@ -339,7 +339,7 @@ mod pallet {
         ///
         /// `O(n)` where `n` is the number of assets in the pool.
         #[pallet::call_index(2)]
-        #[pallet::weight(T::WeightInfo::join(max_amounts_in.len() as u32))]
+        #[pallet::weight(T::WeightInfo::join())]
         #[transactional]
         pub fn join(
             origin: OriginFor<T>,
@@ -351,7 +351,7 @@ mod pallet {
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(max_amounts_in.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)?;
-            Ok(Some(T::WeightInfo::join(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::join()).into())
         }
 
         /// Exit the liquidity pool for the specified market.
@@ -383,7 +383,7 @@ mod pallet {
         ///
         /// `O(n)` where `n` is the number of assets in the pool.
         #[pallet::call_index(3)]
-        #[pallet::weight(T::WeightInfo::exit(min_amounts_out.len() as u32))]
+        #[pallet::weight(T::WeightInfo::exit())]
         #[transactional]
         pub fn exit(
             origin: OriginFor<T>,
@@ -395,7 +395,7 @@ mod pallet {
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(min_amounts_out.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_exit(who, market_id, pool_shares_amount_out, min_amounts_out)?;
-            Ok(Some(T::WeightInfo::exit(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::exit()).into())
         }
 
         /// Withdraw swap fees from the specified market.
@@ -443,7 +443,7 @@ mod pallet {
         ///
         /// `O(n)` where `n` is the number of outcomes in the specified market.
         #[pallet::call_index(5)]
-        #[pallet::weight(T::WeightInfo::deploy_pool(spot_prices.len() as u32))]
+        #[pallet::weight(T::WeightInfo::deploy_pool())]
         #[transactional]
         pub fn deploy_pool(
             origin: OriginFor<T>,
@@ -456,7 +456,7 @@ mod pallet {
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes() as u32;
             ensure!(spot_prices.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::deploy_pool(asset_count)).into())
+            Ok(Some(T::WeightInfo::deploy_pool()).into())
         }
     }
 

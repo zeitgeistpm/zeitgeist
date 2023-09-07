@@ -1255,13 +1255,20 @@ benchmarks! {
     create_market_and_deploy_pool {
         let m in 0..63; // Number of markets closing on the same block.
 
+        let base_asset = Asset::Ztg;
         let range_end = (100 * MILLISECS_PER_BLOCK) as u64;
         let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..range_end);
         let market_type = MarketType::Categorical(2);
         let (caller, oracle, deadlines, metadata, _) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
         let price = (BASE / 2).saturated_into();
+        let amount = (10u128 * BASE).saturated_into();
 
+        <T as pallet::Config>::AssetManager::deposit(
+            base_asset,
+            &caller,
+            amount,
+        )?;
         for i in 0..m {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
@@ -1270,14 +1277,14 @@ benchmarks! {
         }
     }: _(
             RawOrigin::Signed(caller),
-            Asset::Ztg,
+            base_asset,
             oracle,
             period,
             deadlines,
             metadata,
             MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
-            (10 * BASE).saturated_into(),
+            amount,
             vec![price, price],
             (BASE / 100).saturated_into()
     )

@@ -1470,10 +1470,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(
-            CacheSize::get(),
-            spot_prices.len() as u32,
-        ))]
+        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(CacheSize::get()))]
         #[transactional]
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
@@ -1490,7 +1487,6 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let spot_price_len = spot_prices.len() as u32;
             let (ids_len, market_id) = Self::do_create_market(
                 who.clone(),
                 base_asset,
@@ -1503,8 +1499,9 @@ mod pallet {
                 dispute_mechanism,
                 ScoringRule::Lmsr,
             )?;
+            Self::do_buy_complete_set(who.clone(), market_id, amount)?;
             T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len, spot_price_len)).into())
+            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
         }
     }
 

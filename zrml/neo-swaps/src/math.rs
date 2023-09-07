@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use alloc::vec::Vec;
 use crate::{BalanceOf, Config, Error};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
 use hydra_dx_math::transcendental::{exp, ln};
