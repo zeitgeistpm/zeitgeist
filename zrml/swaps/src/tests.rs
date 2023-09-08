@@ -37,7 +37,7 @@ use frame_support::{
     weights::Weight,
 };
 use more_asserts::{assert_ge, assert_le};
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency};
 use sp_arithmetic::{traits::SaturatedConversion, Perbill};
 use sp_runtime::DispatchResult;
 #[allow(unused_imports)]
@@ -51,19 +51,6 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::traits::RikiddoMVPallet;
-
-pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
-pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
-pub const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 67);
-pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
-pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
-
-pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
-pub const BASE_ASSET: Asset<MarketId> = if let Some(asset) = ASSETS.last() {
-    *asset
-} else {
-    panic!("Invalid asset vector");
-};
 
 pub const SENTINEL_AMOUNT: u128 = 123456789;
 
@@ -3772,24 +3759,27 @@ fn swap_exact_amount_in_creator_fee_charged_correctly(
         assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
-        let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
-        let market_creator_balance_before = Currencies::free_balance(BASE_ASSET, &market_creator);
-        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
-        let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
-        let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
-        let pool_balance_base_out_before = Currencies::free_balance(BASE_ASSET, &pool_account);
+        let ed = <Runtime as orml_tokens::Config>::ExistentialDeposits::get(&BASE_ASSET);
+        assert_ok!(<Currencies as MultiCurrency<AccountIdTest>>::deposit(
+            BASE_ASSET,
+            &DEFAULT_MARKET_CREATOR,
+            ed
+        ));
+
+        let market_creator_balance_before =
+            Currencies::free_balance(BASE_ASSET, &DEFAULT_MARKET_CREATOR);
         let asset_amount_in = _1;
-        let min_asset_amount_out = Some(0);
+        let min_asset_amount_out = Some(_1 / 2);
         let max_price = None;
-        let expected_out_without_fee = calc_out_given_in(
-            pool_balance_in_before,
-            DEFAULT_WEIGHT,
-            pool_balance_out_before,
-            DEFAULT_WEIGHT,
-            asset_amount_in,
+        let expected_fee = expected_creator_fee(
+            &DEFAULT_POOL_ID,
+            true,
+            &creator_fee,
             swap_fee,
-        )
-        .unwrap();
+            asset_amount_in,
+            asset_in,
+            asset_out,
+        );
 
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
@@ -3801,24 +3791,8 @@ fn swap_exact_amount_in_creator_fee_charged_correctly(
             max_price,
         ));
 
-        let market_creator_balance_after = Currencies::free_balance(BASE_ASSET, &market_creator);
-
-        let expected_fee = if asset_in == BASE_ASSET {
-            creator_fee.mul_floor(asset_amount_in)
-        } else if asset_out == BASE_ASSET {
-            creator_fee.mul_floor(expected_out_without_fee)
-        } else {
-            let fee_before_swap = creator_fee.mul_floor(expected_out_without_fee);
-            calc_out_given_in(
-                DEFAULT_LIQUIDITY - expected_out_without_fee,
-                DEFAULT_WEIGHT,
-                pool_balance_base_out_before,
-                DEFAULT_WEIGHT,
-                fee_before_swap,
-                swap_fee,
-            )
-            .unwrap()
-        };
+        let market_creator_balance_after =
+            Currencies::free_balance(BASE_ASSET, &DEFAULT_MARKET_CREATOR);
 
         assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
     });
@@ -3932,6 +3906,66 @@ fn swap_exact_amount_in_creator_fee_respects_max_price(
 #[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
 #[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
 #[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_in_with_creator_fee_respects_existential_deposit(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+        // TODO(#1097) - using 10x ed since otherwise a MathApproximation bug is emitted.
+        let asset_amount = <Runtime as orml_tokens::Config>::ExistentialDeposits::get(&BASE_ASSET)
+            .saturating_sub(1)
+            * 10;
+
+        if asset_amount == 0 {
+            return;
+        }
+
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+        assert_ok!(Currencies::withdraw(
+            BASE_ASSET,
+            &DEFAULT_MARKET_CREATOR,
+            Currencies::free_balance(BASE_ASSET, &DEFAULT_MARKET_CREATOR)
+        ));
+
+        let expected_fee = expected_creator_fee(
+            &DEFAULT_POOL_ID,
+            true,
+            &creator_fee,
+            swap_fee,
+            asset_amount,
+            asset_in,
+            asset_out,
+        );
+
+        assert_ok!(Swaps::swap_exact_amount_in(
+            alice_signed(),
+            DEFAULT_POOL_ID,
+            asset_in,
+            asset_amount,
+            asset_out,
+            Some(asset_amount / 2),
+            None,
+        ));
+        System::assert_has_event(
+            Event::MarketCreatorFeePaymentFailed(
+                ALICE,
+                DEFAULT_MARKET_CREATOR,
+                expected_fee,
+                BASE_ASSET,
+                orml_tokens::Error::<Runtime>::ExistentialDeposit.into(),
+            )
+            .into(),
+        );
+    });
+}
+
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
 fn swap_exact_amount_out_creator_fee_charged_correctly(
     asset_in: Asset<MarketId>,
     asset_out: Asset<MarketId>,
@@ -3943,24 +3977,28 @@ fn swap_exact_amount_out_creator_fee_charged_correctly(
         assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
 
-        let market_creator = MarketCommons::market(&DEFAULT_MARKET_ID).unwrap().creator;
-        let market_creator_balance_before = Currencies::free_balance(BASE_ASSET, &market_creator);
-        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
-        let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
-        let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
-        let pool_balance_base_out_before = Currencies::free_balance(BASE_ASSET, &pool_account);
+        let ed = <Runtime as orml_tokens::Config>::ExistentialDeposits::get(&BASE_ASSET);
+        assert_ok!(<Currencies as MultiCurrency<AccountIdTest>>::deposit(
+            BASE_ASSET,
+            &DEFAULT_MARKET_CREATOR,
+            ed
+        ));
+
+        let market_creator_balance_before =
+            Currencies::free_balance(BASE_ASSET, &DEFAULT_MARKET_CREATOR);
         let asset_amount_out = _1;
-        let max_asset_amount_in = Some(u128::MAX);
+        let max_asset_amount_in = Some(_2);
         let max_price = None;
-        let expected_in_without_fee = calc_in_given_out(
-            pool_balance_in_before,
-            DEFAULT_WEIGHT,
-            pool_balance_out_before,
-            DEFAULT_WEIGHT,
-            asset_amount_out,
+
+        let expected_fee = expected_creator_fee(
+            &DEFAULT_POOL_ID,
+            false,
+            &creator_fee,
             swap_fee,
-        )
-        .unwrap();
+            asset_amount_out,
+            asset_in,
+            asset_out,
+        );
 
         assert_ok!(Swaps::swap_exact_amount_out(
             alice_signed(),
@@ -3972,24 +4010,8 @@ fn swap_exact_amount_out_creator_fee_charged_correctly(
             max_price,
         ));
 
-        let market_creator_balance_after = Currencies::free_balance(BASE_ASSET, &market_creator);
-
-        let expected_fee = if asset_in == BASE_ASSET {
-            creator_fee.mul_floor(expected_in_without_fee)
-        } else if asset_out == BASE_ASSET {
-            creator_fee.mul_floor(asset_amount_out)
-        } else {
-            let fee_before_swap = creator_fee.mul_floor(asset_amount_out);
-            calc_out_given_in(
-                DEFAULT_LIQUIDITY - asset_amount_out - fee_before_swap,
-                DEFAULT_WEIGHT,
-                pool_balance_base_out_before,
-                DEFAULT_WEIGHT,
-                fee_before_swap,
-                swap_fee,
-            )
-            .unwrap()
-        };
+        let market_creator_balance_after =
+            Currencies::free_balance(BASE_ASSET, &DEFAULT_MARKET_CREATOR);
 
         assert_eq!(market_creator_balance_after - market_creator_balance_before, expected_fee);
     });
@@ -4132,8 +4154,140 @@ fn swap_exact_amount_out_creator_fee_swaps_correct_amount_out(
     });
 }
 
+#[test_case(BASE_ASSET, ASSET_B; "base_asset_in")]
+#[test_case(ASSET_B, BASE_ASSET; "base_asset_out")]
+#[test_case(ASSET_B, ASSET_C; "no_base_asset")]
+fn swap_exact_amount_out_with_creator_fee_respects_existential_deposit(
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator_fee = Perbill::from_percent(1);
+        let swap_fee = 0;
+        let asset_amount = <Runtime as orml_tokens::Config>::ExistentialDeposits::get(&BASE_ASSET)
+            .saturating_sub(1);
+
+        if asset_amount == 0 {
+            return;
+        }
+
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        assert_ok!(set_creator_fee(DEFAULT_MARKET_ID, creator_fee));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(swap_fee), true);
+        assert_ok!(Currencies::withdraw(
+            BASE_ASSET,
+            &DEFAULT_MARKET_CREATOR,
+            Currencies::free_balance(BASE_ASSET, &DEFAULT_MARKET_CREATOR)
+        ));
+
+        let expected_fee = expected_creator_fee(
+            &DEFAULT_POOL_ID,
+            false,
+            &creator_fee,
+            swap_fee,
+            asset_amount,
+            asset_in,
+            asset_out,
+        );
+
+        assert_ok!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            DEFAULT_POOL_ID,
+            asset_in,
+            Some(2 * asset_amount),
+            asset_out,
+            asset_amount,
+            None,
+        ));
+        System::assert_has_event(
+            Event::MarketCreatorFeePaymentFailed(
+                ALICE,
+                DEFAULT_MARKET_CREATOR,
+                expected_fee,
+                BASE_ASSET,
+                orml_tokens::Error::<Runtime>::ExistentialDeposit.into(),
+            )
+            .into(),
+        );
+    });
+}
+
 fn alice_signed() -> RuntimeOrigin {
     RuntimeOrigin::signed(ALICE)
+}
+
+// Must be called before the swap happens.
+fn expected_creator_fee(
+    pool_id: &PoolId,
+    swap_in: bool,
+    creator_fee: &Perbill,
+    swap_fee: BalanceOf<Runtime>,
+    asset_amount: BalanceOf<Runtime>,
+    asset_in: Asset<MarketId>,
+    asset_out: Asset<MarketId>,
+) -> BalanceOf<Runtime> {
+    let pool_account = Swaps::pool_account_id(pool_id);
+    let pool_balance_in_before = Currencies::free_balance(asset_in, &pool_account);
+    let pool_balance_out_before = Currencies::free_balance(asset_out, &pool_account);
+    let pool_balance_base_out_before = Currencies::free_balance(BASE_ASSET, &pool_account);
+
+    let expected_amount_without_fee = if swap_in {
+        calc_out_given_in(
+            pool_balance_in_before,
+            DEFAULT_WEIGHT,
+            pool_balance_out_before,
+            DEFAULT_WEIGHT,
+            asset_amount,
+            swap_fee,
+        )
+        .unwrap()
+    } else {
+        calc_in_given_out(
+            pool_balance_in_before,
+            DEFAULT_WEIGHT,
+            pool_balance_out_before,
+            DEFAULT_WEIGHT,
+            asset_amount,
+            swap_fee,
+        )
+        .unwrap()
+    };
+
+    if asset_in == BASE_ASSET {
+        if swap_in {
+            creator_fee.mul_floor(asset_amount)
+        } else {
+            creator_fee.mul_floor(expected_amount_without_fee)
+        }
+    } else if asset_out == BASE_ASSET {
+        if swap_in {
+            creator_fee.mul_floor(expected_amount_without_fee)
+        } else {
+            creator_fee.mul_floor(asset_amount)
+        }
+    } else if swap_in {
+        let fee_before_swap = creator_fee.mul_floor(expected_amount_without_fee);
+        calc_out_given_in(
+            DEFAULT_LIQUIDITY - expected_amount_without_fee,
+            DEFAULT_WEIGHT,
+            pool_balance_base_out_before,
+            DEFAULT_WEIGHT,
+            fee_before_swap,
+            swap_fee,
+        )
+        .unwrap()
+    } else {
+        let fee_before_swap = creator_fee.mul_floor(asset_amount);
+        calc_out_given_in(
+            DEFAULT_LIQUIDITY - asset_amount - fee_before_swap,
+            DEFAULT_WEIGHT,
+            pool_balance_base_out_before,
+            DEFAULT_WEIGHT,
+            fee_before_swap,
+            swap_fee,
+        )
+        .unwrap()
+    }
 }
 
 fn create_initial_pool(
