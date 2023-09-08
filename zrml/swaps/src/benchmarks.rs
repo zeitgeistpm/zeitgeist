@@ -31,11 +31,15 @@ use super::*;
 use crate::Pallet as Swaps;
 use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
-use frame_support::{dispatch::UnfilteredDispatchable, traits::Get, weights::Weight};
+use frame_support::{
+    dispatch::{DispatchResult, UnfilteredDispatchable},
+    traits::{Currency, Get},
+    weights::Weight,
+};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-    traits::{SaturatedConversion, Zero},
+    traits::{CheckedSub, SaturatedConversion, Zero},
     DispatchError, Perbill,
 };
 use zeitgeist_primitives::{
@@ -47,10 +51,28 @@ use zeitgeist_primitives::{
     },
 };
 
+const DEFAULT_CREATOR_FEE: Perbill = Perbill::from_perthousand(1);
 const LIQUIDITY: u128 = 100 * BASE;
+
+type MarketOf<T> = zeitgeist_primitives::types::Market<
+    <T as frame_system::Config>::AccountId,
+    <<<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance,
+    <<T as Config>::MarketCommons as MarketCommonsPalletApi>::BlockNumber,
+    <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment,
+    Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+>;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+}
+
+fn set_default_creator_fee<T: Config>(market_id: MarketIdOf<T>) -> DispatchResult {
+    T::MarketCommons::mutate_market(&market_id, |market: &mut MarketOf<T>| {
+        market.creator_fee = DEFAULT_CREATOR_FEE;
+        Ok(())
+    })
 }
 
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
@@ -760,7 +782,7 @@ benchmarks! {
         let mut weights = vec![weight_in; asset_count as usize];
         weights[asset_count as usize - 1] = weight_out;
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
+        let (pool_id, assets, market_id) = bench_create_pool::<T>(
             caller.clone(),
             Some(asset_count as usize),
             Some(balance),
@@ -768,6 +790,7 @@ benchmarks! {
             false,
             Some(weights),
         );
+        set_default_creator_fee::<T>(market_id)?;
         let asset_in = assets[0];
         T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
         let asset_out = assets[asset_count as usize - 1];
@@ -815,18 +838,19 @@ benchmarks! {
         // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_out: BalanceOf<T> = bmul(
+        let mut asset_amount_out: BalanceOf<T> = bmul(
             balance.saturated_into(),
             T::MaxOutRatio::get().saturated_into(),
         )
         .unwrap()
         .saturated_into();
+        asset_amount_out = Perbill::one().checked_sub(&DEFAULT_CREATOR_FEE).unwrap().mul_floor(asset_amount_out);
         let weight_out = T::MinWeight::get();
         let weight_in = 4 * weight_out;
         let mut weights = vec![weight_out; asset_count as usize];
         weights[0] = weight_in;
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
+        let (pool_id, assets, market_id) = bench_create_pool::<T>(
             caller.clone(),
             Some(asset_count as usize),
             Some(balance),
@@ -834,6 +858,7 @@ benchmarks! {
             false,
             Some(weights),
         );
+        set_default_creator_fee::<T>(market_id)?;
         let asset_in = assets[0];
         T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
         let asset_out = assets[asset_count as usize - 1];

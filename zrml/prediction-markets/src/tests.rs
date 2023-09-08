@@ -5669,7 +5669,8 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
 }
 
 #[test]
-fn create_cpmm_market_and_deploy_assets_sets_the_correct_market_parameters_and_reserves_the_correct_amount() {
+fn create_cpmm_market_and_deploy_assets_sets_the_correct_market_parameters_and_reserves_the_correct_amount()
+ {
     ExtBuilder::default().build().execute_with(|| {
         let creator = ALICE;
         let oracle = BOB;
