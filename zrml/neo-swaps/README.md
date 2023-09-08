@@ -6,7 +6,7 @@ to dynamically provide liquidity.
 
 ## Overview
 
-For a detailed description of the underlying mathematics see [./docs/docs.pdf].
+For a detailed description of the underlying mathematics see [here](docslink).
 
 ### Terminology
 
@@ -43,3 +43,5 @@ For a detailed description of the underlying mathematics see [./docs/docs.pdf].
     to error with `ExistentialDeposit`. This "buffer" is removed when the pool
     is destroyed. The pool account is expected to be whitelisted from dusting
     for all other assets.
+
+[docslink]: ./docs/docs.pdf
