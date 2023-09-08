@@ -38,7 +38,7 @@ APIs/RPC interface.
   - `ExitExecuted { who, market_id, pool_shares_amount, amounts_out, new_liquidity_parameter }`:
     Liquidity provider left the pool.
   - `PoolDeployed { who, market_id, pool_shares_amount, amounts_in, liquidity_parameter }`:
-    Pool was createed.
+    Pool was created.
   - `PoolDestroyed { who, market_id, pool_shares_amount, amounts_out }`: Pool
     was destroyed.
 
