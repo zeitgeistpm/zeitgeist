@@ -6,7 +6,7 @@ to dynamically provide liquidity.
 
 ## Overview
 
-For a detailed description of the underlying mathematics see [here](docslink).
+For a detailed description of the underlying mathematics see [here][docslink].
 
 ### Terminology
 
