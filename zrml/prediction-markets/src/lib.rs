@@ -66,8 +66,8 @@ mod pallet {
         types::{
             Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
             MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, PrematureClose, PrematureCloseState, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            OldMarketDispute, OutcomeReport, PrematureClose, PrematureCloseState, Report,
+            ResultWithWeightInfo, ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
