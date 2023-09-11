@@ -93,10 +93,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 48,
+    spec_version: 49,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 23,
+    transaction_version: 24,
     state_version: 1,
 };
 
