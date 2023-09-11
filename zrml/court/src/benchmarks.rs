@@ -59,7 +59,7 @@ where
         creator_fee: 0,
         creator: account("creator", 0, 0),
         market_type: MarketType::Scalar(0..=100),
-        dispute_mechanism: MarketDisputeMechanism::Court,
+        dispute_mechanism: Some(MarketDisputeMechanism::Court),
         metadata: vec![],
         oracle: account("oracle", 0, 0),
         period: MarketPeriod::Block(

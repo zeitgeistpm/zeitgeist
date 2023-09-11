@@ -100,7 +100,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
         metadata,
         creation,
         market_type: options,
-        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule,
     }
     .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
@@ -243,7 +243,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -436,7 +436,7 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -473,7 +473,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -526,7 +526,7 @@ benchmarks! {
             )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -631,7 +631,7 @@ benchmarks! {
             metadata,
             creation,
             MarketType::Categorical(T::MaxCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
     )
 
@@ -639,7 +639,7 @@ benchmarks! {
         let m in 0..63;
 
         let market_type = MarketType::Categorical(T::MaxCategories::get());
-        let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        let dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
         let scoring_rule = ScoringRule::CPMM;
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
@@ -799,7 +799,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Court;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Court);
             Ok(())
         })?;
 
@@ -873,7 +873,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -901,7 +901,7 @@ benchmarks! {
             OutcomeReport::Categorical(1u16),
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
@@ -920,7 +920,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -963,7 +963,7 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;

@@ -5559,7 +5559,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let metadata = gen_metadata(0x99);
         let MultiHash::Sha3_384(multihash) = metadata;
         let market_type = MarketType::Categorical(7);
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(creator),
             Asset::Ztg,

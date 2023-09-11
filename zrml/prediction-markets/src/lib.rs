@@ -364,8 +364,11 @@ mod pallet {
 
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
+            // Note: This is noop if the market is trusted.
             let (ids_len, _) = Self::clear_auto_resolve(&market_id)?;
-            Self::clear_dispute_mechanism(&market_id)?;
+            if market.dispute_mechanism.is_some() {
+                Self::clear_dispute_mechanism(&market_id)?;
+            }
             <zrml_market_commons::Pallet<T>>::remove_market(&market_id)?;
 
             Self::deposit_event(Event::MarketDestroyed(market_id));
@@ -641,7 +644,9 @@ mod pallet {
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.status == MarketStatus::Reported, Error::<T>::InvalidMarketStatus);
 
-            let weight = match market.dispute_mechanism {
+            let dispute_mechanism =
+                market.dispute_mechanism.as_ref().ok_or(Error::<T>::NoDisputeMechanism)?;
+            let weight = match dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&market_id, &market)?;
                     T::WeightInfo::dispute_authorized()
@@ -720,7 +725,7 @@ mod pallet {
             deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
@@ -775,7 +780,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
@@ -864,7 +869,7 @@ mod pallet {
             deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
@@ -1451,13 +1456,15 @@ mod pallet {
             ensure_signed(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let dispute_mechanism =
+                market.dispute_mechanism.as_ref().ok_or(Error::<T>::NoDisputeMechanism)?;
             ensure!(
                 matches!(market.status, MarketStatus::Disputed | MarketStatus::Reported),
                 Error::<T>::InvalidMarketStatus
             );
 
             ensure!(
-                matches!(market.dispute_mechanism, MarketDisputeMechanism::Court),
+                matches!(dispute_mechanism, MarketDisputeMechanism::Court),
                 Error::<T>::InvalidDisputeMechanism
             );
 
@@ -1468,7 +1475,7 @@ mod pallet {
 
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
-            let res_0 = match market.dispute_mechanism {
+            let res_0 = match dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::has_failed(&market_id, &market)?
                 }
@@ -1480,7 +1487,7 @@ mod pallet {
             let has_failed = res_0.result;
             ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
 
-            let res_1 = match market.dispute_mechanism {
+            let res_1 = match dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_global_dispute(&market_id, &market)?
                 }
@@ -1814,6 +1821,8 @@ mod pallet {
         UnregisteredForeignAsset,
         /// The start of the global dispute for this market happened already.
         GlobalDisputeExistsAlready,
+        /// The market has no dispute mechanism.
+        NoDisputeMechanism,
     }
 
     #[pallet::event]
@@ -2213,6 +2222,12 @@ mod pallet {
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+            // If there's no dispute mechanism, this function is noop. FIXME This is an
+            // anti-pattern, but it makes benchmarking easier.
+            let dispute_mechanism = match market.dispute_mechanism {
+                Some(ref result) => result,
+                None => return Ok((0, 0)),
+            };
             let (ids_len, mdm_len) = match market.status {
                 MarketStatus::Reported => {
                     let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
@@ -2230,7 +2245,7 @@ mod pallet {
                 MarketStatus::Disputed => {
                     // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
                     let ResultWithWeightInfo { result: auto_resolve_block_opt, weight: _ } =
-                        match market.dispute_mechanism {
+                        match dispute_mechanism {
                             MarketDisputeMechanism::Authorized => {
                                 T::Authorized::get_auto_resolve(market_id, &market)
                             }
@@ -2257,9 +2272,11 @@ mod pallet {
         /// The dispute mechanism is intended to clear its own storage here.
         fn clear_dispute_mechanism(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+            let dispute_mechanism =
+                market.dispute_mechanism.as_ref().ok_or(Error::<T>::NoDisputeMechanism)?;
 
             // TODO(#782): use multiple benchmarks paths for different dispute mechanisms
-            match market.dispute_mechanism {
+            match dispute_mechanism {
                 MarketDisputeMechanism::Authorized => T::Authorized::clear(market_id, &market)?,
                 MarketDisputeMechanism::Court => T::Court::clear(market_id, &market)?,
                 MarketDisputeMechanism::SimpleDisputes => {
@@ -2549,6 +2566,8 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<OutcomeReport>, DispatchError> {
+            let dispute_mechanism =
+                market.dispute_mechanism.as_ref().ok_or(Error::<T>::NoDisputeMechanism)?;
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             let mut weight = Weight::zero();
 
@@ -2559,7 +2578,7 @@ mod pallet {
 
             let imbalance_left = Self::settle_bonds(market_id, market, &resolved_outcome, report)?;
 
-            let remainder = match market.dispute_mechanism {
+            let remainder = match dispute_mechanism {
                 MarketDisputeMechanism::Authorized => {
                     let res = T::Authorized::exchange(
                         market_id,
@@ -2614,7 +2633,9 @@ mod pallet {
             // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
             // the oracle's report.
             if resolved_outcome_option.is_none() {
-                resolved_outcome_option = match market.dispute_mechanism {
+                let dispute_mechanism =
+                    market.dispute_mechanism.as_ref().ok_or(Error::<T>::NoDisputeMechanism)?;
+                resolved_outcome_option = match dispute_mechanism {
                     MarketDisputeMechanism::Authorized => {
                         let res = T::Authorized::on_resolution(market_id, market)?;
                         weight = weight.saturating_add(res.weight);
@@ -3057,7 +3078,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
