@@ -27,7 +27,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
-    traits::{IsType, StorageVersion},
+    traits::{Currency, IsType, StorageVersion},
     transactional, PalletId, Twox64Concat,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -40,7 +40,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     traits::{MarketCommonsPalletApi, ZeitgeistAssetManager},
-    types::{Asset, MarketStatus, ScoringRule},
+    types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -85,6 +85,18 @@ mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MarketCommonsBalanceOf<T> =
+        <<<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency as Currency<
+            AccountIdOf<T>,
+        >>::Balance;
+    pub(crate) type MarketOf<T> = Market<
+        AccountIdOf<T>,
+        MarketCommonsBalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -140,6 +152,8 @@ mod pallet {
         AmountTooHighForOrder,
         /// The specified amount parameter is zero.
         AmountIsZero,
+        /// The specified outcome asset is not part of the market.
+        InvalidOutcomeAsset,
     }
 
     #[pallet::call]
@@ -222,7 +236,7 @@ mod pallet {
                 .amount
                 .checked_sub(&amount)
                 .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
-            let maker = order_data.maker;
+            let maker = order_data.maker.clone();
 
             match order_data.side {
                 OrderSide::Bid => {
@@ -297,6 +311,11 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
+            let market_assets = Self::outcome_assets(market_id, &market);
+            ensure!(
+                market_assets.binary_search(&outcome_asset).is_ok(),
+                Error::<T>::InvalidOutcomeAsset
+            );
             let base_asset = market.base_asset;
 
             let order_id = <NextOrderId<T>>::get();
@@ -360,6 +379,27 @@ mod pallet {
             order_id: OrderId,
         ) -> T::Hash {
             (&creator, market_id, order_id).using_encoded(T::Hashing::hash)
+        }
+
+        pub fn outcome_assets(
+            market_id: MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Vec<Asset<MarketIdOf<T>>> {
+            match market.market_type {
+                MarketType::Categorical(categories) => {
+                    let mut assets = Vec::new();
+                    for i in 0..categories {
+                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                    }
+                    assets
+                }
+                MarketType::Scalar(_) => {
+                    vec![
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                    ]
+                }
+            }
         }
     }
 }
