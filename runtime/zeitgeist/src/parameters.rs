@@ -26,9 +26,9 @@ use super::{Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
-    traits::WithdrawReasons,
+    traits::{LockIdentifier, WithdrawReasons},
     weights::{
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
         Weight,
     },
     PalletId,
@@ -43,24 +43,29 @@ use sp_runtime::{
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
-#[cfg(feature = "with-global-disputes")]
-use frame_support::traits::LockIdentifier;
-
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight =
-    Weight::from_ref_time(WEIGHT_PER_SECOND.ref_time() / 2)
-        .set_proof_size(polkadot_primitives::v2::MAX_POV_SIZE as u64);
+pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    polkadot_primitives::v2::MAX_POV_SIZE as u64,
+);
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
 pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
+
+#[cfg(not(feature = "parachain"))]
+parameter_types! {
+    // Aura
+    pub const MaxAuthorities: u32 = 32;
+
+    // Grandpa
+    // Can be 0, as equivocation handling is not enabled (HandleEquivocation = ())
+    pub const MaxSetIdSessionEntries: u32 = 0;
+}
 
 parameter_types! {
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
     pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
-
-    // Authority
-    pub const MaxAuthorities: u32 = 32;
 
     // Balance
     pub const ExistentialDeposit: u128 = 5 * MILLI;
@@ -92,16 +97,42 @@ parameter_types! {
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 123 * 1024;
     pub const ContractsMaxStorageKeyLen: u32 = 128;
+    pub const ContractsMaxDebugBufferLen: u32 = 2 * 1024 * 1024;
+    pub const ContractsUnsafeUnstableInterface: bool = false;
     pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
-    /// Duration of a single court case.
-    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    /// (Slashable) Bond that is provided for overriding the last appeal.
+    /// This bond increases exponentially with the number of appeals.
+    /// Slashed in case the final outcome does match the appealed outcome for which the `AppealBond`
+    /// was deposited.
+    pub const AppealBond: Balance = 2000 * BASE;
+    /// The blocks per year required to calculate the yearly inflation for court incentivisation.
+    pub const BlocksPerYear: BlockNumber = BLOCKS_PER_YEAR;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
-    /// This value is multiplied by the current number of jurors to determine the stake
-    /// the juror has to pay.
-    pub const StakeWeight: u128 = 2 * BASE;
+    /// The time in which the jurors can cast their secret vote.
+    pub const CourtVotePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The time in which the jurors should reveal their secret vote.
+    pub const CourtAggregationPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The time in which a court case can get appealed.
+    pub const CourtAppealPeriod: BlockNumber = BLOCKS_PER_DAY;
+    /// The lock identifier for the court votes.
+    pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
+    /// The time in which the inflation is periodically issued.
+    pub const InflationPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
+    /// The maximum number of appeals until the court fails.
+    pub const MaxAppeals: u32 = 4;
+    /// The maximum number of delegations per juror account.
+    pub const MaxDelegations: u32 = 5;
+    /// The maximum number of randomly selected `MinJurorStake` draws / atoms of jurors for a dispute.
+    pub const MaxSelectedDraws: u32 = 510;
+    /// The maximum number of jurors / delegators that can be registered.
+    pub const MaxCourtParticipants: u32 = 1_000;
+    /// The minimum stake a user needs to reserve to become a juror.
+    pub const MinJurorStake: Balance = 500 * BASE;
+    /// The interval for requesting multiple court votes at once.
+    pub const RequestInterval: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.
@@ -169,13 +200,13 @@ parameter_types! {
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
-    /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
-    /// was deposited.
+    /// Unreserved in case the dispute was justified otherwise slashed.
+    /// This is when the resolved outcome is different to the default (reported) outcome.
     pub const DisputeBond: Balance = 2_000 * BASE;
-    /// `DisputeBond` is increased by this factor after every dispute.
-    pub const DisputeFactor: Balance = 2 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
+    /// Max creator fee, bounds the fraction per trade volume that is moved to the market creator.
+    pub const MaxCreatorFee: Perbill = Perbill::from_percent(1);
     /// Maximum block period for a dispute.
     pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
     /// Maximum number of disputes.
@@ -240,6 +271,12 @@ parameter_types! {
     // Simple disputes parameters
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const SimpleDisputesPalletId: PalletId = SD_PALLET_ID;
+    /// (Slashable) Bond that is provided for overriding the last outcome addition.
+    /// Slashed in case the final outcome does not match the dispute for which the `OutcomeBond`
+    /// was deposited.
+    pub const OutcomeBond: Balance = 2_000 * BASE;
+    /// `OutcomeBond` is increased by this factor after every new outcome addition.
+    pub const OutcomeFactor: Balance = 2 * BASE;
 
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
@@ -321,6 +358,8 @@ parameter_types! {
     pub const Burn: Permill = Permill::from_percent(10);
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
+    /// Maximum amount a verified origin can spend
+    pub const MaxTreasurySpend: Balance = Balance::max_value();
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);
@@ -370,21 +409,22 @@ parameter_types! {
          WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
 }
 
-#[cfg(feature = "with-global-disputes")]
 parameter_types! {
     // Global Disputes
+    /// The time period in which the addition of new outcomes are allowed.
+    pub const AddOutcomePeriod: BlockNumber = BLOCKS_PER_DAY;
     /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
     pub const GlobalDisputeLockId: LockIdentifier = GLOBAL_DISPUTES_LOCK_ID;
     /// Pallet identifier
     pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
-    /// The period for a global dispute to end.
-    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
-    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+    /// The maximum number of owners for a voting outcome for private API calls of `push_vote_outcome`.
     pub const MaxOwners: u32 = 10;
     /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
     pub const MaxGlobalDisputeVotes: u32 = 50;
     /// The minimum required amount to vote on an outcome.
     pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
+    /// The time period in which votes are allowed.
+    pub const GdVotingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// The fee required to add a voting outcome.
     pub const VotingOutcomeFee: Balance = 200 * BASE;
     /// The remove limit for the Outcomes storage double map.

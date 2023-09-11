@@ -107,6 +107,47 @@ pub const PARA_ID_SIBLING: u32 = 3000;
 pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
 pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
 pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
+pub const BTC_ID: Asset<u128> = CurrencyId::ForeignAsset(3);
+pub const ETH_ID: Asset<u128> = CurrencyId::ForeignAsset(4);
+
+#[inline]
+pub(super) const fn ztg(amount: Balance) -> Balance {
+    amount * dollar(10)
+}
+
+#[inline]
+pub(super) const fn dot(amount: Balance) -> Balance {
+    foreign(amount, 10)
+}
+
+#[inline]
+pub(super) const fn btc(amount: Balance) -> Balance {
+    foreign(amount, 8)
+}
+
+#[inline]
+pub(super) const fn eth(amount: Balance) -> Balance {
+    foreign(amount, 18)
+}
+
+#[inline]
+pub(super) const fn foreign(amount: Balance, decimals: u32) -> Balance {
+    amount * dollar(decimals)
+}
+
+#[inline]
+pub(super) const fn dollar(decimals: u32) -> Balance {
+    10u128.saturating_pow(decimals)
+}
+
+#[inline]
+pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance) -> Balance {
+    if foreign_base > ztg(1) {
+        amount.saturating_div(foreign_base / ztg(1))
+    } else {
+        amount.saturating_mul(ztg(1) / foreign_base)
+    }
+}
 
 // Multilocations that are used to represent tokens from other chains
 #[inline]
@@ -131,11 +172,37 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         name: "Zeitgeist".into(),
         symbol: "ZTG".into(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V1(foreign_ztg_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_ztg_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_ZTG_ID)));
+}
+
+pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 8,
+        name: "Bitcoin".into(),
+        symbol: "BTC".into(),
+        existential_deposit: ExistentialDeposit::get(),
+        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(BTC_ID)));
+}
+
+pub(super) fn register_eth(additional_meta: Option<CustomMetadata>) {
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 18,
+        name: "Ethereum".into(),
+        symbol: "ETH".into(),
+        existential_deposit: ExistentialDeposit::get(),
+        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(ETH_ID)));
 }
 
 pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {
@@ -145,7 +212,7 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         name: "Sibling".into(),
         symbol: "SBL".into(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -163,31 +230,11 @@ pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
         name: "Polkadot".into(),
         symbol: "DOT".into(),
         existential_deposit: 10_000_000_000, // 1
-        location: Some(VersionedMultiLocation::V1(foreign_parent_multilocation())),
+        location: Some(VersionedMultiLocation::V3(foreign_parent_multilocation())),
         additional: additional_meta.unwrap_or_default(),
     };
 
     assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta, Some(FOREIGN_PARENT_ID)));
-}
-
-#[inline]
-pub(super) fn ztg(amount: Balance) -> Balance {
-    amount * dollar(10)
-}
-
-#[inline]
-pub(super) fn dot(amount: Balance) -> Balance {
-    foreign(amount, 10)
-}
-
-#[inline]
-pub(super) fn foreign(amount: Balance, decimals: u32) -> Balance {
-    amount * dollar(decimals)
-}
-
-#[inline]
-pub(super) fn dollar(decimals: u32) -> Balance {
-    10u128.saturating_pow(decimals)
 }
 
 #[inline]

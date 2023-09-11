@@ -41,10 +41,10 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU16, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureWithSuccess};
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
 use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
@@ -57,8 +57,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
-    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything},
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
         config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
@@ -88,16 +88,19 @@ pub mod parameters;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 47,
+    spec_version: 48,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 22,
+    transaction_version: 23,
     state_version: 1,
 };
+
+pub type ContractsCallfilter = Nothing;
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
@@ -163,6 +166,7 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
+            RuntimeCall::GlobalDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
@@ -179,6 +183,7 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
+            RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
@@ -210,12 +215,6 @@ impl Contains<RuntimeCall> for IsCallable {
 
 decl_common_types!();
 
-#[cfg(feature = "with-global-disputes")]
-create_runtime_with_additional_pallets!(
-    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
-);
-
-#[cfg(not(feature = "with-global-disputes"))]
 create_runtime_with_additional_pallets!();
 
 impl_config_traits!();

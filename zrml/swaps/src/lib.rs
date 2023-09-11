@@ -73,9 +73,13 @@ mod pallet {
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
+    use sp_arithmetic::{
+        traits::{CheckedSub, Saturating, Zero},
+        Perbill,
+    };
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
+        traits::AccountIdConversion, ArithmeticError, DispatchError, DispatchResult,
+        SaturatedConversion,
     };
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
@@ -87,14 +91,13 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        traits::{Swaps, ZeitgeistAssetManager},
+        traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
-    use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoMVPallet,
@@ -717,6 +720,7 @@ mod pallet {
                 asset_out,
                 min_asset_amount_out,
                 max_price,
+                false,
             )?;
             Ok(Some(weight).into())
         }
@@ -761,6 +765,7 @@ mod pallet {
                 asset_out,
                 asset_amount_out,
                 max_price,
+                false,
             )?;
             Ok(Some(weight).into())
         }
@@ -1065,6 +1070,21 @@ mod pallet {
         /// An exact amount of an asset is leaving the pool. \[SwapEvent\]
         SwapExactAmountOut(
             SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
+        ),
+        /// Fees were paid to the market creators. \[payer, payee, amount, asset\]
+        MarketCreatorFeesPaid(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::AccountId,
+            BalanceOf<T>,
+            Asset<MarketIdOf<T>>,
+        ),
+        /// Fee payment to market creator failed (usually due to existential deposit requirements) \[payer, payee, amount, asset, error\]
+        MarketCreatorFeePaymentFailed(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::AccountId,
+            BalanceOf<T>,
+            Asset<MarketIdOf<T>>,
+            DispatchError,
         ),
     }
 
@@ -1399,9 +1419,15 @@ mod pallet {
                 let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
                 let swap_fee = if with_fees {
-                    pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?
+                    let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
+                    let market = T::MarketCommons::market(&pool.market_id)?;
+                    market
+                        .creator_fee
+                        .mul_floor(BASE)
+                        .checked_add(swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
+                        .ok_or(Error::<T>::SwapFeeTooHigh)?
                 } else {
-                    BalanceOf::<T>::zero()
+                    BalanceOf::<T>::zero().saturated_into()
                 };
 
                 return Ok(crate::math::calc_spot_price(
@@ -1409,7 +1435,7 @@ mod pallet {
                     in_weight,
                     balance_out.saturated_into(),
                     out_weight,
-                    swap_fee.saturated_into(),
+                    swap_fee,
                 )?
                 .saturated_into());
             }
@@ -1551,6 +1577,64 @@ mod pallet {
             let max_withdraw = balance.saturating_sub(Self::min_balance(asset).saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
             Ok(())
+        }
+
+        fn handle_creator_fee_transfer(
+            fee_asset: Asset<MarketIdOf<T>>,
+            payer: T::AccountId,
+            payee: T::AccountId,
+            fee_amount: BalanceOf<T>,
+        ) {
+            if let Err(err) = T::AssetManager::transfer(fee_asset, &payer, &payee, fee_amount) {
+                Self::deposit_event(Event::MarketCreatorFeePaymentFailed(
+                    payer, payee, fee_amount, fee_asset, err,
+                ));
+            } else {
+                Self::deposit_event(Event::MarketCreatorFeesPaid(
+                    payer, payee, fee_amount, fee_asset,
+                ));
+            }
+        }
+
+        // Infallible, should fee transfer fail, the informant will keep the fees and an event is emitted.
+        fn handle_creator_fees(
+            amount: BalanceOf<T>,
+            fee_asset: Asset<MarketIdOf<T>>,
+            base_asset: Asset<MarketIdOf<T>>,
+            fee: Perbill,
+            payee: T::AccountId,
+            payer: T::AccountId,
+            pool_id: PoolId,
+        ) {
+            if fee.is_zero() {
+                return;
+            };
+
+            let mut fee_amount = fee.mul_floor(amount);
+
+            if fee_asset != base_asset {
+                let balance_before = T::AssetManager::free_balance(base_asset, &payer);
+                let swap_result = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
+                    payer.clone(),
+                    pool_id,
+                    fee_asset,
+                    fee_amount,
+                    base_asset,
+                    None,
+                    Some(<BalanceOf<T>>::saturated_from(u128::MAX)),
+                    true,
+                );
+
+                if swap_result.is_err() {
+                    Self::handle_creator_fee_transfer(fee_asset, payer, payee, fee_amount);
+                    return;
+                }
+
+                let balance_after = T::AssetManager::free_balance(base_asset, &payer);
+                fee_amount = balance_after.saturating_sub(balance_before);
+            }
+
+            Self::handle_creator_fee_transfer(base_asset, payer, payee, fee_amount);
         }
 
         pub(crate) fn burn_pool_shares(
@@ -1755,6 +1839,7 @@ mod pallet {
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             let pool_account = Self::pool_account_id(&next_pool_id);
             let mut map = BTreeMap::new();
+            let market = T::MarketCommons::market(&market_id)?;
             let mut total_weight = 0;
             let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
             let mut sorted_assets = assets.clone();
@@ -1776,11 +1861,27 @@ mod pallet {
                             amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
                             Error::<T>::InsufficientLiquidity
                         );
+
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                        let total_fee = market
+                            .creator_fee
+                            .mul_floor(BASE)
+                            .checked_add(
+                                swap_fee_unwrapped
+                                    .try_into()
+                                    .map_err(|_| Error::<T>::SwapFeeTooHigh)?,
+                            )
+                            .ok_or(Error::<T>::SwapFeeTooHigh)?;
+
+                        let total_fee_as_balance = <BalanceOf<T>>::try_from(total_fee)
+                            .map_err(|_| Error::<T>::SwapFeeTooHigh)?;
+
                         ensure!(
-                            swap_fee_unwrapped <= T::MaxSwapFee::get(),
+                            total_fee_as_balance <= T::MaxSwapFee::get(),
                             Error::<T>::SwapFeeTooHigh
                         );
+                        ensure!(total_fee <= BASE, Error::<T>::SwapFeeTooHigh);
+
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
                             &assets,
@@ -2288,26 +2389,51 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
+        /// * `handle_fees`: Optional parameter to override the swap fee
+        #[allow(clippy::too_many_arguments)]
         fn swap_exact_amount_in(
             who: T::AccountId,
             pool_id: PoolId,
             asset_in: Asset<MarketIdOf<T>>,
-            asset_amount_in: BalanceOf<T>,
+            mut asset_amount_in: BalanceOf<T>,
             asset_out: Asset<MarketIdOf<T>>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
+            handle_fees: bool,
         ) -> Result<Weight, DispatchError> {
-            let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            ensure!(
-                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
-                Error::<T>::InsufficientBalance
-            );
             ensure!(
                 min_asset_amount_out.is_some() || max_price.is_some(),
                 Error::<T>::LimitMissing,
             );
 
+            let pool = Pallet::<T>::pool_by_id(pool_id)?;
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+            let market = T::MarketCommons::market(&pool.market_id)?;
+            let creator_fee = market.creator_fee;
+            let mut fees_handled = false;
+
+            if asset_in == pool.base_asset && !handle_fees {
+                Self::handle_creator_fees(
+                    asset_amount_in,
+                    asset_in,
+                    pool.base_asset,
+                    creator_fee,
+                    market.creator.clone(),
+                    who.clone(),
+                    pool_id,
+                );
+
+                let fee_amount = creator_fee.mul_floor(asset_amount_in);
+                asset_amount_in = asset_amount_in.saturating_sub(fee_amount);
+                fees_handled = true;
+            }
+
+            ensure!(
+                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
+                Error::<T>::InsufficientBalance
+            );
+
+            let balance_before = T::AssetManager::free_balance(asset_out, &who);
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let asset_amount_out = match pool.scoring_rule {
@@ -2325,13 +2451,18 @@ mod pallet {
                                     .saturated_into(),
                                 Error::<T>::MaxInRatio
                             );
+                            let swap_fee = if handle_fees {
+                                0u128
+                            } else {
+                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into()
+                            };
                             crate::math::calc_out_given_in(
                                 balance_in.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_in)?,
                                 balance_out.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_out)?,
                                 asset_amount_in.saturated_into(),
-                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                                swap_fee,
                             )?
                             .saturated_into()
                         }
@@ -2368,8 +2499,15 @@ mod pallet {
                     };
 
                     if let Some(maao) = min_asset_amount_out {
-                        ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
+                        let asset_amount_out_check = if fees_handled {
+                            asset_amount_out
+                        } else {
+                            asset_amount_out.saturating_sub(creator_fee.mul_floor(asset_amount_out))
+                        };
+
+                        ensure!(asset_amount_out_check >= maao, Error::<T>::LimitOut);
                     }
+
                     Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
 
                     Ok([asset_amount_in, asset_amount_out])
@@ -2383,9 +2521,24 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who,
+                who: who.clone(),
             };
             swap_exact_amount::<_, _, _, T>(params)?;
+
+            if !fees_handled && !handle_fees {
+                let balance_after = T::AssetManager::free_balance(asset_out, &who);
+                let asset_amount_out = balance_after.saturating_sub(balance_before);
+
+                Self::handle_creator_fees(
+                    asset_amount_out,
+                    asset_out,
+                    pool.base_asset,
+                    creator_fee,
+                    market.creator.clone(),
+                    who.clone(),
+                    pool_id,
+                );
+            }
 
             match pool.scoring_rule {
                 ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_in_cpmm()),
@@ -2395,19 +2548,48 @@ mod pallet {
             }
         }
 
+        /// Swap - Exact amount out
+        ///
+        /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `who`: The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool.
+        /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
+        /// * `asset_out`: Asset leaving the pool.
+        /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
+        /// * `max_price`: Market price must be equal or less than the provided value.
+        /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
+        #[allow(clippy::too_many_arguments)]
         fn swap_exact_amount_out(
             who: T::AccountId,
             pool_id: PoolId,
             asset_in: Asset<MarketIdOf<T>>,
             max_asset_amount_in: Option<BalanceOf<T>>,
             asset_out: Asset<MarketIdOf<T>>,
-            asset_amount_out: BalanceOf<T>,
+            mut asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
+            handle_fees: bool,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
             Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
+            let market = T::MarketCommons::market(&pool.market_id)?;
+            let creator_fee = market.creator_fee;
+            let mut fee_amount = <BalanceOf<T>>::zero();
+
+            let to_adjust_in_value = if asset_in == pool.base_asset {
+                // Can't adjust the value inside the anonymous function for asset_amounts
+                true
+            } else {
+                fee_amount = creator_fee.mul_floor(asset_amount_out);
+                asset_amount_out = asset_amount_out.saturating_add(fee_amount);
+                false
+            };
+
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
@@ -2425,13 +2607,18 @@ mod pallet {
 
                             let balance_in =
                                 T::AssetManager::free_balance(asset_in, &pool_account_id);
+                            let swap_fee = if handle_fees {
+                                0u128
+                            } else {
+                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into()
+                            };
                             crate::math::calc_in_given_out(
                                 balance_in.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_in)?,
                                 balance_out.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_out)?,
                                 asset_amount_out.saturated_into(),
-                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                                swap_fee,
                             )?
                             .saturated_into()
                         }
@@ -2467,9 +2654,29 @@ mod pallet {
                         }
                     };
 
-                    if let Some(maai) = max_asset_amount_in {
-                        ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
+                    if asset_in == pool.base_asset && !handle_fees && to_adjust_in_value {
+                        Self::handle_creator_fees(
+                            asset_amount_in,
+                            asset_in,
+                            pool.base_asset,
+                            creator_fee,
+                            market.creator.clone(),
+                            who.clone(),
+                            pool_id,
+                        );
                     }
+
+                    if let Some(maai) = max_asset_amount_in {
+                        let asset_amount_in_check = if to_adjust_in_value {
+                            let fee_amount = creator_fee.mul_floor(asset_amount_in);
+                            asset_amount_in.saturating_add(fee_amount)
+                        } else {
+                            asset_amount_in
+                        };
+
+                        ensure!(asset_amount_in_check <= maai, Error::<T>::LimitIn);
+                    }
+
                     Ok([asset_amount_in, asset_amount_out])
                 },
                 asset_bound: max_asset_amount_in,
@@ -2481,9 +2688,23 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who,
+                who: who.clone(),
             };
             swap_exact_amount::<_, _, _, T>(params)?;
+
+            if !to_adjust_in_value && !handle_fees {
+                asset_amount_out = asset_amount_out.saturating_sub(fee_amount);
+
+                Self::handle_creator_fees(
+                    asset_amount_out,
+                    asset_out,
+                    pool.base_asset,
+                    creator_fee,
+                    market.creator.clone(),
+                    who.clone(),
+                    pool_id,
+                );
+            }
 
             match pool.scoring_rule {
                 ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_out_cpmm()),

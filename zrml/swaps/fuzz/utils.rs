@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -30,7 +31,7 @@ use zeitgeist_primitives::{
     traits::Swaps as SwapsTrait,
     types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
 };
-use zrml_swaps::mock::Swaps;
+use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
 
 pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
     let (module, seed0, seed1) = seed;
@@ -56,7 +57,6 @@ pub struct ValidPoolData {
     pub origin: u128,
     pub assets: Vec<(u8, u128, u16)>,
     pub base_asset: (u8, u128, u16),
-    pub market_id: u128,
     pub swap_fee: u128,
     pub amount: u128,
     pub weights: Vec<u128>,
@@ -70,7 +70,7 @@ impl ValidPoolData {
             self.origin,
             self.assets.into_iter().map(construct_asset).collect(),
             construct_asset(self.base_asset),
-            self.market_id,
+            DEFAULT_MARKET_ID,
             ScoringRule::CPMM,
             construct_swap_fee(self.swap_fee),
             Some(self.amount),
@@ -100,13 +100,12 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
             .ok_or(<arbitrary::Error>::IncorrectFormat)?;
 
         let origin = rng.gen::<u128>();
-        let market_id = rng.gen::<u128>();
         let swap_fee = rng.gen_range(0..BASE);
         // Slightly dirty hack: We're assuming that the minimum liquidity is CENT. This is not
         // guaranteed by the protocol, but will most likely remain so forever.
         let amount = rng.gen_range(CENT..u128::MAX);
 
-        Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, amount, weights })
+        Ok(ValidPoolData { origin, assets, base_asset, swap_fee, amount, weights })
     }
 }
 
@@ -209,7 +208,6 @@ pub struct PoolCreationData {
     pub origin: u128,
     pub assets: Vec<(u8, u128, u16)>,
     pub base_asset: (u8, u128, u16),
-    pub market_id: u128,
     pub swap_fee: Option<u128>,
     pub amount: Option<u128>,
     pub weights: Option<Vec<u128>>,

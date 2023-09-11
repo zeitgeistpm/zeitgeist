@@ -30,11 +30,11 @@ use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
 // Definitions for time
-pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100;
-pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
+pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100; // 2_629_800
+pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24; // 7_200
 pub const MILLISECS_PER_BLOCK: u32 = 12000;
-pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
+pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber); // 5
+pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 300
 
 // Definitions for currency
 pub const BASE: u128 = 10_000_000_000;
@@ -70,6 +70,8 @@ pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 // Court
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
+/// Lock identifier, mainly used for the locks on the accounts.
+pub const COURT_LOCK_ID: [u8; 8] = *b"zge/colk";
 
 // Global Disputes
 pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
@@ -82,7 +84,7 @@ pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
 // Prediction Markets
 /// The maximum allowed market life time, measured in blocks.
-pub const MAX_MARKET_LIFETIME: BlockNumber = 365 * BLOCKS_PER_DAY;
+pub const MAX_MARKET_LIFETIME: BlockNumber = 4 * BLOCKS_PER_YEAR;
 /// Max. categories in a prediction market.
 pub const MAX_CATEGORIES: u16 = 64;
 /// The dispute_duration is time where users can dispute the outcome.
@@ -94,7 +96,7 @@ pub const MIN_ORACLE_DURATION: BlockNumber = BLOCKS_PER_HOUR;
 pub const MAX_DISPUTE_DURATION: BlockNumber = 30 * BLOCKS_PER_DAY;
 /// Maximum block period for an grace_period.
 /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
-pub const MAX_GRACE_PERIOD: BlockNumber = 365 * BLOCKS_PER_DAY;
+pub const MAX_GRACE_PERIOD: BlockNumber = BLOCKS_PER_YEAR;
 /// Maximum block period for an oracle_duration.
 /// The oracle_duration is a duration where the oracle has to submit its report.
 pub const MAX_ORACLE_DURATION: BlockNumber = 14 * BLOCKS_PER_DAY;

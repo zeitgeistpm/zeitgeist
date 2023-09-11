@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies Ltd.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -34,10 +34,13 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
+use sp_runtime::{
+    traits::{One, SaturatedConversion, Saturating, Zero},
+    Perbill,
+};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
-    traits::Swaps,
+    traits::{DisputeApi, Swaps},
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus, ScoringRule,
@@ -45,6 +48,7 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
+use zrml_global_disputes::GlobalDisputesPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
@@ -88,11 +92,13 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
     let range_start: MomentOf<T> = 100_000u64.saturated_into();
     let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let creator_fee: Perbill = Perbill::zero();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {
         base_asset: Asset::Ztg,
+        creator_fee,
         oracle,
         period,
         deadlines,
@@ -118,7 +124,7 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     let (caller, market_id) =
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
     Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
+        .dispatch_bypass_filter(T::CloseOrigin::try_successful_origin().unwrap())?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
@@ -155,8 +161,8 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     }
 
     Pallet::<T>::do_buy_complete_set(caller.clone(), market_id, LIQUIDITY.saturated_into())?;
-    let close_origin = T::CloseOrigin::successful_origin();
-    let resolve_origin = T::ResolveOrigin::successful_origin();
+    let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+    let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
@@ -201,7 +207,7 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
     )?;
 
     Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
+        .dispatch_bypass_filter(T::CloseOrigin::try_successful_origin().unwrap())?;
     let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
     let end: u32 = match market.period {
         MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
@@ -221,16 +227,14 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
 benchmarks! {
     where_clause {
         where
-            T: pallet_timestamp::Config + zrml_authorized::Config,
+            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_simple_disputes::Config + zrml_court::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }
 
-    admin_destroy_disputed_market{
+    admin_destroy_disputed_market {
         // The number of assets.
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-        // The number of disputes.
-        let d in 1..T::MaxDisputes::get();
         // The number of market ids per open time frame.
         let o in 0..63;
         // The number of market ids per close time frame.
@@ -243,15 +247,20 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
 
+        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            Ok(())
+        })?;
+
         let pool_id = <zrml_market_commons::Pallet::<T>>::market_pool(&market_id)?;
 
-        for i in 1..=d {
-            let outcome = OutcomeReport::Categorical((i % a).saturated_into());
-            let disputor = account("disputor", i, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
-            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
+        let disputor = account("disputor", 1, 0);
+        <T as pallet::Config>::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            u128::MAX.saturated_into(),
+        ).unwrap();
+        let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
@@ -261,30 +270,38 @@ benchmarks! {
         };
 
         for i in 0..o {
+            // shift of 1 to avoid collisions with first market id 0
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 1).into()),
             ).unwrap();
         }
 
         for i in 0..c {
+            // shift of 65 to avoid collisions with `o`
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 65).into()),
             ).unwrap();
         }
 
-        let disputes = Disputes::<T>::get(market_id);
-        let last_dispute = disputes.last().unwrap();
-        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        AuthorizedPallet::<T>::authorize_market_outcome(
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
+            market_id.into(),
+            OutcomeReport::Categorical(0u16),
+        )?;
+
+        let now = <frame_system::Pallet<T>>::block_number();
+        let resolves_at = now.saturating_add(<T as zrml_authorized::Config>::CorrectionPeriod::get());
         for i in 0..r {
+            // shift of 129 to avoid collisions with `o` and `c`
             MarketIdsPerDisputeBlock::<T>::try_mutate(
                 resolves_at,
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 129).into()),
             ).unwrap();
         }
 
-        let destroy_origin = T::DestroyOrigin::successful_origin();
+        let destroy_origin = T::DestroyOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_destroy_market { market_id };
     }: {
         call.dispatch_bypass_filter(destroy_origin)?
@@ -317,29 +334,32 @@ benchmarks! {
         };
 
         for i in 0..o {
+            // shift of 1 to avoid collisions with first market id 0
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 1).into()),
             ).unwrap();
         }
 
         for i in 0..c {
+            // shift of 65 to avoid collisions with `o`
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 65).into()),
             ).unwrap();
         }
 
         let report_at = market.report.unwrap().at;
         let resolves_at = report_at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
+            // shift of 129 to avoid collisions with `o` and `c`
             MarketIdsPerReportBlock::<T>::try_mutate(
                 resolves_at,
-                |ids| ids.try_push(i.into()),
+                |ids| ids.try_push((i + 129).into()),
             ).unwrap();
         }
 
-        let destroy_origin = T::DestroyOrigin::successful_origin();
+        let destroy_origin = T::DestroyOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_destroy_market { market_id };
     }: {
         call.dispatch_bypass_filter(destroy_origin)?
@@ -376,7 +396,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_closed { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }
 
@@ -400,7 +420,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -436,7 +456,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -466,24 +486,21 @@ benchmarks! {
 
         let outcome = OutcomeReport::Scalar(0);
         let disputor = account("disputor", 1, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
-        T::AssetManager::deposit(
+        <T as pallet::Config>::AssetManager::deposit(
             Asset::Ztg,
             &disputor,
-            dispute_bond,
-        )?;
-        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        let disputes = Disputes::<T>::get(market_id);
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+            u128::MAX.saturated_into(),
+        ).unwrap();
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
+
+        let now = <frame_system::Pallet<T>>::block_number();
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Scalar(0),
         )?;
 
-        let last_dispute = disputes.last().unwrap();
-        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        let resolves_at = now.saturating_add(<T as zrml_authorized::Config>::CorrectionPeriod::get());
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
                 resolves_at,
@@ -491,7 +508,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -518,28 +535,25 @@ benchmarks! {
             Ok(())
         })?;
 
-        let outcome = OutcomeReport::Categorical(0u16);
         let disputor = account("disputor", 1, 0);
-        let dispute_bond = crate::pallet::default_dispute_bond::<T>(0_usize);
-        T::AssetManager::deposit(
+        <T as pallet::Config>::AssetManager::deposit(
             Asset::Ztg,
             &disputor,
-            dispute_bond,
-        )?;
-        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+            u128::MAX.saturated_into(),
+        ).unwrap();
+        Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id)?;
 
-        let disputes = Disputes::<T>::get(market_id);
         // Authorize the outcome with the highest number of correct reporters to maximize the
         // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Categorical(0),
         )?;
 
-        let last_dispute = disputes.last().unwrap();
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
-        let resolves_at = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        let now = <frame_system::Pallet<T>>::block_number();
+        let resolves_at = now.saturating_add(<T as zrml_authorized::Config>::CorrectionPeriod::get());
         for i in 0..r {
             MarketIdsPerDisputeBlock::<T>::try_mutate(
                 resolves_at,
@@ -547,7 +561,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -567,7 +581,7 @@ benchmarks! {
             None,
         )?;
 
-        let approve_origin = T::ApproveOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::approve_market { market_id };
     }: { call.dispatch_bypass_filter(approve_origin)? }
 
@@ -580,7 +594,7 @@ benchmarks! {
             None,
         )?;
 
-        let approve_origin = T::ApproveOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
     }: { call.dispatch_bypass_filter(approve_origin)? } verify {}
@@ -616,6 +630,7 @@ benchmarks! {
     }: _(
             RawOrigin::Signed(caller),
             Asset::Ztg,
+            Perbill::zero(),
             oracle,
             period,
             deadlines,
@@ -639,6 +654,7 @@ benchmarks! {
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
         Call::<T>::create_market {
             base_asset: Asset::Ztg,
+            creator_fee: Perbill::zero(),
             oracle: oracle.clone(),
             period: period.clone(),
             deadlines,
@@ -651,7 +667,7 @@ benchmarks! {
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         let market_id = <zrml_market_commons::Pallet::<T>>::latest_market_id()?;
 
-        let approve_origin = T::ApproveOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; 1024];
         Call::<T>::request_edit{ market_id, edit_reason }
         .dispatch_bypass_filter(approve_origin)?;
@@ -790,7 +806,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+            market.dispute_mechanism = MarketDisputeMechanism::Court;
             Ok(())
         })?;
 
@@ -801,49 +817,58 @@ benchmarks! {
             market_ids_1.try_push(i.saturated_into()).unwrap();
         }
 
-        let max_dispute_len = T::MaxDisputes::get();
-        for i in 0..max_dispute_len {
-            // ensure that the MarketIdsPerDisputeBlock does not interfere
-            // with the start_global_dispute execution block
-            <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
-            let disputor: T::AccountId = account("Disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            let _ = Call::<T>::dispute {
-                market_id,
-                outcome: OutcomeReport::Scalar(i.into()),
-            }
-            .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+        <zrml_court::Pallet<T>>::on_initialize(1u32.into());
+        <frame_system::Pallet<T>>::set_block_number(1u32.into());
+
+        let min_amount = <T as zrml_court::Config>::MinJurorStake::get();
+        for i in 0..<zrml_court::Pallet<T>>::necessary_draws_weight(0usize) {
+            let juror: T::AccountId = account("Jurori", i.try_into().unwrap(), 0);
+            <T as pallet::Config>::AssetManager::deposit(
+                Asset::Ztg,
+                &juror,
+                (u128::MAX / 2).saturated_into(),
+            ).unwrap();
+            <zrml_court::Pallet<T>>::join_court(
+                RawOrigin::Signed(juror.clone()).into(),
+                min_amount + i.saturated_into(),
+            )?;
         }
 
+        let disputor: T::AccountId = account("Disputor", 1, 0);
+        <T as pallet::Config>::AssetManager::deposit(
+            Asset::Ztg,
+            &disputor,
+            u128::MAX.saturated_into(),
+        ).unwrap();
+        let _ = Call::<T>::dispute {
+            market_id,
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(disputor).into())?;
+
         let market = <zrml_market_commons::Pallet<T>>::market(&market_id.saturated_into()).unwrap();
-        let disputes = Disputes::<T>::get(market_id);
-        let last_dispute = disputes.last().unwrap();
-        let dispute_duration_ends_at_block = last_dispute.at + market.deadlines.dispute_duration;
+        let appeal_end = T::Court::get_auto_resolve(&market_id, &market).result.unwrap();
         let mut market_ids_2: BoundedVec<MarketIdOf<T>, CacheSize> = BoundedVec::try_from(
             vec![market_id],
         ).unwrap();
         for i in 1..n {
             market_ids_2.try_push(i.saturated_into()).unwrap();
         }
-        MarketIdsPerDisputeBlock::<T>::insert(dispute_duration_ends_at_block, market_ids_2);
+        MarketIdsPerDisputeBlock::<T>::insert(appeal_end, market_ids_2);
 
-        let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
-        <frame_system::Pallet<T>>::set_block_number(current_block);
+        <frame_system::Pallet<T>>::set_block_number(appeal_end - 1u64.saturated_into::<T::BlockNumber>());
 
-        #[cfg(feature = "with-global-disputes")]
-        {
-            let global_dispute_end = current_block + T::GlobalDisputePeriod::get();
-            // the complexity depends on MarketIdsPerDisputeBlock at the current block
-            // this is because a variable number of market ids need to be decoded from the storage
-            MarketIdsPerDisputeBlock::<T>::insert(global_dispute_end, market_ids_1);
-        }
+        let now = <frame_system::Pallet<T>>::block_number();
+
+        let add_outcome_end = now +
+            <T as Config>::GlobalDisputes::get_add_outcome_period();
+        let vote_end = add_outcome_end + <T as Config>::GlobalDisputes::get_vote_period();
+        // the complexity depends on MarketIdsPerDisputeBlock at the current block
+        // this is because a variable number of market ids need to be decoded from the storage
+        MarketIdsPerDisputeBlock::<T>::insert(vote_end, market_ids_1);
 
         let call = Call::<T>::start_global_dispute { market_id };
     }: {
-        #[cfg(feature = "with-global-disputes")]
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
-        #[cfg(not(feature = "with-global-disputes"))]
-        let _ = call.dispatch_bypass_filter(RawOrigin::Signed(caller).into());
     }
 
     dispute_authorized {
@@ -861,9 +886,7 @@ benchmarks! {
 
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
 
-        // only one dispute allowed for authorized mdm
-        let dispute_outcome = OutcomeReport::Scalar(1u128);
-        let call = Call::<T>::dispute { market_id, outcome: dispute_outcome };
+        let call = Call::<T>::dispute { market_id };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
@@ -911,12 +934,10 @@ benchmarks! {
         Pallet::<T>::dispute(
             RawOrigin::Signed(caller).into(),
             market_id,
-            OutcomeReport::Categorical(0),
         )?;
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Categorical(0),
         )?;
@@ -956,12 +977,10 @@ benchmarks! {
         Pallet::<T>::dispute(
             RawOrigin::Signed(caller).into(),
             market_id,
-            OutcomeReport::Scalar(1)
         )?;
-        // Authorize the outcome with the highest number of correct reporters to maximize the
-        // number of transfers required (0 has (d+1)//2 reports, 1 has d//2 reports).
+
         AuthorizedPallet::<T>::authorize_market_outcome(
-            T::AuthorizedDisputeResolutionOrigin::successful_origin(),
+            T::AuthorizedDisputeResolutionOrigin::try_successful_origin().unwrap(),
             market_id.into(),
             OutcomeReport::Scalar(0),
         )?;
@@ -1037,7 +1056,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let reject_origin = T::RejectOrigin::successful_origin();
+        let reject_origin = T::RejectOrigin::try_successful_origin().unwrap();
         let reject_reason: Vec<u8> = vec![0; r as usize];
         let call = Call::<T>::reject_market { market_id, reject_reason };
     }: { call.dispatch_bypass_filter(reject_origin)? }
@@ -1062,7 +1081,7 @@ benchmarks! {
         })?;
 
         let outcome = OutcomeReport::Categorical(0);
-        let close_origin = T::CloseOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
         Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
         let end : u32 = match market.period {

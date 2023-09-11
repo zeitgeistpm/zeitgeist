@@ -21,12 +21,13 @@ use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Perbill;
 use sp_runtime::RuntimeDebug;
 
 /// Types
 ///
 /// * `AI`: Account id
-/// * `BA`: Balance type for bonds
+/// * `BA`: Balance type
 /// * `BN`: Block number
 /// * `M`: Moment (time moment)
 /// * `A`: Asset
@@ -38,8 +39,8 @@ pub struct Market<AI, BA, BN, M, A> {
     pub creator: AI,
     /// Creation type.
     pub creation: MarketCreation,
-    /// The fee the creator gets from each winning share.
-    pub creator_fee: u8,
+    /// A fee that is charged each trade and given to the market creator.
+    pub creator_fee: Perbill,
     /// Oracle that reports the outcome of this market.
     pub oracle: AI,
     /// Metadata for the market, usually a content address of IPFS
@@ -90,6 +91,7 @@ pub struct MarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
     pub outsider: Option<Bond<AI, BA>>,
+    pub dispute: Option<Bond<AI, BA>>,
     pub close_request: Option<Bond<AI, BA>>,
     pub close_dispute: Option<Bond<AI, BA>>,
 }
@@ -104,6 +106,7 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
         value_or_default(&self.creation)
             .saturating_add(value_or_default(&self.oracle))
             .saturating_add(value_or_default(&self.outsider))
+            .saturating_add(value_or_default(&self.dispute))
             .saturating_add(value_or_default(&self.close_request))
             .saturating_add(value_or_default(&self.close_dispute))
     }
@@ -116,6 +119,7 @@ impl<AI, BA> Default for MarketBonds<AI, BA> {
             creation: None,
             oracle: None,
             outsider: None,
+            dispute: None,
             close_request: None,
             close_dispute: None,
         }
@@ -160,7 +164,7 @@ where
         AI::max_encoded_len()
             .saturating_add(A::max_encoded_len())
             .saturating_add(MarketCreation::max_encoded_len())
-            .saturating_add(u8::max_encoded_len())
+            .saturating_add(Perbill::max_encoded_len())
             .saturating_add(AI::max_encoded_len())
             // We assume that at max. a 512 bit hash function is used
             .saturating_add(u8::max_encoded_len().saturating_mul(68))
@@ -187,11 +191,32 @@ pub enum MarketCreation {
     Advised,
 }
 
+/// Defines a global dispute item for the initialisation of a global dispute.
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct GlobalDisputeItem<AccountId, Balance> {
+    /// The account that already paid somehow for the outcome.
+    pub owner: AccountId,
+    /// The outcome that was already paid for
+    /// and should be added as vote outcome inside global disputes.
+    pub outcome: OutcomeReport,
+    /// The initial amount added in the global dispute vote system initially for the outcome.
+    pub initial_vote_amount: Balance,
+}
+
+// TODO to remove, when Disputes storage item is removed
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct MarketDispute<AccountId, BlockNumber> {
+pub struct OldMarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
     pub outcome: OutcomeReport,
+}
+
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct MarketDispute<AccountId, BlockNumber, Balance> {
+    pub at: BlockNumber,
+    pub by: AccountId,
+    pub outcome: OutcomeReport,
+    pub bond: Balance,
 }
 
 /// How a market should resolve disputes
@@ -382,7 +407,7 @@ mod tests {
             base_asset: Asset::Ztg,
             creator: 1,
             creation: MarketCreation::Permissionless,
-            creator_fee: 2,
+            creator_fee: Default::default(),
             oracle: 3,
             metadata: vec![4u8; 5],
             market_type, // : MarketType::Categorical(6),

@@ -167,6 +167,7 @@ macro_rules! generate_generic_genesis_function {
                     inflation_config: acs.inflation_info,
                     delegations: acs.nominations,
                     parachain_bond_reserve_percent: acs.parachain_bond_reserve_percent,
+                    num_selected_candidates: acs.num_selected_candidates,
                 },
                 #[cfg(feature = "parachain")]
                 parachain_system: Default::default(),
