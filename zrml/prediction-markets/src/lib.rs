@@ -94,6 +94,8 @@ mod pallet {
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
     >;
+    pub(crate) type ReportOf<T> =
+        Report<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::BlockNumber>;
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
@@ -1286,100 +1288,30 @@ mod pallet {
             outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
-
             let current_block = <frame_system::Pallet<T>>::block_number();
             let market_report = Report { at: current_block, by: sender.clone(), outcome };
-
-            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
-                ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-                Self::ensure_market_is_closed(market)?;
-                ensure!(
-                    market.matches_outcome_report(&market_report.outcome),
-                    Error::<T>::OutcomeMismatch
-                );
-
-                let mut should_check_origin = false;
-                //NOTE: Saturating operation in following block may saturate to u32::MAX value
-                //      but that will be the case after thousands of years time. So it is fine.
-                match market.period {
-                    MarketPeriod::Block(ref range) => {
-                        let grace_period_end =
-                            range.end.saturating_add(market.deadlines.grace_period);
-                        ensure!(
-                            grace_period_end <= current_block,
-                            Error::<T>::NotAllowedToReportYet
-                        );
-                        let oracle_duration_end =
-                            grace_period_end.saturating_add(market.deadlines.oracle_duration);
-                        if current_block <= oracle_duration_end {
-                            should_check_origin = true;
-                        }
-                    }
-                    MarketPeriod::Timestamp(ref range) => {
-                        let grace_period_in_moments: MomentOf<T> =
-                            market.deadlines.grace_period.saturated_into::<u32>().into();
-                        let grace_period_in_ms =
-                            grace_period_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        let grace_period_end = range.end.saturating_add(grace_period_in_ms);
-                        let now = <zrml_market_commons::Pallet<T>>::now();
-                        ensure!(grace_period_end <= now, Error::<T>::NotAllowedToReportYet);
-                        let oracle_duration_in_moments: MomentOf<T> =
-                            market.deadlines.oracle_duration.saturated_into::<u32>().into();
-                        let oracle_duration_in_ms =
-                            oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        let oracle_duration_end =
-                            grace_period_end.saturating_add(oracle_duration_in_ms);
-                        if now <= oracle_duration_end {
-                            should_check_origin = true;
-                        }
-                    }
-                }
-
-                let sender_is_oracle = sender == market.oracle;
-                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
-                let sender_is_outsider = !sender_is_oracle && !origin_has_permission;
-
-                if should_check_origin {
-                    ensure!(
-                        sender_is_oracle || origin_has_permission,
-                        Error::<T>::ReporterNotOracle
-                    );
-                } else if sender_is_outsider {
-                    let outsider_bond = T::OutsiderBond::get();
-
-                    market.bonds.outsider = Some(Bond::new(sender.clone(), outsider_bond));
-
-                    T::AssetManager::reserve_named(
-                        &Self::reserve_id(),
-                        Asset::Ztg,
-                        &sender,
-                        outsider_bond,
-                    )?;
-                }
-
-                market.report = Some(market_report.clone());
-                market.status = MarketStatus::Reported;
-
-                Ok(())
-            })?;
-
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let block_after_dispute_duration =
-                current_block.saturating_add(market.deadlines.dispute_duration);
-            let ids_len = MarketIdsPerReportBlock::<T>::try_mutate(
-                block_after_dispute_duration,
-                |ids| -> Result<u32, DispatchError> {
-                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                    Ok(ids.len() as u32)
-                },
-            )?;
-
+            ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
+            Self::ensure_market_is_closed(&market)?;
+            ensure!(
+                market.matches_outcome_report(&market_report.outcome),
+                Error::<T>::OutcomeMismatch
+            );
+            let weight = if market.dispute_mechanism.is_some() {
+                Self::report_market_with_dispute_mechanism(
+                    origin,
+                    market_id,
+                    market_report.clone(),
+                )?
+            } else {
+                Self::report_and_resolve_market(origin, market_id, market_report.clone())?
+            };
             Self::deposit_event(Event::MarketReported(
                 market_id,
                 MarketStatus::Reported,
                 market_report,
             ));
-            Ok(Some(T::WeightInfo::report(ids_len)).into())
+            Ok(weight)
         }
 
         /// Sells a complete set of outcomes shares for a market.
@@ -1856,7 +1788,7 @@ mod pallet {
         /// \[market_id, reject_reason\]
         MarketRejected(MarketIdOf<T>, RejectReason<T>),
         /// A market has been reported on. \[market_id, new_market_status, reported_outcome\]
-        MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
+        MarketReported(MarketIdOf<T>, MarketStatus, ReportOf<T>),
         /// A market has been resolved. \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
@@ -2667,7 +2599,7 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             resolved_outcome: &OutcomeReport,
-            report: &Report<T::AccountId, T::BlockNumber>,
+            report: &ReportOf<T>,
         ) -> Result<NegativeImbalanceOf<T>, DispatchError> {
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
@@ -3080,7 +3012,7 @@ mod pallet {
             market_type: MarketType,
             dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
-            report: Option<Report<T::AccountId, T::BlockNumber>>,
+            report: Option<ReportOf<T>>,
             resolved_outcome: Option<OutcomeReport>,
             bonds: MarketBonds<T::AccountId, BalanceOf<T>>,
         ) -> Result<MarketOf<T>, DispatchError> {
@@ -3131,6 +3063,108 @@ mod pallet {
                 scoring_rule,
                 bonds,
             })
+        }
+
+        fn report_market_with_dispute_mechanism(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            report: ReportOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin.clone())?;
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                let mut should_check_origin = false;
+                //NOTE: Saturating operation in following block may saturate to u32::MAX value
+                //      but that will be the case after thousands of years time. So it is fine.
+                match market.period {
+                    MarketPeriod::Block(ref range) => {
+                        let grace_period_end =
+                            range.end.saturating_add(market.deadlines.grace_period);
+                        ensure!(grace_period_end <= report.at, Error::<T>::NotAllowedToReportYet);
+                        let oracle_duration_end =
+                            grace_period_end.saturating_add(market.deadlines.oracle_duration);
+                        if report.at <= oracle_duration_end {
+                            should_check_origin = true;
+                        }
+                    }
+                    MarketPeriod::Timestamp(ref range) => {
+                        let grace_period_in_moments: MomentOf<T> =
+                            market.deadlines.grace_period.saturated_into::<u32>().into();
+                        let grace_period_in_ms =
+                            grace_period_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let grace_period_end = range.end.saturating_add(grace_period_in_ms);
+                        let now = <zrml_market_commons::Pallet<T>>::now();
+                        ensure!(grace_period_end <= now, Error::<T>::NotAllowedToReportYet);
+                        let oracle_duration_in_moments: MomentOf<T> =
+                            market.deadlines.oracle_duration.saturated_into::<u32>().into();
+                        let oracle_duration_in_ms =
+                            oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let oracle_duration_end =
+                            grace_period_end.saturating_add(oracle_duration_in_ms);
+                        if now <= oracle_duration_end {
+                            should_check_origin = true;
+                        }
+                    }
+                }
+
+                let sender_is_oracle = sender == market.oracle;
+                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
+                let sender_is_outsider = !sender_is_oracle && !origin_has_permission;
+
+                if should_check_origin {
+                    ensure!(
+                        sender_is_oracle || origin_has_permission,
+                        Error::<T>::ReporterNotOracle
+                    );
+                } else if sender_is_outsider {
+                    let outsider_bond = T::OutsiderBond::get();
+
+                    market.bonds.outsider = Some(Bond::new(sender.clone(), outsider_bond));
+
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &sender,
+                        outsider_bond,
+                    )?;
+                }
+
+                market.report = Some(report.clone());
+                market.status = MarketStatus::Reported;
+
+                Ok(())
+            })?;
+
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let block_after_dispute_duration =
+                report.at.saturating_add(market.deadlines.dispute_duration);
+            let ids_len = MarketIdsPerReportBlock::<T>::try_mutate(
+                block_after_dispute_duration,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
+
+            Ok(Some(T::WeightInfo::report(ids_len)).into())
+        }
+
+        fn report_and_resolve_market(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            market_report: ReportOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                let sender = ensure_signed(origin.clone())?;
+                let sender_is_oracle = sender == market.oracle;
+                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
+                ensure!(sender_is_oracle || origin_has_permission, Error::<T>::ReporterNotOracle);
+                market.report = Some(market_report.clone());
+                market.status = MarketStatus::Reported;
+                Ok(())
+            })?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            Self::resolve(&market_id, &market)?;
+            Ok(Some(T::WeightInfo::report(0)).into()) // TODO
         }
     }
 
