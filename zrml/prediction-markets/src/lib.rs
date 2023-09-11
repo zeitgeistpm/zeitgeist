@@ -715,6 +715,7 @@ mod pallet {
         pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
             base_asset: Asset<MarketIdOf<T>>,
+            creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -730,6 +731,7 @@ mod pallet {
             let create_market_weight = Self::create_market(
                 origin.clone(),
                 base_asset,
+                creator_fee,
                 oracle,
                 period,
                 deadlines,
@@ -769,6 +771,7 @@ mod pallet {
         pub fn create_market(
             origin: OriginFor<T>,
             base_asset: Asset<MarketIdOf<T>>,
+            creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -797,7 +800,7 @@ mod pallet {
             let market = Self::construct_market(
                 base_asset,
                 sender.clone(),
-                0_u8,
+                creator_fee,
                 oracle,
                 period,
                 deadlines,
@@ -1625,6 +1628,9 @@ mod pallet {
         #[pallet::constant]
         type MinCategories: Get<u16>;
 
+        /// A upper bound for the fee that is charged each trade and given to the market creator.
+        type MaxCreatorFee: Get<Perbill>;
+
         /// The shortest period of collecting subsidy for a Rikiddo market.
         #[pallet::constant]
         type MinSubsidyPeriod: Get<MomentOf<Self>>;
@@ -1814,6 +1820,8 @@ mod pallet {
         UnregisteredForeignAsset,
         /// The start of the global dispute for this market happened already.
         GlobalDisputeExistsAlready,
+        /// The fee is too high.
+        FeeTooHigh,
     }
 
     #[pallet::event]
@@ -3050,7 +3058,7 @@ mod pallet {
         fn construct_market(
             base_asset: Asset<MarketIdOf<T>>,
             creator: T::AccountId,
-            creator_fee: u8,
+            creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             deadlines: Deadlines<T::BlockNumber>,
@@ -3076,6 +3084,7 @@ mod pallet {
                 _ => false,
             };
 
+            ensure!(creator_fee <= T::MaxCreatorFee::get(), Error::<T>::FeeTooHigh);
             ensure!(valid_base_asset, Error::<T>::InvalidBaseAsset);
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);

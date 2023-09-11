@@ -382,7 +382,7 @@ where
     zeitgeist_primitives::types::Market {
         base_asset: Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
-        creator_fee: 0,
+        creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
         dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,

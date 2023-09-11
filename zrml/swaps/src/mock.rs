@@ -29,25 +29,33 @@
 )]
 
 use crate as zrml_swaps;
-use frame_support::{construct_runtime, parameter_types, traits::Everything};
+use frame_support::{
+    construct_runtime, parameter_types,
+    traits::{Contains, Everything},
+};
+use orml_traits::parameter_type_with_key;
+use sp_arithmetic::Perbill;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
     DispatchError,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
-        MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinSubsidy, MinWeight,
-        MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
+        BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, GetNativeCurrencyId,
+        LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinSubsidy, MinWeight, MinimumPeriod,
+        PmPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
+        ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -55,6 +63,23 @@ pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
+
+pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
+pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
+pub const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 67);
+pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
+pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
+
+pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+pub const BASE_ASSET: Asset<MarketId> = if let Some(asset) = ASSETS.last() {
+    *asset
+} else {
+    panic!("Invalid asset vector");
+};
+
+pub const DEFAULT_MARKET_ID: MarketId = 0;
+pub const DEFAULT_MARKET_ORACLE: AccountIdTest = DAVE;
+pub const DEFAULT_MARKET_CREATOR: AccountIdTest = DAVE;
 
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
@@ -142,11 +167,46 @@ impl orml_currencies::Config for Runtime {
     type WeightInfo = ();
 }
 
+parameter_type_with_key! {
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+        match currency_id {
+            &BASE_ASSET => ExistentialDeposit::get(),
+            Asset::Ztg => ExistentialDeposit::get(),
+            _ => 0,
+        }
+    };
+}
+
+pub struct DustRemovalWhitelist;
+
+impl Contains<AccountIdTest> for DustRemovalWhitelist
+where
+    frame_support::PalletId: AccountIdConversion<AccountIdTest>,
+{
+    fn contains(ai: &AccountIdTest) -> bool {
+        let pallets = vec![LiquidityMiningPalletId::get(), PmPalletId::get(), SwapsPalletId::get()];
+
+        if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {
+            return pallets.contains(&pallet_id.0);
+        }
+
+        for pallet_id in pallets {
+            let pallet_acc: AccountIdTest = pallet_id.into_account_truncating();
+
+            if pallet_acc == *ai {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
     type CurrencyId = CurrencyId;
-    type DustRemovalWhitelist = Everything;
+    type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
@@ -219,13 +279,20 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut storage =
+            frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
-            .assimilate_storage(&mut t)
+            .assimilate_storage(&mut storage)
             .unwrap();
 
-        t.into()
+        let mut ext = sp_io::TestExternalities::from(storage);
+
+        ext.execute_with(|| {
+            MarketCommons::push_market(mock_market(4)).unwrap();
+        });
+
+        ext
     }
 }
 
@@ -256,5 +323,27 @@ sp_api::mock_impl_runtime_apis! {
         ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
             Swaps::get_all_spot_prices(pool_id, with_fees)
         }
+    }
+}
+
+pub(super) fn mock_market(
+    categories: u16,
+) -> Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> {
+    Market {
+        base_asset: BASE_ASSET,
+        creation: MarketCreation::Permissionless,
+        creator_fee: Perbill::from_parts(0),
+        creator: DEFAULT_MARKET_CREATOR,
+        market_type: MarketType::Categorical(categories),
+        dispute_mechanism: MarketDisputeMechanism::Authorized,
+        metadata: vec![0; 50],
+        oracle: DEFAULT_MARKET_ORACLE,
+        period: MarketPeriod::Block(0..1),
+        deadlines: Deadlines::default(),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: MarketStatus::Active,
+        bonds: MarketBonds::default(),
     }
 }

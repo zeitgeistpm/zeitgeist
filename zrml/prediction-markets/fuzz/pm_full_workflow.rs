@@ -22,9 +22,13 @@ use arbitrary::Arbitrary;
 use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::{
-    Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
-    OutcomeReport, ScoringRule,
+use sp_arithmetic::Perbill;
+use zeitgeist_primitives::{
+    constants::mock::MaxCreatorFee,
+    types::{
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType,
+        MultiHash, OutcomeReport, ScoringRule,
+    },
 };
 use zrml_prediction_markets::mock::{ExtBuilder, PredictionMarkets, RuntimeOrigin, System};
 
@@ -39,9 +43,13 @@ fuzz_target!(|data: Data| {
             oracle_duration: 1_u32.into(),
             dispute_duration: 3_u32.into(),
         };
+        let max_parts_per_bill = MaxCreatorFee::get().deconstruct();
+        let bounded_parts = data.create_scalar_market_fee % max_parts_per_bill as u128;
+        let fee = Perbill::from_parts(bounded_parts.try_into().unwrap());
         let _ = PredictionMarkets::create_market(
             RuntimeOrigin::signed(data.create_scalar_market_origin.into()),
             Asset::Ztg,
+            fee,
             data.create_scalar_market_oracle.into(),
             MarketPeriod::Block(data.create_scalar_market_period),
             deadlines,
@@ -95,6 +103,7 @@ fuzz_target!(|data: Data| {
 struct Data {
     create_scalar_market_origin: u8,
     create_scalar_market_oracle: u8,
+    create_scalar_market_fee: u128,
     create_scalar_market_period: Range<u64>,
     create_scalar_market_metadata: MultiHash,
     create_scalar_market_creation: u8,

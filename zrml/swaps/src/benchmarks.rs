@@ -31,27 +31,48 @@ use super::*;
 use crate::Pallet as Swaps;
 use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
-use frame_support::{dispatch::UnfilteredDispatchable, traits::Get, weights::Weight};
+use frame_support::{
+    dispatch::{DispatchResult, UnfilteredDispatchable},
+    traits::{Currency, Get},
+    weights::Weight,
+};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-    traits::{SaturatedConversion, Zero},
-    DispatchError,
+    traits::{CheckedSub, SaturatedConversion, Zero},
+    DispatchError, Perbill,
 };
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
-    traits::Swaps as _,
+    traits::{MarketCommonsPalletApi, Swaps as _},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
         MarketPeriod, MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
 
+const DEFAULT_CREATOR_FEE: Perbill = Perbill::from_perthousand(1);
 const LIQUIDITY: u128 = 100 * BASE;
+
+type MarketOf<T> = zeitgeist_primitives::types::Market<
+    <T as frame_system::Config>::AccountId,
+    <<<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance,
+    <<T as Config>::MarketCommons as MarketCommonsPalletApi>::BlockNumber,
+    <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment,
+    Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+>;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+}
+
+fn set_default_creator_fee<T: Config>(market_id: MarketIdOf<T>) -> DispatchResult {
+    T::MarketCommons::mutate_market(&market_id, |market: &mut MarketOf<T>| {
+        market.creator_fee = DEFAULT_CREATOR_FEE;
+        Ok(())
+    })
 }
 
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
@@ -102,6 +123,32 @@ fn generate_assets<T: Config>(
     assets
 }
 
+fn push_default_market<T: Config>(caller: T::AccountId, oracle: T::AccountId) -> MarketIdOf<T> {
+    let market = Market {
+        base_asset: Asset::Ztg,
+        creation: MarketCreation::Permissionless,
+        creator_fee: Perbill::zero(),
+        creator: caller,
+        market_type: MarketType::Categorical(3),
+        dispute_mechanism: MarketDisputeMechanism::Authorized,
+        metadata: vec![0; 50],
+        oracle,
+        period: MarketPeriod::Block(0u32.into()..1u32.into()),
+        deadlines: Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 1_u32.into(),
+        },
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: MarketStatus::Active,
+        bonds: MarketBonds::default(),
+    };
+
+    T::MarketCommons::push_market(market).unwrap()
+}
+
 fn initialize_pool<T: Config>(
     caller: &T::AccountId,
     asset_count: Option<usize>,
@@ -116,7 +163,6 @@ fn initialize_pool<T: Config>(
         }
     };
 
-    let market_id = MarketIdOf::<T>::from(0u8);
     let assets = generate_assets::<T>(caller, asset_count_unwrapped, asset_amount);
     let some_weights = if weights.is_some() {
         weights
@@ -124,6 +170,7 @@ fn initialize_pool<T: Config>(
         Some(vec![T::MinWeight::get(); asset_count_unwrapped])
     };
     let base_asset = *assets.last().unwrap();
+    let market_id = push_default_market::<T>(caller.clone(), caller.clone());
 
     let pool_id = Pallet::<T>::create_pool(
         caller.clone(),
@@ -139,6 +186,7 @@ fn initialize_pool<T: Config>(
 
     (pool_id, base_asset, assets, market_id)
 }
+
 // Creates a pool containing `asset_count` (default: max assets) assets.
 // Returns `PoolId`, `Vec<Asset<...>>`, ``MarketId`
 fn bench_create_pool<T: Config>(
@@ -179,7 +227,7 @@ benchmarks! {
             Market {
                 base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
-                creator_fee: 0,
+                creator_fee: Perbill::zero(),
                 creator: caller.clone(),
                 market_type: MarketType::Categorical(category_count),
                 dispute_mechanism: MarketDisputeMechanism::Authorized,
@@ -220,7 +268,7 @@ benchmarks! {
             Market {
                 base_asset: Asset::Ztg,
                 creation: MarketCreation::Permissionless,
-                creator_fee: 0,
+                creator_fee: Perbill::zero(),
                 creator: caller.clone(),
                 market_type: MarketType::Scalar(0..=99),
                 dispute_mechanism: MarketDisputeMechanism::Authorized,
@@ -276,7 +324,7 @@ benchmarks! {
         // Create `a` pools with huge balances and only a relatively small difference between them
         // to cause maximum iterations.
         for i in 0..a {
-            let market_id = i.into();
+            let market_id = push_default_market::<T>(caller.clone(), caller.clone());
             let pool_id = Pallet::<T>::create_pool(
                 caller.clone(),
                 assets.clone(),
@@ -441,7 +489,7 @@ benchmarks! {
 
         // Create a pool with huge balances and only a relatively small difference between them to
         // cause at least 30 iterations.
-        let market_id = 0u8.into();
+        let market_id = push_default_market::<T>(caller.clone(), caller.clone());
         let pool_id = Pallet::<T>::create_pool(
             caller,
             assets.clone(),
@@ -498,11 +546,12 @@ benchmarks! {
 
         // Create a pool with huge balances and only a relatively small difference between them to
         // cause at least 30 iterations.
+        let market_id = push_default_market::<T>(caller.clone(), caller.clone());
         let pool_id = Pallet::<T>::create_pool(
             caller,
             assets.clone(),
             base_asset,
-            0u8.into(),
+            market_id,
             ScoringRule::CPMM,
             Some(Zero::zero()),
             Some(balance),
@@ -547,11 +596,12 @@ benchmarks! {
         weights.push(outcome_count as u128 * outcome_weight);
 
         // Create a pool with equal balances to ensure that the total spot price is equal to 1.
+        let market_id = push_default_market::<T>(caller.clone(), caller.clone());
         let pool_id = Pallet::<T>::create_pool(
             caller,
             assets,
             base_asset,
-            0u8.into(),
+            market_id,
             ScoringRule::CPMM,
             Some(Zero::zero()),
             Some(balance),
@@ -732,7 +782,7 @@ benchmarks! {
         let mut weights = vec![weight_in; asset_count as usize];
         weights[asset_count as usize - 1] = weight_out;
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
+        let (pool_id, assets, market_id) = bench_create_pool::<T>(
             caller.clone(),
             Some(asset_count as usize),
             Some(balance),
@@ -740,6 +790,7 @@ benchmarks! {
             false,
             Some(weights),
         );
+        set_default_creator_fee::<T>(market_id)?;
         let asset_in = assets[0];
         T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
         let asset_out = assets[asset_count as usize - 1];
@@ -787,18 +838,19 @@ benchmarks! {
         // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_out: BalanceOf<T> = bmul(
+        let mut asset_amount_out: BalanceOf<T> = bmul(
             balance.saturated_into(),
             T::MaxOutRatio::get().saturated_into(),
         )
         .unwrap()
         .saturated_into();
+        asset_amount_out = Perbill::one().checked_sub(&DEFAULT_CREATOR_FEE).unwrap().mul_floor(asset_amount_out);
         let weight_out = T::MinWeight::get();
         let weight_in = 4 * weight_out;
         let mut weights = vec![weight_out; asset_count as usize];
         weights[0] = weight_in;
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
+        let (pool_id, assets, market_id) = bench_create_pool::<T>(
             caller.clone(),
             Some(asset_count as usize),
             Some(balance),
@@ -806,6 +858,7 @@ benchmarks! {
             false,
             Some(weights),
         );
+        set_default_creator_fee::<T>(market_id)?;
         let asset_in = assets[0];
         T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
         let asset_out = assets[asset_count as usize - 1];

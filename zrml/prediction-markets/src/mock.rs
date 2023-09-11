@@ -42,13 +42,14 @@ use zeitgeist_primitives::{
         BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId, ExistentialDeposit,
         ExistentialDeposits, ExitFee, GetNativeCurrencyId, InflationPeriod,
         LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
-        MaxCourtParticipants, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
-        MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval, SimpleDisputesPalletId,
-        SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
+        MaxEditReasonLen, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
+        MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
+        MinJurorStake, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval,
+        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -119,6 +120,7 @@ impl crate::Config for Runtime {
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
