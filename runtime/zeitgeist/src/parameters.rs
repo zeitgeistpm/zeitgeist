@@ -205,6 +205,8 @@ parameter_types! {
     pub const DisputeBond: Balance = 2_000 * BASE;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
+    /// Max creator fee, bounds the fraction per trade volume that is moved to the market creator.
+    pub const MaxCreatorFee: Perbill = Perbill::from_percent(1);
     /// Maximum block period for a dispute.
     pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
     /// Maximum number of disputes.

@@ -25,6 +25,7 @@ use crate::{
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
+use sp_arithmetic::Perbill;
 
 // Authorized
 parameter_types! {
@@ -75,6 +76,7 @@ parameter_types! {
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const MaxCategories: u16 = 10;
+    pub const MaxCreatorFee: Perbill = Perbill::from_percent(1);
     pub const MaxDisputeDuration: BlockNumber = 50;
     pub const MaxDisputes: u16 = 6;
     pub const MaxEditReasonLen: u32 = 1024;
