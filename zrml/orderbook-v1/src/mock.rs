@@ -26,11 +26,12 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDeposits, MaxLocks, MaxReserves, BASE,
+        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
+        MaxReserves, MinimumPeriod, OrderbookPalletId, PmPalletId, BASE,
     },
     types::{
-        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -45,17 +46,20 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
     }
 );
 
 impl crate::Config for Runtime {
-    type Currency = Balances;
+    type AssetManager = AssetManager;
     type RuntimeEvent = ();
-    type MarketId = MarketId;
-    type Shares = Tokens;
+    type MarketCommons = MarketCommons;
+    type PalletId = OrderbookPalletId;
     type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
@@ -86,6 +90,13 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
+impl orml_currencies::Config for Runtime {
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
+    type WeightInfo = ();
+}
+
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
@@ -112,6 +123,20 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
+    type Timestamp = Timestamp;
+}
+
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
@@ -129,6 +154,10 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        t.into()
+        let mut t: sp_io::TestExternalities = t.into();
+
+        t.execute_with(|| System::set_block_number(1));
+
+        t
     }
 }

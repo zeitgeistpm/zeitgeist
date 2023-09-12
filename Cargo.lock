@@ -14560,14 +14560,17 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+ "zrml-market-commons",
  "zrml-orderbook-v1",
 ]
 

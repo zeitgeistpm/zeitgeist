@@ -49,6 +49,7 @@ pub mod mock;
 #[cfg(test)]
 mod tests;
 mod types;
+mod utils;
 pub mod weights;
 
 #[frame_support::pallet]
@@ -129,7 +130,6 @@ mod pallet {
         OrderPlaced {
             order_hash: HashOf<T>,
             order_id: OrderId,
-            maker: T::AccountId,
             order: OrderOf<T>,
         },
         OrderCancelled {
@@ -216,11 +216,9 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             order_hash: T::Hash,
-            amount: BalanceOf<T>,
+            portion: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-
-            ensure!(!amount.is_zero(), Error::<T>::AmountIsZero);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
@@ -228,6 +226,8 @@ mod pallet {
 
             let mut order_data =
                 <Orders<T>>::get(order_hash).ok_or(Error::<T>::OrderDoesNotExist)?;
+            let amount = portion.unwrap_or(order_data.amount);
+            ensure!(!amount.is_zero(), Error::<T>::AmountIsZero);
             ensure!(amount <= order_data.amount, Error::<T>::AmountTooHighForOrder);
             let cost = amount
                 .checked_mul(&order_data.price)
@@ -261,7 +261,7 @@ mod pallet {
                         order_data.outcome_asset,
                         &maker,
                         &who,
-                        order_data.amount,
+                        amount,
                         BalanceStatus::Free,
                     )?;
 
@@ -321,7 +321,7 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
-            let order_hash = Self::order_hash(&who, market_id, order_id);
+            let order_hash = Self::order_hash(&who, order_id);
             let order = Order {
                 market_id,
                 side: side.clone(),
@@ -352,12 +352,7 @@ mod pallet {
 
             <Orders<T>>::insert(order_hash, order.clone());
             <NextOrderId<T>>::put(next_order_id);
-            Self::deposit_event(Event::OrderPlaced {
-                order_hash,
-                order_id,
-                maker: who.clone(),
-                order,
-            });
+            Self::deposit_event(Event::OrderPlaced { order_hash, order_id, order });
 
             match side {
                 OrderSide::Bid => Ok(Some(T::WeightInfo::make_order_bid()).into()),
@@ -373,12 +368,8 @@ mod pallet {
             T::PalletId::get().0
         }
 
-        pub fn order_hash(
-            creator: &T::AccountId,
-            market_id: MarketIdOf<T>,
-            order_id: OrderId,
-        ) -> T::Hash {
-            (&creator, market_id, order_id).using_encoded(T::Hashing::hash)
+        pub fn order_hash(creator: &T::AccountId, order_id: OrderId) -> T::Hash {
+            (&creator, order_id).using_encoded(T::Hashing::hash)
         }
 
         pub fn outcome_assets(

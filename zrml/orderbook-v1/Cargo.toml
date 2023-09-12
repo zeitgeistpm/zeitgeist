@@ -13,6 +13,9 @@ zeitgeist-primitives = { workspace = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
+orml-currencies = { workspace = true, optional = true }
+pallet-timestamp = { workspace = true, optional = true }
+zrml-market-commons = { workspace = true, optional = true }
 
 [dev-dependencies]
 zrml-orderbook-v1 = { workspace = true, features = ["mock", "default"] }
@@ -22,6 +25,9 @@ default = ["std"]
 mock = [
     "orml-tokens/default",
     "pallet-balances/default",
+    "pallet-timestamp/default",
+    "zrml-market-commons/default",
+    "orml-currencies/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
 ]
