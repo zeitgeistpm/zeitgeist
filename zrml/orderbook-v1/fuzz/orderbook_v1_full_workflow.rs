@@ -22,7 +22,7 @@ use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
 use zrml_orderbook_v1::{
     mock::{ExtBuilder, Orderbook, RuntimeOrigin},
-    OrderSide,
+    types::OrderSide,
 };
 
 #[cfg(feature = "arbitrary")]
@@ -32,43 +32,38 @@ fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // Make arbitrary order and attempt to fill
-        let order_asset = asset(data.make_fill_order_asset);
         let order_hash = Orderbook::order_hash(
-            &ensure_signed(RuntimeOrigin::signed(data.make_fill_order_origin.into())).unwrap(),
-            order_asset,
-            Orderbook::nonce(),
+            &ensure_signed(RuntimeOrigin::signed(data.fill_order_origin.into())).unwrap(),
+            order_id,
         );
 
-        let _ = Orderbook::make_order(
-            RuntimeOrigin::signed(data.make_fill_order_origin.into()),
+        let _ = Orderbook::place_order(
+            RuntimeOrigin::signed(data.fill_order_origin.into()),
             order_asset,
-            orderside(data.make_fill_order_side),
-            data.make_fill_order_amount,
-            data.make_fill_order_price,
+            orderside(data.fill_order_side),
+            data.fill_order_amount,
+            data.fill_order_price,
         );
 
         let _ =
             Orderbook::fill_order(RuntimeOrigin::signed(data.fill_order_origin.into()), order_hash);
 
         // Make arbitrary order and attempt to cancel
-        let order_asset = asset(data.make_cancel_order_asset);
         let order_hash = Orderbook::order_hash(
-            &ensure_signed(RuntimeOrigin::signed(data.make_cancel_order_origin.into())).unwrap(),
-            order_asset,
-            Orderbook::nonce(),
+            &ensure_signed(RuntimeOrigin::signed(data.cancel_order_origin.into())).unwrap(),
+            order_id,
         );
 
-        let _ = Orderbook::make_order(
-            RuntimeOrigin::signed(data.make_cancel_order_origin.into()),
+        let _ = Orderbook::place_order(
+            RuntimeOrigin::signed(data.cancel_order_origin.into()),
             order_asset,
-            orderside(data.make_cancel_order_side),
-            data.make_cancel_order_amount,
-            data.make_cancel_order_price,
+            orderside(data.cancel_order_side),
+            data.cancel_order_amount,
+            data.cancel_order_price,
         );
 
         let _ = Orderbook::cancel_order(
-            RuntimeOrigin::signed(data.make_cancel_order_origin.into()),
-            order_asset,
+            RuntimeOrigin::signed(data.cancel_order_origin.into()),
             order_hash,
         );
     });
@@ -77,19 +72,19 @@ fuzz_target!(|data: Data| {
 
 #[derive(Debug, arbitrary::Arbitrary)]
 struct Data {
-    make_fill_order_amount: u128,
-    make_fill_order_asset: (u128, u16),
-    make_fill_order_price: u128,
-    make_fill_order_origin: u8,
-    make_fill_order_side: u8,
+    fill_order_amount: u128,
+    fill_order_outcome_asset: (u128, u16),
+    fill_order_price: u128,
+    fill_order_origin: u8,
+    fill_order_side: u8,
 
     fill_order_origin: u8,
 
-    make_cancel_order_amount: u128,
-    make_cancel_order_asset: (u128, u16),
-    make_cancel_order_price: u128,
-    make_cancel_order_origin: u8,
-    make_cancel_order_side: u8,
+    cancel_order_amount: u128,
+    cancel_order_asset: (u128, u16),
+    cancel_order_price: u128,
+    cancel_order_origin: u8,
+    cancel_order_side: u8,
 }
 
 fn asset(seed: (u128, u16)) -> Asset<u128> {

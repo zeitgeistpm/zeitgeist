@@ -48,7 +48,7 @@ mod benchmarks;
 pub mod mock;
 #[cfg(test)]
 mod tests;
-mod types;
+pub mod types;
 mod utils;
 pub mod weights;
 
@@ -324,6 +324,7 @@ mod pallet {
             let order_hash = Self::order_hash(&who, order_id);
             let order = Order {
                 market_id,
+                order_id,
                 side: side.clone(),
                 maker: who.clone(),
                 outcome_asset,

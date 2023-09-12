@@ -24,9 +24,7 @@
 #![allow(clippy::type_complexity)]
 
 use super::*;
-use crate::utils::market_mock;
-#[cfg(test)]
-use crate::Pallet as OrderBook;
+use crate::{utils::market_mock, Pallet as OrderBook};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::dispatch::UnfilteredDispatchable;
 use frame_system::RawOrigin;
@@ -82,7 +80,7 @@ fn place_order<T: Config>(
     }
     .dispatch_bypass_filter(RawOrigin::Signed(acc.clone()).into())?;
 
-    let order_hash = (&acc, order_id).using_encoded(T::Hashing::hash);
+    let order_hash = OrderBook::<T>::order_hash(&acc, order_id);
 
     Ok((acc, market_id, order_hash))
 }

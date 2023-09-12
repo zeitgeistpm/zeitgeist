@@ -14,6 +14,7 @@ pub enum OrderSide {
 #[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
     pub market_id: MarketId,
+    pub order_id: OrderId,
     pub side: OrderSide,
     pub maker: AccountId,
     pub outcome_asset: Asset<MarketId>,

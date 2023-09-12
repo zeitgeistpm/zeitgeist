@@ -49,7 +49,7 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
     }
@@ -57,7 +57,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type AssetManager = AssetManager;
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type PalletId = OrderbookPalletId;
     type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
@@ -73,7 +73,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -102,7 +102,7 @@ impl orml_tokens::Config for Runtime {
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -115,7 +115,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;

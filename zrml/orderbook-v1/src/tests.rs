@@ -32,7 +32,7 @@ fn it_places_orders() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         // Give some shares for Bob.
         assert_ok!(AssetManager::deposit(Asset::CategoricalOutcome(0, 1), &BOB, 100));
@@ -71,7 +71,7 @@ fn it_fills_ask_orders_fully() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
         // Give some shares for Bob.
@@ -124,7 +124,7 @@ fn it_fills_bid_orders_fully() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
 
@@ -138,7 +138,7 @@ fn it_fills_bid_orders_fully() {
             5,
         ));
 
-        let reserved_bob = Balances::reserved_balance(&BOB);
+        let reserved_bob = Balances::reserved_balance(BOB);
         assert_eq!(reserved_bob, 50);
 
         let order_id = 0u128;
@@ -176,7 +176,7 @@ fn it_fills_bid_orders_partially() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
 
@@ -190,7 +190,7 @@ fn it_fills_bid_orders_partially() {
             5,
         ));
 
-        let reserved_bob = Balances::reserved_balance(&BOB);
+        let reserved_bob = Balances::reserved_balance(BOB);
         assert_eq!(reserved_bob, 50);
 
         let order_id = 0u128;
@@ -211,6 +211,7 @@ fn it_fills_bid_orders_partially() {
             order,
             Order {
                 market_id,
+                order_id,
                 side: OrderSide::Bid,
                 maker: BOB,
                 outcome_asset,
@@ -221,7 +222,7 @@ fn it_fills_bid_orders_partially() {
             }
         );
 
-        let reserved_bob = Balances::reserved_balance(&BOB);
+        let reserved_bob = Balances::reserved_balance(BOB);
         // 50 - (7 shares * 5 price) = 15
         assert_eq!(reserved_bob, 15);
 
@@ -253,7 +254,7 @@ fn it_cancels_orders() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         // Make an order from Alice to buy shares.
         let share_id = Asset::CategoricalOutcome(0, 2);
@@ -275,6 +276,7 @@ fn it_cancels_orders() {
                 order_id: 0,
                 order: Order {
                     market_id,
+                    order_id,
                     side: OrderSide::Bid,
                     maker: ALICE,
                     outcome_asset: share_id,
