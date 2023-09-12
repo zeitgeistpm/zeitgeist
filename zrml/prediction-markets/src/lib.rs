@@ -1283,7 +1283,10 @@ mod pallet {
         /// Complexity: `O(n)`, where `n` is the number of market ids,
         /// which reported at the same time as the specified market.
         #[pallet::call_index(14)]
-        #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
+        #[pallet::weight(
+            T::WeightInfo::report_market_with_dispute_mechanism(CacheSize::get())
+                .max(T::WeightInfo::report_trusted_market())
+        )]
         #[transactional]
         pub fn report(
             origin: OriginFor<T>,
@@ -3164,7 +3167,7 @@ mod pallet {
                 },
             )?;
 
-            Ok(Some(T::WeightInfo::report(ids_len)).into())
+            Ok(Some(T::WeightInfo::report_market_with_dispute_mechanism(ids_len)).into())
         }
 
         fn report_and_resolve_market(
@@ -3183,7 +3186,7 @@ mod pallet {
             })?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             Self::resolve(&market_id, &market)?;
-            Ok(Some(T::WeightInfo::report(0)).into()) // TODO
+            Ok(Some(T::WeightInfo::report_trusted_market()).into()) // TODO
         }
     }
 

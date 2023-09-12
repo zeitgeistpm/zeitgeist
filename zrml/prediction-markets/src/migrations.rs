@@ -94,16 +94,13 @@ pub(crate) type Markets<T: Config> = StorageMap<
 
 pub struct MigrateMarkets<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
-    for MigrateMarkets<T>
-{
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for MigrateMarkets<T> {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "MigrateMarkets: market-commons version is {:?}, but {:?} is \
-                 required",
+                "MigrateMarkets: market-commons version is {:?}, but {:?} is required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
@@ -212,7 +209,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
             assert_eq!(new_market.status, old_market.status);
             assert_eq!(new_market.report, old_market.report);
             assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
-            assert_eq!(new_market.dispute_mechanism, Some(old_market.dispute_mechanism));
+            assert_eq!(new_market.dispute_mechanism, Some(old_market.dispute_mechanism.clone()));
             assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
             assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
             assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
@@ -237,10 +234,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
             }
         }
 
-        log::info!(
-            "MigrateMarkets: Market Counter post-upgrade is {}!",
-            new_market_count
-        );
+        log::info!("MigrateMarkets: Market Counter post-upgrade is {}!", new_market_count);
         assert!(new_market_count > 0);
         Ok(())
     }
