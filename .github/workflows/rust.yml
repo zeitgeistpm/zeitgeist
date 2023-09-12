@@ -24,6 +24,12 @@ jobs:
 
       - name: Install build tools
         run: ./scripts/init.sh
+
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
         
       - name: Install taplo
         run: cargo install taplo-cli --locked
