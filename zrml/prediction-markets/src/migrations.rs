@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-
 #[cfg(feature = "try-runtime")]
 use crate::MarketIdOf;
 use crate::{BalanceOf, Config, MomentOf};
@@ -93,24 +92,24 @@ pub(crate) type Markets<T: Config> = StorageMap<
     OldMarketOf<T>,
 >;
 
-pub struct AddDisputeBondAndConvertCreatorFee<T>(PhantomData<T>);
+pub struct MigrateMarkets<T>(PhantomData<T>);
 
 impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
-    for AddDisputeBondAndConvertCreatorFee<T>
+    for MigrateMarkets<T>
 {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "AddDisputeBondAndConvertCreatorFee: market-commons version is {:?}, but {:?} is \
+                "MigrateMarkets: market-commons version is {:?}, but {:?} is \
                  required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("AddDisputeBondAndConvertCreatorFee: Starting...");
+        log::info!("MigrateMarkets: Starting...");
 
         let mut translated = 0u64;
         zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(
@@ -142,7 +141,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
                     status: old_market.status,
                     report: old_market.report,
                     resolved_outcome: old_market.resolved_outcome,
-                    dispute_mechanism: old_market.dispute_mechanism,
+                    dispute_mechanism: Some(old_market.dispute_mechanism),
                     deadlines: old_market.deadlines,
                     bonds: MarketBonds {
                         creation: old_market.bonds.creation,
@@ -155,13 +154,13 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
                 Some(new_market)
             },
         );
-        log::info!("AddDisputeBondAndConvertCreatorFee: Upgraded {} markets.", translated);
+        log::info!("MigrateMarkets: Upgraded {} markets.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("AddDisputeBondAndConvertCreatorFee: Done!");
+        log::info!("MigrateMarkets: Done!");
         total_weight
     }
 
@@ -213,14 +212,14 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
             assert_eq!(new_market.status, old_market.status);
             assert_eq!(new_market.report, old_market.report);
             assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
-            assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
+            assert_eq!(new_market.dispute_mechanism, Some(old_market.dispute_mechanism));
             assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
             assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
             assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
             // new fields
             assert_eq!(new_market.creator_fee, Perbill::zero());
             // other dispute mechanisms are regarded in the migration after this migration
-            if let MarketDisputeMechanism::Authorized = new_market.dispute_mechanism {
+            if let MarketDisputeMechanism::Authorized = new_market.dispute_mechanism.unwrap() {
                 let old_disputes = crate::Disputes::<T>::get(market_id);
                 if let Some(first_dispute) = old_disputes.first() {
                     let OldMarketDispute { at: _, by, outcome: _ } = first_dispute;
@@ -239,7 +238,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
         }
 
         log::info!(
-            "AddDisputeBondAndConvertCreatorFee: Market Counter post-upgrade is {}!",
+            "MigrateMarkets: Market Counter post-upgrade is {}!",
             new_market_count
         );
         assert!(new_market_count > 0);
@@ -263,7 +262,7 @@ mod tests {
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
+            MigrateMarkets::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -281,7 +280,7 @@ mod tests {
                 MARKETS,
                 new_markets.clone(),
             );
-            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
+            MigrateMarkets::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -297,7 +296,7 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
+            MigrateMarkets::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -319,7 +318,7 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
+            MigrateMarkets::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -391,7 +390,7 @@ mod tests {
             status,
             report,
             resolved_outcome,
-            dispute_mechanism,
+            dispute_mechanism: Some(dispute_mechanism),
             deadlines,
             bonds: new_bonds,
         };
@@ -461,10 +460,9 @@ where
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             if let Ok(market) = <zrml_market_commons::Pallet<T>>::market(&market_id) {
                 match market.dispute_mechanism {
-                    MarketDisputeMechanism::Authorized => continue,
                     // just transform SimpleDispute disputes
-                    MarketDisputeMechanism::SimpleDisputes => (),
-                    MarketDisputeMechanism::Court => continue,
+                    Some(MarketDisputeMechanism::SimpleDisputes) => (),
+                    _ => continue,
                 }
             } else {
                 log::warn!(
@@ -574,7 +572,7 @@ where
             // market id is a reference, but we need the raw value to encode with the where clause
             let disputes = zrml_simple_disputes::Disputes::<T>::get(*market_id);
 
-            match market.dispute_mechanism {
+            match market.dispute_mechanism.unwrap() {
                 MarketDisputeMechanism::Authorized => {
                     let simple_disputes_count = disputes.iter().count();
                     assert_eq!(simple_disputes_count, 0);
@@ -602,7 +600,7 @@ where
 
             let market = <T as zrml_simple_disputes::Config>::MarketCommons::market(&market_id)
                 .expect(&format!("Market for market id {:?} not found", market_id)[..]);
-            match market.dispute_mechanism {
+            match market.dispute_mechanism.unwrap() {
                 MarketDisputeMechanism::Authorized => {
                     panic!("Authorized should not be contained in simple disputes.");
                 }
@@ -804,7 +802,7 @@ mod tests_simple_disputes_migration {
             status,
             report,
             resolved_outcome,
-            dispute_mechanism,
+            dispute_mechanism: Some(dispute_mechanism),
             deadlines,
             bonds,
         }
@@ -815,6 +813,7 @@ mod tests_simple_disputes_migration {
 // prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
 // https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
 // and previous migrations.
+
 mod utility {
     use crate::{BalanceOf, Config, MarketIdOf};
     use alloc::vec::Vec;

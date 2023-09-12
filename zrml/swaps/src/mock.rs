@@ -335,7 +335,7 @@ pub(super) fn mock_market(
         creator_fee: Perbill::from_parts(0),
         creator: DEFAULT_MARKET_CREATOR,
         market_type: MarketType::Categorical(categories),
-        dispute_mechanism: MarketDisputeMechanism::Authorized,
+        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: vec![0; 50],
         oracle: DEFAULT_MARKET_ORACLE,
         period: MarketPeriod::Block(0..1),

@@ -5690,7 +5690,7 @@ fn create_cpmm_market_and_deploy_assets_sets_the_correct_market_parameters_and_r
         let MultiHash::Sha3_384(multihash) = metadata;
         let category_count = 7;
         let market_type = MarketType::Categorical(category_count);
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let creator_fee = Perbill::from_parts(1);
         let lp_fee = 0;
         let weight = <Runtime as zrml_swaps::Config>::MinWeight::get();
@@ -5747,7 +5747,7 @@ fn create_market_functions_respect_fee_boundaries() {
         let scoring_rule = ScoringRule::CPMM;
         let market_type = MarketType::Categorical(category_count);
         let creation_type = MarketCreation::Permissionless;
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let lp_fee = 0;
 
         assert_ok!(PredictionMarkets::create_market(
@@ -5823,6 +5823,7 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
                 Asset::Ztg,
+                Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(1..2),
                 Deadlines {
@@ -5848,6 +5849,7 @@ fn trusted_market_complete_lifecycle() {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             Asset::Ztg,
+            Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
             Deadlines {
