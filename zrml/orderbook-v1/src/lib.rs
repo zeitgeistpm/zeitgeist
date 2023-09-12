@@ -215,18 +215,16 @@ mod pallet {
         #[transactional]
         pub fn fill_order(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
             order_hash: T::Hash,
             portion: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
-            let base_asset = market.base_asset;
-
             let mut order_data =
                 <Orders<T>>::get(order_hash).ok_or(Error::<T>::OrderDoesNotExist)?;
+            let market = T::MarketCommons::market(&order_data.market_id)?;
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
+            let base_asset = market.base_asset;
             let amount = portion.unwrap_or(order_data.amount);
             ensure!(!amount.is_zero(), Error::<T>::AmountIsZero);
             ensure!(amount <= order_data.amount, Error::<T>::AmountTooHighForOrder);
@@ -296,7 +294,7 @@ mod pallet {
 
         #[pallet::call_index(2)]
         #[pallet::weight(
-            T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
+            T::WeightInfo::place_order_ask().max(T::WeightInfo::place_order_bid())
         )]
         #[transactional]
         pub fn place_order(
@@ -357,8 +355,8 @@ mod pallet {
             Self::deposit_event(Event::OrderPlaced { order_hash, order_id, order });
 
             match side {
-                OrderSide::Bid => Ok(Some(T::WeightInfo::make_order_bid()).into()),
-                OrderSide::Ask => Ok(Some(T::WeightInfo::make_order_ask()).into()),
+                OrderSide::Bid => Ok(Some(T::WeightInfo::place_order_bid()).into()),
+                OrderSide::Ask => Ok(Some(T::WeightInfo::place_order_ask()).into()),
             }
         }
     }

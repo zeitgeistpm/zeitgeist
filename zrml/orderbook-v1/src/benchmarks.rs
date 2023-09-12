@@ -96,13 +96,13 @@ benchmarks! {
 
     fill_order_ask {
         let caller = generate_funded_account::<T>(None)?;
-        let (_, market_id, order_hash) = place_order::<T>(OrderSide::Ask, Some(0))?;
-    }: fill_order(RawOrigin::Signed(caller), market_id, order_hash, None)
+        let (_, _, order_hash) = place_order::<T>(OrderSide::Ask, Some(0))?;
+    }: fill_order(RawOrigin::Signed(caller), order_hash, None)
 
     fill_order_bid {
         let caller = generate_funded_account::<T>(None)?;
-        let (_, market_id, order_hash) = place_order::<T>(OrderSide::Bid, Some(0))?;
-    }: fill_order(RawOrigin::Signed(caller), market_id, order_hash, None)
+        let (_, _, order_hash) = place_order::<T>(OrderSide::Bid, Some(0))?;
+    }: fill_order(RawOrigin::Signed(caller), order_hash, None)
 
     place_order_ask {
         let (caller, outcome_asset, amount, price, market_id) = order_common_parameters::<T>(None)?;

@@ -50,7 +50,6 @@ fuzz_target!(|data: Data| {
 
         let _ = Orderbook::fill_order(
             RuntimeOrigin::signed(data.fill_order_origin.into()),
-            data.market_id,
             order_hash,
             None,
         );

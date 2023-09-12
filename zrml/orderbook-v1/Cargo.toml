@@ -10,11 +10,11 @@ sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 
 # Mock
+orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-sp-io = { workspace = true, optional = true }
-orml-currencies = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
 zrml-market-commons = { workspace = true, optional = true }
 
 [dev-dependencies]

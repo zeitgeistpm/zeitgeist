@@ -92,12 +92,7 @@ fn it_fills_ask_orders_fully() {
 
         let order_id = 0u128;
         let order_hash = Orderbook::order_hash(&BOB, order_id);
-        assert_ok!(Orderbook::fill_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            order_hash,
-            None
-        ));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None));
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
@@ -144,12 +139,7 @@ fn it_fills_bid_orders_fully() {
         let order_id = 0u128;
         let order_hash = Orderbook::order_hash(&BOB, order_id);
         assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 10));
-        assert_ok!(Orderbook::fill_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            order_hash,
-            None
-        ));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None));
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
@@ -199,12 +189,7 @@ fn it_fills_bid_orders_partially() {
 
         // instead of selling 10 shares, Alice sells 7 shares
         let portion = Some(7);
-        assert_ok!(Orderbook::fill_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            order_hash,
-            portion,
-        ));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, portion,));
 
         let order = <Orders<Runtime>>::get(order_hash).unwrap();
         assert_eq!(

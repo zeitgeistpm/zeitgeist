@@ -113,13 +113,13 @@ zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
+zrml-orderbook-v1 = { workspace = true }
 zrml-prediction-markets = { workspace = true }
 zrml-rikiddo = { workspace = true }
 zrml-simple-disputes = { workspace = true }
 zrml-styx = { workspace = true }
 zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
-zrml-orderbook-v1 = { workspace = true }
 
 [dev-dependencies]
 sp-io = { workspace = true, features = ["default"] }
