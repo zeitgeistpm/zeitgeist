@@ -330,7 +330,10 @@ mod pallet {
             T::DestroyOrigin::ensure_origin(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Orderbook),
+                Error::<T>::InvalidScoringRule
+            );
             let market_status = market.status;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 

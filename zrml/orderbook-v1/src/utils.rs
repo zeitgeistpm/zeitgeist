@@ -41,7 +41,7 @@ where
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
-        market_type: zeitgeist_primitives::types::MarketType::Categorical(14u16),
+        market_type: zeitgeist_primitives::types::MarketType::Categorical(64u16),
         dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
