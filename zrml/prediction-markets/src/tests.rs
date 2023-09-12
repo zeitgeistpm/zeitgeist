@@ -47,7 +47,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
         MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType,
-        Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
+        Moment, MultiHash, OutcomeReport, PoolStatus, Report, ScalarPosition, ScoringRule,
     },
 };
 use zrml_global_disputes::{
@@ -5587,6 +5587,79 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         assert_eq!(market.resolved_outcome, None);
         assert_eq!(market.dispute_mechanism, dispute_mechanism);
         assert_eq!(market.bonds, bonds);
+    });
+}
+
+#[test]
+fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_market(
+                RuntimeOrigin::signed(ALICE),
+                Asset::Ztg,
+                BOB,
+                MarketPeriod::Block(1..2),
+                Deadlines {
+                    grace_period: 1,
+                    oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
+                    dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+                },
+                gen_metadata(0x99),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                None,
+                ScoringRule::CPMM,
+            ),
+            Error::<Runtime>::NonZeroDisputePeriodOnTrustedMarket
+        );
+    });
+}
+
+#[test]
+fn trusted_market_complete_lifecycle() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 3;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::CPMM,
+        ));
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(FRED),
+            market_id,
+            BASE
+        ));
+        run_to_block(end);
+        let outcome = OutcomeReport::Categorical(1);
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            market_id.clone(),
+            outcome.clone()
+        ));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Resolved);
+        assert_eq!(market.report, Some(Report { at: end, by: BOB, outcome: outcome.clone() }));
+        assert_eq!(market.resolved_outcome, Some(outcome));
+        assert_eq!(market.dispute_mechanism, None);
+        assert!(market.bonds.oracle.unwrap().is_settled);
+        assert_eq!(market.bonds.outsider, None);
+        assert_eq!(market.bonds.dispute, None);
+        assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(FRED), market_id));
+        // Ensure that we don't accidentally leave any artifacts.
+        assert!(MarketIdsPerDisputeBlock::<Runtime>::iter().next().is_none());
+        assert!(MarketIdsPerReportBlock::<Runtime>::iter().next().is_none());
     });
 }
 

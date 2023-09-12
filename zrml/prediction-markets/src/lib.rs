@@ -1755,6 +1755,8 @@ mod pallet {
         GlobalDisputeExistsAlready,
         /// The market has no dispute mechanism.
         NoDisputeMechanism,
+        /// The dispute duration is positive but the market has dispute period.
+        NonZeroDisputePeriodOnTrustedMarket,
     }
 
     #[pallet::event]
@@ -2337,19 +2339,27 @@ mod pallet {
 
         fn ensure_market_deadlines_are_valid(
             deadlines: &Deadlines<T::BlockNumber>,
+            trusted: bool,
         ) -> DispatchResult {
             ensure!(
                 deadlines.oracle_duration >= T::MinOracleDuration::get(),
                 Error::<T>::OracleDurationSmallerThanMinOracleDuration
             );
-            ensure!(
-                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
-                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
-            );
-            ensure!(
-                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
-                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
-            );
+            if trusted {
+                ensure!(
+                    deadlines.dispute_duration == Zero::zero(),
+                    Error::<T>::NonZeroDisputePeriodOnTrustedMarket
+                );
+            } else {
+                ensure!(
+                    deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                    Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
+                );
+                ensure!(
+                    deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                    Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
+                );
+            }
             ensure!(
                 deadlines.grace_period <= T::MaxGracePeriod::get(),
                 Error::<T>::GracePeriodGreaterThanMaxGracePeriod
@@ -3033,7 +3043,7 @@ mod pallet {
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
             Self::ensure_market_period_is_valid(&period)?;
-            Self::ensure_market_deadlines_are_valid(&deadlines)?;
+            Self::ensure_market_deadlines_are_valid(&deadlines, dispute_mechanism.is_none())?;
             Self::ensure_market_type_is_valid(&market_type)?;
 
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
