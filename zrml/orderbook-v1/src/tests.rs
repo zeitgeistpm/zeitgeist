@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -98,7 +99,7 @@ fn it_fills_ask_orders_fully() {
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
-            Event::<Runtime>::OrderFullyFilled { order_hash, maker: BOB, taker: ALICE, filled: 50 }
+            Event::<Runtime>::OrderFullyFilled { order_hash, maker: BOB, taker: ALICE, filled: 10 }
                 .into(),
         );
 
@@ -145,7 +146,7 @@ fn it_fills_bid_orders_fully() {
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
-            Event::<Runtime>::OrderFullyFilled { order_hash, maker: BOB, taker: ALICE, filled: 50 }
+            Event::<Runtime>::OrderFullyFilled { order_hash, maker: BOB, taker: ALICE, filled: 10 }
                 .into(),
         );
 
@@ -266,8 +267,8 @@ fn it_cancels_orders() {
                     maker: ALICE,
                     outcome_asset: share_id,
                     base_asset: Asset::Ztg,
-                    amount: 10,
-                    price: 25,
+                    amount: 25,
+                    price: 10,
                 },
             }
             .into(),
