@@ -196,6 +196,7 @@ macro_rules! decl_common_types {
                     CourtPalletId::get(),
                     GlobalDisputesPalletId::get(),
                     LiquidityMiningPalletId::get(),
+                    OrderbookPalletId::get(),
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
@@ -313,6 +314,7 @@ macro_rules! create_runtime {
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
                 GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 60,
 
                 $($additional_pallets)*
             }
@@ -858,6 +860,9 @@ macro_rules! impl_config_traits {
                         c,
                         RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
                             | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::cancel_order { .. })
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
@@ -877,6 +882,9 @@ macro_rules! impl_config_traits {
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
                             )
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::cancel_order { .. })
                     ),
                 }
             }
@@ -1231,6 +1239,14 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
         }
+
+        impl zrml_orderbook_v1::Config for Runtime {
+            type AssetManager = AssetManager;
+            type RuntimeEvent = RuntimeEvent;
+            type MarketCommons = MarketCommons;
+            type PalletId = OrderbookPalletId;
+            type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
+        }
     }
 }
 
@@ -1339,6 +1355,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_court, Court);
                     list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
+                    list_benchmark!(list, extra, zrml_orderbook_v1, Orderbook);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
@@ -1440,6 +1457,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_court, Court);
                     add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
+                    add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);

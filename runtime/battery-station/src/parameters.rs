@@ -305,6 +305,9 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves.
     pub const SwapsPalletId: PalletId = SWAPS_PALLET_ID;
 
+    // Orderbook parameters
+    pub const OrderbookPalletId: PalletId = ORDERBOOK_PALLET_ID;
+
     // System
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 73;

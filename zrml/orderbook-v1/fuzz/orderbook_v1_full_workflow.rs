@@ -34,29 +34,37 @@ fuzz_target!(|data: Data| {
         // Make arbitrary order and attempt to fill
         let order_hash = Orderbook::order_hash(
             &ensure_signed(RuntimeOrigin::signed(data.fill_order_origin.into())).unwrap(),
-            order_id,
+            data.order_id,
         );
+
+        let outcome_asset = asset(data.fill_order_outcome_asset);
 
         let _ = Orderbook::place_order(
             RuntimeOrigin::signed(data.fill_order_origin.into()),
-            order_asset,
+            data.market_id,
+            outcome_asset,
             orderside(data.fill_order_side),
             data.fill_order_amount,
             data.fill_order_price,
         );
 
-        let _ =
-            Orderbook::fill_order(RuntimeOrigin::signed(data.fill_order_origin.into()), order_hash);
+        let _ = Orderbook::fill_order(
+            RuntimeOrigin::signed(data.fill_order_origin.into()),
+            data.market_id,
+            order_hash,
+            None,
+        );
 
         // Make arbitrary order and attempt to cancel
         let order_hash = Orderbook::order_hash(
             &ensure_signed(RuntimeOrigin::signed(data.cancel_order_origin.into())).unwrap(),
-            order_id,
+            data.order_id,
         );
 
         let _ = Orderbook::place_order(
             RuntimeOrigin::signed(data.cancel_order_origin.into()),
-            order_asset,
+            data.market_id,
+            outcome_asset,
             orderside(data.cancel_order_side),
             data.cancel_order_amount,
             data.cancel_order_price,
@@ -72,16 +80,16 @@ fuzz_target!(|data: Data| {
 
 #[derive(Debug, arbitrary::Arbitrary)]
 struct Data {
+    market_id: u128,
+    order_id: u128,
+
     fill_order_amount: u128,
     fill_order_outcome_asset: (u128, u16),
     fill_order_price: u128,
     fill_order_origin: u8,
     fill_order_side: u8,
 
-    fill_order_origin: u8,
-
     cancel_order_amount: u128,
-    cancel_order_asset: (u128, u16),
     cancel_order_price: u128,
     cancel_order_origin: u8,
     cancel_order_side: u8,

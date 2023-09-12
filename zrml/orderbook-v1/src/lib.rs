@@ -22,6 +22,7 @@
 extern crate alloc;
 
 use crate::{types::*, weights::*};
+use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
     dispatch::DispatchResultWithPostInfo,
