@@ -2308,7 +2308,7 @@ mod pallet {
             ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
             DispatchError,
         > {
-            Self::ensure_dispute_mechanism(&market)?;
+            Self::ensure_dispute_mechanism(market)?;
 
             // oracle outcome is added by pm-pallet
             let mut gd_outcomes: Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>> =

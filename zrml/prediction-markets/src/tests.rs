@@ -5873,7 +5873,7 @@ fn trusted_market_complete_lifecycle() {
         let outcome = OutcomeReport::Categorical(1);
         assert_ok!(PredictionMarkets::report(
             RuntimeOrigin::signed(BOB),
-            market_id.clone(),
+            market_id,
             outcome.clone()
         ));
         let market = MarketCommons::market(&market_id).unwrap();
