@@ -21,12 +21,13 @@ use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Perbill;
 use sp_runtime::RuntimeDebug;
 
 /// Types
 ///
 /// * `AI`: Account id
-/// * `BA`: Balance type for bonds
+/// * `BA`: Balance type
 /// * `BN`: Block number
 /// * `M`: Moment (time moment)
 /// * `A`: Asset
@@ -38,8 +39,8 @@ pub struct Market<AI, BA, BN, M, A> {
     pub creator: AI,
     /// Creation type.
     pub creation: MarketCreation,
-    /// The fee the creator gets from each winning share.
-    pub creator_fee: u8,
+    /// A fee that is charged each trade and given to the market creator.
+    pub creator_fee: Perbill,
     /// Oracle that reports the outcome of this market.
     pub oracle: AI,
     /// Metadata for the market, usually a content address of IPFS
@@ -150,7 +151,7 @@ where
         AI::max_encoded_len()
             .saturating_add(A::max_encoded_len())
             .saturating_add(MarketCreation::max_encoded_len())
-            .saturating_add(u8::max_encoded_len())
+            .saturating_add(Perbill::max_encoded_len())
             .saturating_add(AI::max_encoded_len())
             // We assume that at max. a 512 bit hash function is used
             .saturating_add(u8::max_encoded_len().saturating_mul(68))
@@ -378,7 +379,7 @@ mod tests {
             base_asset: Asset::Ztg,
             creator: 1,
             creation: MarketCreation::Permissionless,
-            creator_fee: 2,
+            creator_fee: Default::default(),
             oracle: 3,
             metadata: vec![4u8; 5],
             market_type, // : MarketType::Categorical(6),

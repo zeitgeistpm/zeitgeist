@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -180,6 +180,10 @@ where
 
     let spot_price_before =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
+    // Duplicate call can be optimized
+    let spot_price_before_without_fees =
+        Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, false)?;
+
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
     }
@@ -234,7 +238,7 @@ where
 
     match p.pool.scoring_rule {
         ScoringRule::CPMM => ensure!(
-            spot_price_before
+            spot_price_before_without_fees
                 <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
                     .saturated_into(),
             Error::<T>::MathApproximation

@@ -5,11 +5,11 @@ frame-system = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
+sp-arithmetic = { workspace = true }
 sp-runtime = { workspace = true }
 substrate-fixed = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-liquidity-mining = { workspace = true }
-zrml-market-commons = { workspace = true }
 zrml-rikiddo = { workspace = true }
 
 # Mock
@@ -20,6 +20,7 @@ pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
+zrml-market-commons = { workspace = true, optional = true }
 zrml-swaps-runtime-api = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -37,6 +38,7 @@ mock = [
     "sp-api/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
+    "zrml-market-commons/default",
     "zrml-swaps-runtime-api/default",
 ]
 runtime-benchmarks = [
@@ -53,7 +55,6 @@ std = [
     "sp-runtime/std",
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
-    "zrml-market-commons/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",
 ]
