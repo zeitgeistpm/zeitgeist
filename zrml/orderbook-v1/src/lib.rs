@@ -369,7 +369,7 @@ mod pallet {
         }
 
         pub fn order_hash(creator: &T::AccountId, order_id: OrderId) -> T::Hash {
-            (&creator, order_id).using_encoded(T::Hashing::hash)
+            (creator, order_id).using_encoded(T::Hashing::hash)
         }
 
         pub fn outcome_assets(
