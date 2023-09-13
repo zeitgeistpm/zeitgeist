@@ -3185,7 +3185,7 @@ mod pallet {
                 Ok(())
             })?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            Self::resolve(&market_id, &market)?;
+            Self::on_resolution(&market_id, &market)?;
             Ok(Some(T::WeightInfo::report_trusted_market()).into())
         }
     }
