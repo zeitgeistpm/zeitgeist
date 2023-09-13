@@ -172,10 +172,10 @@ impl Contains<RuntimeCall> for IsCallable {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market {
-                        scoring_rule: RikiddoSigmoidFeeMarketEma | Orderbook, ..
+                        scoring_rule: RikiddoSigmoidFeeMarketEma, ..
                     } => false,
                     edit_market {
-                        scoring_rule: RikiddoSigmoidFeeMarketEma | Orderbook, ..
+                        scoring_rule: RikiddoSigmoidFeeMarketEma, ..
                     } => false,
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
