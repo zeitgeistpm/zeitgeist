@@ -452,9 +452,9 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let is_authorized = T::CloseMarketEarlyOrigin::try_origin(origin.clone()).is_ok();
             if is_authorized {
-                T::CloseMarketEarlyOrigin::ensure_origin(origin)?;
+                T::CloseMarketEarlyOrigin::ensure_origin(origin.clone())?;
             } else {
-                ensure_signed(origin)?;
+                ensure_signed(origin.clone())?;
             };
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
@@ -554,8 +554,11 @@ mod pallet {
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
                 let old_market_period = market.period.clone();
                 market.period = new_period.clone();
-                let premature_close =
-                    PrematureClose { old: old_market_period, new: new_period.clone(), state };
+                let premature_close = PrematureClose {
+                    old: old_market_period,
+                    new: new_period.clone(),
+                    state: state.clone(),
+                };
                 market.premature_close = Some(premature_close);
                 Ok(())
             })?;
@@ -596,11 +599,11 @@ mod pallet {
             // ensure we don't dispute if the old market period is already over
             // so that we don't switch back to an invalid market period
             match premature_close.old {
-                MarketPeriod::Block(range) => {
+                MarketPeriod::Block(ref range) => {
                     let now_block = <frame_system::Pallet<T>>::block_number();
                     ensure!(now_block < range.end, Error::<T>::OldMarketPeriodEndAlreadyOver);
                 }
-                MarketPeriod::Timestamp(range) => {
+                MarketPeriod::Timestamp(ref range) => {
                     let now_time = <zrml_market_commons::Pallet<T>>::now();
                     ensure!(now_time < range.end, Error::<T>::OldMarketPeriodEndAlreadyOver);
                 }
@@ -656,14 +659,14 @@ mod pallet {
                     // ensure we don't reject if the old market period is already over
                     // so that we don't switch back to an invalid market period
                     match premature_close.old {
-                        MarketPeriod::Block(range) => {
+                        MarketPeriod::Block(ref range) => {
                             let now_block = <frame_system::Pallet<T>>::block_number();
                             ensure!(
                                 now_block < range.end,
                                 Error::<T>::OldMarketPeriodEndAlreadyOver
                             );
                         }
-                        MarketPeriod::Timestamp(range) => {
+                        MarketPeriod::Timestamp(ref range) => {
                             let now_time = <zrml_market_commons::Pallet<T>>::now();
                             ensure!(
                                 now_time < range.end,
@@ -2398,7 +2401,6 @@ mod pallet {
         impl_slash_bond!(slash_creation_bond, creation);
         impl_slash_bond!(slash_oracle_bond, oracle);
         impl_slash_bond!(slash_outsider_bond, outsider);
-        impl_slash_bond!(slash_close_request_bond, close_request);
         impl_slash_bond!(slash_dispute_bond, dispute);
         impl_repatriate_bond!(repatriate_oracle_bond, oracle);
         impl_repatriate_bond!(repatriate_close_request_bond, close_request);
@@ -2798,7 +2800,7 @@ mod pallet {
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
 
-                match market.premature_close {
+                match &market.premature_close {
                     None => (),
                     Some(p) => {
                         match p.state {

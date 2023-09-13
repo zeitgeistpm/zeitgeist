@@ -39,17 +39,18 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
         AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId, BalanceFractionalDecimals,
-        BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId, ExistentialDeposit,
-        ExistentialDeposits, ExitFee, GetNativeCurrencyId, InflationPeriod,
+        BlockHashCount, BlocksPerYear, CloseDisputeBond, CloseProtectionBlockPeriod,
+        CloseProtectionTimeFramePeriod, CloseRequestBond, CorrectionPeriod, CourtPalletId,
+        ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId, InflationPeriod,
         LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
         MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
         MaxEditReasonLen, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
         MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod,
         MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
         MinJurorStake, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, PrematureCloseBlockPeriod,
+        PrematureCloseTimeFramePeriod, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -119,6 +120,11 @@ impl crate::Config for Runtime {
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
+    type CloseDisputeBond = CloseDisputeBond;
+    type CloseMarketEarlyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type CloseProtectionTimeFramePeriod = CloseProtectionTimeFramePeriod;
+    type CloseProtectionBlockPeriod = CloseProtectionBlockPeriod;
+    type CloseRequestBond = CloseRequestBond;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
@@ -143,6 +149,8 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
+    type PrematureCloseBlockPeriod = PrematureCloseBlockPeriod;
+    type PrematureCloseTimeFramePeriod = PrematureCloseTimeFramePeriod;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;

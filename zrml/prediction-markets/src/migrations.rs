@@ -55,6 +55,8 @@ pub struct OldMarketBonds<AI, BA> {
     pub creation: Option<Bond<AI, BA>>,
     pub oracle: Option<Bond<AI, BA>>,
     pub outsider: Option<Bond<AI, BA>>,
+    pub close_dispute: Option<Bond<AI, BA>>,
+    pub close_request: Option<Bond<AI, BA>>,
 }
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
@@ -74,6 +76,7 @@ pub struct OldMarket<AI, BA, BN, M, A> {
     pub resolved_outcome: Option<OutcomeReport>,
     pub dispute_mechanism: MarketDisputeMechanism,
     pub bonds: OldMarketBonds<AI, BA>,
+    pub premature_close: Option<BN>,
 }
 
 type OldMarketOf<T> = OldMarket<
@@ -148,7 +151,11 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
                         oracle: old_market.bonds.oracle,
                         outsider: old_market.bonds.outsider,
                         dispute: dispute_bond,
+                        // TODO properly add migration for this!!!
+                        close_dispute: None,
+                        close_request: None,
                     },
+                    premature_close: None,
                 };
 
                 Some(new_market)
@@ -351,6 +358,8 @@ mod tests {
             creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
             outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
+            close_dispute: None,
+            close_request: None,
         };
         let dispute_bond = disputor.map(|disputor| Bond::new(disputor, DisputeBond::get()));
         let new_bonds = MarketBonds {
@@ -358,6 +367,8 @@ mod tests {
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
             outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
             dispute: dispute_bond,
+            close_dispute: None,
+            close_request: None,
         };
 
         let old_market = OldMarket {
@@ -376,6 +387,7 @@ mod tests {
             dispute_mechanism: dispute_mechanism.clone(),
             deadlines,
             bonds: old_bonds,
+            premature_close: None,
         };
         let new_market = Market {
             base_asset,
@@ -393,6 +405,7 @@ mod tests {
             dispute_mechanism,
             deadlines,
             bonds: new_bonds,
+            premature_close: None,
         };
         (vec![old_market], vec![new_market])
     }
@@ -788,6 +801,8 @@ mod tests_simple_disputes_migration {
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
             outsider: None,
             dispute: None,
+            close_dispute: None,
+            close_request: None,
         };
 
         Market {
@@ -806,6 +821,7 @@ mod tests_simple_disputes_migration {
             dispute_mechanism,
             deadlines,
             bonds,
+            premature_close: None,
         }
     }
 }

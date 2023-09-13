@@ -73,6 +73,10 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
+    pub const CloseProtectionTimeFramePeriod: Moment = 36_000; // 12 seconds * 3 = 36 seconds = 3 blocks
+    pub const CloseProtectionBlockPeriod: BlockNumber = 3;
+    pub const CloseRequestBond: Balance = 5 * BASE;
+    pub const CloseDisputeBond: Balance = 10 * BASE;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const MaxCategories: u16 = 10;
@@ -94,6 +98,8 @@ parameter_types! {
     pub const OracleBond: Balance = 50 * CENT;
     pub const OutsiderBond: Balance = 2 * OracleBond::get();
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const PrematureCloseBlockPeriod: BlockNumber = 6;
+    pub const PrematureCloseTimeFramePeriod: Moment = 72_000; // 12 seconds * 6 = 72 seconds = 6 blocks
     pub const ValidityBond: Balance = 50 * CENT;
 }
 
