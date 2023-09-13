@@ -168,7 +168,6 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
             RuntimeCall::GlobalDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
-            RuntimeCall::Orderbook(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
