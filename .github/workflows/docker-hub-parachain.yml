@@ -19,7 +19,7 @@ jobs:
   publish:
     needs: hadolint
     name: Publish
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, runtime-benchmark]
     steps:
       - uses: actions/checkout@v3
       - name: Checkout repository
