@@ -25,7 +25,10 @@ use crate::{
 use alloc::{collections::BTreeMap, vec::Vec};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{DispatchError, RuntimeDebug, SaturatedConversion, Saturating};
+use sp_runtime::{
+    traits::{CheckedAdd, CheckedSub},
+    DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
+};
 
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
@@ -55,6 +58,26 @@ where
 
     fn reserve_of(&self, asset: &AssetOf<T>) -> Result<BalanceOf<T>, DispatchError> {
         Ok(*self.reserves.get(asset).ok_or(Error::<T>::AssetNotFound)?)
+    }
+
+    fn increase_reserve(
+        &mut self,
+        asset: &AssetOf<T>,
+        increase_amount: &BalanceOf<T>,
+    ) -> DispatchResult {
+        let value = self.reserves.get_mut(asset).ok_or(Error::<T>::AssetNotFound)?;
+        *value = value.checked_add(increase_amount).ok_or(Error::<T>::MathError)?;
+        Ok(())
+    }
+
+    fn decrease_reserve(
+        &mut self,
+        asset: &AssetOf<T>,
+        decrease_amount: &BalanceOf<T>,
+    ) -> DispatchResult {
+        let value = self.reserves.get_mut(asset).ok_or(Error::<T>::AssetNotFound)?;
+        *value = value.checked_sub(decrease_amount).ok_or(Error::<T>::MathError)?;
+        Ok(())
     }
 
     fn calculate_swap_amount_out_for_buy(

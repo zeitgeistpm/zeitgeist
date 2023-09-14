@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::pallet::{AssetOf, BalanceOf, Config};
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchError, DispatchResult};
 
 /// Trait for LMSR calculations and access to pool data.
 pub(crate) trait PoolOperations<T: Config> {
@@ -30,6 +30,20 @@ pub(crate) trait PoolOperations<T: Config> {
     ///
     /// Beware! The reserve need not coincide with the balance in the pool account.
     fn reserve_of(&self, asset: &AssetOf<T>) -> Result<BalanceOf<T>, DispatchError>;
+
+    /// Perform a checked addition to the balance of `asset`.
+    fn increase_reserve(
+        &mut self,
+        asset: &AssetOf<T>,
+        increase_amount: &BalanceOf<T>,
+    ) -> DispatchResult;
+
+    /// Perform a checked subtraction from the balance of `asset`.
+    fn decrease_reserve(
+        &mut self,
+        asset: &AssetOf<T>,
+        decrease_amount: &BalanceOf<T>,
+    ) -> DispatchResult;
 
     /// Calculate the amount received from the swap that is executed when buying (the function
     /// `y(x)` from the documentation).

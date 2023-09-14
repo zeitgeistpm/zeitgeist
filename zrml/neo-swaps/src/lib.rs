@@ -53,7 +53,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
+        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -510,11 +510,10 @@ mod pallet {
                     amount_in_minus_fees,
                 )?;
                 T::MultiCurrency::transfer(asset_out, &pool.account_id, &who, amount_out)?;
-                for (&asset, balance) in pool.reserves.iter_mut() {
-                    *balance =
-                        balance.checked_add(&amount_in_minus_fees).ok_or(Error::<T>::MathError)?;
-                    if asset == asset_out {
-                        *balance = balance.checked_sub(&amount_out).ok_or(Error::<T>::MathError)?;
+                for asset in pool.assets().iter() {
+                    pool.increase_reserve(asset, &amount_in_minus_fees)?;
+                    if *asset == asset_out {
+                        pool.decrease_reserve(asset, &amount_out)?;
                     }
                 }
                 let new_price = pool.calculate_spot_price(asset_out)?;
@@ -580,11 +579,11 @@ mod pallet {
                     &who,
                     amount_out_minus_fees,
                 )?;
-                for (&asset, balance) in pool.reserves.iter_mut() {
-                    if asset == asset_in {
-                        *balance = balance.checked_add(&amount_in).ok_or(Error::<T>::MathError)?;
+                for asset in pool.assets().iter() {
+                    if *asset == asset_in {
+                        pool.increase_reserve(asset, &amount_in)?;
                     }
-                    *balance = balance.checked_sub(&amount_out).ok_or(Error::<T>::MathError)?;
+                    pool.decrease_reserve(asset, &amount_out)?;
                 }
                 let new_price = pool.calculate_spot_price(asset_in)?;
                 ensure!(
@@ -689,7 +688,8 @@ mod pallet {
                     // This is an ugly hack and system should offer the option to whitelist
                     // accounts.
                     if pool.collateral == Asset::Ztg {
-                        let remaining = T::MultiCurrency::free_balance(Asset::Ztg, &pool.account_id);
+                        let remaining =
+                            T::MultiCurrency::free_balance(Asset::Ztg, &pool.account_id);
                         T::MultiCurrency::withdraw(Asset::Ztg, &pool.account_id, remaining)?;
                     }
                     *maybe_pool = None; // Delete the storage map entry.
