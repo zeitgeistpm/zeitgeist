@@ -22,11 +22,11 @@ pub(crate) mod mock;
 
 mod buy;
 mod deploy_pool;
+mod exit;
 mod join;
 mod sell;
-mod withdraw_fees;
-mod exit;
 mod split;
+mod withdraw_fees;
 
 use crate::{consts::*, traits::*, *};
 use consts::*;
