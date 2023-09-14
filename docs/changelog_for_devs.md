@@ -31,7 +31,7 @@ APIs/RPC interface.
   - `BuyExecuted { who, market_id, asset_out, amount_in, amount_out, swap_fee_amount, external_fee_amount }`:
     Informant bought a position.
   - `SellExecuted { who, market_id, asset_in, amount_in, amount_out, swap_fee_amount, external_fee_amount }`:
-    Informants sold a position.
+    Informant sold a position.
   - `FeesWithdrawn { who }`: Liquidity provider withdrew fees.
   - `JoinExecuted { who, market_id, pool_shares_amount, amounts_in, new_liquidity_parameter }`:
     Liquidity provider joined the pool.
