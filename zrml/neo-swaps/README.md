@@ -21,12 +21,13 @@ For a detailed description of the underlying mathematics see [here][docslink].
   return.
 - _Liquidity provider_: A user who owns pool shares indicating their stake in
   the liquidity pool.
-- _Pool Shares_: A token indicating the owner's per rate share of the liquidity
+- _Pool account_: A unique account associated with a particular pool.
+- _Pool shares_: A token indicating the owner's per rate share of the liquidity
   pool.
 - _Reserve_: The balances in the liquidity pool used for trading.
 - _Swap fees_: Part of the collateral paid or received by informants that is
-  moved to a separate account owned by the liquidity providers. They need to be
-  withdrawn using the `withdraw_fees` extrinsic.
+  moved to the pool account, a separate account owned by the liquidity
+  providers. They need to be withdrawn using the `withdraw_fees` extrinsic.
 
 ### Notes
 

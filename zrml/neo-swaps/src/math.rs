@@ -108,7 +108,7 @@ mod detail {
         math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
     };
 
-    /// Calculate b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x
+    /// Calculate y(x) = b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x.
     pub(super) fn calculate_swap_amount_out_for_buy(
         reserve: u128,
         amount_in: u128,
@@ -122,7 +122,7 @@ mod detail {
         from_fixed(result_fixed)
     }
 
-    /// Calculate b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i
+    /// Calculate v(x) = -b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i.
     pub(super) fn calculate_swap_amount_out_for_sell(
         reserve: u128,
         amount_in: u128,
