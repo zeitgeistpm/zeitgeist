@@ -212,7 +212,7 @@ where
                 return Err(Error::<T>::UnsupportedTrade.into());
             }
         }
-        _ => {
+        ScoringRule::Lmsr => {
             return Err(Error::<T>::UnsupportedTrade.into());
         }
     }
@@ -229,7 +229,7 @@ where
             spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
             Error::<T>::MathApproximation
         ),
-        _ => {
+        ScoringRule::Lmsr => {
             return Err(Error::<T>::UnsupportedTrade.into());
         }
     }
@@ -252,7 +252,7 @@ where
             let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
             T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
         }
-        _ => {
+        ScoringRule::Lmsr => {
             return Err(Error::<T>::UnsupportedTrade.into());
         }
     }
