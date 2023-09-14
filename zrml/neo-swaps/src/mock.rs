@@ -148,7 +148,7 @@ where
         )
         .unwrap()
         .saturated_into();
-        T::AssetManager::transfer(asset, &account, &F::get(), fees).unwrap();
+        T::MultiCurrency::transfer(asset, &account, &F::get(), fees).unwrap();
         fees
     }
 }
@@ -195,7 +195,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type AssetManager = AssetManager;
+    type MultiCurrency = AssetManager;
     type CompleteSetOperations = PredictionMarkets;
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
