@@ -36,6 +36,6 @@ pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
     pub maker: AccountId,
     pub outcome_asset: Asset<MarketId>,
     pub base_asset: Asset<MarketId>,
-    pub amount: Balance,
-    pub price: Balance,
+    pub outcome_asset_amount: Balance,
+    pub base_asset_amount: Balance,
 }

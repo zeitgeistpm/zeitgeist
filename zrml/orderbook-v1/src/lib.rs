@@ -36,8 +36,8 @@ use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
 use parity_scale_codec::Encode;
 use sp_runtime::{
-    traits::{CheckedMul, CheckedSub, Get, Hash, Zero},
-    ArithmeticError, DispatchError,
+    traits::{CheckedSub, Get, Hash, Zero},
+    ArithmeticError, Perquintill, SaturatedConversion, Saturating,
 };
 use zeitgeist_primitives::{
     traits::{MarketCommonsPalletApi, ZeitgeistAssetManager},
@@ -116,24 +116,20 @@ mod pallet {
     where
         T: Config,
     {
-        OrderPartiallyFilled {
+        OrderFilled {
             order_hash: HashOf<T>,
             maker: AccountIdOf<T>,
             taker: AccountIdOf<T>,
             filled: BalanceOf<T>,
-        },
-        OrderFullyFilled {
-            order_hash: HashOf<T>,
-            maker: AccountIdOf<T>,
-            taker: AccountIdOf<T>,
-            filled: BalanceOf<T>,
+            unfilled_outcome_asset_amount: BalanceOf<T>,
+            unfilled_base_asset_amount: BalanceOf<T>,
         },
         OrderPlaced {
             order_hash: HashOf<T>,
             order_id: OrderId,
             order: OrderOf<T>,
         },
-        OrderCancelled {
+        OrderRemoved {
             order_hash: HashOf<T>,
             maker: T::AccountId,
         },
@@ -155,6 +151,8 @@ mod pallet {
         AmountIsZero,
         /// The specified outcome asset is not part of the market.
         InvalidOutcomeAsset,
+        /// The maker partial fill leads to a too low quotient for the next order execution.
+        MakerPartialFillTooLow,
     }
 
     #[pallet::call]
@@ -164,7 +162,7 @@ mod pallet {
             T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
         )]
         #[transactional]
-        pub fn cancel_order(
+        pub fn remove_order(
             origin: OriginFor<T>,
             order_hash: T::Hash,
         ) -> DispatchResultWithPostInfo {
@@ -177,15 +175,11 @@ mod pallet {
 
             match order_data.side {
                 OrderSide::Bid => {
-                    let cost = order_data
-                        .amount
-                        .checked_mul(&order_data.price)
-                        .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
                     T::AssetManager::unreserve_named(
                         &Self::reserve_id(),
                         order_data.base_asset,
                         maker,
-                        cost,
+                        order_data.base_asset_amount,
                     );
                 }
                 OrderSide::Ask => {
@@ -193,14 +187,14 @@ mod pallet {
                         &Self::reserve_id(),
                         order_data.outcome_asset,
                         maker,
-                        order_data.amount,
+                        order_data.outcome_asset_amount,
                     );
                 }
             }
 
             <Orders<T>>::remove(order_hash);
 
-            Self::deposit_event(Event::OrderCancelled { order_hash, maker: maker.clone() });
+            Self::deposit_event(Event::OrderRemoved { order_hash, maker: maker.clone() });
 
             match order_data.side {
                 OrderSide::Bid => Ok(Some(T::WeightInfo::cancel_order_bid()).into()),
@@ -208,6 +202,7 @@ mod pallet {
             }
         }
 
+        /// NOTE: The `maker_partial_fill` is the partial amount of what the maker wants to fill.
         #[pallet::call_index(1)]
         #[pallet::weight(
             T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
@@ -216,75 +211,135 @@ mod pallet {
         pub fn fill_order(
             origin: OriginFor<T>,
             order_hash: T::Hash,
-            portion: Option<BalanceOf<T>>,
+            maker_partial_fill: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+            let taker = ensure_signed(origin)?;
 
             let mut order_data =
                 <Orders<T>>::get(order_hash).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
-            let amount = portion.unwrap_or(order_data.amount);
-            ensure!(!amount.is_zero(), Error::<T>::AmountIsZero);
-            ensure!(amount <= order_data.amount, Error::<T>::AmountTooHighForOrder);
-            let cost = amount
-                .checked_mul(&order_data.price)
-                .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
-            order_data.amount = order_data
-                .amount
-                .checked_sub(&amount)
-                .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+
+            let makers_requested_total = match order_data.side {
+                OrderSide::Bid => order_data.outcome_asset_amount,
+                OrderSide::Ask => order_data.base_asset_amount,
+            };
+            let maker_fill = maker_partial_fill.unwrap_or(makers_requested_total);
+            ensure!(!maker_fill.is_zero(), Error::<T>::AmountIsZero);
+            ensure!(maker_fill <= makers_requested_total, Error::<T>::AmountTooHighForOrder);
+
             let maker = order_data.maker.clone();
 
+            // the reserve of the maker should always be enough to repatriate successfully, e.g. taker gets a little bit less
+            // it should always ensure that the maker's request (maker_fill) is fully filled
             match order_data.side {
                 OrderSide::Bid => {
-                    T::AssetManager::ensure_can_withdraw(order_data.outcome_asset, &who, amount)?;
+                    T::AssetManager::ensure_can_withdraw(
+                        order_data.outcome_asset,
+                        &taker,
+                        maker_fill,
+                    )?;
+
+                    // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
+                    // This ensures that the reserve of the maker is always enough to repatriate successfully!
+                    let ratio = Perquintill::from_rational(
+                        maker_fill.saturated_into::<u128>(),
+                        order_data.outcome_asset_amount.saturated_into::<u128>(),
+                    );
+                    let taker_fill = ratio
+                        .mul_floor(order_data.base_asset_amount.saturated_into::<u128>())
+                        .saturated_into::<BalanceOf<T>>();
 
                     T::AssetManager::repatriate_reserved_named(
                         &Self::reserve_id(),
                         base_asset,
                         &maker,
-                        &who,
-                        cost,
+                        &taker,
+                        taker_fill,
                         BalanceStatus::Free,
                     )?;
 
-                    T::AssetManager::transfer(order_data.outcome_asset, &who, &maker, amount)?;
+                    T::AssetManager::transfer(
+                        order_data.outcome_asset,
+                        &taker,
+                        &maker,
+                        maker_fill,
+                    )?;
+
+                    order_data.base_asset_amount = order_data
+                        .base_asset_amount
+                        .checked_sub(&taker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    order_data.outcome_asset_amount = order_data
+                        .outcome_asset_amount
+                        .checked_sub(&maker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    // this ensures that partial fills, which fill nearly the whole order, are not executed
+                    // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
+                    let is_ratio_quotient_valid = order_data.outcome_asset_amount.is_zero()
+                        || order_data.outcome_asset_amount.saturated_into::<u128>() >= 100u128;
+                    ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
                 }
                 OrderSide::Ask => {
-                    T::AssetManager::ensure_can_withdraw(base_asset, &who, cost)?;
+                    T::AssetManager::ensure_can_withdraw(base_asset, &taker, maker_fill)?;
+
+                    // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
+                    // This ensures that the reserve of the maker is always enough to repatriate successfully!
+                    let ratio = Perquintill::from_rational(
+                        maker_fill.saturated_into::<u128>(),
+                        order_data.base_asset_amount.saturated_into::<u128>(),
+                    );
+                    let taker_fill = ratio
+                        .mul_floor(order_data.outcome_asset_amount.saturated_into::<u128>())
+                        .saturated_into::<BalanceOf<T>>();
 
                     T::AssetManager::repatriate_reserved_named(
                         &Self::reserve_id(),
                         order_data.outcome_asset,
                         &maker,
-                        &who,
-                        amount,
+                        &taker,
+                        taker_fill,
                         BalanceStatus::Free,
                     )?;
 
-                    T::AssetManager::transfer(base_asset, &who, &maker, cost)?;
+                    T::AssetManager::transfer(base_asset, &taker, &maker, maker_fill)?;
+
+                    order_data.outcome_asset_amount = order_data
+                        .outcome_asset_amount
+                        .checked_sub(&taker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    order_data.base_asset_amount = order_data
+                        .base_asset_amount
+                        .checked_sub(&maker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    // this ensures that partial fills, which fill nearly the whole order, are not executed
+                    // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
+                    let is_ratio_quotient_valid = order_data.base_asset_amount.is_zero()
+                        || order_data.base_asset_amount.saturated_into::<u128>() >= 100u128;
+                    ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
                 }
+            };
+
+            let unfilled_outcome_asset_amount = order_data.outcome_asset_amount;
+            let unfilled_base_asset_amount = order_data.base_asset_amount;
+            let total_unfilled =
+                unfilled_outcome_asset_amount.saturating_add(unfilled_base_asset_amount);
+
+            if total_unfilled.is_zero() {
+                <Orders<T>>::remove(order_hash);
+            } else {
+                <Orders<T>>::insert(order_hash, order_data.clone());
             }
 
-            if !order_data.amount.is_zero() {
-                <Orders<T>>::insert(order_hash, order_data.clone());
-                Self::deposit_event(Event::OrderPartiallyFilled {
-                    order_hash,
-                    maker,
-                    taker: who.clone(),
-                    filled: amount,
-                });
-            } else {
-                <Orders<T>>::remove(order_hash);
-                Self::deposit_event(Event::OrderFullyFilled {
-                    order_hash,
-                    maker: maker.clone(),
-                    taker: who.clone(),
-                    filled: amount,
-                });
-            }
+            Self::deposit_event(Event::OrderFilled {
+                order_hash,
+                maker,
+                taker: taker.clone(),
+                filled: maker_fill,
+                unfilled_outcome_asset_amount,
+                unfilled_base_asset_amount,
+            });
 
             match order_data.side {
                 OrderSide::Bid => Ok(Some(T::WeightInfo::fill_order_bid()).into()),
@@ -302,8 +357,8 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome_asset: Asset<MarketIdOf<T>>,
             side: OrderSide,
-            #[pallet::compact] amount: BalanceOf<T>,
-            #[pallet::compact] price: BalanceOf<T>,
+            #[pallet::compact] outcome_asset_amount: BalanceOf<T>,
+            #[pallet::compact] base_asset_amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -328,24 +383,25 @@ mod pallet {
                 maker: who.clone(),
                 outcome_asset,
                 base_asset,
-                amount,
-                price,
+                outcome_asset_amount,
+                base_asset_amount,
             };
 
             match side {
                 OrderSide::Bid => {
-                    let cost = amount
-                        .checked_mul(&price)
-                        .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
-
-                    T::AssetManager::reserve_named(&Self::reserve_id(), base_asset, &who, cost)?;
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        base_asset,
+                        &who,
+                        base_asset_amount,
+                    )?;
                 }
                 OrderSide::Ask => {
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
                         outcome_asset,
                         &who,
-                        amount,
+                        outcome_asset_amount,
                     )?;
                 }
             }

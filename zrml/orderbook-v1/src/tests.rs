@@ -36,7 +36,7 @@ fn it_places_orders() {
         Markets::<Runtime>::insert(market_id, market);
 
         // Give some shares for Bob.
-        assert_ok!(AssetManager::deposit(Asset::CategoricalOutcome(0, 1), &BOB, 100));
+        assert_ok!(AssetManager::deposit(Asset::CategoricalOutcome(0, 1), &BOB, 10));
 
         // Make an order from Alice to buy shares.
         assert_ok!(Orderbook::place_order(
@@ -44,8 +44,8 @@ fn it_places_orders() {
             market_id,
             Asset::CategoricalOutcome(0, 2),
             OrderSide::Bid,
-            25,
             10,
+            250,
         ));
 
         let reserved_funds =
@@ -85,7 +85,7 @@ fn it_fills_ask_orders_fully() {
             outcome_asset,
             OrderSide::Ask,
             10,
-            5,
+            50,
         ));
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
@@ -99,8 +99,15 @@ fn it_fills_ask_orders_fully() {
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
-            Event::<Runtime>::OrderFullyFilled { order_hash, maker: BOB, taker: ALICE, filled: 10 }
-                .into(),
+            Event::<Runtime>::OrderFilled {
+                order_hash,
+                maker: BOB,
+                taker: ALICE,
+                filled: 50,
+                unfilled_outcome_asset_amount: 0,
+                unfilled_base_asset_amount: 0,
+            }
+            .into(),
         );
 
         let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
@@ -131,7 +138,7 @@ fn it_fills_bid_orders_fully() {
             outcome_asset,
             OrderSide::Bid,
             10,
-            5,
+            50,
         ));
 
         let reserved_bob = Balances::reserved_balance(BOB);
@@ -146,8 +153,15 @@ fn it_fills_bid_orders_fully() {
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
-            Event::<Runtime>::OrderFullyFilled { order_hash, maker: BOB, taker: ALICE, filled: 10 }
-                .into(),
+            Event::<Runtime>::OrderFilled {
+                order_hash,
+                maker: BOB,
+                taker: ALICE,
+                filled: 10,
+                unfilled_outcome_asset_amount: 0,
+                unfilled_base_asset_amount: 0,
+            }
+            .into(),
         );
 
         let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
@@ -177,19 +191,19 @@ fn it_fills_bid_orders_partially() {
             market_id,
             outcome_asset,
             OrderSide::Bid,
-            10,
-            5,
+            1000,
+            5000,
         ));
 
         let reserved_bob = Balances::reserved_balance(BOB);
-        assert_eq!(reserved_bob, 50);
+        assert_eq!(reserved_bob, 5000);
 
         let order_id = 0u128;
         let order_hash = Orderbook::order_hash(&BOB, order_id);
-        assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 10));
+        assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 1000));
 
-        // instead of selling 10 shares, Alice sells 7 shares
-        let portion = Some(7);
+        // instead of selling 1000 shares, Alice sells 700 shares
+        let portion = Some(700);
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, portion,));
 
         let order = <Orders<Runtime>>::get(order_hash).unwrap();
@@ -202,36 +216,38 @@ fn it_fills_bid_orders_partially() {
                 maker: BOB,
                 outcome_asset,
                 base_asset: Asset::Ztg,
-                // from 10 to 3 changed (partially filled)
-                amount: 3,
-                price: 5,
+                // from 1000 to 300 changed (partially filled)
+                outcome_asset_amount: 300,
+                base_asset_amount: 1500,
             }
         );
 
         let reserved_bob = Balances::reserved_balance(BOB);
-        // 50 - (7 shares * 5 price) = 15
-        assert_eq!(reserved_bob, 15);
+        // 5000 - (700 shares * 500 price) = 1500
+        assert_eq!(reserved_bob, 1500);
 
         System::assert_last_event(
-            Event::<Runtime>::OrderPartiallyFilled {
+            Event::<Runtime>::OrderFilled {
                 order_hash,
                 maker: BOB,
                 taker: ALICE,
-                filled: 7,
+                filled: 700,
+                unfilled_outcome_asset_amount: 300,
+                unfilled_base_asset_amount: 1500,
             }
             .into(),
         );
 
         let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
         let alice_shares = Tokens::free_balance(outcome_asset, &ALICE);
-        assert_eq!(alice_bal, BASE + 35);
-        assert_eq!(alice_shares, 3);
+        assert_eq!(alice_bal, BASE + 3500);
+        assert_eq!(alice_shares, 300);
 
         let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
         let bob_shares = Tokens::free_balance(outcome_asset, &BOB);
-        // 35 of base_asset lost, 15 of base_asset reserved
-        assert_eq!(bob_bal, BASE - 50);
-        assert_eq!(bob_shares, 7);
+        // 3500 of base_asset lost, 1500 of base_asset reserved
+        assert_eq!(bob_bal, BASE - 5000);
+        assert_eq!(bob_shares, 700);
     });
 }
 
@@ -267,18 +283,18 @@ fn it_cancels_orders() {
                     maker: ALICE,
                     outcome_asset: share_id,
                     base_asset: Asset::Ztg,
-                    amount: 25,
-                    price: 10,
+                    outcome_asset_amount: 25,
+                    base_asset_amount: 10,
                 },
             }
             .into(),
         );
 
         assert_noop!(
-            Orderbook::cancel_order(RuntimeOrigin::signed(BOB), order_hash),
+            Orderbook::remove_order(RuntimeOrigin::signed(BOB), order_hash),
             Error::<Runtime>::NotOrderCreator,
         );
 
-        assert_ok!(Orderbook::cancel_order(RuntimeOrigin::signed(ALICE), order_hash));
+        assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_hash));
     });
 }

@@ -862,7 +862,7 @@ macro_rules! impl_config_traits {
                             | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::cancel_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::remove_order { .. })
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
@@ -884,7 +884,7 @@ macro_rules! impl_config_traits {
                             )
                             | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::cancel_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::remove_order { .. })
                     ),
                 }
             }

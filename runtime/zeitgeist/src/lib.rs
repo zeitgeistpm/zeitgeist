@@ -125,7 +125,7 @@ impl Contains<RuntimeCall> for IsCallable {
 
         use zeitgeist_primitives::types::{
             MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::{Orderbook, RikiddoSigmoidFeeMarketEma},
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{
             create_cpmm_market_and_deploy_assets, create_market, edit_market,
@@ -171,12 +171,8 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
-                    create_market {
-                        scoring_rule: RikiddoSigmoidFeeMarketEma, ..
-                    } => false,
-                    edit_market {
-                        scoring_rule: RikiddoSigmoidFeeMarketEma, ..
-                    } => false,
+                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                     edit_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
