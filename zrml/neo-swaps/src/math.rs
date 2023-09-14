@@ -244,7 +244,7 @@ mod detail {
         }
 
         #[test]
-        fn calculatte_swap_amount_out_for_sell_works() {
+        fn calculate_swap_amount_out_for_sell_works() {
             let liquidity = 144269504088;
             assert_eq!(
                 calculate_swap_amount_out_for_sell(_10, _10, liquidity).unwrap(),
