@@ -215,7 +215,7 @@ mod pallet {
         MarketNotActive,
         /// Deploying pools is only supported for scalar or binary markets.
         MarketNotBinaryOrScalar,
-        /// Some calculating failed. This shouldn't happen.
+        /// Some calculation failed. This shouldn't happen.
         MathError,
         /// The user is not allowed to execute this command.
         NotAllowed,
