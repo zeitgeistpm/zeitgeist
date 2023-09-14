@@ -485,7 +485,6 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: vec![(ALICE, FOREIGN_ASSET, _100)],
-            // balances: (0..69).map(|idx| (idx, FOREIGN_ASSET, _100)).collect(),
         }
         .assimilate_storage(&mut t)
         .unwrap();
