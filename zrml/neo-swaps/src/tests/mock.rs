@@ -486,11 +486,9 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         use frame_support::traits::GenesisBuild;
         #[cfg(feature = "parachain")]
-        orml_tokens::GenesisConfig::<Runtime> {
-            balances: vec![(ALICE, FOREIGN_ASSET, _100)],
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
+        orml_tokens::GenesisConfig::<Runtime> { balances: vec![(ALICE, FOREIGN_ASSET, _100)] }
+            .assimilate_storage(&mut t)
+            .unwrap();
         #[cfg(feature = "parachain")]
         let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
             allow_as_base_asset: true,
@@ -515,4 +513,3 @@ impl ExtBuilder {
         t.into()
     }
 }
-
