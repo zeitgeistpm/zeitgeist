@@ -96,7 +96,7 @@ In particular, $(p_1, \ldots, p_n)$ always maps to a probability distribution.
 
 Trading fees are specified as fractional (a fee of $f = .01$ means that $1\%$ are charged) and deducted from the amount of collateral before the complete set operations are executed. In other words, the liquidity providers receive $fx$ dollars (fees are distributed pro rata amongst the liquidity providers) and Alice goes through the entire process described above with $\tilde x = (1-f)x$ in place of $x$. The spot price taking the fees into account is (as expected)
 \[
-    \psi(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
+    p_i(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
 \]
 
 \subsection{Selling}
@@ -222,9 +222,9 @@ How "bad" are these restrictions? The first restriction is completely irrelevant
     \ln(e^A) - \ln(e^A - q) &= \ln\left(\frac{e^A}{e^A - q}\right) \\
     &\leq \ln\left(\frac{e^A}{e^A - 1}\right) \\
     &\approx 2.0611536900435727 \cdot 10^{-9} \\
-    &\leq 10^{-10}.
+    &\leq 10^{-8}.
 \end{align*}
-Let $\varepsilon = 10^{-10}$. Then we have
+Let $\varepsilon = 10^{-8}$. Then we have
 \begin{align*}
     y(x) &= b\ln(e^A - 1 + e^{-r_i/b}) + r_i - x \\
     &\geq b(\ln(e^A) - \varepsilon) + r_i - x \\
@@ -233,9 +233,9 @@ Let $\varepsilon = 10^{-10}$. Then we have
 \end{align*}
 Thus, Alice receives all funds from the pool except $b \varepsilon$, which is very small unless the pool contains an inordinate amount of liquidity.
 
-The second restriction means that no trades of outcome $i$ can be executed if the price of $i$ drops below the threshold $\varepsilon = e^{-A}$. On markets with two outcomes (binary or scalar), this is equivalent to the price of the other outcome rising above $1 - \varepsilon$. Due to risk considerations, these are generally scenarios that won't occur.
+The second restriction means that no trades of outcome $i$ can be executed if the price of $i$ drops below the threshold $\varepsilon' = e^{-A}$. On markets with two outcomes (binary or scalar), this is equivalent to the price of the other outcome rising above $1 - \varepsilon'$. Due to risk considerations, these are generally scenarios that won't occur.
 
-For markets with two outcomes (binary or scalar), we therefore make the following restriction: \emph{Any trade that moves the price of an outcome below $\varepsilon = .005$ (or equivalently, moves the price of an outcome above $1 - \varepsilon$) is not allowed.} This will ensure that the pool is always in a valid state where it can execute trades. Note that in the presence of a swap fee of 1\%, this isn't even a restriction.
+For markets with two outcomes (binary or scalar), we therefore make the following restriction: Any trade that moves the price of an outcome below $\varepsilon'' = .005$ (or equivalently, moves the price of an outcome above $1 - \varepsilon''$) is not allowed. This will ensure that the pool is always in a valid state where it can execute trades. Note that in the presence of a swap fee of 1\%, this isn't even a restriction.
 
 Markets with more than two outcomes are currently not allowed to use AMM 2.0 pools. The issue in a market with three or more outcomes $A, B, C, \ldots$ is that if $C$ is a clear underdog and most of the trading happens between the favorites $A$ and $B$, then the price of $C$ might drop below the allowed threshold and \emph{brick} the market of $C$ (all trades involving $C$ must be rejected due to numerical issues). While this is most likely to happen if the market is $C$-weakly trivialized (it is common knowledge that $C$ will almost certainly not materialize), which should never happen on a live market, this is unfortunate. A solution for this issue is provided in the near future.
 
