@@ -81,6 +81,7 @@ where
     }
 
     fn calculate_max_amount_in(&self) -> BalanceOf<T> {
+        // Saturation is OK. If this saturates, the maximum amount in is just the numerical limit.
         self.liquidity_parameter.saturating_mul(EXP_NUMERICAL_LIMIT.saturated_into())
     }
 }
