@@ -2312,6 +2312,7 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
         pub(crate) fn do_sell_complete_set(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -2356,6 +2357,7 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
         pub(crate) fn do_buy_complete_set(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
