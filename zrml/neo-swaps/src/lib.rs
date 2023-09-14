@@ -227,7 +227,7 @@ mod pallet {
         OutstandingFees,
         /// Specified market does not have a pool.
         PoolNotFound,
-        /// Spot price is below the allowed minimum.
+        /// Spot price is above the allowed minimum.
         SpotPriceAboveMax,
         /// Spot price is below the allowed minimum.
         SpotPriceBelowMin,
