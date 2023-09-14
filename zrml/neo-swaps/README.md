@@ -35,8 +35,8 @@ For a detailed description of the underlying mathematics see [here][docslink].
   does not take into account funds that are sent to the pool account
   unsolicitedly. This fixes a griefing vector which allows an attacker to change
   prices by sending funds to the pool account.
-- Pool shares are not recorded using the `MultiCurrency` trait. Instead,
-  they are part of the `Pool` object and can be tracked using events.
+- Pool shares are not recorded using the `MultiCurrency` trait. Instead, they
+  are part of the `Pool` object and can be tracked using events.
 - When the native currency is used as collateral, the pallet deposits the
   existential deposit to the pool account (which holds the swap fees). This is
   done to ensure that small amounts of fees don't cause the entire transaction
