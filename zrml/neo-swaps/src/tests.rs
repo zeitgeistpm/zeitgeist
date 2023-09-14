@@ -395,6 +395,10 @@ fn join_works() {
             pool_after.liquidity_parameter,
             bmul(ratio, pool_before.liquidity_parameter).unwrap()
         );
+        assert_eq!(
+            pool_after.liquidity_shares_manager.shares_of(&ALICE).unwrap(),
+            liquidity + pool_shares_amount
+        );
         System::assert_last_event(
             Event::JoinExecuted {
                 who: ALICE,
@@ -456,6 +460,10 @@ fn exit_works() {
         assert_eq!(
             pool_after.liquidity_parameter,
             bmul(_1 - ratio, pool_before.liquidity_parameter).unwrap()
+        );
+        assert_eq!(
+            pool_after.liquidity_shares_manager.shares_of(&ALICE).unwrap(),
+            liquidity - pool_shares_amount
         );
         System::assert_last_event(
             Event::ExitExecuted {
