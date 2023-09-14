@@ -31,7 +31,7 @@
 
 use crate as zrml_neo_swaps;
 #[cfg(feature = "parachain")]
-use crate::consts::_100;
+use crate::tests::consts::_100;
 use crate::{consts::MAX_ASSETS, AssetOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
@@ -48,6 +48,8 @@ use sp_runtime::{
     DispatchResult, Percent, SaturatedConversion,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
+#[cfg(feature = "parachain")]
+use zeitgeist_primitives::types::Asset;
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
@@ -66,8 +68,8 @@ use zeitgeist_primitives::{
     },
     traits::DeployPoolApi,
     types::{
-        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_neo_swaps::{traits::DistributeFees, BalanceOf};
@@ -82,6 +84,7 @@ pub const FEE_ACCOUNT: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 123456;
 pub const EXTERNAL_FEES: Balance = CENT;
 
+#[cfg(feature = "parachain")]
 pub const FOREIGN_ASSET: Asset<MarketId> = Asset::ForeignAsset(1);
 
 parameter_types! {

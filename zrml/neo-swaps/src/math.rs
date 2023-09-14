@@ -228,9 +228,18 @@ mod detail {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::{assert_approx, consts::*};
+        use crate::assert_approx;
         use std::str::FromStr;
         use test_case::test_case;
+        use zeitgeist_primitives::constants::BASE;
+
+        const _1: u128 = BASE;
+        const _3: u128 = 3 * _1;
+        const _10: u128 = 10 * _1;
+        const _20: u128 = 20 * _1;
+        const _1_2: u128 = _1 / 2;
+        const _1_4: u128 = _1 / 4;
+        const _3_4: u128 = _3 / 4;
 
         // Example taken from
         // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr

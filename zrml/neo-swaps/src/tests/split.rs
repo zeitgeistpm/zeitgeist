@@ -15,5 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub(crate) const EXP_NUMERICAL_LIMIT: u128 = 20; // Numerical limit for exp arguments.
-pub(crate) const MAX_ASSETS: u16 = 128;
+use super::*;
+
+#[test]
+fn split_is_noop() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            NeoSwaps::split(RuntimeOrigin::signed(ALICE), 0, BOB, _1),
+            Error::<Runtime>::NotImplemented
+        );
+    });
+}
