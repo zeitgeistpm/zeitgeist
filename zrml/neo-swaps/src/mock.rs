@@ -514,32 +514,3 @@ impl ExtBuilder {
     }
 }
 
-// sp_api::mock_impl_runtime_apis! {
-//     impl zrml_neo_swaps_runtime_api::SwapsApi<BlockTest<Runtime>, PoolId, AccountIdTest, Balance, MarketId>
-//       for Runtime
-//     {
-//         fn get_spot_price(
-//             pool_id: &PoolId,
-//             asset_in: &Asset<MarketId>,
-//             asset_out: &Asset<MarketId>,
-//             with_fees: bool,
-//         ) -> SerdeWrapper<Balance> {
-//             SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
-//         }
-//
-//         fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
-//             Swaps::pool_account_id(pool_id)
-//         }
-//
-//         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
-//             Asset::PoolShare(SerdeWrapper(pool_id))
-//         }
-//
-//         fn get_all_spot_prices(
-//             pool_id: &PoolId,
-//             with_fees: bool
-//         ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
-//             Swaps::get_all_spot_prices(pool_id, with_fees)
-//         }
-//     }
-// }
