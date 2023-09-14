@@ -73,6 +73,7 @@ mock = [
     "zrml-global-disputes/std",
     "zrml-prediction-markets/std",
     "zrml-prediction-markets/mock",
+    "zrml-prediction-markets/default",
     "serde/default",
 ]
 parachain = [
