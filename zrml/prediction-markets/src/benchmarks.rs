@@ -155,7 +155,8 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
         panic!("setup_redeem_shares_common: Unsupported market type: {market_type:?}");
     }
 
-    Pallet::<T>::do_buy_complete_set(caller.clone(), market_id, LIQUIDITY.saturated_into())?;
+    Call::<T>::buy_complete_set { market_id, amount: LIQUIDITY.saturated_into() }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
     let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
