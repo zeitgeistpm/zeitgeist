@@ -638,7 +638,6 @@ mod pallet {
                         .saturated_into(),
                 );
                 pool.liquidity_parameter = new_liquidity_parameter;
-                Pools::<T>::insert(market_id, pool);
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
                     market_id,
@@ -710,7 +709,6 @@ mod pallet {
                         Error::<T>::LiquidityTooLow
                     );
                     pool.liquidity_parameter = new_liquidity_parameter;
-                    Pools::<T>::insert(market_id, pool);
                     Self::deposit_event(Event::<T>::ExitExecuted {
                         who: who.clone(),
                         market_id,
