@@ -159,7 +159,7 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
         #[pallet::weight(
-            T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
+            T::WeightInfo::remove_order_ask().max(T::WeightInfo::remove_order_bid())
         )]
         #[transactional]
         pub fn remove_order(
@@ -197,8 +197,8 @@ mod pallet {
             Self::deposit_event(Event::OrderRemoved { order_hash, maker: maker.clone() });
 
             match order_data.side {
-                OrderSide::Bid => Ok(Some(T::WeightInfo::cancel_order_bid()).into()),
-                OrderSide::Ask => Ok(Some(T::WeightInfo::cancel_order_ask()).into()),
+                OrderSide::Bid => Ok(Some(T::WeightInfo::remove_order_bid()).into()),
+                OrderSide::Ask => Ok(Some(T::WeightInfo::remove_order_ask()).into()),
             }
         }
 
