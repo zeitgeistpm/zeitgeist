@@ -4,15 +4,18 @@
 
 # Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
 
-![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg) [![Codecov](https://codecov.io/gh/zeitgeistpm/zeitgeist/branch/main/graph/badge.svg)](https://codecov.io/gh/zeitgeistpm/zeitgeist) [![Discord](https://img.shields.io/badge/discord-https%3A%2F%2Fdiscord.gg%2FMD3TbH3ctv-purple)](https://discord.gg/MD3TbH3ctv) [![Telegram](https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue)](https://t.me/zeitgeist_official)
+![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg)
+[![Codecov](https://codecov.io/gh/zeitgeistpm/zeitgeist/branch/main/graph/badge.svg)](https://codecov.io/gh/zeitgeistpm/zeitgeist)
+[![Discord](https://img.shields.io/badge/discord-https%3A%2F%2Fdiscord.gg%2FMD3TbH3ctv-purple)](https://discord.gg/MD3TbH3ctv)
+[![Telegram](https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue)](https://t.me/zeitgeist_official)
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
 prediction markets. The platform's native currency, the ZTG, is used to sway the
 direction of the network, and as a means of last-call dispute resolution.
 Additionally, Zeitgeist is a protocol for efficient trading of prediction market
 shares and will one day become the backbone of the decentralized finance
-ecosystem by allowing traders to create complex financial contracts on
-virtually _anything_.
+ecosystem by allowing traders to create complex financial contracts on virtually
+_anything_.
 
 ## Modules
 
@@ -27,6 +30,9 @@ virtually _anything_.
   liquidity to swap pools.
 - [market-commons](./zrml/market-commons) - Contains common operations on
   markets that are used by multiple pallets.
+- [neo-swaps](./zrml/neo-swaps) - An implementation of the Logarithmic Market
+  Scoring Rule as constant function market maker, tailor-made for decentralized
+  combinatorial markets and Futarchy.
 - [orderbook-v1](./zrml/orderbook-v1) - A naive orderbook implementation that's
   only part of Zeitgeist's PoC. Will be replaced by a v2 orderbook that uses
   0x-style hybrid on-chain and off-chain trading.

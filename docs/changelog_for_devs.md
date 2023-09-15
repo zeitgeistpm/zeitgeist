@@ -12,6 +12,38 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.4.1
+
+### Added
+
+- Implement AMM-2.0-light in the form of zrml-neo-swaps. The new pallet has the
+  following dispatchables:
+
+  - `buy`: Buy outcome tokens from the specified market.
+  - `sell`: Sell outcome tokens to the specified market.
+  - `join`: Join the liquidity pool for the specified market.
+  - `exit`: Exit the liquidity pool for the specified market.
+  - `withdraw_fees`: Withdraw swap fees from the specified market.
+  - `deploy_pool`: Deploy a pool for the specified market and provide liquidity.
+
+  The new pallet has the following events:
+
+  - `BuyExecuted { who, market_id, asset_out, amount_in, amount_out, swap_fee_amount, external_fee_amount }`:
+    Informant bought a position.
+  - `SellExecuted { who, market_id, asset_in, amount_in, amount_out, swap_fee_amount, external_fee_amount }`:
+    Informants sold a position.
+  - `FeesWithdrawn { who }`: Liquidity provider withdrew fees.
+  - `JoinExecuted { who, market_id, pool_shares_amount, amounts_in, new_liquidity_parameter }`:
+    Liquidity provider joined the pool.
+  - `ExitExecuted { who, market_id, pool_shares_amount, amounts_out, new_liquidity_parameter }`:
+    Liquidity provider left the pool.
+  - `PoolDeployed { who, market_id, pool_shares_amount, amounts_in, liquidity_parameter }`:
+    Pool was created.
+  - `PoolDestroyed { who, market_id, pool_shares_amount, amounts_out }`: Pool
+    was destroyed.
+
+  For details, please refer to the `README.md` and the in-file documentation.
+
 ## v0.4.0
 
 [#976]: https://github.com/zeitgeistpm/zeitgeist/pull/976
