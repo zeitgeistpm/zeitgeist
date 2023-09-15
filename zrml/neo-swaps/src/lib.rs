@@ -26,7 +26,7 @@ mod math;
 mod mock;
 mod tests;
 pub mod traits;
-mod types;
+pub mod types;
 pub mod weights;
 
 pub use pallet::*;

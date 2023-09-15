@@ -53,6 +53,7 @@ macro_rules! decl_common_types {
         use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
         use sp_runtime::{generic, DispatchResult};
         use zeitgeist_primitives::traits::DeployPoolApi;
+        use zrml_neo_swaps::types::MarketCreatorFee;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -227,24 +228,6 @@ macro_rules! decl_common_types {
                 }
 
                 false
-            }
-        }
-
-        pub struct ExternalFeesNoop;
-
-        impl zrml_neo_swaps::traits::DistributeFees for ExternalFeesNoop {
-            type Asset = Asset<MarketId>;
-            type AccountId = AccountId;
-            type Balance = Balance;
-            type MarketId = MarketId;
-
-            fn distribute(
-                _market_id: Self::MarketId,
-                _asset: Self::Asset,
-                _account: Self::AccountId,
-                _amount: Self::Balance,
-            ) -> Balance {
-                0u128.into()
             }
         }
 
@@ -1266,7 +1249,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_neo_swaps::Config for Runtime {
             type CompleteSetOperations = PredictionMarkets;
-            type ExternalFees = ExternalFeesNoop;
+            type ExternalFees = MarketCreatorFee<Runtime>;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
