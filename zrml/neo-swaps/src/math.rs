@@ -229,8 +229,7 @@ mod detail {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::assert_approx;
-        use crate::consts::*;
+        use crate::{assert_approx, consts::*};
         use std::str::FromStr;
         use test_case::test_case;
 

@@ -24,9 +24,8 @@ mod join;
 mod sell;
 mod withdraw_fees;
 
-use crate::{consts::*, traits::*, *};
+use crate::{consts::*, mock::*, traits::*, *};
 use frame_support::{assert_noop, assert_ok};
-use crate::mock::*;
 use orml_traits::MultiCurrency;
 use sp_runtime::Perbill;
 use zeitgeist_primitives::{

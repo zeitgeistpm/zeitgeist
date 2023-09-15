@@ -81,32 +81,32 @@ pub trait WeightInfoZeitgeist {
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(538), added: 3013, mode: MaxEncodedLen)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: MarketCommons MarketPool (r:1 w:0)
     /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
     /// Storage: Swaps Pools (r:1 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
     fn admin_clean_up_pool_cpmm_categorical(_a: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `651 + a * (54 ±0)`
-        //  Estimated: `11662`
-        // Minimum execution time: 44_000 nanoseconds.
-        Weight::from_parts(155_000_000, 11662)
+        //  Measured:  `692 + a * (54 ±0)`
+        //  Estimated: `11665`
+        // Minimum execution time: 45_000 nanoseconds.
+        Weight::from_parts(67_000_000, 11665)
             .saturating_add(T::DbWeight::get().reads(3_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(538), added: 3013, mode: MaxEncodedLen)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: MarketCommons MarketPool (r:1 w:0)
     /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
     /// Storage: Swaps Pools (r:1 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
     fn admin_clean_up_pool_cpmm_scalar() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `844`
-        //  Estimated: `11662`
-        // Minimum execution time: 63_000 nanoseconds.
-        Weight::from_parts(63_000_000, 11662)
+        //  Measured:  `885`
+        //  Estimated: `11665`
+        // Minimum execution time: 40_000 nanoseconds.
+        Weight::from_parts(40_000_000, 11665)
             .saturating_add(T::DbWeight::get().reads(3_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
     }
@@ -125,7 +125,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         //  Measured:  `0 + a * (11565 ±0)`
         //  Estimated: `11673751`
         // Minimum execution time: 1_000 nanoseconds.
-        Weight::from_parts(85_199_000_000, 11673751)
+        Weight::from_parts(77_180_000_000, 11673751)
             .saturating_add(T::DbWeight::get().reads(4412_u64))
             .saturating_add(T::DbWeight::get().writes(4285_u64))
     }
@@ -136,7 +136,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         //  Measured:  `0 + a * (28 ±0)`
         //  Estimated: `159936`
         // Minimum execution time: 1_000 nanoseconds.
-        Weight::from_parts(815_000_000, 159936)
+        Weight::from_parts(542_000_000, 159936)
             .saturating_add(T::DbWeight::get().reads(64_u64))
             .saturating_add(T::DbWeight::get().writes(63_u64))
     }
@@ -152,8 +152,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `631 + a * (314 ±0)`
         //  Estimated: `63006`
-        // Minimum execution time: 39_000 nanoseconds.
-        Weight::from_parts(219_000_000, 63006)
+        // Minimum execution time: 29_000 nanoseconds.
+        Weight::from_parts(213_000_000, 63006)
             .saturating_add(T::DbWeight::get().reads(23_u64))
             .saturating_add(T::DbWeight::get().writes(22_u64))
     }
@@ -166,18 +166,18 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `0 + a * (412 ±0) + b * (248 ±0)`
-        //  Estimated: `13114 + b * (6216 ±0) + a * (7794 ±0)`
-        // Minimum execution time: 549_000 nanoseconds.
-        Weight::from_parts(26_999_999, 13114)
-            // Standard Error: 1_039_230
-            .saturating_add(Weight::from_ref_time(26_100_000).saturating_mul(a.into()))
-            // Standard Error: 1_039_230
-            .saturating_add(Weight::from_ref_time(31_600_000).saturating_mul(b.into()))
+        //  Estimated: `13114 + a * (7794 ±0) + b * (6216 ±0)`
+        // Minimum execution time: 580_000 nanoseconds.
+        Weight::from_parts(55_999_999, 13114)
+            // Standard Error: 2_424_871
+            .saturating_add(Weight::from_ref_time(26_200_000).saturating_mul(a.into()))
+            // Standard Error: 2_424_871
+            .saturating_add(Weight::from_ref_time(29_100_000).saturating_mul(b.into()))
             .saturating_add(T::DbWeight::get().reads(5_u64))
             .saturating_add(T::DbWeight::get().reads((3_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(b.into())))
-            .saturating_add(Weight::from_proof_size(6216).saturating_mul(b.into()))
             .saturating_add(Weight::from_proof_size(7794).saturating_mul(a.into()))
+            .saturating_add(Weight::from_proof_size(6216).saturating_mul(b.into()))
     }
     /// Storage: Swaps Pools (r:1 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
@@ -195,12 +195,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `0 + a * (182 ±0) + b * (1508 ±0)`
         //  Estimated: `7230 + b * (11044 ±0) + a * (5116 ±0)`
-        // Minimum execution time: 26_000 nanoseconds.
-        Weight::from_parts(26_000_000, 7230)
-            // Standard Error: 5_032_352
-            .saturating_add(Weight::from_ref_time(5_593_072).saturating_mul(a.into()))
-            // Standard Error: 32_715_450
-            .saturating_add(Weight::from_ref_time(83_090_481).saturating_mul(b.into()))
+        // Minimum execution time: 15_000 nanoseconds.
+        Weight::from_parts(15_000_000, 7230)
+            // Standard Error: 4_743_295
+            .saturating_add(Weight::from_ref_time(5_275_214).saturating_mul(a.into()))
+            // Standard Error: 30_836_285
+            .saturating_add(Weight::from_ref_time(83_022_388).saturating_mul(b.into()))
             .saturating_add(T::DbWeight::get().reads(1_u64))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().reads((10_u64).saturating_mul(b.into())))
@@ -219,8 +219,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `742 + a * (215 ±0)`
         //  Estimated: `341353`
-        // Minimum execution time: 78_000 nanoseconds.
-        Weight::from_parts(1_430_000_000, 341353)
+        // Minimum execution time: 76_000 nanoseconds.
+        Weight::from_parts(1_308_000_000, 341353)
             .saturating_add(T::DbWeight::get().reads(132_u64))
             .saturating_add(T::DbWeight::get().writes(130_u64))
     }
@@ -236,8 +236,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `540 + a * (215 ±0)`
         //  Estimated: `343960`
-        // Minimum execution time: 82_000 nanoseconds.
-        Weight::from_parts(1_533_000_000, 343960)
+        // Minimum execution time: 78_000 nanoseconds.
+        Weight::from_parts(1_260_000_000, 343960)
             .saturating_add(T::DbWeight::get().reads(133_u64))
             .saturating_add(T::DbWeight::get().writes(131_u64))
     }
@@ -249,8 +249,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `395 + a * (167 ±0)`
         //  Estimated: `174996`
-        // Minimum execution time: 40_000 nanoseconds.
-        Weight::from_parts(263_000_000, 174996).saturating_add(T::DbWeight::get().reads(66_u64))
+        // Minimum execution time: 28_000 nanoseconds.
+        Weight::from_parts(297_000_000, 174996).saturating_add(T::DbWeight::get().reads(66_u64))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
@@ -264,8 +264,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `748 + a * (289 ±0)`
         //  Estimated: `351589`
-        // Minimum execution time: 92_000 nanoseconds.
-        Weight::from_parts(1_218_000_000, 351589)
+        // Minimum execution time: 90_000 nanoseconds.
+        Weight::from_parts(1_123_000_000, 351589)
             .saturating_add(T::DbWeight::get().reads(134_u64))
             .saturating_add(T::DbWeight::get().writes(132_u64))
     }
@@ -279,8 +279,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `2459`
         //  Estimated: `11279`
-        // Minimum execution time: 46_000 nanoseconds.
-        Weight::from_parts(46_000_000, 11279)
+        // Minimum execution time: 45_000 nanoseconds.
+        Weight::from_parts(45_000_000, 11279)
             .saturating_add(T::DbWeight::get().reads(3_u64))
             .saturating_add(T::DbWeight::get().writes(3_u64))
     }
@@ -298,8 +298,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `5392`
         //  Estimated: `19045`
-        // Minimum execution time: 98_000 nanoseconds.
-        Weight::from_parts(98_000_000, 19045)
+        // Minimum execution time: 97_000 nanoseconds.
+        Weight::from_parts(97_000_000, 19045)
             .saturating_add(T::DbWeight::get().reads(6_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
@@ -317,8 +317,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `5392`
         //  Estimated: `19045`
-        // Minimum execution time: 103_000 nanoseconds.
-        Weight::from_parts(103_000_000, 19045)
+        // Minimum execution time: 97_000 nanoseconds.
+        Weight::from_parts(97_000_000, 19045)
             .saturating_add(T::DbWeight::get().reads(6_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
@@ -332,8 +332,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `609 + a * (289 ±0)`
         //  Estimated: `348982`
-        // Minimum execution time: 84_000 nanoseconds.
-        Weight::from_parts(1_182_000_000, 348982)
+        // Minimum execution time: 82_000 nanoseconds.
+        Weight::from_parts(1_080_000_000, 348982)
             .saturating_add(T::DbWeight::get().reads(133_u64))
             .saturating_add(T::DbWeight::get().writes(132_u64))
     }
@@ -347,8 +347,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `2357`
         //  Estimated: `11279`
-        // Minimum execution time: 53_000 nanoseconds.
-        Weight::from_parts(53_000_000, 11279)
+        // Minimum execution time: 52_000 nanoseconds.
+        Weight::from_parts(52_000_000, 11279)
             .saturating_add(T::DbWeight::get().reads(3_u64))
             .saturating_add(T::DbWeight::get().writes(3_u64))
     }
@@ -364,8 +364,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `5947`
         //  Estimated: `16438`
-        // Minimum execution time: 102_000 nanoseconds.
-        Weight::from_parts(102_000_000, 16438)
+        // Minimum execution time: 84_000 nanoseconds.
+        Weight::from_parts(84_000_000, 16438)
             .saturating_add(T::DbWeight::get().reads(5_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
@@ -381,8 +381,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `5947`
         //  Estimated: `16438`
-        // Minimum execution time: 99_000 nanoseconds.
-        Weight::from_parts(99_000_000, 16438)
+        // Minimum execution time: 92_000 nanoseconds.
+        Weight::from_parts(92_000_000, 16438)
             .saturating_add(T::DbWeight::get().reads(5_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
@@ -392,13 +392,15 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `208 + a * (54 ±0)`
         //  Estimated: `6126`
-        // Minimum execution time: 20_000 nanoseconds.
-        Weight::from_parts(22_000_000, 6126)
+        // Minimum execution time: 11_000 nanoseconds.
+        Weight::from_parts(21_000_000, 6126)
             .saturating_add(T::DbWeight::get().reads(1_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:4 w:4)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -407,15 +409,17 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Swaps PoolsCachedForArbitrage (max_values: None, max_size: Some(24), added: 2499, mode: MaxEncodedLen)
     fn swap_exact_amount_in_cpmm() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `5112`
-        //  Estimated: `19125`
-        // Minimum execution time: 126_000 nanoseconds.
-        Weight::from_parts(126_000_000, 19125)
-            .saturating_add(T::DbWeight::get().reads(6_u64))
+        //  Measured:  `5488`
+        //  Estimated: `22141`
+        // Minimum execution time: 149_000 nanoseconds.
+        Weight::from_parts(149_000_000, 22141)
+            .saturating_add(T::DbWeight::get().reads(7_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:3 w:3)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:64 w:1)
@@ -428,34 +432,38 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
     fn swap_exact_amount_in_rikiddo(_a: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1414 + a * (86 ±0)`
-        //  Estimated: `180977`
-        // Minimum execution time: 123_000 nanoseconds.
-        Weight::from_parts(639_000_000, 180977)
-            .saturating_add(T::DbWeight::get().reads(71_u64))
+        //  Measured:  `1790 + a * (86 ±0)`
+        //  Estimated: `183993`
+        // Minimum execution time: 141_000 nanoseconds.
+        Weight::from_parts(736_000_000, 183993)
+            .saturating_add(T::DbWeight::get().reads(72_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:4 w:4)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
     /// Storage: Swaps PoolsCachedForArbitrage (r:0 w:1)
     /// Proof: Swaps PoolsCachedForArbitrage (max_values: None, max_size: Some(24), added: 2499, mode: MaxEncodedLen)
     fn swap_exact_amount_out_cpmm() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `5112`
-        //  Estimated: `19125`
-        // Minimum execution time: 125_000 nanoseconds.
-        Weight::from_parts(125_000_000, 19125)
-            .saturating_add(T::DbWeight::get().reads(6_u64))
+        //  Measured:  `5488`
+        //  Estimated: `22141`
+        // Minimum execution time: 151_000 nanoseconds.
+        Weight::from_parts(151_000_000, 22141)
+            .saturating_add(T::DbWeight::get().reads(7_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:4 w:3)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:64 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: RikiddoSigmoidFeeMarketEma RikiddoPerPool (r:1 w:1)
@@ -464,11 +472,11 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
     fn swap_exact_amount_out_rikiddo(_a: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1354 + a * (86 ±0)`
-        //  Estimated: `180968`
-        // Minimum execution time: 115_000 nanoseconds.
-        Weight::from_parts(928_000_000, 180968)
-            .saturating_add(T::DbWeight::get().reads(71_u64))
+        //  Measured:  `1730 + a * (86 ±0)`
+        //  Estimated: `183984`
+        // Minimum execution time: 133_000 nanoseconds.
+        Weight::from_parts(967_000_000, 183984)
+            .saturating_add(T::DbWeight::get().reads(72_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
     /// Storage: Swaps Pools (r:1 w:1)
@@ -477,8 +485,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `208 + a * (54 ±0)`
         //  Estimated: `6126`
-        // Minimum execution time: 18_000 nanoseconds.
-        Weight::from_parts(54_000_000, 6126)
+        // Minimum execution time: 17_000 nanoseconds.
+        Weight::from_parts(40_000_000, 6126)
             .saturating_add(T::DbWeight::get().reads(1_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
     }
@@ -488,8 +496,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `208 + a * (54 ±0)`
         //  Estimated: `6126`
-        // Minimum execution time: 19_000 nanoseconds.
-        Weight::from_parts(39_000_000, 6126)
+        // Minimum execution time: 16_000 nanoseconds.
+        Weight::from_parts(26_000_000, 6126)
             .saturating_add(T::DbWeight::get().reads(1_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
     }
@@ -505,8 +513,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `553 + a * (215 ±0)`
         //  Estimated: `341273`
-        // Minimum execution time: 76_000 nanoseconds.
-        Weight::from_parts(1_112_000_000, 341273)
+        // Minimum execution time: 64_000 nanoseconds.
+        Weight::from_parts(1_052_000_000, 341273)
             .saturating_add(T::DbWeight::get().reads(132_u64))
             .saturating_add(T::DbWeight::get().writes(132_u64))
     }
