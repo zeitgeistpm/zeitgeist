@@ -30,8 +30,7 @@
 )]
 
 use crate as zrml_neo_swaps;
-use crate::tests::consts::*;
-use crate::{consts::MAX_ASSETS, AssetOf, MarketIdOf};
+use crate::{consts::MAX_ASSETS, tests::consts::*, AssetOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
@@ -55,10 +54,10 @@ use zeitgeist_primitives::{
         BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId,
         ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCourtParticipants, MaxDelegations,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-        MaxInRatio, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
+        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCourtParticipants, MaxCreatorFee,
+        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
+        MaxGracePeriod, MaxInRatio, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
+        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
         MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
         MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond,
@@ -244,6 +243,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MaxDisputes = MaxDisputes;
     type MinDisputeDuration = MinDisputeDuration;
     type MinOracleDuration = MinOracleDuration;
+    type MaxCreatorFee = MaxCreatorFee;
     type MaxDisputeDuration = MaxDisputeDuration;
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;

@@ -33,6 +33,7 @@ use consts::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::*;
 use orml_traits::MultiCurrency;
+use sp_runtime::Perbill;
 use zeitgeist_primitives::{
     constants::CENT,
     math::fixed::{bdiv, bmul},
@@ -60,6 +61,7 @@ fn create_market(
     assert_ok!(PredictionMarkets::create_market(
         RuntimeOrigin::signed(creator),
         base_asset,
+        Perbill::zero(),
         EVE,
         MarketPeriod::Block(0..2),
         Deadlines {
