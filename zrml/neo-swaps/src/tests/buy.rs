@@ -78,11 +78,8 @@ fn buy_works() {
             pool_outcomes_after[1],
             pool_outcomes_before[0] + expected_amount_in_minus_fees,
         );
-        let expected_pool_account_balance = if pool.collateral == Asset::Ztg {
-            expected_swap_fee_amount + AssetManager::minimum_balance(pool.collateral)
-        } else {
-            expected_swap_fee_amount
-        };
+        let expected_pool_account_balance =
+            expected_swap_fee_amount + AssetManager::minimum_balance(pool.collateral);
         assert_eq!(
             AssetManager::free_balance(BASE_ASSET, &pool.account_id),
             expected_pool_account_balance

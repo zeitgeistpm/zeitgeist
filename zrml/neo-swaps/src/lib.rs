@@ -259,7 +259,7 @@ mod pallet {
         /// # Complexity
         ///
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
-        /// using the canoncial implementations, the runtime complexity is `O(asset_count)`.
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::buy(*asset_count))]
         #[transactional]
@@ -296,7 +296,7 @@ mod pallet {
         /// # Complexity
         ///
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
-        /// using the canoncial implementations, the runtime complexity is `O(asset_count)`.
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::sell(*asset_count))]
         #[transactional]
@@ -445,6 +445,11 @@ mod pallet {
         /// buying from the pool or by using complete set operations. It's therefore convenient to
         /// batch this function together with a `buy_complete_set` with `amount` as amount of
         /// complete sets to buy.
+        ///
+        /// Deploying the pool will cost the signer an additional fee to the tune of the
+        /// collateral's existential deposit. This fee is placed in the pool account and ensures
+        /// that swap fees can be stored in the pool account without triggering dusting or failed
+        /// transfers.
         ///
         /// The operation is currently limited to binary and scalar markets.
         ///
@@ -681,15 +686,11 @@ mod pallet {
                 }
                 pool.liquidity_shares_manager.exit(&who, pool_shares_amount)?;
                 if pool.liquidity_shares_manager.total_shares()? == Zero::zero() {
-                    // FIXME We will withdraw all remaining funds (there shouldn't be any unless
-                    // we're using the native currency). The implementation is a bit defensive here.
-                    // This is an ugly hack and system should offer the option to whitelist
-                    // accounts.
-                    if pool.collateral == Asset::Ztg {
-                        let remaining =
-                            T::MultiCurrency::free_balance(Asset::Ztg, &pool.account_id);
-                        T::MultiCurrency::withdraw(Asset::Ztg, &pool.account_id, remaining)?;
-                    }
+                    // FIXME We will withdraw all remaining funds (the "buffer"). This is an ugly
+                    // hack and system should offer the option to whitelist accounts.
+                    let remaining =
+                        T::MultiCurrency::free_balance(pool.collateral, &pool.account_id);
+                    T::MultiCurrency::withdraw(pool.collateral, &pool.account_id, remaining)?;
                     *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
@@ -790,17 +791,14 @@ mod pallet {
                 liquidity_shares_manager: SoloLp::new(who.clone(), amount),
                 swap_fee,
             };
-            // FIXME Ensure that the existential deposit doesn't kill fees for the native currency.
-            // You **must** whitelist the pool account from dust collection for non-native
-            // currencies. This is an ugly hack and system should offer the option to whitelist
-            // accounts.
-            if pool.collateral == Asset::Ztg {
-                T::MultiCurrency::deposit(
-                    Asset::Ztg,
-                    &pool.account_id,
-                    T::MultiCurrency::minimum_balance(Asset::Ztg),
-                )?;
-            }
+            // FIXME Ensure that the existential deposit doesn't kill fees. This is an ugly hack and
+            // system should offer the option to whitelist accounts.
+            T::MultiCurrency::transfer(
+                pool.collateral,
+                &who,
+                &pool.account_id,
+                T::MultiCurrency::minimum_balance(pool.collateral),
+            )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,

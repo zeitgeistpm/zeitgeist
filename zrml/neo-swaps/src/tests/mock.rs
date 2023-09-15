@@ -30,8 +30,7 @@
 )]
 
 use crate as zrml_neo_swaps;
-#[cfg(feature = "parachain")]
-use crate::tests::consts::_100;
+use crate::tests::consts::*;
 use crate::{consts::MAX_ASSETS, AssetOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
@@ -473,7 +472,7 @@ pub struct ExtBuilder {
 // FIXME Remove this in favor of adding whatever the account need in the individual tests.
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, 100 * BASE), (CHARLIE, BASE), (DAVE, BASE), (EVE, BASE)] }
+        Self { balances: vec![(ALICE, _101), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
     }
 }
 
@@ -486,7 +485,7 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         use frame_support::traits::GenesisBuild;
         #[cfg(feature = "parachain")]
-        orml_tokens::GenesisConfig::<Runtime> { balances: vec![(ALICE, FOREIGN_ASSET, _100)] }
+        orml_tokens::GenesisConfig::<Runtime> { balances: vec![(ALICE, FOREIGN_ASSET, _101)] }
             .assimilate_storage(&mut t)
             .unwrap();
         #[cfg(feature = "parachain")]

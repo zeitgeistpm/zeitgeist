@@ -40,11 +40,7 @@ fn withdraw_fees_works() {
         Pools::<Runtime>::insert(market_id, pool.clone());
         let alice_before = AssetManager::free_balance(pool.collateral, &ALICE);
         assert_ok!(NeoSwaps::withdraw_fees(RuntimeOrigin::signed(ALICE), market_id));
-        let expected_pool_account_balance = if pool.collateral == Asset::Ztg {
-            AssetManager::minimum_balance(pool.collateral)
-        } else {
-            0
-        };
+        let expected_pool_account_balance = AssetManager::minimum_balance(pool.collateral);
         assert_eq!(
             AssetManager::free_balance(pool.collateral, &pool.account_id),
             expected_pool_account_balance

@@ -146,11 +146,10 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    // Well, not every asset is a currency ¯\_(ツ)_/¯
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::Ztg => ExistentialDeposit::get(),
-            _ => 0
+            _ => 10
         }
     };
 }

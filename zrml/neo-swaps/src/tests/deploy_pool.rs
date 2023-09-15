@@ -38,6 +38,7 @@ fn deploy_pool_works_with_binary_markets() {
             vec![Asset::CategoricalOutcome(market_id, 0), Asset::CategoricalOutcome(market_id, 1)];
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let expected_liquidity = 144269504088;
+        let buffer = AssetManager::minimum_balance(pool.collateral);
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1);
         assert_eq!(pool.collateral, BASE_ASSET);
@@ -45,13 +46,14 @@ fn deploy_pool_works_with_binary_markets() {
         assert_eq!(pool.liquidity_shares_manager.total_shares, amount);
         assert_eq!(pool.liquidity_shares_manager.fees, 0);
         assert_eq!(pool.swap_fee, swap_fee);
+        assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), buffer);
         assert_eq!(AssetManager::free_balance(assets[0], &pool.account_id), amount);
         assert_eq!(AssetManager::free_balance(assets[1], &pool.account_id), amount);
         assert_eq!(pool.reserve_of(&assets[0]).unwrap(), amount);
         assert_eq!(pool.reserve_of(&assets[1]).unwrap(), amount);
         assert_eq!(pool.calculate_spot_price(assets[0]).unwrap(), spot_prices[0]);
         assert_eq!(pool.calculate_spot_price(assets[1]).unwrap(), spot_prices[1]);
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount);
+        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
         assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
         assert_eq!(AssetManager::free_balance(assets[1], &ALICE), 0);
         System::assert_last_event(
@@ -99,6 +101,7 @@ fn deploy_pool_works_with_scalar_marktes() {
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let expected_liquidity = 558110626551;
         let expected_amounts = vec![amount, 101755598229];
+        let buffer = AssetManager::minimum_balance(pool.collateral);
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1_000);
         assert_eq!(pool.collateral, BASE_ASSET);
@@ -115,7 +118,7 @@ fn deploy_pool_works_with_scalar_marktes() {
         assert_eq!(pool.reserve_of(&assets[1]).unwrap(), expected_amounts[1]);
         assert_eq!(pool.calculate_spot_price(assets[0]).unwrap(), spot_prices[0]);
         assert_eq!(pool.calculate_spot_price(assets[1]).unwrap(), spot_prices[1]);
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount);
+        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
         assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
         assert_eq!(AssetManager::free_balance(assets[1], &ALICE), amount - expected_amounts[1]);
         let price_sum =

@@ -107,6 +107,7 @@ fn exit_destroys_pool() {
         ];
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
         assert!(!Pools::<Runtime>::contains_key(market_id));
+        assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), 0);
         assert_eq!(AssetManager::free_balance(pool.assets()[0], &pool.account_id), 0);
         assert_eq!(AssetManager::free_balance(pool.assets()[1], &pool.account_id), 0);
         assert_eq!(
