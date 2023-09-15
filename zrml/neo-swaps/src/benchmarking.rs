@@ -23,10 +23,13 @@ use crate::{
     MarketIdOf, Pallet as NeoSwaps, Pools,
 };
 use frame_benchmarking::v2::*;
-use frame_support::assert_ok;
+use frame_support::{
+    assert_ok,
+    storage::{with_transaction, TransactionOutcome::*},
+};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
     constants::CENT,
     traits::CompleteSetOperationsApi,
@@ -37,6 +40,15 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
+macro_rules! assert_ok_with_transaction {
+    ($expr:expr) => {{
+        assert_ok!(with_transaction(|| match $expr {
+            Ok(val) => Commit(Ok(val)),
+            Err(err) => Rollback(Err(err)),
+        }));
+    }};
+}
+
 fn create_market<T: Config>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
@@ -45,7 +57,7 @@ fn create_market<T: Config>(
     let market = Market {
         base_asset,
         creation: MarketCreation::Permissionless,
-        creator_fee: 0,
+        creator_fee: Perbill::zero(),
         creator: caller.clone(),
         oracle: caller,
         metadata: vec![0, 50],
@@ -70,8 +82,13 @@ fn create_market_and_deploy_pool<T: Config>(
     amount: BalanceOf<T>,
 ) -> MarketIdOf<T> {
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
-    assert_ok!(T::AssetManager::deposit(base_asset, &caller, amount));
-    assert_ok!(T::CompleteSetOperations::buy_complete_set(caller.clone(), market_id, amount));
+    let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
+    assert_ok!(T::MultiCurrency::deposit(base_asset, &caller, total_cost));
+    assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
+        caller.clone(),
+        market_id,
+        amount
+    ));
     assert_ok!(NeoSwaps::<T>::deploy_pool(
         RawOrigin::Signed(caller).into(),
         market_id,
@@ -102,7 +119,7 @@ mod benchmarks {
         let min_amount_out = 0u8.saturated_into();
 
         let bob: T::AccountId = whitelisted_caller();
-        assert_ok!(T::AssetManager::deposit(base_asset, &bob, amount_in));
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &bob, amount_in));
 
         #[extrinsic_call]
         _(RawOrigin::Signed(bob), market_id, asset_count, asset_out, amount_in, min_amount_out);
@@ -119,7 +136,7 @@ mod benchmarks {
         let min_amount_out = 0u8.saturated_into();
 
         let bob: T::AccountId = whitelisted_caller();
-        assert_ok!(T::AssetManager::deposit(asset_in, &bob, amount_in));
+        assert_ok!(T::MultiCurrency::deposit(asset_in, &bob, amount_in));
 
         #[extrinsic_call]
         _(RawOrigin::Signed(bob), market_id, 2, asset_in, amount_in, min_amount_out);
@@ -138,8 +155,8 @@ mod benchmarks {
         let pool_shares_amount = _1.saturated_into();
         let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
 
-        assert_ok!(T::AssetManager::deposit(base_asset, &alice, pool_shares_amount));
-        assert_ok!(T::CompleteSetOperations::buy_complete_set(
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, pool_shares_amount));
+        assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
             alice.clone(),
             market_id,
             pool_shares_amount
@@ -184,7 +201,7 @@ mod benchmarks {
 
         // Mock up some fees.
         let mut pool = Pools::<T>::get(market_id).unwrap();
-        assert_ok!(T::AssetManager::deposit(base_asset, &pool.account_id, fee_amount));
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &pool.account_id, fee_amount));
         assert_ok!(pool.liquidity_shares_manager.deposit_fees(fee_amount));
         Pools::<T>::insert(market_id, pool);
 
@@ -198,9 +215,14 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let market_id = create_market::<T>(alice.clone(), base_asset, 2);
         let amount = _10.saturated_into();
+        let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
 
-        assert_ok!(T::AssetManager::deposit(base_asset, &alice, amount));
-        assert_ok!(T::CompleteSetOperations::buy_complete_set(alice.clone(), market_id, amount));
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
+        assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
+            alice.clone(),
+            market_id,
+            amount
+        ));
 
         #[extrinsic_call]
         _(

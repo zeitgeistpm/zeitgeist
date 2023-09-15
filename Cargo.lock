@@ -14381,6 +14381,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-arithmetic",
  "sp-core",
  "sp-runtime",
  "test-case",
@@ -14605,7 +14606,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "fixed",
  "frame-benchmarking",
@@ -14722,6 +14723,7 @@ dependencies = [
  "arbitrary",
  "frame-support",
  "libfuzzer-sys",
+ "sp-arithmetic",
  "zeitgeist-primitives",
  "zrml-prediction-markets",
  "zrml-simple-disputes",
@@ -14821,6 +14823,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-api",
+ "sp-arithmetic",
  "sp-io",
  "sp-runtime",
  "substrate-fixed",

@@ -35,7 +35,7 @@ use zeitgeist_primitives::{
 const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
-    creator_fee: 0,
+    creator_fee: sp_runtime::Perbill::zero(),
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
     dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,

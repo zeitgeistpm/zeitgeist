@@ -22,9 +22,8 @@ extern crate alloc;
 
 mod benchmarking;
 mod consts;
-mod macros;
 mod math;
-pub mod mock;
+mod mock;
 mod tests;
 pub mod traits;
 mod types;
@@ -54,13 +53,13 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
+        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
         math::fixed::{bdiv, bmul},
-        traits::{CompleteSetOperationsApi, DeployPoolApi, ZeitgeistAssetManager},
+        traits::{CompleteSetOperationsApi, DeployPoolApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -74,7 +73,7 @@ mod pallet {
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
+    pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
     pub(crate) type IndexType = u32;
@@ -84,7 +83,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = AssetOf<Self>>;
+        type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
         type CompleteSetOperations: CompleteSetOperationsApi<
                 AccountId = Self::AccountId,
@@ -216,7 +215,7 @@ mod pallet {
         MarketNotActive,
         /// Deploying pools is only supported for scalar or binary markets.
         MarketNotBinaryOrScalar,
-        /// Some calculating failed. This shouldn't happen.
+        /// Some calculation failed. This shouldn't happen.
         MathError,
         /// The user is not allowed to execute this command.
         NotAllowed,
@@ -228,7 +227,7 @@ mod pallet {
         OutstandingFees,
         /// Specified market does not have a pool.
         PoolNotFound,
-        /// Spot price is below the allowed minimum.
+        /// Spot price is above the allowed maximum.
         SpotPriceAboveMax,
         /// Spot price is below the allowed minimum.
         SpotPriceBelowMin,
@@ -262,7 +261,7 @@ mod pallet {
         /// # Complexity
         ///
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
-        /// using the canoncial implementations, the runtime complexity is `O(asset_count)`.
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::buy())]
         #[transactional]
@@ -299,7 +298,7 @@ mod pallet {
         /// # Complexity
         ///
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
-        /// using the canoncial implementations, the runtime complexity is `O(asset_count)`.
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::sell())]
         #[transactional]
@@ -437,6 +436,11 @@ mod pallet {
         /// batch this function together with a `buy_complete_set` with `amount` as amount of
         /// complete sets to buy.
         ///
+        /// Deploying the pool will cost the signer an additional fee to the tune of the
+        /// collateral's existential deposit. This fee is placed in the pool account and ensures
+        /// that swap fees can be stored in the pool account without triggering dusting or failed
+        /// transfers.
+        ///
         /// The operation is currently limited to binary and scalar markets.
         ///
         /// # Complexity
@@ -480,7 +484,7 @@ mod pallet {
                     Error::<T>::Unexpected
                 );
                 ensure!(amount_in <= pool.calculate_max_amount_in(), Error::<T>::NumericalLimits);
-                T::AssetManager::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
+                T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
@@ -498,12 +502,11 @@ mod pallet {
                     market_id,
                     amount_in_minus_fees,
                 )?;
-                T::AssetManager::transfer(asset_out, &pool.account_id, &who, amount_out)?;
-                for (&asset, balance) in pool.reserves.iter_mut() {
-                    *balance =
-                        balance.checked_add(&amount_in_minus_fees).ok_or(Error::<T>::MathError)?;
-                    if asset == asset_out {
-                        *balance = balance.checked_sub(&amount_out).ok_or(Error::<T>::MathError)?;
+                T::MultiCurrency::transfer(asset_out, &pool.account_id, &who, amount_out)?;
+                for asset in pool.assets().iter() {
+                    pool.increase_reserve(asset, &amount_in_minus_fees)?;
+                    if *asset == asset_out {
+                        pool.decrease_reserve(asset, &amount_out)?;
                     }
                 }
                 let new_price = pool.calculate_spot_price(asset_out)?;
@@ -551,7 +554,7 @@ mod pallet {
                 // up in the pool.
                 let amount_out = pool.calculate_swap_amount_out_for_sell(asset_in, amount_in)?;
                 // Beware! This transfer happen _after_ calculating `amount_out`:
-                T::AssetManager::transfer(asset_in, &who, &pool.account_id, amount_in)?;
+                T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
                     market_id,
@@ -563,17 +566,17 @@ mod pallet {
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(market_id, pool, amount_out)?;
                 ensure!(amount_out_minus_fees >= min_amount_out, Error::<T>::AmountOutBelowMin);
-                T::AssetManager::transfer(
+                T::MultiCurrency::transfer(
                     pool.collateral,
                     &pool.account_id,
                     &who,
                     amount_out_minus_fees,
                 )?;
-                for (&asset, balance) in pool.reserves.iter_mut() {
-                    if asset == asset_in {
-                        *balance = balance.checked_add(&amount_in).ok_or(Error::<T>::MathError)?;
+                for asset in pool.assets().iter() {
+                    if *asset == asset_in {
+                        pool.increase_reserve(asset, &amount_in)?;
                     }
-                    *balance = balance.checked_sub(&amount_out).ok_or(Error::<T>::MathError)?;
+                    pool.decrease_reserve(asset, &amount_out)?;
                 }
                 let new_price = pool.calculate_spot_price(asset_in)?;
                 ensure!(
@@ -616,7 +619,7 @@ mod pallet {
                     let amount_in = bmul(ratio, balance_in_pool.saturated_into())?.saturated_into();
                     amounts_in.push(amount_in);
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
-                    T::AssetManager::transfer(asset, &who, &pool.account_id, amount_in)?;
+                    T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_in)?;
                 }
                 for ((_, balance), &amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
                     *balance = balance.saturating_add(amount_in);
@@ -627,7 +630,6 @@ mod pallet {
                         .saturated_into(),
                 );
                 pool.liquidity_parameter = new_liquidity_parameter;
-                Pools::<T>::insert(market_id, pool);
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
                     market_id,
@@ -666,7 +668,7 @@ mod pallet {
                         bmul(ratio, balance_in_pool.saturated_into())?.saturated_into();
                     amounts_out.push(amount_out);
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
-                    T::AssetManager::transfer(asset, &pool.account_id, &who, amount_out)?;
+                    T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
                 for ((_, balance), &amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter())
                 {
@@ -674,14 +676,11 @@ mod pallet {
                 }
                 pool.liquidity_shares_manager.exit(&who, pool_shares_amount)?;
                 if pool.liquidity_shares_manager.total_shares()? == Zero::zero() {
-                    // FIXME We will withdraw all remaining funds (there shouldn't be any unless
-                    // we're using the native currency). The implementation is a bit defensive here.
-                    // This is an ugly hack and system should offer the option to whitelist
-                    // accounts.
-                    if pool.collateral == Asset::Ztg {
-                        let remaining = T::AssetManager::free_balance(Asset::Ztg, &pool.account_id);
-                        T::AssetManager::withdraw(Asset::Ztg, &pool.account_id, remaining)?;
-                    }
+                    // FIXME We will withdraw all remaining funds (the "buffer"). This is an ugly
+                    // hack and system should offer the option to whitelist accounts.
+                    let remaining =
+                        T::MultiCurrency::free_balance(pool.collateral, &pool.account_id);
+                    T::MultiCurrency::withdraw(pool.collateral, &pool.account_id, remaining)?;
                     *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
@@ -699,7 +698,6 @@ mod pallet {
                         Error::<T>::LiquidityTooLow
                     );
                     pool.liquidity_parameter = new_liquidity_parameter;
-                    Pools::<T>::insert(market_id, pool);
                     Self::deposit_event(Event::<T>::ExitExecuted {
                         who: who.clone(),
                         market_id,
@@ -716,7 +714,7 @@ mod pallet {
         fn do_withdraw_fees(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
             Self::try_mutate_pool(&market_id, |pool| {
                 let amount = pool.liquidity_shares_manager.withdraw_fees(&who)?;
-                T::AssetManager::transfer(pool.collateral, &pool.account_id, &who, amount)?; // Should never fail.
+                T::MultiCurrency::transfer(pool.collateral, &pool.account_id, &who, amount)?; // Should never fail.
                 Self::deposit_event(Event::<T>::FeesWithdrawn {
                     who: who.clone(),
                     market_id,
@@ -772,7 +770,7 @@ mod pallet {
             let assets = Self::outcomes(market_id)?;
             let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(assets.iter()) {
-                T::AssetManager::transfer(asset, &who, &pool_account_id, amount_in)?;
+                T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
                 let _ = reserves.insert(asset, amount_in);
             }
             let pool = Pool {
@@ -783,17 +781,14 @@ mod pallet {
                 liquidity_shares_manager: SoloLp::new(who.clone(), amount),
                 swap_fee,
             };
-            // FIXME Ensure that the existential deposit doesn't kill fees for the native currency.
-            // You **must** whitelist the pool account from dust collection for non-native
-            // currencies. This is an ugly hack and system should offer the option to whitelist
-            // accounts.
-            if pool.collateral == Asset::Ztg {
-                T::AssetManager::deposit(
-                    Asset::Ztg,
-                    &pool.account_id,
-                    T::AssetManager::minimum_balance(Asset::Ztg),
-                )?;
-            }
+            // FIXME Ensure that the existential deposit doesn't kill fees. This is an ugly hack and
+            // system should offer the option to whitelist accounts.
+            T::MultiCurrency::transfer(
+                pool.collateral,
+                &who,
+                &pool.account_id,
+                T::MultiCurrency::minimum_balance(pool.collateral),
+            )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,

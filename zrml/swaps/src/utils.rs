@@ -180,6 +180,10 @@ where
 
     let spot_price_before =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
+    // Duplicate call can be optimized
+    let spot_price_before_without_fees =
+        Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, false)?;
+
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
     }
@@ -212,7 +216,7 @@ where
                 return Err(Error::<T>::UnsupportedTrade.into());
             }
         }
-        _ => {
+        ScoringRule::Lmsr => {
             return Err(Error::<T>::UnsupportedTrade.into());
         }
     }
@@ -229,7 +233,7 @@ where
             spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
             Error::<T>::MathApproximation
         ),
-        _ => {
+        ScoringRule::Lmsr => {
             return Err(Error::<T>::UnsupportedTrade.into());
         }
     }
@@ -240,7 +244,7 @@ where
 
     match p.pool.scoring_rule {
         ScoringRule::CPMM => ensure!(
-            spot_price_before
+            spot_price_before_without_fees
                 <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
                     .saturated_into(),
             Error::<T>::MathApproximation
@@ -252,7 +256,7 @@ where
             let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
             T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
         }
-        _ => {
+        ScoringRule::Lmsr => {
             return Err(Error::<T>::UnsupportedTrade.into());
         }
     }

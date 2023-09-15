@@ -34,6 +34,27 @@ All things about Global Disputes Fix ⚠️ :
 
 ### Added
 
+- Add market creator incentives.
+  - The following dispatchable calls within the prediction markets pallet now
+    expect a market creator fee denoted as type `Perbill` after the `base_asset`
+    parameter. The fee is bounded by the pallet's `Config` parameter
+    `MaxCreatorFee`:
+    - `create_market`
+    - `create_cpmm_market_and_deploy_assets`
+  - The market type now holds an additional field `creator_fee` using the type
+    `Perbill` after the `creation` field.
+  - The swaps pallet's `Config` parameter `MaxSwapFee` now is a boundary for the
+    sum of all fees, currently the liqudity provider fee and the market creator
+    fee. It is checked during the execution of the public function
+    `create_pool`.
+  - Fees are always transferred from the trader's account to the market
+    creator's account either before or after the trade. The base asset is always
+    preferred to pay fees. If the trade does not include the base asset, the
+    pallet will try to convert the outcome asset to the base asset by executing
+    a swap.
+  - A new event `MarketCreatorFeesPaid` is emitted by the swaps pallet after
+    successful payment of fees to the market creator. It contains the fields
+    `\[payer, payee, amount, asset\]`.
 - ⚠️ Add court production implementation ([#976]). Dispatchable calls are:
   - `join_court` - Join the court with a stake to become a juror in order to get
     the stake-weighted chance to be selected for decision making.

@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -20,7 +21,7 @@
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::{traits::Swaps as SwapsTrait, types::ScoringRule};
 
-use zrml_swaps::mock::{ExtBuilder, Swaps};
+use zrml_swaps::mock::{ExtBuilder, Swaps, DEFAULT_MARKET_ID};
 
 mod utils;
 use utils::{construct_asset, PoolCreationData};
@@ -32,7 +33,7 @@ fuzz_target!(|data: PoolCreationData| {
             data.origin,
             data.assets.into_iter().map(construct_asset).collect(),
             construct_asset(data.base_asset),
-            data.market_id,
+            DEFAULT_MARKET_ID,
             ScoringRule::CPMM,
             data.swap_fee,
             data.amount,

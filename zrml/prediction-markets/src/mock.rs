@@ -45,14 +45,14 @@ use zeitgeist_primitives::{
         ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
         LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories, MaxCourtParticipants,
-        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit,
-        RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod,
-        VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
+        MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
+        MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
+        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -188,6 +188,7 @@ impl crate::Config for Runtime {
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DeployPool = DeployPoolMock;

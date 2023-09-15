@@ -32,8 +32,8 @@ pub trait DistributeFees {
     /// - `account`: The account which pays the fees.
     /// - `amount`: The gross amount from which fees are deducted.
     ///
-    /// Note that this function is infallible. If distribution is impossible or fails
-    /// midway, it should return the balance of the remaining undistributed funds.
+    /// Note that this function is infallible. If distribution is impossible or fails midway, it
+    /// should return the balance of the already successfully deducted fees.
     fn distribute(
         market_id: Self::MarketId,
         asset: Self::Asset,

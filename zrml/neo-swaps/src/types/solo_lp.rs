@@ -20,8 +20,8 @@ use frame_support::ensure;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, Zero},
-    DispatchError, DispatchResult, RuntimeDebug, Saturating,
+    traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Zero},
+    DispatchError, DispatchResult, RuntimeDebug,
 };
 
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
@@ -45,14 +45,14 @@ where
 {
     fn join(&mut self, who: &T::AccountId, shares: BalanceOf<T>) -> DispatchResult {
         ensure!(*who == self.owner, Error::<T>::NotAllowed);
-        self.total_shares = self.total_shares.saturating_add(shares);
+        self.total_shares = self.total_shares.checked_add(&shares).ok_or(Error::<T>::MathError)?;
         Ok(())
     }
 
     fn exit(&mut self, who: &T::AccountId, shares: BalanceOf<T>) -> DispatchResult {
         ensure!(*who == self.owner, Error::<T>::NotAllowed);
         ensure!(shares <= self.total_shares, Error::<T>::InsufficientPoolShares);
-        self.total_shares = self.total_shares.saturating_sub(shares);
+        self.total_shares = self.total_shares.checked_sub(&shares).ok_or(Error::<T>::MathError)?;
         Ok(())
     }
 
@@ -66,7 +66,7 @@ where
     }
 
     fn deposit_fees(&mut self, amount: BalanceOf<T>) -> DispatchResult {
-        self.fees = self.fees.saturating_add(amount);
+        self.fees = self.fees.checked_add(&amount).ok_or(Error::<T>::MathError)?;
         Ok(())
     }
 

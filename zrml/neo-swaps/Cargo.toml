@@ -20,7 +20,6 @@ pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
-# zrml-neo-swaps-runtime-api = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 pallet-randomness-collective-flip = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
@@ -76,8 +75,8 @@ mock = [
     "zrml-global-disputes/std",
     "zrml-prediction-markets/std",
     "zrml-prediction-markets/mock",
+    "zrml-prediction-markets/default",
     "serde/default",
-    # "zrml-neo-swaps-runtime-api/default",
 ]
 parachain = ["zrml-prediction-markets/parachain"]
 runtime-benchmarks = [
@@ -107,4 +106,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-neo-swaps"
-version = "0.3.11"
+version = "0.4.0"

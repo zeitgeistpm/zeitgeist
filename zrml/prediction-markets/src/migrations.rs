@@ -35,7 +35,7 @@ use frame_support::{
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_runtime::traits::Saturating;
+use sp_runtime::{traits::Saturating, Perbill};
 use zeitgeist_primitives::types::{
     Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -92,21 +92,24 @@ pub(crate) type Markets<T: Config> = StorageMap<
     OldMarketOf<T>,
 >;
 
-pub struct AddDisputeBond<T>(PhantomData<T>);
+pub struct AddDisputeBondAndConvertCreatorFee<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBond<T> {
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade
+    for AddDisputeBondAndConvertCreatorFee<T>
+{
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "AddDisputeBond: market-commons version is {:?}, but {:?} is required",
+                "AddDisputeBondAndConvertCreatorFee: market-commons version is {:?}, but {:?} is \
+                 required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("AddDisputeBond: Starting...");
+        log::info!("AddDisputeBondAndConvertCreatorFee: Starting...");
 
         let mut translated = 0u64;
         zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(
@@ -128,7 +131,8 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
                     base_asset: old_market.base_asset,
                     creator: old_market.creator,
                     creation: old_market.creation,
-                    creator_fee: old_market.creator_fee,
+                    // Zero can be safely assumed here as it was hardcoded before
+                    creator_fee: Perbill::zero(),
                     oracle: old_market.oracle,
                     metadata: old_market.metadata,
                     market_type: old_market.market_type,
@@ -150,13 +154,13 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
                 Some(new_market)
             },
         );
-        log::info!("AddDisputeBond: Upgraded {} markets.", translated);
+        log::info!("AddDisputeBondAndConvertCreatorFee: Upgraded {} markets.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("AddDisputeBond: Done!");
+        log::info!("AddDisputeBondAndConvertCreatorFee: Done!");
         total_weight
     }
 
@@ -199,7 +203,6 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
             assert_eq!(new_market.base_asset, old_market.base_asset);
             assert_eq!(new_market.creator, old_market.creator);
             assert_eq!(new_market.creation, old_market.creation);
-            assert_eq!(new_market.creator_fee, old_market.creator_fee);
             assert_eq!(new_market.oracle, old_market.oracle);
             assert_eq!(new_market.metadata, old_market.metadata);
             assert_eq!(new_market.market_type, old_market.market_type);
@@ -214,6 +217,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
             assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
             assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
             // new fields
+            assert_eq!(new_market.creator_fee, Perbill::zero());
             // other dispute mechanisms are regarded in the migration after this migration
             if let MarketDisputeMechanism::Authorized = new_market.dispute_mechanism {
                 let old_disputes = crate::Disputes::<T>::get(market_id);
@@ -233,7 +237,10 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddDisputeBon
             }
         }
 
-        log::info!("AddDisputeBond: Market Counter post-upgrade is {}!", new_market_count);
+        log::info!(
+            "AddDisputeBondAndConvertCreatorFee: Market Counter post-upgrade is {}!",
+            new_market_count
+        );
         assert!(new_market_count > 0);
         Ok(())
     }
@@ -255,7 +262,7 @@ mod tests {
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            AddDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -273,7 +280,7 @@ mod tests {
                 MARKETS,
                 new_markets.clone(),
             );
-            AddDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -289,7 +296,7 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            AddDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -311,7 +318,7 @@ mod tests {
                 MARKETS,
                 old_markets,
             );
-            AddDisputeBond::<Runtime>::on_runtime_upgrade();
+            AddDisputeBondAndConvertCreatorFee::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -327,7 +334,8 @@ mod tests {
     ) -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
         let base_asset = Asset::Ztg;
         let creator = 999;
-        let creator_fee = 1;
+        let old_creator_fee = 0;
+        let new_creator_fee = Perbill::zero();
         let oracle = 2;
         let metadata = vec![3, 4, 5];
         let market_type = MarketType::Categorical(6);
@@ -356,7 +364,7 @@ mod tests {
             base_asset,
             creator,
             creation: creation.clone(),
-            creator_fee,
+            creator_fee: old_creator_fee,
             oracle,
             metadata: metadata.clone(),
             market_type: market_type.clone(),
@@ -373,7 +381,7 @@ mod tests {
             base_asset,
             creator,
             creation,
-            creator_fee,
+            creator_fee: new_creator_fee,
             oracle,
             metadata,
             market_type,
@@ -764,7 +772,7 @@ mod tests_simple_disputes_migration {
     fn get_market(dispute_mechanism: MarketDisputeMechanism) -> MarketOf<Runtime> {
         let base_asset = Asset::Ztg;
         let creator = 999;
-        let creator_fee = 1;
+        let creator_fee = Perbill::zero();
         let oracle = 2;
         let metadata = vec![3, 4, 5];
         let market_type = MarketType::Categorical(6);

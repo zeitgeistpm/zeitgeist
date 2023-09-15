@@ -63,8 +63,8 @@ macro_rules! decl_common_types {
             orml_asset_registry::Migration<Runtime>,
             orml_unknown_tokens::Migration<Runtime>,
             pallet_xcm::migration::v1::MigrateToV1<Runtime>,
-            // IMPORTANT that AddDisputeBond comes before MoveDataToSimpleDisputes!!!
-            zrml_prediction_markets::migrations::AddDisputeBond<Runtime>,
+            // IMPORTANT that AddDisputeBondAndConvertCreatorFee comes before MoveDataToSimpleDisputes!!!
+            zrml_prediction_markets::migrations::AddDisputeBondAndConvertCreatorFee<Runtime>,
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
             zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
         );
@@ -72,8 +72,8 @@ macro_rules! decl_common_types {
         #[cfg(not(feature = "parachain"))]
         type Migrations = (
             pallet_grandpa::migrations::CleanupSetIdSessionMap<Runtime>,
-            // IMPORTANT that AddDisputeBond comes before MoveDataToSimpleDisputes!!!
-            zrml_prediction_markets::migrations::AddDisputeBond<Runtime>,
+            // IMPORTANT that AddDisputeBondAndConvertCreatorFee comes before MoveDataToSimpleDisputes!!!
+            zrml_prediction_markets::migrations::AddDisputeBondAndConvertCreatorFee<Runtime>,
             zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
             zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
         );
@@ -1158,6 +1158,7 @@ macro_rules! impl_config_traits {
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
             type MaxCategories = MaxCategories;
+            type MaxCreatorFee = MaxCreatorFee;
             type MaxDisputes = MaxDisputes;
             type MaxMarketLifetime = MaxMarketLifetime;
             type MinDisputeDuration = MinDisputeDuration;
@@ -1264,10 +1265,10 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_neo_swaps::Config for Runtime {
-            type AssetManager = AssetManager;
             type CompleteSetOperations = PredictionMarkets;
             type ExternalFees = ExternalFeesNoop;
             type MarketCommons = MarketCommons;
+            type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
             type MaxSwapFee = NeoSwapsMaxSwapFee;

@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -152,6 +153,8 @@ pub trait Swaps<AccountId> {
     /// * `asset_out`: Asset leaving the pool.
     /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
     /// * `max_price`: Market price must be equal or less than the provided value.
+    /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
+    #[allow(clippy::too_many_arguments)]
     fn swap_exact_amount_in(
         who: AccountId,
         pool_id: PoolId,
@@ -160,6 +163,7 @@ pub trait Swaps<AccountId> {
         asset_out: Asset<Self::MarketId>,
         min_asset_amount_out: Option<Self::Balance>,
         max_price: Option<Self::Balance>,
+        handle_fees: bool,
     ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount out
@@ -175,6 +179,8 @@ pub trait Swaps<AccountId> {
     /// * `asset_out`: Asset leaving the pool.
     /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
     /// * `max_price`: Market price must be equal or less than the provided value.
+    /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
+    #[allow(clippy::too_many_arguments)]
     fn swap_exact_amount_out(
         who: AccountId,
         pool_id: PoolId,
@@ -183,5 +189,6 @@ pub trait Swaps<AccountId> {
         asset_out: Asset<Self::MarketId>,
         asset_amount_out: Self::Balance,
         max_price: Option<Self::Balance>,
+        handle_fees: bool,
     ) -> Result<Weight, DispatchError>;
 }

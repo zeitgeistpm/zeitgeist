@@ -25,7 +25,10 @@ use crate::{
 use alloc::{collections::BTreeMap, vec::Vec};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{DispatchError, RuntimeDebug, SaturatedConversion, Saturating};
+use sp_runtime::{
+    traits::{CheckedAdd, CheckedSub},
+    DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
+};
 
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
@@ -57,6 +60,26 @@ where
         Ok(*self.reserves.get(asset).ok_or(Error::<T>::AssetNotFound)?)
     }
 
+    fn increase_reserve(
+        &mut self,
+        asset: &AssetOf<T>,
+        increase_amount: &BalanceOf<T>,
+    ) -> DispatchResult {
+        let value = self.reserves.get_mut(asset).ok_or(Error::<T>::AssetNotFound)?;
+        *value = value.checked_add(increase_amount).ok_or(Error::<T>::MathError)?;
+        Ok(())
+    }
+
+    fn decrease_reserve(
+        &mut self,
+        asset: &AssetOf<T>,
+        decrease_amount: &BalanceOf<T>,
+    ) -> DispatchResult {
+        let value = self.reserves.get_mut(asset).ok_or(Error::<T>::AssetNotFound)?;
+        *value = value.checked_sub(decrease_amount).ok_or(Error::<T>::MathError)?;
+        Ok(())
+    }
+
     fn calculate_swap_amount_out_for_buy(
         &self,
         asset_out: AssetOf<T>,
@@ -81,6 +104,7 @@ where
     }
 
     fn calculate_max_amount_in(&self) -> BalanceOf<T> {
+        // Saturation is OK. If this saturates, the maximum amount in is just the numerical limit.
         self.liquidity_parameter.saturating_mul(EXP_NUMERICAL_LIMIT.saturated_into())
     }
 }

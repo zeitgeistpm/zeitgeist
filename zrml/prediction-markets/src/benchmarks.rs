@@ -34,7 +34,10 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{One, SaturatedConversion, Saturating, Zero};
+use sp_runtime::{
+    traits::{One, SaturatedConversion, Saturating, Zero},
+    Perbill,
+};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::{DisputeApi, Swaps},
@@ -89,11 +92,13 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
     let range_start: MomentOf<T> = 100_000u64.saturated_into();
     let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let creator_fee: Perbill = Perbill::zero();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
     let (caller, oracle, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     Call::<T>::create_market {
         base_asset: Asset::Ztg,
+        creator_fee,
         oracle,
         period,
         deadlines,
@@ -155,7 +160,8 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
         panic!("setup_redeem_shares_common: Unsupported market type: {market_type:?}");
     }
 
-    Pallet::<T>::do_buy_complete_set(caller.clone(), market_id, LIQUIDITY.saturated_into())?;
+    Call::<T>::buy_complete_set { market_id, amount: LIQUIDITY.saturated_into() }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
     let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
     Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
@@ -625,6 +631,7 @@ benchmarks! {
     }: _(
             RawOrigin::Signed(caller),
             Asset::Ztg,
+            Perbill::zero(),
             oracle,
             period,
             deadlines,
@@ -648,6 +655,7 @@ benchmarks! {
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
         Call::<T>::create_market {
             base_asset: Asset::Ztg,
+            creator_fee: Perbill::zero(),
             oracle: oracle.clone(),
             period: period.clone(),
             deadlines,
@@ -1278,6 +1286,7 @@ benchmarks! {
     }: _(
             RawOrigin::Signed(caller),
             base_asset,
+            Perbill::zero(),
             oracle,
             period,
             deadlines,
