@@ -76,7 +76,7 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
-    pub(crate) type IndexType = u32;
+    pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type PoolOf<T> = Pool<T, SoloLp<T>>;
@@ -268,13 +268,13 @@ mod pallet {
         pub fn buy(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            asset_count: IndexType,
+            asset_count: AssetIndexType,
             asset_out: AssetOf<T>,
             #[pallet::compact] amount_in: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes() as u32;
+            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
             Ok(Some(T::WeightInfo::buy()).into())
@@ -305,13 +305,13 @@ mod pallet {
         pub fn sell(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            asset_count: IndexType,
+            asset_count: AssetIndexType,
             asset_in: AssetOf<T>,
             #[pallet::compact] amount_in: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes() as u32;
+            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
             Ok(Some(T::WeightInfo::sell()).into())
