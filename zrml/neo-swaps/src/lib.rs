@@ -431,10 +431,9 @@ mod pallet {
         /// amounts of each outcome to the pool. The sender specifies a maximum `amount` of outcome
         /// tokens to spend.
         ///
-        /// Note that the sender must acquire the outcome tokens in a separate transaction, either by
-        /// buying from the pool or by using complete set operations. It's therefore convenient to
-        /// batch this function together with a `buy_complete_set` with `amount` as amount of
-        /// complete sets to buy.
+        /// Note that the sender must acquire the outcome tokens in a separate transaction by using
+        /// complete set operations. It's therefore convenient to batch this function together with
+        /// a `buy_complete_set` with `amount` as amount of complete sets to buy.
         ///
         /// Deploying the pool will cost the signer an additional fee to the tune of the
         /// collateral's existential deposit. This fee is placed in the pool account and ensures

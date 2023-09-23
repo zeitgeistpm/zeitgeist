@@ -1474,6 +1474,14 @@ mod pallet {
             Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
         }
 
+        /// Create a market, deploy a LMSR pool, and buy outcome tokens and provide liquidity to the
+        /// market.
+        ///
+        /// # Weight
+        ///
+        /// `O(n)` where `n` is the number of markets which close on the same block, plus the
+        /// resources consumed by `DeployPool::create_pool`. In the standard implementation using
+        /// neo-swaps, this is `O(m)` where `m` is the number of assets in the market.
         #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(CacheSize::get()))]
         #[transactional]
         #[pallet::call_index(17)]
