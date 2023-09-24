@@ -1292,7 +1292,7 @@ benchmarks! {
             deadlines,
             metadata,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            MarketDisputeMechanism::Court,
             amount,
             vec![price, price],
             (BASE / 100).saturated_into()
