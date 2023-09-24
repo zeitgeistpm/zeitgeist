@@ -52,7 +52,7 @@ macro_rules! assert_ok_with_transaction {
 fn create_market<T: Config>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
-    asset_count: IndexType,
+    asset_count: AssetIndexType,
 ) -> MarketIdOf<T> {
     let market = Market {
         base_asset,
@@ -61,7 +61,7 @@ fn create_market<T: Config>(
         creator: caller.clone(),
         oracle: caller,
         metadata: vec![0, 50],
-        market_type: MarketType::Categorical(asset_count as u16),
+        market_type: MarketType::Categorical(asset_count),
         period: MarketPeriod::Block(0u32.into()..1u32.into()),
         deadlines: Default::default(),
         scoring_rule: ScoringRule::Lmsr,
@@ -78,7 +78,7 @@ fn create_market<T: Config>(
 fn create_market_and_deploy_pool<T: Config>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
-    asset_count: IndexType,
+    asset_count: AssetIndexType,
     amount: BalanceOf<T>,
 ) -> MarketIdOf<T> {
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
@@ -107,7 +107,7 @@ mod benchmarks {
     fn buy() {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let asset_count = 2u32;
+        let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool::<T>(
             alice,
             base_asset,
@@ -130,7 +130,7 @@ mod benchmarks {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let market_id =
-            create_market_and_deploy_pool::<T>(alice, base_asset, 2u32, _10.saturated_into());
+            create_market_and_deploy_pool::<T>(alice, base_asset, 2u16, _10.saturated_into());
         let asset_in = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
@@ -149,7 +149,7 @@ mod benchmarks {
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
             base_asset,
-            2u32,
+            2u16,
             _10.saturated_into(),
         );
         let pool_shares_amount = _1.saturated_into();
@@ -175,7 +175,7 @@ mod benchmarks {
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
             base_asset,
-            2u32,
+            2u16,
             _10.saturated_into(),
         );
         let pool_shares_amount = _1.saturated_into();
@@ -194,7 +194,7 @@ mod benchmarks {
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
             base_asset,
-            2u32,
+            2u16,
             _10.saturated_into(),
         );
         let fee_amount = _1.saturated_into();

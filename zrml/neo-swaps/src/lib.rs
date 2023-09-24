@@ -73,9 +73,8 @@ mod pallet {
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-        AccountIdOf<T>,
-    >>::Balance;
+    pub(crate) type BalanceOf<T> =
+        <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
