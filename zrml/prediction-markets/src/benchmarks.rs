@@ -1264,8 +1264,9 @@ benchmarks! {
         let m in 0..63; // Number of markets closing on the same block.
 
         let base_asset = Asset::Ztg;
+        let range_start = (5 * MILLISECS_PER_BLOCK) as u64;
         let range_end = (100 * MILLISECS_PER_BLOCK) as u64;
-        let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..range_end);
+        let period = MarketPeriod::Timestamp(range_start..range_end);
         let market_type = MarketType::Categorical(2);
         let (caller, oracle, deadlines, metadata, _) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
