@@ -954,7 +954,7 @@ mod pallet {
         TooManyAssets,
         /// Tried to create a pool with at least two identical assets.
         SomeIdenticalAssets,
-        /// The pool does not support swapping the assets in question, at least via this pallet.
+        /// The pool does not support swapping the assets in question.
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
@@ -1939,7 +1939,7 @@ mod pallet {
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
                     }
                     ScoringRule::Lmsr => {
-                        return Err(Error::<T>::UnsupportedTrade.into());
+                        return Err(Error::<T>::InvalidScoringRule.into());
                     }
                 };
             let pool = Pool {
@@ -2500,7 +2500,7 @@ mod pallet {
                             cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                         }
                         ScoringRule::Lmsr => {
-                            return Err(Error::<T>::UnsupportedTrade.into());
+                            return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
 
@@ -2551,7 +2551,7 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
-                ScoringRule::Lmsr => Err(Error::<T>::UnsupportedTrade.into()),
+                ScoringRule::Lmsr => Err(Error::<T>::InvalidScoringRule.into()),
             }
         }
 
@@ -2660,7 +2660,7 @@ mod pallet {
                             cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                         }
                         ScoringRule::Lmsr => {
-                            return Err(Error::<T>::UnsupportedTrade.into());
+                            return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
 
@@ -2723,7 +2723,7 @@ mod pallet {
                         pool.assets.len().saturated_into(),
                     ))
                 }
-                ScoringRule::Lmsr => Err(Error::<T>::UnsupportedTrade.into()),
+                ScoringRule::Lmsr => Err(Error::<T>::InvalidScoringRule.into()),
             }
         }
     }

@@ -217,7 +217,7 @@ where
             }
         }
         ScoringRule::Lmsr => {
-            return Err(Error::<T>::UnsupportedTrade.into());
+            return Err(Error::<T>::InvalidScoringRule.into());
         }
     }
 
@@ -234,7 +234,7 @@ where
             Error::<T>::MathApproximation
         ),
         ScoringRule::Lmsr => {
-            return Err(Error::<T>::UnsupportedTrade.into());
+            return Err(Error::<T>::InvalidScoringRule.into());
         }
     }
 
@@ -257,7 +257,7 @@ where
             T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
         }
         ScoringRule::Lmsr => {
-            return Err(Error::<T>::UnsupportedTrade.into());
+            return Err(Error::<T>::InvalidScoringRule.into());
         }
     }
 

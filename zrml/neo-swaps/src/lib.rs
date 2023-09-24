@@ -74,7 +74,7 @@ mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
+        AccountIdOf<T>,
     >>::Balance;
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
@@ -195,7 +195,7 @@ mod pallet {
         AssetNotFound,
         /// Market already has an associated pool.
         DuplicatePool,
-        /// Invalid asset count.
+        /// Incorrect asset count.
         IncorrectAssetCount,
         // Length of `max_amounts_in`, `max_amounts_out` or `spot_prices` must be equal to the
         // number of outcomes in the market.
@@ -450,7 +450,7 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
-            swap_fee: BalanceOf<T>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes() as u32;
