@@ -329,7 +329,7 @@ mod pallet {
         /// - `market_id`: Identifier for the market related to the pool.
         /// - `pool_shares_amount`: The number of new pool shares the LP will receive.
         /// - `max_amounts_in`: Vector of the maximum amounts of each outcome token the LP is
-        ///   willing to deposit.
+        ///   willing to deposit (with outcomes specified in the order of `MarketCommonsApi`).
         ///
         /// # Complexity
         ///
@@ -373,7 +373,7 @@ mod pallet {
         /// - `market_id`: Identifier for the market related to the pool.
         /// - `pool_shares_amount_out`: The number of pool shares the LP will relinquish.
         /// - `min_amounts_out`: Vector of the minimum amounts of each outcome token the LP expects
-        ///   to withdraw.
+        ///   to withdraw (with outcomes specified in the order given by `MarketCommonsApi`).
         ///
         /// # Complexity
         ///
