@@ -801,10 +801,6 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating((*market_id).saturated_into::<u128>())
         }
 
-        // fn pool(market_id: &MarketIdOf<T>) -> Result<PoolOf<T>, DispatchError> {
-        //     Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound.into())
-        // }
-
         /// Distribute swap fees and external fees and returns the remaining amount.
         ///
         /// # Arguments
