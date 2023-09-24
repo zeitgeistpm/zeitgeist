@@ -106,9 +106,6 @@ mod pallet {
 
         type WeightInfo: WeightInfoZeitgeist;
 
-        // #[pallet::constant]
-        // type ExitFee: Get<BalanceOf<Self>>;
-
         #[pallet::constant]
         type MaxSwapFee: Get<BalanceOf<Self>>;
 
