@@ -185,7 +185,7 @@ fn it_fills_bid_orders_partially() {
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
 
-        // Make an order from Bob to sell shares.
+        // Make an order from Bob to buy outcome tokens.
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -252,7 +252,84 @@ fn it_fills_bid_orders_partially() {
 }
 
 #[test]
-fn it_cancels_orders() {
+fn it_fills_ask_orders_partially() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let outcome_asset = Asset::CategoricalOutcome(0, 1);
+
+        assert_ok!(Tokens::deposit(outcome_asset, &BOB, 2000));
+
+        // Make an order from Bob to sell outcome tokens.
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            outcome_asset,
+            OrderSide::Ask,
+            1000,
+            5000,
+        ));
+
+        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        assert_eq!(reserved_bob, 1000);
+
+        let order_id = 0u128;
+        let order_hash = Orderbook::order_hash(&BOB, order_id);
+        assert_ok!(Tokens::deposit(market.base_asset.clone(), &ALICE, 5000));
+
+        // instead of buying 5000 of the base asset, Alice buys 700 shares
+        let portion = Some(700);
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, portion,));
+
+        let order = <Orders<Runtime>>::get(order_hash).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                order_id,
+                side: OrderSide::Ask,
+                maker: BOB,
+                outcome_asset,
+                base_asset: Asset::Ztg,
+                // from 1000 to 860 changed (partially filled)
+                outcome_asset_amount: 860,
+                // from 5000 to 4300 changed (partially filled)
+                base_asset_amount: 4300,
+            }
+        );
+
+        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        assert_eq!(reserved_bob, 860);
+
+        System::assert_last_event(
+            Event::<Runtime>::OrderFilled {
+                order_hash,
+                maker: BOB,
+                taker: ALICE,
+                filled: 700,
+                unfilled_outcome_asset_amount: 860,
+                unfilled_base_asset_amount: 4300,
+            }
+            .into(),
+        );
+
+        let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
+        let alice_shares = Tokens::free_balance(outcome_asset, &ALICE);
+        assert_eq!(alice_bal, BASE - 700);
+        assert_eq!(alice_shares, 140);
+
+        let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
+        let bob_shares = Tokens::free_balance(outcome_asset, &BOB);
+        assert_eq!(bob_bal, BASE + 700);
+        // ask order was adjusted from 1000 to 860, and bob had 2000 shares at start
+        assert_eq!(bob_shares, 1000);
+    });
+}
+
+#[test]
+fn it_removes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -290,11 +367,32 @@ fn it_cancels_orders() {
             .into(),
         );
 
+        let order = <Orders<Runtime>>::get(order_hash).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                order_id,
+                side: OrderSide::Bid,
+                maker: ALICE,
+                outcome_asset: share_id,
+                base_asset: Asset::Ztg,
+                outcome_asset_amount: 25,
+                base_asset_amount: 10,
+            }
+        );
+
         assert_noop!(
             Orderbook::remove_order(RuntimeOrigin::signed(BOB), order_hash),
             Error::<Runtime>::NotOrderCreator,
         );
 
         assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_hash));
+
+        assert!(<Orders<Runtime>>::get(order_hash).is_none());
+
+        System::assert_last_event(
+            Event::<Runtime>::OrderRemoved { order_hash, maker: ALICE }.into(),
+        );
     });
 }
