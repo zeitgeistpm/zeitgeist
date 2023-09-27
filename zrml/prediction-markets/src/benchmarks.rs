@@ -61,12 +61,8 @@ const LIQUIDITY: u128 = 100 * BASE;
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
-fn create_market_common_parameters<T: Config>(
-    permission: MarketCreation,
-) -> Result<
-    (T::AccountId, T::AccountId, Deadlines<T::BlockNumber>, MultiHash, MarketCreation),
-    &'static str,
-> {
+fn create_market_common_parameters<T: Config>()
+-> Result<(T::AccountId, T::AccountId, Deadlines<T::BlockNumber>, MultiHash), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
     T::AssetManager::deposit(Asset::Ztg, &caller, (100u128 * LIQUIDITY).saturated_into()).unwrap();
     let oracle = caller.clone();
@@ -78,13 +74,12 @@ fn create_market_common_parameters<T: Config>(
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
-    let creation = permission;
-    Ok((caller, oracle, deadlines, MultiHash::Sha3_384(metadata), creation))
+    Ok((caller, oracle, deadlines, MultiHash::Sha3_384(metadata)))
 }
 
 // Create a market based on common parameters
 fn create_market_common<T: Config + pallet_timestamp::Config>(
-    permission: MarketCreation,
+    creation: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
     period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
@@ -94,8 +89,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
     let creator_fee: Perbill = Perbill::zero();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
-    let (caller, oracle, deadlines, metadata, creation) =
-        create_market_common_parameters::<T>(permission)?;
+    let (caller, oracle, deadlines, metadata) = create_market_common_parameters::<T>()?;
     Call::<T>::create_market {
         base_asset: Asset::Ztg,
         creator_fee,
@@ -105,7 +99,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
         metadata,
         creation,
         market_type: options,
-        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule,
     }
     .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
@@ -248,7 +242,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -441,7 +435,7 @@ benchmarks! {
             OutcomeReport::Categorical(0u16),
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -478,7 +472,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -531,7 +525,7 @@ benchmarks! {
             )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -615,8 +609,7 @@ benchmarks! {
     create_market {
         let m in 0..63;
 
-        let (caller, oracle, deadlines, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+        let (caller, oracle, deadlines, metadata) = create_market_common_parameters::<T>()?;
 
         let range_end = T::MaxSubsidyPeriod::get();
         let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..range_end);
@@ -635,9 +628,9 @@ benchmarks! {
             period,
             deadlines,
             metadata,
-            creation,
+            MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
     )
 
@@ -645,13 +638,13 @@ benchmarks! {
         let m in 0..63;
 
         let market_type = MarketType::Categorical(T::MaxCategories::get());
-        let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        let dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
         let scoring_rule = ScoringRule::CPMM;
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
-        let (caller, oracle, deadlines, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Advised)?;
+        let (caller, oracle, deadlines, metadata) =
+            create_market_common_parameters::<T>()?;
         Call::<T>::create_market {
             base_asset: Asset::Ztg,
             creator_fee: Perbill::zero(),
@@ -659,7 +652,7 @@ benchmarks! {
             period: period.clone(),
             deadlines,
             metadata: metadata.clone(),
-            creation,
+            creation: MarketCreation::Advised,
             market_type: market_type.clone(),
             dispute_mechanism: dispute_mechanism.clone(),
             scoring_rule,
@@ -806,7 +799,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Court;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Court);
             Ok(())
         })?;
 
@@ -880,7 +873,7 @@ benchmarks! {
         )?;
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -908,7 +901,7 @@ benchmarks! {
             OutcomeReport::Categorical(1u16),
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
@@ -927,7 +920,7 @@ benchmarks! {
                 OutcomeReport::Categorical(1u16)
             )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
 
@@ -970,7 +963,7 @@ benchmarks! {
             OutcomeReport::Scalar(u128::MAX),
         )?;
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = MarketDisputeMechanism::Authorized;
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
@@ -1061,7 +1054,7 @@ benchmarks! {
         let call = Call::<T>::reject_market { market_id, reject_reason };
     }: { call.dispatch_bypass_filter(reject_origin)? }
 
-    report {
+    report_market_with_dispute_mechanism {
         let m in 0..63;
 
         // ensure range.start is now to get the heaviest path
@@ -1104,7 +1097,41 @@ benchmarks! {
                 ids.try_push(i.into())
             }).unwrap();
         }
-    }: _(RawOrigin::Signed(caller), market_id, outcome)
+        let call = Call::<T>::report { market_id, outcome };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+    }
+
+    report_trusted_market {
+        pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
+        let start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
+        let end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let (caller, oracle, _, metadata) = create_market_common_parameters::<T>()?;
+        Call::<T>::create_market {
+            base_asset: Asset::Ztg,
+            creator_fee: Perbill::zero(),
+            oracle: caller.clone(),
+            period: MarketPeriod::Timestamp(start..end),
+            deadlines: Deadlines::<T::BlockNumber> {
+                grace_period: 0u8.into(),
+                oracle_duration: T::MinOracleDuration::get(),
+                dispute_duration: 0u8.into(),
+            },
+            metadata,
+            creation: MarketCreation::Permissionless,
+            market_type: MarketType::Categorical(3),
+            dispute_mechanism: None,
+            scoring_rule: ScoringRule::CPMM,
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let market_id = <zrml_market_commons::Pallet<T>>::latest_market_id()?;
+        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
+        let outcome = OutcomeReport::Categorical(0);
+        let call = Call::<T>::report { market_id, outcome };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+    }
 
     sell_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();

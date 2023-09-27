@@ -38,7 +38,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     creator_fee: sp_runtime::Perbill::zero(),
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
@@ -54,7 +54,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
 fn on_dispute_denies_non_simple_disputes_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Court);
         assert_noop!(
             SimpleDisputes::on_dispute(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
@@ -66,7 +66,7 @@ fn on_dispute_denies_non_simple_disputes_markets() {
 fn on_resolution_denies_non_simple_disputes_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Court);
         assert_noop!(
             SimpleDisputes::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism

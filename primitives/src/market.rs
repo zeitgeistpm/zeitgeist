@@ -61,7 +61,7 @@ pub struct Market<AI, BA, BN, M, A> {
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
-    pub dispute_mechanism: MarketDisputeMechanism,
+    pub dispute_mechanism: Option<MarketDisputeMechanism>,
     /// The bonds reserved for this market.
     pub bonds: MarketBonds<AI, BA>,
 }
@@ -162,7 +162,7 @@ where
             .saturating_add(MarketStatus::max_encoded_len())
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
-            .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
+            .saturating_add(<Option<MarketDisputeMechanism>>::max_encoded_len())
             .saturating_add(<MarketBonds<AI, BA>>::max_encoded_len())
     }
 }
@@ -393,7 +393,7 @@ mod tests {
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,
-            dispute_mechanism: MarketDisputeMechanism::Authorized,
+            dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
             bonds: MarketBonds::default(),
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
