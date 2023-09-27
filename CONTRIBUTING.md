@@ -52,7 +52,7 @@ mark the PR with the following labels according to
 
 ## Style Guide
 
-- Refer to the [style guide]
+- Refer to the [style guide].
 
 [rules]: #Rules
 [docs/changelog_for_devs.md]: docs/changelog_for_devs.md
