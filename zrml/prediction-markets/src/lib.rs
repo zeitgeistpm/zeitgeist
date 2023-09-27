@@ -1629,6 +1629,7 @@ mod pallet {
         type MinCategories: Get<u16>;
 
         /// A upper bound for the fee that is charged each trade and given to the market creator.
+        #[pallet::constant]
         type MaxCreatorFee: Get<Perbill>;
 
         /// The shortest period of collecting subsidy for a Rikiddo market.
