@@ -324,6 +324,9 @@ fn it_fills_bid_orders_partially() {
         // 3500 of base_asset lost, 1500 of base_asset reserved
         assert_eq!(bob_bal, BASE - 5000);
         assert_eq!(bob_shares, 700);
+
+        let reserved_bob = Balances::reserved_balance(BOB);
+        assert_eq!(reserved_bob, 1500);
     });
 }
 
@@ -353,7 +356,7 @@ fn it_fills_ask_orders_partially() {
 
         let order_id = 0u128;
         let order_hash = Orderbook::order_hash(&BOB, order_id);
-        assert_ok!(Tokens::deposit(market.base_asset.clone(), &ALICE, 5000));
+        assert_ok!(Tokens::deposit(market.base_asset, &ALICE, 5000));
 
         // instead of buying 5000 of the base asset, Alice buys 700 shares
         let portion = Some(700);
@@ -401,6 +404,9 @@ fn it_fills_ask_orders_partially() {
         assert_eq!(bob_bal, BASE + 700);
         // ask order was adjusted from 1000 to 860, and bob had 2000 shares at start
         assert_eq!(bob_shares, 1000);
+
+        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        assert_eq!(reserved_bob, 860);
     });
 }
 
@@ -463,7 +469,15 @@ fn it_removes_orders() {
             Error::<Runtime>::NotOrderCreator,
         );
 
+        let reserved_funds =
+            <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
+        assert_eq!(reserved_funds, 10);
+
         assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_hash));
+
+        let reserved_funds =
+            <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
+        assert_eq!(reserved_funds, 0);
 
         assert!(<Orders<Runtime>>::get(order_hash).is_none());
 
