@@ -373,7 +373,7 @@ where
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        dispute_mechanism: Some(zeitgeist_primitives::types::MarketDisputeMechanism::Authorized),
+        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
