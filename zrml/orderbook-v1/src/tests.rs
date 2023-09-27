@@ -22,11 +22,87 @@ use frame_support::{
     traits::{Currency, ReservableCurrency},
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{AccountIdTest, Asset},
+    types::{AccountIdTest, Asset, ScoringRule},
 };
-use zrml_market_commons::Markets;
+use zrml_market_commons::{MarketCommonsPalletApi, Markets};
+
+#[test_case(ScoringRule::CPMM; "CPMM")]
+#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
+fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.scoring_rule = scoring_rule;
+            Ok(())
+        }));
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                Asset::CategoricalOutcome(0, 2),
+                OrderSide::Bid,
+                100,
+                250,
+            ),
+            Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test_case(ScoringRule::CPMM; "CPMM")]
+#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
+fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market);
+
+        let order_id = 0u128;
+        let order_hash = Orderbook::order_hash(&ALICE, order_id);
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            Asset::CategoricalOutcome(0, 2),
+            OrderSide::Bid,
+            10,
+            250,
+        ));
+
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.scoring_rule = scoring_rule;
+            Ok(())
+        }));
+
+        assert_noop!(
+            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None),
+            Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test]
+fn it_fails_order_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        let order_id = 0u128;
+        let order_hash = Orderbook::order_hash(&ALICE, order_id);
+        assert_noop!(
+            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None),
+            Error::<Runtime>::OrderDoesNotExist,
+        );
+
+        assert_noop!(
+            Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_hash),
+            Error::<Runtime>::OrderDoesNotExist,
+        );
+    });
+}
 
 #[test]
 fn it_places_orders() {
