@@ -14,17 +14,17 @@ zrml-market-commons = { workspace = true }
 
 # Mock
 
+orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-timestamp = { workspace = true, optional = true }
-sp-api = { workspace = true, optional = true }
-sp-io = { workspace = true, optional = true }
-orml-asset-registry = { workspace = true, optional = true }
 pallet-randomness-collective-flip = { workspace = true, optional = true }
+pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
+sp-api = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
 substrate-fixed = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
