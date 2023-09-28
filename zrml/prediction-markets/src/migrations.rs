@@ -37,8 +37,8 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::Saturating, Perbill};
 use zeitgeist_primitives::types::{
-    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-    MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
+    Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 #[cfg(feature = "try-runtime")]
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -90,7 +90,7 @@ pub struct OldMarket<AI, BA, BN, M, A> {
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
-    pub dispute_mechanism: MarketDisputeMechanism,
+    pub dispute_mechanism: Option<MarketDisputeMechanism>,
     pub bonds: OldMarketBonds<AI, BA>,
 }
 
@@ -126,40 +126,38 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
         }
         log::info!("AddEarlyCloseBonds: Starting...");
         let mut translated = 0u64;
-        zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(
-            |market_id, old_market| {
-                translated.saturating_inc();
+        zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
+            translated.saturating_inc();
 
-                let new_market = Market {
-                    base_asset: old_market.base_asset,
-                    creator: old_market.creator,
-                    creation: old_market.creation,
-                    // Zero can be safely assumed here as it was hardcoded before
-                    creator_fee: Perbill::zero(),
-                    oracle: old_market.oracle,
-                    metadata: old_market.metadata,
-                    market_type: old_market.market_type,
-                    period: old_market.period,
-                    scoring_rule: old_market.scoring_rule,
-                    status: old_market.status,
-                    report: old_market.report,
-                    resolved_outcome: old_market.resolved_outcome,
-                    dispute_mechanism: old_market.dispute_mechanism,
-                    deadlines: old_market.deadlines,
-                    bonds: MarketBonds {
-                        creation: old_market.bonds.creation,
-                        oracle: old_market.bonds.oracle,
-                        outsider: old_market.bonds.outsider,
-                        dispute: dispute_bond,
-                        close_dispute: None,
-                        close_request: None,
-                    },
-                    premature_close: None,
-                };
+            let new_market = Market {
+                base_asset: old_market.base_asset,
+                creator: old_market.creator,
+                creation: old_market.creation,
+                // Zero can be safely assumed here as it was hardcoded before
+                creator_fee: Perbill::zero(),
+                oracle: old_market.oracle,
+                metadata: old_market.metadata,
+                market_type: old_market.market_type,
+                period: old_market.period,
+                scoring_rule: old_market.scoring_rule,
+                status: old_market.status,
+                report: old_market.report,
+                resolved_outcome: old_market.resolved_outcome,
+                dispute_mechanism: old_market.dispute_mechanism,
+                deadlines: old_market.deadlines,
+                bonds: MarketBonds {
+                    creation: old_market.bonds.creation,
+                    oracle: old_market.bonds.oracle,
+                    outsider: old_market.bonds.outsider,
+                    dispute: old_market.bonds.dispute,
+                    close_dispute: None,
+                    close_request: None,
+                },
+                premature_close: None,
+            };
 
-                Some(new_market)
-            },
-        );
+            Some(new_market)
+        });
         log::info!("AddEarlyCloseBonds: Upgraded {} markets.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
@@ -226,10 +224,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
             assert_eq!(new_market.bonds.close_dispute, None);
         }
 
-        log::info!(
-            "AddEarlyCloseBonds: Market Counter post-upgrade is {}!",
-            new_market_count
-        );
+        log::info!("AddEarlyCloseBonds: Market Counter post-upgrade is {}!", new_market_count);
         assert!(new_market_count > 0);
         Ok(())
     }
@@ -246,7 +241,6 @@ mod tests {
         dispatch::fmt::Debug, migration::put_storage_value, storage_root, Blake2_128Concat,
         StateVersion, StorageHasher,
     };
-    use test_case::test_case;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[test]
@@ -265,7 +259,7 @@ mod tests {
     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
             // Don't set up chain to signal that storage is already up to date.
-            let (_, new_markets) = construct_old_new_tuple(MarketDisputeMechanism::Court);
+            let (_, new_markets) = construct_old_new_tuple();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, MarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
@@ -277,12 +271,11 @@ mod tests {
         });
     }
 
-    #[test_case(MarketDisputeMechanism::Authorized)]
-    #[test_case(MarketDisputeMechanism::Court)]
-    fn on_runtime_upgrade_correctly_updates_markets(dispute_mechanism: MarketDisputeMechanism) {
+    #[test]
+    fn on_runtime_upgrade_correctly_updates_markets() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            let (old_markets, new_markets) = construct_old_new_tuple(dispute_mechanism);
+            let (old_markets, new_markets) = construct_old_new_tuple();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, OldMarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
@@ -299,9 +292,7 @@ mod tests {
             .put::<MarketCommonsPallet<Runtime>>();
     }
 
-    fn construct_old_new_tuple(
-        dispute_mechanism: MarketDisputeMechanism,
-    ) -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
+    fn construct_old_new_tuple() -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
         let base_asset = Asset::Ztg;
         let creator = 999;
         let creator_fee = Perbill::from_parts(1);
@@ -315,13 +306,13 @@ mod tests {
         let report = None;
         let resolved_outcome = None;
         let deadlines = Deadlines::default();
+        let dispute_mechanism = Some(MarketDisputeMechanism::Court);
         let old_bonds = OldMarketBonds {
             creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
             outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
             dispute: None,
         };
-        let dispute_bond = disputor.map(|disputor| Bond::new(disputor, DisputeBond::get()));
         let new_bonds = MarketBonds {
             creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
             oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
@@ -361,7 +352,7 @@ mod tests {
             status,
             report,
             resolved_outcome,
-            dispute_mechanism: Some(dispute_mechanism),
+            dispute_mechanism: dispute_mechanism,
             deadlines,
             bonds: new_bonds,
             premature_close: None,

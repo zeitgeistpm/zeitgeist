@@ -43,8 +43,9 @@ use sp_arithmetic::Perbill;
 use sp_runtime::traits::{AccountIdConversion, Hash, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{
-        CloseProtectionBlockPeriod, CloseProtectionTimeFramePeriod, MaxAppeals, MaxSelectedDraws,
-        MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK,
+        CloseDisputeBond, CloseProtectionBlockPeriod, CloseProtectionTimeFramePeriod,
+        CloseRequestBond, MaxAppeals, MaxSelectedDraws, MinJurorStake, OutcomeBond, OutcomeFactor,
+        OutsiderBond, PrematureCloseBlockPeriod, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::Swaps as SwapsPalletApi,
     types::{
@@ -2873,7 +2874,6 @@ fn schedule_early_close_emits_event() {
         let new_end = now + CloseProtectionBlockPeriod::get();
         assert!(new_end < end);
 
-        let market = MarketCommons::market(&market_id).unwrap();
         let new_period = MarketPeriod::Block(0..new_end);
         System::assert_last_event(
             Event::MarketEarlyCloseScheduled {
@@ -2882,6 +2882,119 @@ fn schedule_early_close_emits_event() {
                 state: PrematureCloseState::ScheduledAsOther,
             }
             .into(),
+        );
+    });
+}
+
+#[test]
+fn dispute_early_close_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+
+        // just to ensure events are emitted
+        run_blocks(2);
+
+        let market_id = 0;
+
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
+
+        System::assert_last_event(Event::MarketEarlyCloseDisputed { market_id }.into());
+    });
+}
+
+#[test]
+fn reject_early_close_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+
+        // just to ensure events are emitted
+        run_blocks(2);
+
+        let market_id = 0;
+
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
+
+        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+
+        System::assert_last_event(Event::MarketEarlyCloseRejected { market_id }.into());
+    });
+}
+
+#[test]
+fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+
+        // just to ensure events are emitted
+        run_blocks(2);
+
+        let market_id = 0;
+
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        assert_noop!(
+            PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,),
+            Error::<Runtime>::InvalidPrematureCloseState
+        );
+    });
+}
+
+#[test]
+fn reject_early_close_fails_if_state_is_rejected() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+
+        // just to ensure events are emitted
+        run_blocks(2);
+
+        let market_id = 0;
+
+        assert_ok!(
+            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
+        );
+
+        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+
+        assert_noop!(
+            PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,),
+            Error::<Runtime>::InvalidPrematureCloseState
         );
     });
 }
@@ -2900,7 +3013,7 @@ fn sudo_schedule_early_close_at_block_works() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::CPMM
         ));
 
@@ -2971,7 +3084,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::CPMM
         ));
 
@@ -3021,9 +3134,146 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         set_timestamp_for_on_initialize((start_block + new_end) * MILLISECS_PER_BLOCK as u64);
         run_to_block(start_block + new_end);
 
-        let now = <zrml_market_commons::Pallet<Runtime>>::now();
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
+    });
+}
+
+#[test]
+fn schedule_early_close_as_market_creator_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::CPMM
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let old_market_period = market.period;
+        assert_eq!(market.status, MarketStatus::Active);
+        let market_ids_to_close = <MarketIdsPerCloseBlock<Runtime>>::iter().next().unwrap();
+        assert_eq!(market_ids_to_close.0, end);
+        assert_eq!(market_ids_to_close.1.into_inner(), vec![market_id]);
+        assert!(market.premature_close.is_none());
+
+        let reserved_balance_alice = Balances::reserved_balance(&ALICE);
+
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        let reserved_balance_alice_after = Balances::reserved_balance(&ALICE);
+        assert_eq!(reserved_balance_alice_after - reserved_balance_alice, CloseRequestBond::get());
+
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let new_end = now + PrematureCloseBlockPeriod::get();
+        assert!(new_end < end);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let new_period = MarketPeriod::Block(0..new_end);
+        assert_eq!(
+            market.premature_close.unwrap(),
+            PrematureClose {
+                old: old_market_period,
+                new: new_period,
+                state: PrematureCloseState::ScheduledAsMarketCreator,
+            }
+        );
+
+        let market_ids_to_close = <MarketIdsPerCloseBlock<Runtime>>::iter().collect::<Vec<_>>();
+        assert_eq!(market_ids_to_close.len(), 2);
+
+        // The first entry is the old one without a market id inside.
+        let first = market_ids_to_close.first().unwrap();
+        assert_eq!(first.0, end);
+        assert!(first.1.clone().into_inner().is_empty());
+
+        // The second entry is the new one with the market id inside.
+        let second = market_ids_to_close.last().unwrap();
+        assert_eq!(second.0, new_end);
+        assert_eq!(second.1.clone().into_inner(), vec![market_id]);
+
+        run_to_block(new_end + 1);
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+    });
+}
+
+#[test]
+fn dispute_early_close_from_market_creator_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::CPMM
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let old_market_period = market.period;
+
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let new_end = now + PrematureCloseBlockPeriod::get();
+        let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
+        assert_eq!(market_ids_at_new_end, vec![market_id]);
+
+        run_blocks(1);
+
+        let reserved_bob = Balances::reserved_balance(&BOB);
+
+        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
+
+        let reserved_bob_after = Balances::reserved_balance(&BOB);
+        assert_eq!(reserved_bob_after - reserved_bob, CloseDisputeBond::get());
+
+        let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
+        assert!(market_ids_at_new_end.is_empty());
+
+        let market_ids_at_old_end = <MarketIdsPerCloseBlock<Runtime>>::get(end);
+        assert_eq!(market_ids_at_old_end, vec![market_id]);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let new_period = MarketPeriod::Block(0..new_end);
+        assert_eq!(
+            market.premature_close.unwrap(),
+            PrematureClose {
+                old: old_market_period,
+                new: new_period,
+                state: PrematureCloseState::Disputed,
+            }
+        );
+
+        run_to_block(new_end + 1);
+
+        // verify the market doesn't close after proposed new market period end
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
     });
 }
 

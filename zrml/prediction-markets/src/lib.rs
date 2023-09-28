@@ -444,6 +444,12 @@ mod pallet {
                 .into())
         }
 
+        /// Allows the advisory committee or the market creator to schedule an early close.
+        /// TODO
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is ...
         #[pallet::call_index(17)]
         #[pallet::weight((
             T::WeightInfo::admin_move_market_to_closed(
@@ -577,6 +583,12 @@ mod pallet {
             Ok((Some(T::WeightInfo::admin_move_market_to_closed(0u32, 0u32)), Pays::Yes).into())
         }
 
+        /// Allows anyone to dispute a scheduled early close.
+        /// TODO
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is ...
         #[pallet::call_index(18)]
         #[pallet::weight((
             T::WeightInfo::admin_move_market_to_closed(
@@ -642,6 +654,12 @@ mod pallet {
             Ok((Some(T::WeightInfo::admin_move_market_to_closed(0u32, 0u32)), Pays::Yes).into())
         }
 
+        /// Allows the advisory committee to reject a scheduled early close.
+        /// TODO
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is ...
         #[pallet::call_index(19)]
         #[pallet::weight((
             T::WeightInfo::admin_move_market_to_closed(
