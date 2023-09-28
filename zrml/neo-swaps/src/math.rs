@@ -123,7 +123,7 @@ mod detail {
         from_fixed(result_fixed)
     }
 
-    /// Calculate b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i
+    /// Calculate –1 * b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i
     pub(super) fn calculate_swap_amount_out_for_sell(
         reserve: u128,
         amount_in: u128,
