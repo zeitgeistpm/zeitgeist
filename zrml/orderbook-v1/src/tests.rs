@@ -468,8 +468,6 @@ fn it_removes_orders() {
 
         assert!(<Orders<Runtime>>::get(order_id).is_none());
 
-        System::assert_last_event(
-            Event::<Runtime>::OrderRemoved { order_id, maker: ALICE }.into(),
-        );
+        System::assert_last_event(Event::<Runtime>::OrderRemoved { order_id, maker: ALICE }.into());
     });
 }
