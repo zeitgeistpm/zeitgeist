@@ -34,9 +34,8 @@ use frame_support::{
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
-use parity_scale_codec::Encode;
 use sp_runtime::{
-    traits::{CheckedSub, Get, Hash, Zero},
+    traits::{CheckedSub, Get, Zero},
     ArithmeticError, Perquintill, SaturatedConversion, Saturating,
 };
 use zeitgeist_primitives::{
@@ -85,7 +84,6 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketCommonsBalanceOf<T> =
@@ -108,7 +106,7 @@ mod pallet {
     pub type NextOrderId<T> = StorageValue<_, OrderId, ValueQuery>;
 
     #[pallet::storage]
-    pub type Orders<T: Config> = StorageMap<_, Twox64Concat, T::Hash, OrderOf<T>, OptionQuery>;
+    pub type Orders<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -117,7 +115,7 @@ mod pallet {
         T: Config,
     {
         OrderFilled {
-            order_hash: HashOf<T>,
+            order_id: OrderId,
             maker: AccountIdOf<T>,
             taker: AccountIdOf<T>,
             filled: BalanceOf<T>,
@@ -125,12 +123,11 @@ mod pallet {
             unfilled_base_asset_amount: BalanceOf<T>,
         },
         OrderPlaced {
-            order_hash: HashOf<T>,
             order_id: OrderId,
             order: OrderOf<T>,
         },
         OrderRemoved {
-            order_hash: HashOf<T>,
+            order_id: OrderId,
             maker: T::AccountId,
         },
     }
@@ -167,13 +164,10 @@ mod pallet {
             T::WeightInfo::remove_order_ask().max(T::WeightInfo::remove_order_bid())
         )]
         #[transactional]
-        pub fn remove_order(
-            origin: OriginFor<T>,
-            order_hash: T::Hash,
-        ) -> DispatchResultWithPostInfo {
+        pub fn remove_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let order_data = <Orders<T>>::get(order_hash).ok_or(Error::<T>::OrderDoesNotExist)?;
+            let order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
 
             let maker = &order_data.maker;
             ensure!(sender == *maker, Error::<T>::NotOrderCreator);
@@ -197,9 +191,9 @@ mod pallet {
                 }
             }
 
-            <Orders<T>>::remove(order_hash);
+            <Orders<T>>::remove(order_id);
 
-            Self::deposit_event(Event::OrderRemoved { order_hash, maker: maker.clone() });
+            Self::deposit_event(Event::OrderRemoved { order_id, maker: maker.clone() });
 
             match order_data.side {
                 OrderSide::Bid => Ok(Some(T::WeightInfo::remove_order_bid()).into()),
@@ -222,13 +216,12 @@ mod pallet {
         #[transactional]
         pub fn fill_order(
             origin: OriginFor<T>,
-            order_hash: T::Hash,
+            order_id: OrderId,
             maker_partial_fill: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let taker = ensure_signed(origin)?;
 
-            let mut order_data =
-                <Orders<T>>::get(order_hash).ok_or(Error::<T>::OrderDoesNotExist)?;
+            let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
             ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
@@ -340,13 +333,13 @@ mod pallet {
                 unfilled_outcome_asset_amount.saturating_add(unfilled_base_asset_amount);
 
             if total_unfilled.is_zero() {
-                <Orders<T>>::remove(order_hash);
+                <Orders<T>>::remove(order_id);
             } else {
-                <Orders<T>>::insert(order_hash, order_data.clone());
+                <Orders<T>>::insert(order_id, order_data.clone());
             }
 
             Self::deposit_event(Event::OrderFilled {
-                order_hash,
+                order_id,
                 maker,
                 taker: taker.clone(),
                 filled: maker_fill,
@@ -393,10 +386,8 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
-            let order_hash = Self::order_hash(&who, order_id);
             let order = Order {
                 market_id,
-                order_id,
                 side: side.clone(),
                 maker: who.clone(),
                 outcome_asset,
@@ -424,9 +415,9 @@ mod pallet {
                 }
             }
 
-            <Orders<T>>::insert(order_hash, order.clone());
+            <Orders<T>>::insert(order_id, order.clone());
             <NextOrderId<T>>::put(next_order_id);
-            Self::deposit_event(Event::OrderPlaced { order_hash, order_id, order });
+            Self::deposit_event(Event::OrderPlaced { order_id, order });
 
             match side {
                 OrderSide::Bid => Ok(Some(T::WeightInfo::place_order_bid()).into()),
@@ -440,10 +431,6 @@ mod pallet {
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
             T::PalletId::get().0
-        }
-
-        pub fn order_hash(creator: &T::AccountId, order_id: OrderId) -> T::Hash {
-            (creator, order_id).using_encoded(T::Hashing::hash)
         }
 
         pub fn outcome_assets(

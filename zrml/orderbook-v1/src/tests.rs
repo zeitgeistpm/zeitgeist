@@ -64,7 +64,6 @@ fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
         Markets::<Runtime>::insert(market_id, market);
 
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&ALICE, order_id);
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
@@ -81,7 +80,7 @@ fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
         }));
 
         assert_noop!(
-            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None),
+            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None),
             Error::<Runtime>::InvalidScoringRule
         );
     });
@@ -91,14 +90,13 @@ fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
 fn it_fails_order_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&ALICE, order_id);
         assert_noop!(
-            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None),
+            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None),
             Error::<Runtime>::OrderDoesNotExist,
         );
 
         assert_noop!(
-            Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_hash),
+            Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id),
             Error::<Runtime>::OrderDoesNotExist,
         );
     });
@@ -168,15 +166,14 @@ fn it_fills_ask_orders_fully() {
         assert_eq!(reserved_bob, 10);
 
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&BOB, order_id);
-        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
-                order_hash,
+                order_id,
                 maker: BOB,
                 taker: ALICE,
                 filled: 50,
@@ -221,16 +218,15 @@ fn it_fills_bid_orders_fully() {
         assert_eq!(reserved_bob, 50);
 
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&BOB, order_id);
         assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 10));
-        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, None));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
-                order_hash,
+                order_id,
                 maker: BOB,
                 taker: ALICE,
                 filled: 10,
@@ -275,19 +271,17 @@ fn it_fills_bid_orders_partially() {
         assert_eq!(reserved_bob, 5000);
 
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&BOB, order_id);
         assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 1000));
 
         // instead of selling 1000 shares, Alice sells 700 shares
         let portion = Some(700);
-        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, portion,));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
-        let order = <Orders<Runtime>>::get(order_hash).unwrap();
+        let order = <Orders<Runtime>>::get(order_id).unwrap();
         assert_eq!(
             order,
             Order {
                 market_id,
-                order_id,
                 side: OrderSide::Bid,
                 maker: BOB,
                 outcome_asset,
@@ -304,7 +298,7 @@ fn it_fills_bid_orders_partially() {
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
-                order_hash,
+                order_id,
                 maker: BOB,
                 taker: ALICE,
                 filled: 700,
@@ -355,19 +349,17 @@ fn it_fills_ask_orders_partially() {
         assert_eq!(reserved_bob, 1000);
 
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&BOB, order_id);
         assert_ok!(Tokens::deposit(market.base_asset, &ALICE, 5000));
 
         // instead of buying 5000 of the base asset, Alice buys 700 shares
         let portion = Some(700);
-        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_hash, portion,));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
-        let order = <Orders<Runtime>>::get(order_hash).unwrap();
+        let order = <Orders<Runtime>>::get(order_id).unwrap();
         assert_eq!(
             order,
             Order {
                 market_id,
-                order_id,
                 side: OrderSide::Ask,
                 maker: BOB,
                 outcome_asset,
@@ -384,7 +376,7 @@ fn it_fills_ask_orders_partially() {
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
-                order_hash,
+                order_id,
                 maker: BOB,
                 taker: ALICE,
                 filled: 700,
@@ -429,15 +421,11 @@ fn it_removes_orders() {
         ));
 
         let order_id = 0u128;
-        let order_hash = Orderbook::order_hash(&ALICE, order_id);
-
         System::assert_last_event(
             Event::<Runtime>::OrderPlaced {
-                order_hash,
                 order_id: 0,
                 order: Order {
                     market_id,
-                    order_id,
                     side: OrderSide::Bid,
                     maker: ALICE,
                     outcome_asset: share_id,
@@ -449,12 +437,11 @@ fn it_removes_orders() {
             .into(),
         );
 
-        let order = <Orders<Runtime>>::get(order_hash).unwrap();
+        let order = <Orders<Runtime>>::get(order_id).unwrap();
         assert_eq!(
             order,
             Order {
                 market_id,
-                order_id,
                 side: OrderSide::Bid,
                 maker: ALICE,
                 outcome_asset: share_id,
@@ -465,7 +452,7 @@ fn it_removes_orders() {
         );
 
         assert_noop!(
-            Orderbook::remove_order(RuntimeOrigin::signed(BOB), order_hash),
+            Orderbook::remove_order(RuntimeOrigin::signed(BOB), order_id),
             Error::<Runtime>::NotOrderCreator,
         );
 
@@ -473,16 +460,16 @@ fn it_removes_orders() {
             <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
         assert_eq!(reserved_funds, 10);
 
-        assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_hash));
+        assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id));
 
         let reserved_funds =
             <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
         assert_eq!(reserved_funds, 0);
 
-        assert!(<Orders<Runtime>>::get(order_hash).is_none());
+        assert!(<Orders<Runtime>>::get(order_id).is_none());
 
         System::assert_last_event(
-            Event::<Runtime>::OrderRemoved { order_hash, maker: ALICE }.into(),
+            Event::<Runtime>::OrderRemoved { order_id, maker: ALICE }.into(),
         );
     });
 }

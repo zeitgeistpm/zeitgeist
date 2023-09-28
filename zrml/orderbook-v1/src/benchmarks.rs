@@ -24,7 +24,9 @@
 #![allow(clippy::type_complexity)]
 
 use super::*;
-use crate::{utils::market_mock, Pallet as OrderBook};
+use crate::utils::market_mock;
+#[cfg(test)]
+use crate::Pallet as OrderBook;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::dispatch::UnfilteredDispatchable;
 use frame_system::RawOrigin;
@@ -63,11 +65,11 @@ fn order_common_parameters<T: Config>(
 
 // Creates an order of type `order_type`. `seed` specifies the account seed,
 // None will return a whitelisted account
-// Returns `account`, `asset` and `order_hash`
+// Returns `account`, `asset`, `order_id`
 fn place_order<T: Config>(
     order_type: OrderSide,
     seed: Option<u32>,
-) -> Result<(T::AccountId, MarketIdOf<T>, T::Hash), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>, OrderId), &'static str> {
     let (acc, outcome_asset, outcome_asset_amount, base_asset_amount, market_id) =
         order_common_parameters::<T>(seed)?;
 
@@ -81,29 +83,27 @@ fn place_order<T: Config>(
     }
     .dispatch_bypass_filter(RawOrigin::Signed(acc.clone()).into())?;
 
-    let order_hash = OrderBook::<T>::order_hash(&acc, order_id);
-
-    Ok((acc, market_id, order_hash))
+    Ok((acc, market_id, order_id))
 }
 
 benchmarks! {
     remove_order_ask {
-        let (caller, _, order_hash) = place_order::<T>(OrderSide::Ask, None)?;
-    }: remove_order(RawOrigin::Signed(caller), order_hash)
+        let (caller, _, order_id) = place_order::<T>(OrderSide::Ask, None)?;
+    }: remove_order(RawOrigin::Signed(caller), order_id)
 
     remove_order_bid {
-        let (caller, _, order_hash) = place_order::<T>(OrderSide::Bid, None)?;
-    }: remove_order(RawOrigin::Signed(caller), order_hash)
+        let (caller, _, order_id) = place_order::<T>(OrderSide::Bid, None)?;
+    }: remove_order(RawOrigin::Signed(caller), order_id)
 
     fill_order_ask {
         let caller = generate_funded_account::<T>(None)?;
-        let (_, _, order_hash) = place_order::<T>(OrderSide::Ask, Some(0))?;
-    }: fill_order(RawOrigin::Signed(caller), order_hash, None)
+        let (_, _, order_id) = place_order::<T>(OrderSide::Ask, Some(0))?;
+    }: fill_order(RawOrigin::Signed(caller), order_id, None)
 
     fill_order_bid {
         let caller = generate_funded_account::<T>(None)?;
-        let (_, _, order_hash) = place_order::<T>(OrderSide::Bid, Some(0))?;
-    }: fill_order(RawOrigin::Signed(caller), order_hash, None)
+        let (_, _, order_id) = place_order::<T>(OrderSide::Bid, Some(0))?;
+    }: fill_order(RawOrigin::Signed(caller), order_id, None)
 
     place_order_ask {
         let (caller, outcome_asset, outcome_asset_amount, base_asset_amount, market_id) = order_common_parameters::<T>(None)?;
