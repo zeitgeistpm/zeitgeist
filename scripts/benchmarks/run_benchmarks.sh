@@ -71,7 +71,7 @@ for pallet in ${ZEITGEIST_PALLETS[@]}; do
         $ADDITIONAL_PARAMS
 done
 
-if [ -n "$DISK_SPACE_OPTIMIZED" ];then
+if [ -n "$DISK_SPACE_OPTIMIZED" ]; then
    echo "Disk space optimization actived."
    cargo clean
 fi
