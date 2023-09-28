@@ -199,6 +199,16 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
+    /// (Slashable) Bond that is provided for disputing an early market close by the market creator.
+    pub const CloseDisputeBond: Balance = 50 * BASE;
+    // 43_200_000 = 12 hours. Fat-finger protection for the advisory committe to reject
+    // the early market schedule.
+    pub const CloseProtectionTimeFramePeriod: Moment = 43_200_000;
+    // Fat-finger protection for the advisory committe to reject
+    // the early market schedule.
+    pub const CloseProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
+    /// (Slashable) Bond that is provided for scheduling an early market close.
+    pub const CloseRequestBond: Balance = 25 * BASE;
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Unreserved in case the dispute was justified otherwise slashed.
     /// This is when the resolved outcome is different to the default (reported) outcome.
@@ -244,6 +254,12 @@ parameter_types! {
     pub const OutsiderBond: Balance = 2 * OracleBond::get();
     /// Pallet identifier, mainly used for named balance reserves.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
+    // Waiting time for market creator to close
+    // the market after an early close schedule.
+    pub const PrematureCloseBlockPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+    // 432_000_000 = 5 days. Waiting time for market creator to close
+    // the market after an early close schedule.
+    pub const PrematureCloseTimeFramePeriod: Moment = 432_000_000;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 50 * CENT;

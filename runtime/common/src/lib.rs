@@ -58,10 +58,10 @@ macro_rules! decl_common_types {
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
+        type Migrations = (zrml_prediction_markets::migrations::AddEarlyCloseBonds<Runtime>,);
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
+        type Migrations = (zrml_prediction_markets::migrations::AddEarlyCloseBonds<Runtime>,);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -1113,7 +1113,12 @@ macro_rules! impl_config_traits {
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type Authorized = Authorized;
             type Court = Court;
+            type CloseDisputeBond = CloseDisputeBond;
+            type CloseMarketEarlyOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type CloseOrigin = EnsureRoot<AccountId>;
+            type CloseProtectionTimeFramePeriod = CloseProtectionTimeFramePeriod;
+            type CloseProtectionBlockPeriod = CloseProtectionBlockPeriod;
+            type CloseRequestBond = CloseRequestBond;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
@@ -1139,6 +1144,8 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
+            type PrematureCloseBlockPeriod = PrematureCloseBlockPeriod;
+            type PrematureCloseTimeFramePeriod = PrematureCloseTimeFramePeriod;
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;

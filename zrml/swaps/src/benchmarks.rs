@@ -144,6 +144,7 @@ fn push_default_market<T: Config>(caller: T::AccountId, oracle: T::AccountId) ->
         scoring_rule: ScoringRule::CPMM,
         status: MarketStatus::Active,
         bonds: MarketBonds::default(),
+        premature_close: None,
     };
 
     T::MarketCommons::push_market(market).unwrap()
@@ -244,6 +245,7 @@ benchmarks! {
                 scoring_rule: ScoringRule::CPMM,
                 status: MarketStatus::Active,
                 bonds: MarketBonds::default(),
+                premature_close: None,
             }
         )?;
         let pool_id: PoolId = 0;
@@ -285,6 +287,7 @@ benchmarks! {
                 scoring_rule: ScoringRule::CPMM,
                 status: MarketStatus::Active,
                 bonds: MarketBonds::default(),
+                premature_close: None,
             }
         )?;
         let pool_id: PoolId = 0;

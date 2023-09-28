@@ -529,6 +529,8 @@ mod pallet {
                     get_new_period(block_period, time_frame_period)?
                 }
                 Some(p) => {
+                    ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
+
                     match p.state {
                         // in these case the market period got already reset to the old period
                         PrematureCloseState::Disputed => {
@@ -545,8 +547,6 @@ mod pallet {
                             return Err(Error::<T>::InvalidPrematureCloseState.into());
                         }
                     }
-
-                    ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
 
                     get_new_period(
                         T::CloseProtectionBlockPeriod::get(),
@@ -716,7 +716,7 @@ mod pallet {
 
             if let Some(disputor_bond) = market.bonds.close_dispute.as_ref() {
                 let close_disputor = &disputor_bond.who;
-                Self::repatriate_close_request_bond(&market_id, &close_disputor)?;
+                Self::repatriate_close_request_bond(&market_id, close_disputor)?;
                 Self::unreserve_close_dispute_bond(&market_id)?;
             }
 
@@ -2787,19 +2787,19 @@ mod pallet {
                     Some(p) => {
                         match p.state {
                             PrematureCloseState::ScheduledAsMarketCreator => {
-                                if Self::is_close_request_bond_pending(&market_id, &market, false) {
-                                    Self::unreserve_close_request_bond(&market_id)?;
+                                if Self::is_close_request_bond_pending(market_id, market, false) {
+                                    Self::unreserve_close_request_bond(market_id)?;
                                 }
                             }
                             PrematureCloseState::Disputed => {
                                 // this is the case that the original close happened,
                                 // although requested early close or disputed
                                 // there was no decision made via `reject` or `approve`
-                                if Self::is_close_dispute_bond_pending(&market_id, &market, false) {
-                                    Self::unreserve_close_dispute_bond(&market_id)?;
+                                if Self::is_close_dispute_bond_pending(market_id, market, false) {
+                                    Self::unreserve_close_dispute_bond(market_id)?;
                                 }
-                                if Self::is_close_request_bond_pending(&market_id, &market, false) {
-                                    Self::unreserve_close_request_bond(&market_id)?;
+                                if Self::is_close_request_bond_pending(market_id, market, false) {
+                                    Self::unreserve_close_request_bond(market_id)?;
                                 }
                             }
                             PrematureCloseState::ScheduledAsOther

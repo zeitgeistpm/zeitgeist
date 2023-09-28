@@ -423,6 +423,7 @@ mod tests {
             resolved_outcome: None,
             dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
             bonds: MarketBonds::default(),
+            premature_close: None,
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }

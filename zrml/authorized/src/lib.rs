@@ -365,7 +365,7 @@ where
 {
     use frame_support::traits::Get;
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
+    use zeitgeist_primitives::types::{Asset, MarketBonds, MarketDisputeMechanism, ScoringRule};
 
     zeitgeist_primitives::types::Market {
         base_asset: Asset::Ztg,
@@ -387,5 +387,6 @@ where
         scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: MarketBonds::default(),
+        premature_close: None,
     }
 }

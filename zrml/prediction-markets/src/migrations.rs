@@ -213,7 +213,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
             assert_eq!(new_market.status, old_market.status);
             assert_eq!(new_market.report, old_market.report);
             assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
-            assert_eq!(new_market.dispute_mechanism, Some(old_market.dispute_mechanism.clone()));
+            assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
             assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
             assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
             assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
