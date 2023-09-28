@@ -26,5 +26,6 @@ export PROFILE_DIR=release
 export ADDITIONAL_PARAMS=--detailed-log-output
 export EXECUTION=native
 export ADDITIONAL_FEATURES=""
+export DISK_SPACE_OPTIMIZED="true"
 
 source ./scripts/benchmarks/run_benchmarks.sh
