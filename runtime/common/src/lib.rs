@@ -60,24 +60,10 @@ macro_rules! decl_common_types {
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = (
-            orml_asset_registry::Migration<Runtime>,
-            orml_unknown_tokens::Migration<Runtime>,
-            pallet_xcm::migration::v1::MigrateToV1<Runtime>,
-            // IMPORTANT that AddDisputeBondAndConvertCreatorFee comes before MoveDataToSimpleDisputes!!!
-            zrml_prediction_markets::migrations::AddDisputeBondAndConvertCreatorFee<Runtime>,
-            zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
-            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
-        );
+        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = (
-            pallet_grandpa::migrations::CleanupSetIdSessionMap<Runtime>,
-            // IMPORTANT that AddDisputeBondAndConvertCreatorFee comes before MoveDataToSimpleDisputes!!!
-            zrml_prediction_markets::migrations::AddDisputeBondAndConvertCreatorFee<Runtime>,
-            zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
-            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
-        );
+        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
 
         pub type Executive = frame_executive::Executive<
             Runtime,

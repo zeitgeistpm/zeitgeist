@@ -186,10 +186,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(&market)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
@@ -246,6 +243,15 @@ mod pallet {
         #[inline]
         fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
             ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
+            Ok(())
+        }
+
+        #[inline]
+        fn ensure_dispute_mechanism(market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == Some(MarketDisputeMechanism::SimpleDisputes),
+                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
+            );
             Ok(())
         }
 
@@ -322,10 +328,7 @@ mod pallet {
             _: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let res =
                 ResultWithWeightInfo { result: (), weight: T::WeightInfo::on_dispute_weight() };
@@ -337,10 +340,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             let disputes = Disputes::<T>::get(market_id);
@@ -370,10 +370,7 @@ mod pallet {
             resolved_outcome: &OutcomeReport,
             mut overall_imbalance: NegativeImbalanceOf<T>,
         ) -> Result<ResultWithWeightInfo<NegativeImbalanceOf<T>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             let disputes = Disputes::<T>::get(market_id);
@@ -427,7 +424,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> ResultWithWeightInfo<Option<Self::BlockNumber>> {
-            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
+            if market.dispute_mechanism != Some(MarketDisputeMechanism::SimpleDisputes) {
                 return ResultWithWeightInfo {
                     result: None,
                     weight: T::WeightInfo::get_auto_resolve_weight(T::MaxDisputes::get()),
@@ -448,10 +445,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
             let disputes = <Disputes<T>>::get(market_id);
             let disputes_len = disputes.len() as u32;
 
@@ -470,10 +464,7 @@ mod pallet {
             ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
             DispatchError,
         > {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let disputes_len = <Disputes<T>>::decode_len(market_id).unwrap_or(0) as u32;
 
@@ -496,10 +487,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
-                Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let mut disputes_len = 0u32;
             // `Disputes` is emtpy unless the market is disputed, so this is just a defensive
@@ -553,7 +541,7 @@ where
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes,
+        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
