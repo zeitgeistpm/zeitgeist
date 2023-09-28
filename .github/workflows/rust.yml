@@ -24,10 +24,11 @@ jobs:
 
       - name: Install build tools
         run: ./scripts/init.sh
-        
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: taplo-cli
+
+# TODO(#1125): Use actions-rs/install for Taplo once stable        
+#      - uses: actions-rs/install@v0.1
+#        with:
+#          crate: taplo-cli
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1

@@ -50,7 +50,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
         MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType,
-        Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
+        Moment, MultiHash, OutcomeReport, PoolStatus, Report, ScalarPosition, ScoringRule,
     },
 };
 use zrml_global_disputes::{
@@ -117,7 +117,7 @@ fn simple_create_categorical_market(
         gen_metadata(2),
         creation,
         MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-        MarketDisputeMechanism::SimpleDisputes,
+        Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule
     ));
 }
@@ -138,7 +138,7 @@ fn simple_create_scalar_market(
         gen_metadata(2),
         creation,
         MarketType::Scalar(100..=200),
-        MarketDisputeMechanism::SimpleDisputes,
+        Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule
     ));
 }
@@ -189,7 +189,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let market_id = 0;
@@ -265,7 +265,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -279,7 +279,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -293,7 +293,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -325,7 +325,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Scalar(range),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::InvalidOutcomeRange
@@ -352,7 +352,7 @@ fn create_market_fails_on_min_dispute_period() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
@@ -379,7 +379,7 @@ fn create_market_fails_on_min_oracle_duration() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
@@ -406,7 +406,7 @@ fn create_market_fails_on_max_dispute_period() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::DisputeDurationGreaterThanMaxDisputeDuration
@@ -433,7 +433,7 @@ fn create_market_fails_on_max_grace_period() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::GracePeriodGreaterThanMaxGracePeriod
@@ -460,7 +460,7 @@ fn create_market_fails_on_max_oracle_duration() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::OracleDurationGreaterThanMaxOracleDuration
@@ -491,7 +491,7 @@ fn create_market_with_foreign_assets() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::InvalidBaseAsset,
@@ -508,7 +508,7 @@ fn create_market_with_foreign_assets() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::UnregisteredForeignAsset,
@@ -524,7 +524,7 @@ fn create_market_with_foreign_assets() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         let market = MarketCommons::market(&0).unwrap();
@@ -1026,7 +1026,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(3),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             swap_fee,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 3],
@@ -1092,7 +1092,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1106,7 +1106,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1120,7 +1120,7 @@ fn admin_destroy_market_correctly_clears_auto_open_and_close_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1315,7 +1315,7 @@ fn it_does_not_create_market_with_too_few_categories() {
                 gen_metadata(2),
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get() - 1),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM
             ),
             Error::<Runtime>::NotEnoughCategories
@@ -1337,7 +1337,7 @@ fn it_does_not_create_market_with_too_many_categories() {
                 gen_metadata(2),
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MaxCategories::get() + 1),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM
             ),
             Error::<Runtime>::TooManyCategories
@@ -1818,7 +1818,7 @@ fn on_market_open_successfully_auto_opens_market_pool_with_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1850,7 +1850,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1889,7 +1889,7 @@ fn on_market_open_successfully_auto_opens_market_with_timestamps() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1924,7 +1924,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1971,7 +1971,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -1985,7 +1985,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -2018,7 +2018,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -2032,7 +2032,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             0,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -2072,7 +2072,7 @@ fn on_initialize_skips_the_genesis_block() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             123,
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
@@ -2167,7 +2167,7 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized,
+                Some(MarketDisputeMechanism::Authorized),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
@@ -2198,7 +2198,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized,
+                Some(MarketDisputeMechanism::Authorized),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
@@ -2222,7 +2222,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized,
+                Some(MarketDisputeMechanism::Authorized),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
@@ -2240,7 +2240,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized,
+                Some(MarketDisputeMechanism::Authorized),
                 ScoringRule::CPMM,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
@@ -2582,7 +2582,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
 
@@ -2741,7 +2741,7 @@ fn dispute_fails_disputed_already() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
 
@@ -2782,7 +2782,7 @@ fn dispute_fails_if_market_not_reported() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
 
@@ -2817,7 +2817,7 @@ fn dispute_reserves_dispute_bond() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
 
@@ -3041,7 +3041,7 @@ fn dispute_updates_market() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
 
@@ -3088,7 +3088,7 @@ fn dispute_emits_event() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
 
@@ -3389,7 +3389,7 @@ fn it_resolves_a_disputed_court_market() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::Court,
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::CPMM,
         ));
 
@@ -3657,7 +3657,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::Court,
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::CPMM,
         ));
 
@@ -3777,7 +3777,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
         let market_id = MarketCommons::latest_market_id().unwrap();
@@ -3871,7 +3871,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
             get_deadlines(),
             metadata,
             market_type,
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             swap_fee,
             amount,
             weights,
@@ -4098,7 +4098,7 @@ fn only_creator_can_edit_market() {
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM
             ),
             Error::<Runtime>::EditorNotCreator
@@ -4140,7 +4140,7 @@ fn edit_cycle_for_proposed_markets() {
             get_deadlines(),
             gen_metadata(2),
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let edited_market = MarketCommons::market(&0).expect("Market not found");
@@ -4187,7 +4187,7 @@ fn edit_market_with_foreign_asset() {
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM
             ),
             Error::<Runtime>::UnregisteredForeignAsset
@@ -4203,7 +4203,7 @@ fn edit_market_with_foreign_asset() {
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-                MarketDisputeMechanism::SimpleDisputes,
+                Some(MarketDisputeMechanism::SimpleDisputes),
                 ScoringRule::CPMM
             ),
             Error::<Runtime>::InvalidBaseAsset,
@@ -4218,7 +4218,7 @@ fn edit_market_with_foreign_asset() {
             get_deadlines(),
             gen_metadata(2),
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let market = MarketCommons::market(&0).unwrap();
@@ -4240,7 +4240,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
 
@@ -4280,7 +4280,7 @@ fn full_scalar_market_lifecycle() {
             gen_metadata(3),
             MarketCreation::Permissionless,
             MarketType::Scalar(10..=30),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
 
@@ -4489,7 +4489,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
@@ -4531,7 +4531,7 @@ fn authorized_correctly_resolves_disputed_market() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -4677,7 +4677,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         let market_id = 0;
@@ -4715,7 +4715,7 @@ fn deploy_swap_pool_correctly_sets_weight_of_base_asset() {
             get_deadlines(),
             gen_metadata(50),
             MarketType::Categorical(3),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             1,
             LIQUIDITY,
             weights,
@@ -4743,7 +4743,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let amount = 123 * BASE;
@@ -4781,7 +4781,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let amount = 123 * BASE;
@@ -4822,7 +4822,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4868,7 +4868,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4934,7 +4934,7 @@ fn outsider_reports_wrong_outcome() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
 
@@ -5013,7 +5013,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
@@ -5059,7 +5059,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
@@ -5106,7 +5106,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -5157,7 +5157,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
@@ -5209,7 +5209,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -5269,7 +5269,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
@@ -5327,7 +5327,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
 
@@ -5399,7 +5399,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM,
         ));
 
@@ -5466,7 +5466,7 @@ fn report_fails_on_market_state_proposed() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         assert_noop!(
@@ -5489,7 +5489,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         assert_noop!(
@@ -5512,7 +5512,7 @@ fn report_fails_on_market_state_collecting_subsidy() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::RikiddoSigmoidFeeMarketEma
         ));
         assert_noop!(
@@ -5535,7 +5535,7 @@ fn report_fails_on_market_state_insufficient_subsidy() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::RikiddoSigmoidFeeMarketEma
         ));
         let _ = MarketCommons::mutate_market(&0, |market| {
@@ -5562,7 +5562,7 @@ fn report_fails_on_market_state_active() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         assert_noop!(
@@ -5585,7 +5585,7 @@ fn report_fails_on_market_state_suspended() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let _ = MarketCommons::mutate_market(&0, |market| {
@@ -5612,7 +5612,7 @@ fn report_fails_on_market_state_resolved() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let _ = MarketCommons::mutate_market(&0, |market| {
@@ -5639,7 +5639,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::SimpleDisputes,
+            Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::CPMM
         ));
         let market = MarketCommons::market(&0).unwrap();
@@ -5680,7 +5680,7 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
             gen_metadata(0),
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
     });
@@ -5708,7 +5708,7 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
             gen_metadata(0),
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
-            MarketDisputeMechanism::Authorized,
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::CPMM,
         ));
     });
@@ -5736,7 +5736,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized,
+                Some(MarketDisputeMechanism::Authorized),
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::MarketDurationTooLong,
@@ -5767,7 +5767,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized,
+                Some(MarketDisputeMechanism::Authorized),
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::MarketDurationTooLong,
@@ -5819,7 +5819,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let metadata = gen_metadata(0x99);
         let MultiHash::Sha3_384(multihash) = metadata;
         let market_type = MarketType::Categorical(7);
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let creator_fee = Perbill::from_parts(1);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(creator),
@@ -5876,7 +5876,7 @@ fn create_cpmm_market_and_deploy_assets_sets_the_correct_market_parameters_and_r
         let MultiHash::Sha3_384(multihash) = metadata;
         let category_count = 7;
         let market_type = MarketType::Categorical(category_count);
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let creator_fee = Perbill::from_parts(1);
         let lp_fee = 0;
         let weight = <Runtime as zrml_swaps::Config>::MinWeight::get();
@@ -5933,7 +5933,7 @@ fn create_market_functions_respect_fee_boundaries() {
         let scoring_rule = ScoringRule::CPMM;
         let market_type = MarketType::Categorical(category_count);
         let creation_type = MarketCreation::Permissionless;
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let lp_fee = 0;
 
         assert_ok!(PredictionMarkets::create_market(
@@ -5999,6 +5999,81 @@ fn create_market_functions_respect_fee_boundaries() {
             ),
             Error::<Runtime>::FeeTooHigh
         );
+    });
+}
+
+#[test]
+fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_market(
+                RuntimeOrigin::signed(ALICE),
+                Asset::Ztg,
+                Perbill::zero(),
+                BOB,
+                MarketPeriod::Block(1..2),
+                Deadlines {
+                    grace_period: 1,
+                    oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
+                    dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+                },
+                gen_metadata(0x99),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
+                None,
+                ScoringRule::CPMM,
+            ),
+            Error::<Runtime>::NonZeroDisputePeriodOnTrustedMarket
+        );
+    });
+}
+
+#[test]
+fn trusted_market_complete_lifecycle() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 3;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::CPMM,
+        ));
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(FRED),
+            market_id,
+            BASE
+        ));
+        run_to_block(end);
+        let outcome = OutcomeReport::Categorical(1);
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            outcome.clone()
+        ));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Resolved);
+        assert_eq!(market.report, Some(Report { at: end, by: BOB, outcome: outcome.clone() }));
+        assert_eq!(market.resolved_outcome, Some(outcome));
+        assert_eq!(market.dispute_mechanism, None);
+        assert!(market.bonds.oracle.unwrap().is_settled);
+        assert_eq!(market.bonds.outsider, None);
+        assert_eq!(market.bonds.dispute, None);
+        assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(FRED), market_id));
+        // Ensure that we don't accidentally leave any artifacts.
+        assert!(MarketIdsPerDisputeBlock::<Runtime>::iter().next().is_none());
+        assert!(MarketIdsPerReportBlock::<Runtime>::iter().next().is_none());
     });
 }
 

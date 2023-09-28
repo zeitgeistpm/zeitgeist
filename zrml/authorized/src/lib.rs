@@ -45,7 +45,7 @@ mod pallet {
         PalletId, Twox64Concat,
     };
     use frame_system::pallet_prelude::OriginFor;
-    use sp_runtime::{traits::Saturating, DispatchError};
+    use sp_runtime::{traits::Saturating, DispatchError, DispatchResult};
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
         types::{
@@ -95,10 +95,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(&market)?;
 
             let now = frame_system::Pallet::<T>::block_number();
 
@@ -192,6 +189,15 @@ mod pallet {
         fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
             AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at)
         }
+
+        #[inline]
+        fn ensure_dispute_mechanism(market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == Some(MarketDisputeMechanism::Authorized),
+                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
+            );
+            Ok(())
+        }
     }
 
     impl<T> DisputeMaxWeightApi for Pallet<T>
@@ -243,10 +249,7 @@ mod pallet {
             _: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let res =
                 ResultWithWeightInfo { result: (), weight: T::WeightInfo::on_dispute_weight() };
@@ -258,10 +261,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(market)?;
             let report = AuthorizedOutcomeReports::<T>::take(market_id);
 
             let res = ResultWithWeightInfo {
@@ -278,10 +278,7 @@ mod pallet {
             _: &OutcomeReport,
             overall_imbalance: NegativeImbalanceOf<T>,
         ) -> Result<ResultWithWeightInfo<NegativeImbalanceOf<T>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(market)?;
             // all funds to treasury
             let res = ResultWithWeightInfo {
                 result: overall_imbalance,
@@ -300,7 +297,7 @@ mod pallet {
                 weight: T::WeightInfo::get_auto_resolve_weight(),
             };
 
-            if market.dispute_mechanism != MarketDisputeMechanism::Authorized {
+            if market.dispute_mechanism != Some(MarketDisputeMechanism::Authorized) {
                 return res;
             }
 
@@ -313,10 +310,7 @@ mod pallet {
             _: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let res =
                 ResultWithWeightInfo { result: false, weight: T::WeightInfo::has_failed_weight() };
@@ -331,10 +325,7 @@ mod pallet {
             ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
             DispatchError,
         > {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let res = ResultWithWeightInfo {
                 result: Vec::new(),
@@ -348,10 +339,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Authorized,
-                Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             AuthorizedOutcomeReports::<T>::remove(market_id);
 
@@ -385,7 +373,7 @@ where
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,
+        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
