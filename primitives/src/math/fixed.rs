@@ -253,7 +253,7 @@ impl<F: Fixed + ToString, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
         let mut increment = false;
 
         let new_frac_part = if frac_part.len() < decimals_usize {
-            format!("{}{}", frac_part, "0".repeat(decimals_usize - frac_part.len()))
+            format!("{}{}", frac_part, "0".repeat(decimals_usize.saturating_sub(frac_part.len())))
         } else {
             // Adding rounding behavior
             let round_digit = frac_part.chars().nth(decimals_usize);
