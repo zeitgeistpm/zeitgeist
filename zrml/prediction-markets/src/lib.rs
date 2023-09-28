@@ -454,6 +454,7 @@ mod pallet {
             if is_authorized {
                 T::CloseMarketEarlyOrigin::ensure_origin(origin.clone())?;
             } else {
+                // check if market creator below
                 ensure_signed(origin.clone())?;
             };
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
