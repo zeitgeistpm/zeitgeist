@@ -40,7 +40,7 @@ use sp_runtime::{
     ArithmeticError, Perquintill, SaturatedConversion, Saturating,
 };
 use zeitgeist_primitives::{
-    traits::{MarketCommonsPalletApi, ZeitgeistAssetManager},
+    traits::MarketCommonsPalletApi,
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 
@@ -60,7 +60,7 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
+        type AssetManager: NamedMultiReservableCurrency<
                 Self::AccountId,
                 CurrencyId = Asset<MarketIdOf<Self>>,
                 ReserveIdentifier = [u8; 8],
@@ -157,6 +157,11 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Removes an order.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::remove_order_ask().max(T::WeightInfo::remove_order_bid())
@@ -202,7 +207,14 @@ mod pallet {
             }
         }
 
+        /// Fill an existing order entirely (`maker_partial_fill` = None)
+        /// or partially (`maker_partial_fill` = Some(partial_amount)).
+        ///
         /// NOTE: The `maker_partial_fill` is the partial amount of what the maker wants to fill.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::call_index(1)]
         #[pallet::weight(
             T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
@@ -348,6 +360,11 @@ mod pallet {
             }
         }
 
+        /// Place a new order.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::call_index(2)]
         #[pallet::weight(
             T::WeightInfo::place_order_ask().max(T::WeightInfo::place_order_bid())
