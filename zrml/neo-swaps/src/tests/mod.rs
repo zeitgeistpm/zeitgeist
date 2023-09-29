@@ -32,8 +32,8 @@ use zeitgeist_primitives::{
     constants::CENT,
     math::fixed::{bdiv, bmul},
     types::{
-        AccountIdTest, Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId,
-        MarketPeriod, MarketStatus, MarketType, MultiHash, ScalarPosition, ScoringRule,
+        AccountIdTest, Asset, Deadlines, MarketCreation, MarketId, MarketPeriod, MarketStatus,
+        MarketType, MultiHash, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
@@ -67,7 +67,7 @@ fn create_market(
         MultiHash::Sha3_384(metadata),
         MarketCreation::Permissionless,
         market_type,
-        MarketDisputeMechanism::SimpleDisputes,
+        None,
         scoring_rule,
     ));
     MarketCommons::latest_market_id().unwrap()

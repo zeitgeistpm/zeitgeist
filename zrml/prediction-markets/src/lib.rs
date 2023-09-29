@@ -1436,7 +1436,7 @@ mod pallet {
             deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
             #[pallet::compact] amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             #[pallet::compact] swap_fee: BalanceOf<T>,
@@ -2063,7 +2063,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
         ) -> Result<(u32, MarketIdOf<T>), DispatchError> {
             let bonds = match creation {

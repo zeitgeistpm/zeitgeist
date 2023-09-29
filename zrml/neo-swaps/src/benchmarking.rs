@@ -33,10 +33,7 @@ use sp_runtime::{Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
     constants::CENT,
     traits::CompleteSetOperationsApi,
-    types::{
-        Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, ScoringRule,
-    },
+    types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -68,7 +65,7 @@ fn create_market<T: Config>(
         status: MarketStatus::Active,
         report: None,
         resolved_outcome: None,
-        dispute_mechanism: MarketDisputeMechanism::Court,
+        dispute_mechanism: None,
         bonds: Default::default(),
     };
     let maybe_market_id = T::MarketCommons::push_market(market);

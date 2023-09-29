@@ -1295,8 +1295,7 @@ benchmarks! {
         let range_end = (100 * MILLISECS_PER_BLOCK) as u64;
         let period = MarketPeriod::Timestamp(range_start..range_end);
         let market_type = MarketType::Categorical(2);
-        let (caller, oracle, deadlines, metadata, _) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+        let (caller, oracle, deadlines, metadata) = create_market_common_parameters::<T>()?;
         let price = (BASE / 2).saturated_into();
         let amount = (10u128 * BASE).saturated_into();
 
@@ -1320,7 +1319,7 @@ benchmarks! {
             deadlines,
             metadata,
             MarketType::Categorical(2),
-            MarketDisputeMechanism::Court,
+            Some(MarketDisputeMechanism::Court),
             amount,
             vec![price, price],
             (BASE / 100).saturated_into()

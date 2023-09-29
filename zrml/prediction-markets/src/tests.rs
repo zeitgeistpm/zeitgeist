@@ -5683,7 +5683,7 @@ fn create_market_and_deploy_pool_works() {
         let metadata = gen_metadata(0x99);
         let MultiHash::Sha3_384(multihash) = metadata;
         let market_type = MarketType::Categorical(7);
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let amount = 1234567890;
         let swap_prices = vec![50 * CENT, 50 * CENT];
         let swap_fee = CENT;
@@ -5810,7 +5810,7 @@ fn create_market_and_deploy_pool_errors() {
         };
         let metadata = gen_metadata(0x99);
         let market_type = MarketType::Categorical(7);
-        let dispute_mechanism = MarketDisputeMechanism::Authorized;
+        let dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         let amount = 1234567890;
         let swap_prices = vec![50 * CENT, 50 * CENT];
         let swap_fee = CENT;
