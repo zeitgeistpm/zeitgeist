@@ -364,20 +364,23 @@ where
     T: crate::Config,
 {
     use frame_support::traits::Get;
-    use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
+    use sp_runtime::{traits::AccountIdConversion, Perbill};
+    use zeitgeist_primitives::types::{
+        Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, ScoringRule,
+    };
 
     zeitgeist_primitives::types::Market {
         base_asset: Asset::Ztg,
-        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
-        creator_fee: sp_runtime::Perbill::zero(),
+        creation: MarketCreation::Permissionless,
+        creator_fee: Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
-        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+        market_type: MarketType::Scalar(0..=100),
         dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
-        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
-        deadlines: zeitgeist_primitives::types::Deadlines {
+        period: MarketPeriod::Block(Default::default()),
+        deadlines: Deadlines {
             grace_period: 1_u32.into(),
             oracle_duration: 1_u32.into(),
             dispute_duration: 1_u32.into(),
@@ -385,7 +388,7 @@ where
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
-        status: zeitgeist_primitives::types::MarketStatus::Disputed,
+        status: MarketStatus::Disputed,
         bonds: MarketBonds::default(),
     }
 }
