@@ -12,6 +12,19 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.4.2
+
+### Added
+
+- Add extrinsics to zrml-prediction-markets:
+  - `schedule_early_close`: Schedule an early close of a market.
+  - `dispute_early_close`: Dispute a scheduled early close of a market.
+  - `reject_early_close`: Reject a scheduled early close of a market.
+- Add events to zrml-prediction-markets:
+  - `MarketEarlyCloseScheduled`
+  - `MarketEarlyCloseDisputed`
+  - `MarketEarlyCloseRejected`
+
 ## v0.4.0
 
 [#976]: https://github.com/zeitgeistpm/zeitgeist/pull/976
