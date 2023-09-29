@@ -616,16 +616,26 @@ mod pallet {
 
             // ensure we don't dispute if the old market period is already over
             // so that we don't switch back to an invalid market period
-            match premature_close.old {
-                MarketPeriod::Block(ref range) => {
-                    let now_block = <frame_system::Pallet<T>>::block_number();
-                    ensure!(now_block < range.end, Error::<T>::OldMarketPeriodEndAlreadyOver);
-                }
-                MarketPeriod::Timestamp(ref range) => {
-                    let now_time = <zrml_market_commons::Pallet<T>>::now();
-                    ensure!(now_time < range.end, Error::<T>::OldMarketPeriodEndAlreadyOver);
-                }
-            }
+            // this should never trigger, because at the time of scheduling a new market period,
+            // we ensure the new end is always before the old end
+            debug_assert!(
+                {
+                    match premature_close.old {
+                        MarketPeriod::Block(ref range) => {
+                            let now_block = <frame_system::Pallet<T>>::block_number();
+                            now_block < range.end
+                        }
+                        MarketPeriod::Timestamp(ref range) => {
+                            let now_time = <zrml_market_commons::Pallet<T>>::now();
+                            now_time < range.end
+                        }
+                    }
+                },
+                "This will never happen, because schedule_early_close ensures that the new end is \
+                 always before the old end, 
+                    otherwise the switch to an old market period would lead to a never ending \
+                 market!"
+            );
 
             let close_dispute_bond = T::CloseDisputeBond::get();
 
@@ -682,22 +692,24 @@ mod pallet {
                 PrematureCloseState::ScheduledAsOther => {
                     // ensure we don't reject if the old market period is already over
                     // so that we don't switch back to an invalid market period
-                    match premature_close.old {
-                        MarketPeriod::Block(ref range) => {
-                            let now_block = <frame_system::Pallet<T>>::block_number();
-                            ensure!(
-                                now_block < range.end,
-                                Error::<T>::OldMarketPeriodEndAlreadyOver
-                            );
-                        }
-                        MarketPeriod::Timestamp(ref range) => {
-                            let now_time = <zrml_market_commons::Pallet<T>>::now();
-                            ensure!(
-                                now_time < range.end,
-                                Error::<T>::OldMarketPeriodEndAlreadyOver
-                            );
-                        }
-                    }
+                    debug_assert!(
+                        {
+                            match premature_close.old {
+                                MarketPeriod::Block(ref range) => {
+                                    let now_block = <frame_system::Pallet<T>>::block_number();
+                                    now_block < range.end
+                                }
+                                MarketPeriod::Timestamp(ref range) => {
+                                    let now_time = <zrml_market_commons::Pallet<T>>::now();
+                                    now_time < range.end
+                                }
+                            }
+                        },
+                        "This will never happen, because schedule_early_close ensures that the \
+                         new end is always before the old end, 
+                    otherwise the switch to an old market period would lead to a never ending \
+                         market!"
+                    );
 
                     let close_ids_len = Self::clear_auto_close(&market_id)?;
 
