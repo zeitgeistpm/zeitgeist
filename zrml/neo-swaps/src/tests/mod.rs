@@ -61,8 +61,7 @@ fn create_market(
         Deadlines {
             grace_period: 0_u32.into(),
             oracle_duration: <Runtime as zrml_prediction_markets::Config>::MinOracleDuration::get(),
-            dispute_duration: <Runtime as zrml_prediction_markets::Config>::MinDisputeDuration::get(
-            ),
+            dispute_duration: 0_u32.into(),
         },
         MultiHash::Sha3_384(metadata),
         MarketCreation::Permissionless,
