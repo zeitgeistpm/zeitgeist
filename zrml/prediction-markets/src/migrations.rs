@@ -352,7 +352,7 @@ mod tests {
             status,
             report,
             resolved_outcome,
-            dispute_mechanism: dispute_mechanism,
+            dispute_mechanism,
             deadlines,
             bonds: new_bonds,
             premature_close: None,

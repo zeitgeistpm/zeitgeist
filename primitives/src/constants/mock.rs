@@ -85,7 +85,7 @@ parameter_types! {
     pub const MaxDisputes: u16 = 6;
     pub const MaxEditReasonLen: u32 = 1024;
     pub const MaxGracePeriod: BlockNumber = 20;
-    pub const MaxMarketLifetime: BlockNumber = 1_000_000;
+    pub const MaxMarketLifetime: BlockNumber = 100_000_000_000;
     pub const MaxOracleDuration: BlockNumber = 30;
     pub const MaxRejectReasonLen: u32 = 1024;
     // 2_678_400_000 = 31 days.

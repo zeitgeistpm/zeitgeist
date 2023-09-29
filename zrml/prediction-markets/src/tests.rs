@@ -3194,14 +3194,14 @@ fn schedule_early_close_as_market_creator_works() {
         assert_eq!(market_ids_to_close.1.into_inner(), vec![market_id]);
         assert!(market.premature_close.is_none());
 
-        let reserved_balance_alice = Balances::reserved_balance(&ALICE);
+        let reserved_balance_alice = Balances::reserved_balance(ALICE);
 
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
         ));
 
-        let reserved_balance_alice_after = Balances::reserved_balance(&ALICE);
+        let reserved_balance_alice_after = Balances::reserved_balance(ALICE);
         assert_eq!(reserved_balance_alice_after - reserved_balance_alice, CloseRequestBond::get());
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
@@ -3273,11 +3273,11 @@ fn dispute_early_close_from_market_creator_works() {
 
         run_blocks(1);
 
-        let reserved_bob = Balances::reserved_balance(&BOB);
+        let reserved_bob = Balances::reserved_balance(BOB);
 
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
-        let reserved_bob_after = Balances::reserved_balance(&BOB);
+        let reserved_bob_after = Balances::reserved_balance(BOB);
         assert_eq!(reserved_bob_after - reserved_bob, CloseDisputeBond::get());
 
         let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
@@ -3326,22 +3326,20 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
         ));
 
-        let alice_free = Balances::free_balance(&ALICE);
-        let alice_reserved = Balances::reserved_balance(&ALICE);
+        let alice_free = Balances::free_balance(ALICE);
+        let alice_reserved = Balances::reserved_balance(ALICE);
 
         run_blocks(1);
 
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
-        let bob_free = Balances::free_balance(&BOB);
-        let bob_reserved = Balances::reserved_balance(&BOB);
+        let bob_free = Balances::free_balance(BOB);
+        let bob_reserved = Balances::reserved_balance(BOB);
 
         run_to_block(end + 1);
 
@@ -3349,14 +3347,14 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
 
-        let alice_free_after = Balances::free_balance(&ALICE);
-        let alice_reserved_after = Balances::reserved_balance(&ALICE);
+        let alice_free_after = Balances::free_balance(ALICE);
+        let alice_reserved_after = Balances::reserved_balance(ALICE);
         // moved CloseRequestBond from reserved to free
         assert_eq!(alice_reserved - alice_reserved_after, CloseRequestBond::get());
         assert_eq!(alice_free_after - alice_free, CloseRequestBond::get());
 
-        let bob_free_after = Balances::free_balance(&BOB);
-        let bob_reserved_after = Balances::reserved_balance(&BOB);
+        let bob_free_after = Balances::free_balance(BOB);
+        let bob_reserved_after = Balances::reserved_balance(BOB);
         // moved CloseDisputeBond from reserved to free
         assert_eq!(bob_reserved - bob_reserved_after, CloseDisputeBond::get());
         assert_eq!(bob_free_after - bob_free, CloseDisputeBond::get());
@@ -3382,15 +3380,13 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
         ));
 
-        let alice_free = Balances::free_balance(&ALICE);
-        let alice_reserved = Balances::reserved_balance(&ALICE);
+        let alice_free = Balances::free_balance(ALICE);
+        let alice_reserved = Balances::reserved_balance(ALICE);
 
         run_to_block(end + 1);
 
@@ -3398,8 +3394,8 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
 
-        let alice_free_after = Balances::free_balance(&ALICE);
-        let alice_reserved_after = Balances::reserved_balance(&ALICE);
+        let alice_free_after = Balances::free_balance(ALICE);
+        let alice_reserved_after = Balances::reserved_balance(ALICE);
         // moved CloseRequestBond from reserved to free
         assert_eq!(alice_reserved - alice_reserved_after, CloseRequestBond::get());
         assert_eq!(alice_free_after - alice_free, CloseRequestBond::get());
@@ -3425,8 +3421,6 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(
             PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
         );
@@ -3459,8 +3453,6 @@ fn dispute_early_close_fails_if_already_disputed() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -3499,9 +3491,6 @@ fn reject_early_close_resets_to_old_market_period() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-        let old_market_period = market.period;
-
         assert_ok!(
             PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
         );
@@ -3542,8 +3531,6 @@ fn reject_early_close_settles_bonds() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -3553,20 +3540,20 @@ fn reject_early_close_settles_bonds() {
 
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
-        let reserved_bob = Balances::reserved_balance(&BOB);
-        let reserved_alice = Balances::reserved_balance(&ALICE);
-        let free_bob = Balances::free_balance(&BOB);
-        let free_alice = Balances::free_balance(&ALICE);
+        let reserved_bob = Balances::reserved_balance(BOB);
+        let reserved_alice = Balances::reserved_balance(ALICE);
+        let free_bob = Balances::free_balance(BOB);
+        let free_alice = Balances::free_balance(ALICE);
 
         assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
 
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.premature_close.unwrap().state, PrematureCloseState::Rejected);
 
-        let reserved_bob_after = Balances::reserved_balance(&BOB);
-        let reserved_alice_after = Balances::reserved_balance(&ALICE);
-        let free_bob_after = Balances::free_balance(&BOB);
-        let free_alice_after = Balances::free_balance(&ALICE);
+        let reserved_bob_after = Balances::reserved_balance(BOB);
+        let reserved_alice_after = Balances::reserved_balance(ALICE);
+        let free_bob_after = Balances::free_balance(BOB);
+        let free_alice_after = Balances::free_balance(ALICE);
 
         assert_eq!(reserved_alice - reserved_alice_after, CloseRequestBond::get());
         assert_eq!(reserved_bob - reserved_bob_after, CloseDisputeBond::get());
@@ -3595,8 +3582,6 @@ fn dispute_early_close_fails_if_already_rejected() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -3638,8 +3623,6 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
         ));
 
         let market_id = 0;
-        let market = MarketCommons::market(&market_id).unwrap();
-
         assert_ok!(PredictionMarkets::schedule_early_close(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -3649,19 +3632,19 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
 
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
-        let reserved_bob = Balances::reserved_balance(&BOB);
-        let reserved_alice = Balances::reserved_balance(&ALICE);
-        let free_bob = Balances::free_balance(&BOB);
-        let free_alice = Balances::free_balance(&ALICE);
+        let reserved_bob = Balances::reserved_balance(BOB);
+        let reserved_alice = Balances::reserved_balance(ALICE);
+        let free_bob = Balances::free_balance(BOB);
+        let free_alice = Balances::free_balance(ALICE);
 
         assert_ok!(
             PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
         );
 
-        let reserved_bob_after = Balances::reserved_balance(&BOB);
-        let reserved_alice_after = Balances::reserved_balance(&ALICE);
-        let free_bob_after = Balances::free_balance(&BOB);
-        let free_alice_after = Balances::free_balance(&ALICE);
+        let reserved_bob_after = Balances::reserved_balance(BOB);
+        let reserved_alice_after = Balances::reserved_balance(ALICE);
+        let free_bob_after = Balances::free_balance(BOB);
+        let free_alice_after = Balances::free_balance(ALICE);
 
         assert_eq!(reserved_alice - reserved_alice_after, CloseRequestBond::get());
         assert_eq!(reserved_bob - reserved_bob_after, CloseDisputeBond::get());
