@@ -26,8 +26,8 @@ impl<T: frame_system::Config> {{pallet}}::weights::WeightInfo for WeightInfo<T> 
     /// {{comment}}
     {{/each}}
     {{#each benchmark.component_ranges as |range|}}
-	/// The range of component `{{range.name}}` is `[{{range.min}}, {{range.max}}]`.
-	{{/each}}
+    /// The range of component `{{range.name}}` is `[{{range.min}}, {{range.max}}]`.
+    {{/each}}
     fn {{benchmark.name~}}
     (
         {{~#each benchmark.components as |c| ~}}
@@ -52,11 +52,11 @@ impl<T: frame_system::Config> {{pallet}}::weights::WeightInfo for WeightInfo<T> 
             .saturating_add(T::DbWeight::get().writes({{benchmark.base_writes}}))
             {{/if}}
             {{#each benchmark.component_writes as |cw|}}
-			.saturating_add(T::DbWeight::get().writes(({{cw.slope}}_u64).saturating_mul({{cw.name}}.into())))
-			{{/each}}
+            .saturating_add(T::DbWeight::get().writes(({{cw.slope}}_u64).saturating_mul({{cw.name}}.into())))
+            {{/each}}
             {{#each benchmark.component_calculated_proof_size as |cp|}}
-			.saturating_add(Weight::from_parts(0, {{cp.slope}}).saturating_mul({{cp.name}}.into()))
-			{{/each}}
+           .saturating_add(Weight::from_parts(0, {{cp.slope}}).saturating_mul({{cp.name}}.into()))
+           {{/each}}
     }
     {{/each}}
 }
