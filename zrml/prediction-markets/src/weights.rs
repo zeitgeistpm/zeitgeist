@@ -72,7 +72,8 @@ pub trait WeightInfoZeitgeist {
     fn redeem_shares_categorical() -> Weight;
     fn redeem_shares_scalar() -> Weight;
     fn reject_market(c: u32, o: u32, r: u32) -> Weight;
-    fn report(m: u32) -> Weight;
+    fn report_market_with_dispute_mechanism(m: u32) -> Weight;
+    fn report_trusted_market() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
     fn start_subsidy(a: u32) -> Weight;
     fn market_status_manager(b: u32, f: u32) -> Weight;
@@ -415,10 +416,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Timestamp Now (r:1 w:0)
     // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
-    fn report(_m: u32) -> Weight {
+    fn report_market_with_dispute_mechanism(_m: u32) -> Weight {
         Weight::from_ref_time(69_185_134)
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().writes(2))
+    }
+    fn report_trusted_market() -> Weight {
+        Weight::from_ref_time(123)
     }
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: System Account (r:1 w:1)
