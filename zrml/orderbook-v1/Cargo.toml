@@ -18,8 +18,8 @@ sp-io = { workspace = true, optional = true }
 zrml-market-commons = { workspace = true, optional = true }
 
 [dev-dependencies]
-zrml-orderbook-v1 = { workspace = true, features = ["mock", "default"] }
 test-case = { workspace = true }
+zrml-orderbook-v1 = { workspace = true, features = ["mock", "default"] }
 
 [features]
 default = ["std"]

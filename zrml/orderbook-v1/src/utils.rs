@@ -20,10 +20,12 @@
 use crate::*;
 use frame_support::traits::Currency;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::traits::MarketCommonsPalletApi;
-use zeitgeist_primitives::types::{
-    Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, ScoringRule, Deadlines,
+use zeitgeist_primitives::{
+    traits::MarketCommonsPalletApi,
+    types::{
+        Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, ScoringRule,
+    },
 };
 
 type CurrencyOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
