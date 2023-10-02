@@ -18,7 +18,6 @@
 
 #![no_main]
 
-use frame_system::ensure_signed;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
 use zrml_orderbook_v1::{
@@ -33,11 +32,6 @@ fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // Make arbitrary order and attempt to fill
-        let order_hash = Orderbook::order_hash(
-            &ensure_signed(RuntimeOrigin::signed(data.fill_order_origin.into())).unwrap(),
-            data.order_id,
-        );
-
         let outcome_asset = asset(data.fill_order_outcome_asset);
 
         let _ = Orderbook::place_order(
@@ -51,16 +45,11 @@ fuzz_target!(|data: Data| {
 
         let _ = Orderbook::fill_order(
             RuntimeOrigin::signed(data.fill_order_origin.into()),
-            order_hash,
+            data.order_id,
             None,
         );
 
         // Make arbitrary order and attempt to cancel
-        let order_hash = Orderbook::order_hash(
-            &ensure_signed(RuntimeOrigin::signed(data.cancel_order_origin.into())).unwrap(),
-            data.order_id,
-        );
-
         let _ = Orderbook::place_order(
             RuntimeOrigin::signed(data.cancel_order_origin.into()),
             data.market_id,
@@ -70,9 +59,9 @@ fuzz_target!(|data: Data| {
             data.cancel_order_price,
         );
 
-        let _ = Orderbook::cancel_order(
+        let _ = Orderbook::remove_order(
             RuntimeOrigin::signed(data.cancel_order_origin.into()),
-            order_hash,
+            data.order_id,
         );
     });
     let _ = ext.commit_all();
