@@ -1645,7 +1645,7 @@ mod pallet {
         /// The market period is reset to the original (old) period.
         /// A `CloseDisputeBond` is reserved, which is returned,
         /// if the advisory committee decides to reject
-        /// the early close request of the market creator or if the advisory committee is inactive. 
+        /// the early close request of the market creator or if the advisory committee is inactive.
         /// It is slashed, if the advisory committee decides to schedule the early close.
         ///
         /// # Weight
@@ -1724,11 +1724,11 @@ mod pallet {
         }
 
         /// Allows the advisory committee to reject a scheduled early close.
-        /// 
-        /// The market period is reset to the original (old) period 
+        ///
+        /// The market period is reset to the original (old) period
         /// in case it was scheduled before (fat-finger protection).
-        /// 
-        /// The disputant gets back the `CloseDisputeBond` 
+        ///
+        /// The disputant gets back the `CloseDisputeBond`
         /// and receives the market creators `CloseRequestBond`.
         ///
         /// # Weight

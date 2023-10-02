@@ -133,8 +133,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
                 base_asset: old_market.base_asset,
                 creator: old_market.creator,
                 creation: old_market.creation,
-                // Zero can be safely assumed here as it was hardcoded before
-                creator_fee: Perbill::zero(),
+                creator_fee: old_market.creator_fee,
                 oracle: old_market.oracle,
                 metadata: old_market.metadata,
                 market_type: old_market.market_type,
@@ -217,11 +216,12 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
             assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
             assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
             assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
-            assert_eq!(new_market.creator_fee, Perbill::zero());
+            assert_eq!(new_market.creator_fee, old_market.creator_fee);
             assert_eq!(new_market.bonds.dispute, old_market.bonds.dispute);
             // new fields
             assert_eq!(new_market.bonds.close_request, None);
             assert_eq!(new_market.bonds.close_dispute, None);
+            assert_eq!(new_market.premature_close, None);
         }
 
         log::info!("AddEarlyCloseBonds: Market Counter post-upgrade is {}!", new_market_count);
