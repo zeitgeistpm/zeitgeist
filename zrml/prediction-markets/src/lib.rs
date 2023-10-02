@@ -1480,11 +1480,21 @@ mod pallet {
         }
 
         /// Allows the advisory committee or the market creator to schedule an early close.
-        /// TODO
+        ///
+        /// The market creator schedules it `now + PrematureClose...Period` in the future.
+        /// This is to allow enough time for a potential dispute.
+        /// The market creator reserves a `CloseDisputeBond`, which is returned,
+        /// if the advisory committee decides to accept the early close request
+        /// or if it is not disputed.
+        /// It is slashed, if the early close request is disputed
+        /// and the advisory committee decides to reject the early close.
+        /// The advisory committee (or root) can schedule it `now + CloseProtection...Period`
+        /// in the future. This is to prevent fat finger mistakes.
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is ...
+        /// Complexity: `O(n)`, where `n` is the maximum number of market ids
+        /// in `MarketIdsPerClose...` either at the old period end or new period end.
         #[pallet::call_index(17)]
         #[pallet::weight(
             T::WeightInfo::schedule_early_close_as_authority(CacheSize::get(), CacheSize::get())
@@ -1631,11 +1641,17 @@ mod pallet {
         }
 
         /// Allows anyone to dispute a scheduled early close.
-        /// TODO
+        ///
+        /// The market period is reset to the original (old) period.
+        /// A `CloseDisputeBond` is reserved, which is returned,
+        /// if the advisory committee decides to reject
+        /// the early close request of the market creator or if the advisory committee is inactive. 
+        /// It is slashed, if the advisory committee decides to schedule the early close.
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is ...
+        /// Complexity: `O(n)`, where `n` is the maximum number of market ids
+        /// in `MarketIdsPerClose...` either at the old period end or new period end.
         #[pallet::call_index(18)]
         #[pallet::weight(T::WeightInfo::dispute_early_close(CacheSize::get(), CacheSize::get()))]
         #[transactional]
@@ -1708,11 +1724,17 @@ mod pallet {
         }
 
         /// Allows the advisory committee to reject a scheduled early close.
-        /// TODO
+        /// 
+        /// The market period is reset to the original (old) period 
+        /// in case it was scheduled before (fat-finger protection).
+        /// 
+        /// The disputant gets back the `CloseDisputeBond` 
+        /// and receives the market creators `CloseRequestBond`.
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is ...
+        /// Complexity: `O(n)`, where `n` is the maximum number of market ids
+        /// in `MarketIdsPerClose...` either at the old period end or new period end.
         #[pallet::call_index(19)]
         #[pallet::weight(
             T::WeightInfo::reject_early_close_after_authority(CacheSize::get(), CacheSize::get())
