@@ -1850,21 +1850,29 @@ mod pallet {
                 Origin = Self::RuntimeOrigin,
             >;
 
+        /// The base amount of currency that must be bonded 
+        /// by the disputant in order to dispute an early market closure of the market creator.
         #[pallet::constant]
         type CloseDisputeBond: Get<BalanceOf<Self>>;
 
-        /// The origin that is allowed to close markets early.
+        /// The origin that is allowed to close markets early (prematurely).
         type CloseMarketEarlyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
+        /// The milliseconds to wait for the advisory committee
+        /// before the early market close actually happens (fat-finger protection).
         #[pallet::constant]
         type CloseProtectionTimeFramePeriod: Get<MomentOf<Self>>;
 
+        /// The block time to wait for the advisory committee
+        /// before the early market close actually happens (fat-finger protection).
         #[pallet::constant]
         type CloseProtectionBlockPeriod: Get<Self::BlockNumber>;
 
+        /// The base amount of currency that must be bonded 
+        /// by the market creator in order to schedule an early market closure.
         #[pallet::constant]
         type CloseRequestBond: Get<BalanceOf<Self>>;
 
@@ -1972,9 +1980,13 @@ mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
+        /// The block time to wait for the market creator
+        /// before the early market close actually happens.
         #[pallet::constant]
         type PrematureCloseBlockPeriod: Get<Self::BlockNumber>;
 
+        /// The milliseconds to wait for the market creator
+        /// before the early market close actually happens.
         #[pallet::constant]
         type PrematureCloseTimeFramePeriod: Get<MomentOf<Self>>;
 
@@ -2115,10 +2127,14 @@ mod pallet {
         UnregisteredForeignAsset,
         /// The early market close operation was not requested by the market creator.
         RequesterNotCreator,
+        /// The early close would be scheduled after the original market period end.
         EarlyCloseRequestTooLate,
-        OldMarketPeriodEndAlreadyOver,
+        /// This premature close state is not valid.
         InvalidPrematureCloseState,
+        /// There is no early close scheduled.
         NoPrematureCloseScheduled,
+        /// After there was an early close already scheduled,
+        /// only the advisory committee can schedule another one.
         OnlyAuthorizedCanScheduleEarlyClose,
         /// The start of the global dispute for this market happened already.
         GlobalDisputeExistsAlready,
