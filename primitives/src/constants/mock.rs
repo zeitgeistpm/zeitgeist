@@ -120,6 +120,11 @@ parameter_types! {
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 }
 
+// Orderbook parameters
+parameter_types! {
+    pub const OrderbookPalletId: PalletId = PalletId(*b"zge/ordb");
+}
+
 // Shared within tests
 // Balance
 parameter_types! {

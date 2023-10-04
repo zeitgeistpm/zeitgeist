@@ -332,7 +332,10 @@ mod pallet {
             T::DestroyOrigin::ensure_origin(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Orderbook),
+                Error::<T>::InvalidScoringRule
+            );
             let market_status = market.status;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
@@ -532,7 +535,7 @@ mod pallet {
                 );
 
                 match m.scoring_rule {
-                    ScoringRule::CPMM => {
+                    ScoringRule::CPMM | ScoringRule::Orderbook => {
                         m.status = MarketStatus::Active;
                     }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => {
@@ -1341,7 +1344,10 @@ mod pallet {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Orderbook),
+                Error::<T>::InvalidScoringRule
+            );
             Self::ensure_market_is_active(&market)?;
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
@@ -2243,7 +2249,10 @@ mod pallet {
                 T::AssetManager::free_balance(market.base_asset, &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
-            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Orderbook),
+                Error::<T>::InvalidScoringRule
+            );
             Self::ensure_market_is_active(&market)?;
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
@@ -3064,7 +3073,7 @@ mod pallet {
             }
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => match scoring_rule {
-                    ScoringRule::CPMM => MarketStatus::Active,
+                    ScoringRule::CPMM | ScoringRule::Orderbook => MarketStatus::Active,
                     ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
                 },
                 MarketCreation::Advised => MarketStatus::Proposed,
