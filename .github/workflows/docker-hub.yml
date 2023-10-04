@@ -8,7 +8,7 @@ on:
 
 jobs:
   hadolint:
-    runs-on: zeitgeist-runner
+    runs-on: [self-hosted, zeitgeist-runner]
     name: "Hadolint"
     steps:
       - uses: actions/checkout@v3
