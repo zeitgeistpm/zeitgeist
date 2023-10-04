@@ -1938,7 +1938,7 @@ mod pallet {
                         let pool_amount = <BalanceOf<T>>::zero();
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
                     }
-                    ScoringRule::Lmsr => {
+                    ScoringRule::Lmsr | ScoringRule::Orderbook => {
                         return Err(Error::<T>::InvalidScoringRule.into());
                     }
                 };
@@ -2499,7 +2499,7 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                         }
-                        ScoringRule::Lmsr => {
+                        ScoringRule::Lmsr | ScoringRule::Orderbook => {
                             return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
@@ -2551,7 +2551,7 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
-                ScoringRule::Lmsr => Err(Error::<T>::InvalidScoringRule.into()),
+                ScoringRule::Lmsr | ScoringRule::Orderbook => Err(Error::<T>::InvalidScoringRule.into()),
             }
         }
 
@@ -2659,7 +2659,7 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                         }
-                        ScoringRule::Lmsr => {
+                        ScoringRule::Lmsr | ScoringRule::Orderbook => {
                             return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
@@ -2723,7 +2723,7 @@ mod pallet {
                         pool.assets.len().saturated_into(),
                     ))
                 }
-                ScoringRule::Lmsr => Err(Error::<T>::InvalidScoringRule.into()),
+                ScoringRule::Lmsr | ScoringRule::Orderbook => Err(Error::<T>::InvalidScoringRule.into()),
             }
         }
     }

@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -26,11 +26,12 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDeposits, MaxLocks, MaxReserves, BASE,
+        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
+        MaxReserves, MinimumPeriod, OrderbookPalletId, PmPalletId, BASE,
     },
     types::{
-        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
-        UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -45,17 +46,20 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
     }
 );
 
 impl crate::Config for Runtime {
-    type Currency = Balances;
-    type RuntimeEvent = ();
-    type MarketId = MarketId;
-    type Shares = Tokens;
+    type AssetManager = AssetManager;
+    type RuntimeEvent = RuntimeEvent;
+    type MarketCommons = MarketCommons;
+    type PalletId = OrderbookPalletId;
     type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
@@ -69,7 +73,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -86,12 +90,19 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
+impl orml_currencies::Config for Runtime {
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
+    type WeightInfo = ();
+}
+
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
     type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -104,12 +115,26 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
+    type Timestamp = Timestamp;
 }
 
 pub struct ExtBuilder {
@@ -129,6 +154,10 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        t.into()
+        let mut t: sp_io::TestExternalities = t.into();
+
+        t.execute_with(|| System::set_block_number(1));
+
+        t
     }
 }

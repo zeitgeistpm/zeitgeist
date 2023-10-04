@@ -24,10 +24,11 @@
 #![allow(clippy::type_complexity)]
 
 use super::*;
+use crate::utils::market_mock;
 #[cfg(test)]
 use crate::Pallet as OrderBook;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
+use frame_support::dispatch::UnfilteredDispatchable;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
@@ -37,71 +38,80 @@ use zeitgeist_primitives::{constants::BASE, types::Asset};
 fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId, &'static str> {
     let acc = if let Some(s) = seed { account("AssetHolder", 0, s) } else { whitelisted_caller() };
 
-    let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), 0);
-    T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
-    let _ = T::Currency::deposit_creating(&acc, BASE.saturating_mul(1_000).saturated_into());
+    let outcome_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
+    T::AssetManager::deposit(outcome_asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
+    let _ = T::AssetManager::deposit(Asset::Ztg, &acc, BASE.saturating_mul(1_000).saturated_into());
     Ok(acc)
 }
 
 // Creates an account and gives it asset and currency. `seed` specifies the account seed,
 // None will return a whitelisted account
-// Returns `account`, `asset`, `amount` and `price`
+// Returns `account`, `asset`, `outcome_asset_amount` and `base_asset_amount`
 fn order_common_parameters<T: Config>(
     seed: Option<u32>,
-) -> Result<(T::AccountId, Asset<T::MarketId>, BalanceOf<T>, BalanceOf<T>), &'static str> {
+) -> Result<
+    (T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>, MarketIdOf<T>),
+    &'static str,
+> {
     let acc = generate_funded_account::<T>(seed)?;
-    let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), 0);
-    let amt: BalanceOf<T> = BASE.saturated_into();
-    let prc: BalanceOf<T> = 1u32.into();
-    Ok((acc, asset, amt, prc))
+    let outcome_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
+    let outcome_asset_amount: BalanceOf<T> = BASE.saturated_into();
+    let base_asset_amount: BalanceOf<T> = 100u32.into();
+    let market_id: MarketIdOf<T> = 0u32.into();
+    let market = market_mock::<T>();
+    T::MarketCommons::push_market(market.clone()).unwrap();
+    Ok((acc, outcome_asset, outcome_asset_amount, base_asset_amount, market_id))
 }
 
 // Creates an order of type `order_type`. `seed` specifies the account seed,
 // None will return a whitelisted account
-// Returns `account`, `asset` and `order_hash`
-fn create_order<T: Config>(
+// Returns `account`, `asset`, `order_id`
+fn place_order<T: Config>(
     order_type: OrderSide,
     seed: Option<u32>,
-) -> Result<(T::AccountId, Asset<T::MarketId>, T::Hash), &'static str> {
-    let (acc, asset, amount, price) = order_common_parameters::<T>(seed)?;
-    let _ = Call::<T>::make_order { asset, side: order_type.clone(), amount, price }
-        .dispatch_bypass_filter(RawOrigin::Signed(acc.clone()).into())?;
+) -> Result<(T::AccountId, MarketIdOf<T>, OrderId), &'static str> {
+    let (acc, outcome_asset, outcome_asset_amount, base_asset_amount, market_id) =
+        order_common_parameters::<T>(seed)?;
 
-    if order_type == OrderSide::Bid {
-        let hash = Pallet::<T>::bids(asset).last().copied().ok_or("No bids found")?;
-        Ok((acc, asset, hash))
-    } else {
-        let hash = Pallet::<T>::asks(asset).last().copied().ok_or("No asks found")?;
-        Ok((acc, asset, hash))
+    let order_id = <NextOrderId<T>>::get();
+    let _ = Call::<T>::place_order {
+        market_id,
+        outcome_asset,
+        side: order_type.clone(),
+        outcome_asset_amount,
+        base_asset_amount,
     }
+    .dispatch_bypass_filter(RawOrigin::Signed(acc.clone()).into())?;
+
+    Ok((acc, market_id, order_id))
 }
 
 benchmarks! {
-    cancel_order_ask {
-        let (caller, asset, order_hash) = create_order::<T>(OrderSide::Ask, None)?;
-    }: cancel_order(RawOrigin::Signed(caller), asset, order_hash)
+    remove_order_ask {
+        let (caller, _, order_id) = place_order::<T>(OrderSide::Ask, None)?;
+    }: remove_order(RawOrigin::Signed(caller), order_id)
 
-    cancel_order_bid {
-        let (caller, asset, order_hash) = create_order::<T>(OrderSide::Bid, None)?;
-    }: cancel_order(RawOrigin::Signed(caller), asset, order_hash)
+    remove_order_bid {
+        let (caller, _, order_id) = place_order::<T>(OrderSide::Bid, None)?;
+    }: remove_order(RawOrigin::Signed(caller), order_id)
 
     fill_order_ask {
         let caller = generate_funded_account::<T>(None)?;
-        let (_, _, order_hash) = create_order::<T>(OrderSide::Ask, Some(0))?;
-    }: fill_order(RawOrigin::Signed(caller), order_hash)
+        let (_, _, order_id) = place_order::<T>(OrderSide::Ask, Some(0))?;
+    }: fill_order(RawOrigin::Signed(caller), order_id, None)
 
     fill_order_bid {
         let caller = generate_funded_account::<T>(None)?;
-        let (_, _, order_hash) = create_order::<T>(OrderSide::Bid, Some(0))?;
-    }: fill_order(RawOrigin::Signed(caller), order_hash)
+        let (_, _, order_id) = place_order::<T>(OrderSide::Bid, Some(0))?;
+    }: fill_order(RawOrigin::Signed(caller), order_id, None)
 
-    make_order_ask {
-        let (caller, asset, amt, prc) = order_common_parameters::<T>(None)?;
-    }: make_order(RawOrigin::Signed(caller), asset, OrderSide::Ask, amt, prc)
+    place_order_ask {
+        let (caller, outcome_asset, outcome_asset_amount, base_asset_amount, market_id) = order_common_parameters::<T>(None)?;
+    }: place_order(RawOrigin::Signed(caller), market_id, outcome_asset, OrderSide::Ask, outcome_asset_amount, base_asset_amount)
 
-    make_order_bid {
-        let (caller, asset, amt, prc) = order_common_parameters::<T>(None)?;
-    }: make_order(RawOrigin::Signed(caller), asset, OrderSide::Bid, amt, prc)
+    place_order_bid {
+        let (caller, outcome_asset, outcome_asset_amount, base_asset_amount, market_id) = order_common_parameters::<T>(None)?;
+    }: place_order(RawOrigin::Signed(caller), market_id, outcome_asset, OrderSide::Bid, outcome_asset_amount, base_asset_amount)
 
     impl_benchmark_test_suite!(
         OrderBook,
