@@ -2288,7 +2288,7 @@ mod pallet {
             };
             Ok(())
         }
-      
+
         #[require_transactional]
         pub(crate) fn do_sell_complete_set(
             who: T::AccountId,
@@ -2299,7 +2299,10 @@ mod pallet {
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
-                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook),
+                matches!(
+                    market.scoring_rule,
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook
+                ),
                 Error::<T>::InvalidScoringRule
             );
             Self::ensure_market_is_active(&market)?;
@@ -2347,7 +2350,10 @@ mod pallet {
                 Error::<T>::NotEnoughBalance
             );
             ensure!(
-                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook),
+                matches!(
+                    market.scoring_rule,
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook
+                ),
                 Error::<T>::InvalidScoringRule
             );
             Self::ensure_market_is_active(&market)?;
@@ -3169,7 +3175,9 @@ mod pallet {
             }
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => match scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => MarketStatus::Active,
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                        MarketStatus::Active
+                    }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
                 },
                 MarketCreation::Advised => MarketStatus::Proposed,

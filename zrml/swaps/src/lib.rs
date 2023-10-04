@@ -2551,7 +2551,9 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
-                ScoringRule::Lmsr | ScoringRule::Orderbook => Err(Error::<T>::InvalidScoringRule.into()),
+                ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                    Err(Error::<T>::InvalidScoringRule.into())
+                }
             }
         }
 
@@ -2723,7 +2725,9 @@ mod pallet {
                         pool.assets.len().saturated_into(),
                     ))
                 }
-                ScoringRule::Lmsr | ScoringRule::Orderbook => Err(Error::<T>::InvalidScoringRule.into()),
+                ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                    Err(Error::<T>::InvalidScoringRule.into())
+                }
             }
         }
     }
