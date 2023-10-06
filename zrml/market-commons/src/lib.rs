@@ -31,20 +31,21 @@ pub use zeitgeist_primitives::traits::MarketCommonsPalletApi;
 #[frame_support::pallet]
 mod pallet {
     use crate::MarketCommonsPalletApi;
+    use alloc::fmt::Debug;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Currency, Get, Hooks, NamedReservableCurrency, StorageVersion, Time},
+        traits::{Get, Hooks, StorageVersion, Time},
         Blake2_128Concat, PalletId, Parameter,
     };
-    use parity_scale_codec::MaxEncodedLen;
+    use parity_scale_codec::{FullCodec, MaxEncodedLen};
     use sp_runtime::{
         traits::{
-            AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member,
-            Saturating,
+            AccountIdConversion, AtLeast32Bit, AtLeast32BitUnsigned, CheckedAdd,
+            MaybeSerializeDeserialize, Member, Saturating,
         },
         ArithmeticError, DispatchError, SaturatedConversion,
     };
@@ -53,8 +54,7 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
 
-    type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type BalanceOf<T> = <T as Config>::Balance;
     type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
@@ -70,10 +70,14 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Native token
-        //
-        // Reserve identifiers can be pallet ids or any other sequence of bytes.
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+        type Balance: AtLeast32BitUnsigned
+            + FullCodec
+            + Copy
+            + MaybeSerializeDeserialize
+            + Debug
+            + Default
+            + scale_info::TypeInfo
+            + MaxEncodedLen;
 
         /// The identifier of individual markets.
         type MarketId: AtLeast32Bit
@@ -140,7 +144,7 @@ mod pallet {
     {
         type AccountId = T::AccountId;
         type BlockNumber = T::BlockNumber;
-        type Currency = T::Currency;
+        type Balance = T::Balance;
         type MarketId = T::MarketId;
         type Moment = MomentOf<T>;
 

@@ -28,7 +28,7 @@ use frame_support::{
     dispatch::DispatchResultWithPostInfo,
     ensure,
     pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
-    traits::{Currency, IsType, StorageVersion},
+    traits::{IsType, StorageVersion},
     transactional, PalletId, Twox64Concat,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -40,7 +40,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     traits::MarketCommonsPalletApi,
-    types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    types::{Asset, Market, MarketStatus, MarketType, Outcome, ScalarPosition, ScoringRule},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -67,7 +67,11 @@ mod pallet {
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Balance = BalanceOf<Self>,
+            >;
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
@@ -86,13 +90,9 @@ mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketCommonsBalanceOf<T> =
-        <<<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency as Currency<
-            AccountIdOf<T>,
-        >>::Balance;
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
-        MarketCommonsBalanceOf<T>,
+        BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
@@ -441,14 +441,14 @@ mod pallet {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
                     for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                        assets.push(Asset::Outcome(Outcome::CategoricalOutcome(market_id, i)));
                     }
                     assets
                 }
                 MarketType::Scalar(_) => {
                     vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Short)),
                     ]
                 }
             }

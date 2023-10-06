@@ -93,8 +93,8 @@ mod pallet {
         constants::{BASE, CENT},
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
-            ScoringRule, SerdeWrapper,
+            Asset, MarketType, Outcome, OutcomeReport, Pool, PoolId, PoolStatus,
+            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -812,7 +812,11 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Balance = BalanceOf<Self>,
+            >;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -1751,7 +1755,7 @@ mod pallet {
                     Err(Error::<T>::WinningAssetNotFound.into());
                 if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                     pool.assets.retain(|el| {
-                        if let Asset::CategoricalOutcome(_, idx) = *el {
+                        if let Asset::Outcome(Outcome::CategoricalOutcome(_, idx)) = *el {
                             if idx == *winning_asset_idx {
                                 winning_asset = Ok(*el);
                                 return true;
@@ -1938,7 +1942,7 @@ mod pallet {
                         let pool_amount = <BalanceOf<T>>::zero();
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
                     }
-                    ScoringRule::Orderbook => {
+                    ScoringRule::Orderbook | ScoringRule::Parimutuel => {
                         return Err(Error::<T>::InvalidScoringRule.into());
                     }
                 };
@@ -2499,7 +2503,7 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                         }
-                        ScoringRule::Orderbook => {
+                        ScoringRule::Orderbook | ScoringRule::Parimutuel => {
                             return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
@@ -2551,7 +2555,9 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
-                ScoringRule::Orderbook => Err(Error::<T>::InvalidScoringRule.into()),
+                ScoringRule::Orderbook | ScoringRule::Parimutuel => {
+                    Err(Error::<T>::InvalidScoringRule.into())
+                }
             }
         }
 
@@ -2659,7 +2665,7 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                         }
-                        ScoringRule::Orderbook => {
+                        ScoringRule::Orderbook | ScoringRule::Parimutuel => {
                             return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
@@ -2723,7 +2729,9 @@ mod pallet {
                         pool.assets.len().saturated_into(),
                     ))
                 }
-                ScoringRule::Orderbook => Err(Error::<T>::InvalidScoringRule.into()),
+                ScoringRule::Orderbook | ScoringRule::Parimutuel => {
+                    Err(Error::<T>::InvalidScoringRule.into())
+                }
             }
         }
     }

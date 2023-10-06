@@ -16,27 +16,37 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "mock")]
+#![cfg(test)]
 
-use crate as orderbook_v1;
-use frame_support::{construct_runtime, traits::Everything};
+extern crate alloc;
+
+use crate::{self as zrml_authorized};
+use alloc::{vec, vec::Vec};
+use frame_support::{
+    construct_runtime, ord_parameter_types,
+    pallet_prelude::{DispatchError, Weight},
+    traits::Everything,
+};
+use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
-        MaxReserves, MinimumPeriod, OrderbookPalletId, PmPalletId, BASE,
+        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod,
+        PmPalletId, BASE,
     },
+    traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
-        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
+        Moment, UncheckedExtrinsicTest,
     },
 };
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
 
 construct_runtime!(
     pub enum Runtime
@@ -45,23 +55,13 @@ construct_runtime!(
         NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
+        Parimutuel: zrml_parimutuel::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
-        Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
     }
 );
-
-impl crate::Config for Runtime {
-    type AssetManager = AssetManager;
-    type RuntimeEvent = RuntimeEvent;
-    type MarketCommons = MarketCommons;
-    type PalletId = OrderbookPalletId;
-    type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
-}
 
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -73,7 +73,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type RuntimeEvent = RuntimeEvent;
+    type RuntimeEvent = ();
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -90,37 +90,23 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
-impl orml_currencies::Config for Runtime {
-    type GetNativeCurrencyId = GetNativeCurrencyId;
-    type MultiCurrency = Tokens;
-    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
-    type WeightInfo = ();
-}
-
-impl orml_tokens::Config for Runtime {
-    type Amount = Amount;
-    type Balance = Balance;
-    type CurrencyId = CurrencyId;
-    type DustRemovalWhitelist = Everything;
-    type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = ();
-    type MaxReserves = MaxReserves;
-    type CurrencyHooks = ();
-    type ReserveIdentifier = [u8; 8];
-    type WeightInfo = ();
-}
-
 impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposit = ExistentialDeposit;
-    type MaxLocks = MaxLocks;
+    type RuntimeEvent = ();
+    type ExistentialDeposit = ();
+    type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
+    type Timestamp = Timestamp;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -130,22 +116,16 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl zrml_market_commons::Config for Runtime {
-    type Balance = Balance;
-    type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
-    type Timestamp = Timestamp;
-}
-
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, BASE), (BOB, BASE)] }
+        Self { balances: vec![(ALICE, 1_000 * BASE), (BOB, 1_000 * BASE), (CHARLIE, 1_000 * BASE)] }
     }
 }
+
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
@@ -154,10 +134,6 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        let mut t: sp_io::TestExternalities = t.into();
-
-        t.execute_with(|| System::set_block_number(1));
-
-        t
+        t.into()
     }
 }

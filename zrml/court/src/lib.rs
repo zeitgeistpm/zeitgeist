@@ -138,7 +138,7 @@ mod pallet {
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
                 BlockNumber = Self::BlockNumber,
-                Currency = Self::Currency,
+                Balance = BalanceOf<Self>,
             >;
 
         /// The maximum number of appeals until a court fails.
