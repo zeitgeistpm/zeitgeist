@@ -233,23 +233,34 @@ mod detail {
         use std::str::FromStr;
         use test_case::test_case;
 
-        // Example taken from
-        // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
-        #[test]
-        fn calculate_swap_amount_out_for_buy_works() {
-            let liquidity = 144269504088;
+        // First test case taken from
+        // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr. The
+        // two test cases cover both branches of the if-else.
+        #[test_case(_10, _10, 144_269_504_088, 58_496_250_072)]
+        #[test_case(_10, _1, 21_714_724_095, 78_721_949_960)]
+        fn calculate_swap_amount_out_for_buy_works(
+            reserve: u128,
+            amount_in: u128,
+            liquidity: u128,
+            expected: u128,
+        ) {
             assert_eq!(
-                calculate_swap_amount_out_for_buy(_10, _10, liquidity).unwrap(),
-                58496250072
+                calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap(),
+                expected,
             );
         }
 
-        #[test]
-        fn calculate_swap_amount_out_for_sell_works() {
-            let liquidity = 144269504088;
+        #[test_case(_10, _10, 144_269_504_088, 41_503_749_928)]
+        #[test_case(240_064_297, _1, 23_886_196_504, 9_876_134_733)]
+        fn calculate_swap_amount_out_for_sell_works(
+            reserve: u128,
+            amount_in: u128,
+            liquidity: u128,
+            expected: u128,
+        ) {
             assert_eq!(
-                calculate_swap_amount_out_for_sell(_10, _10, liquidity).unwrap(),
-                41503749928
+                calculate_swap_amount_out_for_sell(reserve, amount_in, liquidity).unwrap(),
+                expected
             );
         }
 
