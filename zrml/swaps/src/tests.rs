@@ -46,7 +46,8 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        AccountIdTest, Asset, MarketId, MarketType, Outcome, OutcomeReport, PoolId, PoolStatus,
+        ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -704,11 +705,13 @@ fn most_operations_fail_if_pool_is_clean() {
         assert_ok!(Swaps::clean_up_pool(
             &MarketType::Categorical(0),
             DEFAULT_POOL_ID,
-            &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
-                idx
-            } else {
-                0
-            }),
+            &OutcomeReport::Categorical(
+                if let Asset::Outcome(Outcome::CategoricalOutcome(_, idx)) = ASSET_A {
+                    idx
+                } else {
+                    0
+                }
+            ),
             &Default::default()
         ));
 
@@ -1110,7 +1113,8 @@ fn pool_join_with_exact_pool_amount_satisfies_max_out_ratio_constraints() {
 #[test]
 fn admin_clean_up_pool_fails_if_origin_is_not_root() {
     ExtBuilder::default().build().execute_with(|| {
-        let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
+        let idx =
+            if let Asset::Outcome(Outcome::CategoricalOutcome(_, idx)) = ASSET_A { idx } else { 0 };
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
         assert_ok!(MarketCommons::insert_market_pool(DEFAULT_MARKET_ID, DEFAULT_POOL_ID));
         assert_noop!(
@@ -1900,7 +1904,11 @@ fn clean_up_pool_leaves_only_correct_assets() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
         assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
-        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
+        let cat_idx = if let Asset::Outcome(Outcome::CategoricalOutcome(_, cidx)) = ASSET_A {
+            cidx
+        } else {
+            0
+        };
         assert_ok!(Swaps::clean_up_pool(
             &MarketType::Categorical(4),
             DEFAULT_POOL_ID,
@@ -1918,7 +1926,11 @@ fn clean_up_pool_leaves_only_correct_assets() {
 fn clean_up_pool_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
-        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
+        let cat_idx = if let Asset::Outcome(Outcome::CategoricalOutcome(_, cidx)) = ASSET_A {
+            cidx
+        } else {
+            0
+        };
 
         // We need to forcefully close the pool (Rikiddo pools are not allowed to be cleaned
         // up when CollectingSubsidy).
@@ -1950,7 +1962,11 @@ fn clean_up_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
             pool.pool_status = pool_status;
             Ok(())
         }));
-        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
+        let cat_idx = if let Asset::Outcome(Outcome::CategoricalOutcome(_, cidx)) = ASSET_A {
+            cidx
+        } else {
+            0
+        };
         assert_noop!(
             Swaps::clean_up_pool(
                 &MarketType::Categorical(4),
@@ -2433,8 +2449,9 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
 fn create_pool_fails_on_too_many_assets() {
     ExtBuilder::default().build().execute_with(|| {
         let length = <Runtime as crate::Config>::MaxAssets::get();
-        let assets: Vec<Asset<MarketId>> =
-            (0..=length).map(|x| Asset::CategoricalOutcome(0, x)).collect::<Vec<_>>();
+        let assets: Vec<Asset<MarketId>> = (0..=length)
+            .map(|x| Asset::Outcome(Outcome::CategoricalOutcome(0, x)))
+            .collect::<Vec<_>>();
         let weights = vec![DEFAULT_WEIGHT; length.into()];
 
         assets.iter().cloned().for_each(|asset| {

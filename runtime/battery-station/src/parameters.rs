@@ -443,8 +443,8 @@ parameter_type_with_key! {
     // Explicit match arms are used to ensure new asset types are respected.
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
-            Asset::Outcome(zeitgeist_primitives::types::Outcome::CategoricalOutcome(_,_)) => ExistentialDeposit::get(),
-            Asset::Outcome(zeitgeist_primitives::types::Outcome::ScalarOutcome(_,_))  => ExistentialDeposit::get(),
+            Asset::Outcome(Outcome::CategoricalOutcome(_,_)) => ExistentialDeposit::get(),
+            Asset::Outcome(Outcome::ScalarOutcome(_,_))  => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
@@ -461,8 +461,8 @@ parameter_type_with_key! {
             #[cfg(not(feature = "parachain"))]
             Asset::ForeignAsset(_) => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
-            Asset::ParimutuelShare(zeitgeist_primitives::types::Outcome::CategoricalOutcome(_, _)) => 2 * ExistentialDeposit::get(),
-            Asset::ParimutuelShare(zeitgeist_primitives::types::Outcome::ScalarOutcome(_, _)) => 2 * ExistentialDeposit::get(),
+            Asset::ParimutuelShare(Outcome::CategoricalOutcome(_, _)) => 2 * ExistentialDeposit::get(),
+            Asset::ParimutuelShare(Outcome::ScalarOutcome(_, _)) => 2 * ExistentialDeposit::get(),
         }
     };
 }
