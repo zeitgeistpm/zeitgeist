@@ -14589,6 +14589,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-parimutuel"
+version = "0.3.11"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
+]
+
+[[package]]
 name = "zrml-prediction-markets"
 version = "0.3.11"
 dependencies = [
