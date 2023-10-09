@@ -22,31 +22,38 @@
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::{
-    market_mock, AuthorizedOutcomeReports, Call, Config, NegativeImbalanceOf, Pallet as Authorized,
-    Pallet as Parimutuel,
-};
+#[cfg(test)]
+use crate::Pallet as Parimutuel;
+use crate::*;
 use frame_benchmarking::v2::*;
-use frame_support::{
-    dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get, Imbalance},
-};
-use sp_runtime::traits::Saturating;
-use zeitgeist_primitives::{
-    traits::{DisputeApi, DisputeResolutionApi},
-    types::{AuthorityReport, OutcomeReport},
-};
-use zrml_market_commons::MarketCommonsPalletApi;
+use frame_system::RawOrigin;
+use sp_runtime::SaturatedConversion;
+use zeitgeist_primitives::types::{Asset, Outcome};
 
 #[benchmarks]
-mod benchmarks {
+mod benchmarks_parimutuel {
     use super::*;
 
     #[benchmark]
-    fn buy() {}
+    fn buy() {
+        let buyer = whitelisted_caller();
+        let market_id = 0u32.into();
+        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 2u16));
+        let amount = 100_000_000u128.saturated_into::<BalanceOf<T>>();
+
+        #[extrinsic_call]
+        buy(RawOrigin::Signed(buyer), asset, amount);
+    }
 
     #[benchmark]
-    fn claim_reward() {}
+    fn claim_rewards() {
+        let buyer = whitelisted_caller();
+        let market_id = 0u32.into();
+        let market_ = market_mock::<T>();
+
+        #[extrinsic_call]
+        claim_rewards(RawOrigin::Signed(buyer), market_id);
+    }
 
     impl_benchmark_test_suite!(
         Parimutuel,

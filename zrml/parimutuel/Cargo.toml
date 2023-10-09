@@ -12,6 +12,8 @@ orml-traits = { workspace = true }
 [dev-dependencies]
 pallet-balances = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
+orml-currencies = { workspace = true, features = ["default"] }
+orml-tokens = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
 
@@ -26,6 +28,7 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "orml-traits/std",
     "parity-scale-codec/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",

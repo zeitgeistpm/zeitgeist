@@ -106,8 +106,8 @@ mod pallet {
         #[pallet::weight(5000)]
         #[frame_support::transactional]
         pub fn claim_rewards(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
+            let _who = ensure_signed(origin)?;
+            let _market = T::MarketCommons::market(&market_id)?;
 
             Self::deposit_event(Event::RewardsClaimed { market_id });
 

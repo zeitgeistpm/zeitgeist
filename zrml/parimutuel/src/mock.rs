@@ -20,33 +20,29 @@
 
 extern crate alloc;
 
-use crate::{self as zrml_authorized};
+use crate as zrml_parimutuel;
 use alloc::{vec, vec::Vec};
-use frame_support::{
-    construct_runtime, ord_parameter_types,
-    pallet_prelude::{DispatchError, Weight},
-    traits::Everything,
-};
-use frame_system::EnsureSignedBy;
+use frame_support::{construct_runtime, traits::{OnFinalize, OnInitialize, Everything}};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod,
-        PmPalletId, BASE,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinimumPeriod,
+        PmPalletId, BASE, ParimutuelPalletId, MinBetSize,
     },
-    traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
-        Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
+
+pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
 construct_runtime!(
     pub enum Runtime
@@ -57,11 +53,23 @@ construct_runtime!(
     {
         Parimutuel: zrml_parimutuel::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
     }
 );
+
+impl crate::Config for Runtime {
+    type ExternalFees = ExternalFees;
+    type RuntimeEvent = RuntimeEvent;
+    type MarketCommons = MarketCommons;
+    type AssetManager = AssetManager;
+    type MinBetSize = MinBetSize;
+    type PalletId = ParimutuelPalletId;
+    type WeightInfo = crate::weights::WeightInfo<Runtime>;
+}
 
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
@@ -73,7 +81,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -94,7 +102,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -103,7 +111,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
@@ -116,13 +124,40 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl orml_currencies::Config for Runtime {
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
+    type WeightInfo = ();
+}
+
+impl orml_tokens::Config for Runtime {
+    type Amount = Amount;
+    type Balance = Balance;
+    type CurrencyId = CurrencyId;
+    type DustRemovalWhitelist = Everything;
+    type RuntimeEvent = RuntimeEvent;
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = ();
+    type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
+    type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
+}
+
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, 1_000 * BASE), (BOB, 1_000 * BASE), (CHARLIE, 1_000 * BASE)] }
+        Self {
+            balances: vec![
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
+            ],
+        }
     }
 }
 
@@ -136,4 +171,18 @@ impl ExtBuilder {
 
         t.into()
     }
+}
+
+pub fn run_to_block(n: BlockNumber) {
+    while System::block_number() < n {
+        Balances::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Balances::on_initialize(System::block_number());
+    }
+}
+
+pub fn run_blocks(n: BlockNumber) {
+    run_to_block(System::block_number() + n);
 }

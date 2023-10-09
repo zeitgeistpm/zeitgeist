@@ -19,7 +19,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, Outcome, ScalarPosition, SerdeWrapper};
 use zrml_orderbook_v1::{
     mock::{ExtBuilder, Orderbook, RuntimeOrigin},
     types::OrderSide,
