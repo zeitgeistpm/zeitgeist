@@ -118,11 +118,7 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                T::Currency::unreserve_named(
-                    &Self::reserve_id(),
-                    &bond.who,
-                    bond.value,
-                );
+                T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
@@ -168,11 +164,8 @@ mod pallet {
                 } else {
                     (value, <BalanceOf<T>>::zero())
                 };
-                let (imbalance, excess) = T::Currency::slash_reserved_named(
-                    &Self::reserve_id(),
-                    &bond.who,
-                    slash_amount,
-                );
+                let (imbalance, excess) =
+                    T::Currency::slash_reserved_named(&Self::reserve_id(), &bond.who, slash_amount);
                 // If there's excess, there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
                 if excess != <BalanceOf<T>>::zero() {
@@ -185,11 +178,7 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                 }
                 if unreserve_amount != <BalanceOf<T>>::zero() {
-                    T::Currency::unreserve_named(
-                        &Self::reserve_id(),
-                        &bond.who,
-                        unreserve_amount,
-                    );
+                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
