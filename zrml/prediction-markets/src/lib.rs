@@ -231,7 +231,7 @@ mod pallet {
                 // there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
                 match res {
-                    Ok(missing) if missing != Zero::zero() => {
+                    Ok(missing) if missing != <BalanceOf<T>>::zero() => {
                         let warning = format!(
                             "Failed to repatriate all of the {} bond of market {:?} (missing \
                              balance {:?}).",
