@@ -85,4 +85,5 @@ pub enum ScoringRule {
     CPMM,
     RikiddoSigmoidFeeMarketEma,
     Orderbook,
+    Parimutuel,
 }
