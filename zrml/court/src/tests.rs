@@ -93,7 +93,7 @@ fn initialize_court() -> CourtId {
     Court::join_court(RuntimeOrigin::signed(DAVE), amount_dave).unwrap();
     Court::join_court(RuntimeOrigin::signed(EVE), amount_eve).unwrap();
     let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
-    MarketCommons::mutate_market(&market_id, |market| {
+    MarketCommons::mutate_market(&market_id, |market: &mut MarketOf<Runtime>| {
         market.report = Some(Report { at: 1, by: BOB, outcome: ORACLE_REPORT });
         Ok(())
     })
@@ -1691,7 +1691,7 @@ fn check_appealable_market_fails_if_dispute_mechanism_wrong() {
         let court = <Courts<Runtime>>::get(court_id).unwrap();
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
-        MarketCommons::mutate_market(&market_id, |market| {
+        MarketCommons::mutate_market(&market_id, |market: &mut MarketOf<Runtime>| {
             market.dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
             Ok(())
         })
@@ -2584,7 +2584,7 @@ fn on_global_dispute_fails_if_market_report_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let court_id = initialize_court();
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
-        MarketCommons::mutate_market(&market_id, |market| {
+        MarketCommons::mutate_market(&market_id, |market: &mut MarketOf<Runtime>| {
             market.report = None;
             Ok(())
         })
@@ -2836,7 +2836,7 @@ fn has_failed_returns_true_for_uninitialized_court() {
         <CourtPool<Runtime>>::kill();
         let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
         let report_block = 42;
-        MarketCommons::mutate_market(&market_id, |market| {
+        MarketCommons::mutate_market(&market_id, |market: &mut MarketOf<Runtime>| {
             market.report = Some(Report { at: report_block, by: BOB, outcome: ORACLE_REPORT });
             Ok(())
         })

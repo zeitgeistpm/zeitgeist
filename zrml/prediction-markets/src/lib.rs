@@ -119,11 +119,7 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                T::Currency::unreserve_named(
-                    &Self::reserve_id(),
-                    &bond.who,
-                    bond.value.saturated_into::<u128>().saturated_into(),
-                );
+                T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
@@ -167,16 +163,13 @@ mod pallet {
                     let slash_amount = percentage.mul_floor(value);
                     (slash_amount, value.saturating_sub(slash_amount))
                 } else {
-                    (value, Zero::zero())
+                    (value, <BalanceOf<T>>::zero())
                 };
-                let (imbalance, excess) = T::Currency::slash_reserved_named(
-                    &Self::reserve_id(),
-                    &bond.who,
-                    slash_amount.saturated_into::<u128>().saturated_into(),
-                );
+                let (imbalance, excess) =
+                    T::Currency::slash_reserved_named(&Self::reserve_id(), &bond.who, slash_amount);
                 // If there's excess, there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
-                if excess != Zero::zero() {
+                if excess != <BalanceOf<T>>::zero() {
                     let warning = format!(
                         "Failed to settle the {} bond of market {:?}",
                         stringify!($bond_type),
@@ -185,12 +178,8 @@ mod pallet {
                     log::warn!("{}", warning);
                     debug_assert!(false, "{}", warning);
                 }
-                if unreserve_amount != Zero::zero() {
-                    T::Currency::unreserve_named(
-                        &Self::reserve_id(),
-                        &bond.who,
-                        unreserve_amount.saturated_into::<u128>().saturated_into(),
-                    );
+                if unreserve_amount != <BalanceOf<T>>::zero() {
+                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
@@ -1530,7 +1519,11 @@ mod pallet {
                 Origin = Self::RuntimeOrigin,
             >;
 
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+        type Currency: NamedReservableCurrency<
+                Self::AccountId,
+                ReserveIdentifier = [u8; 8],
+                Balance = BalanceOf<Self>,
+            >;
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
