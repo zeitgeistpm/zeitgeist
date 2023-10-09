@@ -166,7 +166,7 @@ mod pallet {
                     let slash_amount = percentage.mul_floor(value);
                     (slash_amount, value.saturating_sub(slash_amount))
                 } else {
-                    (value, Zero::zero())
+                    (value, <BalanceOf<T>>::zero())
                 };
                 let (imbalance, excess) = T::Currency::slash_reserved_named(
                     &Self::reserve_id(),
