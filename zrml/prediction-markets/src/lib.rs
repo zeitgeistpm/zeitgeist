@@ -184,7 +184,7 @@ mod pallet {
                     log::warn!("{}", warning);
                     debug_assert!(false, "{}", warning);
                 }
-                if unreserve_amount != Zero::zero() {
+                if unreserve_amount != <BalanceOf<T>>::zero() {
                     T::Currency::unreserve_named(
                         &Self::reserve_id(),
                         &bond.who,
