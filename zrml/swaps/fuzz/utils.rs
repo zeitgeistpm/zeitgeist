@@ -29,7 +29,7 @@ use zeitgeist_primitives::{
         MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
-    types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
+    types::{Asset, Outcome, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
 };
 use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
 
