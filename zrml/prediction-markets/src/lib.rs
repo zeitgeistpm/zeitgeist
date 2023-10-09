@@ -77,7 +77,6 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
 
-    // TODO maybe use the Balance of the <T as Config>::Currency here!
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type NegativeImbalanceOf<T> =
@@ -119,7 +118,6 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                // TODO if you use the Balance of Currency, you might not need saturated conversions here!!!
                 T::Currency::unreserve_named(
                     &Self::reserve_id(),
                     &bond.who,

@@ -111,7 +111,7 @@ impl DisputeResolutionApi for NoopResolution {
 }
 
 impl crate::Config for Runtime {
-    type AssetManager = AssetManager;
+    type Currency = Balances;
     type RuntimeEvent = ();
     type DisputeResolution = NoopResolution;
     type MarketCommons = MarketCommons;
@@ -183,7 +183,7 @@ impl orml_tokens::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
