@@ -48,6 +48,7 @@ mod pallet {
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use zeitgeist_primitives::types::Outcome;
 
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
@@ -1124,7 +1125,8 @@ mod pallet {
 
             let winning_assets = match resolved_outcome {
                 OutcomeReport::Categorical(category_index) => {
-                    let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
+                    let winning_currency_id =
+                        Asset::Outcome(Outcome::CategoricalOutcome(market_id, category_index));
                     let winning_balance =
                         T::AssetManager::free_balance(winning_currency_id, &sender);
 
@@ -1141,8 +1143,10 @@ mod pallet {
                     vec![(winning_currency_id, winning_balance, winning_balance)]
                 }
                 OutcomeReport::Scalar(value) => {
-                    let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
-                    let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
+                    let long_currency_id =
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
+                    let short_currency_id =
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Short));
                     let long_balance = T::AssetManager::free_balance(long_currency_id, &sender);
                     let short_balance = T::AssetManager::free_balance(short_currency_id, &sender);
 
@@ -2077,14 +2081,14 @@ mod pallet {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
                     for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                        assets.push(Asset::Outcome(Outcome::CategoricalOutcome(market_id, i)));
                     }
                     assets
                 }
                 MarketType::Scalar(_) => {
                     vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Short)),
                     ]
                 }
             }

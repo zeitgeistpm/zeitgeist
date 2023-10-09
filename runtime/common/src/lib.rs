@@ -1836,12 +1836,12 @@ macro_rules! create_common_benchmark_logic {
                 use orml_traits::MultiCurrency;
                 use zeitgeist_primitives::{
                     constants::BASE,
-                    types::Asset,
+                    types::{Asset, Outcome},
                 };
 
                 const SEED: u32 = 0;
                 const NATIVE: CurrencyId = GetNativeCurrencyId::get();
-                const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
+                const ASSET: CurrencyId = Asset::Outcome(Outcome::CategoricalOutcome(0, 0));
 
                 runtime_benchmarks! {
                     { Runtime, orml_currencies }
@@ -1946,10 +1946,10 @@ macro_rules! create_common_benchmark_logic {
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
-                use zeitgeist_primitives::{constants::BASE, types::Asset};
+                use zeitgeist_primitives::{constants::BASE, types::{ Asset, Outcome }};
 
                 const SEED: u32 = 0;
-                const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
+                const ASSET: CurrencyId = Asset::Outcome(Outcome::CategoricalOutcome(0, 0));
 
                 runtime_benchmarks! {
                     { Runtime, orml_tokens }

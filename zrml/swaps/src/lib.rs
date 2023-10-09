@@ -93,8 +93,8 @@ mod pallet {
         constants::{BASE, CENT},
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
-            ScoringRule, SerdeWrapper,
+            Asset, MarketType, Outcome, OutcomeReport, Pool, PoolId, PoolStatus,
+            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -1751,7 +1751,7 @@ mod pallet {
                     Err(Error::<T>::WinningAssetNotFound.into());
                 if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                     pool.assets.retain(|el| {
-                        if let Asset::CategoricalOutcome(_, idx) = *el {
+                        if let Asset::Outcome(Outcome::CategoricalOutcome(_, idx)) = *el {
                             if idx == *winning_asset_idx {
                                 winning_asset = Ok(*el);
                                 return true;

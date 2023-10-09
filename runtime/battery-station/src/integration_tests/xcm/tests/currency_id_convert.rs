@@ -28,6 +28,7 @@ use crate::{
     xcm_config::config::{battery_station, general_key, AssetConvert},
     CurrencyId,
 };
+use zeitgeist_primitives::types::Outcome;
 
 use frame_support::assert_err;
 use sp_runtime::traits::Convert as C2;
@@ -117,6 +118,11 @@ fn convert_unkown_multilocation() {
 #[test]
 fn convert_unsupported_currency() {
     Zeitgeist::execute_with(|| {
-        assert_eq!(<AssetConvert as C2<_, _>>::convert(CurrencyId::CombinatorialOutcome), None)
+        assert_eq!(
+            <AssetConvert as C2<_, _>>::convert(CurrencyId::Outcome(Outcome::CategoricalOutcome(
+                1, 2
+            ))),
+            None
+        )
     });
 }

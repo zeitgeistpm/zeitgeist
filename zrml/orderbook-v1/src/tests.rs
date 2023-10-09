@@ -25,7 +25,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{AccountIdTest, Asset, ScoringRule},
+    types::{AccountIdTest, Asset, Outcome, ScoringRule},
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
 
@@ -45,7 +45,7 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
             Orderbook::place_order(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
-                Asset::CategoricalOutcome(0, 2),
+                Asset::Outcome(Outcome::CategoricalOutcome(0, 2)),
                 OrderSide::Bid,
                 100,
                 250,
@@ -68,7 +68,7 @@ fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            Asset::CategoricalOutcome(0, 2),
+            Asset::Outcome(Outcome::CategoricalOutcome(0, 2)),
             OrderSide::Bid,
             10,
             250,
@@ -110,13 +110,17 @@ fn it_places_orders() {
         Markets::<Runtime>::insert(market_id, market);
 
         // Give some shares for Bob.
-        assert_ok!(AssetManager::deposit(Asset::CategoricalOutcome(0, 1), &BOB, 10));
+        assert_ok!(AssetManager::deposit(
+            Asset::Outcome(Outcome::CategoricalOutcome(0, 1)),
+            &BOB,
+            10
+        ));
 
         // Make an order from Alice to buy shares.
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            Asset::CategoricalOutcome(0, 2),
+            Asset::Outcome(Outcome::CategoricalOutcome(0, 2)),
             OrderSide::Bid,
             10,
             250,
@@ -130,13 +134,14 @@ fn it_places_orders() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
-            Asset::CategoricalOutcome(0, 1),
+            Asset::Outcome(Outcome::CategoricalOutcome(0, 1)),
             OrderSide::Ask,
             10,
             5,
         ));
 
-        let shares_reserved = Tokens::reserved_balance(Asset::CategoricalOutcome(0, 1), &BOB);
+        let shares_reserved =
+            Tokens::reserved_balance(Asset::Outcome(Outcome::CategoricalOutcome(0, 1)), &BOB);
         assert_eq!(shares_reserved, 10);
     });
 }
@@ -148,7 +153,7 @@ fn it_fills_ask_orders_fully() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market);
 
-        let outcome_asset = Asset::CategoricalOutcome(0, 1);
+        let outcome_asset = Asset::Outcome(Outcome::CategoricalOutcome(0, 1));
         // Give some shares for Bob.
         assert_ok!(Tokens::deposit(outcome_asset, &BOB, 100));
 
@@ -202,7 +207,7 @@ fn it_fills_bid_orders_fully() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market);
 
-        let outcome_asset = Asset::CategoricalOutcome(0, 1);
+        let outcome_asset = Asset::Outcome(Outcome::CategoricalOutcome(0, 1));
 
         // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::place_order(
@@ -255,7 +260,7 @@ fn it_fills_bid_orders_partially() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market);
 
-        let outcome_asset = Asset::CategoricalOutcome(0, 1);
+        let outcome_asset = Asset::Outcome(Outcome::CategoricalOutcome(0, 1));
 
         // Make an order from Bob to buy outcome tokens.
         assert_ok!(Orderbook::place_order(
@@ -331,7 +336,7 @@ fn it_fills_ask_orders_partially() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let outcome_asset = Asset::CategoricalOutcome(0, 1);
+        let outcome_asset = Asset::Outcome(Outcome::CategoricalOutcome(0, 1));
 
         assert_ok!(Tokens::deposit(outcome_asset, &BOB, 2000));
 
@@ -410,7 +415,7 @@ fn it_removes_orders() {
         Markets::<Runtime>::insert(market_id, market);
 
         // Make an order from Alice to buy shares.
-        let share_id = Asset::CategoricalOutcome(0, 2);
+        let share_id = Asset::Outcome(Outcome::CategoricalOutcome(0, 2));
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
