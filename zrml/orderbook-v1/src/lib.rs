@@ -40,7 +40,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     traits::MarketCommonsPalletApi,
-    types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    types::{Asset, Market, MarketStatus, MarketType, Outcome, ScalarPosition, ScoringRule},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -441,14 +441,14 @@ mod pallet {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
                     for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                        assets.push(Asset::Outcome(Outcome::CategoricalOutcome(market_id, i)));
                     }
                     assets
                 }
                 MarketType::Scalar(_) => {
                     vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
+                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Short)),
                     ]
                 }
             }
