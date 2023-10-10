@@ -1,5 +1,6 @@
 [dependencies]
 arbitrary = { workspace = true, optional = true }
+fixed = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-currencies = { workspace = true }

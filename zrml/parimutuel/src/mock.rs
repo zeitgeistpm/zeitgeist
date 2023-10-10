@@ -27,9 +27,9 @@ use core::marker::PhantomData;
 use frame_support::{
     construct_runtime,
     pallet_prelude::Get,
+    parameter_types,
     traits::{Everything, OnFinalize, OnInitialize},
 };
-use frame_support::parameter_types;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,

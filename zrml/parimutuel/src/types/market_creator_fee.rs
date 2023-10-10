@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AssetOf, AccountIdOf, BalanceOf, Config, MarketIdOf};
-use zeitgeist_primitives::traits::DistributeFees;
+use crate::{AccountIdOf, AssetOf, BalanceOf, Config, MarketIdOf};
 use core::marker::PhantomData;
 use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, SaturatedConversion};
+use zeitgeist_primitives::traits::DistributeFees;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 pub struct MarketCreatorFee<T>(PhantomData<T>);

@@ -38,12 +38,23 @@ mod pallet {
         traits::{Get, IsType, StorageVersion},
         PalletId,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use orml_traits::MultiCurrency;
-    use sp_runtime::{traits::AccountIdConversion, DispatchResult};
+    use sp_runtime::{
+        traits::{AccountIdConversion, CheckedSub, Zero},
+        DispatchResult, Perquintill, SaturatedConversion, Saturating,
+    };
     use zeitgeist_primitives::{
+        constants::BASE,
+        math::fixed::*,
         traits::DistributeFees,
-        types::{Asset, Market, MarketStatus, MarketType, Outcome, ScalarPosition, ScoringRule},
+        types::{
+            Asset, Market, MarketStatus, MarketType, Outcome, OutcomeReport, ScalarPosition,
+            ScoringRule,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -57,16 +68,18 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketOf<T> = Market<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        Asset<MarketIdOf<T>>,
-    >;
+    pub(crate) type MarketOf<T> =
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Buy parimutuel shares.
+        ///
+        /// # Arguments
+        ///
+        /// - `asset`: The outcome asset to buy the shares of.
+        /// - `amount`: The amount of collateral (base asset) to spend
+        /// and of parimutuel shares to receive.
         #[pallet::call_index(0)]
         #[pallet::weight(5000)]
         #[frame_support::transactional]
@@ -88,30 +101,196 @@ mod pallet {
                 Outcome::ScalarOutcome(market_id, _) => market_id,
             };
             let market = T::MarketCommons::market(&market_id)?;
+            let base_asset = market.base_asset;
+            ensure!(
+                T::AssetManager::ensure_can_withdraw(base_asset, &who, amount).is_ok(),
+                Error::<T>::InsufficientBalance
+            );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
-
             let market_assets = Self::outcome_assets(market_id, &market);
             ensure!(market_assets.binary_search(&asset).is_ok(), Error::<T>::InvalidOutcomeAsset);
 
+            // transfer some fees of amount to market creator
+            let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
+            let amount_minus_fees =
+                amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
             let pot_account = Self::pot_account(market_id);
-            T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount)?;
 
-            T::AssetManager::deposit(asset, &who, amount)?;
+            T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
+            T::AssetManager::deposit(asset, &who, amount_minus_fees)?;
 
-            Self::deposit_event(Event::OutcomeBought { market_id, asset });
+            Self::deposit_event(Event::OutcomeBought {
+                market_id,
+                buyer: who,
+                asset,
+                amount_minus_fees,
+                fees: external_fees,
+            });
 
             Ok(())
         }
 
+        /// Claim winnings from a resolved market.
         #[pallet::call_index(1)]
         #[pallet::weight(5000)]
         #[frame_support::transactional]
         pub fn claim_rewards(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            let _who = ensure_signed(origin)?;
-            let _market = T::MarketCommons::market(&market_id)?;
+            let who = ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
+            ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
+            let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
+            let pot_account = Self::pot_account(market_id);
+            let winning_assets = match winning_outcome {
+                OutcomeReport::Categorical(category_index) => {
+                    let winning_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(
+                        market_id,
+                        category_index,
+                    ));
+                    let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
+                    let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+                    // each Parimutuel outcome asset has the market id included
+                    // this allows us to query all outstanding shares for each discrete asset
+                    let outcome_total = T::AssetManager::total_issuance(winning_asset);
+                    // use bdiv, because pot_total / outcome_total could be
+                    // a rational number imprecisely rounded to the next integer
+                    // however we need the precision here to calculate the correct payout
+                    // by bdiv we multiply it with BASE and using bmul we divide it by BASE again
+                    // Fugayzi, fugazi. It's a whazy. It's a woozie. It's fairy dust.
+                    let payoff_ratio_mul_base: BalanceOf<T> =
+                        bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?
+                            .saturated_into();
+                    let payoff: BalanceOf<T> = bmul(
+                        payoff_ratio_mul_base.saturated_into(),
+                        winning_balance.saturated_into(),
+                    )?
+                    .saturated_into();
 
-            Self::deposit_event(Event::RewardsClaimed { market_id });
+                    Self::check_values(
+                        winning_balance,
+                        pot_total,
+                        outcome_total,
+                        payoff_ratio_mul_base,
+                        payoff,
+                    )?;
+
+                    let slashable_asset_balance = winning_balance;
+
+                    vec![(winning_asset, payoff, slashable_asset_balance)]
+                }
+                OutcomeReport::Scalar(value) => {
+                    let long_asset = Asset::ParimutuelShare(Outcome::ScalarOutcome(
+                        market_id,
+                        ScalarPosition::Long,
+                    ));
+                    let short_asset = Asset::ParimutuelShare(Outcome::ScalarOutcome(
+                        market_id,
+                        ScalarPosition::Short,
+                    ));
+                    let long_balance = T::AssetManager::free_balance(long_asset, &who);
+                    let short_balance = T::AssetManager::free_balance(short_asset, &who);
+                    ensure!(
+                        !long_balance.is_zero() || !short_balance.is_zero(),
+                        Error::<T>::NoWinningShares
+                    );
+
+                    let bound = if let MarketType::Scalar(range) = market.market_type {
+                        range
+                    } else {
+                        return Err(Error::<T>::InvalidMarketType.into());
+                    };
+
+                    let calc_payouts =
+                        |final_value: u128, low: u128, high: u128| -> (Perquintill, Perquintill) {
+                            if final_value <= low {
+                                return (Perquintill::zero(), Perquintill::one());
+                            }
+                            if final_value >= high {
+                                return (Perquintill::one(), Perquintill::zero());
+                            }
+
+                            let payout_long: Perquintill = Perquintill::from_rational(
+                                final_value.saturating_sub(low),
+                                high.saturating_sub(low),
+                            );
+                            let payout_short: Perquintill = Perquintill::from_parts(
+                                Perquintill::one()
+                                    .deconstruct()
+                                    .saturating_sub(payout_long.deconstruct()),
+                            );
+                            (payout_long, payout_short)
+                        };
+
+                    let (long_percent, short_percent) =
+                        calc_payouts(value, *bound.start(), *bound.end());
+
+                    let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+
+                    let long_total = T::AssetManager::total_issuance(long_asset);
+                    let short_total = T::AssetManager::total_issuance(short_asset);
+
+                    let payoff_long_total =
+                        long_percent.mul_floor(pot_total.saturated_into::<u128>());
+                    let payoff_short_total =
+                        short_percent.mul_floor(pot_total.saturated_into::<u128>());
+
+                    let payoff_long_ratio_mul_base: BalanceOf<T> =
+                        bdiv(payoff_long_total.saturated_into(), long_total.saturated_into())?
+                            .saturated_into();
+                    let payoff_long: BalanceOf<T> = bmul(
+                        payoff_long_ratio_mul_base.saturated_into(),
+                        long_balance.saturated_into(),
+                    )?
+                    .saturated_into();
+
+                    let payoff_short_ratio_mul_base: BalanceOf<T> =
+                        bdiv(payoff_short_total.saturated_into(), short_total.saturated_into())?
+                            .saturated_into();
+                    let payoff_short: BalanceOf<T> = bmul(
+                        payoff_short_ratio_mul_base.saturated_into(),
+                        short_balance.saturated_into(),
+                    )?
+                    .saturated_into();
+
+                    // Ensure the market account has enough to pay out - if this is
+                    // ever not true then we have an accounting problem.
+                    ensure!(
+                        pot_total >= payoff_long.saturating_add(payoff_short),
+                        Error::<T>::InsufficientFundsInPotAccount,
+                    );
+
+                    let slashable_long_balance = long_balance;
+                    let slashable_short_balance = short_balance;
+
+                    vec![
+                        (long_asset, payoff_long, slashable_long_balance),
+                        (short_asset, payoff_short, slashable_short_balance),
+                    ]
+                }
+            };
+
+            for (asset, payoff, slashable_asset_balance) in winning_assets {
+                // Destroy the shares.
+                T::AssetManager::slash(asset, &who, slashable_asset_balance);
+
+                // Pay out the winner.
+                let remaining_bal = T::AssetManager::free_balance(market.base_asset, &pot_account);
+                let actual_payoff = payoff.min(remaining_bal);
+
+                T::AssetManager::transfer(market.base_asset, &pot_account, &who, actual_payoff)?;
+                // The if-check prevents scalar markets to emit events even if sender only owns one
+                // of the outcome tokens.
+                if slashable_asset_balance != <BalanceOf<T>>::zero() {
+                    Self::deposit_event(Event::RewardsClaimed {
+                        market_id,
+                        asset,
+                        balance: slashable_asset_balance,
+                        actual_payoff,
+                        sender: who.clone(),
+                    });
+                }
+            }
 
             Ok(())
         }
@@ -157,6 +336,14 @@ mod pallet {
         NotParimutuelOutcome,
         InvalidOutcomeAsset,
         InvalidScoringRule,
+        InsufficientBalance,
+        MarketIsNotResolvedYet,
+        Unexpected,
+        NoResolvedOutcome,
+        NoWinningShares,
+        InsufficientFundsInPotAccount,
+        InvalidMarketType,
+        OutcomeIssuanceGreaterCollateral,
     }
 
     #[pallet::event]
@@ -165,8 +352,20 @@ mod pallet {
     where
         T: Config,
     {
-        OutcomeBought { market_id: MarketIdOf<T>, asset: Asset<MarketIdOf<T>> },
-        RewardsClaimed { market_id: MarketIdOf<T> },
+        OutcomeBought {
+            market_id: MarketIdOf<T>,
+            buyer: AccountIdOf<T>,
+            asset: AssetOf<T>,
+            amount_minus_fees: BalanceOf<T>,
+            fees: BalanceOf<T>,
+        },
+        RewardsClaimed {
+            market_id: MarketIdOf<T>,
+            asset: AssetOf<T>,
+            balance: BalanceOf<T>,
+            actual_payoff: BalanceOf<T>,
+            sender: AccountIdOf<T>,
+        },
     }
 
     #[pallet::pallet]
@@ -182,10 +381,38 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating(market_id)
         }
 
-        pub fn outcome_assets(
-            market_id: MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Vec<Asset<MarketIdOf<T>>> {
+        fn check_values(
+            winning_balance: BalanceOf<T>,
+            pot_total: BalanceOf<T>,
+            outcome_total: BalanceOf<T>,
+            payoff_ratio_mul_base: BalanceOf<T>,
+            payoff: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
+            ensure!(pot_total >= winning_balance, Error::<T>::InsufficientFundsInPotAccount);
+            ensure!(pot_total >= outcome_total, Error::<T>::OutcomeIssuanceGreaterCollateral);
+            debug_assert!(
+                outcome_total >= winning_balance,
+                "The outcome issuance should be at least as high as the individual balance of \
+                 this outcome!"
+            );
+            debug_assert!(
+                payoff_ratio_mul_base >= BASE.saturated_into(),
+                "The payoff ratio should be greater than or equal to BASE!"
+            );
+            debug_assert!(
+                payoff >= winning_balance,
+                "The payoff in collateral should be greater than or equal to the winning outcome \
+                 balance."
+            );
+            debug_assert!(
+                pot_total >= payoff,
+                "The payoff in collateral should not exceed the total amount of collateral!"
+            );
+            Ok(())
+        }
+
+        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
