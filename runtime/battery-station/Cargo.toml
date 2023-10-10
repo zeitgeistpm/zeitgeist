@@ -113,6 +113,7 @@ zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
+zrml-orderbook-v1 = { workspace = true }
 zrml-prediction-markets = { workspace = true }
 zrml-rikiddo = { workspace = true }
 zrml-simple-disputes = { workspace = true }
@@ -214,6 +215,7 @@ runtime-benchmarks = [
     "zrml-global-disputes/runtime-benchmarks",
     "zrml-styx/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
+    "zrml-orderbook-v1/runtime-benchmarks",
 ]
 std = [
     "frame-executive/std",
@@ -328,6 +330,7 @@ std = [
     "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
+    "zrml-orderbook-v1/std",
 ]
 try-runtime = [
     "frame-executive/try-runtime",
@@ -380,6 +383,7 @@ try-runtime = [
     "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
+    "zrml-orderbook-v1/try-runtime",
 
     # Parachain
     "pallet-author-inherent?/try-runtime",

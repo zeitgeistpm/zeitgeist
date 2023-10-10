@@ -66,7 +66,7 @@ taplo_fmt() {
 has_taplo=$(which taplo)
 if [ $? -eq 1 ]; then
     echo "Installing taplo ..."
-    cargo install taplo-cli
+    cargo install taplo-cli --git https://github.com/tamasfe/taplo --rev 848722f2c604de68535e5a3e0bb2a2c1d3c7dc74
 fi
 # install rustfmt if it isn't already
 has_rustfmt=$(which rustfmt)

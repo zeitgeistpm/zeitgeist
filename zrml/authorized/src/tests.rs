@@ -101,7 +101,7 @@ fn authorize_market_outcome_fails_if_market_does_not_exist() {
 fn authorize_market_outcome_fails_on_non_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = market_mock::<Runtime>();
-        market.dispute_mechanism = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Court);
         Markets::<Runtime>::insert(0, market);
         assert_noop!(
             Authorized::authorize_market_outcome(

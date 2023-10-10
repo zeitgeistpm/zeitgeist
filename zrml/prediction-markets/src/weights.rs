@@ -75,7 +75,8 @@ pub trait WeightInfoZeitgeist {
     fn redeem_shares_categorical() -> Weight;
     fn redeem_shares_scalar() -> Weight;
     fn reject_market(c: u32, o: u32, r: u32) -> Weight;
-    fn report(m: u32) -> Weight;
+    fn report_market_with_dispute_mechanism(m: u32) -> Weight;
+    fn report_trusted_market() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
     fn start_subsidy(a: u32) -> Weight;
     fn market_status_manager(b: u32, f: u32) -> Weight;
@@ -646,29 +647,21 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(4_u64))
             .saturating_add(T::DbWeight::get().writes(5_u64))
     }
-    /// Storage: MarketCommons Markets (r:1 w:1)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
-    /// Storage: Timestamp Now (r:1 w:0)
-    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
-    /// Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
-    /// Proof: PredictionMarkets MarketIdsPerReportBlock (max_values: None, max_size: Some(1042), added: 3517, mode: MaxEncodedLen)
-    fn report(_m: u32) -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `745`
-        //  Estimated: `7036`
-        // Minimum execution time: 38_411 nanoseconds.
-        Weight::from_parts(43_779_882, 7036)
-            .saturating_add(T::DbWeight::get().reads(3_u64))
-            .saturating_add(T::DbWeight::get().writes(2_u64))
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: Timestamp Now (r:1 w:0)
+    // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
+    fn report_market_with_dispute_mechanism(_m: u32) -> Weight {
+        Weight::from_ref_time(69_185_134)
+            .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().writes(2))
     }
-    /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
-    /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: Tokens Accounts (r:64 w:64)
-    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:64 w:64)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
+    fn report_trusted_market() -> Weight {
+        Weight::from_ref_time(123)
+    }
+    // Storage: MarketCommons Markets (r:1 w:0)
+    // Storage: System Account (r:1 w:1)
+    // Storage: Tokens Accounts (r:2 w:2)
+    // Storage: Tokens TotalIssuance (r:2 w:2)
     fn sell_complete_set(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `756 + a * (161 ±0)`

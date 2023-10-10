@@ -45,35 +45,23 @@ pub mod weights;
 
 #[macro_export]
 macro_rules! decl_common_types {
-    {} => {
-        use sp_runtime::generic;
+    () => {
+        use frame_support::traits::{
+            Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced,
+        };
         #[cfg(feature = "try-runtime")]
-        use frame_try_runtime::{UpgradeCheckSelect, TryStateSelect};
-        use frame_support::traits::{Currency, Imbalance, OnRuntimeUpgrade, OnUnbalanced, NeverEnsureOrigin};
+        use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
+        use sp_runtime::generic;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = (
-            orml_asset_registry::Migration<Runtime>,
-            orml_unknown_tokens::Migration<Runtime>,
-            pallet_xcm::migration::v1::MigrateToV1<Runtime>,
-            // IMPORTANT that AddDisputeBondAndConvertCreatorFee comes before MoveDataToSimpleDisputes!!!
-            zrml_prediction_markets::migrations::AddDisputeBondAndConvertCreatorFee<Runtime>,
-            zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
-            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
-        );
+        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = (
-            pallet_grandpa::migrations::CleanupSetIdSessionMap<Runtime>,
-            // IMPORTANT that AddDisputeBondAndConvertCreatorFee comes before MoveDataToSimpleDisputes!!!
-            zrml_prediction_markets::migrations::AddDisputeBondAndConvertCreatorFee<Runtime>,
-            zrml_prediction_markets::migrations::MoveDataToSimpleDisputes<Runtime>,
-            zrml_global_disputes::migrations::ModifyGlobalDisputesStructures<Runtime>,
-        );
+        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -99,7 +87,8 @@ macro_rules! decl_common_types {
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
         );
         pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
-        pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+        pub type UncheckedExtrinsic =
+            generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
         // Governance
         type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -111,20 +100,28 @@ macro_rules! decl_common_types {
 
         // Council vote proportions
         // At least 50%
-        type EnsureRootOrHalfCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
+        type EnsureRootOrHalfCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>,
+        >;
 
         // At least 66%
-        type EnsureRootOrTwoThirdsCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
+        type EnsureRootOrTwoThirdsCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>,
+        >;
 
         // At least 75%
-        type EnsureRootOrThreeFourthsCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
+        type EnsureRootOrThreeFourthsCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>,
+        >;
 
         // At least 100%
-        type EnsureRootOrAllCouncil =
-            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
+        type EnsureRootOrAllCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>,
+        >;
 
         // Technical committee vote proportions
         // At least 50%
@@ -196,6 +193,7 @@ macro_rules! decl_common_types {
                     CourtPalletId::get(),
                     GlobalDisputesPalletId::get(),
                     LiquidityMiningPalletId::get(),
+                    OrderbookPalletId::get(),
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
@@ -248,7 +246,7 @@ macro_rules! decl_common_types {
                 }
             }
         }
-    }
+    };
 }
 
 // Construct runtime
@@ -313,6 +311,7 @@ macro_rules! create_runtime {
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
                 GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 60,
 
                 $($additional_pallets)*
             }
@@ -858,6 +857,9 @@ macro_rules! impl_config_traits {
                         c,
                         RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
                             | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::remove_order { .. })
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
@@ -877,6 +879,9 @@ macro_rules! impl_config_traits {
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
                             )
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::remove_order { .. })
                     ),
                 }
             }
@@ -1231,6 +1236,14 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
         }
+
+        impl zrml_orderbook_v1::Config for Runtime {
+            type AssetManager = AssetManager;
+            type RuntimeEvent = RuntimeEvent;
+            type MarketCommons = MarketCommons;
+            type PalletId = OrderbookPalletId;
+            type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
+        }
     }
 }
 
@@ -1339,6 +1352,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_court, Court);
                     list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
+                    list_benchmark!(list, extra, zrml_orderbook_v1, Orderbook);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
@@ -1440,6 +1454,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_court, Court);
                     add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
+                    add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);

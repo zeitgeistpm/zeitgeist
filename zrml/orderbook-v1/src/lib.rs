@@ -21,270 +21,92 @@
 
 extern crate alloc;
 
-pub use pallet::*;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_runtime::{
-    traits::{CheckedMul, CheckedSub},
-    ArithmeticError, DispatchError, RuntimeDebug,
+use crate::{types::*, weights::*};
+use alloc::{vec, vec::Vec};
+use core::marker::PhantomData;
+use frame_support::{
+    dispatch::DispatchResultWithPostInfo,
+    ensure,
+    pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
+    traits::{Currency, IsType, StorageVersion},
+    transactional, PalletId, Twox64Concat,
 };
-use zeitgeist_primitives::types::Asset;
+use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
+pub use pallet::*;
+use sp_runtime::{
+    traits::{CheckedSub, Get, Zero},
+    ArithmeticError, Perquintill, SaturatedConversion, Saturating,
+};
+use zeitgeist_primitives::{
+    traits::MarketCommonsPalletApi,
+    types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod mock;
 #[cfg(test)]
 mod tests;
+pub mod types;
+mod utils;
 pub mod weights;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{weights::*, Order, OrderSide};
-    use core::{cmp, marker::PhantomData};
-    use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        ensure,
-        pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
-        traits::{
-            Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
-            WithdrawReasons,
-        },
-        transactional, Blake2_128Concat, BoundedVec, Identity,
-    };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use parity_scale_codec::Encode;
-    use sp_runtime::{
-        traits::{Hash, Zero},
-        ArithmeticError, DispatchError,
-    };
-    use zeitgeist_primitives::{traits::MarketId, types::Asset};
-
-    /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
-
-    pub(crate) type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
-        #[pallet::call_index(0)]
-        #[pallet::weight(
-            T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
-        )]
-        #[transactional]
-        pub fn cancel_order(
-            origin: OriginFor<T>,
-            asset: Asset<T::MarketId>,
-            order_hash: T::Hash,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            let mut bid = true;
-
-            if let Some(order_data) = Self::order_data(order_hash) {
-                let maker = &order_data.maker;
-                ensure!(sender == *maker, Error::<T>::NotOrderCreator);
-
-                match order_data.side {
-                    OrderSide::Bid => {
-                        let cost = order_data.cost()?;
-                        T::Currency::unreserve(maker, cost);
-                        let mut bids = Self::bids(asset);
-                        remove_item::<T::Hash, _>(&mut bids, order_hash);
-                        <Bids<T>>::insert(asset, bids);
-                    }
-                    OrderSide::Ask => {
-                        T::Shares::unreserve(order_data.asset, maker, order_data.total);
-                        let mut asks = Self::asks(asset);
-                        remove_item::<T::Hash, _>(&mut asks, order_hash);
-                        <Asks<T>>::insert(asset, asks);
-                        bid = false;
-                    }
-                }
-
-                <OrderData<T>>::remove(order_hash);
-            } else {
-                return Err(Error::<T>::OrderDoesNotExist.into());
-            }
-
-            if bid {
-                Ok(Some(T::WeightInfo::cancel_order_bid()).into())
-            } else {
-                Ok(Some(T::WeightInfo::cancel_order_ask()).into())
-            }
-        }
-
-        #[pallet::call_index(1)]
-        #[pallet::weight(
-            T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
-        )]
-        #[transactional]
-        pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            let mut bid = true;
-
-            if let Some(order_data) = Self::order_data(order_hash) {
-                ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
-
-                let cost = order_data.cost()?;
-
-                let maker = order_data.maker;
-
-                match order_data.side {
-                    OrderSide::Bid => {
-                        T::Shares::ensure_can_withdraw(
-                            order_data.asset,
-                            &sender,
-                            order_data.total,
-                        )?;
-
-                        T::Currency::unreserve(&maker, cost);
-                        T::Currency::transfer(
-                            &maker,
-                            &sender,
-                            cost,
-                            ExistenceRequirement::AllowDeath,
-                        )?;
-
-                        T::Shares::transfer(order_data.asset, &sender, &maker, order_data.total)?;
-                    }
-                    OrderSide::Ask => {
-                        T::Currency::ensure_can_withdraw(
-                            &sender,
-                            cost,
-                            WithdrawReasons::all(),
-                            Zero::zero(),
-                        )?;
-
-                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
-                        T::Shares::transfer(order_data.asset, &maker, &sender, order_data.total)?;
-
-                        T::Currency::transfer(
-                            &sender,
-                            &maker,
-                            cost,
-                            ExistenceRequirement::AllowDeath,
-                        )?;
-                        bid = false;
-                    }
-                }
-
-                Self::deposit_event(Event::OrderFilled(sender, order_hash));
-            } else {
-                return Err(Error::<T>::OrderDoesNotExist.into());
-            }
-
-            if bid {
-                Ok(Some(T::WeightInfo::fill_order_bid()).into())
-            } else {
-                Ok(Some(T::WeightInfo::fill_order_ask()).into())
-            }
-        }
-
-        #[pallet::call_index(2)]
-        #[pallet::weight(
-            T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
-        )]
-        #[transactional]
-        pub fn make_order(
-            origin: OriginFor<T>,
-            asset: Asset<T::MarketId>,
-            side: OrderSide,
-            #[pallet::compact] amount: BalanceOf<T>,
-            #[pallet::compact] price: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-
-            // Only store nonce in memory for now.
-            let nonce = <Nonce<T>>::get();
-            let hash = Self::order_hash(&sender, asset, nonce);
-            let mut bid = true;
-
-            // Love the smell of fresh orders in the morning.
-            let order = Order {
-                side: side.clone(),
-                maker: sender.clone(),
-                taker: None,
-                asset,
-                total: amount,
-                price,
-                filled: Zero::zero(),
-            };
-
-            let cost = order.cost()?;
-
-            match side {
-                OrderSide::Bid => {
-                    ensure!(
-                        T::Currency::can_reserve(&sender, cost),
-                        Error::<T>::InsufficientBalance,
-                    );
-
-                    <Bids<T>>::try_mutate(asset, |b: &mut BoundedVec<T::Hash, _>| {
-                        b.try_push(hash).map_err(|_| <Error<T>>::StorageOverflow)
-                    })?;
-
-                    T::Currency::reserve(&sender, cost)?;
-                }
-                OrderSide::Ask => {
-                    ensure!(
-                        T::Shares::can_reserve(asset, &sender, amount),
-                        Error::<T>::InsufficientBalance,
-                    );
-
-                    <Asks<T>>::try_mutate(asset, |a| {
-                        a.try_push(hash).map_err(|_| <Error<T>>::StorageOverflow)
-                    })?;
-
-                    T::Shares::reserve(asset, &sender, amount)?;
-                    bid = false;
-                }
-            }
-
-            <OrderData<T>>::insert(hash, Some(order.clone()));
-            <Nonce<T>>::try_mutate(|n| {
-                *n = n.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-                Ok::<_, DispatchError>(())
-            })?;
-            Self::deposit_event(Event::OrderMade(sender, hash, order));
-
-            if bid {
-                Ok(Some(T::WeightInfo::make_order_bid()).into())
-            } else {
-                Ok(Some(T::WeightInfo::make_order_ask()).into())
-            }
-        }
-    }
+    use super::*;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Currency: ReservableCurrency<Self::AccountId>;
+        /// Shares of outcome assets and native currency
+        type AssetManager: NamedMultiReservableCurrency<
+                Self::AccountId,
+                CurrencyId = Asset<MarketIdOf<Self>>,
+                ReserveIdentifier = [u8; 8],
+            >;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        type MarketId: MarketId;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
 
-        type Shares: MultiReservableCurrency<
-                Self::AccountId,
-                Balance = BalanceOf<Self>,
-                CurrencyId = Asset<Self::MarketId>,
-            >;
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
 
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Insufficient balance.
-        InsufficientBalance,
-        NotOrderCreator,
-        /// The order was already taken.
-        OrderAlreadyTaken,
-        /// The order does not exist.
-        OrderDoesNotExist,
-        /// It was tried to append an item to storage beyond the boundaries.
-        StorageOverflow,
-    }
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+
+    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MarketCommonsBalanceOf<T> =
+        <<<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency as Currency<
+            AccountIdOf<T>,
+        >>::Balance;
+    pub(crate) type MarketOf<T> = Market<
+        AccountIdOf<T>,
+        MarketCommonsBalanceOf<T>,
+        <T as frame_system::Config>::BlockNumber,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+    >;
+
+    #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::storage]
+    pub type NextOrderId<T> = StorageValue<_, OrderId, ValueQuery>;
+
+    #[pallet::storage]
+    pub type Orders<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -292,102 +114,344 @@ mod pallet {
     where
         T: Config,
     {
-        /// [taker, order_hash]
-        OrderFilled(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash),
-        /// [maker, order_hash, order_data]
-        OrderMade(
-            <T as frame_system::Config>::AccountId,
-            <T as frame_system::Config>::Hash,
-            Order<T::AccountId, BalanceOf<T>, T::MarketId>,
-        ),
+        OrderFilled {
+            order_id: OrderId,
+            maker: AccountIdOf<T>,
+            taker: AccountIdOf<T>,
+            filled: BalanceOf<T>,
+            unfilled_outcome_asset_amount: BalanceOf<T>,
+            unfilled_base_asset_amount: BalanceOf<T>,
+        },
+        OrderPlaced {
+            order_id: OrderId,
+            order: OrderOf<T>,
+        },
+        OrderRemoved {
+            order_id: OrderId,
+            maker: T::AccountId,
+        },
     }
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    #[pallet::error]
+    pub enum Error<T> {
+        /// The sender is not the order creator.
+        NotOrderCreator,
+        /// The order does not exist.
+        OrderDoesNotExist,
+        /// The market is not active.
+        MarketIsNotActive,
+        /// The scoring rule is not orderbook.
+        InvalidScoringRule,
+        /// The specified amount parameter is too high for the order.
+        AmountTooHighForOrder,
+        /// The specified amount parameter is zero.
+        AmountIsZero,
+        /// The specified outcome asset is not part of the market.
+        InvalidOutcomeAsset,
+        /// The maker partial fill leads to a too low quotient for the next order execution.
+        MakerPartialFillTooLow,
+    }
 
-    #[pallet::pallet]
-    #[pallet::storage_version(STORAGE_VERSION)]
-    pub struct Pallet<T>(PhantomData<T>);
-
-    #[pallet::storage]
-    #[pallet::getter(fn asks)]
-    pub type Asks<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        Asset<T::MarketId>,
-        BoundedVec<T::Hash, ConstU32<1_048_576>>,
-        ValueQuery,
-    >;
-
-    #[pallet::storage]
-    #[pallet::getter(fn bids)]
-    pub type Bids<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        Asset<T::MarketId>,
-        BoundedVec<T::Hash, ConstU32<1_048_576>>,
-        ValueQuery,
-    >;
-
-    #[pallet::storage]
-    #[pallet::getter(fn nonce)]
-    pub type Nonce<T> = StorageValue<_, u64, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn order_data)]
-    pub type OrderData<T: Config> = StorageMap<
-        _,
-        Identity,
-        T::Hash,
-        Option<Order<T::AccountId, BalanceOf<T>, T::MarketId>>,
-        ValueQuery,
-    >;
-
+    #[pallet::call]
     impl<T: Config> Pallet<T> {
-        pub fn order_hash(
-            creator: &T::AccountId,
-            asset: Asset<T::MarketId>,
-            nonce: u64,
-        ) -> T::Hash {
-            (&creator, asset, nonce).using_encoded(T::Hashing::hash)
+        /// Removes an order.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(0)]
+        #[pallet::weight(
+            T::WeightInfo::remove_order_ask().max(T::WeightInfo::remove_order_bid())
+        )]
+        #[transactional]
+        pub fn remove_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+
+            let order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
+
+            let maker = &order_data.maker;
+            ensure!(sender == *maker, Error::<T>::NotOrderCreator);
+
+            match order_data.side {
+                OrderSide::Bid => {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        order_data.base_asset,
+                        maker,
+                        order_data.base_asset_amount,
+                    );
+                }
+                OrderSide::Ask => {
+                    T::AssetManager::unreserve_named(
+                        &Self::reserve_id(),
+                        order_data.outcome_asset,
+                        maker,
+                        order_data.outcome_asset_amount,
+                    );
+                }
+            }
+
+            <Orders<T>>::remove(order_id);
+
+            Self::deposit_event(Event::OrderRemoved { order_id, maker: maker.clone() });
+
+            match order_data.side {
+                OrderSide::Bid => Ok(Some(T::WeightInfo::remove_order_bid()).into()),
+                OrderSide::Ask => Ok(Some(T::WeightInfo::remove_order_ask()).into()),
+            }
+        }
+
+        /// Fill an existing order entirely (`maker_partial_fill` = None)
+        /// or partially (`maker_partial_fill` = Some(partial_amount)).
+        ///
+        /// NOTE: The `maker_partial_fill` is the partial amount of what the maker wants to fill.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(1)]
+        #[pallet::weight(
+            T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
+        )]
+        #[transactional]
+        pub fn fill_order(
+            origin: OriginFor<T>,
+            order_id: OrderId,
+            maker_partial_fill: Option<BalanceOf<T>>,
+        ) -> DispatchResultWithPostInfo {
+            let taker = ensure_signed(origin)?;
+
+            let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
+            let market = T::MarketCommons::market(&order_data.market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
+            let base_asset = market.base_asset;
+
+            let makers_requested_total = match order_data.side {
+                OrderSide::Bid => order_data.outcome_asset_amount,
+                OrderSide::Ask => order_data.base_asset_amount,
+            };
+            let maker_fill = maker_partial_fill.unwrap_or(makers_requested_total);
+            ensure!(!maker_fill.is_zero(), Error::<T>::AmountIsZero);
+            ensure!(maker_fill <= makers_requested_total, Error::<T>::AmountTooHighForOrder);
+
+            let maker = order_data.maker.clone();
+
+            // the reserve of the maker should always be enough to repatriate successfully, e.g. taker gets a little bit less
+            // it should always ensure that the maker's request (maker_fill) is fully filled
+            match order_data.side {
+                OrderSide::Bid => {
+                    T::AssetManager::ensure_can_withdraw(
+                        order_data.outcome_asset,
+                        &taker,
+                        maker_fill,
+                    )?;
+
+                    // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
+                    // This ensures that the reserve of the maker is always enough to repatriate successfully!
+                    let ratio = Perquintill::from_rational(
+                        maker_fill.saturated_into::<u128>(),
+                        order_data.outcome_asset_amount.saturated_into::<u128>(),
+                    );
+                    let taker_fill = ratio
+                        .mul_floor(order_data.base_asset_amount.saturated_into::<u128>())
+                        .saturated_into::<BalanceOf<T>>();
+
+                    T::AssetManager::repatriate_reserved_named(
+                        &Self::reserve_id(),
+                        base_asset,
+                        &maker,
+                        &taker,
+                        taker_fill,
+                        BalanceStatus::Free,
+                    )?;
+
+                    T::AssetManager::transfer(
+                        order_data.outcome_asset,
+                        &taker,
+                        &maker,
+                        maker_fill,
+                    )?;
+
+                    order_data.base_asset_amount = order_data
+                        .base_asset_amount
+                        .checked_sub(&taker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    order_data.outcome_asset_amount = order_data
+                        .outcome_asset_amount
+                        .checked_sub(&maker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    // this ensures that partial fills, which fill nearly the whole order, are not executed
+                    // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
+                    let is_ratio_quotient_valid = order_data.outcome_asset_amount.is_zero()
+                        || order_data.outcome_asset_amount.saturated_into::<u128>() >= 100u128;
+                    ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
+                }
+                OrderSide::Ask => {
+                    T::AssetManager::ensure_can_withdraw(base_asset, &taker, maker_fill)?;
+
+                    // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
+                    // This ensures that the reserve of the maker is always enough to repatriate successfully!
+                    let ratio = Perquintill::from_rational(
+                        maker_fill.saturated_into::<u128>(),
+                        order_data.base_asset_amount.saturated_into::<u128>(),
+                    );
+                    let taker_fill = ratio
+                        .mul_floor(order_data.outcome_asset_amount.saturated_into::<u128>())
+                        .saturated_into::<BalanceOf<T>>();
+
+                    T::AssetManager::repatriate_reserved_named(
+                        &Self::reserve_id(),
+                        order_data.outcome_asset,
+                        &maker,
+                        &taker,
+                        taker_fill,
+                        BalanceStatus::Free,
+                    )?;
+
+                    T::AssetManager::transfer(base_asset, &taker, &maker, maker_fill)?;
+
+                    order_data.outcome_asset_amount = order_data
+                        .outcome_asset_amount
+                        .checked_sub(&taker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    order_data.base_asset_amount = order_data
+                        .base_asset_amount
+                        .checked_sub(&maker_fill)
+                        .ok_or(ArithmeticError::Underflow)?;
+                    // this ensures that partial fills, which fill nearly the whole order, are not executed
+                    // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
+                    let is_ratio_quotient_valid = order_data.base_asset_amount.is_zero()
+                        || order_data.base_asset_amount.saturated_into::<u128>() >= 100u128;
+                    ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
+                }
+            };
+
+            let unfilled_outcome_asset_amount = order_data.outcome_asset_amount;
+            let unfilled_base_asset_amount = order_data.base_asset_amount;
+            let total_unfilled =
+                unfilled_outcome_asset_amount.saturating_add(unfilled_base_asset_amount);
+
+            if total_unfilled.is_zero() {
+                <Orders<T>>::remove(order_id);
+            } else {
+                <Orders<T>>::insert(order_id, order_data.clone());
+            }
+
+            Self::deposit_event(Event::OrderFilled {
+                order_id,
+                maker,
+                taker: taker.clone(),
+                filled: maker_fill,
+                unfilled_outcome_asset_amount,
+                unfilled_base_asset_amount,
+            });
+
+            match order_data.side {
+                OrderSide::Bid => Ok(Some(T::WeightInfo::fill_order_bid()).into()),
+                OrderSide::Ask => Ok(Some(T::WeightInfo::fill_order_ask()).into()),
+            }
+        }
+
+        /// Place a new order.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(2)]
+        #[pallet::weight(
+            T::WeightInfo::place_order_ask().max(T::WeightInfo::place_order_bid())
+        )]
+        #[transactional]
+        pub fn place_order(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            outcome_asset: Asset<MarketIdOf<T>>,
+            side: OrderSide,
+            #[pallet::compact] outcome_asset_amount: BalanceOf<T>,
+            #[pallet::compact] base_asset_amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
+            ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
+            let market_assets = Self::outcome_assets(market_id, &market);
+            ensure!(
+                market_assets.binary_search(&outcome_asset).is_ok(),
+                Error::<T>::InvalidOutcomeAsset
+            );
+            let base_asset = market.base_asset;
+
+            let order_id = <NextOrderId<T>>::get();
+            let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+
+            let order = Order {
+                market_id,
+                side: side.clone(),
+                maker: who.clone(),
+                outcome_asset,
+                base_asset,
+                outcome_asset_amount,
+                base_asset_amount,
+            };
+
+            match side {
+                OrderSide::Bid => {
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        base_asset,
+                        &who,
+                        base_asset_amount,
+                    )?;
+                }
+                OrderSide::Ask => {
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        outcome_asset,
+                        &who,
+                        outcome_asset_amount,
+                    )?;
+                }
+            }
+
+            <Orders<T>>::insert(order_id, order.clone());
+            <NextOrderId<T>>::put(next_order_id);
+            Self::deposit_event(Event::OrderPlaced { order_id, order });
+
+            match side {
+                OrderSide::Bid => Ok(Some(T::WeightInfo::place_order_bid()).into()),
+                OrderSide::Ask => Ok(Some(T::WeightInfo::place_order_ask()).into()),
+            }
         }
     }
 
-    fn remove_item<I: cmp::PartialEq + Copy, G>(items: &mut BoundedVec<I, G>, item: I) {
-        let pos = items.iter().position(|&i| i == item).unwrap();
-        items.swap_remove(pos);
-    }
-}
+    impl<T: Config> Pallet<T> {
+        /// The reserve ID of the orderbook pallet.
+        #[inline]
+        pub fn reserve_id() -> [u8; 8] {
+            T::PalletId::get().0
+        }
 
-#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum OrderSide {
-    Bid,
-    Ask,
-}
-
-#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
-    side: OrderSide,
-    maker: AccountId,
-    taker: Option<AccountId>,
-    asset: Asset<MarketId>,
-    total: Balance,
-    price: Balance,
-    filled: Balance,
-}
-
-impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId>
-where
-    Balance: CheckedSub + CheckedMul,
-    MarketId: MaxEncodedLen,
-{
-    pub fn cost(&self) -> Result<Balance, DispatchError> {
-        match self.total.checked_sub(&self.filled) {
-            Some(subtotal) => match subtotal.checked_mul(&self.price) {
-                Some(cost) => Ok(cost),
-                _ => Err(DispatchError::Arithmetic(ArithmeticError::Overflow)),
-            },
-            _ => Err(DispatchError::Arithmetic(ArithmeticError::Overflow)),
+        pub fn outcome_assets(
+            market_id: MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Vec<Asset<MarketIdOf<T>>> {
+            match market.market_type {
+                MarketType::Categorical(categories) => {
+                    let mut assets = Vec::new();
+                    for i in 0..categories {
+                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                    }
+                    assets
+                }
+                MarketType::Scalar(_) => {
+                    vec![
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                    ]
+                }
+            }
         }
     }
 }

@@ -1,5 +1,10 @@
 # Style guide
 
+As a basis, the
+[Substrate Style Guide](https://docs.substrate.io/build/troubleshoot-your-code/)
+should be taken into account. In addition to that, the following sections
+further elaborate the style guide used in this repository.
+
 ## Comments
 
 - Comments **must** be wrapped at 100 chars per line.

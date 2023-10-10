@@ -208,7 +208,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             creator_fee: sp_runtime::Perbill::zero(),
             creator: 0,
             market_type: MarketType::Categorical(0),
-            dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+            dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
             metadata: vec![],
             oracle: 0,
             period: MarketPeriod::Block(period),

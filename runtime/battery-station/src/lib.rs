@@ -128,16 +128,16 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                     dispute { .. } => true,
                     // Only allow CPMM markets using Authorized or SimpleDisputes dispute mechanism
                     create_market {
-                        dispute_mechanism: MarketDisputeMechanism::Authorized,
+                        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: MarketDisputeMechanism::Authorized,
+                        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
                         ..
                     } => true,
                     edit_market {
-                        dispute_mechanism: MarketDisputeMechanism::Authorized,
+                        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
@@ -180,18 +180,18 @@ impl Contains<RuntimeCall> for IsCallable {
                         scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
                     } => false,
                     create_market {
-                        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+                        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
                         ..
                     } => false,
                     edit_market {
                         scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
                     } => false,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+                        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
                         ..
                     } => false,
                     edit_market {
-                        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+                        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
                         ..
                     } => false,
                     _ => true,

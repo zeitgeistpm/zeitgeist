@@ -1774,10 +1774,7 @@ mod pallet {
             if let Some(market_id) = <CourtIdToMarketId<T>>::get(court_id) {
                 let market = T::MarketCommons::market(&market_id)?;
                 ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
-                ensure!(
-                    market.dispute_mechanism == MarketDisputeMechanism::Court,
-                    Error::<T>::MarketDoesNotHaveCourtMechanism
-                );
+                Self::ensure_dispute_mechanism(&market)?;
             }
 
             ensure!(
@@ -1804,6 +1801,15 @@ mod pallet {
         #[inline]
         pub(crate) fn treasury_account_id() -> T::AccountId {
             T::TreasuryPalletId::get().into_account_truncating()
+        }
+
+        #[inline]
+        fn ensure_dispute_mechanism(market: &MarketOf<T>) -> DispatchResult {
+            ensure!(
+                market.dispute_mechanism == Some(MarketDisputeMechanism::Court),
+                Error::<T>::MarketDoesNotHaveCourtMechanism
+            );
+            Ok(())
         }
 
         /// The court has a specific vote item type.
@@ -2112,10 +2118,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let court_id = <NextCourtId<T>>::get();
             let next_court_id =
@@ -2160,10 +2163,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<Option<OutcomeReport>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let court_id = <MarketIdToCourtId<T>>::get(market_id)
                 .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;
@@ -2192,10 +2192,7 @@ mod pallet {
             resolved_outcome: &OutcomeReport,
             mut overall_imbalance: NegativeImbalanceOf<T>,
         ) -> Result<ResultWithWeightInfo<NegativeImbalanceOf<T>>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let court_id = <MarketIdToCourtId<T>>::get(market_id)
                 .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;
@@ -2231,7 +2228,7 @@ mod pallet {
             let mut res =
                 ResultWithWeightInfo { result: None, weight: T::WeightInfo::get_auto_resolve() };
 
-            if market.dispute_mechanism != MarketDisputeMechanism::Court {
+            if market.dispute_mechanism != Some(MarketDisputeMechanism::Court) {
                 return res;
             }
 
@@ -2246,10 +2243,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let mut has_failed = false;
             let now = <frame_system::Pallet<T>>::block_number();
@@ -2314,10 +2308,7 @@ mod pallet {
             ResultWithWeightInfo<Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>>>,
             DispatchError,
         > {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             // oracle outcome is added by pm-pallet
             let mut gd_outcomes: Vec<GlobalDisputeItem<Self::AccountId, Self::Balance>> =
@@ -2376,10 +2367,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &MarketOf<T>,
         ) -> Result<ResultWithWeightInfo<()>, DispatchError> {
-            ensure!(
-                market.dispute_mechanism == MarketDisputeMechanism::Court,
-                Error::<T>::MarketDoesNotHaveCourtMechanism
-            );
+            Self::ensure_dispute_mechanism(market)?;
 
             let court_id = <MarketIdToCourtId<T>>::get(market_id)
                 .ok_or(Error::<T>::MarketIdToCourtIdNotFound)?;

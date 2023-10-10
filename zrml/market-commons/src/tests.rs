@@ -39,7 +39,7 @@ const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<Ma
     creator_fee: Perbill::zero(),
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    dispute_mechanism: MarketDisputeMechanism::Authorized,
+    dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
