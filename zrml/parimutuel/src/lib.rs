@@ -45,7 +45,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchResult, Perquintill, SaturatedConversion, Saturating,
+        DispatchError, DispatchResult, Perquintill, SaturatedConversion, Saturating,
     };
     use zeitgeist_primitives::{
         constants::BASE,
@@ -149,6 +149,8 @@ mod pallet {
                         category_index,
                     ));
                     let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
+                    ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
+
                     let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
                     // each Parimutuel outcome asset has the market id included
                     // this allows us to query all outstanding shares for each discrete asset
@@ -201,62 +203,21 @@ mod pallet {
                         return Err(Error::<T>::InvalidMarketType.into());
                     };
 
-                    let calc_payouts =
-                        |final_value: u128, low: u128, high: u128| -> (Perquintill, Perquintill) {
-                            if final_value <= low {
-                                return (Perquintill::zero(), Perquintill::one());
-                            }
-                            if final_value >= high {
-                                return (Perquintill::one(), Perquintill::zero());
-                            }
-
-                            let payout_long: Perquintill = Perquintill::from_rational(
-                                final_value.saturating_sub(low),
-                                high.saturating_sub(low),
-                            );
-                            let payout_short: Perquintill = Perquintill::from_parts(
-                                Perquintill::one()
-                                    .deconstruct()
-                                    .saturating_sub(payout_long.deconstruct()),
-                            );
-                            (payout_long, payout_short)
-                        };
-
                     let (long_percent, short_percent) =
-                        calc_payouts(value, *bound.start(), *bound.end());
+                        Self::calc_final_payoff_percentages(value, *bound.start(), *bound.end());
 
                     let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
 
-                    let long_total = T::AssetManager::total_issuance(long_asset);
-                    let short_total = T::AssetManager::total_issuance(short_asset);
+                    let payoff_long_portion =
+                        Self::get_payoff(long_asset, long_percent, pot_total, long_balance)?;
 
-                    let payoff_long_total =
-                        long_percent.mul_floor(pot_total.saturated_into::<u128>());
-                    let payoff_short_total =
-                        short_percent.mul_floor(pot_total.saturated_into::<u128>());
+                    let payoff_short_portion: BalanceOf<T> =
+                        Self::get_payoff(short_asset, short_percent, pot_total, short_balance)?;
 
-                    let payoff_long_ratio_mul_base: BalanceOf<T> =
-                        bdiv(payoff_long_total.saturated_into(), long_total.saturated_into())?
-                            .saturated_into();
-                    let payoff_long: BalanceOf<T> = bmul(
-                        payoff_long_ratio_mul_base.saturated_into(),
-                        long_balance.saturated_into(),
-                    )?
-                    .saturated_into();
-
-                    let payoff_short_ratio_mul_base: BalanceOf<T> =
-                        bdiv(payoff_short_total.saturated_into(), short_total.saturated_into())?
-                            .saturated_into();
-                    let payoff_short: BalanceOf<T> = bmul(
-                        payoff_short_ratio_mul_base.saturated_into(),
-                        short_balance.saturated_into(),
-                    )?
-                    .saturated_into();
-
-                    // Ensure the market account has enough to pay out - if this is
+                    // Ensure the pot account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        pot_total >= payoff_long.saturating_add(payoff_short),
+                        pot_total >= payoff_long_portion.saturating_add(payoff_short_portion),
                         Error::<T>::InsufficientFundsInPotAccount,
                     );
 
@@ -264,8 +225,8 @@ mod pallet {
                     let slashable_short_balance = short_balance;
 
                     vec![
-                        (long_asset, payoff_long, slashable_long_balance),
-                        (short_asset, payoff_short, slashable_short_balance),
+                        (long_asset, payoff_long_portion, slashable_long_balance),
+                        (short_asset, payoff_short_portion, slashable_short_balance),
                     ]
                 }
             };
@@ -381,6 +342,67 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating(market_id)
         }
 
+        fn get_payoff(
+            asset: AssetOf<T>,
+            final_payoff_percentage: Perquintill,
+            pot_total: BalanceOf<T>,
+            outcome_balance: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let max_payoff = final_payoff_percentage.mul_floor(pot_total.saturated_into::<u128>());
+            let current_total_asset_amount = T::AssetManager::total_issuance(asset);
+            debug_assert!(
+                outcome_balance <= current_total_asset_amount,
+                "Outcome asset amount should be less than or equal to total issuance!"
+            );
+            let payoff_ratio_mul_base: BalanceOf<T> =
+                bdiv(max_payoff.saturated_into(), current_total_asset_amount.saturated_into())?
+                    .saturated_into();
+            let payoff_portion: BalanceOf<T> =
+                bmul(payoff_ratio_mul_base.saturated_into(), outcome_balance.saturated_into())?
+                    .saturated_into();
+            debug_assert!({
+                let max_payoff = max_payoff.saturated_into::<BalanceOf<T>>();
+                if max_payoff > current_total_asset_amount {
+                    // ratio is positive => gain profit, low cost `outcome_balance`
+                    payoff_portion > outcome_balance
+                } else if max_payoff < current_total_asset_amount {
+                    // ratio is negative => loss, high cost `outcome_balance`
+                    payoff_portion < outcome_balance
+                } else {
+                    // ratio is one => no profit, cost equal to payoff
+                    payoff_portion == outcome_balance
+                }
+            });
+            debug_assert!(
+                payoff_portion <= max_payoff.saturated_into::<BalanceOf<T>>(),
+                "Individual payoff should only be a portion of the maximum payoff!"
+            );
+
+            Ok(payoff_portion)
+        }
+
+        fn calc_final_payoff_percentages(
+            final_value: u128,
+            low: u128,
+            high: u128,
+        ) -> (Perquintill, Perquintill) {
+            if final_value <= low {
+                return (Perquintill::zero(), Perquintill::one());
+            }
+            if final_value >= high {
+                return (Perquintill::one(), Perquintill::zero());
+            }
+
+            let payoff_long: Perquintill = Perquintill::from_rational(
+                final_value.saturating_sub(low),
+                high.saturating_sub(low),
+            );
+            let payoff_short: Perquintill = Perquintill::from_parts(
+                Perquintill::one().deconstruct().saturating_sub(payoff_long.deconstruct()),
+            );
+            (payoff_long, payoff_short)
+        }
+
         fn check_values(
             winning_balance: BalanceOf<T>,
             pot_total: BalanceOf<T>,
@@ -388,7 +410,6 @@ mod pallet {
             payoff_ratio_mul_base: BalanceOf<T>,
             payoff: BalanceOf<T>,
         ) -> DispatchResult {
-            ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
             ensure!(pot_total >= winning_balance, Error::<T>::InsufficientFundsInPotAccount);
             ensure!(pot_total >= outcome_total, Error::<T>::OutcomeIssuanceGreaterCollateral);
             debug_assert!(
