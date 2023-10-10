@@ -24,6 +24,7 @@ extern crate alloc;
 mod benchmarks;
 mod mock;
 mod tests;
+pub mod types;
 pub mod weights;
 
 pub use pallet::*;
@@ -49,6 +50,7 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -133,7 +135,7 @@ mod pallet {
                 Balance = BalanceOf<Self>,
             >;
 
-        type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
+        type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
         /// The minimum amount each bet must be. Must be larger than the existential deposit of parimutuel shares.
         #[pallet::constant]
@@ -240,7 +242,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
+        scoring_rule: ScoringRule::Parimutuel,
         status: MarketStatus::Disputed,
         bonds: MarketBonds::default(),
     }

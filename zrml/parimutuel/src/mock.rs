@@ -21,17 +21,27 @@
 extern crate alloc;
 
 use crate as zrml_parimutuel;
+use crate::{AssetOf, BalanceOf, MarketIdOf};
 use alloc::{vec, vec::Vec};
-use frame_support::{construct_runtime, traits::{OnFinalize, OnInitialize, Everything}};
+use core::marker::PhantomData;
+use frame_support::{
+    construct_runtime,
+    pallet_prelude::Get,
+    traits::{Everything, OnFinalize, OnInitialize},
+};
+use frame_support::parameter_types;
+use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinimumPeriod,
-        PmPalletId, BASE, ParimutuelPalletId, MinBetSize,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
+        MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE, CENT,
     },
+    traits::DistributeFees,
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
         Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
@@ -41,8 +51,38 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
+pub const FEE_ACCOUNT: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
+
+pub const EXTERNAL_FEES: Balance = CENT;
+
+parameter_types! {
+    pub const FeeAccount: AccountIdTest = FEE_ACCOUNT;
+}
+
+pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
+
+impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
+where
+    F: Get<T::AccountId>,
+{
+    type Asset = AssetOf<T>;
+    type AccountId = T::AccountId;
+    type Balance = BalanceOf<T>;
+    type MarketId = MarketIdOf<T>;
+
+    fn distribute(
+        _market_id: Self::MarketId,
+        asset: Self::Asset,
+        account: &Self::AccountId,
+        amount: Self::Balance,
+    ) -> Self::Balance {
+        let fees = amount.saturated_into::<BalanceOf<T>>() * EXTERNAL_FEES.saturated_into();
+        let _ = T::AssetManager::transfer(asset, account, &F::get(), fees);
+        fees
+    }
+}
 
 construct_runtime!(
     pub enum Runtime
@@ -62,7 +102,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type ExternalFees = ExternalFees;
+    type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type AssetManager = AssetManager;
