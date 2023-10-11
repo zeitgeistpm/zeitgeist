@@ -585,7 +585,7 @@ where
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::Parimutuel,
-        status: MarketStatus::Disputed,
+        status: MarketStatus::Active,
         bonds: MarketBonds::default(),
     }
 }

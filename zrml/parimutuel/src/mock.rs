@@ -30,6 +30,7 @@ use frame_support::{
     parameter_types,
     traits::{Everything, OnFinalize, OnInitialize},
 };
+use sp_runtime::Perbill;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
@@ -55,8 +56,6 @@ pub const FEE_ACCOUNT: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
-pub const EXTERNAL_FEES: Balance = CENT;
-
 parameter_types! {
     pub const FeeAccount: AccountIdTest = FEE_ACCOUNT;
 }
@@ -78,7 +77,8 @@ where
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = amount.saturated_into::<BalanceOf<T>>() * EXTERNAL_FEES.saturated_into();
+        let fees =
+            Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>());
         let _ = T::AssetManager::transfer(asset, account, &F::get(), fees);
         fees
     }
