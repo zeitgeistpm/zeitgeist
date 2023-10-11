@@ -619,23 +619,34 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Tokens TotalIssuance (r:2 w:2)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     fn redeem_shares_scalar() -> Weight {
-        Weight::from_ref_time(149_531_000)
-            .saturating_add(T::DbWeight::get().reads(6))
-            .saturating_add(T::DbWeight::get().writes(5))
+        // Proof Size summary in bytes:
+        //  Measured:  `1171`
+        //  Estimated: `15855`
+        // Minimum execution time: 117_211 nanoseconds.
+        Weight::from_parts(133_970_000, 15855)
+            .saturating_add(T::DbWeight::get().reads(6_u64))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
     }
-    // Storage: MarketCommons Markets (r:1 w:1)
-    // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
-    // Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
-    // Storage: Balances Reserves (r:1 w:1)
-    // Storage: PredictionMarkets MarketIdsForEdit (r:0 w:1)
-    fn reject_market(c: u32, o: u32, _r: u32) -> Weight {
-        Weight::from_ref_time(146_031_046)
-            // Standard Error: 4_161
-            .saturating_add(Weight::from_ref_time(27_268).saturating_mul(c.into()))
-            // Standard Error: 4_161
-            .saturating_add(Weight::from_ref_time(2_604).saturating_mul(o.into()))
-            .saturating_add(T::DbWeight::get().reads(4))
-            .saturating_add(T::DbWeight::get().writes(5))
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
+    /// Proof: PredictionMarkets MarketIdsPerOpenTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    /// Storage: Balances Reserves (r:1 w:1)
+    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsForEdit (r:0 w:1)
+    /// Proof: PredictionMarkets MarketIdsForEdit (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    fn reject_market(_c: u32, _o: u32, r: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `719 + c * (16 ±0) + o * (16 ±0)`
+        //  Estimated: `13790`
+        // Minimum execution time: 94_260 nanoseconds.
+        Weight::from_parts(106_089_785, 13790)
+            // Standard Error: 266
+            .saturating_add(Weight::from_ref_time(1_689).saturating_mul(r.into()))
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
     }
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Timestamp Now (r:1 w:0)
