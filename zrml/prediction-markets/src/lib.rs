@@ -2028,7 +2028,7 @@ mod pallet {
     #[pallet::storage]
     pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
         _,
-        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<1_048_576>>,
+        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<16>>,
         ValueQuery,
     >;
 

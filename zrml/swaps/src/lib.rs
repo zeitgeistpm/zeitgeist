@@ -116,7 +116,7 @@ mod pallet {
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
+    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_parts(1_000_000, 100_000);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1271,19 +1271,33 @@ mod pallet {
             // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
             // the number of pools. This shouldn't ever happen, but if it does, we ensure that
             // `pool_count` is zero (this isn't really a runtime error).
-            let pool_count = weight
+            let weight_minus_overhead = weight.saturating_sub(overhead);
+            let max_pool_count_by_ref_time = weight_minus_overhead
                 .ref_time()
-                .saturating_sub(overhead.ref_time())
                 .checked_div(extra_weight_per_pool.ref_time())
                 .unwrap_or_else(|| {
-                    log::warn!("Unexpected zero division when calculating arbitrage weight");
+                    debug_assert!(
+                        false,
+                        "Unexpected zero division when calculating arbitrage ref time"
+                    );
                     0_u64
                 });
-            if pool_count == 0_u64 {
+            let max_pool_count_by_proof_size = weight_minus_overhead
+                .proof_size()
+                .checked_div(extra_weight_per_pool.proof_size())
+                .unwrap_or_else(|| {
+                    debug_assert!(
+                        false,
+                        "Unexpected zero division when calculating arbitrage proof size"
+                    );
+                    0_u64
+                });
+            let max_pool_count = max_pool_count_by_ref_time.min(max_pool_count_by_proof_size);
+            if max_pool_count == 0_u64 {
                 return weight;
             }
             Self::apply_to_cached_pools(
-                pool_count.saturated_into(),
+                max_pool_count.saturated_into(),
                 |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
                 extra_weight_per_pool,
             )
