@@ -32,7 +32,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::WeightInfoZeitgeist;
-    use core::marker::PhantomData;
+    use core::{cmp::Ordering, marker::PhantomData};
     use frame_support::{
         ensure,
         traits::{Get, IsType, StorageVersion},
@@ -80,6 +80,7 @@ mod pallet {
         /// - `asset`: The outcome asset to buy the shares of.
         /// - `amount`: The amount of collateral (base asset) to spend
         /// and of parimutuel shares to receive.
+        /// Keep in mind that market creator fees are taken from this amount.
         #[pallet::call_index(0)]
         #[pallet::weight(5000)]
         #[frame_support::transactional]
@@ -148,18 +149,30 @@ mod pallet {
                         market_id,
                         category_index,
                     ));
-                    let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
-                    ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
-
-                    let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
                     // each Parimutuel outcome asset has the market id included
                     // this allows us to query all outstanding shares for each discrete asset
                     let outcome_total = T::AssetManager::total_issuance(winning_asset);
+                    // use refund extrinsic in case there is no winner
+                    ensure!(outcome_total != <BalanceOf<T>>::zero(), Error::<T>::NoWinner);
+                    let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
+                    ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
+                    debug_assert!(
+                        outcome_total >= winning_balance,
+                        "The outcome issuance should be at least as high as the individual \
+                         balance of this outcome!"
+                    );
+
+                    let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
                     // use bdiv, because pot_total / outcome_total could be
                     // a rational number imprecisely rounded to the next integer
                     // however we need the precision here to calculate the correct payout
                     // by bdiv we multiply it with BASE and using bmul we divide it by BASE again
                     // Fugayzi, fugazi. It's a whazy. It's a woozie. It's fairy dust.
+                    debug_assert!(
+                        outcome_total != <BalanceOf<T>>::zero(),
+                        "If winning balance is non-zero, then the outcome total can only be at \
+                         least as high as the winning balance (non-zero too)!"
+                    );
                     let payoff_ratio_mul_base: BalanceOf<T> =
                         bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?
                             .saturated_into();
@@ -190,6 +203,7 @@ mod pallet {
                         market_id,
                         ScalarPosition::Short,
                     ));
+
                     let long_balance = T::AssetManager::free_balance(long_asset, &who);
                     let short_balance = T::AssetManager::free_balance(short_asset, &who);
                     ensure!(
@@ -232,10 +246,8 @@ mod pallet {
             };
 
             for (asset, payoff, slashable_asset_balance) in winning_assets {
-                // Destroy the shares.
                 T::AssetManager::slash(asset, &who, slashable_asset_balance);
 
-                // Pay out the winner.
                 let remaining_bal = T::AssetManager::free_balance(market.base_asset, &pot_account);
                 let actual_payoff = payoff.min(remaining_bal);
 
@@ -252,6 +264,77 @@ mod pallet {
                     });
                 }
             }
+
+            Ok(())
+        }
+
+        /// Refund the collateral of losing categorical outcome assets
+        /// in case that there was no account betting on the winner outcome.
+        #[pallet::call_index(2)]
+        #[pallet::weight(5000)]
+        #[frame_support::transactional]
+        pub fn refund_pot(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            let outcome = match refund_asset {
+                Asset::ParimutuelShare(outcome) => outcome,
+                _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
+            };
+            let market_id = match outcome {
+                Outcome::CategoricalOutcome(market_id, _) => market_id,
+                Outcome::ScalarOutcome(market_id, _) => market_id,
+            };
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
+            ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
+            let market_assets = Self::outcome_assets(market_id, &market);
+            ensure!(
+                market_assets.binary_search(&refund_asset).is_ok(),
+                Error::<T>::InvalidOutcomeAsset
+            );
+            let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
+            let pot_account = Self::pot_account(market_id);
+            let (refund_asset, refund_balance) = match winning_outcome {
+                OutcomeReport::Categorical(category_index) => {
+                    let winning_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(
+                        market_id,
+                        category_index,
+                    ));
+                    let outcome_total = T::AssetManager::total_issuance(winning_asset);
+                    ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
+
+                    let refund_balance = T::AssetManager::free_balance(refund_asset, &who);
+                    ensure!(!refund_balance.is_zero(), Error::<T>::RefundableBalanceIsZero);
+                    debug_assert!(
+                        refund_asset != winning_asset,
+                        "Since we were checking the total issuance of the winning asset to be \
+                         zero, if the refund balance is non-zero, then the winning asset can't be \
+                         the refund asset!"
+                    );
+
+                    (refund_asset, refund_balance)
+                }
+                OutcomeReport::Scalar(_) => return Err(Error::<T>::NoCategoricalOutcome.into()),
+            };
+
+            let slashable_asset_balance = refund_balance;
+            T::AssetManager::slash(refund_asset, &who, slashable_asset_balance);
+
+            let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+            debug_assert!(
+                pot_total >= refund_balance,
+                "The pot total should be at least as high as the individual refund balance!"
+            );
+            let refund_balance = refund_balance.min(pot_total);
+
+            T::AssetManager::transfer(market.base_asset, &pot_account, &who, refund_balance)?;
+
+            Self::deposit_event(Event::BalanceRefunded {
+                market_id,
+                asset: refund_asset,
+                refunded_balance: refund_balance,
+                sender: who.clone(),
+            });
 
             Ok(())
         }
@@ -291,6 +374,9 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        // There was no buyer of the winning outcome.
+        // Use the `refund` extrinsic to get the initial bet back.
+        NoWinner,
         OutcomeMismatch,
         MarketIsNotActive,
         AmountTooSmall,
@@ -301,10 +387,13 @@ mod pallet {
         MarketIsNotResolvedYet,
         Unexpected,
         NoResolvedOutcome,
+        RefundNotAllowed,
+        RefundableBalanceIsZero,
         NoWinningShares,
         InsufficientFundsInPotAccount,
         InvalidMarketType,
         OutcomeIssuanceGreaterCollateral,
+        NoCategoricalOutcome,
     }
 
     #[pallet::event]
@@ -325,6 +414,12 @@ mod pallet {
             asset: AssetOf<T>,
             balance: BalanceOf<T>,
             actual_payoff: BalanceOf<T>,
+            sender: AccountIdOf<T>,
+        },
+        BalanceRefunded {
+            market_id: MarketIdOf<T>,
+            asset: AssetOf<T>,
+            refunded_balance: BalanceOf<T>,
             sender: AccountIdOf<T>,
         },
     }
@@ -348,11 +443,19 @@ mod pallet {
             pot_total: BalanceOf<T>,
             outcome_balance: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
+            if outcome_balance.is_zero() {
+                return Ok(<BalanceOf<T>>::zero());
+            }
             let max_payoff = final_payoff_percentage.mul_floor(pot_total.saturated_into::<u128>());
             let current_total_asset_amount = T::AssetManager::total_issuance(asset);
             debug_assert!(
                 outcome_balance <= current_total_asset_amount,
                 "Outcome asset amount should be less than or equal to total issuance!"
+            );
+            debug_assert!(
+                current_total_asset_amount > <BalanceOf<T>>::zero(),
+                "The total issuance of the outcome asset should be greater than zero, because the \
+                 individual outcome balance is ensured to be non-zero above!"
             );
             let payoff_ratio_mul_base: BalanceOf<T> =
                 bdiv(max_payoff.saturated_into(), current_total_asset_amount.saturated_into())?
@@ -360,17 +463,13 @@ mod pallet {
             let payoff_portion: BalanceOf<T> =
                 bmul(payoff_ratio_mul_base.saturated_into(), outcome_balance.saturated_into())?
                     .saturated_into();
+
             debug_assert!({
                 let max_payoff = max_payoff.saturated_into::<BalanceOf<T>>();
-                if max_payoff > current_total_asset_amount {
-                    // ratio is positive => gain profit, low cost `outcome_balance`
-                    payoff_portion > outcome_balance
-                } else if max_payoff < current_total_asset_amount {
-                    // ratio is negative => loss, high cost `outcome_balance`
-                    payoff_portion < outcome_balance
-                } else {
-                    // ratio is one => no profit, cost equal to payoff
-                    payoff_portion == outcome_balance
+                match max_payoff.cmp(&current_total_asset_amount) {
+                    Ordering::Greater => payoff_portion > outcome_balance, // gain profit, low cost `outcome_balance`
+                    Ordering::Less => payoff_portion < outcome_balance, // loss, high cost `outcome_balance`
+                    Ordering::Equal => payoff_portion == outcome_balance, // no profit, cost equal to payoff
                 }
             });
             debug_assert!(
@@ -412,11 +511,6 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pot_total >= winning_balance, Error::<T>::InsufficientFundsInPotAccount);
             ensure!(pot_total >= outcome_total, Error::<T>::OutcomeIssuanceGreaterCollateral);
-            debug_assert!(
-                outcome_total >= winning_balance,
-                "The outcome issuance should be at least as high as the individual balance of \
-                 this outcome!"
-            );
             debug_assert!(
                 payoff_ratio_mul_base >= BASE.saturated_into(),
                 "The payoff ratio should be greater than or equal to BASE!"

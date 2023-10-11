@@ -14359,6 +14359,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
+ "more-asserts",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -14369,6 +14370,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "test-case",
+ "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
