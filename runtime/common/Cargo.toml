@@ -29,6 +29,7 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
+zeitgeist-primitives = { workspace = true }
 
 # Utility
 cfg-if = { workspace = true }
@@ -72,6 +73,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
+    "zeitgeist-primitives/std",
 ]
 
 [package]

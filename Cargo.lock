@@ -474,6 +474,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
+name = "az"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
+
+[[package]]
 name = "backtrace"
 version = "0.3.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -617,6 +623,7 @@ dependencies = [
  "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
+ "zrml-neo-swaps",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
  "zrml-rikiddo",
@@ -902,6 +909,12 @@ name = "byte-tools"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
+
+[[package]]
+name = "bytemuck"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17febce684fd15d89027105661fec94afb475cb995fbc59d2865198446ba2eea"
 
 [[package]]
 name = "byteorder"
@@ -1223,6 +1236,7 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -2746,6 +2760,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fixed"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36a65312835c1097a0c926ff3702df965285fadc33d948b87397ff8961bad881"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "num-traits",
+ "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "fixed-hash"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3378,6 +3405,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "half"
+version = "1.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
+
+[[package]]
 name = "handlebars"
 version = "4.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3568,6 +3601,20 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+
+[[package]]
+name = "hydra-dx-math"
+version = "7.4.3"
+source = "git+https://github.com/galacticcouncil/HydraDX-node?tag=v18.0.0#6173a8b0661582247eed774330aa8fa6d99d524d"
+dependencies = [
+ "fixed",
+ "num-traits",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-std",
+]
 
 [[package]]
 name = "hyper"
@@ -14325,8 +14372,10 @@ name = "zeitgeist-primitives"
 version = "0.4.0"
 dependencies = [
  "arbitrary",
+ "fixed",
  "frame-support",
  "frame-system",
+ "more-asserts",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -14337,6 +14386,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "test-case",
+ "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -14431,6 +14481,7 @@ dependencies = [
  "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
+ "zrml-neo-swaps",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
  "zrml-rikiddo",
@@ -14553,6 +14604,50 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+]
+
+[[package]]
+name = "zrml-neo-swaps"
+version = "0.4.0"
+dependencies = [
+ "fixed",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hydra-dx-math",
+ "more-asserts",
+ "orml-asset-registry",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-randomness-collective-flip",
+ "pallet-timestamp",
+ "pallet-treasury",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+ "substrate-fixed",
+ "test-case",
+ "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xcm",
+ "xcm-builder",
+ "zeitgeist-primitives",
+ "zrml-authorized",
+ "zrml-court",
+ "zrml-global-disputes",
+ "zrml-liquidity-mining",
+ "zrml-market-commons",
+ "zrml-neo-swaps",
+ "zrml-prediction-markets",
+ "zrml-prediction-markets-runtime-api",
+ "zrml-rikiddo",
+ "zrml-simple-disputes",
+ "zrml-swaps",
 ]
 
 [[package]]

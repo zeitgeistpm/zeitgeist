@@ -82,6 +82,7 @@ pub trait WeightInfoZeitgeist {
     fn market_status_manager(b: u32, f: u32) -> Weight;
     fn market_resolution_manager(r: u32, d: u32) -> Weight;
     fn process_subsidy_collecting_markets_dummy() -> Weight;
+    fn create_market_and_deploy_pool(m: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -754,5 +755,32 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         Weight::from_parts(5_900_000, 1024)
             .saturating_add(T::DbWeight::get().reads(1_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
+    }
+    /// Storage: Timestamp Now (r:1 w:0)
+    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+    /// Storage: Balances Reserves (r:1 w:1)
+    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
+    /// Storage: MarketCommons MarketCounter (r:1 w:1)
+    /// Proof: MarketCommons MarketCounter (max_values: Some(1), max_size: Some(16), added: 511, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    /// Storage: System Account (r:2 w:2)
+    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Storage: Tokens Accounts (r:4 w:4)
+    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
+    /// Storage: Tokens TotalIssuance (r:2 w:2)
+    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
+    /// Storage: NeoSwaps Pools (r:1 w:1)
+    /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(4652), added: 7127, mode: MaxEncodedLen)
+    /// Storage: MarketCommons Markets (r:0 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
+    fn create_market_and_deploy_pool(_m: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `291 + m * (17 ±0)`
+        //  Estimated: `36032`
+        // Minimum execution time: 166_000 nanoseconds.
+        Weight::from_parts(172_000_000, 36032)
+            .saturating_add(T::DbWeight::get().reads(13_u64))
+            .saturating_add(T::DbWeight::get().writes(13_u64))
     }
 }

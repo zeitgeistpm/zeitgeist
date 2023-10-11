@@ -1,5 +1,4 @@
 // Copyright 2023 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,19 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use sp_runtime::DispatchResult;
 
-extern crate alloc;
+pub trait CompleteSetOperationsApi {
+    type AccountId;
+    type Balance;
+    type MarketId;
 
-mod asset;
-pub mod constants;
-mod market;
-pub mod math;
-mod max_runtime_usize;
-mod outcome_report;
-mod pool;
-mod pool_status;
-mod proxy_type;
-mod serde_wrapper;
-pub mod traits;
-pub mod types;
+    fn buy_complete_set(
+        who: Self::AccountId,
+        market_id: Self::MarketId,
+        amount: Self::Balance,
+    ) -> DispatchResult;
+    fn sell_complete_set(
+        who: Self::AccountId,
+        market_id: Self::MarketId,
+        amount: Self::Balance,
+    ) -> DispatchResult;
+}

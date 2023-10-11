@@ -40,6 +40,7 @@ mod pallet {
         dispatch::{DispatchResultWithPostInfo, Pays, Weight},
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
+        require_transactional,
         storage::{with_transaction, TransactionOutcome},
         traits::{
             tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
@@ -61,7 +62,8 @@ mod pallet {
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
         traits::{
-            DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
+            CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
+            DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
         },
         types::{
             Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
@@ -535,7 +537,7 @@ mod pallet {
                 );
 
                 match m.scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Orderbook => {
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
                         m.status = MarketStatus::Active;
                     }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => {
@@ -623,7 +625,11 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            Self::do_buy_complete_set(sender, market_id, amount)
+            Self::do_buy_complete_set(sender, market_id, amount)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let assets = Self::outcome_assets(market_id, &market);
+            let assets_len: u32 = assets.len().saturated_into();
+            Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
         }
 
         /// Dispute on a market that has been reported or already disputed.
@@ -793,57 +799,20 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
-
-            let bonds = match creation {
-                MarketCreation::Advised => MarketBonds {
-                    creation: Some(Bond::new(sender.clone(), T::AdvisoryBond::get())),
-                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
-                    ..Default::default()
-                },
-                MarketCreation::Permissionless => MarketBonds {
-                    creation: Some(Bond::new(sender.clone(), T::ValidityBond::get())),
-                    oracle: Some(Bond::new(sender.clone(), T::OracleBond::get())),
-                    ..Default::default()
-                },
-            };
-
-            let market = Self::construct_market(
+            let (ids_len, _) = Self::do_create_market(
+                sender,
                 base_asset,
-                sender.clone(),
                 creator_fee,
                 oracle,
                 period,
                 deadlines,
                 metadata,
-                creation.clone(),
+                creation,
                 market_type,
                 dispute_mechanism,
                 scoring_rule,
-                None,
-                None,
-                bonds.clone(),
             )?;
-
-            T::AssetManager::reserve_named(
-                &Self::reserve_id(),
-                Asset::Ztg,
-                &sender,
-                bonds.total_amount_bonded(&sender),
-            )?;
-
-            let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
-            let mut extra_weight = Weight::zero();
-
-            if market.status == MarketStatus::CollectingSubsidy {
-                extra_weight = Self::start_subsidy(&market, market_id)?;
-            }
-
-            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
-
-            Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
-
-            Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::create_market(ids_len)).into())
         }
 
         /// Edit a proposed market for which request is made.
@@ -1331,9 +1300,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`, where `n` is the number of assets for a categorical market.
         #[pallet::call_index(15)]
-        #[pallet::weight(
-            T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
-        )]
+        #[pallet::weight(T::WeightInfo::sell_complete_set(T::MaxCategories::get().into()))]
         #[transactional]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
@@ -1341,41 +1308,9 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
-
+            Self::do_sell_complete_set(sender, market_id, amount)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(
-                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Orderbook),
-                Error::<T>::InvalidScoringRule
-            );
-            Self::ensure_market_is_active(&market)?;
-
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
-            ensure!(
-                T::AssetManager::free_balance(market.base_asset, &market_account) >= amount,
-                "Market account does not have sufficient reserves.",
-            );
-
             let assets = Self::outcome_assets(market_id, &market);
-
-            // verify first.
-            for asset in assets.iter() {
-                // Ensures that the sender has sufficient amount of each
-                // share in the set.
-                ensure!(
-                    T::AssetManager::free_balance(*asset, &sender) >= amount,
-                    Error::<T>::InsufficientShareBalance,
-                );
-            }
-
-            // write last.
-            for asset in assets.iter() {
-                T::AssetManager::slash(*asset, &sender, amount);
-            }
-
-            T::AssetManager::transfer(market.base_asset, &market_account, &sender, amount)?;
-
-            Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
             Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
@@ -1483,6 +1418,50 @@ mod pallet {
 
             Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
         }
+
+        /// Create a market, deploy a LMSR pool, and buy outcome tokens and provide liquidity to the
+        /// market.
+        ///
+        /// # Weight
+        ///
+        /// `O(n)` where `n` is the number of markets which close on the same block, plus the
+        /// resources consumed by `DeployPool::create_pool`. In the standard implementation using
+        /// neo-swaps, this is `O(m)` where `m` is the number of assets in the market.
+        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(CacheSize::get()))]
+        #[transactional]
+        #[pallet::call_index(17)]
+        pub fn create_market_and_deploy_pool(
+            origin: OriginFor<T>,
+            base_asset: Asset<MarketIdOf<T>>,
+            creator_fee: Perbill,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            market_type: MarketType,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
+            #[pallet::compact] amount: BalanceOf<T>,
+            spot_prices: Vec<BalanceOf<T>>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let (ids_len, market_id) = Self::do_create_market(
+                who.clone(),
+                base_asset,
+                creator_fee,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                MarketCreation::Permissionless,
+                market_type,
+                dispute_mechanism,
+                ScoringRule::Lmsr,
+            )?;
+            Self::do_buy_complete_set(who.clone(), market_id, amount)?;
+            T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
+            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
+        }
     }
 
     #[pallet::config]
@@ -1537,6 +1516,13 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
                 Moment = MomentOf<Self>,
                 Origin = Self::RuntimeOrigin,
+            >;
+
+        /// Used to deploy neo-swaps pools.
+        type DeployPool: DeployPoolApi<
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
             >;
 
         /// The origin that is allowed to destroy markets.
@@ -2069,6 +2055,71 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
+        fn do_create_market(
+            who: T::AccountId,
+            base_asset: Asset<MarketIdOf<T>>,
+            creator_fee: Perbill,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            creation: MarketCreation,
+            market_type: MarketType,
+            dispute_mechanism: Option<MarketDisputeMechanism>,
+            scoring_rule: ScoringRule,
+        ) -> Result<(u32, MarketIdOf<T>), DispatchError> {
+            let bonds = match creation {
+                MarketCreation::Advised => MarketBonds {
+                    creation: Some(Bond::new(who.clone(), T::AdvisoryBond::get())),
+                    oracle: Some(Bond::new(who.clone(), T::OracleBond::get())),
+                    ..Default::default()
+                },
+                MarketCreation::Permissionless => MarketBonds {
+                    creation: Some(Bond::new(who.clone(), T::ValidityBond::get())),
+                    oracle: Some(Bond::new(who.clone(), T::OracleBond::get())),
+                    ..Default::default()
+                },
+            };
+
+            let market = Self::construct_market(
+                base_asset,
+                who.clone(),
+                creator_fee,
+                oracle,
+                period,
+                deadlines,
+                metadata,
+                creation.clone(),
+                market_type,
+                dispute_mechanism,
+                scoring_rule,
+                None,
+                None,
+                bonds.clone(),
+            )?;
+
+            T::AssetManager::reserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &who,
+                bonds.total_amount_bonded(&who),
+            )?;
+
+            let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
+
+            if market.status == MarketStatus::CollectingSubsidy {
+                let _ = Self::start_subsidy(&market, market_id)?;
+            }
+
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
+
+            Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
+
+            Ok((ids_amount, market_id))
+        }
+
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
             market: &MarketOf<T>,
@@ -2238,11 +2289,60 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
+        pub(crate) fn do_sell_complete_set(
+            who: T::AccountId,
+            market_id: MarketIdOf<T>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
+
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            ensure!(
+                matches!(
+                    market.scoring_rule,
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook
+                ),
+                Error::<T>::InvalidScoringRule
+            );
+            Self::ensure_market_is_active(&market)?;
+
+            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
+            ensure!(
+                T::AssetManager::free_balance(market.base_asset, &market_account) >= amount,
+                "Market account does not have sufficient reserves.",
+            );
+
+            let assets = Self::outcome_assets(market_id, &market);
+
+            // verify first.
+            for asset in assets.iter() {
+                // Ensures that the sender has sufficient amount of each
+                // share in the set.
+                ensure!(
+                    T::AssetManager::free_balance(*asset, &who) >= amount,
+                    Error::<T>::InsufficientShareBalance,
+                );
+            }
+
+            // write last.
+            for asset in assets.iter() {
+                T::AssetManager::slash(*asset, &who, amount);
+            }
+
+            T::AssetManager::transfer(market.base_asset, &market_account, &who, amount)?;
+
+            Self::deposit_event(Event::SoldCompleteSet(market_id, amount, who));
+
+            Ok(())
+        }
+
+        #[require_transactional]
         pub(crate) fn do_buy_complete_set(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
@@ -2250,7 +2350,10 @@ mod pallet {
                 Error::<T>::NotEnoughBalance
             );
             ensure!(
-                matches!(market.scoring_rule, ScoringRule::CPMM | ScoringRule::Orderbook),
+                matches!(
+                    market.scoring_rule,
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook
+                ),
                 Error::<T>::InvalidScoringRule
             );
             Self::ensure_market_is_active(&market)?;
@@ -2265,8 +2368,7 @@ mod pallet {
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
 
-            let assets_len: u32 = assets.len().saturated_into();
-            Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
+            Ok(())
         }
 
         pub(crate) fn do_reject_market(
@@ -3073,7 +3175,9 @@ mod pallet {
             }
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => match scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Orderbook => MarketStatus::Active,
+                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                        MarketStatus::Active
+                    }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
                 },
                 MarketCreation::Advised => MarketStatus::Proposed,
@@ -3254,6 +3358,31 @@ mod pallet {
 
         fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
             remove_auto_resolve::<T>(market_id, resolve_at)
+        }
+    }
+
+    impl<T> CompleteSetOperationsApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type Balance = BalanceOf<T>;
+        type MarketId = MarketIdOf<T>;
+
+        fn buy_complete_set(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            amount: Self::Balance,
+        ) -> DispatchResult {
+            Self::do_buy_complete_set(who, market_id, amount)
+        }
+
+        fn sell_complete_set(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            amount: Self::Balance,
+        ) -> DispatchResult {
+            Self::do_sell_complete_set(who, market_id, amount)
         }
     }
 }

@@ -1,5 +1,4 @@
 // Copyright 2023 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,19 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::{BalanceOf, Config};
 
-extern crate alloc;
-
-mod asset;
-pub mod constants;
-mod market;
-pub mod math;
-mod max_runtime_usize;
-mod outcome_report;
-mod pool;
-mod pool_status;
-mod proxy_type;
-mod serde_wrapper;
-pub mod traits;
-pub mod types;
+pub(crate) struct FeeDistribution<T: Config> {
+    pub(crate) remaining: BalanceOf<T>,
+    pub(crate) swap_fees: BalanceOf<T>,
+    pub(crate) external_fees: BalanceOf<T>,
+}

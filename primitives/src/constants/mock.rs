@@ -70,6 +70,13 @@ parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
 }
 
+// NeoSwaps
+parameter_types! {
+    pub storage NeoExitFee: Balance = CENT;
+    pub const NeoMaxSwapFee: Balance = 10 * CENT;
+    pub const NeoSwapsPalletId: PalletId = PalletId(*b"zge/neos");
+}
+
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
@@ -146,11 +153,10 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    // Well, not every asset is a currency ¯\_(ツ)_/¯
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::Ztg => ExistentialDeposit::get(),
-            _ => 0
+            _ => 10
         }
     };
 }

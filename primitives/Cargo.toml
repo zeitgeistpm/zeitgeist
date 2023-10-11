@@ -1,5 +1,6 @@
 [dependencies]
 arbitrary = { workspace = true, optional = true }
+fixed = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-currencies = { workspace = true }
@@ -13,7 +14,9 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 
 [dev-dependencies]
+more-asserts = { workspace = true }
 test-case = { workspace = true }
+typenum = { workspace = true }
 
 [features]
 default = ["std"]

@@ -34,34 +34,32 @@ use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    DispatchError, DispatchResult,
 };
+use std::cell::RefCell;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId, BalanceFractionalDecimals,
-        BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId, ExistentialDeposit,
-        ExistentialDeposits, ExitFee, GetNativeCurrencyId, InflationPeriod,
-        LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
-        MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
-        MaxEditReasonLen, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
-        MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
-        MinJurorStake, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
+        BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId,
+        ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
+        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
+        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories, MaxCourtParticipants,
+        MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
+        MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
+        MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
+        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
     },
+    traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
-
-use zeitgeist_primitives::constants::mock::{
-    AddOutcomePeriod, GdVotingPeriod, GlobalDisputeLockId, GlobalDisputesPalletId,
-    MaxGlobalDisputeVotes, MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
-};
-
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -73,6 +71,76 @@ pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
+
+#[allow(unused)]
+pub struct DeployPoolMock;
+
+#[allow(unused)]
+#[derive(Clone)]
+pub struct DeployPoolArgs {
+    who: AccountIdTest,
+    market_id: MarketId,
+    amount: Balance,
+    swap_prices: Vec<Balance>,
+    swap_fee: Balance,
+}
+
+thread_local! {
+    pub static DEPLOY_POOL_CALL_DATA: RefCell<Vec<DeployPoolArgs>> = RefCell::new(vec![]);
+    pub static DEPLOY_POOL_RETURN_VALUE: RefCell<DispatchResult> = RefCell::new(Ok(()));
+}
+
+#[allow(unused)]
+impl DeployPoolApi for DeployPoolMock {
+    type AccountId = AccountIdTest;
+    type Balance = Balance;
+    type MarketId = MarketId;
+
+    fn deploy_pool(
+        who: Self::AccountId,
+        market_id: Self::MarketId,
+        amount: Self::Balance,
+        swap_prices: Vec<Self::Balance>,
+        swap_fee: Self::Balance,
+    ) -> DispatchResult {
+        DEPLOY_POOL_CALL_DATA.with(|value| {
+            value.borrow_mut().push(DeployPoolArgs {
+                who,
+                market_id,
+                amount,
+                swap_prices,
+                swap_fee,
+            })
+        });
+        DEPLOY_POOL_RETURN_VALUE.with(|v| *v.borrow())
+    }
+}
+
+#[allow(unused)]
+impl DeployPoolMock {
+    pub fn called_once_with(
+        who: AccountIdTest,
+        market_id: MarketId,
+        amount: Balance,
+        swap_prices: Vec<Balance>,
+        swap_fee: Balance,
+    ) -> bool {
+        if DEPLOY_POOL_CALL_DATA.with(|value| value.borrow().len()) != 1 {
+            return false;
+        }
+        let args = DEPLOY_POOL_CALL_DATA.with(|value| value.borrow()[0].clone());
+        args.who == who
+            && args.market_id == market_id
+            && args.amount == amount
+            && args.swap_prices == swap_prices
+            && args.swap_fee == swap_fee
+    }
+
+    pub fn return_error() {
+        DEPLOY_POOL_RETURN_VALUE
+            .with(|value| *value.borrow_mut() = Err(DispatchError::Other("neo-swaps")));
+    }
+}
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
@@ -123,6 +191,7 @@ impl crate::Config for Runtime {
     type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type DeployPool = DeployPoolMock;
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
@@ -379,6 +448,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
+        DEPLOY_POOL_CALL_DATA.with(|value| value.borrow_mut().clear());
         Self {
             balances: vec![
                 (ALICE, INITIAL_BALANCE),
