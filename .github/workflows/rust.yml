@@ -103,13 +103,10 @@ jobs:
 
       - name: Install build tools
         run: ./scripts/init.sh
-
-      - name: Update Shell 
-        shell: bash -l
-        run: |
-          cargo --version
       
-      - run: ./scripts/benchmarks/quick_check.sh
+      - run: |
+          source $HOME/.cargo/env 
+          ./scripts/benchmarks/quick_check.sh
 
   test_standalone:
     name: Test standalone build
