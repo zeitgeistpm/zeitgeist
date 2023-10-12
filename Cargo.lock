@@ -532,7 +532,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -623,6 +623,7 @@ dependencies = [
  "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
+ "zrml-neo-swaps",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
  "zrml-rikiddo",
@@ -911,9 +912,9 @@ checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
 
 [[package]]
 name = "bytemuck"
-version = "1.14.0"
+version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374d28ec25809ee0e23827c2ab573d729e293f281dfe393500e7ad618baa61c6"
+checksum = "17febce684fd15d89027105661fec94afb475cb995fbc59d2865198446ba2eea"
 
 [[package]]
 name = "byteorder"
@@ -1203,7 +1204,7 @@ dependencies = [
 
 [[package]]
 name = "common-runtime"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-xcmp-queue",
@@ -1235,6 +1236,7 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -3601,6 +3603,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
+name = "hydra-dx-math"
+version = "7.4.3"
+source = "git+https://github.com/galacticcouncil/HydraDX-node?tag=v18.0.0#6173a8b0661582247eed774330aa8fa6d99d524d"
+dependencies = [
+ "fixed",
+ "num-traits",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-std",
+]
+
+[[package]]
 name = "hyper"
 version = "0.14.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5123,7 +5139,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-vrf"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#286d43904f4e8fe5f114731e0c20fcca052a30e3"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#095ddae0ea44d8385453091e5e11d475b3dbda1e"
 dependencies = [
  "nimbus-primitives",
  "parity-scale-codec",
@@ -5878,7 +5894,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#286d43904f4e8fe5f114731e0c20fcca052a30e3"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#095ddae0ea44d8385453091e5e11d475b3dbda1e"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6484,7 +6500,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#286d43904f4e8fe5f114731e0c20fcca052a30e3"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#095ddae0ea44d8385453091e5e11d475b3dbda1e"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10855,7 +10871,7 @@ dependencies = [
 [[package]]
 name = "session-keys-primitives"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#286d43904f4e8fe5f114731e0c20fcca052a30e3"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=polkadot-v0.9.38-use-paritytech-dependencies#095ddae0ea44d8385453091e5e11d475b3dbda1e"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -14261,7 +14277,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "battery-station-runtime",
  "cfg-if",
@@ -14353,7 +14369,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "arbitrary",
  "fixed",
@@ -14375,7 +14391,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -14465,6 +14481,7 @@ dependencies = [
  "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
+ "zrml-neo-swaps",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
  "zrml-rikiddo",
@@ -14496,7 +14513,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14513,7 +14530,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "arrayvec 0.7.4",
  "frame-benchmarking",
@@ -14537,7 +14554,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14557,7 +14574,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14575,7 +14592,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -14590,8 +14607,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-neo-swaps"
+version = "0.4.0"
+dependencies = [
+ "fixed",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hydra-dx-math",
+ "more-asserts",
+ "orml-asset-registry",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-randomness-collective-flip",
+ "pallet-timestamp",
+ "pallet-treasury",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+ "substrate-fixed",
+ "test-case",
+ "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xcm",
+ "xcm-builder",
+ "zeitgeist-primitives",
+ "zrml-authorized",
+ "zrml-court",
+ "zrml-global-disputes",
+ "zrml-liquidity-mining",
+ "zrml-market-commons",
+ "zrml-neo-swaps",
+ "zrml-prediction-markets",
+ "zrml-prediction-markets-runtime-api",
+ "zrml-rikiddo",
+ "zrml-simple-disputes",
+ "zrml-swaps",
+]
+
+[[package]]
 name = "zrml-orderbook-v1"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14644,7 +14705,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14696,7 +14757,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14705,7 +14766,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "arbitrary",
  "cfg-if",
@@ -14738,7 +14799,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14758,7 +14819,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14774,7 +14835,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14817,7 +14878,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14830,7 +14891,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.3.11"
+version = "0.4.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

@@ -25,6 +25,9 @@
   "parachain_id": 2101,
   "relay_chain": "rococo",
   "consensusEngine": null,
+  "bad_blocks": [
+    "0x74d8c181547c1607ed28120f94cbe527cb3828772b3e794aabb45dc6a16e482d"
+  ],
   "codeSubstitutes": {},
   "genesis": {
     "raw": {
