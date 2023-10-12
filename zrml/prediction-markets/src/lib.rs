@@ -528,7 +528,10 @@ mod pallet {
                 );
 
                 match m.scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
+                    ScoringRule::CPMM
+                    | ScoringRule::Lmsr
+                    | ScoringRule::Parimutuel
+                    | ScoringRule::Orderbook => {
                         m.status = MarketStatus::Active;
                     }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => {
@@ -3175,9 +3178,10 @@ mod pallet {
             }
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => match scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-                        MarketStatus::Active
-                    }
+                    ScoringRule::CPMM
+                    | ScoringRule::Lmsr
+                    | ScoringRule::Parimutuel
+                    | ScoringRule::Orderbook => MarketStatus::Active,
                     ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
                 },
                 MarketCreation::Advised => MarketStatus::Proposed,

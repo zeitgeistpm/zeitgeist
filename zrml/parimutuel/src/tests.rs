@@ -20,7 +20,7 @@
 
 use crate::{mock::*, *};
 use frame_support::assert_ok;
-use zeitgeist_primitives::types::{Asset, MarketType, Outcome, MarketStatus};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, Outcome};
 use zrml_market_commons::Markets;
 
 #[test]

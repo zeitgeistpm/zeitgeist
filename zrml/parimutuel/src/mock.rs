@@ -30,12 +30,11 @@ use frame_support::{
     parameter_types,
     traits::{Everything, OnFinalize, OnInitialize},
 };
-use sp_runtime::Perbill;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    SaturatedConversion,
+    Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
