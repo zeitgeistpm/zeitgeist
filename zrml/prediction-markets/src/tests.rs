@@ -5810,7 +5810,10 @@ fn create_market_and_deploy_pool_works() {
         assert_eq!(market.bonds, bonds);
         // Check that the correct amount of full sets were bought.
         assert_eq!(
-            AssetManager::free_balance(Asset::CategoricalOutcome(market_id, 0), &ALICE),
+            AssetManager::free_balance(
+                Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0),),
+                &ALICE
+            ),
             amount
         );
         assert!(DeployPoolMock::called_once_with(
