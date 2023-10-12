@@ -33,7 +33,7 @@ use zeitgeist_primitives::{
     math::fixed::{bdiv, bmul},
     types::{
         AccountIdTest, Asset, Deadlines, MarketCreation, MarketId, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, ScalarPosition, ScoringRule,
+        MarketType, MultiHash, Outcome, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};

@@ -125,7 +125,7 @@ fn sell_fails_on_incorrect_asset_count() {
                 RuntimeOrigin::signed(BOB),
                 market_id,
                 1,
-                Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
                 _1,
                 0
             ),
@@ -151,7 +151,7 @@ fn sell_fails_on_market_not_found() {
                 RuntimeOrigin::signed(BOB),
                 market_id,
                 2,
-                Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
                 _1,
                 0
             ),
@@ -188,7 +188,7 @@ fn sell_fails_on_inactive_market(market_status: MarketStatus) {
                 RuntimeOrigin::signed(BOB),
                 market_id,
                 2,
-                Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
                 _1,
                 0
             ),
@@ -207,7 +207,7 @@ fn sell_fails_on_pool_not_found() {
                 RuntimeOrigin::signed(BOB),
                 market_id,
                 2,
-                Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
                 _1,
                 0
             ),
@@ -233,7 +233,7 @@ fn sell_fails_on_asset_not_found(market_type: MarketType) {
                 RuntimeOrigin::signed(BOB),
                 market_id,
                 2,
-                Asset::CategoricalOutcome(market_id, 2),
+                Asset::Outcome(Outcome::CategoricalOutcome(market_id, 2)),
                 _1,
                 u128::MAX,
             ),
@@ -254,7 +254,7 @@ fn sell_fails_on_numerical_limits() {
             CENT,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
+        let asset_in = Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
         let amount_in = 100 * pool.liquidity_parameter;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
@@ -276,7 +276,7 @@ fn sell_fails_on_insufficient_funds() {
             CENT,
         );
         let amount_in = _10;
-        let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
+        let asset_in = Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in - 1));
         assert_noop!(
             NeoSwaps::sell(
@@ -304,7 +304,7 @@ fn sell_fails_on_amount_out_below_min() {
             CENT,
         );
         let amount_in = _20;
-        let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
+        let asset_in = Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         // Selling 20 at price of .5 will return less than 10 dollars due to slippage.
         assert_noop!(
@@ -325,7 +325,7 @@ fn sell_fails_on_spot_price_below_min() {
             vec![_1_2, _1_2],
             CENT,
         );
-        let asset_in = Asset::CategoricalOutcome(market_id, 0);
+        let asset_in = Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0));
         let amount_in = _80;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
