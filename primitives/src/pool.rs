@@ -84,5 +84,6 @@ where
 pub enum ScoringRule {
     CPMM,
     RikiddoSigmoidFeeMarketEma,
+    Lmsr,
     Orderbook,
 }

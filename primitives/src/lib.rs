@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -22,6 +23,7 @@ extern crate alloc;
 mod asset;
 pub mod constants;
 mod market;
+pub mod math;
 mod max_runtime_usize;
 mod outcome_report;
 mod pool;

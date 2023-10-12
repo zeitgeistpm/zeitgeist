@@ -216,7 +216,7 @@ where
                 return Err(Error::<T>::UnsupportedTrade.into());
             }
         }
-        ScoringRule::Orderbook => {
+        ScoringRule::Lmsr | ScoringRule::Orderbook => {
             return Err(Error::<T>::InvalidScoringRule.into());
         }
     }
@@ -233,7 +233,7 @@ where
             spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
             Error::<T>::MathApproximation
         ),
-        ScoringRule::Orderbook => {
+        ScoringRule::Lmsr | ScoringRule::Orderbook => {
             return Err(Error::<T>::InvalidScoringRule.into());
         }
     }
@@ -256,7 +256,7 @@ where
             let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
             T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
         }
-        ScoringRule::Orderbook => {
+        ScoringRule::Lmsr | ScoringRule::Orderbook => {
             return Err(Error::<T>::InvalidScoringRule.into());
         }
     }
