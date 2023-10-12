@@ -39,7 +39,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
-        MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE, CENT,
+        MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
     },
     traits::DistributeFees,
     types::{
@@ -51,12 +51,12 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
-pub const FEE_ACCOUNT: AccountIdTest = 42;
+pub const MARKET_CREATOR: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
 parameter_types! {
-    pub const FeeAccount: AccountIdTest = FEE_ACCOUNT;
+    pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
 }
 
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
@@ -208,11 +208,16 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
+        let mut t: sp_io::TestExternalities = t.into();
+
+        // to ensure we can have events emitted in the tests. events not present at genesis block
+        t.execute_with(|| System::set_block_number(1));
+
         t.into()
     }
 }
 
-pub fn run_to_block(n: BlockNumber) {
+pub fn _run_to_block(n: BlockNumber) {
     while System::block_number() < n {
         Balances::on_finalize(System::block_number());
         System::on_finalize(System::block_number());
@@ -222,6 +227,6 @@ pub fn run_to_block(n: BlockNumber) {
     }
 }
 
-pub fn run_blocks(n: BlockNumber) {
-    run_to_block(System::block_number() + n);
+pub fn _run_blocks(n: BlockNumber) {
+    _run_to_block(System::block_number() + n);
 }
