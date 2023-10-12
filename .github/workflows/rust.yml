@@ -107,7 +107,7 @@ jobs:
       - name: Update Shell 
         shell: bash -l
         run: |
-        cargo --version
+          cargo --version
       
       - run: ./scripts/benchmarks/quick_check.sh
 
