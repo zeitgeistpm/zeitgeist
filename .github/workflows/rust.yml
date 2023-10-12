@@ -17,7 +17,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -43,7 +43,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -113,7 +113,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -183,7 +183,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
