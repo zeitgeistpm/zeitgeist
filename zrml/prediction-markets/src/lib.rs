@@ -164,13 +164,13 @@ mod pallet {
                     let slash_amount = percentage.mul_floor(value);
                     (slash_amount, value.saturating_sub(slash_amount))
                 } else {
-                    (value, <BalanceOf<T>>::zero())
+                    (value, BalanceOf::<T>::zero())
                 };
                 let (imbalance, excess) =
                     T::Currency::slash_reserved_named(&Self::reserve_id(), &bond.who, slash_amount);
                 // If there's excess, there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
-                if excess != <BalanceOf<T>>::zero() {
+                if excess != BalanceOf::<T>::zero() {
                     let warning = format!(
                         "Failed to settle the {} bond of market {:?}",
                         stringify!($bond_type),
@@ -179,7 +179,7 @@ mod pallet {
                     log::warn!("{}", warning);
                     debug_assert!(false, "{}", warning);
                 }
-                if unreserve_amount != <BalanceOf<T>>::zero() {
+                if unreserve_amount != BalanceOf::<T>::zero() {
                     T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
@@ -222,7 +222,7 @@ mod pallet {
                 // there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
                 match res {
-                    Ok(missing) if missing != <BalanceOf<T>>::zero() => {
+                    Ok(missing) if missing != BalanceOf::<T>::zero() => {
                         let warning = format!(
                             "Failed to repatriate all of the {} bond of market {:?} (missing \
                              balance {:?}).",
@@ -1175,7 +1175,7 @@ mod pallet {
                 )?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
-                if balance != <BalanceOf<T>>::zero() {
+                if balance != BalanceOf::<T>::zero() {
                     Self::deposit_event(Event::TokensRedeemed(
                         market_id,
                         currency_id,
@@ -1371,7 +1371,7 @@ mod pallet {
             initial_items.push(InitialItemOf::<T> {
                 outcome: report.outcome.clone(),
                 owner: report.by.clone(),
-                amount: <BalanceOf<T>>::zero(),
+                amount: BalanceOf::<T>::zero(),
             });
 
             let gd_items = res_1.result;

@@ -17,12 +17,10 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(clippy::type_complexity)]
-extern crate alloc;
 
 use crate::types::{Asset, Market, PoolId};
-use alloc::fmt::Debug;
 use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
+    dispatch::{fmt::Debug, DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     storage::PrefixIterator,
     Parameter,

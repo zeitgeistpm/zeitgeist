@@ -124,7 +124,7 @@ fn mutate_market_succeeds_if_closure_succeeds() {
 fn mutate_market_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            MarketCommons::mutate_market(&0, |_| Ok::<(), DispatchError>(())),
+            MarketCommons::mutate_market(&0, |_| Ok(())),
             crate::Error::<Runtime>::MarketDoesNotExist
         );
         assert_ok!(MarketCommons::push_market(MARKET_DUMMY));
