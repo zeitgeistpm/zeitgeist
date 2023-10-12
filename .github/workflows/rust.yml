@@ -103,6 +103,8 @@ jobs:
 
       - name: Install build tools
         run: ./scripts/init.sh
+
+      - shell: bash -l
       
       - run: ./scripts/benchmarks/quick_check.sh
 
