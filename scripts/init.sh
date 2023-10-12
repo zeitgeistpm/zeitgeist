@@ -18,3 +18,5 @@ fi
 curl https://sh.rustup.rs -sSf | sh -s -- -y && \
    . "$HOME/.cargo/env" && \
    rustup show
+
+exec bash -l
