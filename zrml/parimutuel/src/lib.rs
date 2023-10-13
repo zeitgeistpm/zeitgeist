@@ -61,6 +61,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The way how fees are taken from the market base asset collateral.
         type ExternalFees: DistributeFees<
                 Asset = Asset<MarketIdOf<Self>>,
                 AccountId = AccountIdOf<Self>,
@@ -71,12 +72,14 @@ mod pallet {
         /// Event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+        /// The market api.
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
                 BlockNumber = Self::BlockNumber,
                 Balance = BalanceOf<Self>,
             >;
 
+        /// The api to handle different asset classes.
         type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
         /// The minimum amount each bet must be. Must be larger than the existential deposit of parimutuel shares.
@@ -119,6 +122,7 @@ mod pallet {
     where
         T: Config,
     {
+        /// An outcome was bought.
         OutcomeBought {
             market_id: MarketIdOf<T>,
             buyer: AccountIdOf<T>,
@@ -126,6 +130,7 @@ mod pallet {
             amount_minus_fees: BalanceOf<T>,
             fees: BalanceOf<T>,
         },
+        /// Rewards of the pot were claimed.
         RewardsClaimed {
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
@@ -133,6 +138,7 @@ mod pallet {
             actual_payoff: BalanceOf<T>,
             sender: AccountIdOf<T>,
         },
+        /// A market base asset collateral was refunded.
         BalanceRefunded {
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
@@ -143,32 +149,51 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        // There was no buyer of the winning outcome.
-        // Use the `refund` extrinsic to get the initial bet back.
+        /// There was no buyer of the winning outcome.
+        /// Use the `refund` extrinsic to get the initial bet back.
         NoWinner,
-        OutcomeMismatch,
+        /// The market is not active.
         MarketIsNotActive,
+        /// The specified amount is below the minimum bet size.
         AmountTooSmall,
+        /// The specified asset is not a parimutuel share.
         NotParimutuelOutcome,
+        /// The specified asset was not found in the market assets.
         InvalidOutcomeAsset,
+        /// The scoring rule is not parimutuel.
         InvalidScoringRule,
+        /// The specified amount can not be transferred.
         InsufficientBalance,
+        /// The market is not resolved yet.
         MarketIsNotResolvedYet,
+        /// An unexpected error occured. This should never happen!
+        /// There was an internal coding mistake.
         Unexpected,
+        /// There is no resolved outcome present for the market.
         NoResolvedOutcome,
+        /// The refund is not allowed.
         RefundNotAllowed,
+        /// There is no balance to refund.
         RefundableBalanceIsZero,
+        /// There is no reward, because there are no winning shares.
         NoWinningShares,
+        /// There are not enough funds in the pot to reward the calculated amount.
+        /// This should never happen, but if it does, we have an accounting problem.
         InsufficientFundsInPotAccount,
+        /// The market type is invalid.
         InvalidMarketType,
+        /// The outcome issuance is greater than the market base asset collateral.
+        /// This should never happen, but if it does, we have an accounting problem.
         OutcomeIssuanceGreaterCollateral,
+        /// A categorical outcome was expected, but it was not found.
         NoCategoricalOutcome,
+        /// There is no reward to distribute.
         NoRewardToDistribute,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Buy parimutuel shares.
+        /// Buy parimutuel shares for markets base asset collateral.
         ///
         /// # Arguments
         ///
@@ -176,6 +201,8 @@ mod pallet {
         /// - `amount`: The amount of collateral (base asset) to spend
         /// and of parimutuel shares to receive.
         /// Keep in mind that market creator fees are taken from this amount.
+        ///
+        /// Complexity: `O(log(n))`, where `n` is the number of assets in the market.
         #[pallet::call_index(0)]
         #[pallet::weight(5000)]
         #[frame_support::transactional]
@@ -233,6 +260,9 @@ mod pallet {
         }
 
         /// Claim winnings from a resolved market.
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of winning assets in the market.
+        /// But `n` is at most `2`, because scalar markets have two outcome assets.
         #[pallet::call_index(1)]
         #[pallet::weight(5000)]
         #[frame_support::transactional]
@@ -370,6 +400,8 @@ mod pallet {
 
         /// Refund the collateral of losing categorical outcome assets
         /// in case that there was no account betting on the winner outcome.
+        ///
+        /// Complexity: `O(log(n))``, where `n` is the number of categorical assets the market can have.
         #[pallet::call_index(2)]
         #[pallet::weight(5000)]
         #[frame_support::transactional]
@@ -382,7 +414,7 @@ mod pallet {
             };
             let market_id = match outcome {
                 Outcome::CategoricalOutcome(market_id, _) => market_id,
-                Outcome::ScalarOutcome(market_id, _) => market_id,
+                Outcome::ScalarOutcome(_, _) => return Err(Error::<T>::NoCategoricalOutcome.into()),
             };
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
@@ -449,6 +481,7 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating(market_id)
         }
 
+        /// Get the canoncial, individual payoff per parimutuel participant.
         fn get_payoff(
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
@@ -495,6 +528,7 @@ mod pallet {
             Ok(payoff_portion)
         }
 
+        /// Get the reward percentages of the LONG and SHORT assets according to the resolved scalar outcome value.
         fn calc_final_payoff_percentages(
             final_value: u128,
             low: u128,
@@ -517,6 +551,7 @@ mod pallet {
             (payoff_long, payoff_short)
         }
 
+        /// Check the values for validity.
         fn check_values(
             winning_balance: BalanceOf<T>,
             pot_total: BalanceOf<T>,
