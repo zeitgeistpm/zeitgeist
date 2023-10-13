@@ -141,13 +141,14 @@ fn simple_create_scalar_market(
     ));
 }
 
+#[test_case(MarketStatus::Proposed)]
+#[test_case(MarketStatus::Suspended)]
 #[test_case(MarketStatus::Closed)]
+#[test_case(MarketStatus::CollectingSubsidy)]
+#[test_case(MarketStatus::InsufficientSubsidy)]
 #[test_case(MarketStatus::Reported)]
 #[test_case(MarketStatus::Disputed)]
 #[test_case(MarketStatus::Resolved)]
-#[test_case(MarketStatus::Proposed)]
-#[test_case(MarketStatus::CollectingSubsidy)]
-#[test_case(MarketStatus::InsufficientSubsidy)]
 fn buy_complete_set_fails_if_market_is_not_active(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
