@@ -49,8 +49,6 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_prediction_markets (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_destroy_disputed_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
-    fn admin_destroy_reported_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
     fn admin_move_market_to_closed(o: u32, c: u32) -> Weight;
     fn admin_move_market_to_resolved_scalar_reported(r: u32) -> Weight;
     fn admin_move_market_to_resolved_categorical_reported(r: u32) -> Weight;
@@ -88,78 +86,6 @@ pub trait WeightInfoZeitgeist {
 /// Weight functions for zrml_prediction_markets (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
-    /// Storage: MarketCommons Markets (r:1 w:1)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
-    /// Storage: Balances Reserves (r:2 w:2)
-    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
-    /// Storage: System Account (r:3 w:3)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
-    /// Proof: GlobalDisputes GlobalDisputesInfo (max_values: None, max_size: Some(396), added: 2871, mode: MaxEncodedLen)
-    /// Storage: MarketCommons MarketPool (r:1 w:1)
-    /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
-    /// Storage: Swaps Pools (r:1 w:1)
-    /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
-    /// Storage: Tokens Accounts (r:64 w:64)
-    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:64 w:64)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    /// Storage: Authorized AuthorizedOutcomeReports (r:1 w:1)
-    /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
-    /// Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
-    /// Proof: PredictionMarkets MarketIdsPerDisputeBlock (max_values: None, max_size: Some(1042), added: 3517, mode: MaxEncodedLen)
-    fn admin_destroy_disputed_market(a: u32, o: u32, c: u32, r: u32) -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `2060 + a * (215 ±0) + r * (16 ±0)`
-        //  Estimated: `35846 + a * (5116 ±0)`
-        // Minimum execution time: 275_961 nanoseconds.
-        Weight::from_parts(223_802_648, 35846)
-            // Standard Error: 39_490
-            .saturating_add(Weight::from_ref_time(29_860_680).saturating_mul(a.into()))
-            // Standard Error: 39_293
-            .saturating_add(Weight::from_ref_time(133_295).saturating_mul(o.into()))
-            // Standard Error: 39_293
-            .saturating_add(Weight::from_ref_time(199_113).saturating_mul(c.into()))
-            // Standard Error: 39_293
-            .saturating_add(Weight::from_ref_time(205_263).saturating_mul(r.into()))
-            .saturating_add(T::DbWeight::get().reads(11_u64))
-            .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
-            .saturating_add(T::DbWeight::get().writes(10_u64))
-            .saturating_add(Weight::from_proof_size(5116).saturating_mul(a.into()))
-    }
-    /// Storage: MarketCommons Markets (r:1 w:1)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
-    /// Storage: Balances Reserves (r:1 w:1)
-    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
-    /// Storage: GlobalDisputes GlobalDisputesInfo (r:1 w:0)
-    /// Proof: GlobalDisputes GlobalDisputesInfo (max_values: None, max_size: Some(396), added: 2871, mode: MaxEncodedLen)
-    /// Storage: System Account (r:2 w:2)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: MarketCommons MarketPool (r:1 w:1)
-    /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
-    /// Storage: Swaps Pools (r:1 w:1)
-    /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
-    /// Storage: Tokens Accounts (r:64 w:64)
-    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:64 w:64)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    /// Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
-    /// Proof: PredictionMarkets MarketIdsPerReportBlock (max_values: None, max_size: Some(1042), added: 3517, mode: MaxEncodedLen)
-    fn admin_destroy_reported_market(a: u32, _o: u32, _c: u32, r: u32) -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `1691 + a * (215 ±0) + r * (16 ±0)`
-        //  Estimated: `26991 + a * (5116 ±0)`
-        // Minimum execution time: 241_041 nanoseconds.
-        Weight::from_parts(196_167_863, 26991)
-            // Standard Error: 42_480
-            .saturating_add(Weight::from_ref_time(30_146_656).saturating_mul(a.into()))
-            // Standard Error: 42_269
-            .saturating_add(Weight::from_ref_time(177_697).saturating_mul(r.into()))
-            .saturating_add(T::DbWeight::get().reads(8_u64))
-            .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
-            .saturating_add(T::DbWeight::get().writes(7_u64))
-            .saturating_add(Weight::from_proof_size(5116).saturating_mul(a.into()))
-    }
     /// Storage: MarketCommons Markets (r:1 w:1)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(541), added: 3016, mode: MaxEncodedLen)
     /// Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
