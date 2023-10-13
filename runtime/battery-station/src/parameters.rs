@@ -312,6 +312,10 @@ parameter_types! {
     // Orderbook parameters
     pub const OrderbookPalletId: PalletId = ORDERBOOK_PALLET_ID;
 
+    // Parimutuel parameters
+    pub const MinBetSize: Balance = 50 * CENT;
+    pub const ParimutuelPalletId: PalletId = PARIMUTUEL_PALLET_ID;
+
     // System
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 73;

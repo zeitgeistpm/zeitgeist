@@ -38,8 +38,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
-        MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxCategories, MaxReserves,
+        MinBetSize, MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
     },
     traits::DistributeFees,
     types::{
@@ -104,6 +104,7 @@ impl crate::Config for Runtime {
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
+    type MaxCategories = MaxCategories;
     type AssetManager = AssetManager;
     type MinBetSize = MinBetSize;
     type PalletId = ParimutuelPalletId;
@@ -213,7 +214,7 @@ impl ExtBuilder {
         // to ensure we can have events emitted in the tests. events not present at genesis block
         t.execute_with(|| System::set_block_number(1));
 
-        t.into()
+        t
     }
 }
 

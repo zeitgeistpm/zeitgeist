@@ -113,6 +113,7 @@ zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
 zrml-neo-swaps = { workspace = true }
 zrml-orderbook-v1 = { workspace = true }
+zrml-parimutuel = { workspace = true }
 zrml-prediction-markets = { workspace = true }
 zrml-rikiddo = { workspace = true }
 zrml-simple-disputes = { workspace = true }
@@ -209,6 +210,7 @@ runtime-benchmarks = [
     "zrml-court/runtime-benchmarks",
     "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-neo-swaps/runtime-benchmarks",
+    "zrml-parimutuel/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
     "zrml-simple-disputes/runtime-benchmarks",
     "zrml-global-disputes/runtime-benchmarks",
@@ -315,6 +317,7 @@ std = [
     "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
     "zrml-neo-swaps/std",
+    "zrml-parimutuel/std",
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
@@ -370,6 +373,7 @@ try-runtime = [
     "zrml-liquidity-mining/try-runtime",
     "zrml-market-commons/try-runtime",
     "zrml-neo-swaps/try-runtime",
+    "zrml-parimutuel/try-runtime",
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",

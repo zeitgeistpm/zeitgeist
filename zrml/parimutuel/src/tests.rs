@@ -74,7 +74,7 @@ fn buy_balances_change_correctly() {
         market.creator = MARKET_CREATOR;
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let base_asset = market.base_asset.clone();
+        let base_asset = market.base_asset;
 
         let free_alice_before = AssetManager::free_balance(base_asset, &ALICE);
         let free_creator_before = AssetManager::free_balance(base_asset, &market.creator);
@@ -717,7 +717,7 @@ fn refund_fails_if_invalid_outcome_asset() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
+        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 20u16));
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidOutcomeAsset

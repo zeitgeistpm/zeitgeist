@@ -24,7 +24,6 @@ extern crate alloc;
 mod benchmarks;
 mod mock;
 mod tests;
-pub mod types;
 pub mod weights;
 
 pub use pallet::*;
@@ -32,6 +31,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::WeightInfoZeitgeist;
+    use alloc::{vec, vec::Vec};
     use core::{cmp::Ordering, marker::PhantomData};
     use frame_support::{
         ensure,
@@ -78,6 +78,9 @@ mod pallet {
                 BlockNumber = Self::BlockNumber,
                 Balance = BalanceOf<Self>,
             >;
+
+        #[pallet::constant]
+        type MaxCategories: Get<u16>;
 
         /// The api to handle different asset classes.
         type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
