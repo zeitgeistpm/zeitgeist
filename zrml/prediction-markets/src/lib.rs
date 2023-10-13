@@ -2305,7 +2305,6 @@ mod pallet {
                 ),
                 Error::<T>::InvalidScoringRule
             );
-            Self::ensure_market_is_active(&market)?;
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             ensure!(
