@@ -102,11 +102,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install build tools
-        run: ./scripts/init.sh
-      
-      - run: |
+        run: |
+          ./scripts/init.sh
           source $HOME/.cargo/env 
-          ./scripts/benchmarks/quick_check.sh
+      
+      - run: ./scripts/benchmarks/quick_check.sh
 
   test_standalone:
     name: Test standalone build
