@@ -17,7 +17,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: [self-hosted, zeitgeist-runner]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -34,9 +34,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Format
-        run: |
-          source $HOME/.cargo/env 
-          ./scripts/tests/format.sh --check
+        run: ./scripts/tests/format.sh --check
 
   copyright:
     name: Copyright Notices
@@ -119,7 +117,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: [self-hosted, zeitgeist-runner]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -145,9 +143,7 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Tests
-        run: |
-          source $HOME/.cargo/env 
-          ./scripts/tests/test_standalone.sh
+        run: ./scripts/tests/test_standalone.sh
 
   test_parachain:
     name: Test parachain build
@@ -193,7 +189,7 @@ jobs:
         (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
         contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
       github.event_name == 'push'
-    runs-on: [self-hosted, zeitgeist-runner]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -209,7 +205,4 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Fuzz Test
-        run: |
-          source $HOME/.cargo/env 
-          ./scripts/tests/fuzz.sh --verbose
+      - run: ./scripts/tests/fuzz.sh --verbose
