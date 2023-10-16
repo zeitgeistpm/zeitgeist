@@ -12,6 +12,15 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.4.2
+
+[#1148]: https://github.com/zeitgeistpm/zeitgeist/pull/1148
+
+### Changed
+
+- Modify event `MarketDisputed` to have an additional field for the disputant.
+  This is the account id of the user who called `dispute`. ([#1148])
+
 ## v0.4.1
 
 ### Added
@@ -43,9 +52,6 @@ APIs/RPC interface.
     was destroyed.
 
   For details, please refer to the `README.md` and the in-file documentation.
-
-- Modify event `MarketDisputed` to have an additional field for the disputant.
-  This is the account id of the user who called `dispute`.
 
 ## v0.4.0
 
