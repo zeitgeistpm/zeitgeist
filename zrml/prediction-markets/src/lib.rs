@@ -79,29 +79,28 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
 
-    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BalanceOf<T> =
+        <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type CurrencyOf<T> = <T as zrml_market_commons::Config>::Currency;
     pub(crate) type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+        <CurrencyOf<T> as Currency<AccountIdOf<T>>>::NegativeImbalance;
     pub(crate) type TimeFrame = u64;
     pub(crate) type MarketIdOf<T> = <T as zrml_market_commons::Config>::MarketId;
     pub(crate) type MomentOf<T> =
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
     pub type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
+        AccountIdOf<T>,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
     >;
-    pub(crate) type ReportOf<T> =
-        Report<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::BlockNumber>;
+    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, <T as frame_system::Config>::BlockNumber>;
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
-    type InitialItemOf<T> = InitialItem<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
+    type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
 
     macro_rules! impl_unreserve_bond {
         ($fn_name:ident, $bond_type:ident) => {
@@ -685,7 +684,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
+            Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed, who));
             Ok((Some(weight)).into())
         }
 
@@ -1772,7 +1771,7 @@ mod pallet {
         /// Custom addition block initialization logic wasn't successful.
         BadOnInitialize,
         /// A complete set of assets has been bought. \[market_id, amount_per_asset, buyer\]
-        BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// A market has been approved. \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created. \[market_id, market_account, market\]
@@ -1786,8 +1785,8 @@ mod pallet {
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed. \[market_id\]
         MarketClosed(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_market_status\]
-        MarketDisputed(MarketIdOf<T>, MarketStatus),
+        /// A market has been disputed \[market_id, new_market_status, disputant\]
+        MarketDisputed(MarketIdOf<T>, MarketStatus, AccountIdOf<T>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid with a reason.
@@ -1802,7 +1801,7 @@ mod pallet {
         /// A proposed market has been edited by the market creator. \[market_id, new_market\]
         MarketEdited(MarketIdOf<T>, MarketOf<T>),
         /// A complete set of assets has been sold. \[market_id, amount_per_asset, seller\]
-        SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// An amount of winning outcomes have been redeemed.
         /// \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
@@ -1810,7 +1809,7 @@ mod pallet {
             Asset<MarketIdOf<T>>,
             BalanceOf<T>,
             BalanceOf<T>,
-            <T as frame_system::Config>::AccountId,
+            AccountIdOf<T>,
         ),
         /// The global dispute was started. \[market_id\]
         GlobalDisputeStarted(MarketIdOf<T>),

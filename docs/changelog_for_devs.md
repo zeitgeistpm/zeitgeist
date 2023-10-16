@@ -44,6 +44,9 @@ APIs/RPC interface.
 
   For details, please refer to the `README.md` and the in-file documentation.
 
+- Modify event `MarketDisputed` to have an additional field for the disputant.
+  This is the account id of the user who called `dispute`.
+
 ## v0.4.0
 
 [#976]: https://github.com/zeitgeistpm/zeitgeist/pull/976
