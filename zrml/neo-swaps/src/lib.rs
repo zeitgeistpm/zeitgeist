@@ -58,7 +58,10 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        math::fixed::{FixedDiv, FixedMul},
+        math::{
+            checked_ops_res::{CheckedAddRes, CheckedSubRes},
+            fixed::{FixedDiv, FixedMul},
+        },
         traits::{CompleteSetOperationsApi, DeployPoolApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
@@ -487,7 +490,7 @@ mod pallet {
                 } = Self::distribute_fees(market_id, pool, amount_in)?;
                 let swap_amount_out =
                     pool.calculate_swap_amount_out_for_buy(asset_out, amount_in_minus_fees)?;
-                let amount_out = swap_amount_out.saturating_add(amount_in_minus_fees);
+                let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 // Instead of letting `who` buy the complete sets and then transfer almost all of
                 // the outcomes to the pool account, we prevent `(n-1)` storage reads by using the
@@ -614,12 +617,13 @@ mod pallet {
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
                     T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_in)?;
                 }
-                for ((_, balance), &amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
-                    *balance = balance.saturating_add(amount_in);
+                for ((_, balance), amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
+                    *balance = balance.checked_add_res(amount_in)?;
                 }
                 pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
-                let new_liquidity_parameter =
-                    pool.liquidity_parameter.saturating_add(ratio.bmul(pool.liquidity_parameter)?);
+                let new_liquidity_parameter = pool
+                    .liquidity_parameter
+                    .checked_add_res(&ratio.bmul(pool.liquidity_parameter)?)?;
                 pool.liquidity_parameter = new_liquidity_parameter;
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
@@ -658,9 +662,9 @@ mod pallet {
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
-                for ((_, balance), &amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter())
+                for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter())
                 {
-                    *balance = balance.saturating_sub(amount_out);
+                    *balance = balance.checked_sub_res(amount_out)?;
                 }
                 pool.liquidity_shares_manager.exit(&who, pool_shares_amount)?;
                 if pool.liquidity_shares_manager.total_shares()? == Zero::zero() {
@@ -678,7 +682,7 @@ mod pallet {
                     });
                 } else {
                     let liq = pool.liquidity_parameter;
-                    let new_liquidity_parameter = liq.saturating_sub(ratio.bmul(liq)?);
+                    let new_liquidity_parameter = liq.checked_sub_res(&ratio.bmul(liq)?)?;
                     ensure!(
                         new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
                         Error::<T>::LiquidityTooLow
@@ -815,7 +819,7 @@ mod pallet {
                 pool.account_id.clone(),
                 amount,
             );
-            let total_fees = external_fees.saturating_add(swap_fees);
+            let total_fees = external_fees.checked_add_res(&swap_fees)?;
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
         }
