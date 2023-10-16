@@ -47,8 +47,7 @@ use zeitgeist_primitives::{
     traits::{MarketCommonsPalletApi, Swaps as _},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, Outcome, OutcomeReport, PoolId, PoolStatus,
-        ScoringRule,
+        MarketPeriod, MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
 
@@ -86,8 +85,7 @@ fn generate_accounts_with_assets<T: Config>(
         let acc = account("AssetHolder", i, 0);
 
         for j in 0..acc_asset {
-            let asset =
-                Asset::Outcome(Outcome::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), j));
+            let asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), j);
             T::AssetManager::deposit(asset, &acc, acc_amount)?;
         }
 
@@ -114,7 +112,7 @@ fn generate_assets<T: Config>(
 
     // Generate MaxAssets assets and generate enough liquidity
     for i in 0..asset_count {
-        let asset = Asset::Outcome(Outcome::CategoricalOutcome(0u32.into(), i.saturated_into()));
+        let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
         assets.push(asset);
 
         T::AssetManager::deposit(asset, owner, asset_amount_unwrapped).unwrap()
@@ -438,7 +436,7 @@ benchmarks! {
             &pool,
             pool_id,
             pool.base_asset,
-            Asset::Outcome(Outcome::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into())),
+            Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()),
             &account("ScrapCollector", 0, 0)
         );
     }

@@ -33,9 +33,7 @@ use sp_runtime::{Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
     constants::CENT,
     traits::CompleteSetOperationsApi,
-    types::{
-        Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, Outcome, ScoringRule,
-    },
+    types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -113,7 +111,7 @@ mod benchmarks {
             asset_count,
             _10.saturated_into(),
         );
-        let asset_out = Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0));
+        let asset_out = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
@@ -130,7 +128,7 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let market_id =
             create_market_and_deploy_pool::<T>(alice, base_asset, 2u16, _10.saturated_into());
-        let asset_in = Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0));
+        let asset_in = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 

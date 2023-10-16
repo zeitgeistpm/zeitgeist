@@ -34,10 +34,8 @@ fn deploy_pool_works_with_binary_markets() {
             spot_prices.clone(),
             swap_fee,
         );
-        let assets = vec![
-            Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0)),
-            Asset::Outcome(Outcome::CategoricalOutcome(market_id, 1)),
-        ];
+        let assets =
+            vec![Asset::CategoricalOutcome(market_id, 0), Asset::CategoricalOutcome(market_id, 1)];
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let expected_liquidity = 144269504088;
         let buffer = AssetManager::minimum_balance(pool.collateral);
@@ -81,8 +79,8 @@ fn deploy_pool_works_with_scalar_marktes() {
         let swap_fee = CENT;
         let market_id: MarketId = 0;
         let assets = vec![
-            Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
-            Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Short)),
+            Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+            Asset::ScalarOutcome(market_id, ScalarPosition::Short),
         ];
         // Deploy some funds in the pool account to ensure that rogue funds don't screw up price
         // calculatings.

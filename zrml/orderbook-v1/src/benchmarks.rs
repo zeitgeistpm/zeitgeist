@@ -32,17 +32,13 @@ use frame_support::dispatch::UnfilteredDispatchable;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
-use zeitgeist_primitives::{
-    constants::BASE,
-    types::{Asset, Outcome},
-};
+use zeitgeist_primitives::{constants::BASE, types::Asset};
 
 // Takes a `seed` and returns an account. Use None to generate a whitelisted caller
 fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId, &'static str> {
     let acc = if let Some(s) = seed { account("AssetHolder", 0, s) } else { whitelisted_caller() };
 
-    let outcome_asset =
-        Asset::Outcome(Outcome::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0));
+    let outcome_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
     T::AssetManager::deposit(outcome_asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
     let _ = T::AssetManager::deposit(Asset::Ztg, &acc, BASE.saturating_mul(1_000).saturated_into());
     Ok(acc)
@@ -58,8 +54,7 @@ fn order_common_parameters<T: Config>(
     &'static str,
 > {
     let acc = generate_funded_account::<T>(seed)?;
-    let outcome_asset =
-        Asset::Outcome(Outcome::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0));
+    let outcome_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
     let outcome_asset_amount: BalanceOf<T> = BASE.saturated_into();
     let base_asset_amount: BalanceOf<T> = 100u32.into();
     let market_id: MarketIdOf<T> = 0u32.into();

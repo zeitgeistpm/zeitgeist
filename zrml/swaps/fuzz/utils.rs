@@ -29,18 +29,19 @@ use zeitgeist_primitives::{
         MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
-    types::{Asset, Outcome, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
+    types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
 };
 use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
 
 pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
     let (module, seed0, seed1) = seed;
+
     match module % 4 {
-        0 => Asset::Outcome(Outcome::CategoricalOutcome(seed0, seed1)),
+        0 => Asset::CategoricalOutcome(seed0, seed1),
         1 => {
             let scalar_position =
                 if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
-            Asset::Outcome(Outcome::ScalarOutcome(seed0, scalar_position))
+            Asset::ScalarOutcome(seed0, scalar_position)
         }
         2 => Asset::PoolShare(SerdeWrapper(seed0)),
         _ => Asset::Ztg,
