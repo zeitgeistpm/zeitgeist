@@ -23,9 +23,7 @@ use core::ops::RangeInclusive;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use sp_runtime::Percent;
-use zeitgeist_primitives::types::{
-    Asset, MarketStatus, MarketType, Outcome, OutcomeReport, ScalarPosition, ScoringRule,
-};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, OutcomeReport, ScoringRule};
 use zrml_market_commons::{Error as MError, Markets};
 
 #[test]
@@ -37,7 +35,7 @@ fn buy_emits_event() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,));
 
@@ -68,7 +66,7 @@ fn buy_balances_change_correctly() {
         let free_pot_before =
             AssetManager::free_balance(base_asset, &Parimutuel::pot_account(market_id));
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,));
 
@@ -99,29 +97,11 @@ fn buy_fails_if_asset_not_parimutuel_share() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::CategoricalOutcome(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
             Error::<Runtime>::NotParimutuelOutcome
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_asset_mismatches_market_type() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let asset = Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
-        let amount = <Runtime as Config>::MinBetSize::get();
-        assert_noop!(
-            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
-            Error::<Runtime>::ScalarOutcomeNotAllowed
         );
     });
 }
@@ -138,7 +118,7 @@ fn buy_fails_if_invalid_scoring_rule() {
 
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
@@ -157,7 +137,7 @@ fn buy_fails_if_market_not_active() {
         market.status = MarketStatus::Proposed;
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
@@ -178,7 +158,7 @@ fn buy_fails_if_insufficient_balance() {
         let free_alice = AssetManager::free_balance(market.base_asset, &ALICE);
         AssetManager::slash(market.base_asset, &ALICE, free_alice);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
@@ -196,7 +176,7 @@ fn buy_fails_if_below_minimum_bet_size() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get() - 1;
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
@@ -210,7 +190,7 @@ fn buy_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
@@ -228,12 +208,12 @@ fn claim_rewards_emits_event() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let winner_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
         let winner_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,));
 
-        let loser_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 1u16));
+        let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
         let loser_amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount,));
 
@@ -269,12 +249,12 @@ fn claim_rewards_categorical_changes_balances_correctly() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let winner_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
         let winner_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,));
 
-        let loser_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 1u16));
+        let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
         let loser_amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount,));
 
@@ -329,13 +309,12 @@ fn buy_fails_if_market_type_is_scalar() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let winner_asset =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
+        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
         let winner_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,),
-            Error::<Runtime>::ScalarOutcomeNotAllowed
+            Error::<Runtime>::OnlyCategoricalMarketsAllowed
         );
     });
 }
@@ -430,12 +409,12 @@ fn claim_rewards_categorical_fails_if_no_winner() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let winner_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
         let winner_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,));
 
-        let loser_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 1u16));
+        let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
         let loser_amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount,));
 
@@ -461,12 +440,12 @@ fn claim_rewards_categorical_fails_if_no_winning_shares() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let winner_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
         let winner_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,));
 
-        let loser_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 1u16));
+        let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
         let loser_amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount,));
 
@@ -492,12 +471,12 @@ fn refund_pot_works() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let alice_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let alice_asset = Asset::ParimutuelShare(market_id, 0u16);
         let alice_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), alice_asset, alice_amount,));
 
-        let bob_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 1u16));
+        let bob_asset = Asset::ParimutuelShare(market_id, 1u16);
         let bob_amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), bob_asset, bob_amount,));
 
@@ -563,7 +542,7 @@ fn refund_fails_if_not_parimutuel_outcome() {
         assert_noop!(
             Parimutuel::refund_pot(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Outcome(Outcome::CategoricalOutcome(market_id, 0u16))
+                Asset::CategoricalOutcome(market_id, 0u16)
             ),
             Error::<Runtime>::NotParimutuelOutcome
         );
@@ -579,7 +558,7 @@ fn refund_fails_if_market_not_resolved() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::MarketIsNotResolvedYet
@@ -599,7 +578,7 @@ fn refund_fails_if_invalid_scoring_rule() {
         market.scoring_rule = ScoringRule::CPMM;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidScoringRule
@@ -617,7 +596,7 @@ fn refund_fails_if_invalid_outcome_asset() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 20u16));
+        let asset = Asset::ParimutuelShare(market_id, 20u16);
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidOutcomeAsset
@@ -635,7 +614,7 @@ fn refund_fails_if_no_resolved_outcome() {
         market.resolved_outcome = None;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::NoResolvedOutcome
@@ -652,7 +631,7 @@ fn refund_fails_if_refund_not_allowed() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,));
 
@@ -661,7 +640,7 @@ fn refund_fails_if_refund_not_allowed() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::RefundNotAllowed
@@ -678,7 +657,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,));
 
@@ -687,7 +666,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_ok!(Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset));
 
         // already refunded above
@@ -707,7 +686,7 @@ fn refund_emits_event() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,));
 
@@ -716,7 +695,7 @@ fn refund_emits_event() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_ok!(Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset));
 
         let amount_minus_fees = amount - (Percent::from_percent(1) * amount);

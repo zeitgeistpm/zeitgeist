@@ -45,12 +45,11 @@ use scale_info::TypeInfo;
 pub enum Asset<MI: MaxEncodedLen> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
-    CombinatorialOutcome,
+    ParimutuelShare(MI, CategoryIndex),
     PoolShare(SerdeWrapper<PoolId>),
     #[default]
     Ztg,
     ForeignAsset(u32),
-    ParimutuelShare(Outcome<MI>),
 }
 
 /// In a scalar market, users can either choose a `Long` position,

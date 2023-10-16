@@ -35,7 +35,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{OptionQuery, StorageMap},
+        pallet_prelude::{DispatchError, OptionQuery, StorageMap},
         traits::{Get, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
@@ -52,10 +52,7 @@ mod pallet {
         constants::BASE,
         math::fixed::*,
         traits::DistributeFees,
-        types::{
-            Asset, Market, MarketStatus, MarketType, Outcome, OutcomeReport, ScalarPosition,
-            ScoringRule,
-        },
+        types::{Asset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -188,8 +185,6 @@ mod pallet {
         OutcomeIssuanceGreaterCollateral,
         /// A scalar market is not allowed for parimutuels.
         ScalarMarketsNotAllowed,
-        /// A scalar outcome is not allowed for parimutuels.
-        ScalarOutcomeNotAllowed,
         /// Only categorical markets are allowed for parimutuels.
         OnlyCategoricalMarketsAllowed,
         /// There is no reward to distribute.
@@ -220,15 +215,9 @@ mod pallet {
 
             ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountTooSmall);
 
-            let outcome = match asset {
-                Asset::ParimutuelShare(outcome) => outcome,
+            let market_id = match asset {
+                Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
-            };
-            let market_id = match outcome {
-                Outcome::CategoricalOutcome(market_id, _) => market_id,
-                Outcome::ScalarOutcome(_, _) => {
-                    return Err(Error::<T>::ScalarOutcomeNotAllowed.into());
-                }
             };
             let market = T::MarketCommons::market(&market_id)?;
             let base_asset = market.base_asset;
@@ -242,7 +231,7 @@ mod pallet {
                 matches!(market.market_type, MarketType::Categorical(_)),
                 Error::<T>::OnlyCategoricalMarketsAllowed
             );
-            let market_assets = Self::outcome_assets(market_id, &market);
+            let market_assets = Self::outcome_assets(market_id, &market)?;
             ensure!(market_assets.binary_search(&asset).is_ok(), Error::<T>::InvalidOutcomeAsset);
 
             // transfer some fees of amount to market creator
@@ -289,10 +278,7 @@ mod pallet {
             let pot_account = Self::pot_account(market_id);
             let (winning_asset, payoff, slashable_asset_balance) = match winning_outcome {
                 OutcomeReport::Categorical(category_index) => {
-                    let winning_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(
-                        market_id,
-                        category_index,
-                    ));
+                    let winning_asset = Asset::ParimutuelShare(market_id, category_index);
                     // each Parimutuel outcome asset has the market id included
                     // this allows us to query all outstanding shares for each discrete asset
                     let outcome_total = T::AssetManager::total_issuance(winning_asset);
@@ -371,15 +357,9 @@ mod pallet {
         pub fn refund_pot(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            let outcome = match refund_asset {
-                Asset::ParimutuelShare(outcome) => outcome,
+            let market_id = match refund_asset {
+                Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
-            };
-            let market_id = match outcome {
-                Outcome::CategoricalOutcome(market_id, _) => market_id,
-                Outcome::ScalarOutcome(_, _) => {
-                    return Err(Error::<T>::ScalarOutcomeNotAllowed.into());
-                }
             };
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
@@ -388,7 +368,7 @@ mod pallet {
                 matches!(market.market_type, MarketType::Categorical(_)),
                 Error::<T>::OnlyCategoricalMarketsAllowed
             );
-            let market_assets = Self::outcome_assets(market_id, &market);
+            let market_assets = Self::outcome_assets(market_id, &market)?;
             ensure!(
                 market_assets.binary_search(&refund_asset).is_ok(),
                 Error::<T>::InvalidOutcomeAsset
@@ -397,10 +377,7 @@ mod pallet {
             let pot_account = Self::pot_account(market_id);
             let (refund_asset, refund_balance) = match winning_outcome {
                 OutcomeReport::Categorical(category_index) => {
-                    let winning_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(
-                        market_id,
-                        category_index,
-                    ));
+                    let winning_asset = Asset::ParimutuelShare(market_id, category_index);
                     let outcome_total = T::AssetManager::total_issuance(winning_asset);
                     ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
 
@@ -476,29 +453,19 @@ mod pallet {
             Ok(())
         }
 
-        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
+        pub fn outcome_assets(
+            market_id: MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<Vec<AssetOf<T>>, DispatchError> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
                     for i in 0..categories {
-                        assets.push(Asset::ParimutuelShare(Outcome::CategoricalOutcome(
-                            market_id, i,
-                        )));
+                        assets.push(Asset::ParimutuelShare(market_id, i));
                     }
-                    assets
+                    Ok(assets)
                 }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ParimutuelShare(Outcome::ScalarOutcome(
-                            market_id,
-                            ScalarPosition::Long,
-                        )),
-                        Asset::ParimutuelShare(Outcome::ScalarOutcome(
-                            market_id,
-                            ScalarPosition::Short,
-                        )),
-                    ]
-                }
+                MarketType::Scalar(_) => Err(Error::<T>::ScalarMarketsNotAllowed.into()),
             }
         }
     }

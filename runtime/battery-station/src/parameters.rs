@@ -452,7 +452,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
+            Asset::ParimutuelShare(_,_) => 2 * ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
@@ -470,8 +470,6 @@ parameter_type_with_key! {
             #[cfg(not(feature = "parachain"))]
             Asset::ForeignAsset(_) => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
-            Asset::ParimutuelShare(Outcome::CategoricalOutcome(_, _)) => 2 * ExistentialDeposit::get(),
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(_, _)) => 2 * ExistentialDeposit::get(),
         }
     };
 }
