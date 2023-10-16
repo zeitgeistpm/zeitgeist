@@ -662,8 +662,7 @@ mod pallet {
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
-                for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter())
-                {
+                for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter()) {
                     *balance = balance.checked_sub_res(amount_out)?;
                 }
                 pool.liquidity_shares_manager.exit(&who, pool_shares_amount)?;
