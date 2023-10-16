@@ -20,7 +20,9 @@ use crate::{Balance, CurrencyId};
 use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
 use xcm::latest::MultiLocation;
-use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::CustomMetadata};
+use zeitgeist_primitives::{
+    constants::BalanceFractionalDecimals, math::fixed::FixedMul, types::CustomMetadata,
+};
 
 /// The fee cost per second for transferring the native token in cents.
 pub fn native_per_second() -> Balance {

@@ -30,7 +30,7 @@ use crate::{
 use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::{
     constants::BASE,
-    fixed::{FixedDiv, FixedMul},
+    math::fixed::{FixedDiv, FixedMul},
 };
 
 pub fn btoi(a: u128) -> Result<u128, DispatchError> {
@@ -165,13 +165,9 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        consts::{ARITHM_OF, BPOW_PRECISION},
-        fixed::{bpow, bpow_approx},
-    };
+    use super::*;
     use frame_support::{assert_err, dispatch::DispatchError};
     use more_asserts::assert_le;
-    use zeitgeist_primitives::{constants::BASE, fixed::FixedMul};
 
     #[test]
     fn bpow_has_minimum_set_of_correct_values() {

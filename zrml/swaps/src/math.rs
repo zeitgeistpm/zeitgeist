@@ -27,7 +27,7 @@ use crate::{check_arithm_rslt::CheckArithmRslt, fixed::bpow};
 use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::{
     constants::BASE,
-    fixed::{FixedDiv, FixedMul},
+    math::fixed::{FixedDiv, FixedMul},
 };
 
 /// Calculate the spot price of one asset in terms of another, including trading fees.

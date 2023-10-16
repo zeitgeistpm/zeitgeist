@@ -30,7 +30,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::Perbill;
 use zeitgeist_primitives::{
     constants::CENT,
-    fixed::{FixedDiv, FixedMul},
+    math::fixed::{FixedDiv, FixedMul},
     types::{
         AccountIdTest, Asset, Deadlines, MarketCreation, MarketId, MarketPeriod, MarketStatus,
         MarketType, MultiHash, ScalarPosition, ScoringRule,

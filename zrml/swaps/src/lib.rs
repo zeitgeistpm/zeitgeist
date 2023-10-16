@@ -89,9 +89,11 @@ mod pallet {
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
-        checked_ops_res::{CheckedAddRes, CheckedSubRes},
         constants::CENT,
-        fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+        math::{
+            checked_ops_res::{CheckedAddRes, CheckedSubRes},
+            fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+        },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,

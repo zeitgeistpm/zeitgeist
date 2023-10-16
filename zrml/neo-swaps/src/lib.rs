@@ -58,7 +58,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        fixed::{FixedDiv, FixedMul},
+        math::fixed::{FixedDiv, FixedMul},
         traits::{CompleteSetOperationsApi, DeployPoolApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };

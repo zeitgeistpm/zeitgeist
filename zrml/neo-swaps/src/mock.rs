@@ -58,7 +58,7 @@ use zeitgeist_primitives::{
         PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
         TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
-    fixed::FixedMul,
+    math::fixed::FixedMul,
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,

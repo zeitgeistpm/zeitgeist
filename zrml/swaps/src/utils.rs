@@ -35,7 +35,7 @@ use sp_runtime::{
     DispatchError,
 };
 use zeitgeist_primitives::{
-    fixed::{FixedDiv, FixedMul},
+    math::fixed::{FixedDiv, FixedMul},
     types::{Asset, Pool, PoolId, ScoringRule},
 };
 use zrml_rikiddo::traits::RikiddoMVPallet;

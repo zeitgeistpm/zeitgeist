@@ -44,7 +44,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
-    fixed::FixedMul,
+    math::fixed::FixedMul,
     traits::{MarketCommonsPalletApi, Swaps as _},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
