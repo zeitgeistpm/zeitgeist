@@ -58,7 +58,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        math::fixed::{bdiv, bmul},
+        fixed::{FixedDiv, FixedMul},
         traits::{CompleteSetOperationsApi, DeployPoolApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
@@ -603,15 +603,13 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 // FIXME Round up to avoid exploits.
-                let ratio = bdiv(
-                    pool_shares_amount.saturated_into(),
-                    pool.liquidity_shares_manager.total_shares()?.saturated_into(),
-                )?;
+                let ratio =
+                    pool_shares_amount.bdiv(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_in = vec![];
                 for (&asset, &max_amount_in) in pool.assets().iter().zip(max_amounts_in.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
                     // FIXME Round up to avoid exploits.
-                    let amount_in = bmul(ratio, balance_in_pool.saturated_into())?.saturated_into();
+                    let amount_in = ratio.bmul(balance_in_pool)?;
                     amounts_in.push(amount_in);
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
                     T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_in)?;
@@ -620,10 +618,8 @@ mod pallet {
                     *balance = balance.saturating_add(amount_in);
                 }
                 pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
-                let new_liquidity_parameter = pool.liquidity_parameter.saturating_add(
-                    bmul(ratio.saturated_into(), pool.liquidity_parameter.saturated_into())?
-                        .saturated_into(),
-                );
+                let new_liquidity_parameter =
+                    pool.liquidity_parameter.saturating_add(ratio.bmul(pool.liquidity_parameter)?);
                 pool.liquidity_parameter = new_liquidity_parameter;
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
@@ -652,15 +648,12 @@ mod pallet {
                     pool.liquidity_shares_manager.fees == Zero::zero(),
                     Error::<T>::OutstandingFees
                 );
-                let ratio = bdiv(
-                    pool_shares_amount.saturated_into(),
-                    pool.liquidity_shares_manager.total_shares()?.saturated_into(),
-                )?;
+                let ratio =
+                    pool_shares_amount.bdiv(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_out = vec![];
                 for (&asset, &min_amount_out) in pool.assets().iter().zip(min_amounts_out.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
-                    let amount_out: BalanceOf<T> =
-                        bmul(ratio, balance_in_pool.saturated_into())?.saturated_into();
+                    let amount_out = ratio.bmul(balance_in_pool)?;
                     amounts_out.push(amount_out);
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
@@ -685,9 +678,7 @@ mod pallet {
                     });
                 } else {
                     let liq = pool.liquidity_parameter;
-                    let new_liquidity_parameter = liq.saturating_sub(
-                        bmul(ratio.saturated_into(), liq.saturated_into())?.saturated_into(),
-                    );
+                    let new_liquidity_parameter = liq.saturating_sub(ratio.bmul(liq)?);
                     ensure!(
                         new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
                         Error::<T>::LiquidityTooLow
@@ -816,8 +807,7 @@ mod pallet {
             pool: &mut PoolOf<T>,
             amount: BalanceOf<T>,
         ) -> Result<FeeDistribution<T>, DispatchError> {
-            let swap_fees_u128 = bmul(pool.swap_fee.saturated_into(), amount.saturated_into())?;
-            let swap_fees = swap_fees_u128.saturated_into();
+            let swap_fees = pool.swap_fee.bmul(amount)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
             let external_fees = T::ExternalFees::distribute(
                 market_id,

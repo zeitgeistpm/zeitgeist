@@ -58,6 +58,7 @@ use zeitgeist_primitives::{
         PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
         TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
+    fixed::FixedMul,
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
@@ -137,12 +138,7 @@ where
         account: Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = zeitgeist_primitives::math::fixed::bmul(
-            amount.saturated_into(),
-            EXTERNAL_FEES.saturated_into(),
-        )
-        .unwrap()
-        .saturated_into();
+        let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
         let _ = T::MultiCurrency::transfer(asset, &account, &F::get(), fees);
         fees
     }

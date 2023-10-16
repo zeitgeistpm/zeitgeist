@@ -47,12 +47,12 @@ fn exit_works() {
             vec![0, 0],
         ));
         let pool_after = Pools::<Runtime>::get(market_id).unwrap();
-        let ratio = bdiv(pool_shares_amount, liquidity).unwrap();
+        let ratio = pool_shares_amount.bdiv(liquidity).unwrap();
         let pool_outcomes_after: Vec<_> =
             pool_after.assets().iter().map(|a| pool_after.reserve_of(a).unwrap()).collect();
         let expected_pool_diff = vec![
-            bmul(ratio, pool_outcomes_before[0]).unwrap(),
-            bmul(ratio, pool_outcomes_before[1]).unwrap(),
+            ratio.bmul(pool_outcomes_before[0]).unwrap(),
+            ratio.bmul(pool_outcomes_before[1]).unwrap(),
         ];
         let alice_outcomes_after = [
             AssetManager::free_balance(pool_after.assets()[0], &ALICE),
@@ -64,7 +64,7 @@ fn exit_works() {
         assert_eq!(alice_outcomes_after[1], alice_outcomes_before[1] + expected_pool_diff[1]);
         assert_eq!(
             pool_after.liquidity_parameter,
-            bmul(_1 - ratio, pool_before.liquidity_parameter).unwrap()
+            (_1 - ratio).bmul(pool_before.liquidity_parameter).unwrap()
         );
         assert_eq!(
             pool_after.liquidity_shares_manager.shares_of(&ALICE).unwrap(),

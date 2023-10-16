@@ -21,7 +21,6 @@ use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
 use xcm::latest::MultiLocation;
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::CustomMetadata};
-use zrml_swaps::fixed::bmul;
 
 /// The fee cost per second for transferring the native token in cents.
 pub fn native_per_second() -> Balance {
@@ -68,7 +67,7 @@ impl<
         let foreign_decimals = metadata.decimals;
 
         let fee_unadjusted = if let Some(fee_factor) = metadata.additional.xcm.fee_factor {
-            bmul(default_per_second, fee_factor).ok()?
+            default_per_second.bmul(fee_factor).ok()?
         } else {
             default_per_second
         };
