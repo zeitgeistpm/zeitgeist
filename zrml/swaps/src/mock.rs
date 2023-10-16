@@ -51,8 +51,8 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, Outcome,
-        PoolId, ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
+        ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -64,11 +64,11 @@ pub const CHARLIE: AccountIdTest = 2;
 pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 
-pub const ASSET_A: Asset<MarketId> = Asset::Outcome(Outcome::CategoricalOutcome(0, 65));
-pub const ASSET_B: Asset<MarketId> = Asset::Outcome(Outcome::CategoricalOutcome(0, 66));
-pub const ASSET_C: Asset<MarketId> = Asset::Outcome(Outcome::CategoricalOutcome(0, 67));
-pub const ASSET_D: Asset<MarketId> = Asset::Outcome(Outcome::CategoricalOutcome(0, 68));
-pub const ASSET_E: Asset<MarketId> = Asset::Outcome(Outcome::CategoricalOutcome(0, 69));
+pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
+pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
+pub const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 67);
+pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
+pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
 
 pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 pub const BASE_ASSET: Asset<MarketId> = if let Some(asset) = ASSETS.last() {

@@ -213,7 +213,7 @@ mod tests {
     use test_case::test_case;
     use zeitgeist_primitives::{
         constants::CENT,
-        types::{Asset, Outcome, PoolStatus, ScoringRule},
+        types::{Asset, PoolStatus, ScoringRule},
     };
 
     type MarketId = u128;
@@ -424,7 +424,7 @@ mod tests {
     ) -> Pool<Balance, MarketId> {
         let fake_market_id = 0;
         let assets = (0..weights.len())
-            .map(|i| Asset::Outcome(Outcome::CategoricalOutcome(fake_market_id, i as u16)))
+            .map(|i| Asset::CategoricalOutcome(fake_market_id, i as u16))
             .collect::<Vec<_>>();
         let total_weight = weights.iter().sum();
         let weights = assets.clone().into_iter().zip(weights).collect::<BTreeMap<_, _>>();

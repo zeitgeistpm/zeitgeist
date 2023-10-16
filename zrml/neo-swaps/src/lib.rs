@@ -60,7 +60,7 @@ mod pallet {
         constants::{BASE, CENT},
         math::fixed::{bdiv, bmul},
         traits::{CompleteSetOperationsApi, DeployPoolApi},
-        types::{Asset, MarketStatus, MarketType, Outcome, ScalarPosition, ScoringRule},
+        types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -837,14 +837,14 @@ mod pallet {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
                     for i in 0..categories {
-                        assets.push(Asset::Outcome(Outcome::CategoricalOutcome(market_id, i)));
+                        assets.push(Asset::CategoricalOutcome(market_id, i));
                     }
                     assets
                 }
                 MarketType::Scalar(_) => {
                     vec![
-                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Long)),
-                        Asset::Outcome(Outcome::ScalarOutcome(market_id, ScalarPosition::Short)),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
                     ]
                 }
             })
