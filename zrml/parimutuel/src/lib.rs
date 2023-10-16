@@ -32,7 +32,7 @@ pub use pallet::*;
 mod pallet {
     use crate::weights::WeightInfoZeitgeist;
     use alloc::{vec, vec::Vec};
-    use core::{cmp::Ordering, marker::PhantomData};
+    use core::marker::PhantomData;
     use frame_support::{
         ensure,
         pallet_prelude::{OptionQuery, StorageMap},
@@ -46,7 +46,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchError, DispatchResult, Perquintill, SaturatedConversion, Saturating,
+        DispatchResult, SaturatedConversion, Saturating,
     };
     use zeitgeist_primitives::{
         constants::BASE,
@@ -183,13 +183,15 @@ mod pallet {
         /// There are not enough funds in the pot to reward the calculated amount.
         /// This should never happen, but if it does, we have an accounting problem.
         InsufficientFundsInPotAccount,
-        /// The market type is invalid.
-        InvalidMarketType,
         /// The outcome issuance is greater than the market base asset collateral.
         /// This should never happen, but if it does, we have an accounting problem.
         OutcomeIssuanceGreaterCollateral,
-        /// A categorical outcome was expected, but it was not found.
-        NoCategoricalOutcome,
+        /// A scalar market is not allowed for parimutuels.
+        ScalarMarketsNotAllowed,
+        /// A scalar outcome is not allowed for parimutuels.
+        ScalarOutcomeNotAllowed,
+        /// Only categorical markets are allowed for parimutuels.
+        OnlyCategoricalMarketsAllowed,
         /// There is no reward to distribute.
         NoRewardToDistribute,
     }
@@ -207,7 +209,7 @@ mod pallet {
         ///
         /// Complexity: `O(log(n))`, where `n` is the number of assets in the market.
         #[pallet::call_index(0)]
-        #[pallet::weight(5000)]
+        #[pallet::weight(T::WeightInfo::buy())]
         #[frame_support::transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -224,7 +226,9 @@ mod pallet {
             };
             let market_id = match outcome {
                 Outcome::CategoricalOutcome(market_id, _) => market_id,
-                Outcome::ScalarOutcome(market_id, _) => market_id,
+                Outcome::ScalarOutcome(_, _) => {
+                    return Err(Error::<T>::ScalarOutcomeNotAllowed.into());
+                }
             };
             let market = T::MarketCommons::market(&market_id)?;
             let base_asset = market.base_asset;
@@ -234,6 +238,10 @@ mod pallet {
             );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.market_type, MarketType::Categorical(_)),
+                Error::<T>::OnlyCategoricalMarketsAllowed
+            );
             let market_assets = Self::outcome_assets(market_id, &market);
             ensure!(market_assets.binary_search(&asset).is_ok(), Error::<T>::InvalidOutcomeAsset);
 
@@ -264,19 +272,22 @@ mod pallet {
 
         /// Claim winnings from a resolved market.
         ///
-        /// Complexity: `O(n)`, where `n` is the number of winning assets in the market.
-        /// But `n` is at most `2`, because scalar markets have two outcome assets.
+        /// Complexity: `O(1)`
         #[pallet::call_index(1)]
-        #[pallet::weight(5000)]
+        #[pallet::weight(T::WeightInfo::claim_rewards())]
         #[frame_support::transactional]
         pub fn claim_rewards(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.market_type, MarketType::Categorical(_)),
+                Error::<T>::OnlyCategoricalMarketsAllowed
+            );
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
-            let winning_assets = match winning_outcome {
+            let (winning_asset, payoff, slashable_asset_balance) = match winning_outcome {
                 OutcomeReport::Categorical(category_index) => {
                     let winning_asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(
                         market_id,
@@ -325,78 +336,27 @@ mod pallet {
 
                     let slashable_asset_balance = winning_balance;
 
-                    vec![(winning_asset, payoff, slashable_asset_balance)]
+                    (winning_asset, payoff, slashable_asset_balance)
                 }
-                OutcomeReport::Scalar(value) => {
-                    let long_asset = Asset::ParimutuelShare(Outcome::ScalarOutcome(
-                        market_id,
-                        ScalarPosition::Long,
-                    ));
-                    let short_asset = Asset::ParimutuelShare(Outcome::ScalarOutcome(
-                        market_id,
-                        ScalarPosition::Short,
-                    ));
-
-                    let long_balance = T::AssetManager::free_balance(long_asset, &who);
-                    let short_balance = T::AssetManager::free_balance(short_asset, &who);
-                    ensure!(
-                        !long_balance.is_zero() || !short_balance.is_zero(),
-                        Error::<T>::NoWinningShares
-                    );
-
-                    let bound = if let MarketType::Scalar(range) = market.market_type {
-                        range
-                    } else {
-                        return Err(Error::<T>::InvalidMarketType.into());
-                    };
-
-                    let (long_percent, short_percent) =
-                        Self::calc_final_payoff_percentages(value, *bound.start(), *bound.end());
-
-                    let payoff_long_portion =
-                        Self::get_payoff(market_id, long_asset, long_percent, long_balance)?;
-
-                    let payoff_short_portion: BalanceOf<T> =
-                        Self::get_payoff(market_id, short_asset, short_percent, short_balance)?;
-
-                    let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
-
-                    // Ensure the pot account has enough to pay out - if this is
-                    // ever not true then we have an accounting problem.
-                    ensure!(
-                        pot_total >= payoff_long_portion.saturating_add(payoff_short_portion),
-                        Error::<T>::InsufficientFundsInPotAccount,
-                    );
-
-                    let slashable_long_balance = long_balance;
-                    let slashable_short_balance = short_balance;
-
-                    vec![
-                        (long_asset, payoff_long_portion, slashable_long_balance),
-                        (short_asset, payoff_short_portion, slashable_short_balance),
-                    ]
+                OutcomeReport::Scalar(_) => {
+                    return Err(Error::<T>::ScalarMarketsNotAllowed.into());
                 }
             };
 
-            for (asset, payoff, slashable_asset_balance) in winning_assets {
-                T::AssetManager::slash(asset, &who, slashable_asset_balance);
+            T::AssetManager::slash(winning_asset, &who, slashable_asset_balance);
 
-                let remaining_bal = T::AssetManager::free_balance(market.base_asset, &pot_account);
-                let actual_payoff = payoff.min(remaining_bal);
+            let remaining_bal = T::AssetManager::free_balance(market.base_asset, &pot_account);
+            let actual_payoff = payoff.min(remaining_bal);
 
-                T::AssetManager::transfer(market.base_asset, &pot_account, &who, actual_payoff)?;
-                // The if-check prevents scalar markets to emit events even if sender only owns one
-                // of the outcome tokens.
-                if slashable_asset_balance != <BalanceOf<T>>::zero() {
-                    Self::deposit_event(Event::RewardsClaimed {
-                        market_id,
-                        asset,
-                        balance: slashable_asset_balance,
-                        actual_payoff,
-                        sender: who.clone(),
-                    });
-                }
-            }
+            T::AssetManager::transfer(market.base_asset, &pot_account, &who, actual_payoff)?;
+
+            Self::deposit_event(Event::RewardsClaimed {
+                market_id,
+                asset: winning_asset,
+                balance: slashable_asset_balance,
+                actual_payoff,
+                sender: who.clone(),
+            });
 
             Ok(())
         }
@@ -406,7 +366,7 @@ mod pallet {
         ///
         /// Complexity: `O(log(n))``, where `n` is the number of categorical assets the market can have.
         #[pallet::call_index(2)]
-        #[pallet::weight(5000)]
+        #[pallet::weight(T::WeightInfo::refund_pot())]
         #[frame_support::transactional]
         pub fn refund_pot(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -417,11 +377,17 @@ mod pallet {
             };
             let market_id = match outcome {
                 Outcome::CategoricalOutcome(market_id, _) => market_id,
-                Outcome::ScalarOutcome(_, _) => return Err(Error::<T>::NoCategoricalOutcome.into()),
+                Outcome::ScalarOutcome(_, _) => {
+                    return Err(Error::<T>::ScalarOutcomeNotAllowed.into());
+                }
             };
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
+            ensure!(
+                matches!(market.market_type, MarketType::Categorical(_)),
+                Error::<T>::OnlyCategoricalMarketsAllowed
+            );
             let market_assets = Self::outcome_assets(market_id, &market);
             ensure!(
                 market_assets.binary_search(&refund_asset).is_ok(),
@@ -449,7 +415,7 @@ mod pallet {
 
                     (refund_asset, refund_balance)
                 }
-                OutcomeReport::Scalar(_) => return Err(Error::<T>::NoCategoricalOutcome.into()),
+                OutcomeReport::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
             };
 
             let slashable_asset_balance = refund_balance;
@@ -482,76 +448,6 @@ mod pallet {
         #[inline]
         pub(crate) fn pot_account(market_id: MarketIdOf<T>) -> AccountIdOf<T> {
             T::PalletId::get().into_sub_account_truncating(market_id)
-        }
-
-        /// Get the canoncial, individual payoff per parimutuel participant.
-        fn get_payoff(
-            market_id: MarketIdOf<T>,
-            asset: AssetOf<T>,
-            final_payoff_percentage: Perquintill,
-            outcome_balance: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            if outcome_balance.is_zero() {
-                return Ok(<BalanceOf<T>>::zero());
-            }
-            let total_reward =
-                TotalRewards::<T>::get(market_id).ok_or(Error::<T>::NoRewardToDistribute)?;
-            let max_payoff =
-                final_payoff_percentage.mul_floor(total_reward.saturated_into::<u128>());
-            let current_total_asset_amount = T::AssetManager::total_issuance(asset);
-            debug_assert!(
-                outcome_balance <= current_total_asset_amount,
-                "Outcome asset amount should be less than or equal to total issuance!"
-            );
-            debug_assert!(
-                current_total_asset_amount > <BalanceOf<T>>::zero(),
-                "The total issuance of the outcome asset should be greater than zero, because the \
-                 individual outcome balance is ensured to be non-zero above!"
-            );
-            let payoff_ratio_mul_base: BalanceOf<T> =
-                bdiv(max_payoff.saturated_into(), current_total_asset_amount.saturated_into())?
-                    .saturated_into();
-            let payoff_portion: BalanceOf<T> =
-                bmul(payoff_ratio_mul_base.saturated_into(), outcome_balance.saturated_into())?
-                    .saturated_into();
-
-            debug_assert!({
-                let max_payoff = max_payoff.saturated_into::<BalanceOf<T>>();
-                match max_payoff.cmp(&current_total_asset_amount) {
-                    Ordering::Greater => payoff_portion > outcome_balance, // gain profit, low cost `outcome_balance`
-                    Ordering::Less => payoff_portion < outcome_balance, // loss, high cost `outcome_balance`
-                    Ordering::Equal => payoff_portion == outcome_balance, // no profit, cost equal to payoff
-                }
-            });
-            debug_assert!(
-                payoff_portion <= max_payoff.saturated_into::<BalanceOf<T>>(),
-                "Individual payoff should only be a portion of the maximum payoff!"
-            );
-
-            Ok(payoff_portion)
-        }
-
-        /// Get the reward percentages of the LONG and SHORT assets according to the resolved scalar outcome value.
-        fn calc_final_payoff_percentages(
-            final_value: u128,
-            low: u128,
-            high: u128,
-        ) -> (Perquintill, Perquintill) {
-            if final_value <= low {
-                return (Perquintill::zero(), Perquintill::one());
-            }
-            if final_value >= high {
-                return (Perquintill::one(), Perquintill::zero());
-            }
-
-            let payoff_long: Perquintill = Perquintill::from_rational(
-                final_value.saturating_sub(low),
-                high.saturating_sub(low),
-            );
-            let payoff_short: Perquintill = Perquintill::from_parts(
-                Perquintill::one().deconstruct().saturating_sub(payoff_long.deconstruct()),
-            );
-            (payoff_long, payoff_short)
         }
 
         /// Check the values for validity.

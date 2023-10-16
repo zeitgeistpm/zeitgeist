@@ -22,24 +22,11 @@ use crate::{mock::*, *};
 use core::ops::RangeInclusive;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::Zero, Percent};
+use sp_runtime::Percent;
 use zeitgeist_primitives::types::{
     Asset, MarketStatus, MarketType, Outcome, OutcomeReport, ScalarPosition, ScoringRule,
 };
 use zrml_market_commons::{Error as MError, Markets};
-
-fn setup_default_scalar_buys(market_id: u128) {
-    let winner_asset =
-        Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
-    let winner_amount =
-        <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
-    assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,));
-
-    let loser_asset =
-        Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Short));
-    let loser_amount = <Runtime as Config>::MinBetSize::get();
-    assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount,));
-}
 
 #[test]
 fn buy_emits_event() {
@@ -134,7 +121,7 @@ fn buy_fails_if_asset_mismatches_market_type() {
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,),
-            Error::<Runtime>::InvalidOutcomeAsset
+            Error::<Runtime>::ScalarOutcomeNotAllowed
         );
     });
 }
@@ -333,7 +320,7 @@ fn claim_rewards_categorical_changes_balances_correctly() {
 }
 
 #[test]
-fn claim_rewards_scalar_changes_balances_correctly() {
+fn buy_fails_if_market_type_is_scalar() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
@@ -346,114 +333,27 @@ fn claim_rewards_scalar_changes_balances_correctly() {
             Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
         let winner_amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
-        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,));
-
-        let loser_asset =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Short));
-        let loser_amount = <Runtime as Config>::MinBetSize::get();
-        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount,));
-
-        let mut market = Markets::<Runtime>::get(market_id).unwrap();
-        market.status = MarketStatus::Resolved;
-        market.resolved_outcome = Some(OutcomeReport::Scalar(75u128));
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let total_payoff = 29700000000;
-        let winner_payoff = Percent::from_percent(75) * total_payoff;
-        let loser_payoff = Percent::from_percent(25) * total_payoff;
-        let total_pot_amount = loser_amount + winner_amount;
-        let total_fees = Percent::from_percent(1) * total_pot_amount;
-        assert_eq!(total_payoff, total_pot_amount - total_fees);
-
-        let slashable_balance = 19800000000;
-        let winner_paid_fees = Percent::from_percent(1) * winner_amount;
-        assert_eq!(slashable_balance + winner_paid_fees, winner_amount);
-
-        let free_winner_asset_alice_before = AssetManager::free_balance(winner_asset, &ALICE);
-        assert_eq!(free_winner_asset_alice_before, slashable_balance);
-        let free_base_asset_alice_before = AssetManager::free_balance(market.base_asset, &ALICE);
-        let free_base_asset_pot_before =
-            AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id));
-        assert_eq!(free_base_asset_pot_before, total_pot_amount - total_fees);
-
-        let free_base_asset_bob_before = AssetManager::free_balance(market.base_asset, &BOB);
-
-        assert_ok!(Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id));
-        assert_eq!(AssetManager::free_balance(winner_asset, &ALICE), 0);
-        assert_eq!(
-            AssetManager::free_balance(market.base_asset, &ALICE) - free_base_asset_alice_before,
-            winner_payoff
-        );
-        assert_eq!(
-            AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id)),
-            loser_payoff
-        );
-
-        assert_ok!(Parimutuel::claim_rewards(RuntimeOrigin::signed(BOB), market_id));
-        assert_eq!(
-            AssetManager::free_balance(market.base_asset, &BOB) - free_base_asset_bob_before,
-            loser_payoff
-        );
-        assert_eq!(
-            AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id)),
-            0
+        assert_noop!(
+            Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount,),
+            Error::<Runtime>::ScalarOutcomeNotAllowed
         );
     });
 }
 
 #[test]
-fn claim_rewards_fails_if_invalid_market_type() {
+fn claim_rewards_fails_if_market_type_is_scalar() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
         let range: RangeInclusive<u128> = 0..=100;
         market.market_type = MarketType::Scalar(range);
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        setup_default_scalar_buys(market_id);
-
-        let mut market = Markets::<Runtime>::get(market_id).unwrap();
+        market.resolved_outcome = Some(OutcomeReport::Scalar(50));
         market.status = MarketStatus::Resolved;
-        market.resolved_outcome = Some(OutcomeReport::Scalar(75u128));
-        // invalid market type
-        market.market_type = MarketType::Categorical(10u16);
-        Markets::<Runtime>::insert(market_id, market.clone());
+        Markets::<Runtime>::insert(market_id, market);
 
         assert_noop!(
             Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id),
-            Error::<Runtime>::InvalidMarketType
-        );
-    });
-}
-
-#[test]
-fn claim_rewards_scalar_fails_if_no_winning_shares() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>();
-        let range: RangeInclusive<u128> = 0..=100;
-        market.market_type = MarketType::Scalar(range);
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        setup_default_scalar_buys(market_id);
-
-        let mut market = Markets::<Runtime>::get(market_id).unwrap();
-        market.status = MarketStatus::Resolved;
-        market.resolved_outcome = Some(OutcomeReport::Scalar(75u128));
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let asset_short =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Short));
-        let asset_long =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
-        assert!(AssetManager::free_balance(asset_short, &CHARLIE).is_zero());
-        assert!(AssetManager::free_balance(asset_long, &CHARLIE).is_zero());
-
-        assert_noop!(
-            Parimutuel::claim_rewards(RuntimeOrigin::signed(CHARLIE), market_id),
-            Error::<Runtime>::NoWinningShares
+            Error::<Runtime>::OnlyCategoricalMarketsAllowed
         );
     });
 }
@@ -794,32 +694,6 @@ fn refund_fails_if_refundable_balance_is_zero() {
         assert_noop!(
             Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::RefundableBalanceIsZero
-        );
-    });
-}
-
-#[test]
-fn refund_fails_if_scalar_report() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
-        let amount = <Runtime as Config>::MinBetSize::get();
-        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount,));
-
-        let mut market = Markets::<Runtime>::get(market_id).unwrap();
-        market.resolved_outcome = Some(OutcomeReport::Scalar(75u128));
-        market.status = MarketStatus::Resolved;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset = Asset::ParimutuelShare(Outcome::CategoricalOutcome(market_id, 0u16));
-        assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
-            Error::<Runtime>::NoCategoricalOutcome
         );
     });
 }

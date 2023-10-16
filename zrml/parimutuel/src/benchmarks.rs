@@ -23,14 +23,11 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Pallet as Parimutuel, *};
-use core::ops::RangeInclusive;
 use frame_benchmarking::v2::*;
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use zeitgeist_primitives::types::{
-    Asset, MarketStatus, MarketType, Outcome, OutcomeReport, ScalarPosition,
-};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, Outcome, OutcomeReport};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
@@ -74,7 +71,7 @@ mod benchmarks_parimutuel {
     }
 
     #[benchmark]
-    fn claim_rewards_categorical() {
+    fn claim_rewards() {
         // max category index is worst case
         let market_id = setup_market::<T>(MarketType::Categorical(T::MaxCategories::get()));
 
@@ -91,39 +88,6 @@ mod benchmarks_parimutuel {
         T::MarketCommons::mutate_market(&market_id, |market| {
             market.status = MarketStatus::Resolved;
             market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
-            Ok(())
-        })?;
-
-        #[extrinsic_call]
-        claim_rewards(RawOrigin::Signed(winner), market_id);
-    }
-
-    #[benchmark]
-    fn claim_rewards_scalar() {
-        let range: RangeInclusive<u128> = 0..=100;
-        let market_id = setup_market::<T>(MarketType::Scalar(range));
-
-        let winner = whitelisted_caller();
-        let winner_asset =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Long));
-        let winner_amount = T::MinBetSize::get() + T::MinBetSize::get();
-        buy_asset::<T>(market_id, winner_asset, &winner, winner_amount);
-        // buy both Scalar positions to get the worst case
-        let winner_asset =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Short));
-        let winner_amount = T::MinBetSize::get();
-        buy_asset::<T>(market_id, winner_asset, &winner, winner_amount);
-
-        let loser = whitelisted_caller();
-        let loser_asset =
-            Asset::ParimutuelShare(Outcome::ScalarOutcome(market_id, ScalarPosition::Short));
-        let loser_amount = T::MinBetSize::get();
-        buy_asset::<T>(market_id, loser_asset, &loser, loser_amount);
-
-        T::MarketCommons::mutate_market(&market_id, |market| {
-            market.status = MarketStatus::Resolved;
-            // pot distributes to 75% LONG and 25% SHORT
-            market.resolved_outcome = Some(OutcomeReport::Scalar(75u128));
             Ok(())
         })?;
 
