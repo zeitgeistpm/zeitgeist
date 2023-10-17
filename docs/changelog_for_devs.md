@@ -14,16 +14,18 @@ APIs/RPC interface.
 
 ## v0.4.2
 
+[#1127]: https://github.com/zeitgeistpm/zeitgeist/pull/1127
+
 ### Added
 
-- Add extrinsics to zrml-prediction-markets:
+- Add extrinsics to zrml-prediction-markets ([#1127]):
   - `schedule_early_close`: Schedule an early close of a market.
   - `dispute_early_close`: Dispute a scheduled early close of a market.
   - `reject_early_close`: Reject a scheduled early close of a market.
-- Add events to zrml-prediction-markets:
-  - `MarketEarlyCloseScheduled`
-  - `MarketEarlyCloseDisputed`
-  - `MarketEarlyCloseRejected`
+- Add events to zrml-prediction-markets ([#1127]):
+  - `MarketEarlyCloseScheduled`: A market's early close was scheduled.
+  - `MarketEarlyCloseDisputed`: A market's early close was disputed.
+  - `MarketEarlyCloseRejected`: A market's early close was rejected.
 
 ## v0.4.0
 
