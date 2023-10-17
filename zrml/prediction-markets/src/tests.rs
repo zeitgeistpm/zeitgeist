@@ -2866,9 +2866,7 @@ fn schedule_early_close_emits_event() {
 
         let market_id = 0;
 
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         let new_end = now + CloseProtectionBlockPeriod::get();
