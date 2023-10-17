@@ -138,7 +138,7 @@ mod pallet {
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
                 BlockNumber = Self::BlockNumber,
-                Currency = Self::Currency,
+                Balance = BalanceOf<Self>,
             >;
 
         /// The maximum number of appeals until a court fails.
@@ -652,7 +652,7 @@ mod pallet {
             let (exit_amount, active_lock, weight) = if prev_p_info.active_lock.is_zero() {
                 T::Currency::remove_lock(T::LockId::get(), &who);
                 Participants::<T>::remove(&who);
-                (prev_p_info.stake, <BalanceOf<T>>::zero(), T::WeightInfo::exit_court_remove())
+                (prev_p_info.stake, BalanceOf::<T>::zero(), T::WeightInfo::exit_court_remove())
             } else {
                 let active_lock = prev_p_info.active_lock;
                 let exit_amount = prev_p_info.stake.saturating_sub(active_lock);
@@ -1164,8 +1164,8 @@ mod pallet {
                     Ok(p)
                 };
 
-            let mut active_lock = <BalanceOf<T>>::zero();
-            let mut consumed_stake = <BalanceOf<T>>::zero();
+            let mut active_lock = BalanceOf::<T>::zero();
+            let mut consumed_stake = BalanceOf::<T>::zero();
             let mut joined_at = now;
 
             if let Some(prev_p_info) = <Participants<T>>::get(who) {
@@ -1470,7 +1470,7 @@ mod pallet {
                             court_participant.clone(),
                             SelectionValue {
                                 weight: 1,
-                                slashable: <BalanceOf<T>>::zero(),
+                                slashable: BalanceOf::<T>::zero(),
                                 delegated_stakes: Default::default(),
                             },
                         );
@@ -2340,7 +2340,7 @@ mod pallet {
                                     // we have no better global dispute outcome owner
                                     owner: Self::treasury_account_id(),
                                     // initial vote amount
-                                    initial_vote_amount: <BalanceOf<T>>::zero(),
+                                    initial_vote_amount: BalanceOf::<T>::zero(),
                                 })
                             }
                             _ => None,

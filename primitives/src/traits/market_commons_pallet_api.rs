@@ -17,24 +17,22 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(clippy::type_complexity)]
+
 use crate::types::{Asset, Market, PoolId};
 use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
+    dispatch::{fmt::Debug, DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     storage::PrefixIterator,
-    traits::{Currency, NamedReservableCurrency},
     Parameter,
 };
-use parity_scale_codec::MaxEncodedLen;
-use sp_runtime::traits::AtLeast32Bit;
+use parity_scale_codec::{FullCodec, MaxEncodedLen};
+use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
 type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::AccountId,
-    <<T as MarketCommonsPalletApi>::Currency as Currency<
-        <T as MarketCommonsPalletApi>::AccountId,
-    >>::Balance,
+    <T as MarketCommonsPalletApi>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
     Asset<<T as MarketCommonsPalletApi>::MarketId>,
@@ -44,7 +42,14 @@ type MarketOf<T> = Market<
 pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber: AtLeast32Bit;
-    type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+    type Balance: AtLeast32BitUnsigned
+        + FullCodec
+        + Copy
+        + MaybeSerializeDeserialize
+        + Debug
+        + Default
+        + scale_info::TypeInfo
+        + MaxEncodedLen;
     type MarketId: AtLeast32Bit
         + Copy
         + Default
