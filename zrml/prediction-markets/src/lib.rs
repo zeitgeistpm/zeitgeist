@@ -1514,13 +1514,15 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let is_authorized = T::CloseMarketEarlyOrigin::try_origin(origin.clone()).is_ok();
-            if is_authorized {
-                T::CloseMarketEarlyOrigin::ensure_origin(origin.clone())?;
-            } else {
+            let mut market_creator = None;
+            if !is_authorized {
                 // check if market creator below
-                ensure_signed(origin.clone())?;
-            };
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+                let who = ensure_signed(origin)?;
+                let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+                ensure!(market.creator == who, Error::<T>::RequesterNotCreator);
+                market_creator = Some(who);
+            }
+            
             Self::ensure_market_is_active(&market)?;
             let now_block = <frame_system::Pallet<T>>::block_number();
             let now_time = <zrml_market_commons::Pallet<T>>::now();
@@ -1553,10 +1555,7 @@ mod pallet {
                             T::CloseProtectionTimeFramePeriod::get(),
                         )
                     } else {
-                        let who = ensure_signed(origin)?;
-                        ensure!(market.creator == who, Error::<T>::RequesterNotCreator);
-                        let market_creator = who;
-
+                        let market_creator = market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
                         let close_request_bond = T::CloseRequestBond::get();
 
                         T::AssetManager::reserve_named(
