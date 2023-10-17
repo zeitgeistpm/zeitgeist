@@ -1498,8 +1498,14 @@ mod pallet {
         #[pallet::call_index(17)]
         #[pallet::weight(
             T::WeightInfo::schedule_early_close_as_authority(CacheSize::get(), CacheSize::get())
-                .max(T::WeightInfo::schedule_early_close_after_dispute(CacheSize::get(), CacheSize::get()))
-                .max(T::WeightInfo::schedule_early_close_as_market_creator(CacheSize::get(), CacheSize::get()))
+                .max(T::WeightInfo::schedule_early_close_after_dispute(
+                        CacheSize::get(),
+                        CacheSize::get()),
+                )
+                .max(T::WeightInfo::schedule_early_close_as_market_creator(
+                        CacheSize::get(),
+                        CacheSize::get()),
+                )
             )
         ]
         #[transactional]
@@ -1691,9 +1697,8 @@ mod pallet {
                     }
                 },
                 "This will never happen, because schedule_early_close ensures that the new end is \
-                 always before the old end, 
-                    otherwise the switch to an old market period would lead to a never ending \
-                 market!"
+                 always before the old end, otherwise the switch to an old market period would \
+                 lead to a never ending market!"
             );
 
             let close_dispute_bond = T::CloseDisputeBond::get();
