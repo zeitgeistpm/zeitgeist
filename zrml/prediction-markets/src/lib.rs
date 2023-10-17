@@ -1850,7 +1850,7 @@ mod pallet {
                 Origin = Self::RuntimeOrigin,
             >;
 
-        /// The base amount of currency that must be bonded 
+        /// The base amount of currency that must be bonded
         /// by the disputant in order to dispute an early market closure of the market creator.
         #[pallet::constant]
         type CloseDisputeBond: Get<BalanceOf<Self>>;
@@ -1871,7 +1871,7 @@ mod pallet {
         #[pallet::constant]
         type CloseProtectionBlockPeriod: Get<Self::BlockNumber>;
 
-        /// The base amount of currency that must be bonded 
+        /// The base amount of currency that must be bonded
         /// by the market creator in order to schedule an early market closure.
         #[pallet::constant]
         type CloseRequestBond: Get<BalanceOf<Self>>;
