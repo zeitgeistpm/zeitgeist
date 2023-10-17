@@ -2,18 +2,18 @@
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
-orml-traits = { workspace = true }
 
 [dev-dependencies]
-pallet-balances = { workspace = true, features = ["default"] }
-pallet-timestamp = { workspace = true, features = ["default"] }
 orml-currencies = { workspace = true, features = ["default"] }
 orml-tokens = { workspace = true, features = ["default"] }
+pallet-balances = { workspace = true, features = ["default"] }
+pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
 
