@@ -200,15 +200,15 @@ parameter_types! {
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing an early market close by the market creator.
-    pub const CloseDisputeBond: Balance = 2_000 * BASE;
+    pub const CloseEarlyDisputeBond: Balance = 2_000 * BASE;
     // 43_200_000 = 12 hours. Fat-finger protection for the advisory committe to reject
     // the early market schedule.
-    pub const CloseProtectionTimeFramePeriod: Moment = 43_200_000;
+    pub const CloseEarlyProtectionTimeFramePeriod: Moment = 43_200_000;
     // Fat-finger protection for the advisory committe to reject
     // the early market schedule.
-    pub const CloseProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
+    pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
     /// (Slashable) Bond that is provided for scheduling an early market close.
-    pub const CloseRequestBond: Balance = 200 * BASE;
+    pub const CloseEarlyRequestBond: Balance = 200 * BASE;
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Unreserved in case the dispute was justified otherwise slashed.
     /// This is when the resolved outcome is different to the default (reported) outcome.
@@ -256,10 +256,10 @@ parameter_types! {
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     // Waiting time for market creator to close
     // the market after an early close schedule.
-    pub const PrematureCloseBlockPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+    pub const CloseEarlyBlockPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
     // 432_000_000 = 5 days. Waiting time for market creator to close
     // the market after an early close schedule.
-    pub const PrematureCloseTimeFramePeriod: Moment = 432_000_000;
+    pub const CloseEarlyTimeFramePeriod: Moment = 432_000_000;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;

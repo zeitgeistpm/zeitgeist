@@ -40,8 +40,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        CloseProtectionTimeFramePeriod, MaxSwapFee, MinWeight, PrematureCloseTimeFramePeriod, BASE,
-        MILLISECS_PER_BLOCK,
+        CloseEarlyProtectionTimeFramePeriod, CloseEarlyTimeFramePeriod, MaxSwapFee, MinWeight,
+        BASE, MILLISECS_PER_BLOCK,
     },
     traits::{DisputeApi, Swaps},
     types::{
@@ -1310,7 +1310,7 @@ benchmarks! {
         }
 
         let now_time = <zrml_market_commons::Pallet::<T>>::now();
-        let new_range_end: MomentOf<T> = now_time + CloseProtectionTimeFramePeriod::get();
+        let new_range_end: MomentOf<T> = now_time + CloseEarlyProtectionTimeFramePeriod::get();
 
         for i in 0..n {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -1344,7 +1344,7 @@ benchmarks! {
         }
 
         let now_time = <zrml_market_commons::Pallet::<T>>::now();
-        let new_range_end: MomentOf<T> = now_time + CloseProtectionTimeFramePeriod::get();
+        let new_range_end: MomentOf<T> = now_time + CloseEarlyProtectionTimeFramePeriod::get();
 
         for i in 0..n {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -1391,7 +1391,7 @@ benchmarks! {
         }
 
         let now_time = <zrml_market_commons::Pallet::<T>>::now();
-        let new_range_end: MomentOf<T> = now_time + PrematureCloseTimeFramePeriod::get();
+        let new_range_end: MomentOf<T> = now_time + CloseEarlyTimeFramePeriod::get();
 
         for i in 0..n {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(

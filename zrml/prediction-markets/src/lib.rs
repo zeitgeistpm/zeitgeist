@@ -1483,7 +1483,7 @@ mod pallet {
         ///
         /// The market creator schedules it `now + PrematureClose...Period` in the future.
         /// This is to allow enough time for a potential dispute.
-        /// The market creator reserves a `CloseDisputeBond`, which is returned,
+        /// The market creator reserves a `CloseEarlyDisputeBond`, which is returned,
         /// if the `CloseMarketsEarlyOrigin`` decides to accept the early close request
         /// or if it is not disputed.
         /// It is slashed, if the early close request is disputed
@@ -1553,13 +1553,13 @@ mod pallet {
                     let (block_period, time_frame_period) = if is_authorized {
                         // fat finger protection
                         (
-                            T::CloseProtectionBlockPeriod::get(),
-                            T::CloseProtectionTimeFramePeriod::get(),
+                            T::CloseEarlyProtectionBlockPeriod::get(),
+                            T::CloseEarlyProtectionTimeFramePeriod::get(),
                         )
                     } else {
                         let market_creator =
                             market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
-                        let close_request_bond = T::CloseRequestBond::get();
+                        let close_request_bond = T::CloseEarlyRequestBond::get();
 
                         T::AssetManager::reserve_named(
                             &Self::reserve_id(),
@@ -1574,10 +1574,7 @@ mod pallet {
                             Ok(())
                         })?;
 
-                        (
-                            T::PrematureCloseBlockPeriod::get(),
-                            T::PrematureCloseTimeFramePeriod::get(),
-                        )
+                        (T::CloseEarlyBlockPeriod::get(), T::CloseEarlyTimeFramePeriod::get())
                     };
 
                     get_new_period(block_period, time_frame_period)?
@@ -1603,8 +1600,8 @@ mod pallet {
                     }
 
                     get_new_period(
-                        T::CloseProtectionBlockPeriod::get(),
-                        T::CloseProtectionTimeFramePeriod::get(),
+                        T::CloseEarlyProtectionBlockPeriod::get(),
+                        T::CloseEarlyProtectionTimeFramePeriod::get(),
                     )?
                 }
             };
@@ -1651,7 +1648,7 @@ mod pallet {
         /// Allows anyone to dispute a scheduled early close.
         ///
         /// The market period is reset to the original (old) period.
-        /// A `CloseDisputeBond` is reserved, which is returned,
+        /// A `CloseEarlyDisputeBond` is reserved, which is returned,
         /// if the `CloseMarketsEarlyOrigin` decides to reject
         /// the early close request of the market creator or
         /// if the `CloseMarketsEarlyOrigin` is inactive.
@@ -1704,7 +1701,7 @@ mod pallet {
                  lead to a never ending market!"
             );
 
-            let close_dispute_bond = T::CloseDisputeBond::get();
+            let close_dispute_bond = T::CloseEarlyDisputeBond::get();
 
             T::AssetManager::reserve_named(
                 &Self::reserve_id(),
@@ -1736,8 +1733,8 @@ mod pallet {
         /// The market period is reset to the original (old) period
         /// in case it was scheduled before (fat-finger protection).
         ///
-        /// The disputant gets back the `CloseDisputeBond`
-        /// and receives the market creators `CloseRequestBond`.
+        /// The disputant gets back the `CloseEarlyDisputeBond`
+        /// and receives the market creators `CloseEarlyRequestBond`.
         ///
         /// # Weight
         ///
@@ -1861,7 +1858,7 @@ mod pallet {
         /// The base amount of currency that must be bonded
         /// by the disputant in order to dispute an early market closure of the market creator.
         #[pallet::constant]
-        type CloseDisputeBond: Get<BalanceOf<Self>>;
+        type CloseEarlyDisputeBond: Get<BalanceOf<Self>>;
 
         /// The origin that is allowed to close markets early.
         type CloseMarketEarlyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -1872,17 +1869,17 @@ mod pallet {
         /// The milliseconds to wait for the `CloseMarketsEarlyOrigin`
         /// before the early market close actually happens (fat-finger protection).
         #[pallet::constant]
-        type CloseProtectionTimeFramePeriod: Get<MomentOf<Self>>;
+        type CloseEarlyProtectionTimeFramePeriod: Get<MomentOf<Self>>;
 
         /// The block time to wait for the `CloseMarketsEarlyOrigin`
         /// before the early market close actually happens (fat-finger protection).
         #[pallet::constant]
-        type CloseProtectionBlockPeriod: Get<Self::BlockNumber>;
+        type CloseEarlyProtectionBlockPeriod: Get<Self::BlockNumber>;
 
         /// The base amount of currency that must be bonded
         /// by the market creator in order to schedule an early market closure.
         #[pallet::constant]
-        type CloseRequestBond: Get<BalanceOf<Self>>;
+        type CloseEarlyRequestBond: Get<BalanceOf<Self>>;
 
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
@@ -1991,12 +1988,12 @@ mod pallet {
         /// The block time to wait for the market creator
         /// before the early market close actually happens.
         #[pallet::constant]
-        type PrematureCloseBlockPeriod: Get<Self::BlockNumber>;
+        type CloseEarlyBlockPeriod: Get<Self::BlockNumber>;
 
         /// The milliseconds to wait for the market creator
         /// before the early market close actually happens.
         #[pallet::constant]
-        type PrematureCloseTimeFramePeriod: Get<MomentOf<Self>>;
+        type CloseEarlyTimeFramePeriod: Get<MomentOf<Self>>;
 
         /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;

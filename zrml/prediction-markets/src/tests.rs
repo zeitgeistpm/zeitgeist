@@ -43,9 +43,9 @@ use sp_arithmetic::Perbill;
 use sp_runtime::traits::{AccountIdConversion, Hash, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{
-        CloseDisputeBond, CloseProtectionBlockPeriod, CloseProtectionTimeFramePeriod,
-        CloseRequestBond, MaxAppeals, MaxSelectedDraws, MinJurorStake, OutcomeBond, OutcomeFactor,
-        OutsiderBond, PrematureCloseBlockPeriod, BASE, CENT, MILLISECS_PER_BLOCK,
+        CloseEarlyBlockPeriod, CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
+        CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, MaxAppeals, MaxSelectedDraws,
+        MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::Swaps as SwapsPalletApi,
     types::{
@@ -2869,7 +2869,7 @@ fn schedule_early_close_emits_event() {
         assert_ok!(PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + CloseProtectionBlockPeriod::get();
+        let new_end = now + CloseEarlyProtectionBlockPeriod::get();
         assert!(new_end < end);
 
         let new_period = MarketPeriod::Block(0..new_end);
@@ -3029,7 +3029,7 @@ fn sudo_schedule_early_close_at_block_works() {
         );
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + CloseProtectionBlockPeriod::get();
+        let new_end = now + CloseEarlyProtectionBlockPeriod::get();
         assert!(new_end < end);
 
         let market = MarketCommons::market(&market_id).unwrap();
@@ -3102,7 +3102,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         );
 
         let now = <zrml_market_commons::Pallet<Runtime>>::now();
-        let new_end = now + CloseProtectionTimeFramePeriod::get();
+        let new_end = now + CloseEarlyProtectionTimeFramePeriod::get();
         assert!(new_end < end);
 
         let market = MarketCommons::market(&market_id).unwrap();
@@ -3233,10 +3233,13 @@ fn schedule_early_close_as_market_creator_works() {
         ));
 
         let reserved_balance_alice_after = Balances::reserved_balance(ALICE);
-        assert_eq!(reserved_balance_alice_after - reserved_balance_alice, CloseRequestBond::get());
+        assert_eq!(
+            reserved_balance_alice_after - reserved_balance_alice,
+            CloseEarlyRequestBond::get()
+        );
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + PrematureCloseBlockPeriod::get();
+        let new_end = now + CloseEarlyBlockPeriod::get();
         assert!(new_end < end);
 
         let market = MarketCommons::market(&market_id).unwrap();
@@ -3298,7 +3301,7 @@ fn dispute_early_close_from_market_creator_works() {
         ));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + PrematureCloseBlockPeriod::get();
+        let new_end = now + CloseEarlyBlockPeriod::get();
         let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
         assert_eq!(market_ids_at_new_end, vec![market_id]);
 
@@ -3309,7 +3312,7 @@ fn dispute_early_close_from_market_creator_works() {
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
         let reserved_bob_after = Balances::reserved_balance(BOB);
-        assert_eq!(reserved_bob_after - reserved_bob, CloseDisputeBond::get());
+        assert_eq!(reserved_bob_after - reserved_bob, CloseEarlyDisputeBond::get());
 
         let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
         assert!(market_ids_at_new_end.is_empty());
@@ -3319,7 +3322,7 @@ fn dispute_early_close_from_market_creator_works() {
 
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.period, old_market_period);
-        assert_eq!(market.bonds.close_dispute, Some(Bond::new(BOB, CloseDisputeBond::get())));
+        assert_eq!(market.bonds.close_dispute, Some(Bond::new(BOB, CloseEarlyDisputeBond::get())));
         let new_period = MarketPeriod::Block(0..new_end);
         assert_eq!(
             market.premature_close.unwrap(),
@@ -3380,15 +3383,15 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
 
         let alice_free_after = Balances::free_balance(ALICE);
         let alice_reserved_after = Balances::reserved_balance(ALICE);
-        // moved CloseRequestBond from reserved to free
-        assert_eq!(alice_reserved - alice_reserved_after, CloseRequestBond::get());
-        assert_eq!(alice_free_after - alice_free, CloseRequestBond::get());
+        // moved CloseEarlyRequestBond from reserved to free
+        assert_eq!(alice_reserved - alice_reserved_after, CloseEarlyRequestBond::get());
+        assert_eq!(alice_free_after - alice_free, CloseEarlyRequestBond::get());
 
         let bob_free_after = Balances::free_balance(BOB);
         let bob_reserved_after = Balances::reserved_balance(BOB);
-        // moved CloseDisputeBond from reserved to free
-        assert_eq!(bob_reserved - bob_reserved_after, CloseDisputeBond::get());
-        assert_eq!(bob_free_after - bob_free, CloseDisputeBond::get());
+        // moved CloseEarlyDisputeBond from reserved to free
+        assert_eq!(bob_reserved - bob_reserved_after, CloseEarlyDisputeBond::get());
+        assert_eq!(bob_free_after - bob_free, CloseEarlyDisputeBond::get());
     });
 }
 
@@ -3427,9 +3430,9 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
 
         let alice_free_after = Balances::free_balance(ALICE);
         let alice_reserved_after = Balances::reserved_balance(ALICE);
-        // moved CloseRequestBond from reserved to free
-        assert_eq!(alice_reserved - alice_reserved_after, CloseRequestBond::get());
-        assert_eq!(alice_free_after - alice_free, CloseRequestBond::get());
+        // moved CloseEarlyRequestBond from reserved to free
+        assert_eq!(alice_reserved - alice_reserved_after, CloseEarlyRequestBond::get());
+        assert_eq!(alice_free_after - alice_free, CloseEarlyRequestBond::get());
     });
 }
 
@@ -3527,7 +3530,7 @@ fn reject_early_close_resets_to_old_market_period() {
         );
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + CloseProtectionBlockPeriod::get();
+        let new_end = now + CloseEarlyProtectionBlockPeriod::get();
         let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
         assert_eq!(market_ids_at_new_end, vec![market_id]);
 
@@ -3586,10 +3589,13 @@ fn reject_early_close_settles_bonds() {
         let free_bob_after = Balances::free_balance(BOB);
         let free_alice_after = Balances::free_balance(ALICE);
 
-        assert_eq!(reserved_alice - reserved_alice_after, CloseRequestBond::get());
-        assert_eq!(reserved_bob - reserved_bob_after, CloseDisputeBond::get());
+        assert_eq!(reserved_alice - reserved_alice_after, CloseEarlyRequestBond::get());
+        assert_eq!(reserved_bob - reserved_bob_after, CloseEarlyDisputeBond::get());
         // disputant Bob gets the bonds
-        assert_eq!(free_bob_after - free_bob, CloseRequestBond::get() + CloseDisputeBond::get());
+        assert_eq!(
+            free_bob_after - free_bob,
+            CloseEarlyRequestBond::get() + CloseEarlyDisputeBond::get()
+        );
         assert_eq!(free_alice_after - free_alice, 0);
     });
 }
@@ -3677,17 +3683,17 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
         let free_bob_after = Balances::free_balance(BOB);
         let free_alice_after = Balances::free_balance(ALICE);
 
-        assert_eq!(reserved_alice - reserved_alice_after, CloseRequestBond::get());
-        assert_eq!(reserved_bob - reserved_bob_after, CloseDisputeBond::get());
+        assert_eq!(reserved_alice - reserved_alice_after, CloseEarlyRequestBond::get());
+        assert_eq!(reserved_bob - reserved_bob_after, CloseEarlyDisputeBond::get());
         // market creator Alice gets the bonds
         assert_eq!(
             free_alice_after - free_alice,
-            CloseRequestBond::get() + CloseDisputeBond::get()
+            CloseEarlyRequestBond::get() + CloseEarlyDisputeBond::get()
         );
         assert_eq!(free_bob_after - free_bob, 0);
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + CloseProtectionBlockPeriod::get();
+        let new_end = now + CloseEarlyProtectionBlockPeriod::get();
         let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
         assert_eq!(market_ids_at_new_end, vec![market_id]);
 

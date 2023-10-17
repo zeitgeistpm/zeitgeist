@@ -1113,12 +1113,12 @@ macro_rules! impl_config_traits {
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type Authorized = Authorized;
             type Court = Court;
-            type CloseDisputeBond = CloseDisputeBond;
+            type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
             type CloseMarketEarlyOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type CloseOrigin = EnsureRoot<AccountId>;
-            type CloseProtectionTimeFramePeriod = CloseProtectionTimeFramePeriod;
-            type CloseProtectionBlockPeriod = CloseProtectionBlockPeriod;
-            type CloseRequestBond = CloseRequestBond;
+            type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
+            type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
+            type CloseEarlyRequestBond = CloseEarlyRequestBond;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
@@ -1144,8 +1144,8 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
-            type PrematureCloseBlockPeriod = PrematureCloseBlockPeriod;
-            type PrematureCloseTimeFramePeriod = PrematureCloseTimeFramePeriod;
+            type CloseEarlyBlockPeriod = CloseEarlyBlockPeriod;
+            type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
