@@ -108,7 +108,7 @@ where
             juror.clone(),
             CourtParticipantInfo {
                 stake,
-                active_lock: <BalanceOf<T>>::zero(),
+                active_lock: BalanceOf::<T>::zero(),
                 prepare_exit_at: None,
                 delegations: Default::default(),
             },
@@ -282,7 +282,7 @@ benchmarks! {
         <frame_system::Pallet<T>>::set_block_number(now + T::InflationPeriod::get());
 
         <Participants<T>>::mutate(caller.clone(), |prev_p_info| {
-            prev_p_info.as_mut().unwrap().active_lock = <BalanceOf<T>>::zero();
+            prev_p_info.as_mut().unwrap().active_lock = BalanceOf::<T>::zero();
         });
 
         let juror = T::Lookup::unlookup(caller.clone());
@@ -323,7 +323,7 @@ benchmarks! {
             court_participant: caller.clone(),
             vote: Vote::Drawn,
             weight: 1u32,
-            slashable: <BalanceOf<T>>::zero(),
+            slashable: BalanceOf::<T>::zero(),
         };
         let index = draws.binary_search_by_key(&caller, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
         draws.try_insert(index, draw).unwrap();
@@ -475,7 +475,7 @@ benchmarks! {
                     court_participant: juror,
                     vote: Vote::Revealed { commitment, vote_item, salt },
                     weight: 1u32,
-                    slashable: <BalanceOf<T>>::zero()
+                    slashable: BalanceOf::<T>::zero()
                 };
             draws.try_push(draw).unwrap();
         }

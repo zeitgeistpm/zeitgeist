@@ -79,29 +79,26 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
 
-    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
-    pub(crate) type CurrencyOf<T> = <T as zrml_market_commons::Config>::Currency;
+    pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+        <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
     pub(crate) type TimeFrame = u64;
     pub(crate) type MarketIdOf<T> = <T as zrml_market_commons::Config>::MarketId;
     pub(crate) type MomentOf<T> =
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
     pub type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
+        AccountIdOf<T>,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
     >;
-    pub(crate) type ReportOf<T> =
-        Report<<T as frame_system::Config>::AccountId, <T as frame_system::Config>::BlockNumber>;
+    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, <T as frame_system::Config>::BlockNumber>;
     pub type CacheSize = ConstU32<64>;
     pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
-    type InitialItemOf<T> = InitialItem<<T as frame_system::Config>::AccountId, BalanceOf<T>>;
+    type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
 
     macro_rules! impl_unreserve_bond {
         ($fn_name:ident, $bond_type:ident) => {
@@ -123,7 +120,7 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                CurrencyOf::<T>::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
@@ -169,11 +166,8 @@ mod pallet {
                 } else {
                     (value, BalanceOf::<T>::zero())
                 };
-                let (imbalance, excess) = CurrencyOf::<T>::slash_reserved_named(
-                    &Self::reserve_id(),
-                    &bond.who,
-                    slash_amount,
-                );
+                let (imbalance, excess) =
+                    T::Currency::slash_reserved_named(&Self::reserve_id(), &bond.who, slash_amount);
                 // If there's excess, there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
                 if excess != BalanceOf::<T>::zero() {
@@ -186,11 +180,7 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                 }
                 if unreserve_amount != BalanceOf::<T>::zero() {
-                    CurrencyOf::<T>::unreserve_named(
-                        &Self::reserve_id(),
-                        &bond.who,
-                        unreserve_amount,
-                    );
+                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
@@ -221,7 +211,7 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                let res = <CurrencyOf<T>>::repatriate_reserved_named(
+                let res = T::Currency::repatriate_reserved_named(
                     &Self::reserve_id(),
                     &bond.who,
                     beneficiary,
@@ -232,7 +222,7 @@ mod pallet {
                 // there's nothing we can do, so we don't count this as error
                 // and log a warning instead.
                 match res {
-                    Ok(missing) if missing != <BalanceOf<T>>::zero() => {
+                    Ok(missing) if missing != BalanceOf::<T>::zero() => {
                         let warning = format!(
                             "Failed to repatriate all of the {} bond of market {:?} (missing \
                              balance {:?}).",
@@ -1185,7 +1175,7 @@ mod pallet {
                 )?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
-                if balance != <BalanceOf<T>>::zero() {
+                if balance != BalanceOf::<T>::zero() {
                     Self::deposit_event(Event::TokensRedeemed(
                         market_id,
                         currency_id,
@@ -1381,7 +1371,7 @@ mod pallet {
             initial_items.push(InitialItemOf::<T> {
                 outcome: report.outcome.clone(),
                 owner: report.by.clone(),
-                amount: <BalanceOf<T>>::zero(),
+                amount: BalanceOf::<T>::zero(),
             });
 
             let gd_items = res_1.result;
@@ -1481,7 +1471,7 @@ mod pallet {
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<
                 Self::AccountId,
-                Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
+                Balance = BalanceOf<Self>,
                 CurrencyId = Asset<MarketIdOf<Self>>,
                 ReserveIdentifier = [u8; 8],
             >;
@@ -1502,6 +1492,12 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
                 Moment = MomentOf<Self>,
                 Origin = Self::RuntimeOrigin,
+            >;
+
+        type Currency: NamedReservableCurrency<
+                Self::AccountId,
+                ReserveIdentifier = [u8; 8],
+                Balance = BalanceOf<Self>,
             >;
 
         /// The origin that is allowed to close markets.
@@ -2783,7 +2779,7 @@ mod pallet {
                     } else {
                         // If the report outcome was wrong, the dispute was justified
                         Self::unreserve_dispute_bond(market_id)?;
-                        CurrencyOf::<T>::resolve_creating(&bond.who, overall_imbalance);
+                        T::Currency::resolve_creating(&bond.who, overall_imbalance);
                         overall_imbalance = NegativeImbalanceOf::<T>::zero();
                     }
                 }
