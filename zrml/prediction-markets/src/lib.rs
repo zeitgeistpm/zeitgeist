@@ -68,8 +68,8 @@ mod pallet {
         types::{
             Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
             MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            OldMarketDispute, OutcomeReport, Report, ResolutionMechanism, ResultWithWeightInfo,
+            ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
@@ -215,7 +215,7 @@ mod pallet {
                     &Self::reserve_id(),
                     &bond.who,
                     beneficiary,
-                    bond.value.saturated_into::<u128>().saturated_into(),
+                    bond.value,
                     BalanceStatus::Free,
                 );
                 // If there's an error or missing balance,
@@ -1079,6 +1079,12 @@ mod pallet {
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
+            match <zrml_market_commons::Pallet<T>>::resolution_mechanism(market.clone()) {
+                ResolutionMechanism::RedeemTokens => (),
+                ResolutionMechanism::Noop => {
+                    return Err(Error::<T>::InvalidResolutionMechanism.into());
+                }
+            }
 
             // Check to see if the sender has any winning shares.
             let resolved_outcome =
@@ -1760,6 +1766,8 @@ mod pallet {
         NonZeroDisputePeriodOnTrustedMarket,
         /// The fee is too high.
         FeeTooHigh,
+        /// The resolution mechanism resulting from the scoring rule is not supported.
+        InvalidResolutionMechanism,
     }
 
     #[pallet::event]

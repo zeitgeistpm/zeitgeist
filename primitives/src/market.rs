@@ -303,6 +303,11 @@ pub struct AuthorityReport<BlockNumber> {
     pub outcome: OutcomeReport,
 }
 
+pub enum ResolutionMechanism {
+    RedeemTokens,
+    Noop,
+}
+
 /// Contains a market id and the market period.
 ///
 /// * `BN`: Block Number

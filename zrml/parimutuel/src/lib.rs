@@ -350,6 +350,10 @@ mod pallet {
         /// Refund the collateral of losing categorical outcome assets
         /// in case that there was no account betting on the winner outcome.
         ///
+        /// # Arguments
+        ///
+        /// - `refund_asset`: The outcome asset to refund.
+        ///
         /// Complexity: `O(log(n))``, where `n` is the number of categorical assets the market can have.
         #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::refund_pot())]
