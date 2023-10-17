@@ -1514,15 +1514,17 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let is_authorized = T::CloseMarketEarlyOrigin::try_origin(origin.clone()).is_ok();
-            let mut market_creator = None;
-            if !is_authorized {
+            let (market, market_creator) = if !is_authorized {
                 // check if market creator below
                 let who = ensure_signed(origin)?;
                 let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
                 ensure!(market.creator == who, Error::<T>::RequesterNotCreator);
-                market_creator = Some(who);
-            }
-            
+                (market, Some(who))
+            } else {
+                let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+                (market, None)
+            };
+
             Self::ensure_market_is_active(&market)?;
             let now_block = <frame_system::Pallet<T>>::block_number();
             let now_time = <zrml_market_commons::Pallet<T>>::now();
@@ -1555,7 +1557,8 @@ mod pallet {
                             T::CloseProtectionTimeFramePeriod::get(),
                         )
                     } else {
-                        let market_creator = market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
+                        let market_creator =
+                            market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
                         let close_request_bond = T::CloseRequestBond::get();
 
                         T::AssetManager::reserve_named(
@@ -1650,7 +1653,7 @@ mod pallet {
         /// The market period is reset to the original (old) period.
         /// A `CloseDisputeBond` is reserved, which is returned,
         /// if the `CloseMarketsEarlyOrigin` decides to reject
-        /// the early close request of the market creator or 
+        /// the early close request of the market creator or
         /// if the `CloseMarketsEarlyOrigin` is inactive.
         /// It is slashed, if the `CloseMarketsEarlyOrigin` decides to schedule the early close.
         ///
