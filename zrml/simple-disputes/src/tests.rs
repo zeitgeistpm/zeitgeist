@@ -55,7 +55,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
         close_dispute: None,
         close_request: None,
     },
-    premature_close: None,
+    early_close: None,
 };
 
 #[test]

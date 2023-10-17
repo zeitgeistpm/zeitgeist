@@ -61,6 +61,6 @@ where
         scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: Default::default(),
-        premature_close: None,
+        early_close: None,
     }
 }

@@ -56,7 +56,7 @@ const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<Ma
         close_dispute: None,
         close_request: None,
     },
-    premature_close: None,
+    early_close: None,
 };
 
 #[test]

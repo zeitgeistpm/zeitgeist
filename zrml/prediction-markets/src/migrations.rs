@@ -152,7 +152,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
                     close_dispute: None,
                     close_request: None,
                 },
-                premature_close: None,
+                early_close: None,
             };
 
             Some(new_market)
@@ -221,7 +221,7 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyClose
             // new fields
             assert_eq!(new_market.bonds.close_request, None);
             assert_eq!(new_market.bonds.close_dispute, None);
-            assert_eq!(new_market.premature_close, None);
+            assert_eq!(new_market.early_close, None);
         }
 
         log::info!("AddEarlyCloseBonds: Market Counter post-upgrade is {}!", new_market_count);
@@ -355,7 +355,7 @@ mod tests {
             dispute_mechanism,
             deadlines,
             bonds: new_bonds,
-            premature_close: None,
+            early_close: None,
         };
         (vec![old_market], vec![new_market])
     }

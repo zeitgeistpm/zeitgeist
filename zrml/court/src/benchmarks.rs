@@ -86,7 +86,7 @@ where
             close_dispute: None,
             close_request: None,
         },
-        premature_close: None,
+        early_close: None,
     }
 }
 

@@ -35,7 +35,7 @@ use frame_support::{
 };
 use sp_runtime::{traits::BlakeTwo256, Perquintill};
 use test_case::test_case;
-use zeitgeist_primitives::types::{PrematureClose, PrematureCloseState};
+use zeitgeist_primitives::types::{EarlyClose, EarlyCloseState};
 use zrml_court::{types::*, Error as CError};
 
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -2877,7 +2877,7 @@ fn schedule_early_close_emits_event() {
             Event::MarketEarlyCloseScheduled {
                 market_id,
                 new_period: new_period.clone(),
-                state: PrematureCloseState::ScheduledAsOther,
+                state: EarlyCloseState::ScheduledAsOther,
             }
             .into(),
         );
@@ -2963,7 +2963,7 @@ fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
 
         assert_noop!(
             PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,),
-            Error::<Runtime>::InvalidPrematureCloseState
+            Error::<Runtime>::InvalidEarlyCloseState
         );
     });
 }
@@ -2992,7 +2992,7 @@ fn reject_early_close_fails_if_state_is_rejected() {
 
         assert_noop!(
             PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,),
-            Error::<Runtime>::InvalidPrematureCloseState
+            Error::<Runtime>::InvalidEarlyCloseState
         );
     });
 }
@@ -3022,7 +3022,7 @@ fn sudo_schedule_early_close_at_block_works() {
         let market_ids_to_close = <MarketIdsPerCloseBlock<Runtime>>::iter().next().unwrap();
         assert_eq!(market_ids_to_close.0, end);
         assert_eq!(market_ids_to_close.1.into_inner(), vec![market_id]);
-        assert!(market.premature_close.is_none());
+        assert!(market.early_close.is_none());
 
         assert_ok!(
             PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
@@ -3035,11 +3035,11 @@ fn sudo_schedule_early_close_at_block_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         let new_period = MarketPeriod::Block(0..new_end);
         assert_eq!(
-            market.premature_close.unwrap(),
-            PrematureClose {
+            market.early_close.unwrap(),
+            EarlyClose {
                 old: old_market_period,
                 new: new_period,
-                state: PrematureCloseState::ScheduledAsOther,
+                state: EarlyCloseState::ScheduledAsOther,
             }
         );
 
@@ -3095,7 +3095,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         let first = market_ids_to_close.first().unwrap();
         assert_eq!(first.0, end.saturating_div(MILLISECS_PER_BLOCK.into()));
         assert_eq!(first.1.clone().into_inner(), vec![market_id]);
-        assert!(market.premature_close.is_none());
+        assert!(market.early_close.is_none());
 
         assert_ok!(
             PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
@@ -3108,11 +3108,11 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         let new_period = MarketPeriod::Timestamp(start..new_end);
         assert_eq!(
-            market.premature_close.unwrap(),
-            PrematureClose {
+            market.early_close.unwrap(),
+            EarlyClose {
                 old: old_market_period,
                 new: new_period,
-                state: PrematureCloseState::ScheduledAsOther,
+                state: EarlyCloseState::ScheduledAsOther,
             }
         );
 
@@ -3223,7 +3223,7 @@ fn schedule_early_close_as_market_creator_works() {
         let market_ids_to_close = <MarketIdsPerCloseBlock<Runtime>>::iter().next().unwrap();
         assert_eq!(market_ids_to_close.0, end);
         assert_eq!(market_ids_to_close.1.into_inner(), vec![market_id]);
-        assert!(market.premature_close.is_none());
+        assert!(market.early_close.is_none());
 
         let reserved_balance_alice = Balances::reserved_balance(ALICE);
 
@@ -3245,11 +3245,11 @@ fn schedule_early_close_as_market_creator_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         let new_period = MarketPeriod::Block(0..new_end);
         assert_eq!(
-            market.premature_close.unwrap(),
-            PrematureClose {
+            market.early_close.unwrap(),
+            EarlyClose {
                 old: old_market_period,
                 new: new_period,
-                state: PrematureCloseState::ScheduledAsMarketCreator,
+                state: EarlyCloseState::ScheduledAsMarketCreator,
             }
         );
 
@@ -3325,11 +3325,11 @@ fn dispute_early_close_from_market_creator_works() {
         assert_eq!(market.bonds.close_dispute, Some(Bond::new(BOB, CloseEarlyDisputeBond::get())));
         let new_period = MarketPeriod::Block(0..new_end);
         assert_eq!(
-            market.premature_close.unwrap(),
-            PrematureClose {
+            market.early_close.unwrap(),
+            EarlyClose {
                 old: old_market_period,
                 new: new_period,
-                state: PrematureCloseState::Disputed,
+                state: EarlyCloseState::Disputed,
             }
         );
 
@@ -3463,7 +3463,7 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
 
         assert_noop!(
             PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,),
-            Error::<Runtime>::InvalidPrematureCloseState
+            Error::<Runtime>::InvalidEarlyCloseState
         );
     });
 }
@@ -3497,11 +3497,11 @@ fn dispute_early_close_fails_if_already_disputed() {
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
         let market = MarketCommons::market(&market_id).unwrap();
-        assert_eq!(market.premature_close.unwrap().state, PrematureCloseState::Disputed);
+        assert_eq!(market.early_close.unwrap().state, EarlyCloseState::Disputed);
 
         assert_noop!(
             PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,),
-            Error::<Runtime>::InvalidPrematureCloseState
+            Error::<Runtime>::InvalidEarlyCloseState
         );
     });
 }
@@ -3582,7 +3582,7 @@ fn reject_early_close_settles_bonds() {
         assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
 
         let market = MarketCommons::market(&market_id).unwrap();
-        assert_eq!(market.premature_close.unwrap().state, PrematureCloseState::Rejected);
+        assert_eq!(market.early_close.unwrap().state, EarlyCloseState::Rejected);
 
         let reserved_bob_after = Balances::reserved_balance(BOB);
         let reserved_alice_after = Balances::reserved_balance(ALICE);
@@ -3631,11 +3631,11 @@ fn dispute_early_close_fails_if_already_rejected() {
         assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
 
         let market = MarketCommons::market(&market_id).unwrap();
-        assert_eq!(market.premature_close.unwrap().state, PrematureCloseState::Rejected);
+        assert_eq!(market.early_close.unwrap().state, EarlyCloseState::Rejected);
 
         assert_noop!(
             PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,),
-            Error::<Runtime>::InvalidPrematureCloseState
+            Error::<Runtime>::InvalidEarlyCloseState
         );
     });
 }
@@ -3700,11 +3700,11 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
         let market = MarketCommons::market(&market_id).unwrap();
         let new_period = MarketPeriod::Block(0..new_end);
         assert_eq!(
-            market.premature_close.unwrap(),
-            PrematureClose {
+            market.early_close.unwrap(),
+            EarlyClose {
                 old: old_period,
                 new: new_period,
-                state: PrematureCloseState::ScheduledAsOther,
+                state: EarlyCloseState::ScheduledAsOther,
             }
         );
     });
