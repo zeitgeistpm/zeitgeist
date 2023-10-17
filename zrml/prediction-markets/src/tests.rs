@@ -3129,8 +3129,8 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         assert_eq!(second.0, end.saturating_div(MILLISECS_PER_BLOCK.into()));
         assert!(second.1.clone().into_inner().is_empty());
 
-        set_timestamp_for_on_initialize((start_block + new_end) * MILLISECS_PER_BLOCK as u64);
-        run_to_block(start_block + new_end);
+        set_timestamp_for_on_initialize(start_block * MILLISECS_PER_BLOCK as u64 + new_end);
+        run_to_block(start_block + new_end.saturating_div(MILLISECS_PER_BLOCK.into()) + 1);
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
