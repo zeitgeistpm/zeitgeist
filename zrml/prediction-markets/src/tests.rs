@@ -2303,7 +2303,7 @@ fn dispute_emits_event() {
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
 
         System::assert_last_event(
-            Event::MarketDisputed(0u32.into(), MarketStatus::Disputed).into(),
+            Event::MarketDisputed(0u32.into(), MarketStatus::Disputed, CHARLIE).into(),
         );
     });
 }

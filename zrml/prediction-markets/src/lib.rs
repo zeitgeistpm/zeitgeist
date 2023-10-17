@@ -572,7 +572,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed));
+            Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed, who));
             Ok((Some(weight)).into())
         }
 
@@ -1665,7 +1665,7 @@ mod pallet {
         /// Custom addition block initialization logic wasn't successful.
         BadOnInitialize,
         /// A complete set of assets has been bought. \[market_id, amount_per_asset, buyer\]
-        BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// A market has been approved. \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created. \[market_id, market_account, market\]
@@ -1679,8 +1679,8 @@ mod pallet {
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed. \[market_id\]
         MarketClosed(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_market_status\]
-        MarketDisputed(MarketIdOf<T>, MarketStatus),
+        /// A market has been disputed \[market_id, new_market_status, disputant\]
+        MarketDisputed(MarketIdOf<T>, MarketStatus, AccountIdOf<T>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid with a reason.
@@ -1695,7 +1695,7 @@ mod pallet {
         /// A proposed market has been edited by the market creator. \[market_id, new_market\]
         MarketEdited(MarketIdOf<T>, MarketOf<T>),
         /// A complete set of assets has been sold. \[market_id, amount_per_asset, seller\]
-        SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// An amount of winning outcomes have been redeemed.
         /// \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
@@ -1703,7 +1703,7 @@ mod pallet {
             Asset<MarketIdOf<T>>,
             BalanceOf<T>,
             BalanceOf<T>,
-            <T as frame_system::Config>::AccountId,
+            AccountIdOf<T>,
         ),
         /// The global dispute was started. \[market_id\]
         GlobalDisputeStarted(MarketIdOf<T>),
