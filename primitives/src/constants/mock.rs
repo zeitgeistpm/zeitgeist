@@ -99,7 +99,7 @@ parameter_types! {
     pub const OutsiderBond: Balance = 2 * OracleBond::get();
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const PrematureCloseBlockPeriod: BlockNumber = 6;
-    pub const PrematureCloseTimeFramePeriod: Moment = 72_000; // 12 seconds * 6 = 72 seconds = 6 blocks
+    pub const PrematureCloseTimeFramePeriod: Moment = 6 * MILLISECS_PER_BLOCK as u64;
     pub const ValidityBond: Balance = 50 * CENT;
 }
 
