@@ -18,11 +18,7 @@
 #![cfg(any(feature = "runtime-benchmarks", test))]
 
 use crate::*;
-use frame_support::traits::Currency;
 
-type CurrencyOf<T> =
-    <<T as Config>::MarketCommons as zrml_market_commons::MarketCommonsPalletApi>::Currency;
-type BalanceOf<T> = <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MarketOf<T> = zeitgeist_primitives::types::Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,

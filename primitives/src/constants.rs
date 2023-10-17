@@ -37,7 +37,8 @@ pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as Bloc
 pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 300
 
 // Definitions for currency
-pub const BASE: u128 = 10_000_000_000;
+pub const DECIMALS: u8 = 10;
+pub const BASE: u128 = 10u128.pow(DECIMALS as u32);
 pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
@@ -82,6 +83,9 @@ pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 /// Pallet identifier, mainly used for named balance reserves.
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
+// NeoSwaps
+pub const NS_PALLET_ID: PalletId = PalletId(*b"zge/neos");
+
 // Prediction Markets
 /// The maximum allowed market life time, measured in blocks.
 pub const MAX_MARKET_LIFETIME: BlockNumber = 4 * BLOCKS_PER_YEAR;
@@ -112,6 +116,9 @@ pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
 pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
 /// Pallet identifier, mainly used for named balance reserves.
 pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
+
+// Orderbook
+pub const ORDERBOOK_PALLET_ID: PalletId = PalletId(*b"zge/ordb");
 
 // Treasury
 /// Pallet identifier, used to derive treasury account

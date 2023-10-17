@@ -111,6 +111,8 @@ zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
+zrml-neo-swaps = { workspace = true }
+zrml-orderbook-v1 = { workspace = true }
 zrml-prediction-markets = { workspace = true }
 zrml-rikiddo = { workspace = true }
 zrml-simple-disputes = { workspace = true }
@@ -176,9 +178,9 @@ runtime-benchmarks = [
     "hex-literal",
     "polkadot-runtime?/runtime-benchmarks",
     "orml-asset-registry?/runtime-benchmarks",
+    "orml-benchmarking",
     "orml-tokens/runtime-benchmarks",
     "orml-xtokens?/runtime-benchmarks",
-    "orml-benchmarking",
     "pallet-author-inherent?/runtime-benchmarks",
     "pallet-author-mapping?/runtime-benchmarks",
     "pallet-author-slot-filter?/runtime-benchmarks",
@@ -206,11 +208,13 @@ runtime-benchmarks = [
     "zrml-authorized/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
     "zrml-liquidity-mining/runtime-benchmarks",
+    "zrml-neo-swaps/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
     "zrml-simple-disputes/runtime-benchmarks",
     "zrml-global-disputes/runtime-benchmarks",
     "zrml-styx/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
+    "zrml-orderbook-v1/runtime-benchmarks",
 ]
 std = [
     "frame-executive/std",
@@ -310,6 +314,7 @@ std = [
     "zrml-court/std",
     "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
+    "zrml-neo-swaps/std",
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
@@ -317,6 +322,7 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-styx/std",
     "zrml-swaps/std",
+    "zrml-orderbook-v1/std",
 ]
 try-runtime = [
     "frame-executive/try-runtime",
@@ -363,12 +369,14 @@ try-runtime = [
     "zrml-court/try-runtime",
     "zrml-liquidity-mining/try-runtime",
     "zrml-market-commons/try-runtime",
+    "zrml-neo-swaps/try-runtime",
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
     "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
+    "zrml-orderbook-v1/try-runtime",
 
     # Parachain
     "pallet-author-inherent?/try-runtime",
@@ -394,7 +402,7 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.11"
+version = "0.4.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

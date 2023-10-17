@@ -59,11 +59,10 @@ mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
-    pub(crate) type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -129,6 +128,8 @@ mod pallet {
         /// Event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+        type Currency: Currency<Self::AccountId>;
+
         /// The period, in which the authority can correct the outcome of a market.
         /// This value must not be zero.
         #[pallet::constant]
@@ -141,7 +142,11 @@ mod pallet {
                 Moment = MomentOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Balance = BalanceOf<Self>,
+            >;
 
         /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
         type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::RuntimeOrigin>;

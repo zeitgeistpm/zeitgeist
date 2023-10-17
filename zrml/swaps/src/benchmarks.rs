@@ -33,7 +33,7 @@ use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, Market
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::{
     dispatch::{DispatchResult, UnfilteredDispatchable},
-    traits::{Currency, Get},
+    traits::Get,
     weights::Weight,
 };
 use frame_system::RawOrigin;
@@ -56,9 +56,7 @@ const LIQUIDITY: u128 = 100 * BASE;
 
 type MarketOf<T> = zeitgeist_primitives::types::Market<
     <T as frame_system::Config>::AccountId,
-    <<<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance,
+    BalanceOf<T>,
     <<T as Config>::MarketCommons as MarketCommonsPalletApi>::BlockNumber,
     <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment,
     Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,

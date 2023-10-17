@@ -116,7 +116,7 @@ mod pallet {
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_ref_time(1_000_000);
+    const ON_IDLE_MIN_WEIGHT: Weight = Weight::from_parts(1_000_000, 100_000);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -284,7 +284,7 @@ mod pallet {
 
                     let missing = T::AssetManager::unreserve(base_asset, &who, real_amount);
                     transferred = real_amount.saturating_sub(missing);
-                    let zero_balance = <BalanceOf<T>>::zero();
+                    let zero_balance = BalanceOf::<T>::zero();
 
                     if missing > zero_balance {
                         log::warn!(
@@ -812,7 +812,11 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Balance = BalanceOf<Self>,
+            >;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -1271,19 +1275,33 @@ mod pallet {
             // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
             // the number of pools. This shouldn't ever happen, but if it does, we ensure that
             // `pool_count` is zero (this isn't really a runtime error).
-            let pool_count = weight
+            let weight_minus_overhead = weight.saturating_sub(overhead);
+            let max_pool_count_by_ref_time = weight_minus_overhead
                 .ref_time()
-                .saturating_sub(overhead.ref_time())
                 .checked_div(extra_weight_per_pool.ref_time())
                 .unwrap_or_else(|| {
-                    log::warn!("Unexpected zero division when calculating arbitrage weight");
+                    debug_assert!(
+                        false,
+                        "Unexpected zero division when calculating arbitrage ref time"
+                    );
                     0_u64
                 });
-            if pool_count == 0_u64 {
+            let max_pool_count_by_proof_size = weight_minus_overhead
+                .proof_size()
+                .checked_div(extra_weight_per_pool.proof_size())
+                .unwrap_or_else(|| {
+                    debug_assert!(
+                        false,
+                        "Unexpected zero division when calculating arbitrage proof size"
+                    );
+                    0_u64
+                });
+            let max_pool_count = max_pool_count_by_ref_time.min(max_pool_count_by_proof_size);
+            if max_pool_count == 0_u64 {
                 return weight;
             }
             Self::apply_to_cached_pools(
-                pool_count.saturated_into(),
+                max_pool_count.saturated_into(),
                 |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
                 extra_weight_per_pool,
             )
@@ -1453,8 +1471,8 @@ mod pallet {
                     .saturating_add(BASE.saturated_into()));
             }
 
-            let mut balance_in = <BalanceOf<T>>::zero();
-            let mut balance_out = <BalanceOf<T>>::zero();
+            let mut balance_in = BalanceOf::<T>::zero();
+            let mut balance_out = BalanceOf::<T>::zero();
 
             for asset in pool.assets.iter().filter(|asset| **asset != base_asset) {
                 let issuance = T::AssetManager::total_issuance(*asset);
@@ -1932,11 +1950,14 @@ mod pallet {
                         T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
 
                         let pool_status = PoolStatus::CollectingSubsidy;
-                        let total_subsidy = Some(<BalanceOf<T>>::zero());
+                        let total_subsidy = Some(BalanceOf::<T>::zero());
                         let total_weight = None;
                         let weights = None;
-                        let pool_amount = <BalanceOf<T>>::zero();
+                        let pool_amount = BalanceOf::<T>::zero();
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
+                    }
+                    ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                        return Err(Error::<T>::InvalidScoringRule.into());
                     }
                 };
             let pool = Pool {
@@ -2061,7 +2082,7 @@ mod pallet {
                     let pool_account = Pallet::<T>::pool_account_id(&pool_id);
                     let pool_shares_id = Self::pool_shares_id(pool_id);
                     let mut account_created = false;
-                    let mut total_balance = <BalanceOf<T>>::zero();
+                    let mut total_balance = BalanceOf::<T>::zero();
                     total_assets = pool.assets.len();
                     let mut providers_and_pool_shares = vec![];
 
@@ -2496,6 +2517,9 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                         }
+                        ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                            return Err(Error::<T>::InvalidScoringRule.into());
+                        }
                     };
 
                     if let Some(maao) = min_asset_amount_out {
@@ -2545,6 +2569,9 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
+                ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                    Err(Error::<T>::InvalidScoringRule.into())
+                }
             }
         }
 
@@ -2579,7 +2606,7 @@ mod pallet {
             Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
             let market = T::MarketCommons::market(&pool.market_id)?;
             let creator_fee = market.creator_fee;
-            let mut fee_amount = <BalanceOf<T>>::zero();
+            let mut fee_amount = BalanceOf::<T>::zero();
 
             let to_adjust_in_value = if asset_in == pool.base_asset {
                 // Can't adjust the value inside the anonymous function for asset_amounts
@@ -2652,6 +2679,9 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                             cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                         }
+                        ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                            return Err(Error::<T>::InvalidScoringRule.into());
+                        }
                     };
 
                     if asset_in == pool.base_asset && !handle_fees && to_adjust_in_value {
@@ -2712,6 +2742,9 @@ mod pallet {
                     Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(
                         pool.assets.len().saturated_into(),
                     ))
+                }
+                ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                    Err(Error::<T>::InvalidScoringRule.into())
                 }
             }
         }

@@ -190,6 +190,10 @@ parameter_types! {
     // Additional storage item size of 32 bytes.
     pub const DepositFactor: Balance = deposit(0, 32);
 
+    // NeoSwaps
+    pub const NeoSwapsMaxSwapFee: Balance = 10 * CENT;
+    pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
+
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
 
@@ -320,6 +324,9 @@ parameter_types! {
     pub const MinWeight: Balance = BASE;
     /// Pallet identifier, mainly used for named balance reserves.
     pub const SwapsPalletId: PalletId = SWAPS_PALLET_ID;
+
+    // Orderbook parameters
+    pub const OrderbookPalletId: PalletId = ORDERBOOK_PALLET_ID;
 
     // System
     pub const BlockHashCount: u64 = 250;

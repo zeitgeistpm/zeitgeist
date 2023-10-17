@@ -230,6 +230,7 @@ impl pallet_balances::Config for Runtime {
 
 impl zrml_liquidity_mining::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
@@ -237,7 +238,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;

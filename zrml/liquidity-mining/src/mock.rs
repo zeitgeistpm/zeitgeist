@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -57,6 +57,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
+    type Currency = Balances;
     type RuntimeEvent = ();
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
@@ -104,7 +105,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;

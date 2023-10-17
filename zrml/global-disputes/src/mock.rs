@@ -171,7 +171,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;

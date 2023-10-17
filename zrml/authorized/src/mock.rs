@@ -119,6 +119,7 @@ impl DisputeResolutionApi for MockResolution {
 }
 
 impl crate::Config for Runtime {
+    type Currency = Balances;
     type RuntimeEvent = ();
     type CorrectionPeriod = CorrectionPeriod;
     type DisputeResolution = MockResolution;
@@ -173,7 +174,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;

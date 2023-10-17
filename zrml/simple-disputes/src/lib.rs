@@ -31,7 +31,7 @@ pub mod weights;
 pub use pallet::*;
 pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 use zeitgeist_primitives::{
-    traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi, ZeitgeistAssetManager},
+    traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
         Asset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
         OutcomeReport, Report, ResultWithWeightInfo,
@@ -54,7 +54,6 @@ mod pallet {
         transactional, BoundedVec, PalletId,
     };
     use frame_system::pallet_prelude::*;
-    use orml_traits::currency::NamedMultiReservableCurrency;
     use sp_runtime::{
         traits::{CheckedDiv, Saturating},
         DispatchError, SaturatedConversion,
@@ -64,13 +63,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
-                Self::AccountId,
-                Balance = <CurrencyOf<Self> as Currency<Self::AccountId>>::Balance,
-                CurrencyId = Asset<MarketIdOf<Self>>,
-                ReserveIdentifier = [u8; 8],
-            >;
+        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
 
         /// Event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -92,7 +85,11 @@ mod pallet {
         type OutcomeFactor: Get<BalanceOf<Self>>;
 
         /// The identifier of individual markets.
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Balance = BalanceOf<Self>,
+            >;
 
         /// The maximum number of disputes allowed on any single market.
         #[pallet::constant]
@@ -107,11 +104,10 @@ mod pallet {
     }
 
     pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
-    pub(crate) type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::NegativeImbalance;
     pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> = Market<
@@ -200,7 +196,7 @@ mod pallet {
 
             let bond = default_outcome_bond::<T>(disputes.len());
 
-            T::AssetManager::reserve_named(&Self::reserve_id(), Asset::Ztg, &who, bond)?;
+            T::Currency::reserve_named(&Self::reserve_id(), &who, bond)?;
 
             let market_dispute = MarketDispute { at: now, by: who, outcome, bond };
             <Disputes<T>>::try_mutate(market_id, |disputes| {
@@ -379,16 +375,15 @@ mod pallet {
 
             for dispute in disputes.iter() {
                 if &dispute.outcome == resolved_outcome {
-                    T::AssetManager::unreserve_named(
+                    T::Currency::unreserve_named(
                         &Self::reserve_id(),
-                        Asset::Ztg,
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
                     );
 
                     correct_reporters.push(dispute.by.clone());
                 } else {
-                    let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                    let (imbalance, _) = T::Currency::slash_reserved_named(
                         &Self::reserve_id(),
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
@@ -406,7 +401,7 @@ mod pallet {
                 for correct_reporter in &correct_reporters {
                     let (actual_reward, leftover) = overall_imbalance.split(reward_per_each);
                     overall_imbalance = leftover;
-                    CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
+                    T::Currency::resolve_creating(correct_reporter, actual_reward);
                 }
             }
 
@@ -495,9 +490,8 @@ mod pallet {
             if market.status == MarketStatus::Disputed {
                 disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
                 for dispute in Disputes::<T>::take(market_id).iter() {
-                    T::AssetManager::unreserve_named(
+                    T::Currency::unreserve_named(
                         &Self::reserve_id(),
-                        Asset::Ztg,
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
                     );
