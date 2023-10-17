@@ -222,6 +222,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
+    type Currency = Balances;
     type DeployPool = DeployPoolNoop;
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
@@ -260,6 +261,7 @@ impl zrml_authorized::Config for Runtime {
     type AuthorizedDisputeResolutionOrigin =
         EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
     type CorrectionPeriod = CorrectionPeriod;
+    type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
     type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
@@ -294,6 +296,7 @@ impl zrml_court::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
+    type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
@@ -362,7 +365,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
+    type Balance = Balance;
     type MarketId = MarketId;
     type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
@@ -376,7 +379,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type AssetManager = AssetManager;
+    type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
     type OutcomeBond = OutcomeBond;
     type OutcomeFactor = OutcomeFactor;

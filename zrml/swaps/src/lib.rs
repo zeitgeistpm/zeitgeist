@@ -284,7 +284,7 @@ mod pallet {
 
                     let missing = T::AssetManager::unreserve(base_asset, &who, real_amount);
                     transferred = real_amount.saturating_sub(missing);
-                    let zero_balance = <BalanceOf<T>>::zero();
+                    let zero_balance = BalanceOf::<T>::zero();
 
                     if missing > zero_balance {
                         log::warn!(
@@ -812,7 +812,11 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = Self::BlockNumber,
+                Balance = BalanceOf<Self>,
+            >;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -1467,8 +1471,8 @@ mod pallet {
                     .saturating_add(BASE.saturated_into()));
             }
 
-            let mut balance_in = <BalanceOf<T>>::zero();
-            let mut balance_out = <BalanceOf<T>>::zero();
+            let mut balance_in = BalanceOf::<T>::zero();
+            let mut balance_out = BalanceOf::<T>::zero();
 
             for asset in pool.assets.iter().filter(|asset| **asset != base_asset) {
                 let issuance = T::AssetManager::total_issuance(*asset);
@@ -1946,10 +1950,10 @@ mod pallet {
                         T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
 
                         let pool_status = PoolStatus::CollectingSubsidy;
-                        let total_subsidy = Some(<BalanceOf<T>>::zero());
+                        let total_subsidy = Some(BalanceOf::<T>::zero());
                         let total_weight = None;
                         let weights = None;
-                        let pool_amount = <BalanceOf<T>>::zero();
+                        let pool_amount = BalanceOf::<T>::zero();
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
                     }
                     ScoringRule::Lmsr | ScoringRule::Orderbook => {
@@ -2078,7 +2082,7 @@ mod pallet {
                     let pool_account = Pallet::<T>::pool_account_id(&pool_id);
                     let pool_shares_id = Self::pool_shares_id(pool_id);
                     let mut account_created = false;
-                    let mut total_balance = <BalanceOf<T>>::zero();
+                    let mut total_balance = BalanceOf::<T>::zero();
                     total_assets = pool.assets.len();
                     let mut providers_and_pool_shares = vec![];
 
@@ -2602,7 +2606,7 @@ mod pallet {
             Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
             let market = T::MarketCommons::market(&pool.market_id)?;
             let creator_fee = market.creator_fee;
-            let mut fee_amount = <BalanceOf<T>>::zero();
+            let mut fee_amount = BalanceOf::<T>::zero();
 
             let to_adjust_in_value = if asset_in == pool.base_asset {
                 // Can't adjust the value inside the anonymous function for asset_amounts

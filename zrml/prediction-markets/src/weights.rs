@@ -49,8 +49,6 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_prediction_markets (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_destroy_disputed_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
-    fn admin_destroy_reported_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
     fn admin_move_market_to_closed(o: u32, c: u32) -> Weight;
     fn admin_move_market_to_resolved_scalar_reported(r: u32) -> Weight;
     fn admin_move_market_to_resolved_categorical_reported(r: u32) -> Weight;

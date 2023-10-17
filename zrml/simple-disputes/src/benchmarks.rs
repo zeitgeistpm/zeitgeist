@@ -29,9 +29,8 @@ use super::*;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     dispatch::RawOrigin,
-    traits::{Get, Imbalance},
+    traits::{Currency, Get, Imbalance},
 };
-use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, Saturating};
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -40,7 +39,7 @@ fn fill_disputes<T: Config>(market_id: MarketIdOf<T>, d: u32) {
         let now = <frame_system::Pallet<T>>::block_number();
         let disputor = account("disputor", i, 0);
         let bond = default_outcome_bond::<T>(i as usize);
-        T::AssetManager::deposit(Asset::Ztg, &disputor, bond).unwrap();
+        let _ = T::Currency::deposit_creating(&disputor, bond);
         let outcome = OutcomeReport::Scalar((2 + i).into());
         SimpleDisputes::<T>::suggest_outcome(
             RawOrigin::Signed(disputor).into(),
@@ -83,7 +82,7 @@ benchmarks! {
 
         let outcome = OutcomeReport::Scalar(1);
         let bond = default_outcome_bond::<T>(T::MaxDisputes::get() as usize);
-        T::AssetManager::deposit(Asset::Ztg, &caller, bond).unwrap();
+        let _ = T::Currency::deposit_creating(&caller, bond);
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome)
 
     on_dispute_weight {

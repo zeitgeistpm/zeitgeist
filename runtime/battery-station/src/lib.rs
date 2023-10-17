@@ -119,6 +119,11 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
     fn contains(runtime_call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match runtime_call {
+            RuntimeCall::System(inner_call) => match inner_call {
+                SystemCall::remark { .. } => true,
+                SystemCall::remark_with_event { .. } => true,
+                _ => false,
+            },
             RuntimeCall::AssetManager(transfer { .. }) => true,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
