@@ -2847,29 +2847,25 @@ mod pallet {
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
 
-                match &market.premature_close {
-                    None => (),
-                    Some(p) => {
-                        match p.state {
-                            PrematureCloseState::ScheduledAsMarketCreator => {
-                                if Self::is_close_request_bond_pending(market_id, market, false) {
-                                    Self::unreserve_close_request_bond(market_id)?;
-                                }
+                if let Some(p) = &market.premature_close {
+                    match p.state {
+                        PrematureCloseState::ScheduledAsMarketCreator => {
+                            if Self::is_close_request_bond_pending(market_id, market, false) {
+                                Self::unreserve_close_request_bond(market_id)?;
                             }
-                            PrematureCloseState::Disputed => {
-                                // this is the case that the original close happened,
-                                // although requested early close or disputed
-                                // there was no decision made via `reject` or `approve`
-                                if Self::is_close_dispute_bond_pending(market_id, market, false) {
-                                    Self::unreserve_close_dispute_bond(market_id)?;
-                                }
-                                if Self::is_close_request_bond_pending(market_id, market, false) {
-                                    Self::unreserve_close_request_bond(market_id)?;
-                                }
-                            }
-                            PrematureCloseState::ScheduledAsOther
-                            | PrematureCloseState::Rejected => {}
                         }
+                        PrematureCloseState::Disputed => {
+                            // this is the case that the original close happened,
+                            // although requested early close or disputed
+                            // there was no decision made via `reject` or `approve`
+                            if Self::is_close_dispute_bond_pending(market_id, market, false) {
+                                Self::unreserve_close_dispute_bond(market_id)?;
+                            }
+                            if Self::is_close_request_bond_pending(market_id, market, false) {
+                                Self::unreserve_close_request_bond(market_id)?;
+                            }
+                        }
+                        PrematureCloseState::ScheduledAsOther | PrematureCloseState::Rejected => {}
                     }
                 }
 
