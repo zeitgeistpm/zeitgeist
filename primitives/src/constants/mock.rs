@@ -73,7 +73,7 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const CloseProtectionTimeFramePeriod: Moment = 36_000; // 12 seconds * 3 = 36 seconds = 3 blocks
+    pub const CloseProtectionTimeFramePeriod: Moment = 3 * MILLISECS_PER_BLOCK as u64;
     pub const CloseProtectionBlockPeriod: BlockNumber = 3;
     pub const CloseRequestBond: Balance = 5 * BASE;
     pub const CloseDisputeBond: Balance = 10 * BASE;
