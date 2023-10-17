@@ -1479,16 +1479,16 @@ mod pallet {
             Ok(Some(T::WeightInfo::start_global_dispute(ids_len_1, ids_len_2)).into())
         }
 
-        /// Allows the advisory committee or the market creator to schedule an early close.
+        /// Allows the `CloseMarketsEarlyOrigin`` or the market creator to schedule an early close.
         ///
         /// The market creator schedules it `now + PrematureClose...Period` in the future.
         /// This is to allow enough time for a potential dispute.
         /// The market creator reserves a `CloseDisputeBond`, which is returned,
-        /// if the advisory committee decides to accept the early close request
+        /// if the `CloseMarketsEarlyOrigin`` decides to accept the early close request
         /// or if it is not disputed.
         /// It is slashed, if the early close request is disputed
-        /// and the advisory committee decides to reject the early close.
-        /// The advisory committee (or root) can schedule it `now + CloseProtection...Period`
+        /// and the `CloseMarketsEarlyOrigin`` decides to reject the early close.
+        /// The `CloseMarketsEarlyOrigin` (or root) can schedule it `now + CloseProtection...Period`
         /// in the future. This is to prevent fat finger mistakes.
         ///
         /// # Weight
@@ -1650,9 +1650,10 @@ mod pallet {
         ///
         /// The market period is reset to the original (old) period.
         /// A `CloseDisputeBond` is reserved, which is returned,
-        /// if the advisory committee decides to reject
-        /// the early close request of the market creator or if the advisory committee is inactive.
-        /// It is slashed, if the advisory committee decides to schedule the early close.
+        /// if the `CloseMarketsEarlyOrigin` decides to reject
+        /// the early close request of the market creator or 
+        /// if the `CloseMarketsEarlyOrigin` is inactive.
+        /// It is slashed, if the `CloseMarketsEarlyOrigin` decides to schedule the early close.
         ///
         /// # Weight
         ///
@@ -1728,7 +1729,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::dispute_early_close(ids_len_0, ids_len_1)).into())
         }
 
-        /// Allows the advisory committee to reject a scheduled early close.
+        /// Allows the `CloseMarketsEarlyOrigin` to reject a scheduled early close.
         ///
         /// The market period is reset to the original (old) period
         /// in case it was scheduled before (fat-finger protection).
@@ -1860,18 +1861,18 @@ mod pallet {
         #[pallet::constant]
         type CloseDisputeBond: Get<BalanceOf<Self>>;
 
-        /// The origin that is allowed to close markets early (prematurely).
+        /// The origin that is allowed to close markets early.
         type CloseMarketEarlyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// The milliseconds to wait for the advisory committee
+        /// The milliseconds to wait for the `CloseMarketsEarlyOrigin`
         /// before the early market close actually happens (fat-finger protection).
         #[pallet::constant]
         type CloseProtectionTimeFramePeriod: Get<MomentOf<Self>>;
 
-        /// The block time to wait for the advisory committee
+        /// The block time to wait for the `CloseMarketsEarlyOrigin`
         /// before the early market close actually happens (fat-finger protection).
         #[pallet::constant]
         type CloseProtectionBlockPeriod: Get<Self::BlockNumber>;
@@ -2139,7 +2140,7 @@ mod pallet {
         /// There is no early close scheduled.
         NoPrematureCloseScheduled,
         /// After there was an early close already scheduled,
-        /// only the advisory committee can schedule another one.
+        /// only the `CloseMarketsEarlyOrigin` can schedule another one.
         OnlyAuthorizedCanScheduleEarlyClose,
         /// The start of the global dispute for this market happened already.
         GlobalDisputeExistsAlready,
