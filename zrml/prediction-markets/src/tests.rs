@@ -3138,7 +3138,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
 }
 
 #[test]
-fn schedule_early_close_fails_if_early_close_request_too_late() {
+fn schedule_early_close_block_fails_if_early_close_request_too_late() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
@@ -3156,6 +3156,39 @@ fn schedule_early_close_fails_if_early_close_request_too_late() {
         ));
 
         run_to_block(end - 1);
+
+        let market_id = 0;
+        assert_noop!(
+            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(ALICE), market_id,),
+            Error::<Runtime>::EarlyCloseRequestTooLate
+        );
+    });
+}
+
+#[test]
+fn schedule_early_close_timestamp_fails_if_early_close_request_too_late() {
+    ExtBuilder::default().build().execute_with(|| {
+        let start_block = 7;
+        set_timestamp_for_on_initialize(start_block * MILLISECS_PER_BLOCK as u64);
+        run_blocks(start_block);
+        let start = <zrml_market_commons::Pallet<Runtime>>::now();
+        let end = start + 42.saturated_into::<TimeFrame>() * MILLISECS_PER_BLOCK as u64;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::CPMM
+        ));
+
+        run_to_block(end.saturating_div(MILLISECS_PER_BLOCK.into()) - 1);
+        set_timestamp_for_on_initialize(end - MILLISECS_PER_BLOCK as u64);
 
         let market_id = 0;
         assert_noop!(
