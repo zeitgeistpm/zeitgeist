@@ -134,7 +134,7 @@ parameter_types! {
 
 // Parimutuel parameters
 parameter_types! {
-    pub const ParimutuelPalletId: PalletId = PalletId(*b"zge/pari");
+    pub const ParimutuelPalletId: PalletId = PalletId(*b"zge/prmt");
     pub const MinBetSize: Balance = BASE;
 }
 
