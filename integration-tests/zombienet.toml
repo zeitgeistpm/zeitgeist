@@ -1,23 +1,23 @@
 [settings]
-timeout = 1000
 provider = "native"
+timeout = 1000
 
 [relaychain]
 chain = "rococo-dev"
+default_args = ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb"]
 default_command = "./tmp/polkadot"
-default_args = [ "--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb" ]
 
-  [[relaychain.nodes]]
-  name = "charlie"
+[[relaychain.nodes]]
+name = "charlie"
 
-  [[relaychain.nodes]]
-  name = "bob"
+[[relaychain.nodes]]
+name = "bob"
 
 [[parachains]]
 id = 2101
 
-  [parachains.collator]
-  name = "alice"
-  command = "./target/debug/zeitgeist"
-  args = ["-lparachain=debug"]
-  ws_port = 9944
+[parachains.collator]
+args = ["-lparachain=debug"]
+command = "./target/debug/zeitgeist"
+name = "alice"
+ws_port = 9944
