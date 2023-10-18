@@ -18,7 +18,7 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, *};
+use crate::{mock::*, utils::*, *};
 use core::ops::RangeInclusive;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;

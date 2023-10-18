@@ -22,7 +22,7 @@
 )]
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::{Pallet as Parimutuel, *};
+use crate::{utils::*, Pallet as Parimutuel, *};
 use frame_benchmarking::v2::*;
 use frame_support::traits::Get;
 use frame_system::RawOrigin;

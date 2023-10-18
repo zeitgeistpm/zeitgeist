@@ -24,12 +24,7 @@ use crate as zrml_parimutuel;
 use crate::{AssetOf, BalanceOf, MarketIdOf};
 use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
-use frame_support::{
-    construct_runtime,
-    pallet_prelude::Get,
-    parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize},
-};
+use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
@@ -51,6 +46,7 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
+
 pub const MARKET_CREATOR: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
