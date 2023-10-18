@@ -254,14 +254,10 @@ impl<F: Fixed + ToString, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
         let mut increment_int_part = false;
         let new_frac_part = if frac_part.len() < decimals_usize {
             format!("{}{}", frac_part, "0".repeat(decimals_usize.saturating_sub(frac_part.len())))
-        } else {
-            let round_digit = frac_part.chars().nth(decimals_usize).and_then(|c| c.to_digit(10));
-            // Note that `round_digit` might be `None`, for example if `frac_part = 245` and
-            // `decimals = 3`. There's no need to round in that case.
-            if let Some(d) = round_digit {
-                if d >= 5 {
-                    increment_int_part = true;
-                }
+        } else if frac_part.len() > decimal_usize {
+            let round_digit = frac_part.chars().nth(decimals_usize).and_then(|c| c.to_digit(10)).ok_or("Either the to_digit could not convert to a number or the char at decimals_usize was not found, although the frac_part length is higher than decimals_usize.")?;
+            if round_digit >= 5 {
+                increment_int_part = true;
             }
             frac_part.chars().take(decimals_usize).collect()
         };
