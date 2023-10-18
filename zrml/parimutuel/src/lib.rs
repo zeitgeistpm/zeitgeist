@@ -195,7 +195,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Buy parimutuel shares for markets base asset collateral.
+        /// Buy parimutuel shares for the market's collateral.
         ///
         /// # Arguments
         ///
