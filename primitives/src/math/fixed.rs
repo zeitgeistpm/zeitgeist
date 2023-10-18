@@ -265,6 +265,7 @@ impl<F: Fixed + ToString, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
             }
             frac_part.chars().take(decimals_usize).collect::<String>()
         } else {
+            // There's no need to round here, the fractional part already fits perfectly.
             frac_part.to_string()
         };
 
