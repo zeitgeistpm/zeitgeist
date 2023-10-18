@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-mod benchmarks;
+mod benchmarking;
 mod mock;
 mod tests;
 pub mod weights;

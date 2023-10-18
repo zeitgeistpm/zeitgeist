@@ -51,7 +51,7 @@ fn buy_asset<T: Config>(
 }
 
 #[benchmarks]
-mod benchmarks_parimutuel {
+mod benchmarks {
     use super::*;
 
     #[benchmark]

@@ -38,8 +38,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves,
-        MinBetSize, MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
+        MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
     },
     traits::DistributeFees,
     types::{
