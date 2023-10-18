@@ -36,9 +36,9 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{Decode, DispatchError, Encode, OptionQuery, StorageMap, TypeInfo},
+        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         traits::{Get, IsType, StorageVersion},
-        PalletId, RuntimeDebug, Twox64Concat,
+        PalletId, RuntimeDebug,
     };
     use frame_system::{
         ensure_signed,
@@ -47,7 +47,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchResult, SaturatedConversion, Saturating,
+        DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::BASE,
@@ -210,6 +210,107 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
+            Self::do_buy(who, asset, amount)?;
+
+            Ok(())
+        }
+
+        /// Claim winnings from a resolved market.
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(1)]
+        #[pallet::weight(T::WeightInfo::claim_rewards())]
+        #[frame_support::transactional]
+        pub fn claim_rewards(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            Self::do_claim_rewards(who, market_id)?;
+
+            Ok(())
+        }
+
+        /// Refund the base asset of losing categorical outcome assets
+        /// in case that there was no account betting on the winner outcome.
+        ///
+        /// # Arguments
+        ///
+        /// - `refund_asset`: The outcome asset to refund.
+        ///
+        /// Complexity: `O(log(n))``, where `n` is the number of categorical assets the market can have.
+        #[pallet::call_index(2)]
+        #[pallet::weight(T::WeightInfo::refund_pot())]
+        #[frame_support::transactional]
+        pub fn refund_pot(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            Self::do_refund_pot(who, refund_asset)?;
+
+            Ok(())
+        }
+    }
+
+    impl<T> Pallet<T>
+    where
+        T: Config,
+    {
+        #[inline]
+        pub(crate) fn pot_account(market_id: MarketIdOf<T>) -> AccountIdOf<T> {
+            T::PalletId::get().into_sub_account_truncating(market_id)
+        }
+
+        /// Check the values for validity.
+        fn check_values(
+            winning_balance: BalanceOf<T>,
+            pot_total: BalanceOf<T>,
+            outcome_total: BalanceOf<T>,
+            payoff_ratio_mul_base: BalanceOf<T>,
+            payoff: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure!(
+                pot_total >= winning_balance,
+                Error::<T>::InconsistentState(
+                    InconsistentStateError::InsufficientFundsInPotAccount
+                )
+            );
+            ensure!(
+                pot_total >= outcome_total,
+                Error::<T>::InconsistentState(
+                    InconsistentStateError::OutcomeIssuanceGreaterCollateral
+                )
+            );
+            debug_assert!(
+                payoff_ratio_mul_base >= BASE.saturated_into(),
+                "The payoff ratio should be greater than or equal to BASE!"
+            );
+            debug_assert!(
+                payoff >= winning_balance,
+                "The payoff in base asset should be greater than or equal to the winning outcome \
+                 balance."
+            );
+            debug_assert!(
+                pot_total >= payoff,
+                "The payoff in base asset should not exceed the total amount of the base asset!"
+            );
+            Ok(())
+        }
+
+        pub fn outcome_assets(
+            market_id: MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<Vec<AssetOf<T>>, DispatchError> {
+            match market.market_type {
+                MarketType::Categorical(categories) => {
+                    let mut assets = Vec::new();
+                    for i in 0..categories {
+                        assets.push(Asset::ParimutuelShare(market_id, i));
+                    }
+                    Ok(assets)
+                }
+                MarketType::Scalar(_) => Err(Error::<T>::ScalarMarketsNotAllowed.into()),
+            }
+        }
+
+        fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
             ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountTooSmall);
 
             let market_id = match asset {
@@ -251,14 +352,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Claim winnings from a resolved market.
-        ///
-        /// Complexity: `O(1)`
-        #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::claim_rewards())]
-        #[frame_support::transactional]
-        pub fn claim_rewards(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+        fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
@@ -334,20 +428,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Refund the base asset of losing categorical outcome assets
-        /// in case that there was no account betting on the winner outcome.
-        ///
-        /// # Arguments
-        ///
-        /// - `refund_asset`: The outcome asset to refund.
-        ///
-        /// Complexity: `O(log(n))``, where `n` is the number of categorical assets the market can have.
-        #[pallet::call_index(2)]
-        #[pallet::weight(T::WeightInfo::refund_pot())]
-        #[frame_support::transactional]
-        pub fn refund_pot(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-
+        fn do_refund_pot(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
             let market_id = match refund_asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
@@ -406,68 +487,6 @@ mod pallet {
             });
 
             Ok(())
-        }
-    }
-
-    impl<T> Pallet<T>
-    where
-        T: Config,
-    {
-        #[inline]
-        pub(crate) fn pot_account(market_id: MarketIdOf<T>) -> AccountIdOf<T> {
-            T::PalletId::get().into_sub_account_truncating(market_id)
-        }
-
-        /// Check the values for validity.
-        fn check_values(
-            winning_balance: BalanceOf<T>,
-            pot_total: BalanceOf<T>,
-            outcome_total: BalanceOf<T>,
-            payoff_ratio_mul_base: BalanceOf<T>,
-            payoff: BalanceOf<T>,
-        ) -> DispatchResult {
-            ensure!(
-                pot_total >= winning_balance,
-                Error::<T>::InconsistentState(
-                    InconsistentStateError::InsufficientFundsInPotAccount
-                )
-            );
-            ensure!(
-                pot_total >= outcome_total,
-                Error::<T>::InconsistentState(
-                    InconsistentStateError::OutcomeIssuanceGreaterCollateral
-                )
-            );
-            debug_assert!(
-                payoff_ratio_mul_base >= BASE.saturated_into(),
-                "The payoff ratio should be greater than or equal to BASE!"
-            );
-            debug_assert!(
-                payoff >= winning_balance,
-                "The payoff in base asset should be greater than or equal to the winning outcome \
-                 balance."
-            );
-            debug_assert!(
-                pot_total >= payoff,
-                "The payoff in base asset should not exceed the total amount of the base asset!"
-            );
-            Ok(())
-        }
-
-        pub fn outcome_assets(
-            market_id: MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Result<Vec<AssetOf<T>>, DispatchError> {
-            match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::ParimutuelShare(market_id, i));
-                    }
-                    Ok(assets)
-                }
-                MarketType::Scalar(_) => Err(Error::<T>::ScalarMarketsNotAllowed.into()),
-            }
         }
     }
 }
