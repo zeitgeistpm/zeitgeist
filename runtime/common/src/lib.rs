@@ -1272,8 +1272,6 @@ macro_rules! impl_config_traits {
             type ExternalFees = MarketCreatorFee;
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
-            #[cfg(feature = "runtime-benchmarks")]
-            type MaxCategories = MaxCategories;
             type AssetManager = AssetManager;
             type MinBetSize = MinBetSize;
             type PalletId = ParimutuelPalletId;
