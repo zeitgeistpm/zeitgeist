@@ -216,17 +216,3 @@ impl ExtBuilder {
         t
     }
 }
-
-pub fn _run_to_block(n: BlockNumber) {
-    while System::block_number() < n {
-        Balances::on_finalize(System::block_number());
-        System::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-        Balances::on_initialize(System::block_number());
-    }
-}
-
-pub fn _run_blocks(n: BlockNumber) {
-    _run_to_block(System::block_number() + n);
-}
