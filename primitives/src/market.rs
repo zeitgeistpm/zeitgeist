@@ -66,6 +66,18 @@ pub struct Market<AI, BA, BN, M, A> {
     pub bonds: MarketBonds<AI, BA>,
 }
 
+impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
+    pub fn resolution_mechanism(&self) -> ResolutionMechanism {
+        match self.scoring_rule {
+            ScoringRule::CPMM
+            | ScoringRule::Lmsr
+            | ScoringRule::Orderbook
+            | ScoringRule::RikiddoSigmoidFeeMarketEma => ResolutionMechanism::RedeemTokens,
+            ScoringRule::Parimutuel => ResolutionMechanism::Noop,
+        }
+    }
+}
+
 /// Tracks the status of a bond.
 #[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct Bond<AI, BA> {

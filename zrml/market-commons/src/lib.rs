@@ -49,7 +49,7 @@ mod pallet {
         },
         ArithmeticError, DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::types::{Asset, Market, PoolId, ResolutionMechanism, ScoringRule};
+    use zeitgeist_primitives::types::{Asset, Market, PoolId};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
@@ -227,16 +227,6 @@ mod pallet {
 
         fn now() -> Self::Moment {
             T::Timestamp::now()
-        }
-
-        fn resolution_mechanism(market: MarketOf<T>) -> ResolutionMechanism {
-            match market.scoring_rule {
-                ScoringRule::CPMM
-                | ScoringRule::Lmsr
-                | ScoringRule::Orderbook
-                | ScoringRule::RikiddoSigmoidFeeMarketEma => ResolutionMechanism::RedeemTokens,
-                ScoringRule::Parimutuel => ResolutionMechanism::Noop,
-            }
         }
     }
 

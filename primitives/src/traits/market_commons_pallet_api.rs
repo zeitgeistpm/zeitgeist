@@ -18,7 +18,7 @@
 
 #![allow(clippy::type_complexity)]
 
-use crate::types::{Asset, Market, PoolId, ResolutionMechanism};
+use crate::types::{Asset, Market, PoolId};
 use frame_support::{
     dispatch::{fmt::Debug, DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -102,7 +102,4 @@ pub trait MarketCommonsPalletApi {
 
     /// Returns the current UTC time (milliseconds)
     fn now() -> Self::Moment;
-
-    /// Returns the market resolution mechanism.
-    fn resolution_mechanism(market: MarketOf<Self>) -> ResolutionMechanism;
 }

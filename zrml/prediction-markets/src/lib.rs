@@ -976,7 +976,7 @@ mod pallet {
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
-            match <zrml_market_commons::Pallet<T>>::resolution_mechanism(market.clone()) {
+            match &market.resolution_mechanism() {
                 ResolutionMechanism::RedeemTokens => (),
                 ResolutionMechanism::Noop => {
                     return Err(Error::<T>::InvalidResolutionMechanism.into());
