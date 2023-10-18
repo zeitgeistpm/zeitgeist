@@ -17,7 +17,7 @@ where
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
-        market_type: MarketType::Scalar(0..=100),
+        market_type: MarketType::Categorical(10u16),
         dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),

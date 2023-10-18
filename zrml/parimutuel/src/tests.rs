@@ -31,7 +31,6 @@ fn buy_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -54,7 +53,6 @@ fn buy_balances_change_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         market.creator = MARKET_CREATOR;
         Markets::<Runtime>::insert(market_id, market.clone());
@@ -93,7 +91,6 @@ fn buy_fails_if_asset_not_parimutuel_share() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
@@ -111,7 +108,6 @@ fn buy_fails_if_invalid_scoring_rule() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         // invalid
         market.scoring_rule = ScoringRule::CPMM;
@@ -132,7 +128,6 @@ fn buy_fails_if_market_not_active() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         // not active
         market.status = MarketStatus::Proposed;
         Markets::<Runtime>::insert(market_id, market.clone());
@@ -151,7 +146,6 @@ fn buy_fails_if_insufficient_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
@@ -172,7 +166,6 @@ fn buy_fails_if_below_minimum_bet_size() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
@@ -204,7 +197,6 @@ fn claim_rewards_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -245,7 +237,6 @@ fn claim_rewards_categorical_changes_balances_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -342,7 +333,6 @@ fn claim_rewards_fails_if_not_resolved() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -358,7 +348,6 @@ fn claim_rewards_fails_if_scoring_rule_not_parimutuel() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Resolved;
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         market.scoring_rule = ScoringRule::CPMM;
@@ -376,7 +365,6 @@ fn claim_rewards_fails_if_no_resolved_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Resolved;
         market.resolved_outcome = None;
         Markets::<Runtime>::insert(market_id, market);
@@ -405,7 +393,6 @@ fn claim_rewards_categorical_fails_if_no_winner() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
