@@ -18,8 +18,6 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate alloc;
-
 mod benchmarking;
 mod mock;
 mod tests;
@@ -31,11 +29,10 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::WeightInfoZeitgeist;
-    use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        pallet_prelude::{Decode, Encode, TypeInfo},
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
@@ -198,7 +195,7 @@ mod pallet {
         /// and of parimutuel shares to receive.
         /// Keep in mind that market creator fees are taken from this amount.
         ///
-        /// Complexity: `O(log(n))`, where `n` is the number of assets in the market.
+        /// Complexity: `O(1)`
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::buy())]
         #[frame_support::transactional]
@@ -235,7 +232,7 @@ mod pallet {
         ///
         /// - `refund_asset`: The outcome asset to refund.
         ///
-        /// Complexity: `O(log(n))``, where `n` is the number of categorical assets the market can have.
+        /// Complexity: `O(1)`
         #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::refund_pot())]
         #[frame_support::transactional]
@@ -293,20 +290,17 @@ mod pallet {
             Ok(())
         }
 
-        pub fn outcome_assets(
-            market_id: MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Result<Vec<AssetOf<T>>, DispatchError> {
-            match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::ParimutuelShare(market_id, i));
+        pub fn market_assets_contains(market: &MarketOf<T>, asset: &AssetOf<T>) -> DispatchResult {
+            if let Asset::ParimutuelShare(_, i) = asset {
+                match market.market_type {
+                    MarketType::Categorical(categories) => {
+                        ensure!(*i < categories, Error::<T>::InvalidOutcomeAsset);
+                        return Ok(());
                     }
-                    Ok(assets)
+                    MarketType::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
                 }
-                MarketType::Scalar(_) => Err(Error::<T>::ScalarMarketsNotAllowed.into()),
             }
+            Err(Error::<T>::NotParimutuelOutcome.into())
         }
 
         fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
@@ -328,8 +322,7 @@ mod pallet {
                 matches!(market.market_type, MarketType::Categorical(_)),
                 Error::<T>::OnlyCategoricalMarketsAllowed
             );
-            let market_assets = Self::outcome_assets(market_id, &market)?;
-            ensure!(market_assets.binary_search(&asset).is_ok(), Error::<T>::InvalidOutcomeAsset);
+            Self::market_assets_contains(&market, &asset)?;
 
             // transfer some fees of amount to market creator
             let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
@@ -439,11 +432,7 @@ mod pallet {
                 matches!(market.market_type, MarketType::Categorical(_)),
                 Error::<T>::OnlyCategoricalMarketsAllowed
             );
-            let market_assets = Self::outcome_assets(market_id, &market)?;
-            ensure!(
-                market_assets.binary_search(&refund_asset).is_ok(),
-                Error::<T>::InvalidOutcomeAsset
-            );
+            Self::market_assets_contains(&market, &refund_asset)?;
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
             let (refund_asset, refund_balance) = match winning_outcome {
