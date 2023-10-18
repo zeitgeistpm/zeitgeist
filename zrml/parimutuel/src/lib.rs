@@ -107,11 +107,6 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    /// The total rewards for each market at the market close.
-    #[pallet::storage]
-    pub type TotalRewards<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, BalanceOf<T>, OptionQuery>;
-
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
@@ -244,11 +239,6 @@ mod pallet {
 
             T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
             T::AssetManager::deposit(asset, &who, amount_minus_fees)?;
-
-            let mut total_reward =
-                TotalRewards::<T>::get(market_id).unwrap_or(BalanceOf::<T>::zero());
-            total_reward = total_reward.saturating_add(amount_minus_fees);
-            TotalRewards::<T>::insert(market_id, total_reward);
 
             Self::deposit_event(Event::OutcomeBought {
                 market_id,
