@@ -76,9 +76,6 @@ mod pallet {
                 Balance = BalanceOf<Self>,
             >;
 
-        #[pallet::constant]
-        type MaxCategories: Get<u16>;
-
         /// The api to handle different asset classes.
         type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 

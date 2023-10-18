@@ -58,7 +58,7 @@ mod benchmarks_parimutuel {
     fn buy() {
         let buyer = whitelisted_caller();
 
-        let market_id = setup_market::<T>(MarketType::Categorical(T::MaxCategories::get()));
+        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
 
         let amount = T::MinBetSize::get();
         let asset = Asset::ParimutuelShare(market_id, 0u16);
@@ -73,7 +73,7 @@ mod benchmarks_parimutuel {
     #[benchmark]
     fn claim_rewards() {
         // max category index is worst case
-        let market_id = setup_market::<T>(MarketType::Categorical(T::MaxCategories::get()));
+        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
 
         let winner = whitelisted_caller();
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
@@ -98,7 +98,7 @@ mod benchmarks_parimutuel {
     #[benchmark]
     fn refund_pot() {
         // max category index is worst case
-        let market_id = setup_market::<T>(MarketType::Categorical(T::MaxCategories::get()));
+        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
 
         let loser_0 = whitelisted_caller();
         let loser_0_index = 0u16;

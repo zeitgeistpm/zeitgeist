@@ -38,7 +38,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxCategories, MaxReserves,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves,
         MinBetSize, MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
     },
     traits::DistributeFees,
@@ -104,7 +104,6 @@ impl crate::Config for Runtime {
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
-    type MaxCategories = MaxCategories;
     type AssetManager = AssetManager;
     type MinBetSize = MinBetSize;
     type PalletId = ParimutuelPalletId;
