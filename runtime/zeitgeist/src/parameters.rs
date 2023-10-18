@@ -470,7 +470,7 @@ parameter_type_with_key! {
             #[cfg(not(feature = "parachain"))]
             Asset::ForeignAsset(_) => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
-            Asset::ParimutuelShare(_, _) => 2 * ExistentialDeposit::get(),
+            Asset::ParimutuelShare(_, _) => ExistentialDeposit::get(),
         }
     };
 }
