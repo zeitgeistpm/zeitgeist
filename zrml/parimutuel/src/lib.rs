@@ -36,9 +36,9 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{DispatchError, OptionQuery, StorageMap},
+        pallet_prelude::{Decode, DispatchError, Encode, OptionQuery, StorageMap, TypeInfo},
         traits::{Get, IsType, StorageVersion},
-        PalletId, Twox64Concat,
+        PalletId, RuntimeDebug, Twox64Concat,
     };
     use frame_system::{
         ensure_signed,
@@ -173,18 +173,24 @@ mod pallet {
         RefundableBalanceIsZero,
         /// There is no reward, because there are no winning shares.
         NoWinningShares,
-        /// There are not enough funds in the pot to reward the calculated amount.
-        /// This should never happen, but if it does, we have an accounting problem.
-        InsufficientFundsInPotAccount,
-        /// The outcome issuance is greater than the market base asset collateral.
-        /// This should never happen, but if it does, we have an accounting problem.
-        OutcomeIssuanceGreaterCollateral,
         /// A scalar market is not allowed for parimutuels.
         ScalarMarketsNotAllowed,
         /// Only categorical markets are allowed for parimutuels.
         OnlyCategoricalMarketsAllowed,
         /// There is no reward to distribute.
         NoRewardToDistribute,
+        /// Action cannot be completed because unexpected error has occurred. This should be reported
+        /// to protocol maintainers.
+        InconsistentState(InconsistentStateError),
+    }
+
+    // NOTE: these errors should never happen.
+    #[derive(Encode, Decode, Eq, PartialEq, TypeInfo, frame_support::PalletError, RuntimeDebug)]
+    pub enum InconsistentStateError {
+        /// There are not enough funds in the pot to reward the calculated amount.
+        InsufficientFundsInPotAccount,
+        /// The outcome issuance is greater than the market base asset collateral.
+        OutcomeIssuanceGreaterCollateral,
     }
 
     #[pallet::call]
@@ -430,8 +436,18 @@ mod pallet {
             payoff_ratio_mul_base: BalanceOf<T>,
             payoff: BalanceOf<T>,
         ) -> DispatchResult {
-            ensure!(pot_total >= winning_balance, Error::<T>::InsufficientFundsInPotAccount);
-            ensure!(pot_total >= outcome_total, Error::<T>::OutcomeIssuanceGreaterCollateral);
+            ensure!(
+                pot_total >= winning_balance,
+                Error::<T>::InconsistentState(
+                    InconsistentStateError::InsufficientFundsInPotAccount
+                )
+            );
+            ensure!(
+                pot_total >= outcome_total,
+                Error::<T>::InconsistentState(
+                    InconsistentStateError::OutcomeIssuanceGreaterCollateral
+                )
+            );
             debug_assert!(
                 payoff_ratio_mul_base >= BASE.saturated_into(),
                 "The payoff ratio should be greater than or equal to BASE!"
