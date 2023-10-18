@@ -296,11 +296,6 @@ mod pallet {
                     // however we need the precision here to calculate the correct payout
                     // by bdiv we multiply it with BASE and using bmul we divide it by BASE again
                     // Fugayzi, fugazi. It's a whazy. It's a woozie. It's fairy dust.
-                    debug_assert!(
-                        outcome_total != <BalanceOf<T>>::zero(),
-                        "If winning balance is non-zero, then the outcome total can only be at \
-                         least as high as the winning balance (non-zero too)!"
-                    );
                     let payoff_ratio_mul_base: BalanceOf<T> =
                         bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?
                             .saturated_into();
