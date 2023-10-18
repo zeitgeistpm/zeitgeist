@@ -1371,15 +1371,14 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::schedule_early_close_as_authority(CacheSize::get(), CacheSize::get())
                 .max(T::WeightInfo::schedule_early_close_after_dispute(
-                        CacheSize::get(),
-                        CacheSize::get()),
-                )
+                    CacheSize::get(),
+                    CacheSize::get(),
+                ))
                 .max(T::WeightInfo::schedule_early_close_as_market_creator(
-                        CacheSize::get(),
-                        CacheSize::get()),
-                )
-            )
-        ]
+                    CacheSize::get(),
+                    CacheSize::get(),
+                ))
+        )]
         #[transactional]
         pub fn schedule_early_close(
             origin: OriginFor<T>,
