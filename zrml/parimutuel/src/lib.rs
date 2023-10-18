@@ -59,7 +59,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The way how fees are taken from the market base asset collateral.
+        /// The way how fees are taken from the market base asset.
         type ExternalFees: DistributeFees<
                 Asset = Asset<MarketIdOf<Self>>,
                 AccountId = AccountIdOf<Self>,
@@ -134,7 +134,7 @@ mod pallet {
             actual_payoff: BalanceOf<T>,
             sender: AccountIdOf<T>,
         },
-        /// A market base asset collateral was refunded.
+        /// A market base asset was refunded.
         BalanceRefunded {
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
@@ -189,18 +189,18 @@ mod pallet {
     pub enum InconsistentStateError {
         /// There are not enough funds in the pot to reward the calculated amount.
         InsufficientFundsInPotAccount,
-        /// The outcome issuance is greater than the market base asset collateral.
+        /// The outcome issuance is greater than the market base asset.
         OutcomeIssuanceGreaterCollateral,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Buy parimutuel shares for the market's collateral.
+        /// Buy parimutuel shares for the market's base asset.
         ///
         /// # Arguments
         ///
         /// - `asset`: The outcome asset to buy the shares of.
-        /// - `amount`: The amount of collateral (base asset) to spend
+        /// - `amount`: The amount of base asset to spend
         /// and of parimutuel shares to receive.
         /// Keep in mind that market creator fees are taken from this amount.
         ///
@@ -344,7 +344,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Refund the collateral of losing categorical outcome assets
+        /// Refund the base asset of losing categorical outcome assets
         /// in case that there was no account betting on the winner outcome.
         ///
         /// # Arguments
@@ -454,12 +454,12 @@ mod pallet {
             );
             debug_assert!(
                 payoff >= winning_balance,
-                "The payoff in collateral should be greater than or equal to the winning outcome \
+                "The payoff in base asset should be greater than or equal to the winning outcome \
                  balance."
             );
             debug_assert!(
                 pot_total >= payoff,
-                "The payoff in collateral should not exceed the total amount of collateral!"
+                "The payoff in base asset should not exceed the total amount of the base asset!"
             );
             Ok(())
         }
