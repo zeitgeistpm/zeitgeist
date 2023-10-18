@@ -68,7 +68,7 @@ mod pallet {
         types::{
             Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
             MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ResolutionMechanism, ResultWithWeightInfo,
+            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo,
             ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
@@ -976,12 +976,7 @@ mod pallet {
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
-            match &market.resolution_mechanism() {
-                ResolutionMechanism::RedeemTokens => (),
-                ResolutionMechanism::Noop => {
-                    return Err(Error::<T>::InvalidResolutionMechanism.into());
-                }
-            }
+            ensure!(market.is_redeemable(), Error::<T>::InvalidResolutionMechanism);
 
             // Check to see if the sender has any winning shares.
             let resolved_outcome =

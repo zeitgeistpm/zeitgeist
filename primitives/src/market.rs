@@ -76,6 +76,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
             ScoringRule::Parimutuel => ResolutionMechanism::Noop,
         }
     }
+
+    pub fn is_redeemable(&self) -> bool {
+        matches!(self.resolution_mechanism(), ResolutionMechanism::RedeemTokens)
+    }
 }
 
 /// Tracks the status of a bond.
