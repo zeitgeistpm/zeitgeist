@@ -15,6 +15,7 @@ APIs/RPC interface.
 ## v0.4.2
 
 [#1127]: https://github.com/zeitgeistpm/zeitgeist/pull/1127
+[#1148]: https://github.com/zeitgeistpm/zeitgeist/pull/1148
 
 ### Added
 
@@ -26,6 +27,11 @@ APIs/RPC interface.
   - `MarketEarlyCloseScheduled`: A market's early close was scheduled.
   - `MarketEarlyCloseDisputed`: A market's early close was disputed.
   - `MarketEarlyCloseRejected`: A market's early close was rejected.
+
+### Changed
+
+- Modify event `MarketDisputed` to have an additional field for the disputant.
+  This is the account id of the user who called `dispute`. ([#1148])
 
 ## v0.4.1
 
