@@ -13,7 +13,7 @@ ZOMBIENET_BINARY="./tmp/zombienet"
 # Check if the file already exists
 if [[ -f "${ZOMBIENET_BINARY}" ]]; then
     echo "zombienet already exists in /tmp. Executing it."
-    ./tmp/zombienet spawn --provider native ./integration-tests/zombienet.toml
+    $ZOMBIENET_BINARY spawn --provider native ./integration-tests/zombienet.toml
     exit 0
 fi
 
@@ -65,4 +65,4 @@ fi
 # Make the file executable
 chmod +x "${ZOMBIENET_BINARY}"
 
-./tmp/zombienet spawn --provider native ./integration-tests/zombienet.toml
+$ZOMBIENET_BINARY spawn --provider native ./integration-tests/zombienet.toml
