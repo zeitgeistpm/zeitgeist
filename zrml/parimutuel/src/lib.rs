@@ -376,10 +376,13 @@ mod pallet {
 
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
             let payoff_ratio_mul_base: BalanceOf<T> =
-                bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?.saturated_into();
-            let payoff: BalanceOf<T> =
-                bmul(payoff_ratio_mul_base.saturated_into(), winning_balance.saturated_into())?
+                bdiv_floor(pot_total.saturated_into(), outcome_total.saturated_into())?
                     .saturated_into();
+            let payoff: BalanceOf<T> = bmul_floor(
+                payoff_ratio_mul_base.saturated_into(),
+                winning_balance.saturated_into(),
+            )?
+            .saturated_into();
 
             Self::check_values(
                 winning_balance,

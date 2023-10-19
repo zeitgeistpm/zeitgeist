@@ -412,7 +412,7 @@ fn claim_rewards_categorical_fails_if_no_winner() {
 
         assert_noop!(
             Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id),
-            Error::<Runtime>::NoWinner
+            Error::<Runtime>::NoRewardShareOutstanding
         );
     });
 }
@@ -475,7 +475,7 @@ fn refund_pot_works() {
 
         assert_noop!(
             Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id),
-            Error::<Runtime>::NoWinner
+            Error::<Runtime>::NoRewardShareOutstanding
         );
 
         let alice_paid_fees = Percent::from_percent(1) * alice_amount;
