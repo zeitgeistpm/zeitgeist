@@ -165,10 +165,8 @@ mod pallet {
         RefundableBalanceIsZero,
         /// There is no reward, because there are no winning shares.
         NoWinningShares,
-        /// A scalar market is not allowed for parimutuels.
-        ScalarMarketsNotAllowed,
         /// Only categorical markets are allowed for parimutuels.
-        OnlyCategoricalMarketsAllowed,
+        NotCategorical,
         /// There is no reward to distribute.
         NoRewardToDistribute,
         /// Action cannot be completed because unexpected error has occurred. This should be reported
@@ -298,7 +296,7 @@ mod pallet {
                         ensure!(*i < categories, Error::<T>::InvalidOutcomeAsset);
                         return Ok(());
                     }
-                    MarketType::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
+                    MarketType::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
                 }
             }
             Err(Error::<T>::NotParimutuelOutcome.into())
@@ -321,7 +319,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
             ensure!(
                 matches!(market.market_type, MarketType::Categorical(_)),
-                Error::<T>::OnlyCategoricalMarketsAllowed
+                Error::<T>::NotCategorical
             );
             Self::market_assets_contains(&market, &asset)?;
 
@@ -350,7 +348,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
             ensure!(
                 matches!(market.market_type, MarketType::Categorical(_)),
-                Error::<T>::OnlyCategoricalMarketsAllowed
+                Error::<T>::NotCategorical
             );
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
@@ -358,7 +356,7 @@ mod pallet {
                 OutcomeReport::Categorical(category_index) => {
                     Asset::ParimutuelShare(market_id, category_index)
                 }
-                OutcomeReport::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
+                OutcomeReport::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
             };
             // each Parimutuel outcome asset has the market id included
             // this allows us to query all outstanding shares for each discrete asset
@@ -422,7 +420,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
             ensure!(
                 matches!(market.market_type, MarketType::Categorical(_)),
-                Error::<T>::OnlyCategoricalMarketsAllowed
+                Error::<T>::NotCategorical
             );
             Self::market_assets_contains(&market, &refund_asset)?;
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
@@ -431,7 +429,7 @@ mod pallet {
                 OutcomeReport::Categorical(category_index) => {
                     Asset::ParimutuelShare(market_id, category_index)
                 }
-                OutcomeReport::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
+                OutcomeReport::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
             };
             let outcome_total = T::AssetManager::total_issuance(winning_asset);
             ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
