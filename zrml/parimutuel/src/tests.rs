@@ -103,20 +103,50 @@ fn buy_fails_if_asset_not_parimutuel_share() {
     });
 }
 
-#[test_case(ScoringRule::CPMM, MarketStatus::Active, Error::<Runtime>::InvalidScoringRule)]
-#[test_case(ScoringRule::Parimutuel, MarketStatus::Proposed, Error::<Runtime>::MarketIsNotActive)]
-fn buy_fails(scoring_rule: ScoringRule, status: MarketStatus, error: Error<Runtime>) {
+#[test_case(ScoringRule::CPMM; "cpmm")]
+#[test_case(ScoringRule::Orderbook; "orderbook")]
+#[test_case(ScoringRule::Lmsr; "lmsr")]
+#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "rikiddo sigmoid fee market ema")]
+fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.status = status;
+        market.status = MarketStatus::Active;
         market.scoring_rule = scoring_rule;
 
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
-        assert_noop!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount), error);
+        assert_noop!(
+            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
+            Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Suspended; "suspended")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>();
+        market.status = status;
+        market.scoring_rule = ScoringRule::Parimutuel;
+
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
+        let amount = <Runtime as Config>::MinBetSize::get();
+        assert_noop!(
+            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
+            Error::<Runtime>::MarketIsNotActive
+        );
     });
 }
 
@@ -525,13 +555,20 @@ fn refund_fails_if_not_parimutuel_outcome() {
     });
 }
 
-#[test]
-fn refund_fails_if_market_not_resolved() {
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Suspended; "suspended")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+fn refund_fails_if_market_not_resolved(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
         market.market_type = MarketType::Categorical(10u16);
-        market.status = MarketStatus::Active;
+        market.status = status;
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
@@ -542,8 +579,11 @@ fn refund_fails_if_market_not_resolved() {
     });
 }
 
-#[test]
-fn refund_fails_if_invalid_scoring_rule() {
+#[test_case(ScoringRule::CPMM; "cpmm")]
+#[test_case(ScoringRule::Orderbook; "orderbook")]
+#[test_case(ScoringRule::Lmsr; "lmsr")]
+#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "rikiddo sigmoid fee market ema")]
+fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
@@ -551,7 +591,7 @@ fn refund_fails_if_invalid_scoring_rule() {
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         market.status = MarketStatus::Resolved;
         // invalid scoring rule
-        market.scoring_rule = ScoringRule::CPMM;
+        market.scoring_rule = scoring_rule;
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
