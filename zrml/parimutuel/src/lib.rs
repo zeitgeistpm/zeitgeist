@@ -136,9 +136,10 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// There was no buyer of the winning outcome.
-        /// Use the `refund` extrinsic to get the initial bet back.
-        NoWinner,
+        /// There was no buyer for the winning outcome or all winners already claimed their rewards.
+        /// Use the `refund` extrinsic to get the initial bet back, 
+        /// in case there was no buyer for the winning outcome.
+        NoRewardShareOutstanding,
         /// The market is not active.
         MarketIsNotActive,
         /// The specified amount is below the minimum bet size.
@@ -362,8 +363,9 @@ mod pallet {
             // each Parimutuel outcome asset has the market id included
             // this allows us to query all outstanding shares for each discrete asset
             let outcome_total = T::AssetManager::total_issuance(winning_asset);
-            // use refund extrinsic in case there is no winner
-            ensure!(outcome_total != <BalanceOf<T>>::zero(), Error::<T>::NoWinner);
+            // if there are no outstanding reward shares, but the pot account is not empty
+            // then use the refund extrinsic to get the initial bet back
+            ensure!(outcome_total != BalanceOf::<T>::zero(), Error::<T>::NoRewardShareOutstanding);
             let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
             ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
             debug_assert!(
