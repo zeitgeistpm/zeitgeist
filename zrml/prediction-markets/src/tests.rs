@@ -3110,6 +3110,36 @@ fn it_allows_to_redeem_shares() {
 }
 
 #[test]
+fn redeem_shares_fails_if_invalid_resolution_mechanism() {
+    let test = |base_asset: Asset<MarketId>| {
+        let end = 2;
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::Parimutuel,
+        );
+
+        assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
+            market_inner.status = MarketStatus::Resolved;
+            Ok(())
+        }));
+
+        assert_noop!(
+            PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0),
+            Error::<Runtime>::InvalidResolutionMechanism
+        );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test]
 fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params() {
     let test = |base_asset: Asset<MarketId>| {
         let oracle = ALICE;
