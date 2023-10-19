@@ -8,10 +8,10 @@ fi;
 cargo build --features parachain
 
 # Define destination path
-DEST_PATH="./tmp/zombienet"
+ZOMBIENET_BINARY="./tmp/zombienet"
 
 # Check if the file already exists
-if [[ -f "${DEST_PATH}" ]]; then
+if [[ -f "${ZOMBIENET_BINARY}" ]]; then
     echo "zombienet already exists in /tmp. Executing it."
     ./tmp/zombienet spawn --provider native ./integration-tests/zombienet.toml
     exit 0
@@ -52,7 +52,7 @@ mkdir -p ./tmp/
 
 # Download the file
 echo "Downloading ${FILE_NAME} from ${DOWNLOAD_URL}"
-curl -L "${DOWNLOAD_URL}" -o "${DEST_PATH}"
+curl -L "${DOWNLOAD_URL}" -o "${ZOMBIENET_BINARY}"
 
 # Provide feedback on the download status
 if [[ $? -eq 0 ]]; then
@@ -63,6 +63,6 @@ else
 fi
 
 # Make the file executable
-chmod +x "${DEST_PATH}"
+chmod +x "${ZOMBIENET_BINARY}"
 
 ./tmp/zombienet spawn --provider native ./integration-tests/zombienet.toml
