@@ -375,11 +375,6 @@ mod pallet {
             );
 
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
-            // use bdiv, because pot_total / outcome_total could be
-            // a rational number imprecisely rounded to the next integer
-            // however we need the precision here to calculate the correct payout
-            // by bdiv we multiply it with BASE and using bmul we divide it by BASE again
-            // Fugayzi, fugazi. It's a whazy. It's a woozie. It's fairy dust.
             let payoff_ratio_mul_base: BalanceOf<T> =
                 bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?.saturated_into();
             let payoff: BalanceOf<T> =
