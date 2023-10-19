@@ -137,7 +137,7 @@ mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// There was no buyer for the winning outcome or all winners already claimed their rewards.
-        /// Use the `refund` extrinsic to get the initial bet back, 
+        /// Use the `refund` extrinsic to get the initial bet back,
         /// in case there was no buyer for the winning outcome.
         NoRewardShareOutstanding,
         /// The market is not active.
