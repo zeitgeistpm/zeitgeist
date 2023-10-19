@@ -193,7 +193,7 @@ mod pallet {
         /// - `asset`: The outcome asset to buy the shares of.
         /// - `amount`: The amount of base asset to spend
         /// and of parimutuel shares to receive.
-        /// Keep in mind that market creator fees are taken from this amount.
+        /// Keep in mind that there are external fees taken from this amount.
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(0)]
@@ -324,7 +324,6 @@ mod pallet {
             );
             Self::market_assets_contains(&market, &asset)?;
 
-            // transfer some fees of amount to market creator
             let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
             let amount_minus_fees =
                 amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
