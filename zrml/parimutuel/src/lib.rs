@@ -233,12 +233,12 @@ mod pallet {
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(2)]
-        #[pallet::weight(T::WeightInfo::refund_pot())]
+        #[pallet::weight(T::WeightInfo::claim_refunds())]
         #[frame_support::transactional]
-        pub fn refund_pot(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
+        pub fn claim_refunds(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            Self::do_refund_pot(who, refund_asset)?;
+            Self::do_claim_refunds(who, refund_asset)?;
 
             Ok(())
         }
@@ -410,7 +410,7 @@ mod pallet {
             Ok(())
         }
 
-        fn do_refund_pot(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
+        fn do_claim_refunds(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
             let market_id = match refund_asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),

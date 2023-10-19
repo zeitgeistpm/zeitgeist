@@ -95,7 +95,7 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn refund_pot() {
+    fn claim_refunds() {
         // max category index is worst case
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
 
@@ -125,7 +125,7 @@ mod benchmarks {
         })?;
 
         #[extrinsic_call]
-        refund_pot(RawOrigin::Signed(loser_0), loser_0_asset);
+        claim_refunds(RawOrigin::Signed(loser_0), loser_0_asset);
     }
 
     impl_benchmark_test_suite!(

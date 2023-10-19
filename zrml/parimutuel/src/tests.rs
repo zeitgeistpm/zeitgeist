@@ -429,7 +429,7 @@ fn claim_rewards_categorical_fails_if_no_winning_shares() {
 }
 
 #[test]
-fn refund_pot_works() {
+fn claim_refunds_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
@@ -468,7 +468,7 @@ fn refund_pot_works() {
         let free_base_asset_pot_before =
             AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id));
 
-        assert_ok!(Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), alice_asset));
+        assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), alice_asset));
 
         assert_eq!(
             AssetManager::free_balance(market.base_asset, &ALICE) - free_base_asset_alice_before,
@@ -483,7 +483,7 @@ fn refund_pot_works() {
             bob_amount_minus_fees
         );
 
-        assert_ok!(Parimutuel::refund_pot(RuntimeOrigin::signed(BOB), bob_asset));
+        assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(BOB), bob_asset));
         assert_eq!(
             AssetManager::free_balance(market.base_asset, &BOB) - free_base_asset_bob_before,
             bob_amount_minus_fees
@@ -506,7 +506,7 @@ fn refund_fails_if_not_parimutuel_outcome() {
         Markets::<Runtime>::insert(market_id, market);
 
         assert_noop!(
-            Parimutuel::refund_pot(
+            Parimutuel::claim_refunds(
                 RuntimeOrigin::signed(ALICE),
                 Asset::CategoricalOutcome(market_id, 0u16)
             ),
@@ -526,7 +526,7 @@ fn refund_fails_if_market_not_resolved() {
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
+            Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::MarketIsNotResolvedYet
         );
     });
@@ -546,7 +546,7 @@ fn refund_fails_if_invalid_scoring_rule() {
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
+            Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidScoringRule
         );
     });
@@ -564,7 +564,7 @@ fn refund_fails_if_invalid_outcome_asset() {
 
         let asset = Asset::ParimutuelShare(market_id, 20u16);
         assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
+            Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidOutcomeAsset
         );
     });
@@ -582,7 +582,7 @@ fn refund_fails_if_no_resolved_outcome() {
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
+            Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::NoResolvedOutcome
         );
     });
@@ -608,7 +608,7 @@ fn refund_fails_if_refund_not_allowed() {
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
+            Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::RefundNotAllowed
         );
     });
@@ -633,11 +633,11 @@ fn refund_fails_if_refundable_balance_is_zero() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        assert_ok!(Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset));
+        assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset));
 
         // already refunded above
         assert_noop!(
-            Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset),
+            Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::RefundableBalanceIsZero
         );
     });
@@ -662,7 +662,7 @@ fn refund_emits_event() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        assert_ok!(Parimutuel::refund_pot(RuntimeOrigin::signed(ALICE), asset));
+        assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset));
 
         let amount_minus_fees = amount - (Percent::from_percent(1) * amount);
 

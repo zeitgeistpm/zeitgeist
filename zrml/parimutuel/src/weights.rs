@@ -49,7 +49,7 @@ use frame_support::{traits::Get, weights::Weight};
 pub trait WeightInfoZeitgeist {
     fn buy() -> Weight;
     fn claim_rewards() -> Weight;
-    fn refund_pot() -> Weight;
+    fn claim_refunds() -> Weight;
 }
 
 /// Weight functions for zrml_parimutuel (automatically generated)
@@ -99,7 +99,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(124), added: 2599, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn refund_pot() -> Weight {
+    fn claim_refunds() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2311`
         //  Estimated: `13262`
