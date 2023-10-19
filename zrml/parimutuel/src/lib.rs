@@ -353,53 +353,46 @@ mod pallet {
             );
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
-            let (winning_asset, payoff, slashable_asset_balance) = match winning_outcome {
+            let winning_asset = match winning_outcome {
                 OutcomeReport::Categorical(category_index) => {
-                    let winning_asset = Asset::ParimutuelShare(market_id, category_index);
-                    // each Parimutuel outcome asset has the market id included
-                    // this allows us to query all outstanding shares for each discrete asset
-                    let outcome_total = T::AssetManager::total_issuance(winning_asset);
-                    // use refund extrinsic in case there is no winner
-                    ensure!(outcome_total != <BalanceOf<T>>::zero(), Error::<T>::NoWinner);
-                    let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
-                    ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
-                    debug_assert!(
-                        outcome_total >= winning_balance,
-                        "The outcome issuance should be at least as high as the individual \
-                         balance of this outcome!"
-                    );
+                    Asset::ParimutuelShare(market_id, category_index)
+                }
+                OutcomeReport::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
+            };
+            // each Parimutuel outcome asset has the market id included
+            // this allows us to query all outstanding shares for each discrete asset
+            let outcome_total = T::AssetManager::total_issuance(winning_asset);
+            // use refund extrinsic in case there is no winner
+            ensure!(outcome_total != <BalanceOf<T>>::zero(), Error::<T>::NoWinner);
+            let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
+            ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
+            debug_assert!(
+                outcome_total >= winning_balance,
+                "The outcome issuance should be at least as high as the individual balance of \
+                 this outcome!"
+            );
 
-                    let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
-                    // use bdiv, because pot_total / outcome_total could be
-                    // a rational number imprecisely rounded to the next integer
-                    // however we need the precision here to calculate the correct payout
-                    // by bdiv we multiply it with BASE and using bmul we divide it by BASE again
-                    // Fugayzi, fugazi. It's a whazy. It's a woozie. It's fairy dust.
-                    let payoff_ratio_mul_base: BalanceOf<T> =
-                        bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?
-                            .saturated_into();
-                    let payoff: BalanceOf<T> = bmul(
-                        payoff_ratio_mul_base.saturated_into(),
-                        winning_balance.saturated_into(),
-                    )?
+            let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+            // use bdiv, because pot_total / outcome_total could be
+            // a rational number imprecisely rounded to the next integer
+            // however we need the precision here to calculate the correct payout
+            // by bdiv we multiply it with BASE and using bmul we divide it by BASE again
+            // Fugayzi, fugazi. It's a whazy. It's a woozie. It's fairy dust.
+            let payoff_ratio_mul_base: BalanceOf<T> =
+                bdiv(pot_total.saturated_into(), outcome_total.saturated_into())?.saturated_into();
+            let payoff: BalanceOf<T> =
+                bmul(payoff_ratio_mul_base.saturated_into(), winning_balance.saturated_into())?
                     .saturated_into();
 
-                    Self::check_values(
-                        winning_balance,
-                        pot_total,
-                        outcome_total,
-                        payoff_ratio_mul_base,
-                        payoff,
-                    )?;
+            Self::check_values(
+                winning_balance,
+                pot_total,
+                outcome_total,
+                payoff_ratio_mul_base,
+                payoff,
+            )?;
 
-                    let slashable_asset_balance = winning_balance;
-
-                    (winning_asset, payoff, slashable_asset_balance)
-                }
-                OutcomeReport::Scalar(_) => {
-                    return Err(Error::<T>::ScalarMarketsNotAllowed.into());
-                }
-            };
+            let slashable_asset_balance = winning_balance;
 
             T::AssetManager::slash(winning_asset, &who, slashable_asset_balance);
 
@@ -434,25 +427,22 @@ mod pallet {
             Self::market_assets_contains(&market, &refund_asset)?;
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
-            let (refund_asset, refund_balance) = match winning_outcome {
+            let winning_asset = match winning_outcome {
                 OutcomeReport::Categorical(category_index) => {
-                    let winning_asset = Asset::ParimutuelShare(market_id, category_index);
-                    let outcome_total = T::AssetManager::total_issuance(winning_asset);
-                    ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
-
-                    let refund_balance = T::AssetManager::free_balance(refund_asset, &who);
-                    ensure!(!refund_balance.is_zero(), Error::<T>::RefundableBalanceIsZero);
-                    debug_assert!(
-                        refund_asset != winning_asset,
-                        "Since we were checking the total issuance of the winning asset to be \
-                         zero, if the refund balance is non-zero, then the winning asset can't be \
-                         the refund asset!"
-                    );
-
-                    (refund_asset, refund_balance)
+                    Asset::ParimutuelShare(market_id, category_index)
                 }
                 OutcomeReport::Scalar(_) => return Err(Error::<T>::ScalarMarketsNotAllowed.into()),
             };
+            let outcome_total = T::AssetManager::total_issuance(winning_asset);
+            ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
+
+            let refund_balance = T::AssetManager::free_balance(refund_asset, &who);
+            ensure!(!refund_balance.is_zero(), Error::<T>::RefundableBalanceIsZero);
+            debug_assert!(
+                refund_asset != winning_asset,
+                "Since we were checking the total issuance of the winning asset to be zero, if \
+                 the refund balance is non-zero, then the winning asset can't be the refund asset!"
+            );
 
             let slashable_asset_balance = refund_balance;
             T::AssetManager::slash(refund_asset, &who, slashable_asset_balance);
