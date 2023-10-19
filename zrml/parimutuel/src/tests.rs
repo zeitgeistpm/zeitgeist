@@ -279,11 +279,11 @@ fn buy_fails_if_market_type_is_scalar() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount =
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
+        let amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_noop!(
-            Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount),
+            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
             Error::<Runtime>::NotCategorical
         );
     });
