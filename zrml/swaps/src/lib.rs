@@ -33,8 +33,6 @@ mod utils;
 
 mod arbitrage;
 mod benchmarks;
-pub mod check_arithm_rslt;
-mod consts;
 mod events;
 pub mod fixed;
 pub mod math;
@@ -50,7 +48,6 @@ pub use pallet::*;
 mod pallet {
     use crate::{
         arbitrage::ArbitrageForCpmm,
-        check_arithm_rslt::CheckArithmRslt,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         utils::{
             pool_exit_with_exact_amount, pool_join_with_exact_amount, swap_exact_amount,
@@ -91,7 +88,7 @@ mod pallet {
     use zeitgeist_primitives::{
         constants::CENT,
         math::{
-            checked_ops_res::{CheckedAddRes, CheckedSubRes},
+            checked_ops_res::{CheckedAddRes, CheckedMulRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
@@ -138,7 +135,7 @@ mod pallet {
         #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
-                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar())
+                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar()),
         )]
         #[transactional]
         pub fn admin_clean_up_pool(
@@ -460,7 +457,7 @@ mod pallet {
         // though.
         #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::pool_join(
-            max_assets_in.len().min(T::MaxAssets::get().into()) as u32
+            max_assets_in.len().min(T::MaxAssets::get().into()) as u32,
         ))]
         #[transactional]
         pub fn pool_join(
@@ -652,7 +649,7 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount <= asset_balance.check_mul_rslt(&T::MaxInRatio::get())?,
+                        asset_amount <= asset_balance.checked_mul_res(&T::MaxInRatio::get())?,
                         Error::<T>::MaxInRatio
                     );
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, asset_amount);
@@ -1901,7 +1898,7 @@ mod pallet {
                             ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                             ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                             map.insert(asset, weight);
-                            total_weight = total_weight.check_add_rslt(&weight)?;
+                            total_weight = total_weight.checked_add_res(&weight)?;
                             T::AssetManager::transfer(
                                 asset,
                                 &who,

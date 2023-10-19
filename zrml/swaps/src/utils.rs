@@ -23,7 +23,6 @@
 // <https://github.com/balancer-labs/balancer-core>.
 
 use crate::{
-    check_arithm_rslt::CheckArithmRslt,
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     BalanceOf, Config, Error, MarketIdOf, Pallet,
 };
@@ -35,7 +34,10 @@ use sp_runtime::{
     DispatchError,
 };
 use zeitgeist_primitives::{
-    math::fixed::{FixedDiv, FixedMul},
+    math::{
+        checked_ops_res::CheckedSubRes,
+        fixed::{FixedDiv, FixedMul},
+    },
     types::{Asset, Pool, PoolId, ScoringRule},
 };
 use zrml_rikiddo::traits::RikiddoMVPallet;
@@ -142,7 +144,7 @@ where
         let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
         let amount = ratio.bmul(balance)?;
         let fee = (p.fee)(amount)?;
-        let amount_minus_fee = amount.check_sub_rslt(&fee)?;
+        let amount_minus_fee = amount.checked_sub_res(&fee)?;
         transferred.push(amount_minus_fee);
         ensure!(amount_minus_fee != Zero::zero(), Error::<T>::MathApproximation);
         (p.transfer_asset)(amount_minus_fee, amount_bound, asset)?;

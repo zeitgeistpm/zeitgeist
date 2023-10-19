@@ -21,35 +21,41 @@
 // balancer-core repository
 // <https://github.com/balancer-labs/balancer-core>.
 
-use crate::{
-    check_arithm_rslt::CheckArithmRslt,
-    consts::{
-        BPOW_APPROX_BASE_MAX, BPOW_APPROX_BASE_MIN, BPOW_APPROX_MAX_ITERATIONS, BPOW_PRECISION,
-    },
-};
 use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::{
     constants::BASE,
-    math::fixed::{FixedDiv, FixedMul},
+    math::{
+        checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedSubRes},
+        fixed::{FixedDiv, FixedMul},
+    },
 };
 
+/// The amount of precision to use in exponentiation.
+pub const BPOW_PRECISION: u128 = 10;
+/// The minimum value of the base parameter in bpow_approx.
+pub const BPOW_APPROX_BASE_MIN: u128 = BASE / 4;
+/// The maximum value of the base parameter in bpow_approx.
+pub const BPOW_APPROX_BASE_MAX: u128 = 7 * BASE / 4;
+/// The maximum number of terms from the binomial series used to calculate bpow_approx.
+pub const BPOW_APPROX_MAX_ITERATIONS: u128 = 100;
+
 pub fn btoi(a: u128) -> Result<u128, DispatchError> {
-    a.check_div_rslt(&BASE)
+    a.checked_div_res(&BASE)
 }
 
 pub fn bfloor(a: u128) -> Result<u128, DispatchError> {
-    btoi(a)?.check_mul_rslt(&BASE)
+    btoi(a)?.checked_mul_res(&BASE)
 }
 
 pub fn bsub_sign(a: u128, b: u128) -> Result<(u128, bool), DispatchError> {
-    Ok(if a >= b { (a.check_sub_rslt(&b)?, false) } else { (b.check_sub_rslt(&a)?, true) })
+    Ok(if a >= b { (a.checked_sub_res(&b)?, false) } else { (b.checked_sub_res(&a)?, true) })
 }
 
 pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
     let mut z = if n % 2 != 0 { a } else { BASE };
 
     let mut b = a;
-    let mut m = n.check_div_rslt(&2)?;
+    let mut m = n.checked_div_res(&2)?;
 
     while m != 0 {
         b = b.bmul(b)?;
@@ -58,7 +64,7 @@ pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
             z = z.bmul(b)?;
         }
 
-        m = m.check_div_rslt(&2)?;
+        m = m.checked_div_res(&2)?;
     }
 
     Ok(z)
@@ -77,7 +83,7 @@ pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
 /// for `base` (specified above) are violated, a `DispatchError::Other` is returned.
 pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
     let whole = bfloor(exp)?;
-    let remain = exp.check_sub_rslt(&whole)?;
+    let remain = exp.checked_sub_res(&whole)?;
 
     let whole_pow = bpowi(base, btoi(whole)?)?;
 
@@ -131,8 +137,8 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
             break;
         }
 
-        let big_k = i.check_mul_rslt(&BASE)?;
-        let (c, cneg) = bsub_sign(a, big_k.check_sub_rslt(&BASE)?)?;
+        let big_k = i.checked_mul_res(&BASE)?;
+        let (c, cneg) = bsub_sign(a, big_k.checked_sub_res(&BASE)?)?;
         term = term.bmul(c.bmul(x)?)?;
         term = term.bdiv(big_k)?;
         if term == 0 {
@@ -148,9 +154,9 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
         if negative {
             // Never underflows. In fact, the absolute value of the terms is strictly
             // decreasing thanks to the numerical limits.
-            sum = sum.check_sub_rslt(&term)?;
+            sum = sum.checked_sub_res(&term)?;
         } else {
-            sum = sum.check_add_rslt(&term)?;
+            sum = sum.checked_add_res(&term)?;
         }
     }
 
