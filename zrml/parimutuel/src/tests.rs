@@ -307,12 +307,19 @@ fn claim_rewards_fails_if_market_type_is_scalar() {
     });
 }
 
-#[test]
-fn claim_rewards_fails_if_not_resolved() {
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Suspended; "suspended")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+fn claim_rewards_fails_if_not_resolved(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.status = MarketStatus::Active;
+        market.status = status;
         Markets::<Runtime>::insert(market_id, market);
 
         assert_noop!(
