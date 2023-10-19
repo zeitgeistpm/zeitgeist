@@ -169,6 +169,23 @@ fn buy_complete_set_fails_if_market_is_not_active(status: MarketStatus) {
     });
 }
 
+#[test_case(ScoringRule::Parimutuel)]
+fn buy_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: ScoringRule) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..2,
+            scoring_rule,
+        );
+        let market_id = 0;
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(FRED), market_id, 1),
+            Error::<Runtime>::InvalidScoringRule,
+        );
+    });
+}
+
 #[test]
 fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumber() {
     ExtBuilder::default().build().execute_with(|| {
@@ -1846,6 +1863,29 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
         assert_noop!(
             PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT),
             Error::<Runtime>::InsufficientShareBalance
+        );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn it_does_not_allow_to_sell_complete_sets_with_parimutuel_market() {
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::Parimutuel,
+        );
+        assert_noop!(
+            PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT),
+            Error::<Runtime>::InvalidScoringRule
         );
     };
     ExtBuilder::default().build().execute_with(|| {
