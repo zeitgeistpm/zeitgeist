@@ -22,6 +22,7 @@ use core::ops::RangeInclusive;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use sp_runtime::Percent;
+use test_case::test_case;
 use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, OutcomeReport, ScoringRule};
 use zrml_market_commons::{Error as MError, Markets};
 
@@ -102,41 +103,20 @@ fn buy_fails_if_asset_not_parimutuel_share() {
     });
 }
 
-#[test]
-fn buy_fails_if_invalid_scoring_rule() {
+#[test_case(ScoringRule::CPMM, MarketStatus::Active, Error::<Runtime>::InvalidScoringRule)]
+#[test_case(ScoringRule::Parimutuel, MarketStatus::Proposed, Error::<Runtime>::MarketIsNotActive)]
+fn buy_fails(scoring_rule: ScoringRule, status: MarketStatus, error: Error<Runtime>) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>();
-        market.status = MarketStatus::Active;
-        // invalid
-        market.scoring_rule = ScoringRule::CPMM;
+        market.status = status;
+        market.scoring_rule = scoring_rule;
 
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
-        assert_noop!(
-            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
-            Error::<Runtime>::InvalidScoringRule
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_market_not_active() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>();
-        // not active
-        market.status = MarketStatus::Proposed;
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
-        assert_noop!(
-            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
-            Error::<Runtime>::MarketIsNotActive
-        );
+        assert_noop!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount), error);
     });
 }
 
@@ -304,7 +284,7 @@ fn buy_fails_if_market_type_is_scalar() {
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount),
-            Error::<Runtime>::OnlyCategoricalMarketsAllowed
+            Error::<Runtime>::NotCategorical
         );
     });
 }
@@ -322,7 +302,7 @@ fn claim_rewards_fails_if_market_type_is_scalar() {
 
         assert_noop!(
             Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id),
-            Error::<Runtime>::OnlyCategoricalMarketsAllowed
+            Error::<Runtime>::NotCategorical
         );
     });
 }
