@@ -250,9 +250,14 @@ fn claim_rewards_categorical_changes_balances_correctly() {
         Markets::<Runtime>::insert(market_id, market);
 
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount =
+        let winner_amount_0 =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
-        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount));
+        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount_0));
+
+        let winner_amount_1 = <Runtime as Config>::MinBetSize::get()
+            + <Runtime as Config>::MinBetSize::get()
+            + <Runtime as Config>::MinBetSize::get();
+        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(CHARLIE), winner_asset, winner_amount_1));
 
         let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
         let loser_amount = <Runtime as Config>::MinBetSize::get();
@@ -263,18 +268,24 @@ fn claim_rewards_categorical_changes_balances_correctly() {
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        // 29700000000 / 19800000000 = 1.5, because loser amount is half of winner amount
-        let actual_payoff = 29700000000;
+        let actual_payoff = 59400000000;
+        let winner_amount = winner_amount_0 + winner_amount_1;
         let total_pot_amount = loser_amount + winner_amount;
         let total_fees = Percent::from_percent(1) * total_pot_amount;
         assert_eq!(actual_payoff, total_pot_amount - total_fees);
 
-        let slashable_balance = 19800000000;
-        let winner_fees = Percent::from_percent(1) * winner_amount;
-        assert_eq!(slashable_balance + winner_fees, winner_amount);
+        // 2/5 from 59400000000 = 23760000000
+        let actual_payoff_alice = 23760000000;
+        assert_eq!(Percent::from_percent(40) * actual_payoff, actual_payoff_alice);
+        // 3/5 from 59400000000 = 35640000000
+        let actual_payoff_charlie = 35640000000;
+        assert_eq!(Percent::from_percent(60) * actual_payoff, actual_payoff_charlie);
+        assert_eq!(actual_payoff_alice + actual_payoff_charlie, actual_payoff);
 
         let free_winner_asset_alice_before = AssetManager::free_balance(winner_asset, &ALICE);
-        assert_eq!(free_winner_asset_alice_before, slashable_balance);
+        let winner_amount_0_minus_fees =
+            winner_amount_0 - Percent::from_percent(1) * winner_amount_0;
+        assert_eq!(free_winner_asset_alice_before, winner_amount_0_minus_fees);
         let free_base_asset_alice_before = AssetManager::free_balance(market.base_asset, &ALICE);
         let free_base_asset_pot_before =
             AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id));
@@ -284,14 +295,37 @@ fn claim_rewards_categorical_changes_balances_correctly() {
 
         assert_eq!(
             free_winner_asset_alice_before - AssetManager::free_balance(winner_asset, &ALICE),
-            slashable_balance
+            winner_amount_0_minus_fees
         );
 
         assert_eq!(
             AssetManager::free_balance(market.base_asset, &ALICE) - free_base_asset_alice_before,
-            actual_payoff
+            actual_payoff_alice
         );
 
+        assert_eq!(
+            AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id)),
+            actual_payoff_charlie
+        );
+
+        let free_winner_asset_charlie_before = AssetManager::free_balance(winner_asset, &CHARLIE);
+        let winner_amount_1_minus_fees =
+            winner_amount_1 - Percent::from_percent(1) * winner_amount_1;
+        assert_eq!(free_winner_asset_charlie_before, winner_amount_1_minus_fees);
+        let free_base_asset_charlie_before =
+            AssetManager::free_balance(market.base_asset, &CHARLIE);
+
+        assert_ok!(Parimutuel::claim_rewards(RuntimeOrigin::signed(CHARLIE), market_id));
+
+        assert_eq!(
+            free_winner_asset_charlie_before - AssetManager::free_balance(winner_asset, &CHARLIE),
+            winner_amount_1_minus_fees
+        );
+        assert_eq!(
+            AssetManager::free_balance(market.base_asset, &CHARLIE)
+                - free_base_asset_charlie_before,
+            actual_payoff_charlie
+        );
         assert_eq!(
             AssetManager::free_balance(market.base_asset, &Parimutuel::pot_account(market_id)),
             0
