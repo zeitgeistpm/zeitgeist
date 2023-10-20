@@ -1624,7 +1624,7 @@ mod pallet {
             payer: T::AccountId,
             pool_id: PoolId,
         ) {
-            if fee.is_zero() {
+            if fee.is_zero() || payee == payer {
                 return;
             };
 
