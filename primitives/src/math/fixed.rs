@@ -31,7 +31,7 @@ use crate::{
         },
     },
 };
-use alloc::{borrow::ToOwned, format, string::ToString, vec::Vec};
+use alloc::{borrow::ToOwned, format, string::ToString};
 use core::convert::TryFrom;
 use fixed::{traits::Fixed, ParseFixedError};
 use frame_support::dispatch::DispatchError;
@@ -243,36 +243,38 @@ impl<F: Fixed + ToString, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
     fn from_fixed_to_fixed_decimal(fixed: F, decimals: u8) -> Result<N, &'static str> {
         let decimals_usize = decimals as usize;
         let s = fixed.to_string();
-        let mut parts: Vec<&str> = s.split('.').collect();
-        // If there's no fractional part, then `fixed` was an integer.
-        if parts.len() != 2 {
-            parts.push("0");
+        let mut parts = s.split('.');
+        let int_part = parts.next().ok_or("Empty string provided")?;
+        let frac_part = parts.next().unwrap_or("0");
+        // Ensure that the iterator is now exhausted.
+        if parts.next().is_some() {
+            return Err("The string contains multiple decimal points");
         }
 
-        let (int_part, frac_part) = (parts[0], parts[1]);
-        let mut increment = false;
-
+        let mut increment_int_part = false;
         let new_frac_part = if frac_part.len() < decimals_usize {
             format!("{}{}", frac_part, "0".repeat(decimals_usize.saturating_sub(frac_part.len())))
-        } else {
-            // Adding rounding behavior
-            let round_digit = frac_part.chars().nth(decimals_usize);
-            match round_digit {
-                Some(d) if d >= '5' => increment = true,
-                _ => {}
+        } else if frac_part.len() > decimals_usize {
+            let round_digit =
+                frac_part.chars().nth(decimals_usize).and_then(|c| c.to_digit(10)).ok_or(
+                    "The char at decimals_usize was not found, although the frac_part length is \
+                     higher than decimals_usize.",
+                )?;
+            if round_digit >= 5 {
+                increment_int_part = true;
             }
-
-            frac_part.chars().take(decimals_usize).collect()
+            frac_part.chars().take(decimals_usize).collect::<String>()
+        } else {
+            // There's no need to round here, the fractional part already fits perfectly.
+            frac_part.to_string()
         };
 
         let mut fixed_decimal: u128 = format!("{}{}", int_part, new_frac_part)
             .parse::<u128>()
             .map_err(|_| "Failed to parse the fixed decimal representation into u128")?;
-
-        if increment {
+        if increment_int_part {
             fixed_decimal = fixed_decimal.saturating_add(1);
         }
-
         let result: N = fixed_decimal.try_into().map_err(|_| {
             "The parsed fixed decimal representation does not fit into the target type"
         })?;
