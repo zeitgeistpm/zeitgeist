@@ -3952,6 +3952,7 @@ fn swap_exact_amount_in_with_creator_fee_respects_existential_deposit(
         ));
         System::assert_has_event(
             Event::MarketCreatorFeePaymentFailed(
+                DEFAULT_MARKET_ID,
                 ALICE,
                 DEFAULT_MARKET_CREATOR,
                 expected_fee,
@@ -4201,6 +4202,7 @@ fn swap_exact_amount_out_with_creator_fee_respects_existential_deposit(
         ));
         System::assert_has_event(
             Event::MarketCreatorFeePaymentFailed(
+                DEFAULT_MARKET_ID,
                 ALICE,
                 DEFAULT_MARKET_CREATOR,
                 expected_fee,
