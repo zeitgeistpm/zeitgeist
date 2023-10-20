@@ -1349,6 +1349,68 @@ mod pallet {
             T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
             Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
         }
+
+        /// Allows the manual opening and closing for "broken" markets.
+        /// A market is "broken", if an unexpected chain stall happened 
+        /// and the auto open / close was scheduled during this time.
+        ///
+        /// # Weight
+        ///
+        #[pallet::call_index(18)]
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_closed(
+                CacheSize::get(), CacheSize::get()), Pays::No
+            )
+        )]
+        #[transactional]
+        pub fn manually_open_or_close_market(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let now = <zrml_market_commons::Pallet<T>>::now();
+            let range = match market.period {
+                MarketPeriod::Block(range) => return Err(Error::<T>::NotAllowed.into()),
+                MarketPeriod::Timestamp(range) => range,
+            };
+
+            let should_be_opened = range.start < now && now < range.end;
+            let should_be_closed = range.end < now;
+
+            // TODO if ScoringRule is CPMM check if pool is already open for swaps, 
+            // TODO if not, but should_be_opened is true then open it manually
+            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(&market_id) {
+
+            }
+
+            match market.status {
+                MarketStatus::Proposed => (),
+                MarketStatus::Active => (),
+                MarketStatus::Suspended => (),
+                MarketStatus::Closed => (),
+                MarketStatus::CollectingSubsidy => (),
+                MarketStatus::InsufficientSubsidy => (),
+                MarketStatus::Reported => (),
+                MarketStatus::Disputed => (),
+                MarketStatus::Resolved => (),
+            }
+            if range.start < now && now < range.end && market.status != MarketStatus::Active {
+                // open market
+            } else if range.end < now && market.status == MarketStatus::Active {
+                // close market
+                Self::close_market(&market_id)?;
+                Self::set_market_end(&market_id)?;
+            } else {
+                return Err(Error::<T>::NotAllowed.into());
+            }
+            
+            Ok((
+                Some(T::WeightInfo::admin_move_market_to_closed(0u32, 0u32)),
+                Pays::No,
+            )
+                .into())
+        }
     }
 
     #[pallet::config]
@@ -1739,11 +1801,6 @@ mod pallet {
                 Self::calculate_time_frame_of_moment(<zrml_market_commons::Pallet<T>>::now())
                     .saturating_add(1);
 
-            // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
-            // check all time frames since epoch.
-            let last_time_frame =
-                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
-
             let _ = with_transaction(|| {
                 let open = Self::market_status_manager::<
                     _,
@@ -1751,7 +1808,6 @@ mod pallet {
                     MarketIdsPerOpenTimeFrame<T>,
                 >(
                     now,
-                    last_time_frame,
                     current_time_frame,
                     |market_id, _| {
                         let weight = Self::open_market(market_id)?;
@@ -1770,7 +1826,6 @@ mod pallet {
                     MarketIdsPerCloseTimeFrame<T>,
                 >(
                     now,
-                    last_time_frame,
                     current_time_frame,
                     |market_id, market| {
                         let weight = Self::on_market_close(market_id, market)?;
@@ -1805,7 +1860,6 @@ mod pallet {
                         ));
                 }
 
-                LastTimeFrame::<T>::set(Some(current_time_frame));
                 total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
                 match open.and(close).and(resolve) {
@@ -2860,7 +2914,6 @@ mod pallet {
 
         pub(crate) fn market_status_manager<F, MarketIdsPerBlock, MarketIdsPerTimeFrame>(
             block_number: T::BlockNumber,
-            last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
             mut mutation: F,
         ) -> Result<Weight, DispatchError>
@@ -2884,17 +2937,13 @@ mod pallet {
             }
             MarketIdsPerBlock::remove(block_number);
 
-            let mut time_frame_ids_len = 0u32;
-            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
-                time_frame_ids_len =
-                    time_frame_ids_len.saturating_add(market_ids_per_time_frame.len() as u32);
-                for market_id in market_ids_per_time_frame.iter() {
-                    let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
-                    mutation(market_id, market)?;
-                }
-                MarketIdsPerTimeFrame::remove(time_frame);
+            let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(current_time_frame);
+            let time_frame_ids_len = market_ids_per_time_frame.len() as u32;
+            for market_id in market_ids_per_time_frame.iter() {
+                let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
+                mutation(market_id, market)?;
             }
+            MarketIdsPerTimeFrame::remove(current_time_frame);
 
             Ok(T::WeightInfo::market_status_manager(
                 market_ids_per_block.len() as u32,
