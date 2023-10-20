@@ -22,7 +22,6 @@ extern crate alloc;
 
 mod asset;
 pub mod constants;
-pub mod fixed;
 mod market;
 pub mod math;
 mod max_runtime_usize;
