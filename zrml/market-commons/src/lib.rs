@@ -43,12 +43,14 @@ mod pallet {
     use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
         traits::{
-            AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member,
-            Saturating,
+            AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating,
         },
-        ArithmeticError, DispatchError, SaturatedConversion,
+        DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::types::{Asset, Market, PoolId};
+    use zeitgeist_primitives::{
+        math::checked_ops_res::CheckedAddRes,
+        types::{Asset, Market, PoolId},
+    };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
@@ -127,7 +129,7 @@ mod pallet {
         // Returns `Err` if `MarketId` addition overflows.
         pub fn next_market_id() -> Result<T::MarketId, DispatchError> {
             let id = MarketCounter::<T>::get();
-            let new_counter = id.checked_add(&1u8.into()).ok_or(ArithmeticError::Overflow)?;
+            let new_counter = id.checked_add_res(&1u8.into())?;
             <MarketCounter<T>>::put(new_counter);
             Ok(id)
         }

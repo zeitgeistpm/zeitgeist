@@ -74,7 +74,7 @@ mod pallet {
         Perbill,
     };
     use sp_runtime::{
-        traits::AccountIdConversion, ArithmeticError, DispatchError, DispatchResult,
+        traits::AccountIdConversion, DispatchError, DispatchResult,
         SaturatedConversion,
     };
     use substrate_fixed::{
@@ -303,13 +303,12 @@ mod pallet {
                         <SubsidyProviders<T>>::insert(pool_id, &who, new_amount);
                         pool.total_subsidy = Some(
                             total_subsidy
-                                .checked_sub(&transferred)
-                                .ok_or(ArithmeticError::Overflow)?,
+                                .checked_sub_res(&transferred)?
                         );
                     } else {
                         <SubsidyProviders<T>>::remove(pool_id, &who);
                         pool.total_subsidy = Some(
-                            total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
+                            total_subsidy.checked_sub_res(&subsidy)?
                         );
                     }
                 } else {
@@ -1696,7 +1695,7 @@ mod pallet {
         fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
             let id = <NextPoolId<T>>::get();
             <NextPoolId<T>>::try_mutate(|n| {
-                *n = n.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+                *n = n.checked_add_res(&1)?;
                 Ok::<_, DispatchError>(())
             })?;
             Ok(id)
@@ -2484,7 +2483,7 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
                             let cost_after =
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                            cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
+                            cost_before.checked_sub_res(&cost_after)?
                         }
                         ScoringRule::Lmsr | ScoringRule::Orderbook => {
                             return Err(Error::<T>::InvalidScoringRule.into());
@@ -2641,7 +2640,7 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
                             let cost_after =
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                            cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                            cost_after.checked_sub_res(&cost_before)?
                         }
                         ScoringRule::Lmsr | ScoringRule::Orderbook => {
                             return Err(Error::<T>::InvalidScoringRule.into());
