@@ -22,13 +22,16 @@
 // balancer-core repository
 // <https://github.com/balancer-labs/balancer-core>.
 
-use super::checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes};
+use super::checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedSubRes};
 use crate::constants::BASE;
 use alloc::{borrow::ToOwned, format, string::ToString, vec::Vec};
 use core::{convert::TryFrom, marker::PhantomData};
 use fixed::{traits::Fixed, ParseFixedError};
-use frame_support::dispatch::DispatchError;
-use sp_arithmetic::traits::AtLeast32BitUnsigned;
+use frame_support::{dispatch::DispatchError, ensure};
+use sp_arithmetic::{
+    traits::{AtLeast32BitUnsigned, Zero},
+    ArithmeticError,
+};
 
 pub trait BaseProvider<T> {
     fn get() -> Result<T, DispatchError>;
@@ -52,9 +55,7 @@ where
     Self: Sized,
 {
     fn bmul(&self, other: Self) -> Result<Self, DispatchError>;
-
     fn bmul_floor(&self, other: Self) -> Result<Self, DispatchError>;
-
     fn bmul_ceil(&self, other: Self) -> Result<Self, DispatchError>;
 }
 
@@ -69,39 +70,48 @@ where
 
 impl<T> FixedMul for T
 where
-    T: AtLeast32BitUnsigned,
+    T: AtLeast32BitUnsigned
 {
     fn bmul(&self, other: Self) -> Result<Self, DispatchError> {
-        let c0 = self.checked_mul_res(&other)?;
-        let c1 = c0.checked_add_res(&ZeitgeistBase::<T>::get()?.checked_div_res(&2u8.into())?)?;
-        c1.checked_div_res(&ZeitgeistBase::get()?)
+        let prod = self.checked_mul_res(&other)?;
+        let adjustment = ZeitgeistBase::<T>::get()?.checked_div_res(&2u8.into())?;
+        let prod_adjusted = prod.checked_add_res(&adjustment)?;
+        prod_adjusted.checked_div_res(&ZeitgeistBase::get()?)
     }
 
     fn bmul_floor(&self, other: Self) -> Result<Self, DispatchError> {
-        self.bmul(other) // TODO
+        self.checked_mul_res(&other)?.checked_div_res(&ZeitgeistBase::get()?)
     }
 
     fn bmul_ceil(&self, other: Self) -> Result<Self, DispatchError> {
-        self.bmul(other) // TODO
+        let prod = self.checked_mul_res(&other)?;
+        let adjustment = ZeitgeistBase::<Self>::get()?.checked_sub_res(&1u8.into())?;
+        let prod_adjusted = prod.checked_add_res(&adjustment)?;
+        prod_adjusted.checked_div_res(&ZeitgeistBase::get()?)
     }
 }
 
 impl<T> FixedDiv for T
 where
-    T: AtLeast32BitUnsigned,
+    T: AtLeast32BitUnsigned
 {
     fn bdiv(&self, other: Self) -> Result<Self, DispatchError> {
-        let c0 = self.checked_mul_res(&ZeitgeistBase::get()?)?;
-        let c1 = c0.checked_add_res(&other.checked_div_res(&2u8.into())?)?;
-        c1.checked_div_res(&other)
+        let prod = self.checked_mul_res(&ZeitgeistBase::get()?)?;
+        let adjustment = other.checked_div_res(&2u8.into())?;
+        let prod_adjusted = prod.checked_add_res(&adjustment)?;
+        prod_adjusted.checked_div_res(&other)
     }
 
     fn bdiv_floor(&self, other: Self) -> Result<Self, DispatchError> {
-        self.bdiv(other) // TODO
+        self.checked_mul_res(&ZeitgeistBase::get()?)?.checked_div_res(&other)
     }
 
     fn bdiv_ceil(&self, other: Self) -> Result<Self, DispatchError> {
-        self.bdiv(other) // TODO
+        ensure!(other != Zero::zero(), DispatchError::Arithmetic(ArithmeticError::DivisionByZero));
+        let prod = self.checked_mul_res(&ZeitgeistBase::get()?)?;
+        let adjustment = other.checked_sub_res(&1u8.into())?;
+        let prod_adjusted = prod.checked_add_res(&adjustment)?;
+        prod_adjusted.checked_div_res(&other)
     }
 }
 
@@ -223,8 +233,246 @@ mod tests {
     use super::*;
     use crate::assert_approx;
     use fixed::{traits::ToFixed, FixedU128};
+    use sp_arithmetic::ArithmeticError;
     use test_case::test_case;
     use typenum::U80;
+
+    pub(crate) const _1: u128 = BASE;
+    pub(crate) const _2: u128 = 2 * _1;
+    pub(crate) const _3: u128 = 3 * _1;
+    pub(crate) const _4: u128 = 4 * _1;
+    pub(crate) const _5: u128 = 5 * _1;
+    pub(crate) const _6: u128 = 6 * _1;
+    pub(crate) const _7: u128 = 7 * _1;
+    pub(crate) const _9: u128 = 9 * _1;
+    pub(crate) const _10: u128 = 10 * _1;
+    pub(crate) const _20: u128 = 20 * _1;
+    pub(crate) const _70: u128 = 70 * _1;
+    pub(crate) const _80: u128 = 80 * _1;
+    pub(crate) const _100: u128 = 100 * _1;
+    pub(crate) const _101: u128 = 101 * _1;
+
+    pub(crate) const _1_2: u128 = _1 / 2;
+
+    pub(crate) const _1_3: u128 = _1 / 3;
+    pub(crate) const _2_3: u128 = _2 / 3;
+
+    pub(crate) const _1_4: u128 = _1 / 4;
+    pub(crate) const _3_4: u128 = _3 / 4;
+
+    pub(crate) const _1_5: u128 = _1 / 5;
+
+    pub(crate) const _1_6: u128 = _1 / 6;
+    pub(crate) const _5_6: u128 = _5 / 6;
+
+    pub(crate) const _1_10: u128 = _1 / 10;
+
+    #[test_case(0, 0, 0)]
+    #[test_case(0, _1, 0)]
+    #[test_case(0, _2, 0)]
+    #[test_case(0, _3, 0)]
+    #[test_case(_1, 0, 0)]
+    #[test_case(_1, _1, _1)]
+    #[test_case(_1, _2, _2)]
+    #[test_case(_1, _3, _3)]
+    #[test_case(_2, 0, 0)]
+    #[test_case(_2, _1, _2)]
+    #[test_case(_2, _2, _4)]
+    #[test_case(_2, _3, _6)]
+    #[test_case(_3, 0, 0)]
+    #[test_case(_3, _1, _3)]
+    #[test_case(_3, _2, _6)]
+    #[test_case(_3, _3, _9)]
+    #[test_case(_4, _1_2, _2)]
+    #[test_case(_5, _1 + _1_2, _7 + _1_2)]
+    #[test_case(_1 + 1, _2, _2 + 2)]
+    #[test_case(9_999_999_999, _2, 19_999_999_998)]
+    #[test_case(9_999_999_999, _10, 99_999_999_990)]
+    // Rounding behavior when multiplying with small numbers
+    #[test_case(9_999_999_999, _1_2, _1_2)] // 4999999999.5
+    #[test_case(9_999_999_997, _1_4, 2_499_999_999)] // 2499999999.25
+    #[test_case(9_999_999_996, _1_3, 3_333_333_332)] // 3333333331.666...
+    #[test_case(10_000_000_001, _1_10, _1_10)]
+    #[test_case(10_000_000_005, _1_10, _1_10 + 1)]
+    fn bmul_works(lhs: u128, rhs: u128, expected: u128) {
+        assert_eq!(lhs.bmul(rhs).unwrap(), expected);
+    }
+
+    #[test_case(0, 0, 0)]
+    #[test_case(0, _1, 0)]
+    #[test_case(0, _2, 0)]
+    #[test_case(0, _3, 0)]
+    #[test_case(_1, 0, 0)]
+    #[test_case(_1, _1, _1)]
+    #[test_case(_1, _2, _2)]
+    #[test_case(_1, _3, _3)]
+    #[test_case(_2, 0, 0)]
+    #[test_case(_2, _1, _2)]
+    #[test_case(_2, _2, _4)]
+    #[test_case(_2, _3, _6)]
+    #[test_case(_3, 0, 0)]
+    #[test_case(_3, _1, _3)]
+    #[test_case(_3, _2, _6)]
+    #[test_case(_3, _3, _9)]
+    #[test_case(_4, _1_2, _2)]
+    #[test_case(_5, _1 + _1_2, _7 + _1_2)]
+    #[test_case(_1 + 1, _2, _2 + 2)]
+    #[test_case(9_999_999_999, _2, 19_999_999_998)]
+    #[test_case(9_999_999_999, _10, 99_999_999_990)]
+    // Rounding behavior when multiplying with small numbers
+    #[test_case(9_999_999_999, _1_2, 4_999_999_999)] // 4999999999.5
+    #[test_case(9_999_999_997, _1_4, 2_499_999_999)] // 2499999999.25
+    #[test_case(9_999_999_996, _1_3, 3_333_333_331)] // 3333333331.666...
+    #[test_case(10_000_000_001, _1_10, _1_10)]
+    #[test_case(10_000_000_005, _1_10, _1_10)]
+    fn bfloor_works(lhs: u128, rhs: u128, expected: u128) {
+        assert_eq!(lhs.bmul_floor(rhs).unwrap(), expected);
+    }
+
+    #[test_case(0, 0, 0)]
+    #[test_case(0, _1, 0)]
+    #[test_case(0, _2, 0)]
+    #[test_case(0, _3, 0)]
+    #[test_case(_1, 0, 0)]
+    #[test_case(_1, _1, _1)]
+    #[test_case(_1, _2, _2)]
+    #[test_case(_1, _3, _3)]
+    #[test_case(_2, 0, 0)]
+    #[test_case(_2, _1, _2)]
+    #[test_case(_2, _2, _4)]
+    #[test_case(_2, _3, _6)]
+    #[test_case(_3, 0, 0)]
+    #[test_case(_3, _1, _3)]
+    #[test_case(_3, _2, _6)]
+    #[test_case(_3, _3, _9)]
+    #[test_case(_4, _1_2, _2)]
+    #[test_case(_5, _1 + _1_2, _7 + _1_2)]
+    #[test_case(_1 + 1, _2, _2 + 2)]
+    #[test_case(9_999_999_999, _2, 19_999_999_998)]
+    #[test_case(9_999_999_999, _10, 99_999_999_990)]
+    // Rounding behavior when multiplying with small numbers
+    #[test_case(9_999_999_999, _1_2, _1_2)] // 4999999999.5
+    #[test_case(9_999_999_997, _1_4, _1_4)] // 2499999999.25
+    #[test_case(9_999_999_996, _1_3, 3_333_333_332)] // 3333333331.666...
+    #[test_case(10_000_000_001, _1_10, _1_10 + 1)]
+    #[test_case(10_000_000_005, _1_10, _1_10 + 1)]
+    fn bceil_works(lhs: u128, rhs: u128, expected: u128) {
+        assert_eq!(lhs.bmul_ceil(rhs).unwrap(), expected);
+    }
+
+    #[test]
+    fn bmul_fails() {
+        assert_eq!(u128::MAX.bmul(_2), Err(DispatchError::Arithmetic(ArithmeticError::Overflow)));
+    }
+
+    #[test]
+    fn bmul_floor_fails() {
+        assert_eq!(
+            u128::MAX.bmul_floor(_2),
+            Err(DispatchError::Arithmetic(ArithmeticError::Overflow))
+        );
+    }
+
+    #[test]
+    fn bmul_ceil_fails() {
+        assert_eq!(
+            u128::MAX.bmul_ceil(_2),
+            Err(DispatchError::Arithmetic(ArithmeticError::Overflow))
+        );
+    }
+
+    #[test_case(0, _1, 0)]
+    #[test_case(0, _2, 0)]
+    #[test_case(0, _3, 0)]
+    #[test_case(_1, _1, _1)]
+    #[test_case(_1, _2, _1_2)]
+    #[test_case(_2, _1, _2)]
+    #[test_case(_2, _2, _1)]
+    #[test_case(_3, _1, _3)]
+    #[test_case(_3, _2, _1 + _1_2)]
+    #[test_case(_3, _3, _1)]
+    #[test_case(_3 + _1_2, _1_2, _7)]
+    #[test_case(99_999_999_999, 1, 99_999_999_999 * _1)]
+    // Rounding behavior
+    #[test_case(_1, _3, _1_3)]
+    #[test_case(_2, _3, _2_3 + 1)]
+    #[test_case(99_999_999_999, _10, _1)]
+    #[test_case(99_999_999_994, _10, 9_999_999_999)]
+    #[test_case(5, _10, 1)]
+    #[test_case(4, _10, 0)]
+    fn bdiv_works(lhs: u128, rhs: u128, expected: u128) {
+        assert_eq!(lhs.bdiv(rhs).unwrap(), expected);
+    }
+
+    #[test_case(0, _1, 0)]
+    #[test_case(0, _2, 0)]
+    #[test_case(0, _3, 0)]
+    #[test_case(_1, _1, _1)]
+    #[test_case(_1, _2, _1_2)]
+    #[test_case(_2, _1, _2)]
+    #[test_case(_2, _2, _1)]
+    #[test_case(_3, _1, _3)]
+    #[test_case(_3, _2, _1 + _1_2)]
+    #[test_case(_3, _3, _1)]
+    #[test_case(_3 + _1_2, _1_2, _7)]
+    #[test_case(99_999_999_999, 1, 99_999_999_999 * _1)]
+    // Rounding behavior
+    #[test_case(_1, _3, _1_3)]
+    #[test_case(_2, _3, _2_3)]
+    #[test_case(99_999_999_999, _10, 9_999_999_999)]
+    #[test_case(99_999_999_994, _10, 9_999_999_999)]
+    #[test_case(5, _10, 0)]
+    #[test_case(4, _10, 0)]
+    fn bdiv_floor_works(lhs: u128, rhs: u128, expected: u128) {
+        assert_eq!(lhs.bdiv_floor(rhs).unwrap(), expected);
+    }
+
+    #[test_case(0, _1, 0)]
+    #[test_case(0, _2, 0)]
+    #[test_case(0, _3, 0)]
+    #[test_case(_1, _1, _1)]
+    #[test_case(_1, _2, _1_2)]
+    #[test_case(_2, _1, _2)]
+    #[test_case(_2, _2, _1)]
+    #[test_case(_3, _1, _3)]
+    #[test_case(_3, _2, _1 + _1_2)]
+    #[test_case(_3, _3, _1)]
+    #[test_case(_3 + _1_2, _1_2, _7)]
+    #[test_case(99_999_999_999, 1, 99_999_999_999 * _1)]
+    // Rounding behavior
+    #[test_case(_1, _3, _1_3 + 1)]
+    #[test_case(_2, _3, _2_3 + 1)]
+    #[test_case(99_999_999_999, _10, _1)]
+    #[test_case(99_999_999_994, _10, _1)]
+    #[test_case(5, _10, 1)]
+    #[test_case(4, _10, 1)]
+    fn bdiv_ceil_works(lhs: u128, rhs: u128, expected: u128) {
+        assert_eq!(lhs.bdiv_ceil(rhs).unwrap(), expected);
+    }
+
+    #[test]
+    fn bdiv_fails() {
+        assert_eq!(
+            123456789u128.bdiv(0),
+            Err(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
+        );
+    }
+
+    #[test]
+    fn bdiv_floor_fails() {
+        assert_eq!(
+            123456789u128.bdiv_floor(0),
+            Err(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
+        );
+    }
+
+    #[test]
+    fn bdiv_ceil_fails() {
+        assert_eq!(
+            123456789u128.bdiv_ceil(0),
+            Err(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
+        );
+    }
 
     #[test_case(0, 10, 0.0)]
     #[test_case(1, 10, 0.0000000001)]
