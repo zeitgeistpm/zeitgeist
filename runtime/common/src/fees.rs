@@ -82,7 +82,6 @@ macro_rules! impl_foreign_fees {
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
         use zeitgeist_primitives::{math::fixed::FixedMul, types::TxPaymentAssetId};
-        use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
 
         #[repr(u8)]
         pub enum CustomTxError {
