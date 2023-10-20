@@ -33,13 +33,15 @@ use sp_arithmetic::{
     ArithmeticError,
 };
 
+/// Trait for safely obtaining constants converted to generic types in a Substrate context.
 pub trait BaseProvider<T> {
+    /// Returns a constant converted to type `T` and errors if the conversion failed.
     fn get() -> Result<T, DispatchError>;
 }
 
+/// Used to avoid saturating operations when converting `BASE` to `Balance`.
 pub struct ZeitgeistBase<T>(PhantomData<T>);
 
-// Used to avoid saturating operations.
 impl<T> BaseProvider<T> for ZeitgeistBase<T>
 where
     T: AtLeast32BitUnsigned,
@@ -50,21 +52,37 @@ where
     }
 }
 
+/// Performs fixed point multiplication and errors with `DispatchError` in case of over- or
+/// underflows.
 pub trait FixedMul
 where
     Self: Sized,
 {
+    /// Calculates the product of `self` and `other` and rounds to the nearest representable fixed
+    /// point number.
     fn bmul(&self, other: Self) -> Result<Self, DispatchError>;
+
+    /// Calculates the product of `self` and `other` and rounds down.
     fn bmul_floor(&self, other: Self) -> Result<Self, DispatchError>;
+
+    /// Calculates the product of `self` and `other` and rounds up.
     fn bmul_ceil(&self, other: Self) -> Result<Self, DispatchError>;
 }
 
+/// Performs fixed point multiplication and errors with `DispatchError` in case of over- or
+/// underflows and division by zero.
 pub trait FixedDiv
 where
     Self: Sized,
 {
+    /// Calculates the fixed point division of `self` by `other` and rounds to the nearest
+    /// representable fixed point number.
     fn bdiv(&self, other: Self) -> Result<Self, DispatchError>;
+
+    /// Calculates the fixed point division of `self` by `other` and rounds down.
     fn bdiv_floor(&self, other: Self) -> Result<Self, DispatchError>;
+
+    /// Calculates the fixed point division of `self` by `other` and rounds up.
     fn bdiv_ceil(&self, other: Self) -> Result<Self, DispatchError>;
 }
 
