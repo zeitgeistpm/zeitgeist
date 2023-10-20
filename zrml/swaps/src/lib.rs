@@ -135,7 +135,7 @@ mod pallet {
         #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
-                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar()),
+                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar())
         )]
         #[transactional]
         pub fn admin_clean_up_pool(
