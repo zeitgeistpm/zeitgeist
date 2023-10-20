@@ -31,7 +31,11 @@ use crate::{
         },
     },
 };
-use alloc::{borrow::ToOwned, format, string::ToString};
+use alloc::{
+    borrow::ToOwned,
+    format,
+    string::{String, ToString},
+};
 use core::convert::TryFrom;
 use fixed::{traits::Fixed, ParseFixedError};
 use frame_support::dispatch::DispatchError;
