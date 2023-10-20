@@ -605,14 +605,12 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
-                // FIXME Round up to avoid exploits.
                 let ratio =
-                    pool_shares_amount.bdiv(pool.liquidity_shares_manager.total_shares()?)?;
+                    pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_in = vec![];
                 for (&asset, &max_amount_in) in pool.assets().iter().zip(max_amounts_in.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
-                    // FIXME Round up to avoid exploits.
-                    let amount_in = ratio.bmul(balance_in_pool)?;
+                    let amount_in = ratio.bmul_ceil(balance_in_pool)?;
                     amounts_in.push(amount_in);
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
                     T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_in)?;
@@ -653,11 +651,11 @@ mod pallet {
                     Error::<T>::OutstandingFees
                 );
                 let ratio =
-                    pool_shares_amount.bdiv(pool.liquidity_shares_manager.total_shares()?)?;
+                    pool_shares_amount.bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_out = vec![];
                 for (&asset, &min_amount_out) in pool.assets().iter().zip(min_amounts_out.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
-                    let amount_out = ratio.bmul(balance_in_pool)?;
+                    let amount_out = ratio.bmul_floor(balance_in_pool)?;
                     amounts_out.push(amount_out);
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;

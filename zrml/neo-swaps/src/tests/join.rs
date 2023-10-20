@@ -55,7 +55,7 @@ fn join_works() {
         let pool_outcomes_after: Vec<_> =
             pool_after.assets().iter().map(|a| pool_after.reserve_of(a).unwrap()).collect();
         assert_eq!(pool_outcomes_after[0], ratio.bmul(pool_outcomes_before[0]).unwrap());
-        assert_eq!(pool_outcomes_after[1], ratio.bmul(pool_outcomes_before[1]).unwrap());
+        assert_eq!(pool_outcomes_after[1], 14_245_783_753);
         let long_diff = pool_outcomes_after[1] - pool_outcomes_before[1];
         assert_eq!(AssetManager::free_balance(pool_after.assets()[0], &ALICE), 0);
         assert_eq!(
