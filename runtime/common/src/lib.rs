@@ -1048,6 +1048,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_authorized::Config for Runtime {
             type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
+            type Currency = Balances;
             type CorrectionPeriod = CorrectionPeriod;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type RuntimeEvent = RuntimeEvent;
@@ -1084,6 +1085,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_liquidity_mining::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
+            type Currency = Balances;
             type MarketCommons = MarketCommons;
             type MarketId = MarketId;
             type PalletId = LiquidityMiningPalletId;
@@ -1091,7 +1093,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_market_commons::Config for Runtime {
-            type Currency = Balances;
+            type Balance = Balance;
             type MarketId = MarketId;
             type PredictionMarketsPalletId = PmPalletId;
             type Timestamp = Timestamp;
@@ -1123,6 +1125,7 @@ macro_rules! impl_config_traits {
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type Authorized = Authorized;
+            type Currency = Balances;
             type Court = Court;
             type CloseOrigin = EnsureRoot<AccountId>;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
@@ -1180,7 +1183,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_simple_disputes::Config for Runtime {
-            type AssetManager = AssetManager;
+            type Currency = Balances;
             type OutcomeBond = OutcomeBond;
             type OutcomeFactor = OutcomeFactor;
             type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;

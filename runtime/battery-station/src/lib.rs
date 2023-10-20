@@ -105,10 +105,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 49,
+    spec_version: 50,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 24,
+    transaction_version: 25,
     state_version: 1,
 };
 
@@ -119,6 +119,11 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
     fn contains(runtime_call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match runtime_call {
+            RuntimeCall::System(inner_call) => match inner_call {
+                SystemCall::remark { .. } => true,
+                SystemCall::remark_with_event { .. } => true,
+                _ => false,
+            },
             RuntimeCall::AssetManager(transfer { .. }) => true,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {

@@ -79,10 +79,8 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
-    pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
@@ -102,12 +100,15 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        type Currency: Currency<Self::AccountId>;
+
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
                 BlockNumber = Self::BlockNumber,
                 MarketId = Self::MarketId,
+                Balance = BalanceOf<Self>,
             >;
 
         type MarketId: MarketId;
@@ -143,10 +144,7 @@ mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            CurrencyOf::<T>::deposit_creating(
-                &Pallet::<T>::pallet_account_id(),
-                self.initial_balance,
-            );
+            T::Currency::deposit_creating(&Pallet::<T>::pallet_account_id(), self.initial_balance);
             <PerBlockIncentive<T>>::put(self.per_block_distribution);
         }
     }
@@ -270,18 +268,18 @@ mod pallet {
                 )
                 .collect();
 
-            CurrencyOf::<T>::ensure_can_withdraw(
+            T::Currency::ensure_can_withdraw(
                 &pallet_account_id,
                 final_total_incentives,
                 WithdrawReasons::all(),
-                CurrencyOf::<T>::free_balance(&pallet_account_id)
+                T::Currency::free_balance(&pallet_account_id)
                     .saturating_sub(final_total_incentives),
             )
             .map_err(|_err| Error::<T>::FundDoesNotHaveEnoughBalance)?;
 
             let accounts_len = values.len().into();
             for (account_id, incentives) in values {
-                CurrencyOf::<T>::transfer(
+                T::Currency::transfer(
                     &pallet_account_id,
                     &account_id,
                     incentives,

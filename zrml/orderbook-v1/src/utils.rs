@@ -18,18 +18,12 @@
 #![cfg(any(feature = "runtime-benchmarks", test))]
 
 use crate::*;
-use frame_support::traits::Currency;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{
-    traits::MarketCommonsPalletApi,
-    types::{
-        Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, ScoringRule,
-    },
+use zeitgeist_primitives::types::{
+    Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+    MarketType, ScoringRule,
 };
 
-type CurrencyOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
-type BalanceOf<T> = <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 type MarketOf<T> = Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
