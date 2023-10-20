@@ -1075,7 +1075,7 @@ mod pallet {
         SwapExactAmountOut(
             SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
         ),
-        /// Fees were paid to the market creators. \[market_id , payer, payee, amount, asset\]
+        /// Fees were paid to the market creator. \[market_id , payer, payee, amount, asset\]
         MarketCreatorFeesPaid(
             MarketIdOf<T>,
             <T as frame_system::Config>::AccountId,
