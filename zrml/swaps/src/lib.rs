@@ -1075,15 +1075,18 @@ mod pallet {
         SwapExactAmountOut(
             SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
         ),
-        /// Fees were paid to the market creators. \[payer, payee, amount, asset\]
+        /// Fees were paid to the market creator. \[market_id , payer, payee, amount, asset\]
         MarketCreatorFeesPaid(
+            MarketIdOf<T>,
             <T as frame_system::Config>::AccountId,
             <T as frame_system::Config>::AccountId,
             BalanceOf<T>,
             Asset<MarketIdOf<T>>,
         ),
-        /// Fee payment to market creator failed (usually due to existential deposit requirements) \[payer, payee, amount, asset, error\]
+        /// Fee payment to market creator failed (usually due to existential deposit requirements)
+        /// \[market_id, payer, payee, amount, asset, error\]
         MarketCreatorFeePaymentFailed(
+            MarketIdOf<T>,
             <T as frame_system::Config>::AccountId,
             <T as frame_system::Config>::AccountId,
             BalanceOf<T>,
@@ -1598,6 +1601,7 @@ mod pallet {
         }
 
         fn handle_creator_fee_transfer(
+            market_id: MarketIdOf<T>,
             fee_asset: Asset<MarketIdOf<T>>,
             payer: T::AccountId,
             payee: T::AccountId,
@@ -1605,11 +1609,11 @@ mod pallet {
         ) {
             if let Err(err) = T::AssetManager::transfer(fee_asset, &payer, &payee, fee_amount) {
                 Self::deposit_event(Event::MarketCreatorFeePaymentFailed(
-                    payer, payee, fee_amount, fee_asset, err,
+                    market_id, payer, payee, fee_amount, fee_asset, err,
                 ));
             } else {
                 Self::deposit_event(Event::MarketCreatorFeesPaid(
-                    payer, payee, fee_amount, fee_asset,
+                    market_id, payer, payee, fee_amount, fee_asset,
                 ));
             }
         }
@@ -1623,6 +1627,7 @@ mod pallet {
             payee: T::AccountId,
             payer: T::AccountId,
             pool_id: PoolId,
+            market_id: MarketIdOf<T>,
         ) {
             if fee.is_zero() {
                 return;
@@ -1644,7 +1649,9 @@ mod pallet {
                 );
 
                 if swap_result.is_err() {
-                    Self::handle_creator_fee_transfer(fee_asset, payer, payee, fee_amount);
+                    Self::handle_creator_fee_transfer(
+                        market_id, fee_asset, payer, payee, fee_amount,
+                    );
                     return;
                 }
 
@@ -1652,7 +1659,7 @@ mod pallet {
                 fee_amount = balance_after.saturating_sub(balance_before);
             }
 
-            Self::handle_creator_fee_transfer(base_asset, payer, payee, fee_amount);
+            Self::handle_creator_fee_transfer(market_id, base_asset, payer, payee, fee_amount);
         }
 
         pub(crate) fn burn_pool_shares(
@@ -2442,6 +2449,7 @@ mod pallet {
                     market.creator.clone(),
                     who.clone(),
                     pool_id,
+                    pool.market_id,
                 );
 
                 let fee_amount = creator_fee.mul_floor(asset_amount_in);
@@ -2561,6 +2569,7 @@ mod pallet {
                     market.creator.clone(),
                     who.clone(),
                     pool_id,
+                    pool.market_id,
                 );
             }
 
@@ -2693,6 +2702,7 @@ mod pallet {
                             market.creator.clone(),
                             who.clone(),
                             pool_id,
+                            pool.market_id,
                         );
                     }
 
@@ -2733,6 +2743,7 @@ mod pallet {
                     market.creator.clone(),
                     who.clone(),
                     pool_id,
+                    pool.market_id,
                 );
             }
 
