@@ -1629,7 +1629,7 @@ mod pallet {
             pool_id: PoolId,
             market_id: MarketIdOf<T>,
         ) {
-            if fee.is_zero() {
+            if fee.is_zero() || payee == payer {
                 return;
             };
 
