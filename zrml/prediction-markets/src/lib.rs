@@ -1800,11 +1800,6 @@ mod pallet {
                 Self::calculate_time_frame_of_moment(<zrml_market_commons::Pallet<T>>::now())
                     .saturating_add(1);
 
-            // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
-            // check all time frames since epoch.
-            let last_time_frame =
-                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
-
             let _ = with_transaction(|| {
                 let open = Self::market_status_manager::<
                     _,
@@ -1812,7 +1807,6 @@ mod pallet {
                     MarketIdsPerOpenTimeFrame<T>,
                 >(
                     now,
-                    last_time_frame,
                     current_time_frame,
                     |market_id, _| {
                         let weight = Self::open_market(market_id)?;
@@ -1831,7 +1825,6 @@ mod pallet {
                     MarketIdsPerCloseTimeFrame<T>,
                 >(
                     now,
-                    last_time_frame,
                     current_time_frame,
                     |market_id, market| {
                         let weight = Self::on_market_close(market_id, market)?;
@@ -1866,7 +1859,6 @@ mod pallet {
                         ));
                 }
 
-                LastTimeFrame::<T>::set(Some(current_time_frame));
                 total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
                 match open.and(close).and(resolve) {
@@ -2921,7 +2913,6 @@ mod pallet {
 
         pub(crate) fn market_status_manager<F, MarketIdsPerBlock, MarketIdsPerTimeFrame>(
             block_number: T::BlockNumber,
-            last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
             mut mutation: F,
         ) -> Result<Weight, DispatchError>
