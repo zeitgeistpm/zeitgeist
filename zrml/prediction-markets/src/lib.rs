@@ -78,6 +78,11 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
+    /// The maximum number of blocks between the [`LastTimeFrame`]
+    /// and the current timestamp in block number allowed to recover
+    /// the automatic market openings and closing from a chain stall.
+    /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
+    const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
 
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -1348,6 +1353,62 @@ mod pallet {
             Self::do_buy_complete_set(who.clone(), market_id, amount)?;
             T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
             Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
+        }
+
+        /// Allows the manual opening and closing for "broken" markets.
+        /// A market is "broken", if an unexpected chain stall happened
+        /// and the auto open / close was scheduled during this time.
+        ///
+        /// # Weight
+        ///
+        #[pallet::call_index(18)]
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_closed(
+                CacheSize::get(), CacheSize::get()), Pays::No
+            )
+        )]
+        #[transactional]
+        pub fn manually_open_or_close_market(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            let now = <zrml_market_commons::Pallet<T>>::now();
+            let range = match market.period {
+                MarketPeriod::Block(range) => return Err(Error::<T>::NotAllowed.into()),
+                MarketPeriod::Timestamp(range) => range,
+            };
+
+            let should_be_opened = range.start < now && now < range.end;
+            let should_be_closed = range.end < now;
+
+            // TODO if ScoringRule is CPMM check if pool is already open for swaps,
+            // TODO if not, but should_be_opened is true then open it manually
+            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(&market_id) {}
+
+            match market.status {
+                MarketStatus::Proposed => (),
+                MarketStatus::Active => (),
+                MarketStatus::Suspended => (),
+                MarketStatus::Closed => (),
+                MarketStatus::CollectingSubsidy => (),
+                MarketStatus::InsufficientSubsidy => (),
+                MarketStatus::Reported => (),
+                MarketStatus::Disputed => (),
+                MarketStatus::Resolved => (),
+            }
+            if range.start < now && now < range.end && market.status != MarketStatus::Active {
+                // open market
+            } else if range.end < now && market.status == MarketStatus::Active {
+                // close market
+                Self::close_market(&market_id)?;
+                Self::set_market_end(&market_id)?;
+            } else {
+                return Err(Error::<T>::NotAllowed.into());
+            }
+
+            Ok((Some(T::WeightInfo::admin_move_market_to_closed(0u32, 0u32)), Pays::No).into())
         }
     }
 
@@ -2885,7 +2946,15 @@ mod pallet {
             MarketIdsPerBlock::remove(block_number);
 
             let mut time_frame_ids_len = 0u32;
-            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
+            let start = last_time_frame.saturating_add(1);
+            let end = current_time_frame;
+            let diff = end.saturating_sub(start);
+            let start = if diff > MAX_RECOVERY_TIME_FRAMES {
+                end.saturating_sub(MAX_RECOVERY_TIME_FRAMES)
+            } else {
+                start
+            };
+            for time_frame in start..=end {
                 let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
                 time_frame_ids_len =
                     time_frame_ids_len.saturating_add(market_ids_per_time_frame.len() as u32);
