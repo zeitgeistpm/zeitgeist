@@ -1368,7 +1368,11 @@ mod pallet {
         /// and `m` is the number of market ids,
         /// which close at the same time as the specified market.
         #[pallet::call_index(18)]
-        #[pallet::weight((Weight::zero(), Pays::Yes))]
+        #[pallet::weight((
+            T::WeightInfo::manually_open_market(CacheSize::get())
+                .max(T::WeightInfo::manually_close_market(CacheSize::get())),
+            Pays::Yes
+        ))]
         #[transactional]
         pub fn manually_open_or_close_market(
             origin: OriginFor<T>,
@@ -1385,15 +1389,14 @@ mod pallet {
                 MarketPeriod::Timestamp(ref range) => range,
             };
 
-            let mut open_ids_len = 0u32;
-            let mut close_ids_len = 0u32;
+            let mut weight = None;
 
             let should_be_opened = range.start < now && now < range.end;
             let should_be_closed = range.end < now;
 
             if should_be_opened {
                 let range_start_time_frame = Self::calculate_time_frame_of_moment(range.start);
-                open_ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                let open_ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
                     range_start_time_frame,
                     |ids| -> Result<u32, DispatchError> {
                         let ids_len = ids.len() as u32;
@@ -1406,11 +1409,12 @@ mod pallet {
                     },
                 )?;
                 Self::open_market(&market_id)?;
+                weight = Some(T::WeightInfo::manually_open_market(open_ids_len));
             }
 
             if should_be_closed {
                 let range_end_time_frame = Self::calculate_time_frame_of_moment(range.end);
-                close_ids_len = MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                let close_ids_len = MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                     range_end_time_frame,
                     |ids| -> Result<u32, DispatchError> {
                         let ids_len = ids.len() as u32;
@@ -1423,9 +1427,10 @@ mod pallet {
                     },
                 )?;
                 Self::on_market_close(&market_id, market)?;
+                weight = Some(T::WeightInfo::manually_close_market(close_ids_len));
             }
 
-            Ok((Some(Weight::zero()), Pays::No).into())
+            Ok((weight, Pays::No).into())
         }
     }
 

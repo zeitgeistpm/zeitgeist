@@ -1189,14 +1189,14 @@ benchmarks! {
     )
 
     manually_open_market {
-        let o in 0..63;
+        let o in 1..63;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
 
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get().into()),
+            MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
@@ -1214,27 +1214,24 @@ benchmarks! {
         }
 
         let range_start_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_start);
-        for i in 0..o {
+        for i in 0..=o {
             <MarketIdsPerOpenTimeFrame<T>>::try_mutate(range_start_time_frame, |ids| {
                 ids.try_push((i).into())
             }).unwrap();
         }
 
         pallet_timestamp::Pallet::<T>::set_timestamp(now.into());
-    }: manually_open_or_close_market(RawOrigin::Signed(caller), market_id) 
-    verify {
-        pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
-    }
+    }: manually_open_or_close_market(RawOrigin::Signed(caller), market_id)
 
     manually_close_market {
-        let o in 0..63;
+        let o in 1..63;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
 
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get().into()),
+            MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
@@ -1251,23 +1248,13 @@ benchmarks! {
             ).unwrap();
         }
 
-        let range_end_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_end);
-        for i in 0..o {
-            <MarketIdsPerCloseTimeFrame<T>>::try_mutate(range_end_time_frame, |ids| {
-                ids.try_push((i).into())
-            }).unwrap();
-        }
-
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
             market.status = MarketStatus::Active;
             Ok(())
         })?;
 
         pallet_timestamp::Pallet::<T>::set_timestamp(now.into());
-    }: manually_open_or_close_market(RawOrigin::Signed(caller), market_id) 
-    verify {
-        pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
-    }
+    }: manually_open_or_close_market(RawOrigin::Signed(caller), market_id)
 
     impl_benchmark_test_suite!(
         PredictionMarket,
