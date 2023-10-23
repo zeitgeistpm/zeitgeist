@@ -1619,6 +1619,7 @@ mod pallet {
         }
 
         // Infallible, should fee transfer fail, the informant will keep the fees and an event is emitted.
+        #[allow(clippy::too_many_arguments)]
         fn handle_creator_fees(
             amount: BalanceOf<T>,
             fee_asset: Asset<MarketIdOf<T>>,

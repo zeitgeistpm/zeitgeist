@@ -31,8 +31,12 @@ use crate::{
         },
     },
 };
-use alloc::{borrow::ToOwned, format, string::ToString};
-use core::convert::TryFrom;
+use alloc::{
+    borrow::ToOwned,
+    format,
+    string::{String, ToString},
+};
+use core::{cmp::Ordering, convert::TryFrom};
 use fixed::{traits::Fixed, ParseFixedError};
 use frame_support::dispatch::DispatchError;
 
@@ -252,21 +256,27 @@ impl<F: Fixed + ToString, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
         }
 
         let mut increment_int_part = false;
-        let new_frac_part = if frac_part.len() < decimals_usize {
-            format!("{}{}", frac_part, "0".repeat(decimals_usize.saturating_sub(frac_part.len())))
-        } else if frac_part.len() > decimals_usize {
-            let round_digit =
-                frac_part.chars().nth(decimals_usize).and_then(|c| c.to_digit(10)).ok_or(
-                    "The char at decimals_usize was not found, although the frac_part length is \
-                     higher than decimals_usize.",
-                )?;
-            if round_digit >= 5 {
-                increment_int_part = true;
+
+        let new_frac_part = match frac_part.len().cmp(&decimals_usize) {
+            Ordering::Less => {
+                format!(
+                    "{}{}",
+                    frac_part,
+                    "0".repeat(decimals_usize.saturating_sub(frac_part.len()))
+                )
             }
-            frac_part.chars().take(decimals_usize).collect::<String>()
-        } else {
-            // There's no need to round here, the fractional part already fits perfectly.
-            frac_part.to_string()
+            Ordering::Greater => {
+                let round_digit =
+                    frac_part.chars().nth(decimals_usize).and_then(|c| c.to_digit(10)).ok_or(
+                        "The char at decimals_usize was not found, although the frac_part length \
+                         is higher than decimals_usize.",
+                    )?;
+                if round_digit >= 5 {
+                    increment_int_part = true;
+                }
+                frac_part.chars().take(decimals_usize).collect::<String>()
+            }
+            Ordering::Equal => frac_part.to_string(),
         };
 
         let mut fixed_decimal: u128 = format!("{}{}", int_part, new_frac_part)
