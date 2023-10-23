@@ -1392,7 +1392,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
-        set_timestamp_for_on_initialize(end / 2);
+        set_timestamp_for_on_initialize(start + 9 * MILLISECS_PER_BLOCK as u64);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
         assert_eq!(Swaps::pool(0).unwrap().pool_status, PoolStatus::Active);
         assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Active);
@@ -1439,7 +1439,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
-        set_timestamp_for_on_initialize(10 * end);
+        set_timestamp_for_on_initialize(9 * MILLISECS_PER_BLOCK as u64);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
 
         let market_after_close = MarketCommons::market(&0).unwrap();
