@@ -9,13 +9,38 @@ cargo build --features parachain
 
 export ADDITIONAL_ZOMBIECONFIG="${ADDITIONAL_ZOMBIECONFIG:-}"
 export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./integration-tests/zombienet/produce-blocks.toml"}"
+export ZOMBIENET_DSL_FILE="${ZOMBIENET_CONFIG_FILE%.toml}.zndsl"
+
 # Define destination path
 ZOMBIENET_BINARY="./tmp/zombienet"
+
+# Default values for flags
+RUN_TESTS=0  # This flag will be set to 1 if the -t or --test option is present
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        -t|--test)
+            RUN_TESTS=1
+            shift # Remove argument name from processing
+            ;;
+        *)
+            # Unknown option
+            shift # Remove generic argument from processing
+            ;;
+    esac
+done
 
 # Check if the file already exists
 if [[ -f "${ZOMBIENET_BINARY}" ]]; then
     echo "zombienet already exists in /tmp. Executing it."
-    $ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
+    if [[ $RUN_TESTS -eq 1 ]]; then
+        $ZOMBIENET_BINARY test --provider native $ZOMBIENET_DSL_FILE $ADDITIONAL_ZOMBIECONFIG
+    else
+        $ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
+    fi
     exit 0
 fi
 
@@ -73,4 +98,8 @@ fi
 # Make the file executable
 chmod +x "${ZOMBIENET_BINARY}"
 
-$ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
+if [[ $RUN_TESTS -eq 1 ]]; then
+    $ZOMBIENET_BINARY test --provider native $ZOMBIENET_DSL_FILE $ADDITIONAL_ZOMBIECONFIG
+else
+    $ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
+fi
