@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![recursion_limit = "256"]
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
@@ -1361,54 +1362,70 @@ mod pallet {
         ///
         /// # Weight
         ///
+        /// Complexity: `O(max{n, m})`,
+        /// where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
         #[pallet::call_index(18)]
-        #[pallet::weight((
-            T::WeightInfo::admin_move_market_to_closed(
-                CacheSize::get(), CacheSize::get()), Pays::No
-            )
-        )]
+        #[pallet::weight((Weight::zero(), Pays::Yes))]
         #[transactional]
         pub fn manually_open_or_close_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+            ensure_signed(origin)?;
+
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             let now = <zrml_market_commons::Pallet<T>>::now();
-            let range = match market.period {
-                MarketPeriod::Block(range) => return Err(Error::<T>::NotAllowed.into()),
-                MarketPeriod::Timestamp(range) => range,
+            let range = match &market.period {
+                MarketPeriod::Block(_) => {
+                    return Err(Error::<T>::NotAllowedForBlockBasedMarkets.into());
+                }
+                MarketPeriod::Timestamp(ref range) => range,
             };
+
+            let mut open_ids_len = 0u32;
+            let mut close_ids_len = 0u32;
 
             let should_be_opened = range.start < now && now < range.end;
             let should_be_closed = range.end < now;
 
-            // TODO if ScoringRule is CPMM check if pool is already open for swaps,
-            // TODO if not, but should_be_opened is true then open it manually
-            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(&market_id) {}
-
-            match market.status {
-                MarketStatus::Proposed => (),
-                MarketStatus::Active => (),
-                MarketStatus::Suspended => (),
-                MarketStatus::Closed => (),
-                MarketStatus::CollectingSubsidy => (),
-                MarketStatus::InsufficientSubsidy => (),
-                MarketStatus::Reported => (),
-                MarketStatus::Disputed => (),
-                MarketStatus::Resolved => (),
-            }
-            if range.start < now && now < range.end && market.status != MarketStatus::Active {
-                // open market
-            } else if range.end < now && market.status == MarketStatus::Active {
-                // close market
-                Self::close_market(&market_id)?;
-                Self::set_market_end(&market_id)?;
-            } else {
-                return Err(Error::<T>::NotAllowed.into());
+            if should_be_opened {
+                let range_start_time_frame = Self::calculate_time_frame_of_moment(range.start);
+                open_ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                    range_start_time_frame,
+                    |ids| -> Result<u32, DispatchError> {
+                        let ids_len = ids.len() as u32;
+                        let position = ids
+                            .iter()
+                            .position(|i| i == &market_id)
+                            .ok_or(Error::<T>::MarketNotInOpenTimeFrameList)?;
+                        ids.swap_remove(position);
+                        Ok(ids_len)
+                    },
+                )?;
+                Self::open_market(&market_id)?;
             }
 
-            Ok((Some(T::WeightInfo::admin_move_market_to_closed(0u32, 0u32)), Pays::No).into())
+            if should_be_closed {
+                let range_end_time_frame = Self::calculate_time_frame_of_moment(range.end);
+                close_ids_len = MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    range_end_time_frame,
+                    |ids| -> Result<u32, DispatchError> {
+                        let ids_len = ids.len() as u32;
+                        let position = ids
+                            .iter()
+                            .position(|i| i == &market_id)
+                            .ok_or(Error::<T>::MarketNotInCloseTimeFrameList)?;
+                        ids.swap_remove(position);
+                        Ok(ids_len)
+                    },
+                )?;
+                Self::on_market_close(&market_id, market)?;
+            }
+
+            Ok((Some(Weight::zero()), Pays::No).into())
         }
     }
 
@@ -1715,6 +1732,12 @@ mod pallet {
         NonZeroDisputePeriodOnTrustedMarket,
         /// The fee is too high.
         FeeTooHigh,
+        /// The operation is not allowed for market with a block period.
+        NotAllowedForBlockBasedMarkets,
+        /// The market is not in the open time frame list.
+        MarketNotInOpenTimeFrameList,
+        /// The market is not in the close time frame list.
+        MarketNotInCloseTimeFrameList,
     }
 
     #[pallet::event]
