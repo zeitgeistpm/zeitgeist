@@ -8,13 +8,14 @@ fi;
 cargo build --features parachain
 
 export ADDITIONAL_ZOMBIECONFIG="${ADDITIONAL_ZOMBIECONFIG:-}"
+export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./integration-tests/zombienet/produce-blocks.toml"}"
 # Define destination path
 ZOMBIENET_BINARY="./tmp/zombienet"
 
 # Check if the file already exists
 if [[ -f "${ZOMBIENET_BINARY}" ]]; then
     echo "zombienet already exists in /tmp. Executing it."
-    $ZOMBIENET_BINARY spawn --provider native ./integration-tests/zombienet/produce-blocks.toml $ADDITIONAL_ZOMBIECONFIG
+    $ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
     exit 0
 fi
 
@@ -72,4 +73,4 @@ fi
 # Make the file executable
 chmod +x "${ZOMBIENET_BINARY}"
 
-$ZOMBIENET_BINARY spawn --provider native ./integration-tests/zombienet/produce-blocks.toml $ADDITIONAL_ZOMBIECONFIG
+$ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
