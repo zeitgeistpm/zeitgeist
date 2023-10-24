@@ -116,6 +116,6 @@ fn convert_unkown_multilocation() {
 #[test]
 fn convert_unsupported_currency() {
     Zeitgeist::execute_with(|| {
-        assert_eq!(<AssetConvert as C2<_, _>>::convert(CurrencyId::ParimutuelShare(0, 0u16)), None)
+        assert_eq!(<AssetConvert as C2<_, _>>::convert(CurrencyId::CombinatorialOutcome), None)
     });
 }
