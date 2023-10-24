@@ -170,8 +170,8 @@ mod pallet {
         NotCategorical,
         /// There is no reward to distribute.
         NoRewardToDistribute,
-        /// Action cannot be completed because unexpected error has occurred. This should be reported
-        /// to protocol maintainers.
+        /// Action cannot be completed because an unexpected error has occurred. This should be
+        /// reported to protocol maintainers.
         InconsistentState(InconsistentStateError),
     }
 
