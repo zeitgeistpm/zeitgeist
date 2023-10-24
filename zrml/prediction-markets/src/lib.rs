@@ -1351,15 +1351,15 @@ mod pallet {
             Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
         }
 
-        /// Allows the `CloseMarketsEarlyOrigin`` or the market creator to schedule an early close.
+        /// Allows the `CloseMarketsEarlyOrigin` or the market creator to schedule an early close.
         ///
         /// The market creator schedules it `now + EarlyClose...Period` in the future.
         /// This is to allow enough time for a potential dispute.
         /// The market creator reserves a `CloseEarlyDisputeBond`, which is returned,
-        /// if the `CloseMarketsEarlyOrigin`` decides to accept the early close request
+        /// if the `CloseMarketsEarlyOrigin` decides to accept the early close request
         /// or if it is not disputed.
         /// It is slashed, if the early close request is disputed
-        /// and the `CloseMarketsEarlyOrigin`` decides to reject the early close.
+        /// and the `CloseMarketsEarlyOrigin` decides to reject the early close.
         /// The `CloseMarketsEarlyOrigin` (or root) can schedule it `now + CloseProtection...Period`
         /// in the future. This is to prevent fat finger mistakes.
         ///
