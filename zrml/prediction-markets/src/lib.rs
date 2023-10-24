@@ -79,6 +79,7 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
+    const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
     /// The maximum number of blocks between the [`LastTimeFrame`]
     /// and the current timestamp in block number allowed to recover
     /// the automatic market openings and closings from a chain stall.
@@ -1796,6 +1797,8 @@ mod pallet {
         ),
         /// The global dispute was started. \[market_id\]
         GlobalDisputeStarted(MarketIdOf<T>),
+        /// The recovery limit for timestamp based markets was reached due to a prolonged chain stall.
+        RecoveryLimitReached { last_time_frame: TimeFrame, limit_time_frame: TimeFrame },
     }
 
     #[pallet::hooks]
@@ -2978,7 +2981,13 @@ mod pallet {
             let end = current_time_frame;
             let diff = end.saturating_sub(start);
             let start = if diff > MAX_RECOVERY_TIME_FRAMES {
-                end.saturating_sub(MAX_RECOVERY_TIME_FRAMES)
+                log::warn!(target: LOG_TARGET, "Could not recover all time frames since the last time frame {:?}.", last_time_frame);
+                let limit_time_frame = end.saturating_sub(MAX_RECOVERY_TIME_FRAMES);
+                Self::deposit_event(Event::RecoveryLimitReached {
+                    last_time_frame,
+                    limit_time_frame,
+                });
+                limit_time_frame
             } else {
                 start
             };
