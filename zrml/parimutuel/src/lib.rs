@@ -32,6 +32,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
+        log,
         pallet_prelude::{Decode, Encode, TypeInfo},
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
@@ -88,6 +89,7 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const LOG_TARGET: &str = "runtime::zrml-parimutuel";
 
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -446,10 +448,13 @@ mod pallet {
             T::AssetManager::slash(refund_asset, &who, slashable_asset_balance);
 
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
-            debug_assert!(
-                pot_total >= refund_balance,
-                "The pot total should be at least as high as the individual refund balance!"
-            );
+            if pot_total < refund_balance {
+                log::warn!(
+                    target: LOG_TARGET,
+                    "The pot total is lower than the refund balance! This should never happen!"
+                );
+                debug_assert!(false);
+            }
             let refund_balance = refund_balance.min(pot_total);
 
             T::AssetManager::transfer(market.base_asset, &pot_account, &who, refund_balance)?;
