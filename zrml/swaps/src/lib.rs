@@ -74,8 +74,7 @@ mod pallet {
         Perbill,
     };
     use sp_runtime::{
-        traits::AccountIdConversion, DispatchError, DispatchResult,
-        SaturatedConversion,
+        traits::AccountIdConversion, DispatchError, DispatchResult, SaturatedConversion,
     };
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
@@ -301,15 +300,10 @@ mod pallet {
 
                     if new_amount > zero_balance && missing == zero_balance {
                         <SubsidyProviders<T>>::insert(pool_id, &who, new_amount);
-                        pool.total_subsidy = Some(
-                            total_subsidy
-                                .checked_sub_res(&transferred)?
-                        );
+                        pool.total_subsidy = Some(total_subsidy.checked_sub_res(&transferred)?);
                     } else {
                         <SubsidyProviders<T>>::remove(pool_id, &who);
-                        pool.total_subsidy = Some(
-                            total_subsidy.checked_sub_res(&subsidy)?
-                        );
+                        pool.total_subsidy = Some(total_subsidy.checked_sub_res(&subsidy)?);
                     }
                 } else {
                     return Err(Error::<T>::NoSubsidyProvided.into());
