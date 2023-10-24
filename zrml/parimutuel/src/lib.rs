@@ -32,7 +32,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure, log,
-        pallet_prelude::{Decode, Encode, TypeInfo},
+        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
@@ -362,17 +362,25 @@ mod pallet {
             Ok(())
         }
 
-        fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(&market_id)?;
-            Self::ensure_parimutuel_market_resolved(&market)?;
-            let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
-            let pot_account = Self::pot_account(market_id);
+        fn get_winning_asset(
+            market_id: MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<AssetOf<T>, DispatchError> {
+            let winning_outcome =
+                market.resolved_outcome.clone().ok_or(Error::<T>::NoResolvedOutcome)?;
             let winning_asset = match winning_outcome {
                 OutcomeReport::Categorical(category_index) => {
                     Asset::ParimutuelShare(market_id, category_index)
                 }
                 OutcomeReport::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
             };
+            Ok(winning_asset)
+        }
+
+        fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
+            let market = T::MarketCommons::market(&market_id)?;
+            Self::ensure_parimutuel_market_resolved(&market)?;
+            let winning_asset = Self::get_winning_asset(market_id, &market)?;
             // each Parimutuel outcome asset has the market id included
             // this allows us to query all outstanding shares for each discrete asset
             let outcome_total = T::AssetManager::total_issuance(winning_asset);
@@ -390,6 +398,7 @@ mod pallet {
                 debug_assert!(false);
             }
 
+            let pot_account = Self::pot_account(market_id);
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
             let payoff_ratio_mul_base: BalanceOf<T> =
                 bdiv_floor(pot_total.saturated_into(), outcome_total.saturated_into())?
@@ -436,14 +445,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_parimutuel_market_resolved(&market)?;
             Self::market_assets_contains(&market, &refund_asset)?;
-            let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
-            let pot_account = Self::pot_account(market_id);
-            let winning_asset = match winning_outcome {
-                OutcomeReport::Categorical(category_index) => {
-                    Asset::ParimutuelShare(market_id, category_index)
-                }
-                OutcomeReport::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
-            };
+            let winning_asset = Self::get_winning_asset(market_id, &market)?;
             let outcome_total = T::AssetManager::total_issuance(winning_asset);
             ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
 
@@ -458,6 +460,7 @@ mod pallet {
             let slashable_asset_balance = refund_balance;
             T::AssetManager::slash(refund_asset, &who, slashable_asset_balance);
 
+            let pot_account = Self::pot_account(market_id);
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
             if pot_total < refund_balance {
                 log::debug!(
