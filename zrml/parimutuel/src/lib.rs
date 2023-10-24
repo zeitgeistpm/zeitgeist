@@ -352,14 +352,19 @@ mod pallet {
             Ok(())
         }
 
-        fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(&market_id)?;
+        fn ensure_parimutuel_market_resolved(market: &MarketOf<T>) -> DispatchResult {
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
             ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
             ensure!(
                 matches!(market.market_type, MarketType::Categorical(_)),
                 Error::<T>::NotCategorical
             );
+            Ok(())
+        }
+
+        fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
+            let market = T::MarketCommons::market(&market_id)?;
+            Self::ensure_parimutuel_market_resolved(&market)?;
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
             let winning_asset = match winning_outcome {
@@ -429,12 +434,7 @@ mod pallet {
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
             };
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolvedYet);
-            ensure!(market.scoring_rule == ScoringRule::Parimutuel, Error::<T>::InvalidScoringRule);
-            ensure!(
-                matches!(market.market_type, MarketType::Categorical(_)),
-                Error::<T>::NotCategorical
-            );
+            Self::ensure_parimutuel_market_resolved(&market)?;
             Self::market_assets_contains(&market, &refund_asset)?;
             let winning_outcome = market.resolved_outcome.ok_or(Error::<T>::NoResolvedOutcome)?;
             let pot_account = Self::pot_account(market_id);
