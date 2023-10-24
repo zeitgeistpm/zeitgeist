@@ -1874,14 +1874,14 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
     });
 }
 
-#[test]
-fn it_does_not_allow_to_sell_complete_sets_with_parimutuel_market() {
+#[test_case(ScoringRule::Parimutuel; "parimutuel")]
+fn sell_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: ScoringRule) {
     let test = |base_asset: Asset<MarketId>| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::Parimutuel,
+            scoring_rule,
         );
         assert_noop!(
             PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT),
