@@ -50,14 +50,14 @@ fn claim_rewards_emits_event() {
 
         assert_ok!(Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id));
 
-        let slashable_balance = 19800000000;
+        let withdrawn_asset_balance = 19800000000;
         let actual_payoff = 29700000000;
 
         System::assert_last_event(
             Event::RewardsClaimed {
                 market_id,
                 asset: winner_asset,
-                slashed_asset_balance: slashable_balance,
+                withdrawn_asset_balance,
                 base_asset_payoff: actual_payoff,
                 sender: ALICE,
             }

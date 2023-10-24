@@ -122,7 +122,7 @@ mod pallet {
         RewardsClaimed {
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
-            slashed_asset_balance: BalanceOf<T>,
+            withdrawn_asset_balance: BalanceOf<T>,
             base_asset_payoff: BalanceOf<T>,
             sender: AccountIdOf<T>,
         },
@@ -417,9 +417,9 @@ mod pallet {
                 payoff,
             )?;
 
-            let slashed_asset_balance = winning_balance;
+            let withdrawn_asset_balance = winning_balance;
 
-            T::AssetManager::slash(winning_asset, &who, slashed_asset_balance);
+            T::AssetManager::withdraw(winning_asset, &who, withdrawn_asset_balance)?;
 
             let remaining_bal = T::AssetManager::free_balance(market.base_asset, &pot_account);
             let base_asset_payoff = payoff.min(remaining_bal);
@@ -429,7 +429,7 @@ mod pallet {
             Self::deposit_event(Event::RewardsClaimed {
                 market_id,
                 asset: winning_asset,
-                slashed_asset_balance,
+                withdrawn_asset_balance,
                 base_asset_payoff,
                 sender: who.clone(),
             });
