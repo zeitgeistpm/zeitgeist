@@ -461,8 +461,7 @@ mod pallet {
                 debug_assert!(false);
             }
 
-            let slashable_asset_balance = refund_balance;
-            T::AssetManager::slash(refund_asset, &who, slashable_asset_balance);
+            T::AssetManager::withdraw(refund_asset, &who, refund_balance)?;
 
             let pot_account = Self::pot_account(market_id);
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
