@@ -376,11 +376,14 @@ mod pallet {
             ensure!(outcome_total != BalanceOf::<T>::zero(), Error::<T>::NoRewardShareOutstanding);
             let winning_balance = T::AssetManager::free_balance(winning_asset, &who);
             ensure!(!winning_balance.is_zero(), Error::<T>::NoWinningShares);
-            debug_assert!(
-                outcome_total >= winning_balance,
-                "The outcome issuance should be at least as high as the individual balance of \
-                 this outcome!"
-            );
+            if outcome_total < winning_balance {
+                log::debug!(
+                    target: LOG_TARGET,
+                    "The outcome issuance should be at least as high as the individual balance of \
+                     this outcome!"
+                );
+                debug_assert!(false);
+            }
 
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
             let payoff_ratio_mul_base: BalanceOf<T> =
