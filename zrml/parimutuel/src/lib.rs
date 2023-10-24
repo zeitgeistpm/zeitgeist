@@ -31,8 +31,7 @@ mod pallet {
     use crate::weights::WeightInfoZeitgeist;
     use core::marker::PhantomData;
     use frame_support::{
-        ensure,
-        log,
+        ensure, log,
         pallet_prelude::{Decode, Encode, TypeInfo},
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
