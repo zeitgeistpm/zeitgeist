@@ -232,8 +232,8 @@ fn claim_rewards_emits_event() {
             Event::RewardsClaimed {
                 market_id,
                 asset: winner_asset,
-                balance: slashable_balance,
-                actual_payoff,
+                slashed_asset_balance: slashable_balance,
+                base_asset_payoff: actual_payoff,
                 sender: ALICE,
             }
             .into(),

@@ -257,13 +257,13 @@ macro_rules! impl_market_creator_fees {
                 account: &Self::AccountId,
                 amount: Self::Balance,
             ) -> Self::Balance {
-                Self::impl_distribute(market_id, asset, account, amount)
+                Self::do_distribute(market_id, asset, account, amount)
                     .unwrap_or_else(|_| 0u8.saturated_into())
             }
         }
 
         impl MarketCreatorFee {
-            fn impl_distribute(
+            fn do_distribute(
                 market_id: MarketId,
                 asset: Asset<MarketId>,
                 account: &AccountId,
