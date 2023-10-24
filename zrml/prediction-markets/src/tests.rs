@@ -3109,15 +3109,15 @@ fn it_allows_to_redeem_shares() {
     });
 }
 
-#[test]
-fn redeem_shares_fails_if_invalid_resolution_mechanism() {
+#[test_case(ScoringRule::Parimutuel; "parimutuel")]
+fn redeem_shares_fails_if_invalid_resolution_mechanism(scoring_rule: ScoringRule) {
     let test = |base_asset: Asset<MarketId>| {
         let end = 2;
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Parimutuel,
+            scoring_rule,
         );
 
         assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
