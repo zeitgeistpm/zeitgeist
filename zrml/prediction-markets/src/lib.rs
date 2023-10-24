@@ -2012,6 +2012,14 @@ mod pallet {
         InvalidBaseAsset,
         /// A foreign asset in not registered in AssetRegistry.
         UnregisteredForeignAsset,
+        /// The start of the global dispute for this market happened already.
+        GlobalDisputeExistsAlready,
+        /// The market has no dispute mechanism.
+        NoDisputeMechanism,
+        /// The dispute duration is positive but the market has dispute period.
+        NonZeroDisputePeriodOnTrustedMarket,
+        /// The fee is too high.
+        FeeTooHigh,
         /// The early market close operation was not requested by the market creator.
         RequesterNotCreator,
         /// The early close would be scheduled after the original market period end.
@@ -2023,14 +2031,6 @@ mod pallet {
         /// After there was an early close already scheduled,
         /// only the `CloseMarketsEarlyOrigin` can schedule another one.
         OnlyAuthorizedCanScheduleEarlyClose,
-        /// The start of the global dispute for this market happened already.
-        GlobalDisputeExistsAlready,
-        /// The market has no dispute mechanism.
-        NoDisputeMechanism,
-        /// The dispute duration is positive but the market has dispute period.
-        NonZeroDisputePeriodOnTrustedMarket,
-        /// The fee is too high.
-        FeeTooHigh,
     }
 
     #[pallet::event]
