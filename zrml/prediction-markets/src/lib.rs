@@ -1553,23 +1553,25 @@ mod pallet {
             // so that we don't switch back to an invalid market period
             // this should never trigger, because at the time of scheduling a new market period,
             // we ensure the new end is always before the old end
-            debug_assert!(
-                {
-                    match early_close.old {
-                        MarketPeriod::Block(ref range) => {
-                            let now_block = <frame_system::Pallet<T>>::block_number();
-                            now_block < range.end
-                        }
-                        MarketPeriod::Timestamp(ref range) => {
-                            let now_time = <zrml_market_commons::Pallet<T>>::now();
-                            now_time < range.end
-                        }
-                    }
-                },
-                "This will never happen, because schedule_early_close ensures that the new end is \
-                 always before the old end, otherwise the switch to an old market period would \
-                 lead to a never ending market!"
-            );
+            let is_expired = match early_close.old {
+                MarketPeriod::Block(ref range) => {
+                    let now_block = <frame_system::Pallet<T>>::block_number();
+                    range.end <= now_block
+                }
+                MarketPeriod::Timestamp(ref range) => {
+                    let now_time = <zrml_market_commons::Pallet<T>>::now();
+                    range.end <= now_time
+                }
+            };
+            if is_expired {
+                log::debug!(
+                    "This will never happen, because schedule_early_close ensures that the new \
+                     end is always before the old end, otherwise the switch to an old market \
+                     period would lead to a never ending market! Market id: {:?}.",
+                    market_id
+                );
+                debug_assert!(false);
+            }
 
             let close_dispute_bond = T::CloseEarlyDisputeBond::get();
 
@@ -1630,24 +1632,26 @@ mod pallet {
                 EarlyCloseState::ScheduledAsOther => {
                     // ensure we don't reject if the old market period is already over
                     // so that we don't switch back to an invalid market period
-                    debug_assert!(
-                        {
-                            match early_close.old {
-                                MarketPeriod::Block(ref range) => {
-                                    let now_block = <frame_system::Pallet<T>>::block_number();
-                                    now_block < range.end
-                                }
-                                MarketPeriod::Timestamp(ref range) => {
-                                    let now_time = <zrml_market_commons::Pallet<T>>::now();
-                                    now_time < range.end
-                                }
-                            }
-                        },
-                        "This will never happen, because schedule_early_close ensures that the \
-                         new end is always before the old end, 
+                    let is_expired = match early_close.old {
+                        MarketPeriod::Block(ref range) => {
+                            let now_block = <frame_system::Pallet<T>>::block_number();
+                            range.end <= now_block
+                        }
+                        MarketPeriod::Timestamp(ref range) => {
+                            let now_time = <zrml_market_commons::Pallet<T>>::now();
+                            range.end <= now_time
+                        }
+                    };
+                    if is_expired {
+                        log::debug!(
+                            "This will never happen, because schedule_early_close ensures that \
+                             the new end is always before the old end, 
                     otherwise the switch to an old market period would lead to a never ending \
-                         market!"
-                    );
+                             market! Market id: {:?}.",
+                            market_id
+                        );
+                        debug_assert!(false);
+                    }
 
                     let ids_len_0 = Self::clear_auto_close(&market_id)?;
 
