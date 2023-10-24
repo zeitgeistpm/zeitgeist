@@ -274,19 +274,28 @@ mod pallet {
                     InconsistentStateError::OutcomeIssuanceGreaterCollateral
                 )
             );
-            debug_assert!(
-                payoff_ratio_mul_base >= BASE.saturated_into(),
-                "The payoff ratio should be greater than or equal to BASE!"
-            );
-            debug_assert!(
-                payoff >= winning_balance,
-                "The payoff in base asset should be greater than or equal to the winning outcome \
-                 balance."
-            );
-            debug_assert!(
-                pot_total >= payoff,
-                "The payoff in base asset should not exceed the total amount of the base asset!"
-            );
+            if payoff_ratio_mul_base < BASE.saturated_into() {
+                log::debug!(
+                    target: LOG_TARGET,
+                    "The payoff ratio should be greater than or equal to BASE!"
+                );
+                debug_assert!(false);
+            }
+            if payoff < winning_balance {
+                log::debug!(
+                    target: LOG_TARGET,
+                    "The payoff in base asset should be greater than or equal to the winning outcome \
+                    balance."
+                );
+                debug_assert!(false);
+            }
+            if pot_total < payoff {
+                log::debug!(
+                    target: LOG_TARGET,
+                    "The payoff in base asset should not exceed the total amount of the base asset!"
+                );
+                debug_assert!(false);
+            }
             Ok(())
         }
 
@@ -448,7 +457,7 @@ mod pallet {
 
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
             if pot_total < refund_balance {
-                log::warn!(
+                log::debug!(
                     target: LOG_TARGET,
                     "The pot total is lower than the refund balance! This should never happen!"
                 );
