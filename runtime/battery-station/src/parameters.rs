@@ -204,15 +204,15 @@ parameter_types! {
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing an early market close by the market creator.
-    pub const CloseEarlyDisputeBond: Balance = 50 * BASE;
-    // 43_200_000 = 12 hours. Fat-finger protection for the advisory committe to reject
+    pub const CloseEarlyDisputeBond: Balance = BASE;
+    // 3_600_000 = 1 hour. Fat-finger protection for the advisory committe to reject
     // the early market schedule.
-    pub const CloseEarlyProtectionTimeFramePeriod: Moment = 43_200_000;
+    pub const CloseEarlyProtectionTimeFramePeriod: Moment = 3_600_000;
     // Fat-finger protection for the advisory committe to reject
     // the early market schedule.
-    pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
+    pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 1 * BLOCKS_PER_HOUR;
     /// (Slashable) Bond that is provided for scheduling an early market close.
-    pub const CloseEarlyRequestBond: Balance = 25 * BASE;
+    pub const CloseEarlyRequestBond: Balance = 50 * CENT;
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Unreserved in case the dispute was justified otherwise slashed.
     /// This is when the resolved outcome is different to the default (reported) outcome.
@@ -260,10 +260,10 @@ parameter_types! {
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     // Waiting time for market creator to close
     // the market after an early close schedule.
-    pub const CloseEarlyBlockPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
-    // 432_000_000 = 5 days. Waiting time for market creator to close
+    pub const CloseEarlyBlockPeriod: BlockNumber = 1 * BLOCKS_PER_HOUR;
+    // 3_600_000 = 1 hour. Waiting time for market creator to close
     // the market after an early close schedule.
-    pub const CloseEarlyTimeFramePeriod: Moment = 432_000_000;
+    pub const CloseEarlyTimeFramePeriod: Moment = 3_600_000;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 50 * CENT;
