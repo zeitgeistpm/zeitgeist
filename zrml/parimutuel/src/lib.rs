@@ -451,11 +451,15 @@ mod pallet {
 
             let refund_balance = T::AssetManager::free_balance(refund_asset, &who);
             ensure!(!refund_balance.is_zero(), Error::<T>::RefundableBalanceIsZero);
-            debug_assert!(
-                refund_asset != winning_asset,
-                "Since we were checking the total issuance of the winning asset to be zero, if \
-                 the refund balance is non-zero, then the winning asset can't be the refund asset!"
-            );
+            if refund_asset == winning_asset {
+                log::debug!(
+                    target: LOG_TARGET,
+                    "Since we were checking the total issuance of the winning asset to be zero, if \
+                     the refund balance is non-zero, then the winning asset can't be the refund \
+                     asset!"
+                );
+                debug_assert!(false);
+            }
 
             let slashable_asset_balance = refund_balance;
             T::AssetManager::slash(refund_asset, &who, slashable_asset_balance);
