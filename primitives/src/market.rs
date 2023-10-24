@@ -177,6 +177,7 @@ where
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<Option<MarketDisputeMechanism>>::max_encoded_len())
             .saturating_add(<MarketBonds<AI, BA>>::max_encoded_len())
+            .saturating_add(<Option<EarlyClose<BN, M>>>::max_encoded_len())
     }
 }
 
