@@ -205,9 +205,9 @@ parameter_types! {
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing an early market close by the market creator.
     pub const CloseEarlyDisputeBond: Balance = 2_000 * BASE;
-    // 43_200_000 = 12 hours. Fat-finger protection for the advisory committe to reject
+    // Fat-finger protection for the advisory committe to reject
     // the early market schedule.
-    pub const CloseEarlyProtectionTimeFramePeriod: Moment = 43_200_000;
+    pub const CloseEarlyProtectionTimeFramePeriod: Moment = CloseEarlyProtectionBlockPeriod::get() * MILLISECS_PER_BLOCK as u64;
     // Fat-finger protection for the advisory committe to reject
     // the early market schedule.
     pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
@@ -261,9 +261,9 @@ parameter_types! {
     // Waiting time for market creator to close
     // the market after an early close schedule.
     pub const CloseEarlyBlockPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
-    // 432_000_000 = 5 days. Waiting time for market creator to close
+    // Waiting time for market creator to close
     // the market after an early close schedule.
-    pub const CloseEarlyTimeFramePeriod: Moment = 432_000_000;
+    pub const CloseEarlyTimeFramePeriod: Moment = CloseEarlyBlockPeriod::get() * MILLISECS_PER_BLOCK as u64;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
