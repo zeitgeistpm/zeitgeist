@@ -1473,13 +1473,6 @@ mod pallet {
                 get_new_period(block_period, time_frame_period)?
             };
 
-                    get_new_period(
-                        T::CloseEarlyProtectionBlockPeriod::get(),
-                        T::CloseEarlyProtectionTimeFramePeriod::get(),
-                    )?
-                }
-            };
-
             let ids_len_0 = Self::clear_auto_close(&market_id)?;
 
             let state = if is_authorized {
