@@ -302,6 +302,8 @@ mod pallet {
     where
         T: Config,
     {
+        /// A court case was opened.
+        CourtOpened { market_id: MarketIdOf<T>, court_info: CourtOf<T> },
         /// A juror has been added to the court.
         JurorJoined { juror: T::AccountId, stake: BalanceOf<T> },
         /// A court participant prepared to exit the court.
@@ -2146,10 +2148,12 @@ mod pallet {
                 T::DisputeResolution::add_auto_resolve(market_id, court.round_ends.appeal)?;
 
             <SelectedDraws<T>>::insert(court_id, new_draws);
-            <Courts<T>>::insert(court_id, court);
+            <Courts<T>>::insert(court_id, court.clone());
             <MarketIdToCourtId<T>>::insert(market_id, court_id);
             <CourtIdToMarketId<T>>::insert(court_id, market_id);
             <NextCourtId<T>>::put(next_court_id);
+
+            Self::deposit_event(Event::CourtOpened { market_id: *market_id, court_info: court });
 
             let res = ResultWithWeightInfo {
                 result: (),
