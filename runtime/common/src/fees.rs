@@ -238,6 +238,53 @@ macro_rules! impl_foreign_fees {
 }
 
 #[macro_export]
+macro_rules! impl_market_creator_fees {
+    () => {
+        pub struct MarketCreatorFee;
+
+        /// Uses the `creator_fee` field defined by the specified market to deduct a fee for the market's
+        /// creator. Calling `distribute` is noop if the market doesn't exist or the transfer fails for any
+        /// reason.
+        impl DistributeFees for MarketCreatorFee {
+            type Asset = Asset<MarketId>;
+            type AccountId = AccountId;
+            type Balance = Balance;
+            type MarketId = MarketId;
+
+            fn distribute(
+                market_id: Self::MarketId,
+                asset: Self::Asset,
+                account: &Self::AccountId,
+                amount: Self::Balance,
+            ) -> Self::Balance {
+                Self::do_distribute(market_id, asset, account, amount)
+                    .unwrap_or_else(|_| 0u8.saturated_into())
+            }
+        }
+
+        impl MarketCreatorFee {
+            fn do_distribute(
+                market_id: MarketId,
+                asset: Asset<MarketId>,
+                account: &AccountId,
+                amount: Balance,
+            ) -> Result<Balance, DispatchError> {
+                let market = MarketCommons::market(&market_id)?; // Should never fail
+                let fee_amount = market.creator_fee.mul_floor(amount);
+                // Might fail if the transaction is too small
+                <AssetManager as MultiCurrency<_>>::transfer(
+                    asset,
+                    account,
+                    &market.creator,
+                    fee_amount,
+                )?;
+                Ok(fee_amount)
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! fee_tests {
     () => {
         use crate::*;

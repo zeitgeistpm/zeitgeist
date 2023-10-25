@@ -58,10 +58,22 @@ pub fn bmul(a: u128, b: u128) -> Result<u128, DispatchError> {
     c1.check_div_rslt(&BASE)
 }
 
+pub fn bmul_floor(a: u128, b: u128) -> Result<u128, DispatchError> {
+    // checked_mul already rounds down
+    let c0 = a.check_mul_rslt(&b)?;
+    c0.check_div_rslt(&BASE)
+}
+
 pub fn bdiv(a: u128, b: u128) -> Result<u128, DispatchError> {
     let c0 = a.check_mul_rslt(&BASE)?;
     let c1 = c0.check_add_rslt(&b.check_div_rslt(&2)?)?;
     c1.check_div_rslt(&b)
+}
+
+pub fn bdiv_floor(a: u128, b: u128) -> Result<u128, DispatchError> {
+    let c0 = a.check_mul_rslt(&BASE)?;
+    // checked_div already rounds down
+    c0.check_div_rslt(&b)
 }
 
 pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
@@ -363,6 +375,18 @@ mod tests {
             assert_eq!($op(2, u128::MAX), $n_max_2);
             assert_eq!($op(3, u128::MAX), $n_max_3);
         };
+    }
+
+    #[test]
+    fn bmul_rounding_behaviours() {
+        assert_eq!(bmul(3u128, 33_333_333_333u128).unwrap(), 10u128);
+        assert_eq!(bmul_floor(3u128, 33_333_333_333u128).unwrap(), 9u128);
+    }
+
+    #[test]
+    fn bdiv_rounding_behaviors() {
+        assert_eq!(bdiv(14u128, 3u128).unwrap(), 46_666_666_667u128);
+        assert_eq!(bdiv_floor(14u128, 3u128).unwrap(), 46_666_666_666u128);
     }
 
     #[test]

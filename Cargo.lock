@@ -625,6 +625,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook-v1",
+ "zrml-parimutuel",
  "zrml-prediction-markets",
  "zrml-rikiddo",
  "zrml-simple-disputes",
@@ -14483,6 +14484,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook-v1",
+ "zrml-parimutuel",
  "zrml-prediction-markets",
  "zrml-rikiddo",
  "zrml-simple-disputes",
@@ -14681,6 +14683,27 @@ dependencies = [
  "libfuzzer-sys",
  "zeitgeist-primitives",
  "zrml-orderbook-v1",
+]
+
+[[package]]
+name = "zrml-parimutuel"
+version = "0.4.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "test-case",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
 ]
 
 [[package]]

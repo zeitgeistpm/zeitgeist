@@ -132,6 +132,12 @@ parameter_types! {
     pub const OrderbookPalletId: PalletId = PalletId(*b"zge/ordb");
 }
 
+// Parimutuel parameters
+parameter_types! {
+    pub const ParimutuelPalletId: PalletId = PalletId(*b"zge/prmt");
+    pub const MinBetSize: Balance = BASE;
+}
+
 // Shared within tests
 // Balance
 parameter_types! {
