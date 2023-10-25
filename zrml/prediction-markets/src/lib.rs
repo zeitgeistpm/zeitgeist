@@ -1419,56 +1419,59 @@ mod pallet {
                     }
                 }
             };
-            let new_period = match &market.early_close {
-                None => {
-                    let (block_period, time_frame_period) = if is_authorized {
-                        // fat finger protection
-                        (
-                            T::CloseEarlyProtectionBlockPeriod::get(),
-                            T::CloseEarlyProtectionTimeFramePeriod::get(),
-                        )
-                    } else {
-                        let market_creator =
-                            market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
-                        let close_request_bond = T::CloseEarlyRequestBond::get();
+            let new_period = if let Some(p) = &market.early_close {
+                ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
 
-                        T::AssetManager::reserve_named(
-                            &Self::reserve_id(),
-                            Asset::Ztg,
-                            &market_creator,
-                            close_request_bond,
-                        )?;
-
-                        <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
-                            market.bonds.close_request =
-                                Some(Bond::new(market_creator, close_request_bond));
-                            Ok(())
-                        })?;
-
-                        (T::CloseEarlyBlockPeriod::get(), T::CloseEarlyTimeFramePeriod::get())
-                    };
-
-                    get_new_period(block_period, time_frame_period)?
-                }
-                Some(p) => {
-                    ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
-
-                    match p.state {
-                        // in these case the market period got already reset to the old period
-                        EarlyCloseState::Disputed => {
-                            if Self::is_close_dispute_bond_pending(&market_id, &market, false) {
-                                Self::repatriate_close_dispute_bond(&market_id, &market.creator)?;
-                            }
-                            if Self::is_close_request_bond_pending(&market_id, &market, false) {
-                                Self::unreserve_close_request_bond(&market_id)?;
-                            }
+                match p.state {
+                    // in these case the market period got already reset to the old period
+                    EarlyCloseState::Disputed => {
+                        if Self::is_close_dispute_bond_pending(&market_id, &market, false) {
+                            Self::repatriate_close_dispute_bond(&market_id, &market.creator)?;
                         }
-                        EarlyCloseState::Rejected => {}
-                        EarlyCloseState::ScheduledAsMarketCreator
-                        | EarlyCloseState::ScheduledAsOther => {
-                            return Err(Error::<T>::InvalidEarlyCloseState.into());
+                        if Self::is_close_request_bond_pending(&market_id, &market, false) {
+                            Self::unreserve_close_request_bond(&market_id)?;
                         }
                     }
+                    EarlyCloseState::Rejected => {}
+                    EarlyCloseState::ScheduledAsMarketCreator
+                    | EarlyCloseState::ScheduledAsOther => {
+                        return Err(Error::<T>::InvalidEarlyCloseState.into());
+                    }
+                }
+
+                get_new_period(
+                    T::CloseEarlyProtectionBlockPeriod::get(),
+                    T::CloseEarlyProtectionTimeFramePeriod::get(),
+                )?
+            } else {
+                let (block_period, time_frame_period) = if is_authorized {
+                    // fat finger protection
+                    (
+                        T::CloseEarlyProtectionBlockPeriod::get(),
+                        T::CloseEarlyProtectionTimeFramePeriod::get(),
+                    )
+                } else {
+                    let market_creator = market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
+                    let close_request_bond = T::CloseEarlyRequestBond::get();
+
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &market_creator,
+                        close_request_bond,
+                    )?;
+
+                    <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                        market.bonds.close_request =
+                            Some(Bond::new(market_creator, close_request_bond));
+                        Ok(())
+                    })?;
+
+                    (T::CloseEarlyBlockPeriod::get(), T::CloseEarlyTimeFramePeriod::get())
+                };
+
+                get_new_period(block_period, time_frame_period)?
+            };
 
                     get_new_period(
                         T::CloseEarlyProtectionBlockPeriod::get(),
