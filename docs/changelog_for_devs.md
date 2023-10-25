@@ -15,6 +15,27 @@ APIs/RPC interface.
 ## v0.4.2
 
 [#1148]: https://github.com/zeitgeistpm/zeitgeist/pull/1148
+[#1138]: https://github.com/zeitgeistpm/zeitgeist/pull/1138
+
+### Added
+
+- Implement parimutuel market ([#1138]) maker to allow markets without liquidity
+  provision. The new pallet has the following dispatchables:
+
+  - `buy`: Buy outcome tokens.
+  - `claim_rewards`: Claim the winner outcome tokens.
+  - `claim_refunds`: Claim the refunds in case there was no winner.
+
+  The new pallet has the following events:
+
+  - `OutcomeBought { market_id, buyer, asset, amount_minus_fees, fees }`:
+    Informant bought a position.
+  - `RewardsClaimed { market_id, asset, balance, actual_payoff, sender }`:
+    Informant claimed rewards.
+  - `RefundsClaimed { market_id, asset, refunded_balance, sender }`: Informant
+    claimed refunds.
+
+  For details, please refer to the `README.md` and the in-file documentation.
 
 ### Changed
 

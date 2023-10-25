@@ -169,6 +169,23 @@ fn buy_complete_set_fails_if_market_is_not_active(status: MarketStatus) {
     });
 }
 
+#[test_case(ScoringRule::Parimutuel)]
+fn buy_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: ScoringRule) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..2,
+            scoring_rule,
+        );
+        let market_id = 0;
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(FRED), market_id, 1),
+            Error::<Runtime>::InvalidScoringRule,
+        );
+    });
+}
+
 #[test]
 fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumber() {
     ExtBuilder::default().build().execute_with(|| {
@@ -1857,6 +1874,29 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
     });
 }
 
+#[test_case(ScoringRule::Parimutuel; "parimutuel")]
+fn sell_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: ScoringRule) {
+    let test = |base_asset: Asset<MarketId>| {
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..1,
+            scoring_rule,
+        );
+        assert_noop!(
+            PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT),
+            Error::<Runtime>::InvalidScoringRule
+        );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
 #[test]
 fn it_allows_to_report_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
@@ -3058,6 +3098,36 @@ fn it_allows_to_redeem_shares() {
         assert_eq!(bal, 1_000 * BASE);
         System::assert_last_event(
             Event::TokensRedeemed(0, Asset::CategoricalOutcome(0, 1), CENT, CENT, CHARLIE).into(),
+        );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test_case(ScoringRule::Parimutuel; "parimutuel")]
+fn redeem_shares_fails_if_invalid_resolution_mechanism(scoring_rule: ScoringRule) {
+    let test = |base_asset: Asset<MarketId>| {
+        let end = 2;
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            scoring_rule,
+        );
+
+        assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
+            market_inner.status = MarketStatus::Resolved;
+            Ok(())
+        }));
+
+        assert_noop!(
+            PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0),
+            Error::<Runtime>::InvalidResolutionMechanism
         );
     };
     ExtBuilder::default().build().execute_with(|| {

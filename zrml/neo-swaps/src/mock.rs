@@ -59,13 +59,13 @@ use zeitgeist_primitives::{
         TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
     math::fixed::FixedMul,
-    traits::DeployPoolApi,
+    traits::{DeployPoolApi, DistributeFees},
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
         Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
-use zrml_neo_swaps::{traits::DistributeFees, BalanceOf};
+use zrml_neo_swaps::BalanceOf;
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -135,11 +135,11 @@ where
     fn distribute(
         _market_id: Self::MarketId,
         asset: Self::Asset,
-        account: Self::AccountId,
+        account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
         let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
-        let _ = T::MultiCurrency::transfer(asset, &account, &F::get(), fees);
+        let _ = T::MultiCurrency::transfer(asset, account, &F::get(), fees);
         fees
     }
 }

@@ -36,7 +36,7 @@ mod pallet {
     use crate::{
         consts::MAX_ASSETS,
         math::{Math, MathOps},
-        traits::{pool_operations::PoolOperations, DistributeFees, LiquiditySharesManager},
+        traits::{pool_operations::PoolOperations, LiquiditySharesManager},
         types::{FeeDistribution, Pool, SoloLp},
         weights::*,
     };
@@ -62,7 +62,7 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{FixedDiv, FixedMul},
         },
-        traits::{CompleteSetOperationsApi, DeployPoolApi},
+        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -810,13 +810,9 @@ mod pallet {
         ) -> Result<FeeDistribution<T>, DispatchError> {
             let swap_fees = pool.swap_fee.bmul(amount)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
-            let external_fees = T::ExternalFees::distribute(
-                market_id,
-                pool.collateral,
-                pool.account_id.clone(),
-                amount,
-            );
-            let total_fees = external_fees.checked_add_res(&swap_fees)?;
+            let external_fees =
+                T::ExternalFees::distribute(market_id, pool.collateral, &pool.account_id, amount);
+            let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
         }
