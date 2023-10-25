@@ -47,5 +47,6 @@ where
         scoring_rule: ScoringRule::Parimutuel,
         status: MarketStatus::Active,
         bonds: MarketBonds::default(),
+        early_close: None,
     }
 }
