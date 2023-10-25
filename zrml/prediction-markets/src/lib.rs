@@ -84,7 +84,7 @@ mod pallet {
     /// and the current timestamp in block number allowed to recover
     /// the automatic market openings and closings from a chain stall.
     /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
-    const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
+    pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
 
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
