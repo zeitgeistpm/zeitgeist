@@ -196,6 +196,7 @@ mod pallet {
     const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const LOG_TARGET: &str = "runtime::zrml-court";
     /// Weight used to increase the number of jurors for subsequent appeals
     /// of the same court.
     const APPEAL_BASIS: usize = 2;
@@ -1077,6 +1078,7 @@ mod pallet {
                     <Participants<T>>::insert(&draw.court_participant, p_info);
                 } else {
                     log::warn!(
+                        target: LOG_TARGET,
                         "Participant {:?} not found in Participants storage \
                          (reassign_court_stakes). Court id {:?}.",
                         draw.court_participant,
@@ -1273,6 +1275,7 @@ mod pallet {
                 .saturated_into::<BalanceOf<T>>();
             if inflation_period_mint >= log_threshold {
                 log::warn!(
+                    target: LOG_TARGET,
                     "Inflation per period is greater than the threshold. Inflation per period: \
                      {:?}, threshold: {:?}",
                     inflation_period_mint,
@@ -1325,6 +1328,7 @@ mod pallet {
             let remainder = total_mint.peek();
             if total_mint.drop_zero().is_err() {
                 log::debug!(
+                    target: LOG_TARGET,
                     "Total issued tokens were not completely distributed, total: {:?}, leftover: \
                      {:?}",
                     inflation_period_mint,
@@ -1697,6 +1701,7 @@ mod pallet {
                     <Participants<T>>::insert(&old_draw.court_participant, p_info);
                 } else {
                     log::warn!(
+                        target: LOG_TARGET,
                         "Participant {:?} not found in Participants storage \
                          (unlock_participants_from_last_draw). Court id {:?}.",
                         old_draw.court_participant,

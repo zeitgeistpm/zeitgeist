@@ -78,6 +78,7 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const LOG_TARGET: &str = "runtime::zrml-liquidity-mining";
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
@@ -188,7 +189,7 @@ mod pallet {
             };
             let _ = with_transaction(|| match fun() {
                 None => {
-                    log::error!("Block {:?} was not finalized", block);
+                    log::error!(target: LOG_TARGET, "Block {:?} was not finalized", block);
                     TransactionOutcome::Rollback(Err("Block was not finalized"))
                 }
                 Some(_) => TransactionOutcome::Commit(Ok(())),

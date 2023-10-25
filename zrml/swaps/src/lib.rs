@@ -106,6 +106,7 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+    const LOG_TARGET: &str = "runtime::zrml-swaps";
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -288,7 +289,8 @@ mod pallet {
 
                     if missing > zero_balance {
                         log::warn!(
-                            "[Swaps] Data inconsistency: More subsidy provided than currently \
+                            target: LOG_TARGET,
+                            "Data inconsistency: More subsidy provided than currently \
                              reserved.
                              Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
@@ -1168,7 +1170,8 @@ mod pallet {
                 // In case the AMM balance does not suffice to pay out every winner, the pool
                 // rewards will not be distributed (requires investigation and update).
                 log::error!(
-                    "[Swaps] The AMM balance does not suffice to pay out every winner.
+                    target: LOG_TARGET,
+                    "The AMM balance does not suffice to pay out every winner.
                     market_id: {:?}, pool_id: {:?}, total AMM balance: {:?}, total reward value: \
                      {:?}",
                     pool.market_id,
@@ -1212,7 +1215,8 @@ mod pallet {
                     let current_amm_holding =
                         T::AssetManager::free_balance(base_asset, &pool_account);
                     log::error!(
-                        "[Swaps] The AMM failed to pay out the share holder reward.
+                        target: LOG_TARGET,
+                        "The AMM failed to pay out the share holder reward.
                         market_id: {:?}, pool_id: {:?}, current AMM holding: {:?},
                         transfer size: {:?}, to: {:?}, error: {:?}",
                         pool.market_id,
@@ -1333,6 +1337,7 @@ mod pallet {
                 let _ = with_transaction(|| match mutation(pool_id) {
                     Err(err) => {
                         log::warn!(
+                            target: LOG_TARGET,
                             "Arbitrage unexpectedly failed on pool {:?} with error: {:?}",
                             pool_id,
                             err,
@@ -2126,7 +2131,8 @@ mod pallet {
 
                         if transferred != subsidy {
                             log::warn!(
-                                "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
+                                target: LOG_TARGET,
+                                "Data inconsistency: In end_subsidy_phase - More subsidy \
                                  provided than currently reserved.
                             Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                                 pool_id,
