@@ -1814,8 +1814,8 @@ mod pallet {
                         Self::deposit_event(Event::BadOnInitialize);
                         log::error!(
                             target: LOG_TARGET,
-                            "Block {:?} was not initialized. Error: {:?}", 
-                            now, 
+                            "Block {:?} was not initialized. Error: {:?}",
+                            now,
                             err,
                         );
                         TransactionOutcome::Rollback(err.into())

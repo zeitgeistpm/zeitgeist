@@ -841,7 +841,7 @@ mod pallet {
                             <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                         } else {
                             log::error!(
-                                target: LOG_TARGET, 
+                                target: LOG_TARGET,
                                 "Could not construct a bounded vector."
                             );
                             debug_assert!(false);
