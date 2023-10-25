@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>() -> crate::MarketOf<T>
+pub(crate) fn market_mock<T>(creator: T::AccountId) -> crate::MarketOf<T>
 where
     T: crate::Config,
 {
@@ -31,7 +31,7 @@ where
         base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
-        creator: T::PalletId::get().into_account_truncating(),
+        creator,
         market_type: MarketType::Categorical(10u16),
         dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),

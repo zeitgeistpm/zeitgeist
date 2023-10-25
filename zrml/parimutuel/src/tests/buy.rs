@@ -29,7 +29,7 @@ use zrml_market_commons::{Error as MError, Markets};
 fn buy_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -51,9 +51,8 @@ fn buy_emits_event() {
 fn buy_balances_change_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
-        market.creator = MARKET_CREATOR;
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let base_asset = market.base_asset;
@@ -89,7 +88,7 @@ fn buy_balances_change_correctly() {
 fn buy_fails_if_asset_not_parimutuel_share() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
@@ -109,7 +108,7 @@ fn buy_fails_if_asset_not_parimutuel_share() {
 fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         market.scoring_rule = scoring_rule;
 
@@ -134,7 +133,7 @@ fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
 fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = status;
         market.scoring_rule = ScoringRule::Parimutuel;
 
@@ -153,7 +152,7 @@ fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {
 fn buy_fails_if_market_type_is_scalar() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         let range: RangeInclusive<u128> = 0..=100;
         market.market_type = MarketType::Scalar(range);
         market.status = MarketStatus::Active;
@@ -173,7 +172,7 @@ fn buy_fails_if_market_type_is_scalar() {
 fn buy_fails_if_insufficient_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
@@ -193,7 +192,7 @@ fn buy_fails_if_insufficient_balance() {
 fn buy_fails_if_below_minimum_bet_size() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 

@@ -28,7 +28,7 @@ use zrml_market_commons::Markets;
 fn refund_fails_if_not_parimutuel_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         market.status = MarketStatus::Resolved;
@@ -55,7 +55,7 @@ fn refund_fails_if_not_parimutuel_outcome() {
 fn refund_fails_if_market_not_resolved(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = status;
         Markets::<Runtime>::insert(market_id, market);
@@ -75,7 +75,7 @@ fn refund_fails_if_market_not_resolved(status: MarketStatus) {
 fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         market.status = MarketStatus::Resolved;
@@ -95,7 +95,7 @@ fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
 fn refund_fails_if_invalid_outcome_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         market.status = MarketStatus::Resolved;
@@ -113,7 +113,7 @@ fn refund_fails_if_invalid_outcome_asset() {
 fn refund_fails_if_no_resolved_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Resolved;
         market.resolved_outcome = None;
@@ -131,7 +131,7 @@ fn refund_fails_if_no_resolved_outcome() {
 fn refund_fails_if_refund_not_allowed() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
@@ -157,7 +157,7 @@ fn refund_fails_if_refund_not_allowed() {
 fn refund_fails_if_refundable_balance_is_zero() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
@@ -186,7 +186,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
 fn refund_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);

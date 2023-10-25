@@ -30,7 +30,7 @@ use zrml_market_commons::{Error as MError, Markets};
 fn claim_rewards_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -70,7 +70,7 @@ fn claim_rewards_emits_event() {
 fn claim_rewards_categorical_changes_balances_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -162,7 +162,7 @@ fn claim_rewards_categorical_changes_balances_correctly() {
 fn claim_rewards_fails_if_market_type_is_scalar() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         let range: RangeInclusive<u128> = 0..=100;
         market.market_type = MarketType::Scalar(range);
         market.resolved_outcome = Some(OutcomeReport::Scalar(50));
@@ -187,7 +187,7 @@ fn claim_rewards_fails_if_market_type_is_scalar() {
 fn claim_rewards_fails_if_not_resolved(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = status;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -205,7 +205,7 @@ fn claim_rewards_fails_if_not_resolved(status: MarketStatus) {
 fn claim_rewards_fails_if_scoring_rule_not_parimutuel(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Resolved;
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         market.scoring_rule = scoring_rule;
@@ -222,7 +222,7 @@ fn claim_rewards_fails_if_scoring_rule_not_parimutuel(scoring_rule: ScoringRule)
 fn claim_rewards_fails_if_no_resolved_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Resolved;
         market.resolved_outcome = None;
         Markets::<Runtime>::insert(market_id, market);
@@ -250,7 +250,7 @@ fn claim_rewards_fails_if_market_does_not_exist() {
 fn claim_rewards_categorical_fails_if_no_winner() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
@@ -280,7 +280,7 @@ fn claim_rewards_categorical_fails_if_no_winner() {
 fn claim_rewards_categorical_fails_if_no_winning_shares() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
@@ -311,7 +311,7 @@ fn claim_rewards_categorical_fails_if_no_winning_shares() {
 fn claim_refunds_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
-        let mut market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);

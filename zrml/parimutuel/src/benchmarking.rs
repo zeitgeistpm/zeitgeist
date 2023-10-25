@@ -31,7 +31,8 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
     let market_id = 0u32.into();
-    let mut market = market_mock::<T>();
+    let market_creator = whitelisted_caller();
+    let mut market = market_mock::<T>(market_creator);
     market.market_type = market_type;
     market.status = MarketStatus::Active;
     T::MarketCommons::push_market(market.clone()).unwrap();
