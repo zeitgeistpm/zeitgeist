@@ -46,14 +46,15 @@ pub mod weights;
 #[macro_export]
 macro_rules! decl_common_types {
     () => {
+        use core::marker::PhantomData;
         use frame_support::traits::{
             Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced,
         };
         #[cfg(feature = "try-runtime")]
         use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
-        use sp_runtime::{generic, DispatchResult};
-        use zeitgeist_primitives::traits::DeployPoolApi;
-        use zrml_neo_swaps::types::MarketCreatorFee;
+        use orml_traits::MultiCurrency;
+        use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
+        use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -196,6 +197,7 @@ macro_rules! decl_common_types {
                     GlobalDisputesPalletId::get(),
                     LiquidityMiningPalletId::get(),
                     OrderbookPalletId::get(),
+                    ParimutuelPalletId::get(),
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
@@ -315,6 +317,7 @@ macro_rules! create_runtime {
                 GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 61,
+                Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
 
                 $($additional_pallets)*
             }
@@ -1244,9 +1247,11 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
         }
 
+        common_runtime::impl_market_creator_fees!();
+
         impl zrml_neo_swaps::Config for Runtime {
             type CompleteSetOperations = PredictionMarkets;
-            type ExternalFees = MarketCreatorFee<Runtime>;
+            type ExternalFees = MarketCreatorFee;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
@@ -1261,6 +1266,16 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type PalletId = OrderbookPalletId;
             type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_parimutuel::Config for Runtime {
+            type ExternalFees = MarketCreatorFee;
+            type RuntimeEvent = RuntimeEvent;
+            type MarketCommons = MarketCommons;
+            type AssetManager = AssetManager;
+            type MinBetSize = MinBetSize;
+            type PalletId = ParimutuelPalletId;
+            type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
         }
     }
 }
@@ -1371,6 +1386,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_orderbook_v1, Orderbook);
+                    list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
@@ -1474,6 +1490,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
+                    add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);

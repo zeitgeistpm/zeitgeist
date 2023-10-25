@@ -36,6 +36,8 @@ _anything_.
 - [orderbook-v1](./zrml/orderbook-v1) - A naive orderbook implementation that's
   only part of Zeitgeist's PoC. Will be replaced by a v2 orderbook that uses
   0x-style hybrid on-chain and off-chain trading.
+- [parimutuel](./zrml/parimutuel) - A straightforward parimutuel market maker
+  for categorical markets.
 - [prediction-markets](./zrml/prediction-markets) - The core implementation of
   the prediction market logic for creating and resolving markets.
 - [simple-disputes](./zrml-simple-disputes) - Simple disputes selects the last

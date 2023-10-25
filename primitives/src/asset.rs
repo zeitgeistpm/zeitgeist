@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -50,6 +50,7 @@ pub enum Asset<MI: MaxEncodedLen> {
     #[default]
     Ztg,
     ForeignAsset(u32),
+    ParimutuelShare(MI, CategoryIndex),
 }
 
 /// In a scalar market, users can either choose a `Long` position,
