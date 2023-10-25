@@ -212,7 +212,7 @@ parameter_types! {
     // the early market schedule.
     pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
     /// (Slashable) Bond that is provided for scheduling an early market close.
-    pub const CloseEarlyRequestBond: Balance = 200 * BASE;
+    pub const CloseEarlyRequestBond: Balance = 2_000 * BASE;
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Unreserved in case the dispute was justified otherwise slashed.
     /// This is when the resolved outcome is different to the default (reported) outcome.
