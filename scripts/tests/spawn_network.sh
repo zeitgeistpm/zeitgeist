@@ -33,16 +33,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Check if the file already exists
-if [[ -f "${ZOMBIENET_BINARY}" ]]; then
-    echo "zombienet already exists in /tmp. Executing it."
-    if [[ $RUN_TESTS -eq 1 ]]; then
-        $ZOMBIENET_BINARY test --provider native $ZOMBIENET_DSL_FILE $ADDITIONAL_ZOMBIECONFIG
-    else
-        $ZOMBIENET_BINARY spawn --provider native $ZOMBIENET_CONFIG_FILE $ADDITIONAL_ZOMBIECONFIG
-    fi
-    exit 0
-fi
 
 function download_zombienet {
     # Get the appropriate download link based on the OS
