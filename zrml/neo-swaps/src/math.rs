@@ -232,6 +232,7 @@ mod detail {
         use crate::{assert_approx, consts::*};
         use std::str::FromStr;
         use test_case::test_case;
+        use zeitgeist_primitives::constants::BASE;
 
         // Example taken from
         // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
@@ -277,6 +278,41 @@ mod detail {
             let value = 30;
             let result: Fixed = exp(Fixed::checked_from_num(value).unwrap(), neg).unwrap();
             assert_eq!(result, expected);
+        }
+
+        #[test]
+        fn overflow() {
+            // Consider the following pool. Three assets, with the following distribution of
+            // balances: [250.85832972070816, 250.85832971998437, 10000.0]. The liquidity parameter
+            // is 361.9120682527099. We're buying `20 * liquidity` units of the third asset.
+            let reserve = 10_000 * BASE;
+            let liquidity = 3_333_333_333_333;
+            let amount_in = 5 * liquidity;
+            let amount_out =
+                calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
+            assert_eq!(amount_out, 99_977_464_168_502);
+            // After executing the buy, the balances are the following: [1897.7157268533774,
+            // 1897.715726853315, 2.253583149829865].
+            let sum_of_prices = calculate_spot_price(18_977_157_268_533, liquidity).unwrap()
+                + calculate_spot_price(18_977_157_268_533, liquidity).unwrap()
+                + calculate_spot_price(22_535_831_498, liquidity).unwrap();
+            assert_eq!(sum_of_prices, BASE);
+        }
+
+        #[test]
+        fn overflow2() {
+            let reserve = 10_000 * BASE;
+            let liquidity = 4_342_944_819_032;
+            let amount_in = 5 * liquidity;
+            let amount_out =
+                calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
+            assert_eq!(amount_out, 99_970_638_438_209);
+            // After executing the buy, the balances are the following: [1897.7157268533774,
+            // 1897.715726853315, 2.253583149829865].
+            let sum_of_prices = calculate_spot_price(24_725_024_052_670, liquidity).unwrap()
+                + calculate_spot_price(24_725_024_051_802, liquidity).unwrap()
+                + calculate_spot_price(29_361_561_791, liquidity).unwrap();
+            assert_eq!(sum_of_prices, BASE);
         }
     }
 }
