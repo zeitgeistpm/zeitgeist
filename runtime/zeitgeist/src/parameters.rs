@@ -313,7 +313,7 @@ parameter_types! {
     pub const OrderbookPalletId: PalletId = ORDERBOOK_PALLET_ID;
 
     // Parimutuel parameters
-    pub const MinBetSize: Balance = 50 * CENT;
+    pub const MinBetSize: Balance = 100 * ExistentialDeposit::get();
     pub const ParimutuelPalletId: PalletId = PARIMUTUEL_PALLET_ID;
 
     // System
