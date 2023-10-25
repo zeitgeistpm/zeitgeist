@@ -123,7 +123,7 @@ mod pallet {
                         stringify!($bond_type),
                         market_id,
                     );
-                    log::warn!("{}", warning);
+                    log::warn!(target: LOG_TARGET, "{}", warning);
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
@@ -162,7 +162,7 @@ mod pallet {
                         stringify!($bond_type),
                         market_id,
                     );
-                    log::warn!("{}", warning);
+                    log::warn!(target: LOG_TARGET, "{}", warning);
                     debug_assert!(false, "{}", warning);
                     return Ok(NegativeImbalanceOf::<T>::zero());
                 }
@@ -183,7 +183,7 @@ mod pallet {
                         stringify!($bond_type),
                         market_id,
                     );
-                    log::warn!("{}", warning);
+                    log::warn!(target: LOG_TARGET, "{}", warning);
                     debug_assert!(false, "{}", warning);
                 }
                 if unreserve_amount != BalanceOf::<T>::zero() {
@@ -214,7 +214,7 @@ mod pallet {
                         stringify!($bond_type),
                         market_id,
                     );
-                    log::warn!("{}", warning);
+                    log::warn!(target: LOG_TARGET, "{}", warning);
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
@@ -237,7 +237,7 @@ mod pallet {
                             market_id,
                             missing,
                         );
-                        log::warn!("{}", warning);
+                        log::warn!(target: LOG_TARGET, "{}", warning);
                         debug_assert!(false, "{}", warning);
                     }
                     Ok(_) => (),
@@ -248,7 +248,7 @@ mod pallet {
                             market_id,
                             stringify!(_err),
                         );
-                        log::warn!("{}", warning);
+                        log::warn!(target: LOG_TARGET, "{}", warning);
                         debug_assert!(false, "{}", warning);
                     }
                 }
@@ -283,7 +283,7 @@ mod pallet {
                             stringify!($bond_type),
                             market_id,
                         );
-                        log::warn!("{}", warning);
+                        log::warn!(target: LOG_TARGET, "{}", warning);
                         debug_assert!(false, "{}", warning);
                     }
                 } else if with_warning {
@@ -292,7 +292,7 @@ mod pallet {
                         stringify!($bond_type),
                         market_id,
                     );
-                    log::warn!("{}", warning);
+                    log::warn!(target: LOG_TARGET, "{}", warning);
                     debug_assert!(false, "{}", warning);
                 }
 
@@ -1909,7 +1909,12 @@ mod pallet {
                 match open.and(close).and(resolve) {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
-                        log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
+                        log::error!(
+                            target: LOG_TARGET,
+                            "Block {:?} was not initialized. Error: {:?}",
+                            now,
+                            err,
+                        );
                         TransactionOutcome::Rollback(err.into())
                     }
                     Ok(_) => TransactionOutcome::Commit(Ok(())),
@@ -2835,9 +2840,9 @@ mod pallet {
 
                                 if let Err(err) = mutate_result {
                                     log::error!(
-                                        "[PredictionMarkets] Cannot find market associated to \
-                                         market id.
-                                    market_id: {:?}, error: {:?}",
+                                        target: LOG_TARGET,
+                                        "Cannot find market associated to \
+                                         market id. market_id: {:?}, error: {:?}",
                                         subsidy_info.market_id,
                                         err
                                     );
@@ -2855,9 +2860,9 @@ mod pallet {
 
                                 if let Err(err) = destroy_result {
                                     log::error!(
-                                        "[PredictionMarkets] Cannot destroy pool with missing \
-                                         subsidy.
-                                    market_id: {:?}, error: {:?}",
+                                        target: LOG_TARGET,
+                                        "Cannot destroy pool with missing \
+                                         subsidy. market_id: {:?}, error: {:?}",
                                         subsidy_info.market_id,
                                         err
                                     );
@@ -2888,9 +2893,9 @@ mod pallet {
 
                                 if let Err(err) = market_result {
                                     log::error!(
-                                        "[PredictionMarkets] Cannot find market associated to \
-                                         market id.
-                                    market_id: {:?}, error: {:?}",
+                                        target: LOG_TARGET,
+                                        "Cannot find market associated to \
+                                         market id. market_id: {:?}, error: {:?}",
                                         subsidy_info.market_id,
                                         err
                                     );
@@ -2913,8 +2918,9 @@ mod pallet {
                             return false;
                         } else if let Err(err) = end_subsidy_result {
                             log::error!(
-                                "[PredictionMarkets] An error occured during end of subsidy phase.
-                        pool_id: {:?}, market_id: {:?}, error: {:?}",
+                                target: LOG_TARGET,
+                                "An error occured during end of subsidy phase.
+                            pool_id: {:?}, market_id: {:?}, error: {:?}",
                                 pool_id,
                                 subsidy_info.market_id,
                                 err
@@ -2922,7 +2928,8 @@ mod pallet {
                         }
                     } else if let Err(err) = pool_id {
                         log::error!(
-                            "[PredictionMarkets] Cannot find pool associated to market.
+                            target: LOG_TARGET,
+                            "Cannot find pool associated to market.
                             market_id: {:?}, error: {:?}",
                             subsidy_info.market_id,
                             err
