@@ -46,10 +46,7 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
-use sp_runtime::{
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
-    DispatchError,
-};
+use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -93,10 +90,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 49,
+    spec_version: 50,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 24,
+    transaction_version: 25,
     state_version: 1,
 };
 

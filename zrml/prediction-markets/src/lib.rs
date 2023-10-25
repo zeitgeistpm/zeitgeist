@@ -425,7 +425,10 @@ mod pallet {
                 );
 
                 match m.scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                    ScoringRule::CPMM
+                    | ScoringRule::Lmsr
+                    | ScoringRule::Parimutuel
+                    | ScoringRule::Orderbook => {
                         m.status = MarketStatus::Active;
                     }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => {
@@ -974,6 +977,7 @@ mod pallet {
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
+            ensure!(market.is_redeemable(), Error::<T>::InvalidResolutionMechanism);
 
             // Check to see if the sender has any winning shares.
             let resolved_outcome =
@@ -2020,6 +2024,8 @@ mod pallet {
         NonZeroDisputePeriodOnTrustedMarket,
         /// The fee is too high.
         FeeTooHigh,
+        /// The resolution mechanism resulting from the scoring rule is not supported.
+        InvalidResolutionMechanism,
         /// The early market close operation was not requested by the market creator.
         RequesterNotCreator,
         /// The early close would be scheduled after the original market period end.
@@ -3450,9 +3456,10 @@ mod pallet {
             }
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => match scoring_rule {
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
-                        MarketStatus::Active
-                    }
+                    ScoringRule::CPMM
+                    | ScoringRule::Lmsr
+                    | ScoringRule::Parimutuel
+                    | ScoringRule::Orderbook => MarketStatus::Active,
                     ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
                 },
                 MarketCreation::Advised => MarketStatus::Proposed,

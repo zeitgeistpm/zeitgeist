@@ -35,15 +35,15 @@ use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
 
 pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
     let (module, seed0, seed1) = seed;
-    match module % 5 {
+
+    match module % 4 {
         0 => Asset::CategoricalOutcome(seed0, seed1),
         1 => {
             let scalar_position =
                 if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
             Asset::ScalarOutcome(seed0, scalar_position)
         }
-        2 => Asset::CombinatorialOutcome,
-        3 => Asset::PoolShare(SerdeWrapper(seed0)),
+        2 => Asset::PoolShare(SerdeWrapper(seed0)),
         _ => Asset::Ztg,
     }
 }

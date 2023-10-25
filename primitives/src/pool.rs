@@ -86,4 +86,5 @@ pub enum ScoringRule {
     RikiddoSigmoidFeeMarketEma,
     Lmsr,
     Orderbook,
+    Parimutuel,
 }

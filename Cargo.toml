@@ -12,6 +12,7 @@ default-members = [
     "zrml/market-commons",
     "zrml/neo-swaps",
     "zrml/orderbook-v1",
+    "zrml/parimutuel",
     "zrml/prediction-markets",
     "zrml/prediction-markets/runtime-api",
     "zrml/rikiddo",
@@ -35,6 +36,7 @@ members = [
     "zrml/neo-swaps",
     "zrml/orderbook-v1",
     "zrml/orderbook-v1/fuzz",
+    "zrml/parimutuel",
     "zrml/prediction-markets",
     "zrml/prediction-markets/fuzz",
     "zrml/prediction-markets/runtime-api",
@@ -233,6 +235,7 @@ zrml-liquidity-mining = { path = "zrml/liquidity-mining", default-features = fal
 zrml-market-commons = { path = "zrml/market-commons", default-features = false }
 zrml-neo-swaps = { path = "zrml/neo-swaps", default-features = false }
 zrml-orderbook-v1 = { path = "zrml/orderbook-v1", default-features = false }
+zrml-parimutuel = { path = "zrml/parimutuel", default-features = false }
 zrml-prediction-markets = { path = "zrml/prediction-markets", default-features = false }
 zrml-prediction-markets-runtime-api = { path = "zrml/prediction-markets/runtime-api", default-features = false }
 zrml-rikiddo = { path = "zrml/rikiddo", default-features = false }
