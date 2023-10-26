@@ -69,7 +69,7 @@ cargo fuzz run --release --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_pool_am
 cargo fuzz run --release --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RUNS * $POOL_EXIT_FACT)) / $BASE))
 
 # --- Orderbook-v1 Pallet fuzz tests ---
-cargo fuzz run --release --fuzz-dir zrml/orderbook-v1/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/orderbook/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
 
 # --- Rikiddo Pallet fuzz tests ---
 # Profile release is required here since it triggers debug assertions otherwise

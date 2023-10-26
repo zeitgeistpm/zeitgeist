@@ -9,12 +9,12 @@ arbitrary = { workspace = true, features = ["derive"] }
 frame-system = { workspace = true, features = ["default"] }
 libfuzzer-sys = { workspace = true }
 zeitgeist-primitives = { workspace = true, features = ["default"] }
-zrml-orderbook-v1 = { workspace = true, features = ["default", "mock"] }
+zrml-orderbook = { workspace = true, features = ["default", "mock"] }
 
 [package]
 authors = ["Automatically generated"]
 edition = "2021"
-name = "zrml-orderbook-v1-fuzz"
+name = "zrml-orderbook-fuzz"
 publish = false
 version = "0.0.0"
 
