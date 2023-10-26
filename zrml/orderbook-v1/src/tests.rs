@@ -148,11 +148,14 @@ fn it_fills_ask_orders_fully() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market);
+        Markets::<Runtime>::insert(market_id, market.clone());
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
+
+        let outcome_asset_amount = 100 * BASE;
+        let base_asset_amount = 500 * BASE;
         // Give some shares for Bob.
-        assert_ok!(Tokens::deposit(outcome_asset, &BOB, 100));
+        assert_ok!(AssetManager::deposit(outcome_asset, &BOB, outcome_asset_amount));
 
         // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::place_order(
@@ -160,17 +163,25 @@ fn it_fills_ask_orders_fully() {
             market_id,
             outcome_asset,
             OrderSide::Ask,
-            10,
-            50,
+            outcome_asset_amount,
+            base_asset_amount,
         ));
 
-        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
-        assert_eq!(reserved_bob, 10);
+        let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
+        assert_eq!(
+            reserved_bob,
+            outcome_asset_amount
+                - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
+        );
+
+        let market_creator_balance_before =
+            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
 
         let order_id = 0u128;
+        assert_ok!(AssetManager::deposit(market.base_asset, &ALICE, base_asset_amount));
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
 
-        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
@@ -178,22 +189,22 @@ fn it_fills_ask_orders_fully() {
                 order_id,
                 maker: BOB,
                 taker: ALICE,
-                filled: 50,
+                filled: 500 * BASE,
                 unfilled_outcome_asset_amount: 0,
                 unfilled_base_asset_amount: 0,
             }
             .into(),
         );
 
-        let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
-        let alice_shares = Tokens::free_balance(outcome_asset, &ALICE);
-        assert_eq!(alice_bal, BASE - 50);
-        assert_eq!(alice_shares, 10);
+        let alice_bal = AssetManager::free_balance(market.base_asset, &ALICE);
+        let alice_shares = AssetManager::free_balance(outcome_asset, &ALICE);
+        assert_eq!(alice_bal, INITIAL_BALANCE);
+        assert_eq!(alice_shares, 100 * BASE);
 
-        let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
-        let bob_shares = Tokens::free_balance(outcome_asset, &BOB);
-        assert_eq!(bob_bal, BASE + 50);
-        assert_eq!(bob_shares, 90);
+        let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
+        let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
+        assert_eq!(bob_bal, INITIAL_BALANCE + 500 * BASE);
+        assert_eq!(bob_shares, 90 * BASE);
     });
 }
 
