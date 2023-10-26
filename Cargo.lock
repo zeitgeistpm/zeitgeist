@@ -624,7 +624,7 @@ dependencies = [
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
- "zrml-orderbook-v1",
+ "zrml-orderbook",
  "zrml-parimutuel",
  "zrml-prediction-markets",
  "zrml-rikiddo",
@@ -14483,7 +14483,7 @@ dependencies = [
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
- "zrml-orderbook-v1",
+ "zrml-orderbook",
  "zrml-parimutuel",
  "zrml-prediction-markets",
  "zrml-rikiddo",
@@ -14653,7 +14653,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zrml-orderbook-v1"
+name = "zrml-orderbook"
 version = "0.4.1"
 dependencies = [
  "frame-benchmarking",
@@ -14671,18 +14671,18 @@ dependencies = [
  "test-case",
  "zeitgeist-primitives",
  "zrml-market-commons",
- "zrml-orderbook-v1",
+ "zrml-orderbook",
 ]
 
 [[package]]
-name = "zrml-orderbook-v1-fuzz"
+name = "zrml-orderbook-fuzz"
 version = "0.0.0"
 dependencies = [
  "arbitrary",
  "frame-system",
  "libfuzzer-sys",
  "zeitgeist-primitives",
- "zrml-orderbook-v1",
+ "zrml-orderbook",
 ]
 
 [[package]]
