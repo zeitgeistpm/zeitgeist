@@ -76,7 +76,15 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     resolved_outcome: None,
     status: MarketStatus::Disputed,
     scoring_rule: ScoringRule::CPMM,
-    bonds: MarketBonds { creation: None, oracle: None, outsider: None, dispute: None },
+    bonds: MarketBonds {
+        creation: None,
+        oracle: None,
+        outsider: None,
+        dispute: None,
+        close_dispute: None,
+        close_request: None,
+    },
+    early_close: None,
 };
 
 fn initialize_court() -> CourtId {

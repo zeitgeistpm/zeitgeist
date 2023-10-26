@@ -67,6 +67,7 @@ fn create_market<T: Config>(
         resolved_outcome: None,
         dispute_mechanism: None,
         bonds: Default::default(),
+        early_close: None,
     };
     let maybe_market_id = T::MarketCommons::push_market(market);
     maybe_market_id.unwrap()

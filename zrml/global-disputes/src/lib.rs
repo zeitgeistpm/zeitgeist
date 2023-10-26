@@ -85,6 +85,7 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const LOG_TARGET: &str = "runtime::zrml-global-disputes";
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -633,7 +634,8 @@ mod pallet {
                     }
                     None => {
                         log::warn!(
-                            "Global Disputes: Winner info is not found for market with id {:?}.",
+                            target: LOG_TARGET,
+                            "Winner info is not found for market with id {:?}.",
                             market_id
                         );
                         debug_assert!(false);
@@ -730,7 +732,8 @@ mod pallet {
                 }
             } else {
                 log::error!(
-                    "Global Disputes: There should be always at least one owner for a voting \
+                    target: LOG_TARGET,
+                    "There should be always at least one owner for a voting \
                      outcome. This can also happen if reward is smaller than owners_len."
                 );
                 debug_assert!(false);
@@ -837,7 +840,10 @@ mod pallet {
                             Self::update_winner(market_id, outcome, outcome_info.clone());
                             <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                         } else {
-                            log::error!("Global Disputes: Could not construct a bounded vector.");
+                            log::error!(
+                                target: LOG_TARGET,
+                                "Could not construct a bounded vector."
+                            );
                             debug_assert!(false);
                         }
                     }

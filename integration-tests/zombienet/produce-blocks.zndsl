@@ -1,0 +1,29 @@
+Description: Produce blocks test
+Network: ./produce-blocks.toml
+Creds: config
+
+# Tracing
+# alice: trace with traceID 94c1501a78a0d83c498cc92deec264d9 contains ["answer-chunk-request", "answer-chunk-request"]
+
+# metrics
+alice: reports node_roles is 4
+alice: reports sub_libp2p_is_major_syncing is 0
+
+# histogram
+alice: reports histogram polkadot_pvf_execution_time has at least 2 samples in buckets ["0.1", "0.25", "0.5", "+Inf"] within 100 seconds
+
+# logs
+bob: log line matches glob "*rted #1*" within 10 seconds
+bob: log line matches "Imported #[0-9]+" within 10 seconds
+
+# system events
+bob: system event contains "A candidate was included" within 20 seconds
+alice: system event matches glob "*was backed*" within 10 seconds
+
+#parachain tests
+alice: parachain 2101 is registered within 225 seconds
+alice: parachain 2101 block height is at least 10 within 200 seconds
+
+## test the block height - (or minus) finalised block
+alice: reports block height minus finalised block is lower than 10 within 20 seconds
+alice: reports block height - finalised block is lower than 10 within 20 seconds

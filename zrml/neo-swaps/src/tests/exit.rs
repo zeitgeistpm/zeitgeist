@@ -119,13 +119,7 @@ fn exit_destroys_pool() {
             alice_before[1] + amounts_out[1]
         );
         System::assert_last_event(
-            Event::PoolDestroyed {
-                who: ALICE,
-                market_id,
-                pool_shares_amount: liquidity,
-                amounts_out,
-            }
-            .into(),
+            Event::PoolDestroyed { who: ALICE, market_id, amounts_out }.into(),
         );
     });
 }

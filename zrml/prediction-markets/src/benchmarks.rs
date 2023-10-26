@@ -39,7 +39,10 @@ use sp_runtime::{
     Perbill,
 };
 use zeitgeist_primitives::{
-    constants::mock::{MaxSwapFee, MinWeight, BASE, MILLISECS_PER_BLOCK},
+    constants::mock::{
+        CloseEarlyProtectionTimeFramePeriod, CloseEarlyTimeFramePeriod, MaxSwapFee, MinWeight,
+        BASE, MILLISECS_PER_BLOCK,
+    },
     traits::{DisputeApi, Swaps},
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -1149,6 +1152,248 @@ benchmarks! {
     }: {
         let _ = <Pallet<T>>::process_subsidy_collecting_markets(current_block, current_time);
     }
+
+    schedule_early_close_as_authority {
+        let o in 0..63;
+        let n in 0..63;
+
+        let range_start: MomentOf<T> = 0u64.saturated_into();
+        let old_range_end: MomentOf<T> = 100_000_000_000u64.saturated_into();
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..old_range_end)),
+        )?;
+
+        for i in 0..o {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(old_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let now_time = <zrml_market_commons::Pallet::<T>>::now();
+        let new_range_end: MomentOf<T> = now_time + CloseEarlyProtectionTimeFramePeriod::get();
+
+        for i in 0..n {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(new_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let close_origin = T::CloseMarketEarlyOrigin::try_successful_origin().unwrap();
+        let call = Call::<T>::schedule_early_close { market_id };
+    }: { call.dispatch_bypass_filter(close_origin)? }
+
+    schedule_early_close_after_dispute {
+        let o in 0..63;
+        let n in 0..63;
+
+        let range_start: MomentOf<T> = 0u64.saturated_into();
+        let old_range_end: MomentOf<T> = 100_000_000_000u64.saturated_into();
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..old_range_end)),
+        )?;
+
+        for i in 0..o {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(old_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let now_time = <zrml_market_commons::Pallet::<T>>::now();
+        let new_range_end: MomentOf<T> = now_time + CloseEarlyProtectionTimeFramePeriod::get();
+
+        for i in 0..n {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(new_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        Pallet::<T>::schedule_early_close(
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id,
+        )?;
+
+        Pallet::<T>::dispute_early_close(
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id,
+        )?;
+
+        let close_origin = T::CloseMarketEarlyOrigin::try_successful_origin().unwrap();
+        let call = Call::<T>::schedule_early_close { market_id };
+    }: { call.dispatch_bypass_filter(close_origin)? }
+
+    schedule_early_close_as_market_creator {
+        let o in 0..63;
+        let n in 0..63;
+
+        let range_start: MomentOf<T> = 0u64.saturated_into();
+        let old_range_end: MomentOf<T> = 100_000_000_000u64.saturated_into();
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..old_range_end)),
+        )?;
+
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
+        let market_creator = market.creator.clone();
+
+        for i in 0..o {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(old_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let now_time = <zrml_market_commons::Pallet::<T>>::now();
+        let new_range_end: MomentOf<T> = now_time + CloseEarlyTimeFramePeriod::get();
+
+        for i in 0..n {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(new_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let origin = RawOrigin::Signed(market_creator).into();
+        let call = Call::<T>::schedule_early_close { market_id };
+    }: { call.dispatch_bypass_filter(origin)? }
+
+    dispute_early_close {
+        let o in 0..63;
+        let n in 0..63;
+
+        let range_start: MomentOf<T> = 0u64.saturated_into();
+        let old_range_end: MomentOf<T> = 100_000_000_000u64.saturated_into();
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..old_range_end)),
+        )?;
+
+        let market_creator = caller.clone();
+
+        Pallet::<T>::schedule_early_close(
+            RawOrigin::Signed(market_creator.clone()).into(),
+            market_id,
+        )?;
+
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
+        let new_range_end = match market.period {
+            MarketPeriod::Timestamp(range) => {
+                range.end
+            },
+            _ => {
+                return Err(frame_benchmarking::BenchmarkError::Stop(
+                          "MarketPeriod is block_number based"
+                        ));
+            },
+        };
+
+        for i in 0..o {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(old_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        for i in 0..n {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(new_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let origin = RawOrigin::Signed(market_creator).into();
+        let call = Call::<T>::dispute_early_close { market_id };
+    }: { call.dispatch_bypass_filter(origin)? }
+
+    reject_early_close_after_authority {
+        let o in 0..63;
+        let n in 0..63;
+
+        let range_start: MomentOf<T> = 0u64.saturated_into();
+        let old_range_end: MomentOf<T> = 100_000_000_000u64.saturated_into();
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..old_range_end)),
+        )?;
+
+        let market_creator = caller.clone();
+
+        let close_origin = T::CloseMarketEarlyOrigin::try_successful_origin().unwrap();
+        Pallet::<T>::schedule_early_close(
+            close_origin.clone(),
+            market_id,
+        )?;
+
+        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id)?;
+        let new_range_end = match market.period {
+            MarketPeriod::Timestamp(range) => {
+                range.end
+            },
+            _ => {
+                return Err(frame_benchmarking::BenchmarkError::Stop(
+                          "MarketPeriod is block_number based"
+                        ));
+            },
+        };
+
+        for i in 0..o {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(old_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        for i in 0..n {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(new_range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let call = Call::<T>::reject_early_close { market_id };
+    }: { call.dispatch_bypass_filter(close_origin)? }
+
+    reject_early_close_after_dispute {
+        let range_start: MomentOf<T> = 0u64.saturated_into();
+        let old_range_end: MomentOf<T> = 100_000_000_000u64.saturated_into();
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..old_range_end)),
+        )?;
+
+        let market_creator = caller.clone();
+
+        Pallet::<T>::schedule_early_close(
+            RawOrigin::Signed(market_creator.clone()).into(),
+            market_id,
+        )?;
+
+        Pallet::<T>::dispute_early_close(
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id,
+        )?;
+
+        let close_origin = T::CloseMarketEarlyOrigin::try_successful_origin().unwrap();
+
+        let call = Call::<T>::reject_early_close { market_id };
+    }: { call.dispatch_bypass_filter(close_origin)? }
 
     create_market_and_deploy_pool {
         let m in 0..63; // Number of markets closing on the same block.

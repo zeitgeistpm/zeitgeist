@@ -80,6 +80,10 @@ parameter_types! {
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
+    pub const CloseEarlyProtectionTimeFramePeriod: Moment = 3 * MILLISECS_PER_BLOCK as u64;
+    pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 3;
+    pub const CloseEarlyRequestBond: Balance = 5 * BASE;
+    pub const CloseEarlyDisputeBond: Balance = 10 * BASE;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const MaxCategories: u16 = 10;
@@ -88,7 +92,7 @@ parameter_types! {
     pub const MaxDisputes: u16 = 6;
     pub const MaxEditReasonLen: u32 = 1024;
     pub const MaxGracePeriod: BlockNumber = 20;
-    pub const MaxMarketLifetime: BlockNumber = 1_000_000;
+    pub const MaxMarketLifetime: BlockNumber = 100_000_000_000;
     pub const MaxOracleDuration: BlockNumber = 30;
     pub const MaxRejectReasonLen: u32 = 1024;
     // 2_678_400_000 = 31 days.
@@ -101,6 +105,8 @@ parameter_types! {
     pub const OracleBond: Balance = 50 * CENT;
     pub const OutsiderBond: Balance = 2 * OracleBond::get();
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const CloseEarlyBlockPeriod: BlockNumber = 6;
+    pub const CloseEarlyTimeFramePeriod: Moment = 6 * MILLISECS_PER_BLOCK as u64;
     pub const ValidityBond: Balance = 50 * CENT;
 }
 
