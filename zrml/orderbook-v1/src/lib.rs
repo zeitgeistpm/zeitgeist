@@ -39,7 +39,7 @@ use sp_runtime::{
     ArithmeticError, Perquintill, SaturatedConversion, Saturating,
 };
 use zeitgeist_primitives::{
-    traits::MarketCommonsPalletApi,
+    traits::{DistributeFees, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 
@@ -61,8 +61,16 @@ mod pallet {
         /// Shares of outcome assets and native currency
         type AssetManager: NamedMultiReservableCurrency<
                 Self::AccountId,
-                CurrencyId = Asset<MarketIdOf<Self>>,
+                CurrencyId = AssetOf<Self>,
                 ReserveIdentifier = [u8; 8],
+            >;
+
+        /// The way how fees are taken from the market base asset.
+        type ExternalFees: DistributeFees<
+                Asset = AssetOf<Self>,
+                AccountId = AccountIdOf<Self>,
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
             >;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -90,12 +98,13 @@ mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        Asset<MarketIdOf<T>>,
+        AssetOf<T>,
     >;
 
     #[pallet::pallet]
@@ -309,7 +318,16 @@ mod pallet {
                         BalanceStatus::Free,
                     )?;
 
-                    T::AssetManager::transfer(base_asset, &taker, &maker, maker_fill)?;
+                    let external_fees = T::ExternalFees::distribute(
+                        order_data.market_id,
+                        base_asset,
+                        &taker,
+                        maker_fill,
+                    );
+                    let maker_fill_minus_fees =
+                        maker_fill.checked_sub(&external_fees).ok_or(ArithmeticError::Underflow)?;
+
+                    T::AssetManager::transfer(base_asset, &taker, &maker, maker_fill_minus_fees)?;
 
                     order_data.outcome_asset_amount = order_data
                         .outcome_asset_amount
@@ -366,7 +384,7 @@ mod pallet {
         pub fn place_order(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            outcome_asset: Asset<MarketIdOf<T>>,
+            outcome_asset: AssetOf<T>,
             side: OrderSide,
             #[pallet::compact] outcome_asset_amount: BalanceOf<T>,
             #[pallet::compact] base_asset_amount: BalanceOf<T>,
@@ -386,34 +404,56 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
-            let order = Order {
-                market_id,
-                side: side.clone(),
-                maker: who.clone(),
-                outcome_asset,
-                base_asset,
-                outcome_asset_amount,
-                base_asset_amount,
-            };
+            let outcome_asset_amount_minus_fees = outcome_asset_amount
+                .saturating_sub(T::ExternalFees::get_fee(market_id, outcome_asset_amount));
 
-            match side {
+            let order = match side {
                 OrderSide::Bid => {
+                    let external_fees =
+                        T::ExternalFees::distribute(market_id, base_asset, &who, base_asset_amount);
+                    let base_asset_amount_minus_fees = base_asset_amount
+                        .checked_sub(&external_fees)
+                        .ok_or(ArithmeticError::Underflow)?;
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
                         base_asset,
                         &who,
-                        base_asset_amount,
+                        base_asset_amount_minus_fees,
                     )?;
+
+                    Order {
+                        market_id,
+                        side: side.clone(),
+                        maker: who.clone(),
+                        outcome_asset,
+                        base_asset,
+                        // maker requests outcome asset amount minus fees from taker(s)
+                        outcome_asset_amount: outcome_asset_amount_minus_fees,
+                        // only base_asset_amount_minus_fees left to repatriate
+                        base_asset_amount: base_asset_amount_minus_fees,
+                    }
                 }
                 OrderSide::Ask => {
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
                         outcome_asset,
                         &who,
-                        outcome_asset_amount,
+                        outcome_asset_amount_minus_fees,
                     )?;
+
+                    Order {
+                        market_id,
+                        side: side.clone(),
+                        maker: who.clone(),
+                        outcome_asset,
+                        base_asset,
+                        // only outcome_asset_amount_minus_fees left to repatriate
+                        outcome_asset_amount: outcome_asset_amount_minus_fees,
+                        // maker requests full base asset amount (no fees charged yet) from taker(s)
+                        base_asset_amount,
+                    }
                 }
-            }
+            };
 
             <Orders<T>>::insert(order_id, order.clone());
             <NextOrderId<T>>::put(next_order_id);
@@ -433,10 +473,7 @@ mod pallet {
             T::PalletId::get().0
         }
 
-        pub fn outcome_assets(
-            market_id: MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Vec<Asset<MarketIdOf<T>>> {
+        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();

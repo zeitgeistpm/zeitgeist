@@ -22,9 +22,11 @@ use frame_support::{
     traits::{Currency, ReservableCurrency},
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_runtime::Perbill;
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
+    traits::DistributeFees,
     types::{AccountIdTest, Asset, ScoringRule},
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
@@ -333,7 +335,10 @@ fn it_fills_ask_orders_partially() {
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
 
-        assert_ok!(Tokens::deposit(outcome_asset, &BOB, 2000));
+        let outcome_asset_amount = 100 * BASE;
+        let base_asset_amount = 500 * BASE;
+
+        assert_ok!(Tokens::deposit(outcome_asset, &BOB, outcome_asset_amount));
 
         // Make an order from Bob to sell outcome tokens.
         assert_ok!(Orderbook::place_order(
@@ -341,21 +346,46 @@ fn it_fills_ask_orders_partially() {
             market_id,
             outcome_asset,
             OrderSide::Ask,
-            1000,
-            5000,
+            outcome_asset_amount,
+            base_asset_amount,
         ));
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
-        assert_eq!(reserved_bob, 1000);
+        assert_eq!(
+            reserved_bob,
+            outcome_asset_amount
+                - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
+        );
 
         let order_id = 0u128;
-        assert_ok!(Tokens::deposit(market.base_asset, &ALICE, 5000));
+        let market_creator_free_balance_before =
+            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
 
-        // instead of buying 5000 of the base asset, Alice buys 700 shares
-        let portion = Some(700);
+        // instead of buying 500 of the base asset, Alice buys 70 shares
+        let alice_portion = 70 * BASE;
+        let portion = Some(alice_portion);
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
+        let market_creator_free_balance_after =
+            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
+        assert_eq!(
+            market_creator_free_balance_after - market_creator_free_balance_before,
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, 70 * BASE)
+        );
+
         let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let filled_outcome_asset_without_fees = 860_000_000_000;
+        assert_eq!(
+            filled_outcome_asset_without_fees,
+            outcome_asset_amount
+                - Perbill::from_rational(alice_portion, base_asset_amount)
+                    .mul_floor(outcome_asset_amount)
+        );
+        let filled_outcome_asset_amount = filled_outcome_asset_without_fees
+            - ExternalFees::<Runtime, FeeAccount>::get_fee(
+                market_id,
+                filled_outcome_asset_without_fees,
+            );
         assert_eq!(
             order,
             Order {
@@ -364,41 +394,52 @@ fn it_fills_ask_orders_partially() {
                 maker: BOB,
                 outcome_asset,
                 base_asset: Asset::Ztg,
-                // from 1000 to 860 changed (partially filled)
-                outcome_asset_amount: 860,
-                // from 5000 to 4300 changed (partially filled)
-                base_asset_amount: 4300,
+                // from 100 to 86 changed (partially filled) minus fees
+                outcome_asset_amount: filled_outcome_asset_amount,
+                // from 500 to 430 changed (partially filled)
+                base_asset_amount: base_asset_amount - alice_portion,
             }
         );
 
         let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
-        assert_eq!(reserved_bob, 860);
+        assert_eq!(reserved_bob, filled_outcome_asset_amount);
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
                 order_id,
                 maker: BOB,
                 taker: ALICE,
-                filled: 700,
-                unfilled_outcome_asset_amount: 860,
-                unfilled_base_asset_amount: 4300,
+                filled: alice_portion,
+                unfilled_outcome_asset_amount: filled_outcome_asset_amount,
+                unfilled_base_asset_amount: base_asset_amount - alice_portion,
             }
             .into(),
         );
 
-        let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
-        let alice_shares = Tokens::free_balance(outcome_asset, &ALICE);
-        assert_eq!(alice_bal, BASE - 700);
-        assert_eq!(alice_shares, 140);
+        let alice_bal = AssetManager::free_balance(Asset::Ztg, &ALICE);
+        let alice_shares = AssetManager::free_balance(outcome_asset, &ALICE);
+        assert_eq!(alice_bal, INITIAL_BALANCE - alice_portion);
+        assert_eq!(
+            alice_shares,
+            Perbill::from_rational(alice_portion, base_asset_amount).mul_floor(
+                outcome_asset_amount
+                    - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
+            )
+        );
+        assert_eq!(alice_shares, 138_600_000_000);
 
-        let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
-        let bob_shares = Tokens::free_balance(outcome_asset, &BOB);
-        assert_eq!(bob_bal, BASE + 700);
-        // ask order was adjusted from 1000 to 860, and bob had 2000 shares at start
-        assert_eq!(bob_shares, 1000);
+        let bob_bal = AssetManager::free_balance(Asset::Ztg, &BOB);
+        let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
+        let filled_minus_fees =
+            alice_portion - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, alice_portion);
+        assert_eq!(bob_bal, INITIAL_BALANCE + filled_minus_fees);
+        assert_eq!(
+            bob_shares,
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
+        );
 
-        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
-        assert_eq!(reserved_bob, 860);
+        let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
+        assert_eq!(reserved_bob, filled_outcome_asset_amount);
     });
 }
 

@@ -65,14 +65,17 @@ where
     type Balance = BalanceOf<T>;
     type MarketId = MarketIdOf<T>;
 
+    fn get_fee(_market_id: Self::MarketId, amount: Self::Balance) -> Self::Balance {
+        Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>())
+    }
+
     fn distribute(
         _market_id: Self::MarketId,
         asset: Self::Asset,
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees =
-            Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>());
+        let fees = Self::get_fee(_market_id, amount);
         let _ = T::AssetManager::transfer(asset, account, &F::get(), fees);
         fees
     }

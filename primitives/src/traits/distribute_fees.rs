@@ -22,6 +22,8 @@ pub trait DistributeFees {
     type Balance;
     type MarketId;
 
+    fn get_fee(market_id: Self::MarketId, amount: Self::Balance) -> Self::Balance;
+
     /// Deduct and distribute the swap fees of the pool from the specified amount and returns the
     /// deducted fees.
     ///
