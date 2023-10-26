@@ -1,4 +1,3 @@
-
 // Copyright 2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
