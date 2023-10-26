@@ -28,7 +28,7 @@ export ORML_WEIGHT_TEMPLATE="./misc/orml_weight_template.hbs"
 
 export ZEITGEIST_PALLETS=( 
     zrml_authorized zrml_court zrml_global_disputes zrml_liquidity_mining zrml_neo_swaps \
-    zrml_prediction_markets zrml_swaps zrml_styx \
+    zrml_orderbook zrml_parimutuel zrml_prediction_markets zrml_swaps zrml_styx \
 )
 export ZEITGEIST_PALLETS_RUNS="${ZEITGEIST_PALLETS_RUNS:-1000}"
 export ZEITGEIST_PALLETS_STEPS="${ZEITGEIST_PALLETS_STEPS:-10}"

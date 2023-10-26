@@ -11,7 +11,7 @@ default-members = [
     "zrml/liquidity-mining",
     "zrml/market-commons",
     "zrml/neo-swaps",
-    "zrml/orderbook-v1",
+    "zrml/orderbook",
     "zrml/parimutuel",
     "zrml/prediction-markets",
     "zrml/prediction-markets/runtime-api",
@@ -34,8 +34,8 @@ members = [
     "zrml/liquidity-mining",
     "zrml/market-commons",
     "zrml/neo-swaps",
-    "zrml/orderbook-v1",
-    "zrml/orderbook-v1/fuzz",
+    "zrml/orderbook",
+    "zrml/orderbook/fuzz",
     "zrml/parimutuel",
     "zrml/prediction-markets",
     "zrml/prediction-markets/fuzz",
@@ -234,7 +234,7 @@ zrml-global-disputes = { path = "zrml/global-disputes", default-features = false
 zrml-liquidity-mining = { path = "zrml/liquidity-mining", default-features = false }
 zrml-market-commons = { path = "zrml/market-commons", default-features = false }
 zrml-neo-swaps = { path = "zrml/neo-swaps", default-features = false }
-zrml-orderbook-v1 = { path = "zrml/orderbook-v1", default-features = false }
+zrml-orderbook = { path = "zrml/orderbook", default-features = false }
 zrml-parimutuel = { path = "zrml/parimutuel", default-features = false }
 zrml-prediction-markets = { path = "zrml/prediction-markets", default-features = false }
 zrml-prediction-markets-runtime-api = { path = "zrml/prediction-markets/runtime-api", default-features = false }
