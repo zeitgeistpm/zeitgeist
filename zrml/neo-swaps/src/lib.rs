@@ -127,7 +127,8 @@ mod pallet {
     where
         T: Config,
     {
-        /// Informant bought a position.
+        /// Informant bought a position. `amount_in` is the amount of collateral paid by `who`,
+        /// including swap and external fees.
         BuyExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -137,7 +138,8 @@ mod pallet {
             swap_fee_amount: BalanceOf<T>,
             external_fee_amount: BalanceOf<T>,
         },
-        /// Informant sold a position.
+        /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
+        /// including swap and external fees.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -169,15 +171,17 @@ mod pallet {
         PoolDeployed {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
-            pool_shares_amount: BalanceOf<T>,
-            amounts_in: Vec<BalanceOf<T>>,
+            account_id: T::AccountId,
+            reserves: BTreeMap<AssetOf<T>, BalanceOf<T>>,
+            collateral: AssetOf<T>,
             liquidity_parameter: BalanceOf<T>,
+            pool_shares_amount: BalanceOf<T>,
+            swap_fee: BalanceOf<T>,
         },
         /// Pool was destroyed.
         PoolDestroyed {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
-            pool_shares_amount: BalanceOf<T>,
             amounts_out: Vec<BalanceOf<T>>,
         },
     }
@@ -680,7 +684,6 @@ mod pallet {
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
                         market_id,
-                        pool_shares_amount,
                         amounts_out,
                     });
                 } else {
@@ -768,10 +771,11 @@ mod pallet {
                 T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
                 let _ = reserves.insert(asset, amount_in);
             }
+            let collateral = market.base_asset;
             let pool = Pool {
-                account_id: pool_account_id,
-                reserves,
-                collateral: market.base_asset,
+                account_id: pool_account_id.clone(),
+                reserves: reserves.clone(),
+                collateral,
                 liquidity_parameter,
                 liquidity_shares_manager: SoloLp::new(who.clone(), amount),
                 swap_fee,
@@ -782,15 +786,18 @@ mod pallet {
                 pool.collateral,
                 &who,
                 &pool.account_id,
-                T::MultiCurrency::minimum_balance(pool.collateral),
+                T::MultiCurrency::minimum_balance(collateral),
             )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
                 market_id,
-                pool_shares_amount: amount,
-                amounts_in,
+                account_id: pool_account_id,
+                reserves,
+                collateral,
                 liquidity_parameter,
+                pool_shares_amount: amount,
+                swap_fee,
             });
             Ok(())
         }
