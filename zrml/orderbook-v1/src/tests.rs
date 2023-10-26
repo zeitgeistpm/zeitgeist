@@ -22,7 +22,7 @@ use frame_support::{
     traits::{Currency, ReservableCurrency},
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::Perbill;
+use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -168,11 +168,9 @@ fn it_fills_ask_orders_fully() {
         ));
 
         let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
-        assert_eq!(
-            reserved_bob,
-            outcome_asset_amount
-                - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
-        );
+        let outcome_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
+        assert_eq!(reserved_bob, outcome_asset_amount - outcome_asset_fees);
 
         let market_creator_balance_before =
             AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
@@ -180,6 +178,12 @@ fn it_fills_ask_orders_fully() {
         let order_id = 0u128;
         assert_ok!(AssetManager::deposit(market.base_asset, &ALICE, base_asset_amount));
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
+
+        let market_creator_balance_after =
+            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
+        let base_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, base_asset_amount);
+        assert_eq!(market_creator_balance_after - market_creator_balance_before, base_asset_fees);
 
         let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
@@ -189,7 +193,7 @@ fn it_fills_ask_orders_fully() {
                 order_id,
                 maker: BOB,
                 taker: ALICE,
-                filled: 500 * BASE,
+                filled: base_asset_amount,
                 unfilled_outcome_asset_amount: 0,
                 unfilled_base_asset_amount: 0,
             }
@@ -199,12 +203,14 @@ fn it_fills_ask_orders_fully() {
         let alice_bal = AssetManager::free_balance(market.base_asset, &ALICE);
         let alice_shares = AssetManager::free_balance(outcome_asset, &ALICE);
         assert_eq!(alice_bal, INITIAL_BALANCE);
-        assert_eq!(alice_shares, 100 * BASE);
+
+        let filled_minus_fees = outcome_asset_amount - outcome_asset_fees;
+        assert_eq!(alice_shares, filled_minus_fees);
 
         let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
         let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
-        assert_eq!(bob_bal, INITIAL_BALANCE + 500 * BASE);
-        assert_eq!(bob_shares, 90 * BASE);
+        assert_eq!(bob_bal, INITIAL_BALANCE + base_asset_amount - base_asset_fees);
+        assert_eq!(bob_shares, outcome_asset_fees);
     });
 }
 
@@ -266,9 +272,14 @@ fn it_fills_bid_orders_partially() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market);
+        Markets::<Runtime>::insert(market_id, market.clone());
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
+
+        let outcome_asset_amount = 100 * BASE;
+        let base_asset_amount = 500 * BASE;
+
+        assert_ok!(AssetManager::deposit(market.base_asset, &BOB, base_asset_amount));
 
         // Make an order from Bob to buy outcome tokens.
         assert_ok!(Orderbook::place_order(
@@ -276,21 +287,35 @@ fn it_fills_bid_orders_partially() {
             market_id,
             outcome_asset,
             OrderSide::Bid,
-            1000,
-            5000,
+            outcome_asset_amount,
+            base_asset_amount,
         ));
 
-        let reserved_bob = Balances::reserved_balance(BOB);
-        assert_eq!(reserved_bob, 5000);
+        let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
+        let base_asset_fees = ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, 500 * BASE);
+        assert_eq!(reserved_bob, base_asset_amount - base_asset_fees);
 
         let order_id = 0u128;
-        assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 1000));
+        assert_ok!(AssetManager::deposit(outcome_asset, &ALICE, outcome_asset_amount));
 
-        // instead of selling 1000 shares, Alice sells 700 shares
-        let portion = Some(700);
+        // instead of selling 100 shares, Alice sells 70 shares
+        let alice_portion = 70 * BASE;
+        let alice_shares_left = outcome_asset_amount - alice_portion;
+        let portion = Some(alice_portion);
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
         let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let outcome_asset_amount_minus_fees = outcome_asset_amount
+            - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
+        let unfilled_outcome_asset_amount_minus_fees =
+            outcome_asset_amount_minus_fees - alice_portion;
+
+        let base_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, base_asset_amount);
+        let base_asset_amount_minus_fees = base_asset_amount - base_asset_fees;
+        let unfilled_base_asset_amount_minus_fees = base_asset_amount_minus_fees
+            - Perquintill::from_rational(alice_portion, outcome_asset_amount_minus_fees)
+                .mul_floor(base_asset_amount_minus_fees);
         assert_eq!(
             order,
             Order {
@@ -298,42 +323,45 @@ fn it_fills_bid_orders_partially() {
                 side: OrderSide::Bid,
                 maker: BOB,
                 outcome_asset,
-                base_asset: Asset::Ztg,
-                // from 1000 to 300 changed (partially filled)
-                outcome_asset_amount: 300,
-                base_asset_amount: 1500,
+                base_asset: market.base_asset,
+                // from 100 to 30 changed (partially filled) minus fees
+                outcome_asset_amount: unfilled_outcome_asset_amount_minus_fees,
+                base_asset_amount: unfilled_base_asset_amount_minus_fees,
             }
         );
 
-        let reserved_bob = Balances::reserved_balance(BOB);
-        // 5000 - (700 shares * 500 price) = 1500
-        assert_eq!(reserved_bob, 1500);
+        let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
+        // 500 - (70 shares * 50 price) = 150 and then minus fees
+        assert_eq!(reserved_bob, unfilled_base_asset_amount_minus_fees);
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
                 order_id,
                 maker: BOB,
                 taker: ALICE,
-                filled: 700,
-                unfilled_outcome_asset_amount: 300,
-                unfilled_base_asset_amount: 1500,
+                filled: alice_portion,
+                unfilled_outcome_asset_amount: unfilled_outcome_asset_amount_minus_fees,
+                unfilled_base_asset_amount: unfilled_base_asset_amount_minus_fees,
             }
             .into(),
         );
 
-        let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
-        let alice_shares = Tokens::free_balance(outcome_asset, &ALICE);
-        assert_eq!(alice_bal, BASE + 3500);
-        assert_eq!(alice_shares, 300);
+        let alice_bal = AssetManager::free_balance(market.base_asset, &ALICE);
+        let alice_shares = AssetManager::free_balance(outcome_asset, &ALICE);
+        let filled_base_asset_amount =
+            Perquintill::from_rational(alice_portion, outcome_asset_amount)
+                .mul_floor(base_asset_amount);
+        assert_eq!(alice_bal, INITIAL_BALANCE + filled_base_asset_amount - 1);
+        assert_eq!(alice_shares, alice_shares_left);
 
-        let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
-        let bob_shares = Tokens::free_balance(outcome_asset, &BOB);
-        // 3500 of base_asset lost, 1500 of base_asset reserved
-        assert_eq!(bob_bal, BASE - 5000);
-        assert_eq!(bob_shares, 700);
+        let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
+        let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
+        // 350 of base_asset lost, 150 of base_asset reserved
+        assert_eq!(bob_bal, 0);
+        assert_eq!(bob_shares, 70 * BASE);
 
-        let reserved_bob = Balances::reserved_balance(BOB);
-        assert_eq!(reserved_bob, 1500);
+        let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
+        assert_eq!(reserved_bob, 150 * BASE);
     });
 }
 
