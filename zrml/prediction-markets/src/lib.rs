@@ -19,6 +19,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
+#![recursion_limit = "256"]
 
 extern crate alloc;
 
@@ -66,10 +67,10 @@ mod pallet {
             DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
         },
         types::{
-            Asset, Bond, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
-            MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash,
-            OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
+            MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+            MarketType, MultiHash, OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo,
+            ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
@@ -1354,6 +1355,338 @@ mod pallet {
             T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
             Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
         }
+
+        /// Allows the `CloseMarketsEarlyOrigin` or the market creator to schedule an early close.
+        ///
+        /// The market creator schedules it `now + EarlyClose...Period` in the future.
+        /// This is to allow enough time for a potential dispute.
+        /// The market creator reserves a `CloseEarlyDisputeBond`, which is returned,
+        /// if the `CloseMarketsEarlyOrigin` decides to accept the early close request
+        /// or if it is not disputed.
+        /// It is slashed, if the early close request is disputed
+        /// and the `CloseMarketsEarlyOrigin` decides to reject the early close.
+        /// The `CloseMarketsEarlyOrigin` (or root) can schedule it `now + CloseProtection...Period`
+        /// in the future. This is to prevent fat finger mistakes.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the maximum number of market ids
+        /// in `MarketIdsPerClose...` either at the old period end or new period end.
+        #[pallet::call_index(18)]
+        #[pallet::weight(
+            T::WeightInfo::schedule_early_close_as_authority(CacheSize::get(), CacheSize::get())
+                .max(T::WeightInfo::schedule_early_close_after_dispute(
+                    CacheSize::get(),
+                    CacheSize::get(),
+                ))
+                .max(T::WeightInfo::schedule_early_close_as_market_creator(
+                    CacheSize::get(),
+                    CacheSize::get(),
+                ))
+        )]
+        #[transactional]
+        pub fn schedule_early_close(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let is_authorized = T::CloseMarketEarlyOrigin::try_origin(origin.clone()).is_ok();
+            let (market, market_creator) = if !is_authorized {
+                // check if market creator below
+                let who = ensure_signed(origin)?;
+                let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+                ensure!(market.creator == who, Error::<T>::RequesterNotCreator);
+                (market, Some(who))
+            } else {
+                let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+                (market, None)
+            };
+
+            Self::ensure_market_is_active(&market)?;
+            let now_block = <frame_system::Pallet<T>>::block_number();
+            let now_time = <zrml_market_commons::Pallet<T>>::now();
+
+            let get_new_period = |block_period,
+                                  time_frame_period|
+             -> Result<
+                MarketPeriod<T::BlockNumber, MomentOf<T>>,
+                DispatchError,
+            > {
+                match &market.period {
+                    MarketPeriod::Block(range) => {
+                        let close_time = now_block.saturating_add(block_period);
+                        ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
+                        Ok(MarketPeriod::Block(range.start..close_time))
+                    }
+                    MarketPeriod::Timestamp(range) => {
+                        let close_time = now_time.saturating_add(time_frame_period);
+                        ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
+                        Ok(MarketPeriod::Timestamp(range.start..close_time))
+                    }
+                }
+            };
+            let new_period = if let Some(p) = &market.early_close {
+                ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
+
+                match p.state {
+                    // in these case the market period got already reset to the old period
+                    EarlyCloseState::Disputed => {
+                        if Self::is_close_dispute_bond_pending(&market_id, &market, false) {
+                            Self::repatriate_close_dispute_bond(&market_id, &market.creator)?;
+                        }
+                        if Self::is_close_request_bond_pending(&market_id, &market, false) {
+                            Self::unreserve_close_request_bond(&market_id)?;
+                        }
+                    }
+                    EarlyCloseState::Rejected => {}
+                    EarlyCloseState::ScheduledAsMarketCreator
+                    | EarlyCloseState::ScheduledAsOther => {
+                        return Err(Error::<T>::InvalidEarlyCloseState.into());
+                    }
+                }
+
+                get_new_period(
+                    T::CloseEarlyProtectionBlockPeriod::get(),
+                    T::CloseEarlyProtectionTimeFramePeriod::get(),
+                )?
+            } else {
+                let (block_period, time_frame_period) = if is_authorized {
+                    // fat finger protection
+                    (
+                        T::CloseEarlyProtectionBlockPeriod::get(),
+                        T::CloseEarlyProtectionTimeFramePeriod::get(),
+                    )
+                } else {
+                    let market_creator = market_creator.ok_or(Error::<T>::RequesterNotCreator)?;
+                    let close_request_bond = T::CloseEarlyRequestBond::get();
+
+                    T::AssetManager::reserve_named(
+                        &Self::reserve_id(),
+                        Asset::Ztg,
+                        &market_creator,
+                        close_request_bond,
+                    )?;
+
+                    <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                        market.bonds.close_request =
+                            Some(Bond::new(market_creator, close_request_bond));
+                        Ok(())
+                    })?;
+
+                    (T::CloseEarlyBlockPeriod::get(), T::CloseEarlyTimeFramePeriod::get())
+                };
+
+                get_new_period(block_period, time_frame_period)?
+            };
+
+            let ids_len_0 = Self::clear_auto_close(&market_id)?;
+
+            let state = if is_authorized {
+                EarlyCloseState::ScheduledAsOther
+            } else {
+                EarlyCloseState::ScheduledAsMarketCreator
+            };
+
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                let old_market_period = market.period.clone();
+                market.period = new_period.clone();
+                let early_close = EarlyClose {
+                    old: old_market_period,
+                    new: new_period.clone(),
+                    state: state.clone(),
+                };
+                market.early_close = Some(early_close);
+                Ok(())
+            })?;
+
+            // important to do this after the market period is mutated
+            let ids_len_1 = Self::insert_auto_close(&market_id)?;
+
+            let weight = match &market.early_close {
+                None => {
+                    if is_authorized {
+                        T::WeightInfo::schedule_early_close_as_authority(ids_len_0, ids_len_1)
+                    } else {
+                        T::WeightInfo::schedule_early_close_as_market_creator(ids_len_0, ids_len_1)
+                    }
+                }
+                Some(_) => T::WeightInfo::schedule_early_close_after_dispute(ids_len_0, ids_len_1),
+            };
+
+            Self::deposit_event(Event::MarketEarlyCloseScheduled { market_id, new_period, state });
+
+            Ok(Some(weight).into())
+        }
+
+        /// Allows anyone to dispute a scheduled early close.
+        ///
+        /// The market period is reset to the original (old) period.
+        /// A `CloseEarlyDisputeBond` is reserved, which is returned,
+        /// if the `CloseMarketsEarlyOrigin` decides to reject
+        /// the early close request of the market creator or
+        /// if the `CloseMarketsEarlyOrigin` is inactive.
+        /// It is slashed, if the `CloseMarketsEarlyOrigin` decides to schedule the early close.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the maximum number of market ids
+        /// in `MarketIdsPerClose...` either at the old period end or new period end.
+        #[pallet::call_index(19)]
+        #[pallet::weight(T::WeightInfo::dispute_early_close(CacheSize::get(), CacheSize::get()))]
+        #[transactional]
+        pub fn dispute_early_close(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            Self::ensure_market_is_active(&market)?;
+            let mut early_close = market.early_close.ok_or(Error::<T>::NoEarlyCloseScheduled)?;
+            match early_close.state {
+                EarlyCloseState::ScheduledAsMarketCreator => (),
+                EarlyCloseState::ScheduledAsOther
+                | EarlyCloseState::Disputed
+                | EarlyCloseState::Rejected => {
+                    return Err(Error::<T>::InvalidEarlyCloseState.into());
+                }
+            };
+
+            // ensure we don't dispute if the old market period is already over
+            // so that we don't switch back to an invalid market period
+            // this should never trigger, because at the time of scheduling a new market period,
+            // we ensure the new end is always before the old end
+            let is_expired = match early_close.old {
+                MarketPeriod::Block(ref range) => {
+                    let now_block = <frame_system::Pallet<T>>::block_number();
+                    range.end <= now_block
+                }
+                MarketPeriod::Timestamp(ref range) => {
+                    let now_time = <zrml_market_commons::Pallet<T>>::now();
+                    range.end <= now_time
+                }
+            };
+            if is_expired {
+                log::debug!(
+                    "This will never happen, because schedule_early_close ensures that the new \
+                     end is always before the old end, otherwise the switch to an old market \
+                     period would lead to a never ending market! Market id: {:?}.",
+                    market_id
+                );
+                debug_assert!(false);
+            }
+
+            let close_dispute_bond = T::CloseEarlyDisputeBond::get();
+
+            T::AssetManager::reserve_named(
+                &Self::reserve_id(),
+                Asset::Ztg,
+                &who,
+                close_dispute_bond,
+            )?;
+
+            let ids_len_0 = Self::clear_auto_close(&market_id)?;
+
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                market.period = early_close.old.clone();
+                market.bonds.close_dispute = Some(Bond::new(who.clone(), close_dispute_bond));
+                early_close.state = EarlyCloseState::Disputed;
+                market.early_close = Some(early_close);
+                Ok(())
+            })?;
+
+            // important to do this after the market period is mutated
+            let ids_len_1 = Self::insert_auto_close(&market_id)?;
+
+            Self::deposit_event(Event::MarketEarlyCloseDisputed { market_id });
+
+            Ok(Some(T::WeightInfo::dispute_early_close(ids_len_0, ids_len_1)).into())
+        }
+
+        /// Allows the `CloseMarketsEarlyOrigin` to reject a scheduled early close.
+        ///
+        /// The market period is reset to the original (old) period
+        /// in case it was scheduled before (fat-finger protection).
+        ///
+        /// The disputant gets back the `CloseEarlyDisputeBond`
+        /// and receives the market creators `CloseEarlyRequestBond`.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the maximum number of market ids
+        /// in `MarketIdsPerClose...` either at the old period end or new period end.
+        #[pallet::call_index(20)]
+        #[pallet::weight(
+            T::WeightInfo::reject_early_close_after_authority(CacheSize::get(), CacheSize::get())
+                .max(T::WeightInfo::reject_early_close_after_dispute())
+        )]
+        #[transactional]
+        pub fn reject_early_close(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            T::CloseMarketEarlyOrigin::ensure_origin(origin)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            Self::ensure_market_is_active(&market)?;
+            let mut early_close = market.early_close.ok_or(Error::<T>::NoEarlyCloseScheduled)?;
+            let weight = match early_close.state {
+                // market period got already reset inside `dispute_early_close`
+                EarlyCloseState::Disputed => T::WeightInfo::reject_early_close_after_dispute(),
+                EarlyCloseState::ScheduledAsOther => {
+                    // ensure we don't reject if the old market period is already over
+                    // so that we don't switch back to an invalid market period
+                    let is_expired = match early_close.old {
+                        MarketPeriod::Block(ref range) => {
+                            let now_block = <frame_system::Pallet<T>>::block_number();
+                            range.end <= now_block
+                        }
+                        MarketPeriod::Timestamp(ref range) => {
+                            let now_time = <zrml_market_commons::Pallet<T>>::now();
+                            range.end <= now_time
+                        }
+                    };
+                    if is_expired {
+                        log::debug!(
+                            "This will never happen, because schedule_early_close ensures that \
+                             the new end is always before the old end, 
+                    otherwise the switch to an old market period would lead to a never ending \
+                             market! Market id: {:?}.",
+                            market_id
+                        );
+                        debug_assert!(false);
+                    }
+
+                    let ids_len_0 = Self::clear_auto_close(&market_id)?;
+
+                    <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                        market.period = early_close.old.clone();
+                        Ok(())
+                    })?;
+
+                    // important to do this after the market period is mutated
+                    let ids_len_1 = Self::insert_auto_close(&market_id)?;
+
+                    T::WeightInfo::reject_early_close_after_authority(ids_len_0, ids_len_1)
+                }
+                EarlyCloseState::ScheduledAsMarketCreator | EarlyCloseState::Rejected => {
+                    return Err(Error::<T>::InvalidEarlyCloseState.into());
+                }
+            };
+
+            if let Some(disputor_bond) = market.bonds.close_dispute.as_ref() {
+                let close_disputor = &disputor_bond.who;
+                Self::repatriate_close_request_bond(&market_id, close_disputor)?;
+                Self::unreserve_close_dispute_bond(&market_id)?;
+            }
+
+            <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
+                early_close.state = EarlyCloseState::Rejected;
+                market.early_close = Some(early_close);
+                Ok(())
+            })?;
+
+            Self::deposit_event(Event::MarketEarlyCloseRejected { market_id });
+
+            Ok(Some(weight).into())
+        }
     }
 
     #[pallet::config]
@@ -1396,6 +1729,14 @@ mod pallet {
                 Origin = Self::RuntimeOrigin,
             >;
 
+        /// The base amount of currency that must be bonded
+        /// by the disputant in order to dispute an early market closure of the market creator.
+        #[pallet::constant]
+        type CloseEarlyDisputeBond: Get<BalanceOf<Self>>;
+
+        /// The origin that is allowed to close markets early.
+        type CloseMarketEarlyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
         type Currency: NamedReservableCurrency<
                 Self::AccountId,
                 ReserveIdentifier = [u8; 8],
@@ -1404,6 +1745,21 @@ mod pallet {
 
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        /// The milliseconds to wait for the `CloseMarketsEarlyOrigin`
+        /// before the early market close actually happens (fat-finger protection).
+        #[pallet::constant]
+        type CloseEarlyProtectionTimeFramePeriod: Get<MomentOf<Self>>;
+
+        /// The block time to wait for the `CloseMarketsEarlyOrigin`
+        /// before the early market close actually happens (fat-finger protection).
+        #[pallet::constant]
+        type CloseEarlyProtectionBlockPeriod: Get<Self::BlockNumber>;
+
+        /// The base amount of currency that must be bonded
+        /// by the market creator in order to schedule an early market closure.
+        #[pallet::constant]
+        type CloseEarlyRequestBond: Get<BalanceOf<Self>>;
 
         /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
@@ -1515,6 +1871,16 @@ mod pallet {
         /// The module identifier.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
+
+        /// The block time to wait for the market creator
+        /// before the early market close actually happens.
+        #[pallet::constant]
+        type CloseEarlyBlockPeriod: Get<Self::BlockNumber>;
+
+        /// The milliseconds to wait for the market creator
+        /// before the early market close actually happens.
+        #[pallet::constant]
+        type CloseEarlyTimeFramePeriod: Get<MomentOf<Self>>;
 
         /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -1661,6 +2027,17 @@ mod pallet {
         FeeTooHigh,
         /// The resolution mechanism resulting from the scoring rule is not supported.
         InvalidResolutionMechanism,
+        /// The early market close operation was not requested by the market creator.
+        RequesterNotCreator,
+        /// The early close would be scheduled after the original market period end.
+        EarlyCloseRequestTooLate,
+        /// This early close state is not valid.
+        InvalidEarlyCloseState,
+        /// There is no early close scheduled.
+        NoEarlyCloseScheduled,
+        /// After there was an early close already scheduled,
+        /// only the `CloseMarketsEarlyOrigin` can schedule another one.
+        OnlyAuthorizedCanScheduleEarlyClose,
     }
 
     #[pallet::event]
@@ -1686,6 +2063,16 @@ mod pallet {
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed. \[market_id\]
         MarketClosed(MarketIdOf<T>),
+        /// A market has been scheduled to close early.
+        MarketEarlyCloseScheduled {
+            market_id: MarketIdOf<T>,
+            new_period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            state: EarlyCloseState,
+        },
+        /// A market early close request has been disputed.
+        MarketEarlyCloseDisputed { market_id: MarketIdOf<T> },
+        /// A market early close request has been rejected.
+        MarketEarlyCloseRejected { market_id: MarketIdOf<T> },
         /// A market has been disputed \[market_id, new_market_status, disputant\]
         MarketDisputed(MarketIdOf<T>, MarketStatus, AccountIdOf<T>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
@@ -1933,15 +2320,21 @@ mod pallet {
         impl_unreserve_bond!(unreserve_creation_bond, creation);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
         impl_unreserve_bond!(unreserve_outsider_bond, outsider);
+        impl_unreserve_bond!(unreserve_close_request_bond, close_request);
+        impl_unreserve_bond!(unreserve_close_dispute_bond, close_dispute);
         impl_unreserve_bond!(unreserve_dispute_bond, dispute);
         impl_slash_bond!(slash_creation_bond, creation);
         impl_slash_bond!(slash_oracle_bond, oracle);
         impl_slash_bond!(slash_outsider_bond, outsider);
         impl_slash_bond!(slash_dispute_bond, dispute);
         impl_repatriate_bond!(repatriate_oracle_bond, oracle);
+        impl_repatriate_bond!(repatriate_close_request_bond, close_request);
+        impl_repatriate_bond!(repatriate_close_dispute_bond, close_dispute);
         impl_is_bond_pending!(is_creation_bond_pending, creation);
         impl_is_bond_pending!(is_oracle_bond_pending, oracle);
         impl_is_bond_pending!(is_outsider_bond_pending, outsider);
+        impl_is_bond_pending!(is_close_dispute_bond_pending, close_dispute);
+        impl_is_bond_pending!(is_close_request_bond_pending, close_request);
         impl_is_bond_pending!(is_dispute_bond_pending, dispute);
 
         #[require_transactional]
@@ -2432,6 +2825,29 @@ mod pallet {
         pub(crate) fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
+
+                if let Some(p) = &market.early_close {
+                    match p.state {
+                        EarlyCloseState::ScheduledAsMarketCreator => {
+                            if Self::is_close_request_bond_pending(market_id, market, false) {
+                                Self::unreserve_close_request_bond(market_id)?;
+                            }
+                        }
+                        EarlyCloseState::Disputed => {
+                            // this is the case that the original close happened,
+                            // although requested early close or disputed
+                            // there was no decision made via `reject` or `approve`
+                            if Self::is_close_dispute_bond_pending(market_id, market, false) {
+                                Self::unreserve_close_dispute_bond(market_id)?;
+                            }
+                            if Self::is_close_request_bond_pending(market_id, market, false) {
+                                Self::unreserve_close_request_bond(market_id)?;
+                            }
+                        }
+                        EarlyCloseState::ScheduledAsOther | EarlyCloseState::Rejected => {}
+                    }
+                }
+
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
@@ -3072,6 +3488,7 @@ mod pallet {
                 status,
                 scoring_rule,
                 bonds,
+                early_close: None,
             })
         }
 
