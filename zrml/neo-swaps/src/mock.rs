@@ -45,18 +45,21 @@ use zeitgeist_primitives::types::Asset;
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
-        BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId,
-        ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
-        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCourtParticipants, MaxCreatorFee,
-        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxInRatio, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond,
-        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod,
+        CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
+        CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, CloseEarlyTimeFramePeriod,
+        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
+        InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
+        MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
+        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxLocks,
+        MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
+        MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
+        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
+        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId,
+        VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
     traits::{DeployPoolApi, DistributeFees},
     types::{
@@ -220,6 +223,13 @@ impl zrml_prediction_markets::Config for Runtime {
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
+    type CloseEarlyBlockPeriod = CloseEarlyBlockPeriod;
+    type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
+    type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
+    type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
+    type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
+    type CloseEarlyRequestBond = CloseEarlyRequestBond;
+    type CloseMarketEarlyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
     type Currency = Balances;

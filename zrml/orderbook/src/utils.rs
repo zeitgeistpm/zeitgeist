@@ -56,5 +56,6 @@ where
         scoring_rule: ScoringRule::Orderbook,
         status: MarketStatus::Active,
         bonds: Default::default(),
+        early_close: None,
     }
 }

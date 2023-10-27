@@ -41,18 +41,21 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
-        BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CorrectionPeriod, CourtPalletId,
-        ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
-        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories, MaxCourtParticipants,
-        MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
-        MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
-        MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
-        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
-        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond,
-        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod,
+        CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
+        CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, CloseEarlyTimeFramePeriod,
+        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
+        InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
+        MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
+        MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio,
+        MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
+        MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
+        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -187,6 +190,11 @@ impl crate::Config for Runtime {
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
+    type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
+    type CloseMarketEarlyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
+    type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
+    type CloseEarlyRequestBond = CloseEarlyRequestBond;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Currency = Balances;
     type MaxCreatorFee = MaxCreatorFee;
@@ -213,6 +221,8 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
+    type CloseEarlyBlockPeriod = CloseEarlyBlockPeriod;
+    type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;

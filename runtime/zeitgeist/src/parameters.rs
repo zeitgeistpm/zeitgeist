@@ -203,6 +203,16 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 200 * BASE;
     /// The percentage of the advisory bond that gets slashed when a market is rejected.
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
+    /// (Slashable) Bond that is provided for disputing an early market close by the market creator.
+    pub const CloseEarlyDisputeBond: Balance = 2_000 * BASE;
+    // Fat-finger protection for the advisory committe to reject
+    // the early market schedule.
+    pub const CloseEarlyProtectionTimeFramePeriod: Moment = CloseEarlyProtectionBlockPeriod::get() * MILLISECS_PER_BLOCK as u64;
+    // Fat-finger protection for the advisory committe to reject
+    // the early market schedule.
+    pub const CloseEarlyProtectionBlockPeriod: BlockNumber = 12 * BLOCKS_PER_HOUR;
+    /// (Slashable) Bond that is provided for scheduling an early market close.
+    pub const CloseEarlyRequestBond: Balance = 2_000 * BASE;
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Unreserved in case the dispute was justified otherwise slashed.
     /// This is when the resolved outcome is different to the default (reported) outcome.
@@ -248,6 +258,12 @@ parameter_types! {
     pub const OutsiderBond: Balance = 2 * OracleBond::get();
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
+    // Waiting time for market creator to close
+    // the market after an early close schedule.
+    pub const CloseEarlyBlockPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+    // Waiting time for market creator to close
+    // the market after an early close schedule.
+    pub const CloseEarlyTimeFramePeriod: Moment = CloseEarlyBlockPeriod::get() * MILLISECS_PER_BLOCK as u64;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
