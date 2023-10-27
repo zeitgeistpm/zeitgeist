@@ -81,6 +81,12 @@ pub trait WeightInfoZeitgeist {
     fn market_resolution_manager(r: u32, d: u32) -> Weight;
     fn process_subsidy_collecting_markets_dummy() -> Weight;
     fn create_market_and_deploy_pool(m: u32) -> Weight;
+    fn schedule_early_close_as_authority(o: u32, n: u32) -> Weight;
+    fn schedule_early_close_after_dispute(o: u32, n: u32) -> Weight;
+    fn schedule_early_close_as_market_creator(o: u32, n: u32) -> Weight;
+    fn dispute_early_close(o: u32, n: u32) -> Weight;
+    fn reject_early_close_after_authority(o: u32, n: u32) -> Weight;
+    fn reject_early_close_after_dispute() -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -770,5 +776,115 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(Weight::from_parts(6_946, 0).saturating_mul(m.into()))
             .saturating_add(T::DbWeight::get().reads(13))
             .saturating_add(T::DbWeight::get().writes(13))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(642), added: 3117, mode: MaxEncodedLen)
+    /// Storage: Timestamp Now (r:1 w:0)
+    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:2 w:2)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    fn schedule_early_close_as_authority(o: u32, n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `747 + o * (16 ±0)`
+        //  Estimated: `10670`
+        // Minimum execution time: 33_000 nanoseconds.
+        Weight::from_parts(34_212_254, 10670)
+            // Standard Error: 250
+            .saturating_add(Weight::from_ref_time(11_624).saturating_mul(o.into()))
+            // Standard Error: 250
+            .saturating_add(Weight::from_ref_time(2_400).saturating_mul(n.into()))
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(3_u64))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(642), added: 3117, mode: MaxEncodedLen)
+    /// Storage: Timestamp Now (r:1 w:0)
+    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+    /// Storage: Balances Reserves (r:1 w:1)
+    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:2 w:2)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    fn schedule_early_close_after_dispute(o: u32, n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `972 + o * (16 ±0)`
+        //  Estimated: `14394`
+        // Minimum execution time: 69_000 nanoseconds.
+        Weight::from_parts(70_799_236, 14394)
+            // Standard Error: 939
+            .saturating_add(Weight::from_ref_time(14_923).saturating_mul(o.into()))
+            // Standard Error: 939
+            .saturating_add(Weight::from_ref_time(15_232).saturating_mul(n.into()))
+            .saturating_add(T::DbWeight::get().reads(5_u64))
+            .saturating_add(T::DbWeight::get().writes(4_u64))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(642), added: 3117, mode: MaxEncodedLen)
+    /// Storage: Timestamp Now (r:1 w:0)
+    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+    /// Storage: Balances Reserves (r:1 w:1)
+    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:2 w:2)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    fn schedule_early_close_as_market_creator(o: u32, n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `808 + o * (16 ±0)`
+        //  Estimated: `14394`
+        // Minimum execution time: 50_000 nanoseconds.
+        Weight::from_parts(50_314_327, 14394)
+            // Standard Error: 380
+            .saturating_add(Weight::from_ref_time(25_189).saturating_mul(o.into()))
+            // Standard Error: 380
+            .saturating_add(Weight::from_ref_time(19_089).saturating_mul(n.into()))
+            .saturating_add(T::DbWeight::get().reads(5_u64))
+            .saturating_add(T::DbWeight::get().writes(4_u64))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(642), added: 3117, mode: MaxEncodedLen)
+    /// Storage: Balances Reserves (r:1 w:1)
+    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:2 w:2)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    fn dispute_early_close(o: u32, n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `794 + o * (16 ±0) + n * (16 ±0)`
+        //  Estimated: `13891`
+        // Minimum execution time: 43_000 nanoseconds.
+        Weight::from_parts(45_632_400, 13891)
+            // Standard Error: 439
+            .saturating_add(Weight::from_ref_time(13_851).saturating_mul(o.into()))
+            // Standard Error: 439
+            .saturating_add(Weight::from_ref_time(14_491).saturating_mul(n.into()))
+            .saturating_add(T::DbWeight::get().reads(4_u64))
+            .saturating_add(T::DbWeight::get().writes(4_u64))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(642), added: 3117, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:2 w:2)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    fn reject_early_close_after_authority(o: u32, n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `686 + o * (16 ±0) + n * (16 ±0)`
+        //  Estimated: `10167`
+        // Minimum execution time: 33_000 nanoseconds.
+        Weight::from_parts(33_100_036, 10167)
+            // Standard Error: 329
+            .saturating_add(Weight::from_ref_time(21_279).saturating_mul(o.into()))
+            // Standard Error: 329
+            .saturating_add(Weight::from_ref_time(26_133).saturating_mul(n.into()))
+            .saturating_add(T::DbWeight::get().reads(3_u64))
+            .saturating_add(T::DbWeight::get().writes(3_u64))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(642), added: 3117, mode: MaxEncodedLen)
+    /// Storage: Balances Reserves (r:1 w:1)
+    /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
+    fn reject_early_close_after_dispute() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `672`
+        //  Estimated: `6841`
+        // Minimum execution time: 50_000 nanoseconds.
+        Weight::from_parts(53_000_000, 6841)
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
     }
 }

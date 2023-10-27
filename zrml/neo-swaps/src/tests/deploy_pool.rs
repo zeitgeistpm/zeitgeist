@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use alloc::collections::BTreeMap;
 use test_case::test_case;
 
 #[test]
@@ -56,13 +57,19 @@ fn deploy_pool_works_with_binary_markets() {
         assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
         assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
         assert_eq!(AssetManager::free_balance(assets[1], &ALICE), 0);
+        let mut reserves = BTreeMap::new();
+        reserves.insert(assets[0], amount);
+        reserves.insert(assets[1], amount);
         System::assert_last_event(
             Event::PoolDeployed {
                 who: ALICE,
                 market_id,
-                pool_shares_amount: amount,
-                amounts_in: vec![amount, amount],
+                account_id: pool.account_id,
+                reserves,
+                collateral: pool.collateral,
                 liquidity_parameter: pool.liquidity_parameter,
+                pool_shares_amount: amount,
+                swap_fee,
             }
             .into(),
         );
@@ -100,7 +107,7 @@ fn deploy_pool_works_with_scalar_marktes() {
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let expected_liquidity = 558110626551;
-        let expected_amounts = vec![amount, 101755598229];
+        let expected_amounts = [amount, 101755598229];
         let buffer = AssetManager::minimum_balance(pool.collateral);
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1_000);
@@ -124,13 +131,19 @@ fn deploy_pool_works_with_scalar_marktes() {
         let price_sum =
             pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
         assert_eq!(price_sum, _1);
+        let mut reserves = BTreeMap::new();
+        reserves.insert(assets[0], expected_amounts[0]);
+        reserves.insert(assets[1], expected_amounts[1]);
         System::assert_last_event(
             Event::PoolDeployed {
                 who: ALICE,
                 market_id,
-                pool_shares_amount: amount,
-                amounts_in: expected_amounts,
+                account_id: pool.account_id,
+                reserves,
+                collateral: pool.collateral,
                 liquidity_parameter: pool.liquidity_parameter,
+                pool_shares_amount: amount,
+                swap_fee,
             }
             .into(),
         );

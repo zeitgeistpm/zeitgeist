@@ -48,7 +48,15 @@ const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<Ma
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
-    bonds: MarketBonds { creation: None, oracle: None, outsider: None, dispute: None },
+    bonds: MarketBonds {
+        creation: None,
+        oracle: None,
+        outsider: None,
+        dispute: None,
+        close_dispute: None,
+        close_request: None,
+    },
+    early_close: None,
 };
 
 #[test]

@@ -346,5 +346,6 @@ pub(super) fn mock_market(
         scoring_rule: ScoringRule::CPMM,
         status: MarketStatus::Active,
         bonds: MarketBonds::default(),
+        early_close: None,
     }
 }
