@@ -14,7 +14,40 @@ APIs/RPC interface.
 
 ## v0.4.2
 
+[#1127]: https://github.com/zeitgeistpm/zeitgeist/pull/1127
 [#1148]: https://github.com/zeitgeistpm/zeitgeist/pull/1148
+[#1138]: https://github.com/zeitgeistpm/zeitgeist/pull/1138
+
+### Added
+
+- Implement parimutuel market ([#1138]) maker to allow markets without liquidity
+  provision. The new pallet has the following dispatchables:
+
+  - `buy`: Buy outcome tokens.
+  - `claim_rewards`: Claim the winner outcome tokens.
+  - `claim_refunds`: Claim the refunds in case there was no winner.
+
+  The new pallet has the following events:
+
+  - `OutcomeBought { market_id, buyer, asset, amount_minus_fees, fees }`:
+    Informant bought a position.
+  - `RewardsClaimed { market_id, asset, balance, actual_payoff, sender }`:
+    Informant claimed rewards.
+  - `RefundsClaimed { market_id, asset, refunded_balance, sender }`: Informant
+    claimed refunds.
+
+  For details, please refer to the `README.md` and the in-file documentation.
+
+### Added
+
+- Add extrinsics to zrml-prediction-markets ([#1127]):
+  - `schedule_early_close`: Schedule an early close of a market.
+  - `dispute_early_close`: Dispute a scheduled early close of a market.
+  - `reject_early_close`: Reject a scheduled early close of a market.
+- Add events to zrml-prediction-markets ([#1127]):
+  - `MarketEarlyCloseScheduled`: A market's early close was scheduled.
+  - `MarketEarlyCloseDisputed`: A market's early close was disputed.
+  - `MarketEarlyCloseRejected`: A market's early close was rejected.
 
 ### Changed
 

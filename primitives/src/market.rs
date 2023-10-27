@@ -64,6 +64,24 @@ pub struct Market<AI, BA, BN, M, A> {
     pub dispute_mechanism: Option<MarketDisputeMechanism>,
     /// The bonds reserved for this market.
     pub bonds: MarketBonds<AI, BA>,
+    /// The time at which the market was closed early.
+    pub early_close: Option<EarlyClose<BN, M>>,
+}
+
+impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
+    pub fn resolution_mechanism(&self) -> ResolutionMechanism {
+        match self.scoring_rule {
+            ScoringRule::CPMM
+            | ScoringRule::Lmsr
+            | ScoringRule::Orderbook
+            | ScoringRule::RikiddoSigmoidFeeMarketEma => ResolutionMechanism::RedeemTokens,
+            ScoringRule::Parimutuel => ResolutionMechanism::Noop,
+        }
+    }
+
+    pub fn is_redeemable(&self) -> bool {
+        matches!(self.resolution_mechanism(), ResolutionMechanism::RedeemTokens)
+    }
 }
 
 /// Tracks the status of a bond.
@@ -90,6 +108,8 @@ pub struct MarketBonds<AI, BA> {
     pub oracle: Option<Bond<AI, BA>>,
     pub outsider: Option<Bond<AI, BA>>,
     pub dispute: Option<Bond<AI, BA>>,
+    pub close_request: Option<Bond<AI, BA>>,
+    pub close_dispute: Option<Bond<AI, BA>>,
 }
 
 impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
@@ -103,13 +123,22 @@ impl<AI: Ord, BA: frame_support::traits::tokens::Balance> MarketBonds<AI, BA> {
             .saturating_add(value_or_default(&self.oracle))
             .saturating_add(value_or_default(&self.outsider))
             .saturating_add(value_or_default(&self.dispute))
+            .saturating_add(value_or_default(&self.close_request))
+            .saturating_add(value_or_default(&self.close_dispute))
     }
 }
 
 // Used primarily for testing purposes.
 impl<AI, BA> Default for MarketBonds<AI, BA> {
     fn default() -> Self {
-        MarketBonds { creation: None, oracle: None, outsider: None, dispute: None }
+        MarketBonds {
+            creation: None,
+            oracle: None,
+            outsider: None,
+            dispute: None,
+            close_request: None,
+            close_dispute: None,
+        }
     }
 }
 
@@ -164,6 +193,7 @@ where
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
             .saturating_add(<Option<MarketDisputeMechanism>>::max_encoded_len())
             .saturating_add(<MarketBonds<AI, BA>>::max_encoded_len())
+            .saturating_add(<Option<EarlyClose<BN, M>>>::max_encoded_len())
     }
 }
 
@@ -239,6 +269,21 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
     }
 }
 
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct EarlyClose<BN, M> {
+    pub old: MarketPeriod<BN, M>,
+    pub new: MarketPeriod<BN, M>,
+    pub state: EarlyCloseState,
+}
+
+#[derive(Clone, Decode, Encode, Eq, PartialEq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
+pub enum EarlyCloseState {
+    ScheduledAsMarketCreator,
+    ScheduledAsOther,
+    Disputed,
+    Rejected,
+}
+
 /// Defines deadlines for market.
 #[derive(
     Clone, Copy, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo,
@@ -301,6 +346,11 @@ pub struct Report<AccountId, BlockNumber> {
 pub struct AuthorityReport<BlockNumber> {
     pub resolve_at: BlockNumber,
     pub outcome: OutcomeReport,
+}
+
+pub enum ResolutionMechanism {
+    RedeemTokens,
+    Noop,
 }
 
 /// Contains a market id and the market period.
@@ -395,6 +445,7 @@ mod tests {
             resolved_outcome: None,
             dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
             bonds: MarketBonds::default(),
+            early_close: None,
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }

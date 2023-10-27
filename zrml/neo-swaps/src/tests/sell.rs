@@ -55,7 +55,7 @@ fn sell_works() {
         ));
         let total_fee_percentage = swap_fee + EXTERNAL_FEES;
         let expected_amount_out = 59632253897u128;
-        let expected_fees = bmul(total_fee_percentage, expected_amount_out).unwrap();
+        let expected_fees = total_fee_percentage.bmul(expected_amount_out).unwrap();
         let expected_swap_fee_amount = expected_fees / 2;
         let expected_external_fee_amount = expected_fees - expected_swap_fee_amount;
         let expected_amount_out_minus_fees = expected_amount_out - expected_fees;

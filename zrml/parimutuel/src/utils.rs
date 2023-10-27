@@ -15,33 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(any(feature = "runtime-benchmarks", test))]
-
-use crate::*;
-use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::types::{
-    Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, ScoringRule,
-};
-
-type MarketOf<T> = Market<
-    <T as frame_system::Config>::AccountId,
-    BalanceOf<T>,
-    <T as frame_system::Config>::BlockNumber,
-    MomentOf<T>,
-    Asset<MarketIdOf<T>>,
->;
-
-pub(crate) fn market_mock<T>() -> MarketOf<T>
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>(creator: T::AccountId) -> crate::MarketOf<T>
 where
     T: crate::Config,
 {
-    Market {
+    use frame_support::traits::Get;
+    use sp_runtime::{traits::AccountIdConversion, Perbill};
+    use zeitgeist_primitives::types::{
+        Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, ScoringRule,
+    };
+
+    zeitgeist_primitives::types::Market {
         base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
-        creator_fee: sp_runtime::Perbill::zero(),
-        creator: T::PalletId::get().into_account_truncating(),
-        market_type: MarketType::Categorical(64u16),
+        creator_fee: Perbill::zero(),
+        creator,
+        market_type: MarketType::Categorical(10u16),
         dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account_truncating(),
@@ -53,8 +44,9 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::Orderbook,
+        scoring_rule: ScoringRule::Parimutuel,
         status: MarketStatus::Active,
-        bonds: Default::default(),
+        bonds: MarketBonds::default(),
+        early_close: None,
     }
 }

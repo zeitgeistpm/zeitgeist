@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -23,12 +24,15 @@
 
 #![allow(clippy::let_and_return)]
 
-use crate::{
-    check_arithm_rslt::CheckArithmRslt,
-    fixed::{bdiv, bmul, bpow},
-};
+use crate::fixed::bpow;
 use frame_support::dispatch::DispatchError;
-use zeitgeist_primitives::constants::BASE;
+use zeitgeist_primitives::{
+    constants::BASE,
+    math::{
+        checked_ops_res::{CheckedAddRes, CheckedSubRes},
+        fixed::{FixedDiv, FixedMul},
+    },
+};
 
 /// Calculate the spot price of one asset in terms of another, including trading fees.
 ///
@@ -50,12 +54,11 @@ pub fn calc_spot_price(
     asset_weight_out: u128,
     swap_fee: u128,
 ) -> Result<u128, DispatchError> {
-    let numer = bdiv(asset_balance_in, asset_weight_in)?;
-    let denom = bdiv(asset_balance_out, asset_weight_out)?;
-    let ratio = bdiv(numer, denom)?;
-    let scale = bdiv(BASE, BASE.check_sub_rslt(&swap_fee)?)?;
-    let spot_price = bmul(ratio, scale);
-    spot_price
+    let numer = asset_balance_in.bdiv(asset_weight_in)?;
+    let denom = asset_balance_out.bdiv(asset_weight_out)?;
+    let ratio = numer.bdiv(denom)?;
+    let scale = BASE.bdiv(BASE.checked_sub_res(&swap_fee)?)?;
+    ratio.bmul(scale)
 }
 
 /// Calculate the amount of tokens received from the pool for swapping the specified amount of tokens in, including
@@ -81,14 +84,13 @@ pub fn calc_out_given_in(
     asset_amount_in: u128,
     swap_fee: u128,
 ) -> Result<u128, DispatchError> {
-    let weight_ratio = bdiv(asset_weight_in, asset_weight_out)?;
-    let mut adjusted_in = BASE.check_sub_rslt(&swap_fee)?;
-    adjusted_in = bmul(adjusted_in, asset_amount_in)?;
-    let y = bdiv(asset_balance_in, asset_balance_in.check_add_rslt(&adjusted_in)?)?;
+    let weight_ratio = asset_weight_in.bdiv(asset_weight_out)?;
+    let mut adjusted_in = BASE.checked_sub_res(&swap_fee)?;
+    adjusted_in = adjusted_in.bmul(asset_amount_in)?;
+    let y = asset_balance_in.bdiv(asset_balance_in.checked_add_res(&adjusted_in)?)?;
     let pow = bpow(y, weight_ratio)?;
-    let bar = BASE.check_sub_rslt(&pow)?;
-    let asset_amount_out = bmul(asset_balance_out, bar);
-    asset_amount_out
+    let bar = BASE.checked_sub_res(&pow)?;
+    asset_balance_out.bmul(bar)
 }
 
 /// Calculate the required amount of tokens to swap in to receive a specified amount of tokens
@@ -114,12 +116,11 @@ pub fn calc_in_given_out(
     asset_amount_out: u128,
     swap_fee: u128,
 ) -> Result<u128, DispatchError> {
-    let weight_ratio = bdiv(asset_weight_out, asset_weight_in)?;
-    let diff = asset_balance_out.check_sub_rslt(&asset_amount_out)?;
-    let y = bdiv(asset_balance_out, diff)?;
-    let pow = bpow(y, weight_ratio)?.check_sub_rslt(&BASE)?;
-    let asset_amount_in = bdiv(bmul(asset_balance_in, pow)?, BASE.check_sub_rslt(&swap_fee)?);
-    asset_amount_in
+    let weight_ratio = asset_weight_out.bdiv(asset_weight_in)?;
+    let diff = asset_balance_out.checked_sub_res(&asset_amount_out)?;
+    let y = asset_balance_out.bdiv(diff)?;
+    let pow = bpow(y, weight_ratio)?.checked_sub_res(&BASE)?;
+    asset_balance_in.bmul(pow)?.bdiv(BASE.checked_sub_res(&swap_fee)?)
 }
 
 /// Calculate the amount of pool tokens received when joining the pool with a specified amount of
@@ -150,16 +151,15 @@ pub fn calc_pool_out_given_single_in(
     //  which is implicitly traded to the other pool tokens.
     // That proportion is (1 - weightTokenIn)
     // tokenAiAfterFee = tAi * (1 - (1 - weighTi) * pool_fee)
-    let normalized_weight = bdiv(asset_weight_in, total_weight)?;
-    let zaz = bmul(BASE.check_sub_rslt(&normalized_weight)?, swap_fee)?;
-    let asset_amount_in_after_fee = bmul(asset_amount_in, BASE.check_sub_rslt(&zaz)?)?;
-    let new_asset_balance_in = asset_balance_in.check_add_rslt(&asset_amount_in_after_fee)?;
-    let asset_in_ratio = bdiv(new_asset_balance_in, asset_balance_in)?;
+    let normalized_weight = asset_weight_in.bdiv(total_weight)?;
+    let zaz = BASE.checked_sub_res(&normalized_weight)?.bmul(swap_fee)?;
+    let asset_amount_in_after_fee = asset_amount_in.bmul(BASE.checked_sub_res(&zaz)?)?;
+    let new_asset_balance_in = asset_balance_in.checked_add_res(&asset_amount_in_after_fee)?;
+    let asset_in_ratio = new_asset_balance_in.bdiv(asset_balance_in)?;
 
     let pool_ratio = bpow(asset_in_ratio, normalized_weight)?;
-    let new_pool_supply = bmul(pool_ratio, pool_supply)?;
-    let pool_amount_out = new_pool_supply.check_sub_rslt(&pool_supply);
-    pool_amount_out
+    let new_pool_supply = pool_ratio.bmul(pool_supply)?;
+    new_pool_supply.checked_sub_res(&pool_supply)
 }
 
 /// Calculate the required amount of tokens of a single asset to join the pool with to receive the
@@ -186,18 +186,17 @@ pub fn calc_single_in_given_pool_out(
     pool_amount_out: u128,
     swap_fee: u128,
 ) -> Result<u128, DispatchError> {
-    let normalized_weight = bdiv(asset_weight_in, total_weight)?;
-    let new_pool_supply = pool_supply.check_add_rslt(&pool_amount_out)?;
-    let pool_ratio = bdiv(new_pool_supply, pool_supply)?;
+    let normalized_weight = asset_weight_in.bdiv(total_weight)?;
+    let new_pool_supply = pool_supply.checked_add_res(&pool_amount_out)?;
+    let pool_ratio = new_pool_supply.bdiv(pool_supply)?;
 
-    let boo = bdiv(BASE, normalized_weight)?;
+    let boo = BASE.bdiv(normalized_weight)?;
     let asset_in_ratio = bpow(pool_ratio, boo)?;
-    let new_asset_balance_in = bmul(asset_in_ratio, asset_balance_in)?;
-    let asset_amount_in_after_fee = new_asset_balance_in.check_sub_rslt(&asset_balance_in)?;
+    let new_asset_balance_in = asset_in_ratio.bmul(asset_balance_in)?;
+    let asset_amount_in_after_fee = new_asset_balance_in.checked_sub_res(&asset_balance_in)?;
 
-    let zar = bmul(BASE.check_sub_rslt(&normalized_weight)?, swap_fee)?;
-    let asset_amount_in = bdiv(asset_amount_in_after_fee, BASE.check_sub_rslt(&zar)?);
-    asset_amount_in
+    let zar = BASE.checked_sub_res(&normalized_weight)?.bmul(swap_fee)?;
+    asset_amount_in_after_fee.bdiv(BASE.checked_sub_res(&zar)?)
 }
 
 /// Calculate the amount of tokens of a single asset received when exiting the pool with a specified amount of
@@ -225,21 +224,20 @@ pub fn calc_single_out_given_pool_in(
     swap_fee: u128,
     exit_fee: u128,
 ) -> Result<u128, DispatchError> {
-    let normalized_weight = bdiv(asset_weight_out, total_weight)?;
+    let normalized_weight = asset_weight_out.bdiv(total_weight)?;
 
-    let pool_amount_in_after_exit_fee = bmul(pool_amount_in, BASE.check_sub_rslt(&exit_fee)?)?;
-    let new_pool_supply = pool_supply.check_sub_rslt(&pool_amount_in_after_exit_fee)?;
-    let pool_ratio = bdiv(new_pool_supply, pool_supply)?;
+    let pool_amount_in_after_exit_fee = pool_amount_in.bmul(BASE.checked_sub_res(&exit_fee)?)?;
+    let new_pool_supply = pool_supply.checked_sub_res(&pool_amount_in_after_exit_fee)?;
+    let pool_ratio = new_pool_supply.bdiv(pool_supply)?;
 
-    let exp = bdiv(BASE, normalized_weight)?;
+    let exp = BASE.bdiv(normalized_weight)?;
     let asset_out_ratio = bpow(pool_ratio, exp)?;
-    let new_asset_balance_out = bmul(asset_out_ratio, asset_balance_out)?;
+    let new_asset_balance_out = asset_out_ratio.bmul(asset_balance_out)?;
 
-    let asset_amount_before_swap_fee = asset_balance_out.check_sub_rslt(&new_asset_balance_out)?;
+    let asset_amount_before_swap_fee = asset_balance_out.checked_sub_res(&new_asset_balance_out)?;
 
-    let zaz = bmul(BASE.check_sub_rslt(&normalized_weight)?, swap_fee)?;
-    let asset_amount_out = bmul(asset_amount_before_swap_fee, BASE.check_sub_rslt(&zaz)?);
-    asset_amount_out
+    let zaz = BASE.checked_sub_res(&normalized_weight)?.bmul(swap_fee)?;
+    asset_amount_before_swap_fee.bmul(BASE.checked_sub_res(&zaz)?)
 }
 
 /// Calculate the required amount of pool tokens to exit the pool with to receive the specified number of tokens of a single asset.
@@ -266,19 +264,18 @@ pub fn calc_pool_in_given_single_out(
     swap_fee: u128,
     exit_fee: u128,
 ) -> Result<u128, DispatchError> {
-    let normalized_weight = bdiv(asset_weight_out, total_weight)?;
-    let zoo = BASE.check_sub_rslt(&normalized_weight)?;
-    let zar = bmul(zoo, swap_fee)?;
-    let asset_amount_out_before_swap_fee = bdiv(asset_amount_out, BASE.check_sub_rslt(&zar)?)?;
+    let normalized_weight = asset_weight_out.bdiv(total_weight)?;
+    let zoo = BASE.checked_sub_res(&normalized_weight)?;
+    let zar = zoo.bmul(swap_fee)?;
+    let asset_amount_out_before_swap_fee = asset_amount_out.bdiv(BASE.checked_sub_res(&zar)?)?;
 
     let new_asset_balance_out =
-        asset_balance_out.check_sub_rslt(&asset_amount_out_before_swap_fee)?;
-    let asset_out_ratio = bdiv(new_asset_balance_out, asset_balance_out)?;
+        asset_balance_out.checked_sub_res(&asset_amount_out_before_swap_fee)?;
+    let asset_out_ratio = new_asset_balance_out.bdiv(asset_balance_out)?;
 
     let pool_ratio = bpow(asset_out_ratio, normalized_weight)?;
-    let new_pool_supply = bmul(pool_ratio, pool_supply)?;
+    let new_pool_supply = pool_ratio.bmul(pool_supply)?;
 
-    let pool_amount_in_after_exit_fee = pool_supply.check_sub_rslt(&new_pool_supply)?;
-    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&exit_fee)?);
-    pool_amount_in
+    let pool_amount_in_after_exit_fee = pool_supply.checked_sub_res(&new_pool_supply)?;
+    pool_amount_in_after_exit_fee.bdiv(BASE.checked_sub_res(&exit_fee)?)
 }

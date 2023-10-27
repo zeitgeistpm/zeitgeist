@@ -37,7 +37,7 @@ pub trait DistributeFees {
     fn distribute(
         market_id: Self::MarketId,
         asset: Self::Asset,
-        account: Self::AccountId,
+        account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance;
 }

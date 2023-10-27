@@ -120,6 +120,9 @@ pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
 // Orderbook
 pub const ORDERBOOK_PALLET_ID: PalletId = PalletId(*b"zge/ordb");
 
+// Parimutuel
+pub const PARIMUTUEL_PALLET_ID: PalletId = PalletId(*b"zge/prmt");
+
 // Treasury
 /// Pallet identifier, used to derive treasury account
 pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/tsry");

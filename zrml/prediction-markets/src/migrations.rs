@@ -37,8 +37,8 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::Saturating, Perbill};
 use zeitgeist_primitives::types::{
-    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-    MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
+    Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 #[cfg(feature = "try-runtime")]
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -49,8 +49,16 @@ const MARKET_COMMONS: &[u8] = b"MarketCommons";
 #[cfg(any(feature = "try-runtime", test))]
 const MARKETS: &[u8] = b"Markets";
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 7;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 8;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 8;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 9;
+
+#[derive(Clone, Decode, Encode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct OldMarketBonds<AI, BA> {
+    pub creation: Option<Bond<AI, BA>>,
+    pub oracle: Option<Bond<AI, BA>>,
+    pub outsider: Option<Bond<AI, BA>>,
+    pub dispute: Option<Bond<AI, BA>>,
+}
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OldMarket<AI, BA, BN, M, A> {
@@ -82,9 +90,8 @@ pub struct OldMarket<AI, BA, BN, M, A> {
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
-    pub dispute_mechanism: MarketDisputeMechanism,
-    /// The bonds reserved for this market.
-    pub bonds: MarketBonds<AI, BA>,
+    pub dispute_mechanism: Option<MarketDisputeMechanism>,
+    pub bonds: OldMarketBonds<AI, BA>,
 }
 
 type OldMarketOf<T> = OldMarket<
@@ -103,25 +110,26 @@ pub(crate) type Markets<T: Config> = StorageMap<
     OldMarketOf<T>,
 >;
 
-pub struct MigrateMarkets<T>(PhantomData<T>);
+pub struct AddEarlyCloseBonds<T>(PhantomData<T>);
 
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for MigrateMarkets<T> {
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for AddEarlyCloseBonds<T> {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "MigrateMarkets: market-commons version is {:?}, but {:?} is required",
+                "AddEarlyCloseBonds: market-commons version is {:?}, but {:?} is required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("MigrateMarkets: Starting...");
+        log::info!("AddEarlyCloseBonds: Starting...");
         let mut translated = 0u64;
         zrml_market_commons::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
             translated.saturating_inc();
-            Some(Market {
+
+            let new_market = Market {
                 base_asset: old_market.base_asset,
                 creator: old_market.creator,
                 creation: old_market.creation,
@@ -134,17 +142,27 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for MigrateMarket
                 status: old_market.status,
                 report: old_market.report,
                 resolved_outcome: old_market.resolved_outcome,
-                dispute_mechanism: Some(old_market.dispute_mechanism),
+                dispute_mechanism: old_market.dispute_mechanism,
                 deadlines: old_market.deadlines,
-                bonds: old_market.bonds,
-            })
+                bonds: MarketBonds {
+                    creation: old_market.bonds.creation,
+                    oracle: old_market.bonds.oracle,
+                    outsider: old_market.bonds.outsider,
+                    dispute: old_market.bonds.dispute,
+                    close_dispute: None,
+                    close_request: None,
+                },
+                early_close: None,
+            };
+
+            Some(new_market)
         });
-        log::info!("MigrateMarkets: Upgraded {} markets.", translated);
+        log::info!("AddEarlyCloseBonds: Upgraded {} markets.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("MigrateMarkets: Done!");
+        log::info!("AddEarlyCloseBonds: Done!");
         total_weight
     }
 
@@ -194,11 +212,20 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for MigrateMarket
             assert_eq!(new_market.status, old_market.status);
             assert_eq!(new_market.report, old_market.report);
             assert_eq!(new_market.resolved_outcome, old_market.resolved_outcome);
-            assert_eq!(new_market.dispute_mechanism, Some(old_market.dispute_mechanism.clone()));
+            assert_eq!(new_market.dispute_mechanism, old_market.dispute_mechanism);
             assert_eq!(new_market.bonds.oracle, old_market.bonds.oracle);
-            assert_eq!(new_market.bonds, old_market.bonds);
+            assert_eq!(new_market.bonds.creation, old_market.bonds.creation);
+            assert_eq!(new_market.bonds.outsider, old_market.bonds.outsider);
+            assert_eq!(new_market.creator_fee, old_market.creator_fee);
+            assert_eq!(new_market.bonds.dispute, old_market.bonds.dispute);
+            // new fields
+            assert_eq!(new_market.bonds.close_request, None);
+            assert_eq!(new_market.bonds.close_dispute, None);
+            assert_eq!(new_market.early_close, None);
         }
-        log::info!("MigrateMarkets: Market Counter post-upgrade is {}!", new_market_count);
+
+        log::info!("AddEarlyCloseBonds: Market Counter post-upgrade is {}!", new_market_count);
+        assert!(new_market_count > 0);
         Ok(())
     }
 }
@@ -214,14 +241,13 @@ mod tests {
         dispatch::fmt::Debug, migration::put_storage_value, storage_root, Blake2_128Concat,
         StateVersion, StorageHasher,
     };
-    use test_case::test_case;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            MigrateMarkets::<Runtime>::on_runtime_upgrade();
+            AddEarlyCloseBonds::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -233,30 +259,29 @@ mod tests {
     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
             // Don't set up chain to signal that storage is already up to date.
-            let (_, new_markets) = construct_old_new_tuple(MarketDisputeMechanism::Court);
+            let (_, new_markets) = construct_old_new_tuple();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, MarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
                 new_markets.clone(),
             );
             let tmp = storage_root(StateVersion::V1);
-            MigrateMarkets::<Runtime>::on_runtime_upgrade();
+            AddEarlyCloseBonds::<Runtime>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));
         });
     }
 
-    #[test_case(MarketDisputeMechanism::Authorized)]
-    #[test_case(MarketDisputeMechanism::Court)]
-    fn on_runtime_upgrade_correctly_updates_markets(dispute_mechanism: MarketDisputeMechanism) {
+    #[test]
+    fn on_runtime_upgrade_correctly_updates_markets() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            let (old_markets, new_markets) = construct_old_new_tuple(dispute_mechanism);
+            let (old_markets, new_markets) = construct_old_new_tuple();
             populate_test_data::<Blake2_128Concat, MarketIdOf<Runtime>, OldMarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
                 old_markets,
             );
-            MigrateMarkets::<Runtime>::on_runtime_upgrade();
+            AddEarlyCloseBonds::<Runtime>::on_runtime_upgrade();
             let actual = <zrml_market_commons::Pallet<Runtime>>::market(&0u128).unwrap();
             assert_eq!(actual, new_markets[0]);
         });
@@ -267,9 +292,7 @@ mod tests {
             .put::<MarketCommonsPallet<Runtime>>();
     }
 
-    fn construct_old_new_tuple(
-        dispute_mechanism: MarketDisputeMechanism,
-    ) -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
+    fn construct_old_new_tuple() -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
         let base_asset = Asset::Ztg;
         let creator = 999;
         let creator_fee = Perbill::from_parts(1);
@@ -283,7 +306,21 @@ mod tests {
         let report = None;
         let resolved_outcome = None;
         let deadlines = Deadlines::default();
-        let bonds: MarketBonds<_, _> = Default::default();
+        let dispute_mechanism = Some(MarketDisputeMechanism::Court);
+        let old_bonds = OldMarketBonds {
+            creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
+            oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
+            outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
+            dispute: None,
+        };
+        let new_bonds = MarketBonds {
+            creation: Some(Bond::new(creator, <Runtime as Config>::ValidityBond::get())),
+            oracle: Some(Bond::new(creator, <Runtime as Config>::OracleBond::get())),
+            outsider: Some(Bond::new(creator, <Runtime as Config>::OutsiderBond::get())),
+            dispute: None,
+            close_dispute: None,
+            close_request: None,
+        };
 
         let old_market = OldMarket {
             base_asset,
@@ -300,7 +337,7 @@ mod tests {
             resolved_outcome: resolved_outcome.clone(),
             dispute_mechanism: dispute_mechanism.clone(),
             deadlines,
-            bonds: bonds.clone(),
+            bonds: old_bonds,
         };
         let new_market = Market {
             base_asset,
@@ -315,9 +352,10 @@ mod tests {
             status,
             report,
             resolved_outcome,
-            dispute_mechanism: Some(dispute_mechanism),
+            dispute_mechanism,
             deadlines,
-            bonds,
+            bonds: new_bonds,
+            early_close: None,
         };
         (vec![old_market], vec![new_market])
     }

@@ -33,8 +33,6 @@ mod utils;
 
 mod arbitrage;
 mod benchmarks;
-pub mod check_arithm_rslt;
-mod consts;
 mod events;
 pub mod fixed;
 pub mod math;
@@ -50,9 +48,7 @@ pub use pallet::*;
 mod pallet {
     use crate::{
         arbitrage::ArbitrageForCpmm,
-        check_arithm_rslt::CheckArithmRslt,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
-        fixed::{bdiv, bmul},
         utils::{
             pool_exit_with_exact_amount, pool_join_with_exact_amount, swap_exact_amount,
             PoolExitWithExactAmountParams, PoolJoinWithExactAmountParams, PoolParams,
@@ -78,8 +74,7 @@ mod pallet {
         Perbill,
     };
     use sp_runtime::{
-        traits::AccountIdConversion, ArithmeticError, DispatchError, DispatchResult,
-        SaturatedConversion,
+        traits::AccountIdConversion, DispatchError, DispatchResult, SaturatedConversion,
     };
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
@@ -90,7 +85,11 @@ mod pallet {
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
-        constants::{BASE, CENT},
+        constants::CENT,
+        math::{
+            checked_ops_res::{CheckedAddRes, CheckedMulRes, CheckedSubRes},
+            fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+        },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
@@ -106,6 +105,7 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+    const LOG_TARGET: &str = "runtime::zrml-swaps";
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -225,9 +225,7 @@ mod pallet {
                     Ok(())
                 },
                 fee: |amount: BalanceOf<T>| {
-                    let exit_fee_amount =
-                        bmul(amount.saturated_into(), Self::calc_exit_fee(&pool).saturated_into())?
-                            .saturated_into();
+                    let exit_fee_amount = amount.bmul(Self::calc_exit_fee(&pool))?;
                     Ok(exit_fee_amount)
                 },
                 who: who_clone,
@@ -288,7 +286,8 @@ mod pallet {
 
                     if missing > zero_balance {
                         log::warn!(
-                            "[Swaps] Data inconsistency: More subsidy provided than currently \
+                            target: LOG_TARGET,
+                            "Data inconsistency: More subsidy provided than currently \
                              reserved.
                              Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
@@ -303,16 +302,10 @@ mod pallet {
 
                     if new_amount > zero_balance && missing == zero_balance {
                         <SubsidyProviders<T>>::insert(pool_id, &who, new_amount);
-                        pool.total_subsidy = Some(
-                            total_subsidy
-                                .checked_sub(&transferred)
-                                .ok_or(ArithmeticError::Overflow)?,
-                        );
+                        pool.total_subsidy = Some(total_subsidy.checked_sub_res(&transferred)?);
                     } else {
                         <SubsidyProviders<T>>::remove(pool_id, &who);
-                        pool.total_subsidy = Some(
-                            total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
-                        );
+                        pool.total_subsidy = Some(total_subsidy.checked_sub_res(&subsidy)?);
                     }
                 } else {
                     return Err(Error::<T>::NoSubsidyProvided.into());
@@ -404,9 +397,7 @@ mod pallet {
             let params = PoolExitWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> =
-                        bmul(total_supply.saturated_into(), T::MaxInRatio::get().saturated_into())?
-                            .saturated_into();
+                    let mul: BalanceOf<T> = total_supply.bmul(T::MaxInRatio::get())?;
                     ensure!(pool_amount <= mul, Error::<T>::MaxInRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
@@ -421,12 +412,7 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
-                        asset_amount
-                            <= bmul(
-                                asset_balance.saturated_into(),
-                                T::MaxOutRatio::get().saturated_into()
-                            )?
-                            .saturated_into(),
+                        asset_amount <= asset_balance.bmul(T::MaxOutRatio::get())?,
                         Error::<T>::MaxOutRatio
                     );
                     Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
@@ -466,7 +452,7 @@ mod pallet {
         // though.
         #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::pool_join(
-            max_assets_in.len().min(T::MaxAssets::get().into()) as u32
+            max_assets_in.len().min(T::MaxAssets::get().into()) as u32,
         ))]
         #[transactional]
         pub fn pool_join(
@@ -644,11 +630,7 @@ mod pallet {
             let params = PoolJoinWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = bmul(
-                        total_supply.saturated_into(),
-                        T::MaxOutRatio::get().saturated_into(),
-                    )?
-                    .saturated_into();
+                    let mul: BalanceOf<T> = total_supply.bmul(T::MaxOutRatio::get())?;
                     ensure!(pool_amount <= mul, Error::<T>::MaxOutRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
@@ -662,7 +644,7 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount <= asset_balance.check_mul_rslt(&T::MaxInRatio::get())?,
+                        asset_amount <= asset_balance.checked_mul_res(&T::MaxInRatio::get())?,
                         Error::<T>::MaxInRatio
                     );
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, asset_amount);
@@ -1168,7 +1150,8 @@ mod pallet {
                 // In case the AMM balance does not suffice to pay out every winner, the pool
                 // rewards will not be distributed (requires investigation and update).
                 log::error!(
-                    "[Swaps] The AMM balance does not suffice to pay out every winner.
+                    target: LOG_TARGET,
+                    "The AMM balance does not suffice to pay out every winner.
                     market_id: {:?}, pool_id: {:?}, total AMM balance: {:?}, total reward value: \
                      {:?}",
                     pool.market_id,
@@ -1188,17 +1171,15 @@ mod pallet {
                 let share_holder_account = share_holder.0;
                 let share_holder_balance = share_holder.1.free;
                 let reward_pct_unadjusted =
-                    bdiv(share_holder_balance.saturated_into(), total_pool_shares.saturated_into())
-                        .unwrap_or(0);
+                    share_holder_balance.bdiv(total_pool_shares).unwrap_or(0u8.into());
 
                 // Seems like bdiv does arithmetic rounding. To ensure that we will have enough
                 // reward for everyone and not run into an error, we'll round down in any case.
-                let reward_pct = reward_pct_unadjusted.saturating_sub(1);
-                let holder_reward_unadjusted =
-                    bmul(amm_profit.saturated_into(), reward_pct).unwrap_or(0);
+                let reward_pct = reward_pct_unadjusted.saturating_sub(1u8.into());
+                let holder_reward_unadjusted = amm_profit.bmul(reward_pct).unwrap_or(0u8.into());
 
                 // Same for bmul.
-                let holder_reward = holder_reward_unadjusted.saturating_sub(1);
+                let holder_reward = holder_reward_unadjusted.saturating_sub(1u8.into());
 
                 let transfer_result = T::AssetManager::transfer(
                     base_asset,
@@ -1212,7 +1193,8 @@ mod pallet {
                     let current_amm_holding =
                         T::AssetManager::free_balance(base_asset, &pool_account);
                     log::error!(
-                        "[Swaps] The AMM failed to pay out the share holder reward.
+                        target: LOG_TARGET,
+                        "The AMM failed to pay out the share holder reward.
                         market_id: {:?}, pool_id: {:?}, current AMM holding: {:?},
                         transfer size: {:?}, to: {:?}, error: {:?}",
                         pool.market_id,
@@ -1333,6 +1315,7 @@ mod pallet {
                 let _ = with_transaction(|| match mutation(pool_id) {
                     Err(err) => {
                         log::warn!(
+                            target: LOG_TARGET,
                             "Arbitrage unexpectedly failed on pool {:?} with error: {:?}",
                             pool_id,
                             err,
@@ -1370,7 +1353,9 @@ mod pallet {
             let outcome_tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
 
-            if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
+            if total_spot_price
+                > ZeitgeistBase::<u128>::get()?.checked_add_res(&ARBITRAGE_THRESHOLD)?
+            {
                 let (amount, _) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
                 // Ensure that executing arbitrage doesn't decrease the base asset balance below
@@ -1393,7 +1378,9 @@ mod pallet {
                 }
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
                 Ok(T::WeightInfo::execute_arbitrage_mint_sell(asset_count))
-            } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
+            } else if total_spot_price
+                < ZeitgeistBase::<u128>::get()?.checked_sub_res(&ARBITRAGE_THRESHOLD)?
+            {
                 let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
                 // Ensure that executing arbitrage doesn't decrease the outcome asset balances below
                 // the minimum allowed balance.
@@ -1444,7 +1431,7 @@ mod pallet {
                     let market = T::MarketCommons::market(&pool.market_id)?;
                     market
                         .creator_fee
-                        .mul_floor(BASE)
+                        .mul_floor(ZeitgeistBase::<u128>::get()?)
                         .checked_add(swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
                         .ok_or(Error::<T>::SwapFeeTooHigh)?
                 } else {
@@ -1470,8 +1457,8 @@ mod pallet {
             // Fees are estimated here. The error scales with the fee. For the future, we'll have
             // to figure out how to extract the fee out of the price when using Rikiddo.
             if asset_in == asset_out {
-                return Ok(T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?
-                    .saturating_add(BASE.saturated_into()));
+                return T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?
+                    .checked_add_res(&ZeitgeistBase::get()?);
             }
 
             let mut balance_in = BalanceOf::<T>::zero();
@@ -1492,29 +1479,24 @@ mod pallet {
             if *asset_in == base_asset {
                 T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)
             } else if *asset_out == base_asset {
-                let price_with_inverse_fee = bdiv(
-                    BASE,
-                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?
-                        .saturated_into(),
-                )?
-                .saturated_into();
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
-                let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_with_fee: u128 =
-                    bmul(fee_plus_one, bmul(price_with_inverse_fee, fee_plus_one)?)?;
-                Ok(price_with_fee.saturated_into())
+                let price_with_inverse_fee = ZeitgeistBase::<BalanceOf<T>>::get()?
+                    .bdiv(T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?)?;
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?;
+                let fee_plus_one =
+                    ZeitgeistBase::<BalanceOf<T>>::get()?.checked_add_res(&fee_pct)?;
+                let price_with_fee =
+                    fee_plus_one.bmul(price_with_inverse_fee.bmul(fee_plus_one)?)?;
+                Ok(price_with_fee)
             } else {
-                let price_without_fee = bdiv(
-                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?
-                        .saturated_into(),
-                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?
-                        .saturated_into(),
-                )?
-                .saturated_into();
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?.saturated_into();
-                let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
-                Ok(price_with_fee.saturated_into())
+                let price_without_fee =
+                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?.bdiv(
+                        T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?,
+                    )?;
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?;
+                let fee_plus_one =
+                    ZeitgeistBase::<BalanceOf<T>>::get()?.checked_add_res(&fee_pct)?;
+                let price_with_fee = fee_plus_one.bmul(price_without_fee)?;
+                Ok(price_with_fee)
             }
         }
 
@@ -1724,7 +1706,7 @@ mod pallet {
         fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
             let id = <NextPoolId<T>>::get();
             <NextPoolId<T>>::try_mutate(|n| {
-                *n = n.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+                *n = n.checked_add_res(&1)?;
                 Ok::<_, DispatchError>(())
             })?;
             Ok(id)
@@ -1891,7 +1873,7 @@ mod pallet {
                         let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                         let total_fee = market
                             .creator_fee
-                            .mul_floor(BASE)
+                            .mul_floor(ZeitgeistBase::<u128>::get()?)
                             .checked_add(
                                 swap_fee_unwrapped
                                     .try_into()
@@ -1906,7 +1888,10 @@ mod pallet {
                             total_fee_as_balance <= T::MaxSwapFee::get(),
                             Error::<T>::SwapFeeTooHigh
                         );
-                        ensure!(total_fee <= BASE, Error::<T>::SwapFeeTooHigh);
+                        ensure!(
+                            total_fee <= ZeitgeistBase::<u128>::get()?,
+                            Error::<T>::SwapFeeTooHigh
+                        );
 
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
@@ -1923,7 +1908,7 @@ mod pallet {
                             ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                             ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                             map.insert(asset, weight);
-                            total_weight = total_weight.check_add_rslt(&weight)?;
+                            total_weight = total_weight.checked_add_res(&weight)?;
                             T::AssetManager::transfer(
                                 asset,
                                 &who,
@@ -1964,7 +1949,7 @@ mod pallet {
                         let pool_amount = BalanceOf::<T>::zero();
                         (pool_status, total_subsidy, total_weight, weights, pool_amount)
                     }
-                    ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                    ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
                         return Err(Error::<T>::InvalidScoringRule.into());
                     }
                 };
@@ -2126,7 +2111,8 @@ mod pallet {
 
                         if transferred != subsidy {
                             log::warn!(
-                                "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
+                                target: LOG_TARGET,
+                                "Data inconsistency: In end_subsidy_phase - More subsidy \
                                  provided than currently reserved.
                             Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                                 pool_id,
@@ -2255,12 +2241,7 @@ mod pallet {
                 cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 ensure_balance: |asset_balance: BalanceOf<T>| {
                     ensure!(
-                        asset_amount
-                            <= bmul(
-                                asset_balance.saturated_into(),
-                                T::MaxOutRatio::get().saturated_into()
-                            )?
-                            .saturated_into(),
+                        asset_amount <= asset_balance.bmul(T::MaxOutRatio::get())?,
                         Error::<T>::MaxOutRatio
                     );
                     Ok(())
@@ -2327,11 +2308,7 @@ mod pallet {
                 bound: min_pool_amount,
                 cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 pool_amount: move |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = bmul(
-                        asset_balance.saturated_into(),
-                        T::MaxInRatio::get().saturated_into(),
-                    )?
-                    .saturated_into();
+                    let mul: BalanceOf<T> = asset_balance.bmul(T::MaxInRatio::get())?;
                     ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
                         asset_balance.saturated_into(),
@@ -2473,12 +2450,7 @@ mod pallet {
                             let balance_in =
                                 T::AssetManager::free_balance(asset_in, &pool_account_id);
                             ensure!(
-                                asset_amount_in
-                                    <= bmul(
-                                        balance_in.saturated_into(),
-                                        T::MaxInRatio::get().saturated_into()
-                                    )?
-                                    .saturated_into(),
+                                asset_amount_in <= balance_in.bmul(T::MaxInRatio::get())?,
                                 Error::<T>::MaxInRatio
                             );
                             let swap_fee = if handle_fees {
@@ -2524,9 +2496,9 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
                             let cost_after =
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                            cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
+                            cost_before.checked_sub_res(&cost_after)?
                         }
-                        ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
                             return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
@@ -2579,7 +2551,7 @@ mod pallet {
                 ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
                     T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
                 ),
-                ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
                     Err(Error::<T>::InvalidScoringRule.into())
                 }
             }
@@ -2633,12 +2605,7 @@ mod pallet {
                     let asset_amount_in = match pool.scoring_rule {
                         ScoringRule::CPMM => {
                             ensure!(
-                                asset_amount_out
-                                    <= bmul(
-                                        balance_out.saturated_into(),
-                                        T::MaxOutRatio::get().saturated_into()
-                                    )?
-                                    .saturated_into(),
+                                asset_amount_out <= balance_out.bmul(T::MaxOutRatio::get(),)?,
                                 Error::<T>::MaxOutRatio,
                             );
 
@@ -2687,9 +2654,9 @@ mod pallet {
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
                             let cost_after =
                                 T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                            cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                            cost_after.checked_sub_res(&cost_before)?
                         }
-                        ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
                             return Err(Error::<T>::InvalidScoringRule.into());
                         }
                     };
@@ -2755,7 +2722,7 @@ mod pallet {
                         pool.assets.len().saturated_into(),
                     ))
                 }
-                ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
                     Err(Error::<T>::InvalidScoringRule.into())
                 }
             }

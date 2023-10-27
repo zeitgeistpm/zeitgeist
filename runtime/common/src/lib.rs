@@ -46,24 +46,25 @@ pub mod weights;
 #[macro_export]
 macro_rules! decl_common_types {
     () => {
+        use core::marker::PhantomData;
         use frame_support::traits::{
             Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced,
         };
         #[cfg(feature = "try-runtime")]
         use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
-        use sp_runtime::{generic, DispatchResult};
-        use zeitgeist_primitives::traits::DeployPoolApi;
-        use zrml_neo_swaps::types::MarketCreatorFee;
+        use orml_traits::MultiCurrency;
+        use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
+        use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
+        type Migrations = (zrml_prediction_markets::migrations::AddEarlyCloseBonds<Runtime>,);
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = (zrml_prediction_markets::migrations::MigrateMarkets<Runtime>,);
+        type Migrations = (zrml_prediction_markets::migrations::AddEarlyCloseBonds<Runtime>,);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -196,6 +197,7 @@ macro_rules! decl_common_types {
                     GlobalDisputesPalletId::get(),
                     LiquidityMiningPalletId::get(),
                     OrderbookPalletId::get(),
+                    ParimutuelPalletId::get(),
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
@@ -314,7 +316,8 @@ macro_rules! create_runtime {
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
                 GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
-                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 61,
+                Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
+                Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
 
                 $($additional_pallets)*
             }
@@ -860,9 +863,9 @@ macro_rules! impl_config_traits {
                         c,
                         RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
                             | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::remove_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook::Call::remove_order { .. })
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
@@ -882,9 +885,9 @@ macro_rules! impl_config_traits {
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
                             )
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::place_order { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::fill_order { .. })
-                            | RuntimeCall::Orderbook(zrml_orderbook_v1::Call::remove_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
+                            | RuntimeCall::Orderbook(zrml_orderbook::Call::remove_order { .. })
                     ),
                 }
             }
@@ -1127,7 +1130,12 @@ macro_rules! impl_config_traits {
             type Authorized = Authorized;
             type Currency = Balances;
             type Court = Court;
+            type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
+            type CloseMarketEarlyOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type CloseOrigin = EnsureRoot<AccountId>;
+            type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
+            type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
+            type CloseEarlyRequestBond = CloseEarlyRequestBond;
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DeployPool = NeoSwaps;
             type DisputeBond = DisputeBond;
@@ -1154,6 +1162,8 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
+            type CloseEarlyBlockPeriod = CloseEarlyBlockPeriod;
+            type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
@@ -1244,9 +1254,11 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
         }
 
+        common_runtime::impl_market_creator_fees!();
+
         impl zrml_neo_swaps::Config for Runtime {
             type CompleteSetOperations = PredictionMarkets;
-            type ExternalFees = MarketCreatorFee<Runtime>;
+            type ExternalFees = MarketCreatorFee;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
@@ -1255,12 +1267,22 @@ macro_rules! impl_config_traits {
             type PalletId = NeoSwapsPalletId;
         }
 
-        impl zrml_orderbook_v1::Config for Runtime {
+        impl zrml_orderbook::Config for Runtime {
             type AssetManager = AssetManager;
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = OrderbookPalletId;
-            type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
+            type WeightInfo = zrml_orderbook::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_parimutuel::Config for Runtime {
+            type ExternalFees = MarketCreatorFee;
+            type RuntimeEvent = RuntimeEvent;
+            type MarketCommons = MarketCommons;
+            type AssetManager = AssetManager;
+            type MinBetSize = MinBetSize;
+            type PalletId = ParimutuelPalletId;
+            type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
         }
     }
 }
@@ -1370,7 +1392,8 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_court, Court);
                     list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
-                    list_benchmark!(list, extra, zrml_orderbook_v1, Orderbook);
+                    list_benchmark!(list, extra, zrml_orderbook, Orderbook);
+                    list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
@@ -1473,7 +1496,8 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_court, Court);
                     add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
-                    add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
+                    add_benchmark!(params, batches, zrml_orderbook, Orderbook);
+                    add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);

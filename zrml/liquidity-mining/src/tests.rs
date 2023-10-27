@@ -222,6 +222,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             status: MarketStatus::Closed,
             scoring_rule: ScoringRule::CPMM,
             bonds: MarketBonds::default(),
+            early_close: None,
         },
     );
 }

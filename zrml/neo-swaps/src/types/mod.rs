@@ -16,11 +16,9 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 mod fee_distribution;
-mod market_creator_fee;
 mod pool;
 mod solo_lp;
 
 pub(crate) use fee_distribution::*;
-pub use market_creator_fee::*;
 pub(crate) use pool::*;
 pub(crate) use solo_lp::*;

@@ -81,8 +81,7 @@ macro_rules! impl_foreign_fees {
         };
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
-        use zeitgeist_primitives::types::TxPaymentAssetId;
-        use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
+        use zeitgeist_primitives::{math::fixed::FixedMul, types::TxPaymentAssetId};
 
         #[repr(u8)]
         pub enum CustomTxError {
@@ -108,7 +107,7 @@ macro_rules! impl_foreign_fees {
             // less DOT than ZTG is paid for fees.
             // Assume a fee_factor of 20_000_000_000, then the fee would result in
             // 20_000_000_000 / 10_000_000_000 = 2 units per ZTG
-            let converted_fee = zrml_swaps::fixed::bmul(native_fee, fee_factor).map_err(|_| {
+            let converted_fee = native_fee.bmul(fee_factor).map_err(|_| {
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::FeeConversionArith as u8,
                 ))
@@ -232,6 +231,53 @@ macro_rules! impl_foreign_fees {
                 TTCHandleCredit::handle_credit(final_fee);
 
                 Ok(())
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_market_creator_fees {
+    () => {
+        pub struct MarketCreatorFee;
+
+        /// Uses the `creator_fee` field defined by the specified market to deduct a fee for the market's
+        /// creator. Calling `distribute` is noop if the market doesn't exist or the transfer fails for any
+        /// reason.
+        impl DistributeFees for MarketCreatorFee {
+            type Asset = Asset<MarketId>;
+            type AccountId = AccountId;
+            type Balance = Balance;
+            type MarketId = MarketId;
+
+            fn distribute(
+                market_id: Self::MarketId,
+                asset: Self::Asset,
+                account: &Self::AccountId,
+                amount: Self::Balance,
+            ) -> Self::Balance {
+                Self::do_distribute(market_id, asset, account, amount)
+                    .unwrap_or_else(|_| 0u8.saturated_into())
+            }
+        }
+
+        impl MarketCreatorFee {
+            fn do_distribute(
+                market_id: MarketId,
+                asset: Asset<MarketId>,
+                account: &AccountId,
+                amount: Balance,
+            ) -> Result<Balance, DispatchError> {
+                let market = MarketCommons::market(&market_id)?; // Should never fail
+                let fee_amount = market.creator_fee.mul_floor(amount);
+                // Might fail if the transaction is too small
+                <AssetManager as MultiCurrency<_>>::transfer(
+                    asset,
+                    account,
+                    &market.creator,
+                    fee_amount,
+                )?;
+                Ok(fee_amount)
             }
         }
     };
