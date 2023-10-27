@@ -17,17 +17,14 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, utils::market_mock, Error, Event, Order, OrderSide, Orders};
-use frame_support::{
-    assert_noop, assert_ok,
-    traits::{Currency, ReservableCurrency},
-};
+use frame_support::{assert_noop, assert_ok};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::DistributeFees,
-    types::{AccountIdTest, Asset, ScoringRule},
+    types::{Asset, ScoringRule},
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
 
@@ -49,8 +46,8 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
                 market_id,
                 Asset::CategoricalOutcome(0, 2),
                 OrderSide::Bid,
-                100,
-                250,
+                10 * BASE,
+                25 * BASE,
             ),
             Error::<Runtime>::InvalidScoringRule
         );
@@ -72,8 +69,8 @@ fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
             market_id,
             Asset::CategoricalOutcome(0, 2),
             OrderSide::Bid,
-            10,
-            250,
+            10 * BASE,
+            25 * BASE,
         ));
 
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
@@ -109,37 +106,50 @@ fn it_places_orders() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market);
+        Markets::<Runtime>::insert(market_id, market.clone());
 
-        // Give some shares for Bob.
-        assert_ok!(AssetManager::deposit(Asset::CategoricalOutcome(0, 1), &BOB, 10));
+        let outcome_asset_0 = Asset::CategoricalOutcome(0, 2);
 
-        // Make an order from Alice to buy shares.
+        let outcome_asset_amount = 10 * BASE;
+        let base_asset_amount = 250 * BASE;
+
+        assert_ok!(AssetManager::deposit(market.base_asset, &ALICE, base_asset_amount));
+
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            Asset::CategoricalOutcome(0, 2),
+            outcome_asset_0,
             OrderSide::Bid,
-            10,
-            250,
+            outcome_asset_amount,
+            base_asset_amount,
         ));
 
-        let reserved_funds =
-            <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
-        assert_eq!(reserved_funds, 250);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        let base_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, base_asset_amount);
+        let base_asset_minus_fees = base_asset_amount - base_asset_fees;
+        assert_eq!(reserved_funds, base_asset_minus_fees);
 
-        // Make an order from Bob to sell shares.
+        let outcome_asset_1 = Asset::CategoricalOutcome(0, 1);
+
+        let outcome_asset_amount = 10 * BASE;
+        let base_asset_amount = 5 * BASE;
+        assert_ok!(AssetManager::deposit(outcome_asset_1, &BOB, outcome_asset_amount));
+
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
-            Asset::CategoricalOutcome(0, 1),
+            outcome_asset_1,
             OrderSide::Ask,
-            10,
-            5,
+            outcome_asset_amount,
+            base_asset_amount,
         ));
 
-        let shares_reserved = Tokens::reserved_balance(Asset::CategoricalOutcome(0, 1), &BOB);
-        assert_eq!(shares_reserved, 10);
+        let shares_reserved = AssetManager::reserved_balance(outcome_asset_1, &BOB);
+        let outcome_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
+        let outcome_asset_minus_fees = outcome_asset_amount - outcome_asset_fees;
+        assert_eq!(shares_reserved, outcome_asset_minus_fees);
     });
 }
 
@@ -219,28 +229,37 @@ fn it_fills_bid_orders_fully() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market);
+        Markets::<Runtime>::insert(market_id, market.clone());
 
         let outcome_asset = Asset::CategoricalOutcome(0, 1);
 
-        // Make an order from Bob to sell shares.
+        let outcome_asset_amount = 10 * BASE;
+        let base_asset_amount = 50 * BASE;
+
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
             outcome_asset,
             OrderSide::Bid,
-            10,
-            50,
+            outcome_asset_amount,
+            base_asset_amount,
         ));
 
-        let reserved_bob = Balances::reserved_balance(BOB);
-        assert_eq!(reserved_bob, 50);
+        let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
+        let base_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, base_asset_amount);
+        let base_asset_amount_minus_fees = base_asset_amount - base_asset_fees;
+        assert_eq!(reserved_bob, base_asset_amount_minus_fees);
+
+        let outcome_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
+        let outcome_asset_amount_minus_fees = outcome_asset_amount - outcome_asset_fees;
 
         let order_id = 0u128;
-        assert_ok!(Tokens::deposit(outcome_asset, &ALICE, 10));
+        assert_ok!(AssetManager::deposit(outcome_asset, &ALICE, outcome_asset_amount_minus_fees));
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
 
-        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, 0);
 
         System::assert_last_event(
@@ -248,22 +267,22 @@ fn it_fills_bid_orders_fully() {
                 order_id,
                 maker: BOB,
                 taker: ALICE,
-                filled: 10,
+                filled: outcome_asset_amount_minus_fees,
                 unfilled_outcome_asset_amount: 0,
                 unfilled_base_asset_amount: 0,
             }
             .into(),
         );
 
-        let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
-        let alice_shares = Tokens::free_balance(outcome_asset, &ALICE);
-        assert_eq!(alice_bal, BASE + 50);
+        let alice_bal = AssetManager::free_balance(market.base_asset, &ALICE);
+        let alice_shares = AssetManager::free_balance(outcome_asset, &ALICE);
+        assert_eq!(alice_bal, INITIAL_BALANCE + base_asset_amount_minus_fees);
         assert_eq!(alice_shares, 0);
 
-        let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
-        let bob_shares = Tokens::free_balance(outcome_asset, &BOB);
-        assert_eq!(bob_bal, BASE - 50);
-        assert_eq!(bob_shares, 10);
+        let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
+        let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
+        assert_eq!(bob_bal, INITIAL_BALANCE - base_asset_amount);
+        assert_eq!(bob_shares, outcome_asset_amount_minus_fees);
     });
 }
 
@@ -281,7 +300,6 @@ fn it_fills_bid_orders_partially() {
 
         assert_ok!(AssetManager::deposit(market.base_asset, &BOB, base_asset_amount));
 
-        // Make an order from Bob to buy outcome tokens.
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -300,6 +318,7 @@ fn it_fills_bid_orders_partially() {
 
         // instead of selling 100 shares, Alice sells 70 shares
         let alice_portion = 70 * BASE;
+        assert!(alice_portion < outcome_asset_amount);
         let alice_shares_left = outcome_asset_amount - alice_portion;
         let portion = Some(alice_portion);
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
@@ -324,14 +343,12 @@ fn it_fills_bid_orders_partially() {
                 maker: BOB,
                 outcome_asset,
                 base_asset: market.base_asset,
-                // from 100 to 30 changed (partially filled) minus fees
                 outcome_asset_amount: unfilled_outcome_asset_amount_minus_fees,
                 base_asset_amount: unfilled_base_asset_amount_minus_fees,
             }
         );
 
         let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
-        // 500 - (70 shares * 50 price) = 150 and then minus fees
         assert_eq!(reserved_bob, unfilled_base_asset_amount_minus_fees);
 
         System::assert_last_event(
@@ -356,12 +373,11 @@ fn it_fills_bid_orders_partially() {
 
         let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
         let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
-        // 350 of base_asset lost, 150 of base_asset reserved
-        assert_eq!(bob_bal, 0);
-        assert_eq!(bob_shares, 70 * BASE);
+        assert_eq!(bob_bal, INITIAL_BALANCE);
+        assert_eq!(bob_shares, alice_portion);
 
         let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
-        assert_eq!(reserved_bob, 150 * BASE);
+        assert_eq!(reserved_bob, unfilled_base_asset_amount_minus_fees);
     });
 }
 
@@ -377,7 +393,7 @@ fn it_fills_ask_orders_partially() {
         let outcome_asset_amount = 100 * BASE;
         let base_asset_amount = 500 * BASE;
 
-        assert_ok!(Tokens::deposit(outcome_asset, &BOB, outcome_asset_amount));
+        assert_ok!(AssetManager::deposit(outcome_asset, &BOB, outcome_asset_amount));
 
         // Make an order from Bob to sell outcome tokens.
         assert_ok!(Orderbook::place_order(
@@ -389,7 +405,7 @@ fn it_fills_ask_orders_partially() {
             base_asset_amount,
         ));
 
-        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
         assert_eq!(
             reserved_bob,
             outcome_asset_amount
@@ -440,7 +456,7 @@ fn it_fills_ask_orders_partially() {
             }
         );
 
-        let reserved_bob = Tokens::reserved_balance(outcome_asset, &BOB);
+        let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, filled_outcome_asset_amount);
 
         System::assert_last_event(
@@ -487,31 +503,42 @@ fn it_removes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market);
+        Markets::<Runtime>::insert(market_id, market.clone());
 
-        // Make an order from Alice to buy shares.
-        let share_id = Asset::CategoricalOutcome(0, 2);
+        let outcome_asset = Asset::CategoricalOutcome(0, 2);
+
+        let outcome_asset_amount = 25 * BASE;
+        let base_asset_amount = 10 * BASE;
+
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            share_id,
+            outcome_asset,
             OrderSide::Bid,
-            25,
-            10
+            outcome_asset_amount,
+            base_asset_amount,
         ));
+
+        let outcome_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
+        let outcome_asset_amount_minus_fees = outcome_asset_amount - outcome_asset_fees;
+
+        let base_asset_fees =
+            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, base_asset_amount);
+        let base_asset_amount_minus_fees = base_asset_amount - base_asset_fees;
 
         let order_id = 0u128;
         System::assert_last_event(
             Event::<Runtime>::OrderPlaced {
-                order_id: 0,
+                order_id,
                 order: Order {
                     market_id,
                     side: OrderSide::Bid,
                     maker: ALICE,
-                    outcome_asset: share_id,
+                    outcome_asset,
                     base_asset: Asset::Ztg,
-                    outcome_asset_amount: 25,
-                    base_asset_amount: 10,
+                    outcome_asset_amount: outcome_asset_amount_minus_fees,
+                    base_asset_amount: base_asset_amount_minus_fees,
                 },
             }
             .into(),
@@ -524,10 +551,10 @@ fn it_removes_orders() {
                 market_id,
                 side: OrderSide::Bid,
                 maker: ALICE,
-                outcome_asset: share_id,
+                outcome_asset,
                 base_asset: Asset::Ztg,
-                outcome_asset_amount: 25,
-                base_asset_amount: 10,
+                outcome_asset_amount: outcome_asset_amount_minus_fees,
+                base_asset_amount: base_asset_amount_minus_fees,
             }
         );
 
@@ -536,14 +563,12 @@ fn it_removes_orders() {
             Error::<Runtime>::NotOrderCreator,
         );
 
-        let reserved_funds =
-            <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
-        assert_eq!(reserved_funds, 10);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        assert_eq!(reserved_funds, base_asset_amount_minus_fees);
 
         assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id));
 
-        let reserved_funds =
-            <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
         assert_eq!(reserved_funds, 0);
 
         assert!(<Orders<Runtime>>::get(order_id).is_none());

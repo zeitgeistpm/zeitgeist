@@ -131,18 +131,19 @@ where
     type Balance = BalanceOf<T>;
     type MarketId = MarketIdOf<T>;
 
+    fn get_fee(_market_id: Self::MarketId, amount: Self::Balance) -> Self::Balance {
+        zeitgeist_primitives::math::fixed::bmul(amount.saturated_into(), EXTERNAL_FEES)
+            .unwrap()
+            .saturated_into()
+    }
+
     fn distribute(
         _market_id: Self::MarketId,
         asset: Self::Asset,
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = zeitgeist_primitives::math::fixed::bmul(
-            amount.saturated_into(),
-            EXTERNAL_FEES.saturated_into(),
-        )
-        .unwrap()
-        .saturated_into();
+        let fees = Self::get_fee(_market_id, amount);
         let _ = T::MultiCurrency::transfer(asset, account, &F::get(), fees);
         fees
     }

@@ -1262,6 +1262,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_orderbook_v1::Config for Runtime {
             type AssetManager = AssetManager;
+            type ExternalFees = MarketCreatorFee;
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = OrderbookPalletId;
