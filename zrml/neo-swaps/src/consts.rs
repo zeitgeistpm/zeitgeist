@@ -17,7 +17,11 @@
 
 use zeitgeist_primitives::constants::BASE;
 
-pub(crate) const EXP_NUMERICAL_LIMIT: u128 = 20; // Numerical limit for exp arguments.
+/// Numerical limit for absolute value of exp arguments (not a fixed point number).
+pub(crate) const EXP_NUMERICAL_LIMIT: u128 = 10;
+/// Numerical lower limit for ln arguments (fixed point number).
+pub(crate) const LN_NUMERICAL_LIMIT: u128 = BASE / 10;
+/// The maximum number of assets allowed in a pool.
 pub(crate) const MAX_ASSETS: u16 = 128;
 
 pub(crate) const _1: u128 = BASE;

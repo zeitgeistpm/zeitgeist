@@ -21,10 +21,13 @@ use core::marker::PhantomData;
 use fixed::FixedU128;
 use hydra_dx_math::transcendental::{exp, ln};
 use sp_runtime::{DispatchError, SaturatedConversion};
+use std::str::FromStr;
 use typenum::U80;
 
 type Fractional = U80;
 type Fixed = FixedU128<Fractional>;
+
+const EXP_OVERFLOW_THRESHOLD: &str = "32.44892769177272";
 
 pub(crate) trait MathOps<T: Config> {
     fn calculate_swap_amount_out_for_buy(
@@ -32,19 +35,28 @@ pub(crate) trait MathOps<T: Config> {
         amount_in: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
+
     fn calculate_swap_amount_out_for_sell(
         reserve: BalanceOf<T>,
         amount_in: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
+
     fn calculate_spot_price(
         reserve: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
+
     fn calculate_reserves_from_spot_prices(
         amount: BalanceOf<T>,
         spot_prices: Vec<BalanceOf<T>>,
     ) -> Result<(BalanceOf<T>, Vec<BalanceOf<T>>), DispatchError>;
+
+    fn calculate_buy_ln_argument(
+        reserve: BalanceOf<T>,
+        amount: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
 }
 
 pub(crate) struct Math<T>(PhantomData<T>);
@@ -100,6 +112,19 @@ impl<T: Config> MathOps<T> for Math<T> {
         let spot_prices = spot_prices.into_iter().map(|p| p.saturated_into()).collect();
         Ok((liquidity, spot_prices))
     }
+
+    fn calculate_buy_ln_argument(
+        reserve: BalanceOf<T>,
+        amount_in: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = reserve.saturated_into();
+        let amount_in = amount_in.saturated_into();
+        let liquidity = liquidity.saturated_into();
+        detail::calculate_buy_ln_argument(reserve, amount_in, liquidity)
+            .map(|result| result.saturated_into())
+            .ok_or_else(|| Error::<T>::MathError.into())
+    }
 }
 
 mod detail {
@@ -109,7 +134,7 @@ mod detail {
         math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
     };
 
-    /// Calculate b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x
+    /// Calculate b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x.
     pub(super) fn calculate_swap_amount_out_for_buy(
         reserve: u128,
         amount_in: u128,
@@ -123,7 +148,7 @@ mod detail {
         from_fixed(result_fixed)
     }
 
-    /// Calculate –1 * b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i
+    /// Calculate –1 * b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i.
     pub(super) fn calculate_swap_amount_out_for_sell(
         reserve: u128,
         amount_in: u128,
@@ -156,6 +181,20 @@ mod detail {
         Some((liquidity, reserve))
     }
 
+    /// Calculate e^(x/b) − 1 + e^(−r_i/b).
+    pub(super) fn calculate_buy_ln_argument(
+        reserve: u128,
+        amount_in: u128,
+        liquidity: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_buy_ln_argument_fixed(
+            to_fixed(reserve)?,
+            to_fixed(amount_in)?,
+            to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
     fn to_fixed<B>(value: B) -> Option<Fixed>
     where
         B: Into<u128> + From<u128>,
@@ -175,12 +214,7 @@ mod detail {
         amount_in: Fixed,
         liquidity: Fixed,
     ) -> Option<Fixed> {
-        // FIXME Defensive programming: Check for underflow in x/b and r_i/b.
-        let exp_x_over_b: Fixed = exp(amount_in.checked_div(liquidity)?, false).ok()?;
-        let exp_neg_r_over_b = exp(reserve.checked_div(liquidity)?, true).ok()?;
-        // FIXME Defensive programming: Check for underflow in the exponential expressions.
-        let inside_ln =
-            exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(Fixed::checked_from_num(1)?)?;
+        let inside_ln = calculate_buy_ln_argument_fixed(reserve, amount_in, liquidity)?;
         let (ln_result, ln_neg) = ln(inside_ln).ok()?;
         let blob = liquidity.checked_mul(ln_result)?;
         let reserve_plus_blob =
@@ -193,10 +227,8 @@ mod detail {
         amount_in: Fixed,
         liquidity: Fixed,
     ) -> Option<Fixed> {
-        // FIXME Defensive programming: Check for underflow in x/b and r_i/b.
         let exp_neg_x_over_b: Fixed = exp(amount_in.checked_div(liquidity)?, true).ok()?;
         let exp_r_over_b = exp(reserve.checked_div(liquidity)?, false).ok()?;
-        // FIXME Defensive programming: Check for underflow in the exponential expressions.
         let inside_ln =
             exp_neg_x_over_b.checked_add(exp_r_over_b)?.checked_sub(Fixed::checked_from_num(1)?)?;
         let (ln_result, ln_neg) = ln(inside_ln).ok()?;
@@ -212,7 +244,6 @@ mod detail {
         amount: Fixed,
         spot_prices: Vec<Fixed>,
     ) -> Option<(Fixed, Vec<Fixed>)> {
-        // FIXME Defensive programming - ensure against underflows
         let tmp_reserves = spot_prices
             .iter()
             // Drop the bool (second tuple component) as ln(p) is always negative.
@@ -226,11 +257,26 @@ mod detail {
         Some((liquidity, reserves))
     }
 
+    /// Calculate e^(x/b) − 1 + e^(−r_i/b).
+    pub(super) fn calculate_buy_ln_argument_fixed(
+        reserve: Fixed,
+        amount_in: Fixed,
+        liquidity: Fixed,
+    ) -> Option<Fixed> {
+        let exp_x_over_b: Fixed = exp(amount_in.checked_div(liquidity)?, false).ok()?;
+        let r_over_b = reserve.checked_div(liquidity)?;
+        let exp_neg_r_over_b = if r_over_b < Fixed::from_str(EXP_OVERFLOW_THRESHOLD).ok()? {
+            exp(reserve.checked_div(liquidity)?, true).ok()?
+        } else {
+            Fixed::checked_from_num(0)? // Underflow to zero.
+        };
+        exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(Fixed::checked_from_num(1)?)
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
         use crate::{assert_approx, consts::*};
-        use std::str::FromStr;
         use test_case::test_case;
         use zeitgeist_primitives::constants::BASE;
 
@@ -281,18 +327,18 @@ mod detail {
         }
 
         #[test]
+        fn exp_burns() {
+            let result: Fixed = exp(Fixed::from_str("32.44892769177272").unwrap(), false).unwrap();
+        }
+
+        #[test]
         fn overflow() {
-            // Consider the following pool. Three assets, with the following distribution of
-            // balances: [250.85832972070816, 250.85832971998437, 10000.0]. The liquidity parameter
-            // is 361.9120682527099. We're buying `20 * liquidity` units of the third asset.
             let reserve = 10_000 * BASE;
             let liquidity = 3_333_333_333_333;
             let amount_in = 5 * liquidity;
             let amount_out =
                 calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
             assert_eq!(amount_out, 99_977_464_168_502);
-            // After executing the buy, the balances are the following: [1897.7157268533774,
-            // 1897.715726853315, 2.253583149829865].
             let sum_of_prices = calculate_spot_price(18_977_157_268_533, liquidity).unwrap()
                 + calculate_spot_price(18_977_157_268_533, liquidity).unwrap()
                 + calculate_spot_price(22_535_831_498, liquidity).unwrap();
@@ -303,16 +349,28 @@ mod detail {
         fn overflow2() {
             let reserve = 10_000 * BASE;
             let liquidity = 4_342_944_819_032;
-            let amount_in = 5 * liquidity;
+            let amount_in = 10 * liquidity;
             let amount_out =
                 calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
-            assert_eq!(amount_out, 99_970_638_438_209);
-            // After executing the buy, the balances are the following: [1897.7157268533774,
-            // 1897.715726853315, 2.253583149829865].
-            let sum_of_prices = calculate_spot_price(24_725_024_052_670, liquidity).unwrap()
-                + calculate_spot_price(24_725_024_051_802, liquidity).unwrap()
-                + calculate_spot_price(29_361_561_791, liquidity).unwrap();
-            assert_eq!(sum_of_prices, BASE);
+            assert_eq!(amount_out, 99_999_802_826_134);
+            let sum_of_prices = calculate_spot_price(46_439_748_147_833, liquidity).unwrap()
+                + calculate_spot_price(46_439_748_146_964, liquidity).unwrap()
+                + calculate_spot_price(197_173_865, liquidity).unwrap();
+            assert_approx!(sum_of_prices, BASE, 1);
+        }
+
+        #[test]
+        fn overflow3() {
+            let reserve = 10_000 * BASE;
+            let liquidity = 4_342_944_819_032;
+            let amount_in = BASE / 100;
+            let amount_out =
+                calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
+            assert_eq!(amount_out, 53_622_125_748_008); // Actual result: 53622125747983
+            let sum_of_prices = calculate_spot_price(3_010_399_957_508, liquidity).unwrap()
+                + calculate_spot_price(3_010_399_956_639, liquidity).unwrap()
+                + calculate_spot_price(46_377_874_251_992, liquidity).unwrap();
+            assert_approx!(sum_of_prices, BASE, 1);
         }
     }
 }

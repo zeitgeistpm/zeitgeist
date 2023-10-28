@@ -34,7 +34,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        consts::MAX_ASSETS,
+        consts::{LN_NUMERICAL_LIMIT, MAX_ASSETS},
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
         types::{FeeDistribution, Pool, SoloLp},
@@ -68,9 +68,11 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     // These should not be config parameters to avoid misconfigurations.
-    pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
+    /// The maximum allowed spot price when creating a pool.
     pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
+    /// The minimum allowed spot price when creating a pool.
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
 
@@ -480,12 +482,15 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
-                // Defensive check (shouldn't ever happen)!
                 ensure!(
-                    pool.calculate_spot_price(asset_out)? <= MAX_SPOT_PRICE.saturated_into(),
-                    Error::<T>::Unexpected
+                    amount_in <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits,
                 );
-                ensure!(amount_in <= pool.calculate_max_amount_in(), Error::<T>::NumericalLimits);
+                ensure!(
+                    pool.calculate_buy_ln_argument(asset_out, amount_in)?
+                        >= LN_NUMERICAL_LIMIT.saturated_into(),
+                    Error::<T>::NumericalLimits,
+                );
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
@@ -511,11 +516,6 @@ mod pallet {
                         pool.decrease_reserve(asset, &amount_out)?;
                     }
                 }
-                let new_price = pool.calculate_spot_price(asset_out)?;
-                ensure!(
-                    new_price <= MAX_SPOT_PRICE.saturated_into(),
-                    Error::<T>::SpotPriceAboveMax
-                );
                 Self::deposit_event(Event::<T>::BuyExecuted {
                     who: who.clone(),
                     market_id,
@@ -542,12 +542,14 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
-                // Defensive check (shouldn't ever happen)!
                 ensure!(
-                    pool.calculate_spot_price(asset_in)? >= MIN_SPOT_PRICE.saturated_into(),
-                    Error::<T>::Unexpected
+                    pool.reserve_of(&asset_in)? <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits,
                 );
-                ensure!(amount_in <= pool.calculate_max_amount_in(), Error::<T>::NumericalLimits);
+                ensure!(
+                    amount_in <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits,
+                );
                 // Instead of first executing a swap with `(n-1)` transfers from the pool account to
                 // `who` and then selling complete sets, we prevent `(n-1)` storage reads: 1)
                 // Transfer `amount_in` units of `asset_in` to the pool account, 2) sell
@@ -555,7 +557,7 @@ mod pallet {
                 // `amount_out_minus_fees` units of collateral to `who`. The fees automatically end
                 // up in the pool.
                 let amount_out = pool.calculate_swap_amount_out_for_sell(asset_in, amount_in)?;
-                // Beware! This transfer happen _after_ calculating `amount_out`:
+                // Beware! This transfer **must** happen _after_ calculating `amount_out`:
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
@@ -580,10 +582,11 @@ mod pallet {
                     }
                     pool.decrease_reserve(asset, &amount_out)?;
                 }
-                let new_price = pool.calculate_spot_price(asset_in)?;
+                // Ensure that the price is not pushed below the allowed minimum (without actually
+                // calculating the price).
                 ensure!(
-                    new_price >= MIN_SPOT_PRICE.saturated_into(),
-                    Error::<T>::SpotPriceBelowMin
+                    pool.reserve_of(&asset_in)? <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits,
                 );
                 Self::deposit_event(Event::<T>::SellExecuted {
                     who: who.clone(),
