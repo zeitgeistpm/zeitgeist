@@ -94,7 +94,7 @@ In particular, $(p_1, \ldots, p_n)$ always maps to a probability distribution.
 
 Trading fees are specified as fractional (a fee of $f = .01$ means that $1\%$ are charged) and deducted from the amount of collateral before the complete set operations are executed. In other words, the liquidity providers receive $fx$ dollars (fees are distributed pro rata amongst the liquidity providers) and Alice goes through the entire process described above with $\tilde x = (1-f)x$ in place of $x$. The spot price taking the fees into account is (as expected)
 \[
-    \psi(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
+    p_i(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
 \]
 
 \subsection{Selling}
@@ -239,7 +239,7 @@ The restriction that sells can't push prices below $\varepsilon$ is liable to ca
 
 Despite the rule that sells can't push prices below $\varepsilon$, prices can be moved below $\varepsilon$. The issue in a market with three or more outcomes $A, B, C, \ldots$ is that if $C$ is a clear underdog and most of the trading happens between the favorites $A$ and $B$, then the price of $C$ might drop below the allowed threshold. This is what the last rule handles.
 
-The last rule is made to ensure that even if the price is very small (below $\varepsilon$) or even underflows (both of which _shouldn't_ ever happen thanks to trading fees), buying the outcome is still possible, allowing users to push the price back up again. The restriction is that there's essentially a minimum amount. In fact, in the pessimistic case (price underflows to zero), the restriction becomes
+The last rule is made to ensure that even if the price is very small (below $\varepsilon$) or even underflows (both of which \emph{shouldn't} ever happen thanks to trading fees), buying the outcome is still possible, allowing users to push the price back up again. The restriction is that there's essentially a minimum amount. In fact, in the pessimistic case (price underflows to zero), the restriction becomes
 
 $$
 x \geq b \ln(c + 1) \approx bc = \frac{b}{10}.
