@@ -27,7 +27,7 @@ macro_rules! assert_pool_status {
                 .iter()
                 .map(|&a| pool.calculate_spot_price(a).unwrap())
                 .collect::<Vec<u128>>(),
-            $spot_prices
+            $spot_prices,
         );
         let invariant = $spot_prices.iter().sum::<u128>();
         assert_approx!(invariant, _1, 1);
