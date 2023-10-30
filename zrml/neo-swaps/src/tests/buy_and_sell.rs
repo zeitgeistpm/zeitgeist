@@ -38,7 +38,6 @@ macro_rules! assert_pool_status {
 #[test]
 fn buy_and_sell() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let asset_count = 3;
         let market_id = create_market_and_deploy_pool(
             ALICE,
@@ -79,7 +78,7 @@ fn buy_and_sell() {
             market_id,
             vec![1_807_876_540_789, 113_931_597_104, 1_976_969_097_720],
             [815_736_444, 8_538_986_828, 645_276_728],
-            13345678988,
+            13_345_678_988,
         );
 
         assert_ok!(NeoSwaps::buy(
@@ -94,7 +93,7 @@ fn buy_and_sell() {
             market_id,
             vec![76_875_275, 6_650_531_597_104, 8_513_569_097_720],
             [9_998_934_339, 990_789, 74_872],
-            80045678988,
+            80_045_678_988,
         );
 
         // Selling asset 2 is illegal due to low spot price.
@@ -122,7 +121,7 @@ fn buy_and_sell() {
             market_id,
             vec![77_948_356, 6_640_532_670_185, 8_503_570_170_801],
             [9_998_919_465, 1_004_618, 75_917],
-            80145668257,
+            80_145_668_257,
         );
 
         // Selling asset 1 is allowed, but selling too much will raise an error.
@@ -177,7 +176,7 @@ fn buy_and_sell() {
             market_id,
             vec![980_077_948_356, 7_620_532_670_185, 214_308_675_476],
             [2_570_006_838, 258_215, 7_429_734_946],
-            90145668257,
+            90_145_668_257,
         );
     });
 }
