@@ -28,8 +28,6 @@ pub trait DistributeFees {
     /// # Arguments
     ///
     /// - `market_id`: The market on which the fees are taken.
-    /// - `asset`: The asset the fee is paid in.
-    /// - `account`: The account which pays the fees.
     /// - `amount`: The gross amount from which fees are deducted.
     fn get_fee(market_id: Self::MarketId, amount: Self::Balance) -> Self::Balance;
 
