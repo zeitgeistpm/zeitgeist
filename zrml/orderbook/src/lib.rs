@@ -275,6 +275,13 @@ mod pallet {
                         BalanceStatus::Free,
                     )?;
 
+                    T::ExternalFees::distribute(
+                        order_data.market_id,
+                        base_asset,
+                        &taker,
+                        taker_fill,
+                    );
+
                     T::AssetManager::transfer(
                         order_data.outcome_asset,
                         &taker,
@@ -409,16 +416,11 @@ mod pallet {
 
             let order = match side {
                 OrderSide::Bid => {
-                    let external_fees =
-                        T::ExternalFees::distribute(market_id, base_asset, &who, base_asset_amount);
-                    let base_asset_amount_minus_fees = base_asset_amount
-                        .checked_sub(&external_fees)
-                        .ok_or(ArithmeticError::Underflow)?;
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
                         base_asset,
                         &who,
-                        base_asset_amount_minus_fees,
+                        base_asset_amount,
                     )?;
 
                     Order {
@@ -429,8 +431,9 @@ mod pallet {
                         base_asset,
                         // maker requests outcome asset amount minus fees from taker(s)
                         outcome_asset_amount: outcome_asset_amount_minus_fees,
-                        // only base_asset_amount_minus_fees left to repatriate
-                        base_asset_amount: base_asset_amount_minus_fees,
+                        // maker gives full base asset amount (no fees charged yet)
+                        // the taker(s) get this and immediately fees are charged
+                        base_asset_amount,
                     }
                 }
                 OrderSide::Ask => {
