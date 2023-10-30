@@ -514,21 +514,21 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
-                ensure!(
-                    amount_in <= pool.calculate_numerical_threshold(),
-                    Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
-                );
-                ensure!(
-                    pool.calculate_buy_ln_argument(asset_out, amount_in)?
-                        >= LN_NUMERICAL_LIMIT.saturated_into(),
-                    Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
-                );
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(market_id, pool, amount_in)?;
+                ensure!(
+                    amount_in_minus_fees <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
+                );
+                ensure!(
+                    pool.calculate_buy_ln_argument(asset_out, amount_in_minus_fees)?
+                        >= LN_NUMERICAL_LIMIT.saturated_into(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
+                );
                 let swap_amount_out =
                     pool.calculate_swap_amount_out_for_buy(asset_out, amount_in_minus_fees)?;
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
@@ -591,30 +591,25 @@ mod pallet {
                 // `amount_out_minus_fees` units of collateral to `who`. The fees automatically end
                 // up in the pool.
                 let amount_out = pool.calculate_swap_amount_out_for_sell(asset_in, amount_in)?;
-                println!("foo");
                 // Beware! This transfer **must** happen _after_ calculating `amount_out`:
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
-                println!("bar");
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
                     market_id,
                     amount_out,
                 )?;
-                println!("baz");
                 let FeeDistribution {
                     remaining: amount_out_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(market_id, pool, amount_out)?;
                 ensure!(amount_out_minus_fees >= min_amount_out, Error::<T>::AmountOutBelowMin);
-                println!("{:?}", amount_out_minus_fees);
                 T::MultiCurrency::transfer(
                     pool.collateral,
                     &pool.account_id,
                     &who,
                     amount_out_minus_fees,
                 )?;
-                println!("b");
                 for asset in pool.assets().iter() {
                     if *asset == asset_in {
                         pool.increase_reserve(asset, &amount_in)?;
