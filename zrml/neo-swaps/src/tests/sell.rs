@@ -243,22 +243,30 @@ fn sell_fails_on_asset_not_found(market_type: MarketType) {
 }
 
 #[test]
-fn sell_fails_on_numerical_limits() {
+fn sell_fails_if_amount_in_is_greater_than_numerical_threshold() {
     ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            MarketType::Categorical(asset_count),
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
         let amount_in = 100 * pool.liquidity_parameter;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
-            NeoSwaps::buy(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, 0),
+            NeoSwaps::buy(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
             Error::<Runtime>::NumericalLimits,
         );
     });
