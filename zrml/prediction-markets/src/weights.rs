@@ -80,7 +80,7 @@ pub trait WeightInfoZeitgeist {
     fn market_status_manager(b: u32, f: u32) -> Weight;
     fn market_resolution_manager(r: u32, d: u32) -> Weight;
     fn process_subsidy_collecting_markets_dummy() -> Weight;
-    fn create_market_and_deploy_pool(m: u32) -> Weight;
+    fn create_market_and_deploy_pool(m: u32, n: u32) -> Weight;
     fn schedule_early_close_as_authority(o: u32, n: u32) -> Weight;
     fn schedule_early_close_after_dispute(o: u32, n: u32) -> Weight;
     fn schedule_early_close_as_market_creator(o: u32, n: u32) -> Weight;
@@ -766,7 +766,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: MarketCommons Markets (r:0 w:1)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(542), added: 3017, mode: MaxEncodedLen)
     /// The range of component `m` is `[0, 63]`.
-    fn create_market_and_deploy_pool(m: u32) -> Weight {
+    fn create_market_and_deploy_pool(m: u32, _n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `376 + m * (16 ±0)`
         //  Estimated: `36032`
