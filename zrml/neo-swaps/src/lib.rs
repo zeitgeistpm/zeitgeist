@@ -272,6 +272,13 @@ mod pallet {
         /// tokens received is smaller than `min_amount_out`. The user must correctly specify the
         /// number of outcomes for benchmarking reasons.
         ///
+        /// The `amount_in` parameter must also satisfy lower and upper limits due to numerical
+        /// constraints. In fact, the following must hold:
+        ///
+        /// - `amount_in <= EXP_NUMERICAL_LIMIT * pool.liquidity_parameter`.
+        /// - `exp(amount_in/pool.liquidity_parameter) - 1 + p <= LN_NUMERICAL_LIMIT`, where `p` is
+        ///   the spot price of `asset_out`.
+        ///
         /// # Parameters
         ///
         /// - `origin`: The origin account making the purchase.
@@ -308,6 +315,13 @@ mod pallet {
         /// The `amount_in` is paid in outcome tokens. The transaction fails if the amount of outcome
         /// tokens received is smaller than `min_amount_out`. The user must correctly specify the
         /// number of outcomes for benchmarking reasons.
+        ///
+        /// The `amount_in` parameter must also satisfy lower and upper limits due to numerical
+        /// constraints. In fact, the following must hold:
+        ///
+        /// - `amount_in <= EXP_NUMERICAL_LIMIT * pool.liquidity_parameter`.
+        /// - The spot price of `asset_in` is greater than `exp(-EXP_NUMERICAL_LIMIT)` before and
+        ///   after execution
         ///
         /// # Parameters
         ///
