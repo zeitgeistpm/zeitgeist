@@ -218,8 +218,6 @@ mod pallet {
         InvalidTradingMechanism,
         /// Pool can only be traded on if the market is active.
         MarketNotActive,
-        /// Deploying pools is only supported for scalar or binary markets.
-        MarketNotBinaryOrScalar,
         /// Some calculation failed. This shouldn't happen.
         MathError,
         /// The user is not allowed to execute this command.
@@ -732,7 +730,6 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
             let asset_count = spot_prices.len();
             ensure!(asset_count as u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
-            ensure!(market.outcomes() == 2, Error::<T>::MarketNotBinaryOrScalar);
             ensure!(market.outcomes() <= MAX_ASSETS, Error::<T>::AssetCountAboveMax);
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
