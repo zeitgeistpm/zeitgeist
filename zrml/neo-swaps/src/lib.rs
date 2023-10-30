@@ -258,12 +258,6 @@ mod pallet {
         MinAmountNotMet,
     }
 
-    impl<T> From<NumericalLimitsError> for Error<T> {
-        fn from(error: NumericalLimitsError) -> Error<T> {
-            Error::<T>::NumericalLimits(error)
-        }
-    }
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Buy outcome tokens from the specified market.
