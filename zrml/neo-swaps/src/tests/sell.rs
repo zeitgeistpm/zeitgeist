@@ -291,7 +291,8 @@ fn sell_fails_if_price_is_too_low() {
         NeoSwaps::try_mutate_pool(&market_id, |pool| {
             pool.reserves.insert(asset_in, 11 * pool.liquidity_parameter);
             Ok(())
-        }).unwrap();
+        })
+        .unwrap();
         let amount_in = _1;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
@@ -329,7 +330,8 @@ fn sell_fails_if_price_is_pushed_below_threshold() {
             // anymore.
             pool.reserves.insert(asset_in, 10 * pool.liquidity_parameter);
             Ok(())
-        }).unwrap();
+        })
+        .unwrap();
         let amount_in = _10;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         // The received amount is so small that it triggers an ED error if we don't "pad out" Bob's

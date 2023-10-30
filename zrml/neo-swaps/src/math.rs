@@ -16,12 +16,11 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config, Error};
-use alloc::vec::Vec;
+use alloc::{str::FromStr, vec::Vec};
 use core::marker::PhantomData;
 use fixed::FixedU128;
 use hydra_dx_math::transcendental::{exp, ln};
 use sp_runtime::{DispatchError, SaturatedConversion};
-use std::str::FromStr;
 use typenum::U80;
 
 type Fractional = U80;
