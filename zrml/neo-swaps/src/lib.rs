@@ -491,7 +491,7 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count = T::MarketCommons::market(&market_id)?.outcomes() as u32;
+            let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(spot_prices.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
             Ok(Some(T::WeightInfo::deploy_pool(asset_count as u32)).into())
