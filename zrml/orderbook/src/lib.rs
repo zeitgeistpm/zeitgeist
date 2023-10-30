@@ -327,6 +327,7 @@ mod pallet {
             }
         }
 
+        // TODO benchmark is renewed with simplication to have only one benchmark path!
         /// Place a new order.
         ///
         /// # Weight
@@ -366,45 +367,42 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
-            let external_fees_for_maker = T::ExternalFees::get_fee(market_id, maker_amount);
-            let maker_amount_minus_fees = maker_amount.saturating_sub(external_fees_for_maker);
-
-            let external_fees_for_taker = T::ExternalFees::get_fee(market_id, taker_amount);
-            let taker_amount_minus_fees = taker_amount.saturating_sub(external_fees_for_taker);
-
-            let unfilled_taker_amount = if maker_asset == base_asset {
+            // The taker gets the maker_asset minus fees, and the maker gets taker_asset minus fees.
+            // The outcome asset fee is taken into account here, the base asset fee is paid in fill_order
+            let (unfilled_taker_amount, filled_maker_amount) = if maker_asset == base_asset {
                 debug_assert!(taker_asset == outcome_asset);
-                let ext_fees =
-                    T::ExternalFees::distribute(market_id, base_asset, &who, maker_amount);
-                debug_assert!(ext_fees == external_fees_for_maker);
+                let taker_amount_minus_fees =
+                    taker_amount.saturating_sub(T::ExternalFees::get_fee(market_id, taker_amount));
                 // As maker, request taker amount minus fee of outcome asset from the taker(s).
-                // The taker gets maker_asset minus fees, and the maker gets taker_asset minus fees.
-                taker_amount_minus_fees
+                (taker_amount_minus_fees, maker_amount)
             } else {
                 debug_assert!(maker_asset == outcome_asset);
                 debug_assert!(taker_asset == base_asset);
+                let maker_amount_minus_fees =
+                    maker_amount.saturating_sub(T::ExternalFees::get_fee(market_id, maker_amount));
                 // As maker, request full amount from the taker(s),
                 // so that the taker(s) pays the external fee in base asset.
-                taker_amount
+                (taker_amount, maker_amount_minus_fees)
             };
 
-            // either maker_asset is base asset, 
-            // then the external fees were already paid above 
+            // either maker_asset is base asset,
+            // then the external fees will be paid in base asset in the fill_order extrinsic
+            // so give full maker amount
             // and the taker(s) will get base asset amount minus fees
-            // or maker_asset is outcome asset, 
+            // or maker_asset is outcome asset,
             // then the taker will get outcome asset amount minus fees
             T::AssetManager::reserve_named(
                 &Self::reserve_id(),
                 maker_asset,
                 &who,
-                maker_amount_minus_fees,
+                filled_maker_amount,
             )?;
 
             let order = Order {
                 market_id,
                 maker: who.clone(),
                 maker_asset,
-                maker_amount: maker_amount_minus_fees,
+                maker_amount: filled_maker_amount,
                 taker_asset,
                 taker_amount: unfilled_taker_amount,
             };
