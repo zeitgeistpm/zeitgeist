@@ -36,6 +36,9 @@ pub(crate) const _70: u128 = 70 * _1;
 pub(crate) const _80: u128 = 80 * _1;
 pub(crate) const _100: u128 = 100 * _1;
 pub(crate) const _101: u128 = 101 * _1;
+pub(crate) const _500: u128 = 500 * _1;
+pub(crate) const _777: u128 = 777 * _1;
+pub(crate) const _1000: u128 = 1_000 * _1;
 
 pub(crate) const _1_2: u128 = _1 / 2;
 

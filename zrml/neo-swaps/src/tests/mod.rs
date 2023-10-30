@@ -22,6 +22,7 @@ mod deploy_pool;
 mod exit;
 mod join;
 mod sell;
+mod stress;
 mod withdraw_fees;
 
 use crate::{consts::*, mock::*, traits::*, *};
