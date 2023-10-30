@@ -267,11 +267,12 @@ mod pallet {
         /// number of outcomes for benchmarking reasons.
         ///
         /// The `amount_in` parameter must also satisfy lower and upper limits due to numerical
-        /// constraints. In fact, the following must hold:
+        /// constraints. In fact, after `amount_in` has been adjusted for fees, the following must
+        /// hold:
         ///
-        /// - `amount_in <= EXP_NUMERICAL_LIMIT * pool.liquidity_parameter`.
-        /// - `exp(amount_in/pool.liquidity_parameter) - 1 + p <= LN_NUMERICAL_LIMIT`, where `p` is
-        ///   the spot price of `asset_out`.
+        /// - `amount_in_minus_fees <= EXP_NUMERICAL_LIMIT * pool.liquidity_parameter`.
+        /// - `exp(amount_in_minus_fees/pool.liquidity_parameter) - 1 + p <= LN_NUMERICAL_LIMIT`,
+        ///   where `p` is the spot price of `asset_out`.
         ///
         /// # Parameters
         ///
