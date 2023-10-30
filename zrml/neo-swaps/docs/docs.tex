@@ -134,7 +134,7 @@ Alice wants to add liquidity to the pool. She's willing to pay $x$ dollars. To i
 
 Now let $i$ be so that $r_i = \max_k r_k$. Let $\lambda = x / r_i$ and $\mu = 1 + \lambda$. For each $k$, Alice moves $\lambda r_k$ units of $k$ into the pool and receives $\lambda q$ pool shares. The liquidity parameter changes from $b$ to $b' = \mu b$. Alice's transfers change the reserve from $r$ to $r' = \mu r$.
 
-The new total issuance of pool shares is $\mu q$ and Alice's share of the pool now is $\lambda / \mu$. Note that Alice retains the balance $(x)^n - \lambda r$ of "left-over tokens".
+The new total issuance of pool shares is $\mu q$ and Alice's share of the pool now is $\lambda / \mu$. Note that Alice retains the balance $(x)^n - \lambda r$ of ``left-over tokens".
 
 \subsection{Withdrawing Liquidity}
 
@@ -150,7 +150,7 @@ Fees are distributed pro rata amongst the liquidity providers. These funds are c
 
 \section{Creating Pools}
 
-Creating a pool is straightforward. The initial odds are defined by adding different amounts of each outcome to the pool. If Alice wants to deposit liquidity worth $x$ units of collateral with initial probability $p$, then she starts off by buying $x$ complete sets. The following algorithm is used to calculate how many units of each outcome go into the pool. Alice retains the other tokens as "left-overs".
+Creating a pool is straightforward. The initial odds are defined by adding different amounts of each outcome to the pool. If Alice wants to deposit liquidity worth $x$ units of collateral with initial probability $p$, then she starts off by buying $x$ complete sets. The following algorithm is used to calculate how many units of each outcome go into the pool. Alice retains the other tokens as ``left-overs".
 
 Let $b = 1$, and let $r_i = - b \ln p_i$ for all $i$. Now let $y = x / \max_i r_i$. Then $y r_i \leq x$ for all $i$ and there exists $i_0$ so that $y r_{i_0} = x$. Set $\tilde r_i = y r_i$ and $\tilde b = yb$. Then
 \[
