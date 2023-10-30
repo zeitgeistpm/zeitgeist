@@ -327,11 +327,6 @@ mod detail {
         }
 
         #[test]
-        fn exp_burns() {
-            let result: Fixed = exp(Fixed::from_str("32.44892769177272").unwrap(), false).unwrap();
-        }
-
-        #[test]
         fn overflow() {
             let reserve = 10_000 * BASE;
             let liquidity = 3_333_333_333_333;

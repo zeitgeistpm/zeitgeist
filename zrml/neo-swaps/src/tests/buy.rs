@@ -266,7 +266,7 @@ fn buy_fails_if_amount_in_is_greater_than_numerical_threshold() {
                 amount_in,
                 0,
             ),
-            Error::<Runtime>::NumericalLimits,
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
         );
     });
 }
@@ -296,7 +296,7 @@ fn buy_fails_if_ln_arg_is_less_than_numerical_limit() {
                 amount_in,
                 0,
             ),
-            Error::<Runtime>::NumericalLimits,
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
         );
     });
 }

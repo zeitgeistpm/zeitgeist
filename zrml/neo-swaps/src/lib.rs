@@ -48,10 +48,12 @@ mod pallet {
         pallet_prelude::StorageMap,
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, PalletId, Twox64Concat,
+        transactional, PalletError, PalletId, RuntimeDebug, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
+    use parity_scale_codec::{Decode, Encode};
+    use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
@@ -225,7 +227,7 @@ mod pallet {
         /// This feature is not yet implemented.
         NotImplemented,
         /// Some value in the operation is too large or small.
-        NumericalLimits,
+        NumericalLimits(NumericalLimitsError),
         /// Outstanding fees prevent liquidity withdrawal.
         OutstandingFees,
         /// Specified market does not have a pool.
@@ -242,6 +244,24 @@ mod pallet {
         Unexpected,
         /// Specified monetary amount is zero.
         ZeroAmount,
+    }
+
+    #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+    pub enum NumericalLimitsError {
+        /// Selling is not allowed at prices this low.
+        SpotPriceTooLow,
+        /// Sells which move the price below this threshold are not allowed.
+        SpotPriceSlippedTooLow,
+        /// The maximum buy or sell amount was exceeded.
+        MaxAmountExceeded,
+        /// The minimum buy or sell amount was exceeded.
+        MinAmountNotMet,
+    }
+
+    impl<T> From<NumericalLimitsError> for Error<T> {
+        fn from(error: NumericalLimitsError) -> Error<T> {
+            Error::<T>::NumericalLimits(error)
+        }
     }
 
     #[pallet::call]
@@ -482,12 +502,12 @@ mod pallet {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
                 ensure!(
                     amount_in <= pool.calculate_numerical_threshold(),
-                    Error::<T>::NumericalLimits,
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
                 );
                 ensure!(
                     pool.calculate_buy_ln_argument(asset_out, amount_in)?
                         >= LN_NUMERICAL_LIMIT.saturated_into(),
-                    Error::<T>::NumericalLimits,
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
                 );
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
@@ -540,13 +560,15 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
+                // Ensure that the price of `asset_in` is at least `exp(-EXP_NUMERICAL_LIMITS) =
+                // 4.5399...e-05`.
                 ensure!(
                     pool.reserve_of(&asset_in)? <= pool.calculate_numerical_threshold(),
-                    Error::<T>::NumericalLimits,
+                    Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow),
                 );
                 ensure!(
                     amount_in <= pool.calculate_numerical_threshold(),
-                    Error::<T>::NumericalLimits,
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
                 );
                 // Instead of first executing a swap with `(n-1)` transfers from the pool account to
                 // `who` and then selling complete sets, we prevent `(n-1)` storage reads: 1)
@@ -555,36 +577,41 @@ mod pallet {
                 // `amount_out_minus_fees` units of collateral to `who`. The fees automatically end
                 // up in the pool.
                 let amount_out = pool.calculate_swap_amount_out_for_sell(asset_in, amount_in)?;
+                println!("foo");
                 // Beware! This transfer **must** happen _after_ calculating `amount_out`:
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
+                println!("bar");
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
                     market_id,
                     amount_out,
                 )?;
+                println!("baz");
                 let FeeDistribution {
                     remaining: amount_out_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(market_id, pool, amount_out)?;
                 ensure!(amount_out_minus_fees >= min_amount_out, Error::<T>::AmountOutBelowMin);
+                println!("{:?}", amount_out_minus_fees);
                 T::MultiCurrency::transfer(
                     pool.collateral,
                     &pool.account_id,
                     &who,
                     amount_out_minus_fees,
                 )?;
+                println!("b");
                 for asset in pool.assets().iter() {
                     if *asset == asset_in {
                         pool.increase_reserve(asset, &amount_in)?;
                     }
                     pool.decrease_reserve(asset, &amount_out)?;
                 }
-                // Ensure that the price is not pushed below the allowed minimum (without actually
-                // calculating the price).
+                // Ensure that the sell doesn't move the price below the minimum defined by
+                // `EXP_NUMERICAL_LIMITS` (see comment above).
                 ensure!(
                     pool.reserve_of(&asset_in)? <= pool.calculate_numerical_threshold(),
-                    Error::<T>::NumericalLimits,
+                    Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
                 );
                 Self::deposit_event(Event::<T>::SellExecuted {
                     who: who.clone(),
@@ -844,7 +871,7 @@ mod pallet {
             })
         }
 
-        fn try_mutate_pool<F>(market_id: &MarketIdOf<T>, mutator: F) -> DispatchResult
+        pub(crate) fn try_mutate_pool<F>(market_id: &MarketIdOf<T>, mutator: F) -> DispatchResult
         where
             F: FnMut(&mut PoolOf<T>) -> DispatchResult,
         {
