@@ -254,6 +254,13 @@ mod pallet {
                         BalanceStatus::Free,
                     )?;
 
+                    T::ExternalFees::distribute(
+                        order_data.market_id,
+                        base_asset,
+                        &taker,
+                        taker_fill,
+                    );
+
                     T::AssetManager::transfer(
                         order_data.outcome_asset,
                         &taker,
