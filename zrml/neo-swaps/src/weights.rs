@@ -49,7 +49,7 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_neo_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn buy() -> Weight;
+    fn buy(n: u32) -> Weight;
     fn sell() -> Weight;
     fn join() -> Weight;
     fn exit() -> Weight;
@@ -70,7 +70,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:2 w:2)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    fn buy() -> Weight {
+    fn buy(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2868`
         //  Estimated: `28188`

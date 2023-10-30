@@ -288,7 +288,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy())]
+        #[pallet::weight(T::WeightInfo::buy(*asset_count as u32))]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -302,7 +302,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::buy()).into())
+            Ok(Some(T::WeightInfo::buy(asset_count as u32)).into())
         }
 
         /// Sell outcome tokens to the specified market.

@@ -101,11 +101,12 @@ fn create_market_and_deploy_pool<T: Config>(
 mod benchmarks {
     use super::*;
 
+    /// FIXME Replace hardcoded variant with `{ MAX_ASSETS as u32 }` as soon as possible.
     #[benchmark]
-    fn buy() {
+    fn buy(n: Linear<1, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let asset_count = 2u16;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice,
             base_asset,
