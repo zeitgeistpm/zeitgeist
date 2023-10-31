@@ -5,6 +5,7 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-currencies = { workspace = true }
 orml-tokens = { workspace = true }
+pallet-assets = { workspace = true }
 pallet-asset-tx-payment = { workspace = true }
 pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
@@ -49,6 +50,7 @@ std = [
     "frame-support/std",
     "orml-currencies/std",
     "orml-tokens/std",
+    "pallet-assets/std",
     "pallet-asset-tx-payment/std",
     "pallet-author-inherent?/std",
     "pallet-author-mapping?/std",

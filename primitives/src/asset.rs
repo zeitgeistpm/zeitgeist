@@ -23,6 +23,9 @@ use scale_info::TypeInfo;
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
 ///
+/// **Deprecated:** Market and Pool assets are "lazy" migrated to pallet-assets
+/// Do not create any new market or pool assets using this enumeration.
+///
 /// # Types
 ///
 /// * `MI`: Market Id
@@ -52,6 +55,58 @@ pub enum Asset<MI: MaxEncodedLen> {
     ForeignAsset(u32),
     ParimutuelShare(MI, CategoryIndex),
 }
+
+/// The `MarketAsset` enum represents all types of assets available in the
+/// Prediction Market protocol
+///
+/// # Types
+///
+/// * `MI`: Market Id
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    PartialEq,
+    TypeInfo,
+)]
+pub enum MarketAsset<MI: MaxEncodedLen> {
+    CategoricalOutcome(MI, CategoryIndex),
+    #[default]
+    CombinatorialOutcome,
+    ScalarOutcome(MI, ScalarPosition),
+    ParimutuelShare(MI, CategoryIndex),
+    PoolShare(SerdeWrapper<PoolId>),
+}
+
+/// The `CustomAsset` tuple struct represents all assets that are not created
+/// by the Prediction Market protocol. This includes assets created by users,
+/// smart contracts, XCM endpoints, etc.
+///
+/// # Types
+///
+/// * `u128`: Asset Id
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    PartialEq,
+    TypeInfo,
+)]
+pub struct CustomAsset(u128);
 
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
