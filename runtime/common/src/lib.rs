@@ -289,7 +289,7 @@ macro_rules! create_runtime {
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
                 Assets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
-                MarketAssets: pallet_assets::<Instance2>::{Pallet, Storage, Event<T>} = 18,
+                MarketAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
