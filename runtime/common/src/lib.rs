@@ -667,14 +667,13 @@ macro_rules! impl_config_traits {
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
             type StringLimit = CustomAssetsStringLimit;
-            // TODO: custom weights
-            type WeightInfo = ();
+            type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
         }
 
         // Required for runtime benchmarks
         pallet_assets::runtime_benchmarks_enabled! {
             pub struct MarketAssetsBenchmarkHelper;
-            
+
             impl pallet_assets::BenchmarkHelper<MarketAsset>
                 for MarketAssetsBenchmarkHelper
             {
@@ -705,8 +704,7 @@ macro_rules! impl_config_traits {
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
             type StringLimit = MarketAssetsStringLimit;
-            // TODO: custom weights
-            type WeightInfo = ();
+            type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
         }
 
 
