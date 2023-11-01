@@ -30,7 +30,7 @@ use common_runtime::{
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
-    CheckTxVersion, CheckWeight,
+    CheckTxVersion, CheckWeight, EnsureNever,
 };
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;

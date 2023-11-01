@@ -66,12 +66,23 @@ parameter_types! {
     // Assets (Custom)
     pub const CustomAssetsAccountDeposit: Balance = deposit(1, 16);
     pub const CustomAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
+    /// The amount of native currency that is frozen during the whole lifetime
+    /// if an asset class. Freezing happens at asset class creation.
     pub const CustomAssetsDeposit: Balance = BASE;
     pub const CustomAssetsStringLimit: u32 = 50;
     pub const CustomAssetsMetadataDepositBase: Balance = deposit(1, 68);
     pub const CustomAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
 
     // Assets (Market)
+    pub const MarketAssetsAccountDeposit: Balance = deposit(1, 16);
+    pub const MarketAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
+    /// The amount of native currency that is frozen during the whole lifetime
+    /// if an asset class. Freezing happens at asset class creation.
+    /// Irrelevant - No origin can successfully call the associated dispatchable call.
+    pub const MarketAssetsDeposit: Balance = BASE;
+    pub const MarketAssetsStringLimit: u32 = 50;
+    pub const MarketAssetsMetadataDepositBase: Balance = deposit(1, 68);
+    pub const MarketAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
 
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;

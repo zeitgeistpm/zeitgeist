@@ -65,7 +65,7 @@ pub enum Asset<MI: MaxEncodedLen> {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
-pub enum MarketAsset<MI: MaxEncodedLen> {
+pub enum PredictionMarketAsset<MI: MaxEncodedLen> {
     CategoricalOutcome(MI, CategoryIndex),
     #[default]
     CombinatorialOutcome,

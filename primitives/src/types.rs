@@ -88,7 +88,7 @@ pub type CurrencyId = Asset<MarketId>;
 pub type AssetId = u128;
 
 // ID type for the asset classes are used within the prediction market protocol
-pub type MarketAssetT = MarketAsset<MarketId>;
+pub type MarketAsset = PredictionMarketAsset<MarketId>;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.

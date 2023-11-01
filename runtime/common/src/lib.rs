@@ -289,7 +289,7 @@ macro_rules! create_runtime {
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
                 Assets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
-                //MarketAssets: pallet_assets::<Instance2>::{Pallet, Storage, Event<T>} = 18,
+                MarketAssets: pallet_assets::<Instance2>::{Pallet, Storage, Event<T>} = 18,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -634,7 +634,7 @@ macro_rules! impl_config_traits {
         // Required for runtime benchmarks
         pallet_assets::runtime_benchmarks_enabled! {
             pub struct CustomAssetsBenchmarkHelper;
-            
+
             impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
                 for CustomAssetsBenchmarkHelper
             where
@@ -653,9 +653,8 @@ macro_rules! impl_config_traits {
             type AssetId = AssetId;
             type AssetIdParameter = Compact<AssetId>;
             type Balance = Balance;
-            pallet_assets::runtime_benchmarks_enabled! {
-                type BenchmarkHelper = CustomAssetsBenchmarkHelper;
-            }
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = CustomAssetsBenchmarkHelper;
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
             type Currency = Balances;
@@ -671,6 +670,45 @@ macro_rules! impl_config_traits {
             // TODO: custom weights
             type WeightInfo = ();
         }
+
+        // Required for runtime benchmarks
+        pallet_assets::runtime_benchmarks_enabled! {
+            pub struct MarketAssetsBenchmarkHelper;
+            
+            impl pallet_assets::BenchmarkHelper<MarketAsset>
+                for MarketAssetsBenchmarkHelper
+            {
+                fn create_asset_id_parameter(id: u32) -> MarketAsset {
+                    MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
+                }
+            }
+        }
+
+        impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
+            type ApprovalDeposit = MarketAssetsApprovalDeposit;
+            type AssetAccountDeposit = MarketAssetsAccountDeposit;
+            type AssetDeposit = MarketAssetsDeposit;
+            type AssetId = MarketAsset;
+            type AssetIdParameter = MarketAsset;
+            type Balance = Balance;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = MarketAssetsBenchmarkHelper;
+            type CallbackHandle = ();
+            type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
+            type Currency = Balances;
+            type Extra = ();
+            type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type Freezer = ();
+            type MetadataDepositBase = MarketAssetsMetadataDepositBase;
+            type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;
+            // TODO: Figure out sensible number after benchmark on reference machine
+            type RemoveItemsLimit = ConstU32<{ 50 }>;
+            type RuntimeEvent = RuntimeEvent;
+            type StringLimit = MarketAssetsStringLimit;
+            // TODO: custom weights
+            type WeightInfo = ();
+        }
+
 
         impl pallet_balances::Config for Runtime {
             type AccountStore = System;
