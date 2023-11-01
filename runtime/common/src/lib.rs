@@ -94,8 +94,8 @@ macro_rules! decl_common_types {
             generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
         // Asset instances
-        type MarketAssets = pallet_assets::Instance1;
-        type CustomAssets = pallet_assets::Instance2;
+        type CustomAssetsInstance = pallet_assets::Instance1;
+        type MarketAssetsInstance = pallet_assets::Instance2;
 
         // Governance
         type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -288,8 +288,8 @@ macro_rules! create_runtime {
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
-                //MarketAssets: pallet_assets::<Instance1>::{Pallet, Storage, Event<T>} = 17,
-                //CustomAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 17,
+                Assets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
+                //MarketAssets: pallet_assets::<Instance2>::{Pallet, Storage, Event<T>} = 18,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -631,11 +631,12 @@ macro_rules! impl_config_traits {
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
 
-        /*
         // Required for runtime benchmarks
         pallet_assets::runtime_benchmarks_enabled! {
-            pub struct BenchmarkHelper;
-            impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter> for BenchmarkHelper
+            pub struct CustomAssetsBenchmarkHelper;
+            
+            impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
+                for CustomAssetsBenchmarkHelper
             where
                 AssetIdParameter: From<u128>,
             {
@@ -645,33 +646,31 @@ macro_rules! impl_config_traits {
             }
         }
 
-        impl pallet_assets::Config for Runtime {
-            type ApprovalDeposit = AssetApprovalDeposit;
-            type AssetAccountDeposit = ConstU128<{ deposit(1, 18) }>;
-            type AssetDeposit = AssetDeposit;
-            type AssetId = CurrencyId;
+        impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
+            type ApprovalDeposit = CustomAssetsApprovalDeposit;
+            type AssetAccountDeposit = CustomAssetsAccountDeposit;
+            type AssetDeposit = CustomAssetsDeposit;
+            type AssetId = AssetId;
             type AssetIdParameter = Compact<AssetId>;
             type Balance = Balance;
             pallet_assets::runtime_benchmarks_enabled! {
-                type BenchmarkHelper = BenchmarkHelper;
+                type BenchmarkHelper = CustomAssetsBenchmarkHelper;
             }
-            type CallbackHandle = AssetsCallbackHandle;
+            type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
             type Currency = Balances;
-            type Extra = AssetExtra;
+            type Extra = ();
             type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
-            // TODO: no ED for pallets
-            type Freezer = AssetFreezer;
-            pub const MetadataDepositBase = ConstU128<{ deposit(1,68) }>;
-            pub const MetadataDepositPerByte = ConstU128<{ deposit(0, 1) }>;
+            type Freezer = ();
+            type MetadataDepositBase = CustomAssetsMetadataDepositBase;
+            type MetadataDepositPerByte = CustomAssetsMetadataDepositPerByte;
             // TODO: Figure out sensible number after benchmark on reference machine
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
-            type StringLimit = AssetStringLimit;
+            type StringLimit = CustomAssetsStringLimit;
             // TODO: custom weights
             type WeightInfo = ();
         }
-        */
 
         impl pallet_balances::Config for Runtime {
             type AccountStore = System;
@@ -1420,7 +1419,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
-                    // list_benchmark!(list, extra, pallet_assets, Assets);
+                    list_benchmark!(list, extra, pallet_assets, Assets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
@@ -1525,7 +1524,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
-                    // add_benchmark!(params, batches, pallet_assets, Assets);
+                    add_benchmark!(params, batches, pallet_assets, Assets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);

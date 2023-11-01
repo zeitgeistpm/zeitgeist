@@ -63,6 +63,16 @@ parameter_types! {
 }
 
 parameter_types! {
+    // Assets (Custom)
+    pub const CustomAssetsAccountDeposit: Balance = deposit(1, 16);
+    pub const CustomAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
+    pub const CustomAssetsDeposit: Balance = BASE;
+    pub const CustomAssetsStringLimit: u32 = 50;
+    pub const CustomAssetsMetadataDepositBase: Balance = deposit(1, 68);
+    pub const CustomAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
+
+    // Assets (Market)
+
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
     pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;

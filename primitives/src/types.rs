@@ -81,7 +81,14 @@ impl<'a> Arbitrary<'a> for MultiHash {
 /// ORML adapter
 pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
 
+/// ID type for any asset class
 pub type CurrencyId = Asset<MarketId>;
+
+// ID type for asset classes that anyone can create
+pub type AssetId = u128;
+
+// ID type for the asset classes are used within the prediction market protocol
+pub type MarketAssetT = MarketAsset<MarketId>;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.

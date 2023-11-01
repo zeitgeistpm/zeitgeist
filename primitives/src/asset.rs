@@ -64,49 +64,15 @@ pub enum Asset<MI: MaxEncodedLen> {
 /// * `MI`: Market Id
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Decode,
-    Default,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    TypeInfo,
-)]
+#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
 pub enum MarketAsset<MI: MaxEncodedLen> {
     CategoricalOutcome(MI, CategoryIndex),
     #[default]
     CombinatorialOutcome,
     ScalarOutcome(MI, ScalarPosition),
     ParimutuelShare(MI, CategoryIndex),
-    PoolShare(SerdeWrapper<PoolId>),
+    PoolShare(PoolId),
 }
-
-/// The `CustomAsset` tuple struct represents all assets that are not created
-/// by the Prediction Market protocol. This includes assets created by users,
-/// smart contracts, XCM endpoints, etc.
-///
-/// # Types
-///
-/// * `u128`: Asset Id
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Decode,
-    Default,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    TypeInfo,
-)]
-pub struct CustomAsset(u128);
 
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
