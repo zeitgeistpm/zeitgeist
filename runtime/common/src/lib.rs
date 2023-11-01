@@ -663,7 +663,7 @@ macro_rules! impl_config_traits {
             type Freezer = ();
             type MetadataDepositBase = CustomAssetsMetadataDepositBase;
             type MetadataDepositPerByte = CustomAssetsMetadataDepositPerByte;
-            // TODO: Figure out sensible number after benchmark on reference machine
+            // TODO(1176): Figure out sensible number after benchmark on reference machine
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
             type StringLimit = CustomAssetsStringLimit;
@@ -700,7 +700,7 @@ macro_rules! impl_config_traits {
             type Freezer = ();
             type MetadataDepositBase = MarketAssetsMetadataDepositBase;
             type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;
-            // TODO: Figure out sensible number after benchmark on reference machine
+            // TODO(1176): Figure out sensible number after benchmark on reference machine
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
             type StringLimit = MarketAssetsStringLimit;
