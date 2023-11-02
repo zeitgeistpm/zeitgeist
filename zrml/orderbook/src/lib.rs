@@ -223,18 +223,69 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
 
-            let makers_requested_total = match order_data.side {
-                OrderSide::Bid => order_data.outcome_asset_amount,
-                OrderSide::Ask => order_data.base_asset_amount,
-            };
-            let maker_fill = maker_partial_fill.unwrap_or(makers_requested_total);
+            let maker_fill = maker_partial_fill.unwrap_or(order_data.taker_amount);
             ensure!(!maker_fill.is_zero(), Error::<T>::AmountIsZero);
-            ensure!(maker_fill <= makers_requested_total, Error::<T>::AmountTooHighForOrder);
+            ensure!(maker_fill <= order_data.taker_amount, Error::<T>::AmountTooHighForOrder);
 
             let maker = order_data.maker.clone();
+            let maker_asset = order_data.maker_asset;
+            let taker_asset = order_data.taker_asset;
 
             // the reserve of the maker should always be enough to repatriate successfully, e.g. taker gets a little bit less
             // it should always ensure that the maker's request (maker_fill) is fully filled
+            let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
+
+            T::AssetManager::repatriate_reserved_named(
+                &Self::reserve_id(),
+                maker_asset,
+                &maker,
+                &taker,
+                taker_fill,
+                BalanceStatus::Free,
+            )?;
+
+            // always charge fees from base asset
+            let maybe_adjusted_maker_fill = if maker_asset == market.base_asset {
+                let external_fees = T::ExternalFees::distribute(
+                    order_data.market_id,
+                    market.base_asset,
+                    &taker,
+                    // taker_fill is the amount what the taker wants to have (base asset from maker)
+                    taker_fill,
+                );
+                // maker_fill is the amount what the maker wants to have (outcome asset from taker)
+                // base asset amount minus fees
+                maker_fill
+                    .checked_sub(&external_fees)
+                    .ok_or(ArithmeticError::Underflow)?
+            } else {
+                // maker_asset is outcome asset here
+                debug_assert!(taker_asset == market.base_asset);
+
+                let external_fees = T::ExternalFees::distribute(
+                    order_data.market_id,
+                    market.base_asset,
+                    &taker,
+                    // maker_fill is the amount what the maker wants to have (base asset from taker)
+                    maker_fill,
+                );
+                // taker_fill is the amount what the taker wants to have (outcome asset from maker)
+                // fees were already charged for maker amount,
+                // because the maker reserved an outcome asset amount minus fees
+                maker_fill
+            };
+
+            T::AssetManager::transfer(
+                order_data.taker_asset,
+                &taker,
+                &maker,
+                // fee was only charged if base asset
+                maybe_adjusted_maker_fill,
+            )?;
+
+            Self::decrease_order_amounts(&mut order_data, taker_fill, maker_fill)?;
+            Self::is_ratio_quotient_valid(&order_data)?;
+
             match order_data.side {
                 OrderSide::Bid => {
                     T::AssetManager::ensure_can_withdraw(
@@ -321,10 +372,7 @@ mod pallet {
                 unfilled_base_asset_amount,
             });
 
-            match order_data.side {
-                OrderSide::Bid => Ok(Some(T::WeightInfo::fill_order_bid()).into()),
-                OrderSide::Ask => Ok(Some(T::WeightInfo::fill_order_ask()).into()),
-            }
+            Ok(Some(T::WeightInfo::fill_order_bid()).into())
         }
 
         // TODO benchmark is renewed with simplication to have only one benchmark path!
