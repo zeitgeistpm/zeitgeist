@@ -95,7 +95,8 @@ macro_rules! decl_common_types {
 
         // Asset instances
         type CustomAssetsInstance = pallet_assets::Instance1;
-        type MarketAssetsInstance = pallet_assets::Instance2;
+        type CampaignAssetsInstance = pallet_assets::Instance2;
+        type MarketAssetsInstance = pallet_assets::Instance3;
 
         // Governance
         type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -289,7 +290,8 @@ macro_rules! create_runtime {
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
                 Assets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
-                MarketAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
+                CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
+                MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>} = 19,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -663,10 +665,37 @@ macro_rules! impl_config_traits {
             type Freezer = ();
             type MetadataDepositBase = CustomAssetsMetadataDepositBase;
             type MetadataDepositPerByte = CustomAssetsMetadataDepositPerByte;
-            // TODO(1176): Figure out sensible number after benchmark on reference machine
+            // TODO(#1176): Figure out sensible number after benchmark on reference machine
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
             type StringLimit = CustomAssetsStringLimit;
+            type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+        }
+
+        impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
+            type ApprovalDeposit = CampaignAssetsApprovalDeposit;
+            type AssetAccountDeposit = CampaignAssetsAccountDeposit;
+            type AssetDeposit = CampaignAssetsDeposit;
+            type AssetId = AssetId;
+            type AssetIdParameter = Compact<AssetId>;
+            type Balance = Balance;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = CustomAssetsBenchmarkHelper;
+            type CallbackHandle = ();
+            type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
+            type Currency = Balances;
+            type Extra = ();
+            type ForceOrigin = EitherOfDiverse<
+                EnsureRootOrTwoThirdsCouncil,
+                EnsureRootOrAllTechnicalCommittee,
+            >;
+            type Freezer = ();
+            type MetadataDepositBase = CampaignAssetsMetadataDepositBase;
+            type MetadataDepositPerByte = CampaignAssetsMetadataDepositPerByte;
+            // TODO(#1176): Figure out sensible number after benchmark on reference machine
+            type RemoveItemsLimit = ConstU32<{ 50 }>;
+            type RuntimeEvent = RuntimeEvent;
+            type StringLimit = CampaignAssetsStringLimit;
             type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
         }
 
@@ -700,7 +729,7 @@ macro_rules! impl_config_traits {
             type Freezer = ();
             type MetadataDepositBase = MarketAssetsMetadataDepositBase;
             type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;
-            // TODO(1176): Figure out sensible number after benchmark on reference machine
+            // TODO(#1176): Figure out sensible number after benchmark on reference machine
             type RemoveItemsLimit = ConstU32<{ 50 }>;
             type RuntimeEvent = RuntimeEvent;
             type StringLimit = MarketAssetsStringLimit;
