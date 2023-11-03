@@ -25,7 +25,6 @@ use crate::{types::*, weights::*};
 use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
-    dispatch::DispatchResultWithPostInfo,
     ensure,
     pallet_prelude::{
         DispatchError, DispatchResult, OptionQuery, StorageMap, StorageValue, ValueQuery,
