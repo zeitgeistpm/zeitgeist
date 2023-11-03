@@ -14377,6 +14377,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "more-asserts",
+ "num-traits",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",

@@ -16,9 +16,11 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 mod fee_distribution;
+mod liquidity_tree;
 mod pool;
 mod solo_lp;
 
 pub(crate) use fee_distribution::*;
 pub(crate) use pool::*;
 pub(crate) use solo_lp::*;
+pub(crate) use liquidity_tree::*;

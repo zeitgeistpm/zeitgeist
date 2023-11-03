@@ -37,7 +37,7 @@ mod pallet {
         consts::MAX_ASSETS,
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{FeeDistribution, Pool, SoloLp},
+        types::{LiquidityTreeError, FeeDistribution, Pool, SoloLp},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -242,6 +242,8 @@ mod pallet {
         Unexpected,
         /// Specified monetary amount is zero.
         ZeroAmount,
+        /// An error occurred when handling the liquidty tree.
+        LiquidityTreeError(LiquidityTreeError),
     }
 
     #[pallet::call]
