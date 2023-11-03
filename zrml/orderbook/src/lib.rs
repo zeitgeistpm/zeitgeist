@@ -128,8 +128,8 @@ mod pallet {
             maker: AccountIdOf<T>,
             taker: AccountIdOf<T>,
             filled: BalanceOf<T>,
-            unfilled_outcome_asset_amount: BalanceOf<T>,
-            unfilled_base_asset_amount: BalanceOf<T>,
+            unfilled_maker_amount: BalanceOf<T>,
+            unfilled_taker_amount: BalanceOf<T>,
         },
         OrderPlaced {
             order_id: OrderId,
@@ -200,6 +200,8 @@ mod pallet {
         /// Fill an existing order entirely (`maker_partial_fill` = None)
         /// or partially (`maker_partial_fill` = Some(partial_amount)).
         ///
+        /// External fees are paid in the base asset.
+        ///
         /// NOTE: The `maker_partial_fill` is the partial amount of what the maker wants to fill.
         ///
         /// # Weight
@@ -227,6 +229,7 @@ mod pallet {
             ensure!(!maker_fill.is_zero(), Error::<T>::AmountIsZero);
             ensure!(maker_fill <= order_data.taker_amount, Error::<T>::AmountTooHighForOrder);
 
+            // clone required because of mutable borrow of order_data below
             let maker = order_data.maker.clone();
             let maker_asset = order_data.maker_asset;
             let taker_asset = order_data.taker_asset;
@@ -235,6 +238,7 @@ mod pallet {
             // it should always ensure that the maker's request (maker_fill) is fully filled
             let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
 
+            // if base asset: fund the full amount, but charge base asset fees from taker later
             T::AssetManager::repatriate_reserved_named(
                 &Self::reserve_id(),
                 maker_asset,
@@ -244,118 +248,56 @@ mod pallet {
                 BalanceStatus::Free,
             )?;
 
-            // always charge fees from base asset
-            let maybe_adjusted_maker_fill = if maker_asset == market.base_asset {
-                let external_fees = T::ExternalFees::distribute(
+            // always charge fees from the base asset
+            let maybe_adjusted_maker_fill = if maker_asset == base_asset {
+                // charge fees from the taker,
+                // who already got the full base asset amount from the maker above (repatriate)
+                T::ExternalFees::distribute(
                     order_data.market_id,
-                    market.base_asset,
+                    base_asset,
                     &taker,
                     // taker_fill is the amount what the taker wants to have (base asset from maker)
                     taker_fill,
                 );
                 // maker_fill is the amount what the maker wants to have (outcome asset from taker)
-                // base asset amount minus fees
+                // the fees were already charged,
+                // because the maker reserved an outcome asset amount minus fees
                 maker_fill
-                    .checked_sub(&external_fees)
-                    .ok_or(ArithmeticError::Underflow)?
             } else {
                 // maker_asset is outcome asset here
-                debug_assert!(taker_asset == market.base_asset);
+                debug_assert!(taker_asset == base_asset);
 
+                // charge fees from the taker,
+                // who is responsible to pay the base asset minus fees to the maker.
                 let external_fees = T::ExternalFees::distribute(
                     order_data.market_id,
-                    market.base_asset,
+                    base_asset,
+                    // taker is the one, who pays the base asset to the maker
+                    // and the maker gets outcome asset amount minus fees in return
                     &taker,
                     // maker_fill is the amount what the maker wants to have (base asset from taker)
                     maker_fill,
                 );
-                // taker_fill is the amount what the taker wants to have (outcome asset from maker)
-                // fees were already charged for maker amount,
-                // because the maker reserved an outcome asset amount minus fees
-                maker_fill
+                // base asset amount from taker minus fees to the maker (maker_fill)
+                maker_fill.checked_sub(&external_fees).ok_or(ArithmeticError::Underflow)?
             };
 
             T::AssetManager::transfer(
                 order_data.taker_asset,
                 &taker,
                 &maker,
-                // fee was only charged if base asset
+                // fee was only charged if the taker spends base asset to the maker
                 maybe_adjusted_maker_fill,
             )?;
 
-            Self::decrease_order_amounts(&mut order_data, taker_fill, maker_fill)?;
+            // the accounting system does not care about, whether fees were charged,
+            // it just substracts the total maker_fill and taker_fill (including fees)
+            Self::decrease_order_amounts(&mut order_data, maker_fill, taker_fill)?;
             Self::is_ratio_quotient_valid(&order_data)?;
 
-            match order_data.side {
-                OrderSide::Bid => {
-                    T::AssetManager::ensure_can_withdraw(
-                        order_data.outcome_asset,
-                        &taker,
-                        maker_fill,
-                    )?;
-
-                    let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
-
-                    T::AssetManager::repatriate_reserved_named(
-                        &Self::reserve_id(),
-                        base_asset,
-                        &maker,
-                        &taker,
-                        taker_fill,
-                        BalanceStatus::Free,
-                    )?;
-
-                    T::ExternalFees::distribute(
-                        order_data.market_id,
-                        base_asset,
-                        &taker,
-                        taker_fill,
-                    );
-
-                    T::AssetManager::transfer(
-                        order_data.outcome_asset,
-                        &taker,
-                        &maker,
-                        maker_fill,
-                    )?;
-
-                    Self::decrease_order_amounts(&mut order_data, taker_fill, maker_fill)?;
-                    Self::is_ratio_quotient_valid(&order_data)?;
-                }
-                OrderSide::Ask => {
-                    T::AssetManager::ensure_can_withdraw(base_asset, &taker, maker_fill)?;
-
-                    let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
-
-                    T::AssetManager::repatriate_reserved_named(
-                        &Self::reserve_id(),
-                        order_data.outcome_asset,
-                        &maker,
-                        &taker,
-                        taker_fill,
-                        BalanceStatus::Free,
-                    )?;
-
-                    let external_fees = T::ExternalFees::distribute(
-                        order_data.market_id,
-                        base_asset,
-                        &taker,
-                        maker_fill,
-                    );
-                    let maker_fill_minus_fees =
-                        maker_fill.checked_sub(&external_fees).ok_or(ArithmeticError::Underflow)?;
-
-                    T::AssetManager::transfer(base_asset, &taker, &maker, maker_fill_minus_fees)?;
-
-                    Self::decrease_order_amounts(&mut order_data, taker_fill, maker_fill)?;
-                    Self::is_ratio_quotient_valid(&order_data)?;
-                }
-            };
-
-            let unfilled_outcome_asset_amount = order_data.outcome_asset_amount;
-            let unfilled_base_asset_amount = order_data.base_asset_amount;
-            let total_unfilled =
-                unfilled_outcome_asset_amount.saturating_add(unfilled_base_asset_amount);
+            let unfilled_maker_amount = order_data.maker_amount;
+            let unfilled_taker_amount = order_data.taker_amount;
+            let total_unfilled = unfilled_maker_amount.saturating_add(unfilled_taker_amount);
 
             if total_unfilled.is_zero() {
                 <Orders<T>>::remove(order_id);
@@ -368,8 +310,8 @@ mod pallet {
                 maker,
                 taker: taker.clone(),
                 filled: maker_fill,
-                unfilled_outcome_asset_amount,
-                unfilled_base_asset_amount,
+                unfilled_maker_amount,
+                unfilled_taker_amount,
             });
 
             Ok(Some(T::WeightInfo::fill_order_bid()).into())
@@ -488,59 +430,50 @@ mod pallet {
             }
         }
 
+        /// Reduces the reserved maker and requested taker amount
+        /// by the amount the maker and taker actually filled.
         fn decrease_order_amounts(
             order_data: &mut OrderOf<T>,
-            taker_fill: BalanceOf<T>,
             maker_fill: BalanceOf<T>,
+            taker_fill: BalanceOf<T>,
         ) -> DispatchResult {
-            let outcome_asset_fill = match order_data.side {
-                OrderSide::Bid => maker_fill,
-                OrderSide::Ask => taker_fill,
-            };
-            let base_asset_fill = match order_data.side {
-                OrderSide::Bid => taker_fill,
-                OrderSide::Ask => maker_fill,
-            };
-            order_data.outcome_asset_amount = order_data
-                .outcome_asset_amount
-                .checked_sub(&outcome_asset_fill)
+            order_data.maker_amount = order_data
+                .maker_amount
+                .checked_sub(&taker_fill)
                 .ok_or(ArithmeticError::Underflow)?;
-            order_data.base_asset_amount = order_data
-                .base_asset_amount
-                .checked_sub(&base_asset_fill)
+            order_data.taker_amount = order_data
+                .taker_amount
+                .checked_sub(&maker_fill)
                 .ok_or(ArithmeticError::Underflow)?;
             Ok(())
         }
 
+        /// Calculates the amount that the taker is going to get from the maker's amount.
         fn get_taker_fill(order_data: &OrderOf<T>, maker_fill: BalanceOf<T>) -> BalanceOf<T> {
-            let maker_full_fill = match order_data.side {
-                OrderSide::Bid => order_data.outcome_asset_amount,
-                OrderSide::Ask => order_data.base_asset_amount,
-            };
-            let taker_full_fill = match order_data.side {
-                OrderSide::Bid => order_data.base_asset_amount,
-                OrderSide::Ask => order_data.outcome_asset_amount,
-            };
+            // the maker_full_fill is the maximum amount of what the maker wants to have
+            let maker_full_fill = order_data.taker_amount;
+            // the taker_full_fill is the maximum amount of what the taker wants to have
+            let taker_full_fill = order_data.maker_amount;
             // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
             // This ensures that the reserve of the maker is always enough to repatriate successfully!
             let ratio = Perquintill::from_rational(
                 maker_fill.saturated_into::<u128>(),
+                // this is ensured to be never zero in `is_ratio_quotient_valid`
                 maker_full_fill.saturated_into::<u128>(),
             );
+            // returns the share (ratio) of what the taker gets from the maker's amount
+            // respected the partial fill from the taker of what the maker wants to fill
             ratio
                 .mul_floor(taker_full_fill.saturated_into::<u128>())
                 .saturated_into::<BalanceOf<T>>()
         }
 
         fn is_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
-            let amount = match order_data.side {
-                OrderSide::Bid => order_data.outcome_asset_amount,
-                OrderSide::Ask => order_data.base_asset_amount,
-            };
+            let maker_full_fill = order_data.taker_amount;
             // this ensures that partial fills, which fill nearly the whole order, are not executed
             // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
             let is_ratio_quotient_valid =
-                amount.is_zero() || amount.saturated_into::<u128>() >= 100u128;
+                maker_full_fill.is_zero() || maker_full_fill.saturated_into::<u128>() >= 100u128;
             ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
             Ok(())
         }
