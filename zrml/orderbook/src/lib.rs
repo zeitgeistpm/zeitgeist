@@ -175,12 +175,12 @@ mod pallet {
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::remove_order())]
         #[transactional]
-        pub fn remove_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
+        pub fn remove_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             Self::do_remove_order(order_id, who)?;
 
-            Ok(Some(T::WeightInfo::remove_order()).into())
+            Ok(())
         }
 
         /// Fill an existing order entirely (`maker_partial_fill` = None)
@@ -200,12 +200,12 @@ mod pallet {
             origin: OriginFor<T>,
             order_id: OrderId,
             maker_partial_fill: Option<BalanceOf<T>>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let taker = ensure_signed(origin)?;
 
             Self::do_fill_order(order_id, taker, maker_partial_fill)?;
 
-            Ok(Some(T::WeightInfo::fill_order()).into())
+            Ok(())
         }
 
         /// Place a new order.
@@ -223,7 +223,7 @@ mod pallet {
             #[pallet::compact] maker_amount: BalanceOf<T>,
             taker_asset: AssetOf<T>,
             #[pallet::compact] taker_amount: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             Self::do_place_order(
@@ -235,7 +235,7 @@ mod pallet {
                 taker_amount,
             )?;
 
-            Ok(Some(T::WeightInfo::place_order()).into())
+            Ok(())
         }
     }
 
