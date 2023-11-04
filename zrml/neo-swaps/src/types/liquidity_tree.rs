@@ -50,6 +50,21 @@ impl LiquidityTreeError {
     }
 }
 
+// Type for nodes of a liquidity tree.
+//
+// # Attributes
+//
+// - `account`: The account that the node belongs to. `None` signifies an abandoned node.
+// - `stake`: The stake belonging to the owner.
+// - `fees`: The fees owed to the owner.
+// - `descendant_stake`: The sum of the stake of all descendant's of this node.
+// - `lazy_fees`: The amount of fees to be lazily propagated down the tree.
+//
+// # Notes
+//
+// - `descendant_stake` does not contain the stake of `self`.
+// - `lazy_fees`, when propagated, is distributed not only to the descendants of `self`, but also to
+//   `self`.
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
 pub struct Node<T: Config> {
@@ -83,7 +98,32 @@ where
     }
 }
 
-pub struct LiquidityTree<T: Config> {
+/// A segment tree used to track balances of liquidity shares which allows `O(log(n))` distribution
+/// of fees.
+///
+/// Each liquidity provider owns exactly one node of the tree which records their stake and fees.
+/// When a liquidity provider leaves the tree, the node is not removed from the tree, but marked as
+/// _abandoned_ instead. Abandoned nodes are reassigned when new LPs enter the tree. Nodes are added
+/// to the leaves of the tree only if there are no abandoned nodes to reassign.
+///
+/// Fees are lazily propagated down the tree. This allows fees to be deposited to the tree in `O(1)`
+/// (fees deposited at the root and later propagated down). If a particular node requires to know
+/// what its fees are, propagating fees to this node takes `O(depth)` operations (or, equivalently,
+/// `O(log(node_countn))`).
+///
+/// # Attributes
+///
+/// - `max_depth`: The maximum allowed depth of the tree. The tree can carry up to `2^max_depth`
+///   nodes.
+/// - `nodes`: A vector which holds the nodes of the tree. The nodes are ordered by depth (the root
+///   is the first element of `nodes`) and from left to right. For example, the right-most grandchild
+///   of the root is at index `6`.
+/// - `account_to_index`: Maps an account to the node that belongs to it.
+/// - `abandoned_nodes`: A vector that contains the indices of abandoned nodes.
+pub struct LiquidityTree<T>
+where
+    T: Config,
+{
     max_depth: usize,
     nodes: Vec<Node<T>>,
     account_to_index: BTreeMap<T::AccountId, usize>,
@@ -94,6 +134,13 @@ impl<T> LiquidityTree<T>
 where
     T: Config,
 {
+    /// Create a new liquidity tree.
+    ///
+    /// Parameter:
+    ///
+    /// - `max_depth`: The maximum allowed depth of the tree.
+    /// - `account`: The account to which the tree's root belongs.
+    /// - `stake`: The stake of the tree's root.
     pub(crate) fn new(
         max_depth: usize,
         account: T::AccountId,
@@ -105,6 +152,7 @@ where
         LiquidityTree { max_depth, nodes: vec![root], account_to_index, abandoned_nodes: vec![] }
     }
 
+    /// Return the maximum allowed amount of nodes in the tree.
     pub(crate) fn max_node_count(&self) -> Result<usize, DispatchError> {
         2usize.checked_pow_res(self.max_depth)
     }
@@ -117,7 +165,6 @@ where
     BalanceOf<T>: AtLeast32BitUnsigned + Copy + Zero,
 {
     fn join(&mut self, who: &T::AccountId, stake: BalanceOf<T>) -> DispatchResult {
-        // TODO Handle root case?
         let index_maybe = self.account_to_index.get(who);
         let index = if let Some(&index) = index_maybe {
             // Pile onto existing account.
@@ -164,7 +211,6 @@ where
     }
 
     fn exit(&mut self, who: &T::AccountId, stake: BalanceOf<T>) -> DispatchResult {
-        // TODO Handle root case?
         let index = self.map_account_to_index(who)?;
         self.propagate_fees_to_node(index)?;
         let node = self.get_node_mut(index)?;
@@ -220,29 +266,53 @@ where
     }
 }
 
+/// Type for specifying the next free node.
 enum NextNode {
     Abandoned(usize),
     Leaf,
     None,
 }
 
+/// A collection of member functions used in the implementation of `LiquiditySharesManager` for
+/// `LiquidityTree`.
 trait LiquidityTreeHelper<T>
 where
     T: Config,
 {
+    /// Propagate lazy fees from the tree's root to the node at `index`.
     fn propagate_fees_to_node(&mut self, index: usize) -> DispatchResult;
 
+    /// Propagate lazy fees from the node at `index` to its children.
     fn propagate_fees(&mut self, index: usize) -> DispatchResult;
 
+    /// Return the indices of the children of the node at `index`.
+    ///
+    /// The first (resp. second) component of the array is the left (resp. right) child. If there is
+    /// no node at either of these indices, the result is `None`.
     fn children(&self, index: usize) -> Result<[Option<usize>; 2], DispatchError>;
 
-    // None if `index` is `zero`, i.e. the node is root.
+    /// Return the index of a node's parent; `None` if `index` is `0usize`, i.e. the node is root.
     fn parent_index(&self, index: usize) -> Option<usize>;
 
+    /// Return a path from the tree's root to the node at `index`.
+    ///
+    /// The return value is a vector of the indices of the nodes of the path, starting with the
+    /// root.
     fn path_to_node(&self, index: usize) -> Result<Vec<usize>, DispatchError>;
 
+    /// Returns the next free index of the tree.
+    ///
+    /// If there are abandoned nodes, this will return the nodes in the reverse order in which they
+    /// were abandoned.
     fn peek_next_free_node_index(&mut self) -> Result<NextNode, DispatchError>;
 
+    /// Mutate a node's descendant stake.
+    ///
+    /// # Parameters
+    ///
+    /// - `index`: The index of the node to modify.
+    /// - `delta`: The (absolute) amount by which to modfiy the descendant stake.
+    /// - `neg`: The sign of the delta; `true` is the delta is negative.
     fn update_descendant_stake(
         &mut self,
         index: usize,
@@ -250,18 +320,24 @@ where
         neg: bool,
     ) -> DispatchResult;
 
+    /// Mutate each of child of the node at `index` using `mutator`.
     fn mutate_each_child<F>(&mut self, index: usize, mutator: F) -> DispatchResult
     where
         F: FnMut(&mut Node<T>) -> DispatchResult;
 
+    /// Return the number of nodes in the tree. Note that abandoned nodes are counted.
     fn node_count(&self) -> usize;
 
+    /// Get a reference to the node at `index`.
     fn get_node(&self, index: usize) -> Result<&Node<T>, DispatchError>;
 
+    /// Get a mutable reference to the node at `index`.
     fn get_node_mut(&mut self, index: usize) -> Result<&mut Node<T>, DispatchError>;
 
+    /// Get the node which belongs to `account`.
     fn map_account_to_index(&self, account: &T::AccountId) -> Result<usize, DispatchError>;
 
+    /// Mutate the node at `index` using `mutator`.
     fn mutate_node<F>(&mut self, index: usize, mutator: F) -> DispatchResult
     where
         F: FnOnce(&mut Node<T>) -> DispatchResult;
@@ -379,7 +455,6 @@ where
             }
             if iterations == self.max_depth {
                 return Err(LiquidityTreeError::MaxIterationsReached.to_dispatch::<T>());
-                // TODO Error
             }
         }
         Ok(())
