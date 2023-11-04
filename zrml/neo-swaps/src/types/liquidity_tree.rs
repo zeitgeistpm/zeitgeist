@@ -28,76 +28,6 @@ use zeitgeist_primitives::math::checked_ops_res::{
     CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedPowRes, CheckedSubRes,
 };
 
-#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
-pub enum LiquidityTreeError {
-    AccountNotFound,
-    NodeNotFound,
-    UnclaimedFees,
-    TreeIsFull,
-    InsufficientStake,
-    MaxIterationsReached,
-}
-
-impl<T> From<LiquidityTreeError> for Error<T> {
-    fn from(error: LiquidityTreeError) -> Error<T> {
-        Error::<T>::LiquidityTreeError(error)
-    }
-}
-
-impl LiquidityTreeError {
-    fn to_dispatch<T: Config>(self) -> DispatchError {
-        Error::<T>::LiquidityTreeError(self).into()
-    }
-}
-
-// Type for nodes of a liquidity tree.
-//
-// # Attributes
-//
-// - `account`: The account that the node belongs to. `None` signifies an abandoned node.
-// - `stake`: The stake belonging to the owner.
-// - `fees`: The fees owed to the owner.
-// - `descendant_stake`: The sum of the stake of all descendant's of this node.
-// - `lazy_fees`: The amount of fees to be lazily propagated down the tree.
-//
-// # Notes
-//
-// - `descendant_stake` does not contain the stake of `self`.
-// - `lazy_fees`, when propagated, is distributed not only to the descendants of `self`, but also to
-//   `self`.
-#[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
-#[scale_info(skip_type_params(T))]
-pub struct Node<T: Config> {
-    pub account: Option<T::AccountId>,
-    pub stake: BalanceOf<T>,
-    pub fees: BalanceOf<T>,
-    pub descendant_stake: BalanceOf<T>,
-    pub lazy_fees: BalanceOf<T>,
-}
-
-impl<T> Node<T>
-where
-    T: Config,
-{
-    pub(crate) fn new(account: T::AccountId, stake: BalanceOf<T>) -> Node<T> {
-        Node {
-            account: Some(account),
-            stake,
-            fees: 0u8.into(),
-            descendant_stake: 0u8.into(),
-            lazy_fees: 0u8.into(),
-        }
-    }
-
-    pub(crate) fn total_stake(&self) -> Result<BalanceOf<T>, DispatchError> {
-        self.stake.checked_add_res(&self.descendant_stake)
-    }
-
-    pub(crate) fn is_leaf(&self) -> bool {
-        self.descendant_stake == Zero::zero()
-    }
-}
-
 /// A segment tree used to track balances of liquidity shares which allows `O(log(n))` distribution
 /// of fees.
 ///
@@ -155,6 +85,58 @@ where
     /// Return the maximum allowed amount of nodes in the tree.
     pub(crate) fn max_node_count(&self) -> Result<usize, DispatchError> {
         2usize.checked_pow_res(self.max_depth)
+    }
+}
+
+// Type for nodes of a liquidity tree.
+//
+// # Attributes
+//
+// - `account`: The account that the node belongs to. `None` signifies an abandoned node.
+// - `stake`: The stake belonging to the owner.
+// - `fees`: The fees owed to the owner.
+// - `descendant_stake`: The sum of the stake of all descendant's of this node.
+// - `lazy_fees`: The amount of fees to be lazily propagated down the tree.
+//
+// # Notes
+//
+// - `descendant_stake` does not contain the stake of `self`.
+// - `lazy_fees`, when propagated, is distributed not only to the descendants of `self`, but also to
+//   `self`.
+#[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+#[scale_info(skip_type_params(T))]
+pub struct Node<T: Config> {
+    pub account: Option<T::AccountId>,
+    pub stake: BalanceOf<T>,
+    pub fees: BalanceOf<T>,
+    pub descendant_stake: BalanceOf<T>,
+    pub lazy_fees: BalanceOf<T>,
+}
+
+impl<T> Node<T>
+where
+    T: Config,
+{
+    /// Create a new node with `stake` belonging to `account`.
+    pub(crate) fn new(account: T::AccountId, stake: BalanceOf<T>) -> Node<T> {
+        Node {
+            account: Some(account),
+            stake,
+            fees: 0u8.into(),
+            descendant_stake: 0u8.into(),
+            lazy_fees: 0u8.into(),
+        }
+    }
+
+    /// Return the total stake of the node (the node's stake plus the sum of descendant's stakes).
+    pub(crate) fn total_stake(&self) -> Result<BalanceOf<T>, DispatchError> {
+        self.stake.checked_add_res(&self.descendant_stake)
+    }
+
+    /// Return `true` is the node is a leaf in the sense that none of its descendants hold any
+    /// stake. (Strictly speaking, it's not always a leaf!)
+    pub(crate) fn is_leaf(&self) -> bool {
+        self.descendant_stake == Zero::zero()
     }
 }
 
@@ -502,5 +484,27 @@ where
     {
         let mut node = self.get_node_mut(index)?;
         mutator(&mut node)
+    }
+}
+
+#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+pub enum LiquidityTreeError {
+    AccountNotFound,
+    NodeNotFound,
+    UnclaimedFees,
+    TreeIsFull,
+    InsufficientStake,
+    MaxIterationsReached,
+}
+
+impl<T> From<LiquidityTreeError> for Error<T> {
+    fn from(error: LiquidityTreeError) -> Error<T> {
+        Error::<T>::LiquidityTreeError(error)
+    }
+}
+
+impl LiquidityTreeError {
+    fn to_dispatch<T: Config>(self) -> DispatchError {
+        Error::<T>::LiquidityTreeError(self).into()
     }
 }
