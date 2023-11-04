@@ -21,6 +21,6 @@ mod pool;
 mod solo_lp;
 
 pub(crate) use fee_distribution::*;
+pub(crate) use liquidity_tree::*;
 pub(crate) use pool::*;
 pub(crate) use solo_lp::*;
-pub(crate) use liquidity_tree::*;

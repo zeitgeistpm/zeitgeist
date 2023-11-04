@@ -126,8 +126,7 @@ where
             node.stake = node.stake.checked_add_res(&stake)?;
             index
         } else {
-            // Push onto new account.
-            // FIXME Beware! This violates verify first, write last!
+            // Push onto new node.
             let index = match self.peek_next_free_node_index()? {
                 NextNode::Abandoned(index) => {
                     self.propagate_fees_to_node(index)?;
@@ -251,7 +250,7 @@ where
         neg: bool,
     ) -> DispatchResult;
 
-    fn with_each_child<F>(&mut self, index: usize, mutator: F) -> DispatchResult
+    fn mutate_each_child<F>(&mut self, index: usize, mutator: F) -> DispatchResult
     where
         F: FnMut(&mut Node<T>) -> DispatchResult;
 
@@ -262,6 +261,10 @@ where
     fn get_node_mut(&mut self, index: usize) -> Result<&mut Node<T>, DispatchError>;
 
     fn map_account_to_index(&self, account: &T::AccountId) -> Result<usize, DispatchError>;
+
+    fn mutate_node<F>(&mut self, index: usize, mutator: F) -> DispatchResult
+    where
+        F: FnOnce(&mut Node<T>) -> DispatchResult;
 }
 
 impl<T> LiquidityTreeHelper<T> for LiquidityTree<T>
@@ -275,35 +278,32 @@ where
         }
         Ok(())
     }
+
     fn propagate_fees(&mut self, index: usize) -> DispatchResult {
         let node = self.get_node(index)?;
-        // TODO Shouldn't this be descendant_stake?
         if node.total_stake()? == Zero::zero() {
             return Ok(()); // Don't propagate if there are no LPs under this node.
         }
-
-        // We can use the immutable data from node here safely.
-        let total_stake = node.total_stake()?;
-        let is_leaf = node.is_leaf();
+        // Temporary storage to ensure that the borrow checker doesn't get upset.
         let descendant_stake = node.descendant_stake;
-        let lazy_fees = node.lazy_fees;
-
-        // Only borrow mutably to update the current node.
-        let node_mut = self.get_node_mut(index)?;
-        node_mut.lazy_fees = Zero::zero();
-        if is_leaf {
-            node_mut.fees = node_mut.fees.checked_add_res(&lazy_fees)?;
+        if node.is_leaf() {
+            self.mutate_node(index, |node| {
+                node.fees = node.fees.checked_add_res(&node.lazy_fees)?;
+                Ok(())
+            })?;
         } else {
-            let mut remaining_lazy_fees =
-                descendant_stake.checked_div_res(&total_stake)?.checked_mul_res(&lazy_fees)?;
-            let fees = lazy_fees.checked_sub_res(&remaining_lazy_fees)?;
-            node_mut.fees = node_mut.fees.checked_add_res(&fees)?;
-
-            // Now loop over child nodes to update them.
-            self.with_each_child(index, |child_node| {
-                // Mutably borrow each child node inside the loop to update it.
-                let child_total_stake = child_node.total_stake()?;
-                let child_lazy_fees = child_total_stake
+            let mut remaining_lazy_fees = node
+                .descendant_stake
+                .checked_div_res(&node.total_stake()?)?
+                .checked_mul_res(&node.lazy_fees)?;
+            let fees = node.lazy_fees.checked_sub_res(&remaining_lazy_fees)?;
+            self.mutate_node(index, |node| {
+                node.fees = node.fees.checked_add_res(&fees)?;
+                Ok(())
+            });
+            self.mutate_each_child(index, |child_node| {
+                let child_lazy_fees = child_node
+                    .total_stake()?
                     .checked_div_res(&descendant_stake)?
                     .checked_mul_res(&remaining_lazy_fees)?;
                 child_node.lazy_fees = child_node.lazy_fees.checked_add_res(&child_lazy_fees)?;
@@ -311,7 +311,10 @@ where
                 Ok(())
             })?;
         }
-
+        self.mutate_node(index, |node| {
+            node.lazy_fees = Zero::zero();
+            Ok(())
+        })?;
         Ok(())
     }
 
@@ -382,7 +385,7 @@ where
         Ok(())
     }
 
-    fn with_each_child<F>(&mut self, index: usize, mut mutator: F) -> DispatchResult
+    fn mutate_each_child<F>(&mut self, index: usize, mut mutator: F) -> DispatchResult
     where
         F: FnMut(&mut Node<T>) -> DispatchResult,
     {
@@ -416,5 +419,13 @@ where
             .get(who)
             .ok_or(LiquidityTreeError::AccountNotFound.to_dispatch::<T>())
             .copied()
+    }
+
+    fn mutate_node<F>(&mut self, index: usize, mutator: F) -> DispatchResult
+    where
+        F: FnOnce(&mut Node<T>) -> DispatchResult,
+    {
+        let mut node = self.get_node_mut(index)?;
+        mutator(&mut node)
     }
 }
