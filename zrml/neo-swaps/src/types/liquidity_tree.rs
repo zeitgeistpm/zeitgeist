@@ -24,8 +24,9 @@ use sp_runtime::{
     traits::{AtLeast32BitUnsigned, CheckedSub, Zero},
     DispatchError, DispatchResult, RuntimeDebug,
 };
-use zeitgeist_primitives::math::checked_ops_res::{
-    CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedPowRes, CheckedSubRes,
+use zeitgeist_primitives::math::{
+    checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedPowRes, CheckedSubRes},
+    fixed::{FixedDiv, FixedMul},
 };
 
 /// A segment tree used to track balances of liquidity shares which allows `O(log(n))` distribution
@@ -350,20 +351,16 @@ where
                 Ok(())
             })?;
         } else {
-            let mut remaining_lazy_fees = node
-                .descendant_stake
-                .checked_div_res(&node.total_stake()?)?
-                .checked_mul_res(&node.lazy_fees)?;
+            let mut remaining_lazy_fees =
+                node.descendant_stake.bdiv(node.total_stake()?)?.bmul(node.lazy_fees)?;
             let fees = node.lazy_fees.checked_sub_res(&remaining_lazy_fees)?;
             self.mutate_node(index, |node| {
                 node.fees = node.fees.checked_add_res(&fees)?;
                 Ok(())
-            });
+            })?;
             self.mutate_each_child(index, |child_node| {
-                let child_lazy_fees = child_node
-                    .total_stake()?
-                    .checked_div_res(&descendant_stake)?
-                    .checked_mul_res(&remaining_lazy_fees)?;
+                let child_lazy_fees =
+                    child_node.total_stake()?.bdiv(descendant_stake)?.bmul(remaining_lazy_fees)?;
                 child_node.lazy_fees = child_node.lazy_fees.checked_add_res(&child_lazy_fees)?;
                 remaining_lazy_fees = remaining_lazy_fees.checked_sub_res(&child_lazy_fees)?;
                 Ok(())
@@ -398,12 +395,17 @@ where
 
     fn path_to_node(&self, mut index: usize) -> Result<Vec<usize>, DispatchError> {
         let mut path = Vec::new();
+        let mut iterations = 0;
+        let max_iterations = self.max_depth.checked_add_res(&1)?;
         while let Some(parent_index) = self.parent_index(index) {
-            // TODO max iterations
+            if iterations == max_iterations {
+                return Err(LiquidityTreeError::MaxIterationsReached.to_dispatch::<T>());
+            }
             path.push(index);
             index = parent_index;
+            iterations = iterations.checked_add_res(&1)?;
         }
-        path.push(0); // Add the root of the tree (`parent_index` returns `None` for root)
+        path.push(0usize); // The tree's root is not considered in the loop above.
         path.reverse(); // The path should be from root to the node
         Ok(path)
     }
@@ -424,19 +426,12 @@ where
         delta: BalanceOf<T>,
         neg: bool,
     ) -> DispatchResult {
-        let mut iterations = 0;
-        while let Some(parent_index) = self.parent_index(index) {
-            let node = self
-                .nodes
-                .get_mut(index)
-                .ok_or::<Error<T>>(LiquidityTreeError::NodeNotFound.into())?;
+        for &i in self.path_to_node(index)?.iter() {
+            let node = self.get_node_mut(i)?;
             if neg {
                 node.descendant_stake = node.descendant_stake.checked_sub_res(&delta)?;
             } else {
                 node.descendant_stake = node.descendant_stake.checked_add_res(&delta)?;
-            }
-            if iterations == self.max_depth {
-                return Err(LiquidityTreeError::MaxIterationsReached.to_dispatch::<T>());
             }
         }
         Ok(())
@@ -449,11 +444,7 @@ where
         let children_indices = self.children(index)?;
         for child_option in children_indices {
             if let Some(child_index) = child_option {
-                let child_node = self
-                    .nodes
-                    .get_mut(child_index)
-                    .ok_or::<Error<T>>(LiquidityTreeError::NodeNotFound.into())?;
-                mutator(child_node)?;
+                self.mutate_node(child_index, |node| mutator(node))?;
             }
         }
         Ok(())
@@ -489,11 +480,17 @@ where
 
 #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
 pub enum LiquidityTreeError {
+    /// There is no node which belongs to this account.
     AccountNotFound,
+    /// There is no node with this index.
     NodeNotFound,
+    /// Operation can't be executed while there are unclaimed fees.
     UnclaimedFees,
+    /// The liquidity tree is full and can't accept any new nodes.
     TreeIsFull,
+    /// This node doesn't hold enough stake.
     InsufficientStake,
+    /// A while loop exceeded the expected number of iterations. This is unexpected behavior.
     MaxIterationsReached,
 }
 
