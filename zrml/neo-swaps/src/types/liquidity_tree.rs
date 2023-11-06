@@ -187,8 +187,7 @@ where
                 }
                 NextNode::None => {
                     return Err::<(), DispatchError>(
-                        // TODO
-                        Into::<Error<T>>::into(LiquidityTreeError::TreeIsFull).into(),
+                        LiquidityTreeError::TreeIsFull.to_dispatch::<T>(),
                     );
                 }
             };
