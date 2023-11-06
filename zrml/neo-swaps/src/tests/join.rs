@@ -217,33 +217,3 @@ fn join_fails_on_amount_in_above_max() {
         );
     });
 }
-
-#[test]
-fn join_fails_if_not_allowed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Scalar(0..=1),
-            _20,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        let pool_shares_amount = _5;
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, pool_shares_amount));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            pool_shares_amount,
-        ));
-        assert_noop!(
-            NeoSwaps::join(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                pool_shares_amount,
-                vec![pool_shares_amount, pool_shares_amount]
-            ),
-            Error::<Runtime>::NotAllowed
-        );
-    });
-}

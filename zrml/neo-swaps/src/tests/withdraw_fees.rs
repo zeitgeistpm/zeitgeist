@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::types::Node;
 
 #[test]
 fn withdraw_fees_works() {
@@ -36,7 +37,7 @@ fn withdraw_fees_works() {
         let mut pool = Pools::<Runtime>::get(market_id).unwrap();
         let fees = 123456789;
         assert_ok!(AssetManager::deposit(pool.collateral, &pool.account_id, fees));
-        pool.liquidity_shares_manager.fees = fees;
+        pool.liquidity_shares_manager.nodes[0].lazy_fees = fees;
         Pools::<Runtime>::insert(market_id, pool.clone());
         let alice_before = AssetManager::free_balance(pool.collateral, &ALICE);
         assert_ok!(NeoSwaps::withdraw_fees(RuntimeOrigin::signed(ALICE), market_id));
@@ -47,7 +48,16 @@ fn withdraw_fees_works() {
         );
         assert_eq!(AssetManager::free_balance(pool.collateral, &ALICE), alice_before + fees);
         let pool_after = Pools::<Runtime>::get(market_id).unwrap();
-        assert_eq!(pool_after.liquidity_shares_manager.fees, 0);
+        assert_liquidity_tree_state!(
+            pool_after.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: liquidity,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: 0u128,
+            }],
+        );
         System::assert_last_event(
             Event::FeesWithdrawn { who: ALICE, market_id, amount: fees }.into(),
         );

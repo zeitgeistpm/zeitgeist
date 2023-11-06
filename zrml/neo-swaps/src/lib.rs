@@ -720,7 +720,6 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(!Pools::<T>::contains_key(market_id), Error::<T>::DuplicatePool);
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.creator == who, Error::<T>::NotAllowed);
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
             let asset_count = spot_prices.len();

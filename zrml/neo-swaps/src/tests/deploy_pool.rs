@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::types::Node;
 use alloc::collections::BTreeMap;
 use test_case::test_case;
 
@@ -43,9 +44,16 @@ fn deploy_pool_works_with_binary_markets() {
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1);
         assert_eq!(pool.collateral, BASE_ASSET);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, amount);
-        assert_eq!(pool.liquidity_shares_manager.fees, 0);
+        assert_liquidity_tree_state!(
+            pool.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: amount,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: 0u128,
+            }],
+        );
         assert_eq!(pool.swap_fee, swap_fee);
         assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), buffer);
         assert_eq!(AssetManager::free_balance(assets[0], &pool.account_id), amount);
@@ -112,9 +120,16 @@ fn deploy_pool_works_with_scalar_marktes() {
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1_000);
         assert_eq!(pool.collateral, BASE_ASSET);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, amount);
-        assert_eq!(pool.liquidity_shares_manager.fees, 0);
+        assert_liquidity_tree_state!(
+            pool.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: amount,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: 0u128,
+            }],
+        );
         assert_eq!(pool.swap_fee, swap_fee);
         assert_eq!(
             AssetManager::free_balance(assets[0], &pool.account_id),
@@ -222,24 +237,6 @@ fn deploy_pool_fails_on_duplicate_pool() {
                 CENT,
             ),
             Error::<Runtime>::DuplicatePool,
-        );
-    });
-}
-
-#[test]
-fn deploy_pool_fails_on_not_allowed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
-        assert_noop!(
-            NeoSwaps::deploy_pool(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                _10,
-                vec![_1_4, _3_4],
-                CENT
-            ),
-            Error::<Runtime>::NotAllowed
         );
     });
 }

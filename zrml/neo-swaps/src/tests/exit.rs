@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::types::LiquidityTreeError;
 
 #[test]
 fn exit_works() {
@@ -192,7 +193,7 @@ fn exit_fails_on_insufficient_funds() {
                 liquidity + 1, // One more than Alice has.
                 vec![0, 0]
             ),
-            Error::<Runtime>::InsufficientPoolShares,
+            LiquidityTreeError::InsufficientStake.to_dispatch::<Runtime>(),
         );
     });
 }
@@ -227,36 +228,6 @@ fn exit_fails_on_amount_out_below_min() {
 }
 
 #[test]
-fn exit_fails_if_not_allowed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Scalar(0..=1),
-            _20,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        let pool_shares_amount = _5;
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, pool_shares_amount));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            pool_shares_amount,
-        ));
-        assert_noop!(
-            NeoSwaps::exit(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                pool_shares_amount,
-                vec![pool_shares_amount, pool_shares_amount]
-            ),
-            Error::<Runtime>::NotAllowed
-        );
-    });
-}
-
-#[test]
 fn exit_fails_on_outstanding_fees() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = create_market_and_deploy_pool(
@@ -267,13 +238,6 @@ fn exit_fails_on_outstanding_fees() {
             vec![_1_2, _1_2],
             CENT,
         );
-        let pool_shares_amount = _20;
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, pool_shares_amount));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            pool_shares_amount,
-        ));
         assert_ok!(Pools::<Runtime>::try_mutate(market_id, |pool| pool
             .as_mut()
             .unwrap()
@@ -281,12 +245,12 @@ fn exit_fails_on_outstanding_fees() {
             .deposit_fees(1)));
         assert_noop!(
             NeoSwaps::exit(
-                RuntimeOrigin::signed(BOB),
+                RuntimeOrigin::signed(ALICE),
                 market_id,
-                pool_shares_amount,
-                vec![pool_shares_amount, pool_shares_amount]
+                _1,
+                vec![0, 0]
             ),
-            Error::<Runtime>::OutstandingFees
+            LiquidityTreeError::UnclaimedFees.to_dispatch::<Runtime>(),
         );
     });
 }

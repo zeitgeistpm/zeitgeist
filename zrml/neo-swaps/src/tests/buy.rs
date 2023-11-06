@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::types::Node;
 use test_case::test_case;
 
 // Example taken from
@@ -60,9 +61,16 @@ fn buy_works() {
         ));
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         assert_eq!(pool.liquidity_parameter, pool_liquidity_before);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, liquidity);
-        assert_eq!(pool.liquidity_shares_manager.fees, expected_swap_fee_amount);
+        assert_liquidity_tree_state!(
+            pool.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: liquidity,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: expected_swap_fee_amount,
+            }],
+        );
         let pool_outcomes_after: Vec<_> = pool
             .assets()
             .iter()

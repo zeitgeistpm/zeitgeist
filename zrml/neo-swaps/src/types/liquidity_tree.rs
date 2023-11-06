@@ -62,9 +62,9 @@ pub struct LiquidityTree<T>
 where
     T: Config,
 {
-    nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes>,
-    account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes>,
-    abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes>,
+    pub(crate) nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes>,
+    pub(crate) account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes>,
+    pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes>,
 }
 
 impl<T> LiquidityTree<T>
@@ -111,7 +111,7 @@ where
 //   `self`.
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
-pub struct Node<T: Config> {
+pub(crate) struct Node<T: Config> {
     pub account: Option<T::AccountId>,
     pub stake: BalanceOf<T>,
     pub fees: BalanceOf<T>,
@@ -529,7 +529,7 @@ impl<T> From<LiquidityTreeError> for Error<T> {
 }
 
 impl LiquidityTreeError {
-    fn to_dispatch<T: Config>(self) -> DispatchError {
+    pub(crate) fn to_dispatch<T: Config>(self) -> DispatchError {
         Error::<T>::LiquidityTreeError(self).into()
     }
 }
