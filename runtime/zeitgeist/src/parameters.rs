@@ -67,8 +67,8 @@ parameter_types! {
     pub const CampaignAssetsAccountDeposit: Balance = deposit(1, 16);
     pub const CampaignAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
     /// The amount of native currency that is frozen during the whole lifetime
-    /// if an asset class. Freezing happens at asset class creation.
-    /// Irrelevant - No origin can successfully call the associated dispatchable call..
+    /// of an asset class. Freezing happens at asset class creation.
+    /// Irrelevant - No origin can successfully call the associated dispatchable call.
     pub const CampaignAssetsDeposit: Balance = 400 * BASE;
     pub const CampaignAssetsStringLimit: u32 = 256;
     pub const CampaignAssetsMetadataDepositBase: Balance = deposit(1, 68);

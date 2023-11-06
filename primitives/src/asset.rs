@@ -57,7 +57,7 @@ pub enum Asset<MI: MaxEncodedLen> {
 }
 
 /// The `MarketAsset` enum represents all types of assets available in the
-/// Prediction Market protocol
+/// prediction market protocol.
 ///
 /// # Types
 ///
