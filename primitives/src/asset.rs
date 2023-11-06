@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::types::{CategoryIndex, CampaignAssetId, CustomAssetId, PoolId, SerdeWrapper};
-use parity_scale_codec::{Compact, HasCompact, CompactAs, Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Compact, CompactAs, HasCompact, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
@@ -61,7 +61,7 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     ForeignAsset(u32),
 
     ParimutuelShare(MI, CategoryIndex),
-
+    
     CampaignAssetClass(
         #[codec(compact)] CampaignAssetId
     ),

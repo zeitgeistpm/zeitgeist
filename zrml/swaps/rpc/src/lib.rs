@@ -27,7 +27,7 @@ use jsonrpsee::{
     proc_macros::rpc,
     types::error::{CallError, ErrorObject},
 };
-use parity_scale_codec::{Codec, CompactAs, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{Codec, HasCompact, MaxEncodedLen};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{

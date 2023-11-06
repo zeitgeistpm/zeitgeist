@@ -21,7 +21,7 @@ use crate::types::{
 };
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
-use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 
 pub trait Swaps<AccountId> {
     type Balance: MaxEncodedLen;

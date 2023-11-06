@@ -19,7 +19,7 @@ use frame_support::{
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
 };
-use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::traits::AtLeast32Bit;
 
 pub trait MarketId:

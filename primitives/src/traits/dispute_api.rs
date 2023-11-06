@@ -24,7 +24,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::Weight;
-use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support

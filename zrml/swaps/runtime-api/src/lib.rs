@@ -19,7 +19,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, Decode, HasCompact, CompactAs, MaxEncodedLen};
+use parity_scale_codec::{Codec, Decode, HasCompact, MaxEncodedLen};
 use sp_runtime::{
     traits::{MaybeDisplay, MaybeFromStr},
     DispatchError,

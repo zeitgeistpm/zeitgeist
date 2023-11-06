@@ -19,7 +19,7 @@
 
 use crate::{math::calc_spot_price, root::calc_preimage};
 use alloc::collections::btree_map::BTreeMap;
-use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::{
     traits::{AtLeast32Bit, AtLeast32BitUnsigned},
     SaturatedConversion,

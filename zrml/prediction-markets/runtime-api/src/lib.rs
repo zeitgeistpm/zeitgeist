@@ -18,7 +18,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, CompactAs, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{Codec, HasCompact, MaxEncodedLen};
 use zeitgeist_primitives::types::Asset;
 
 sp_api::decl_runtime_apis! {

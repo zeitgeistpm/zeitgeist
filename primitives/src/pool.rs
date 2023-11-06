@@ -21,7 +21,7 @@ use crate::{
     types::{Asset, PoolStatus},
 };
 use alloc::{collections::BTreeMap, vec::Vec};
-use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen, CompactAs, HasCompact};
+use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen, HasCompact};
 use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
