@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{CategoryIndex, PoolId, SerdeWrapper};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use crate::types::{CategoryIndex, CampaignAssetId, CustomAssetId, PoolId, SerdeWrapper};
+use parity_scale_codec::{Compact, CompactAs, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
@@ -85,7 +85,7 @@ pub enum MarketAssetClass<MI: MaxEncodedLen> {
     #[codec(index = 7)]
     CategoricalOutcome(
         #[codec(compact)] MI, 
-        #[codec(compact)] CategoryIndex
+        #[codec(compact)] CategoryIndex,
     ),
     #[codec(index = 8)]
     #[default]
@@ -93,34 +93,80 @@ pub enum MarketAssetClass<MI: MaxEncodedLen> {
     #[codec(index = 9)]
     ScalarOutcome(
         #[codec(compact)] MI, 
-        #[codec(compact)] ScalarPosition
+        ScalarPosition,
     ),
     #[codec(index = 10)]
     ParimutuelShare(
         #[codec(compact)] MI,
-        #[codec(compact)] CategoryIndex
+        #[codec(compact)] CategoryIndex,
     ),
     #[codec(index = 11)]
     PoolShare(
-        #[codec(compact)] PoolId
+        #[codec(compact)] PoolId,
     ),
 }
 
 /// The `CustomAsset` tuple struct represents all custom assets.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, 
+    CompactAs,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    PartialEq,
+    TypeInfo
+)]
 pub struct CampaignAssetClass(
-    #[codec(compact)] u128,
+    #[codec(compact)] CampaignAssetId,
 );
+
+impl From<Compact<CampaignAssetId>> for CampaignAssetClass {
+    fn from(value: Compact<CampaignAssetId>) -> CampaignAssetClass {
+        CampaignAssetClass(value.into())
+    }
+}
+
+impl From<CampaignAssetClass> for Compact<CampaignAssetId> {
+    fn from(value: CampaignAssetClass) -> Compact<CampaignAssetId> {
+        value.0.into()
+    }
+}
 
 /// The `CustomAsset` tuple struct represents all custom assets.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, 
+    CompactAs,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    PartialEq,
+    TypeInfo
+)]
 pub struct CustomAssetClass(
-    #[codec(compact)] u128,
+    #[codec(compact)] CustomAssetId,
 );
+
+impl From<Compact<CampaignAssetId>> for CustomAssetClass {
+    fn from(value: Compact<CampaignAssetId>) -> CustomAssetClass {
+        CustomAssetClass(value.into())
+    }
+}
+
+impl From<CustomAssetClass> for Compact<CampaignAssetId> {
+    fn from(value: CustomAssetClass) -> Compact<CampaignAssetId> {
+        value.0.into()
+    }
+}
 
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound

@@ -635,10 +635,10 @@ macro_rules! impl_config_traits {
 
         // Required for runtime benchmarks
         pallet_assets::runtime_benchmarks_enabled! {
-            pub struct CustomAssetsBenchmarkHelper;
+            pub struct AssetsBenchmarkHelper;
 
             impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
-                for CustomAssetsBenchmarkHelper
+                for AssetsBenchmarkHelper
             where
                 AssetIdParameter: From<u128>,
             {
@@ -652,11 +652,11 @@ macro_rules! impl_config_traits {
             type ApprovalDeposit = CustomAssetsApprovalDeposit;
             type AssetAccountDeposit = CustomAssetsAccountDeposit;
             type AssetDeposit = CustomAssetsDeposit;
-            type AssetId = AssetId;
-            type AssetIdParameter = Compact<AssetId>;
+            type AssetId = CustomAsset;
+            type AssetIdParameter = Compact<CustomAssetId>;
             type Balance = Balance;
             #[cfg(feature = "runtime-benchmarks")]
-            type BenchmarkHelper = CustomAssetsBenchmarkHelper;
+            type BenchmarkHelper = AssetsBenchmarkHelper;
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
             type Currency = Balances;
@@ -676,11 +676,11 @@ macro_rules! impl_config_traits {
             type ApprovalDeposit = CampaignAssetsApprovalDeposit;
             type AssetAccountDeposit = CampaignAssetsAccountDeposit;
             type AssetDeposit = CampaignAssetsDeposit;
-            type AssetId = AssetId;
-            type AssetIdParameter = Compact<AssetId>;
+            type AssetId = CampaignAsset;
+            type AssetIdParameter = Compact<CampaignAssetId>;
             type Balance = Balance;
             #[cfg(feature = "runtime-benchmarks")]
-            type BenchmarkHelper = CustomAssetsBenchmarkHelper;
+            type BenchmarkHelper = AssetsBenchmarkHelper;
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
