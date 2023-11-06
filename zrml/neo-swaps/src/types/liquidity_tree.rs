@@ -17,17 +17,20 @@
 
 use crate::{traits::LiquiditySharesManager, BalanceOf, Config, Error};
 use alloc::collections::BTreeMap;
-use frame_support::{ensure, PalletError};
+use frame_support::{ensure, traits::Get, PalletError};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedSub, Zero},
+    traits::{AtLeast32BitUnsigned, CheckedSub, ConstU32, Zero},
     DispatchError, DispatchResult, RuntimeDebug,
 };
 use zeitgeist_primitives::math::{
     checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedPowRes, CheckedSubRes},
     fixed::{FixedDiv, FixedMul},
 };
+
+pub(crate) const LIQUIDITY_TREE_MAX_DEPTH: u32 = 10;
+pub(crate) type LiquidityTreeMaxNodes = ConstU32<{ 2u32.pow(LIQUIDITY_TREE_MAX_DEPTH) }>;
 
 /// A segment tree used to track balances of liquidity shares which allows `O(log(n))` distribution
 /// of fees.
@@ -40,25 +43,24 @@ use zeitgeist_primitives::math::{
 /// Fees are lazily propagated down the tree. This allows fees to be deposited to the tree in `O(1)`
 /// (fees deposited at the root and later propagated down). If a particular node requires to know
 /// what its fees are, propagating fees to this node takes `O(depth)` operations (or, equivalently,
-/// `O(log(node_countn))`).
+/// `O(log(node_count))`).
 ///
 /// # Attributes
 ///
-/// - `max_depth`: The maximum allowed depth of the tree. The tree can carry up to `2^max_depth`
-///   nodes.
 /// - `nodes`: A vector which holds the nodes of the tree. The nodes are ordered by depth (the root
 ///   is the first element of `nodes`) and from left to right. For example, the right-most grandchild
 ///   of the root is at index `6`.
 /// - `account_to_index`: Maps an account to the node that belongs to it.
 /// - `abandoned_nodes`: A vector that contains the indices of abandoned nodes.
+// #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+// #[scale_info(skip_type_params(T))]
 pub struct LiquidityTree<T>
 where
     T: Config,
 {
-    max_depth: usize,
     nodes: Vec<Node<T>>,
-    account_to_index: BTreeMap<T::AccountId, usize>,
-    abandoned_nodes: Vec<usize>,
+    account_to_index: BTreeMap<T::AccountId, u32>,
+    abandoned_nodes: Vec<u32>,
 }
 
 impl<T> LiquidityTree<T>
@@ -69,23 +71,13 @@ where
     ///
     /// Parameter:
     ///
-    /// - `max_depth`: The maximum allowed depth of the tree.
     /// - `account`: The account to which the tree's root belongs.
     /// - `stake`: The stake of the tree's root.
-    pub(crate) fn new(
-        max_depth: usize,
-        account: T::AccountId,
-        stake: BalanceOf<T>,
-    ) -> LiquidityTree<T> {
+    pub(crate) fn new(account: T::AccountId, stake: BalanceOf<T>) -> LiquidityTree<T> {
         let root = Node::new(account.clone(), stake);
         let mut account_to_index = BTreeMap::new();
-        account_to_index.insert(account, 0usize);
-        LiquidityTree { max_depth, nodes: vec![root], account_to_index, abandoned_nodes: vec![] }
-    }
-
-    /// Return the maximum allowed amount of nodes in the tree.
-    pub(crate) fn max_node_count(&self) -> Result<usize, DispatchError> {
-        2usize.checked_pow_res(self.max_depth)
+        account_to_index.insert(account, 0u32);
+        LiquidityTree { nodes: vec![root], account_to_index, abandoned_nodes: vec![] }
     }
 }
 
@@ -171,7 +163,7 @@ where
                 }
                 NextNode::Leaf => {
                     // Add new leaf. Propagate first so we don't propagate fees to the new leaf.
-                    let index = self.nodes.len();
+                    let index = self.nodes.len() as u32;
                     if let Some(parent_index) = self.parent_index(index) {
                         self.update_descendant_stake(parent_index, stake, false)?;
                     }
@@ -223,7 +215,7 @@ where
     }
 
     fn deposit_fees(&mut self, amount: BalanceOf<T>) -> DispatchResult {
-        let root = self.get_node_mut(0usize)?;
+        let root = self.get_node_mut(0u32)?;
         root.lazy_fees = root.lazy_fees.checked_add_res(&amount)?;
         Ok(())
     }
@@ -244,14 +236,14 @@ where
     }
 
     fn total_shares(&self) -> Result<BalanceOf<T>, DispatchError> {
-        let root = self.get_node(0usize)?;
+        let root = self.get_node(0u32)?;
         root.total_stake()
     }
 }
 
 /// Type for specifying the next free node.
 enum NextNode {
-    Abandoned(usize),
+    Abandoned(u32),
     Leaf,
     None,
 }
@@ -263,25 +255,25 @@ where
     T: Config,
 {
     /// Propagate lazy fees from the tree's root to the node at `index`.
-    fn propagate_fees_to_node(&mut self, index: usize) -> DispatchResult;
+    fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult;
 
     /// Propagate lazy fees from the node at `index` to its children.
-    fn propagate_fees(&mut self, index: usize) -> DispatchResult;
+    fn propagate_fees(&mut self, index: u32) -> DispatchResult;
 
     /// Return the indices of the children of the node at `index`.
     ///
     /// The first (resp. second) component of the array is the left (resp. right) child. If there is
     /// no node at either of these indices, the result is `None`.
-    fn children(&self, index: usize) -> Result<[Option<usize>; 2], DispatchError>;
+    fn children(&self, index: u32) -> Result<[Option<u32>; 2], DispatchError>;
 
-    /// Return the index of a node's parent; `None` if `index` is `0usize`, i.e. the node is root.
-    fn parent_index(&self, index: usize) -> Option<usize>;
+    /// Return the index of a node's parent; `None` if `index` is `0u32`, i.e. the node is root.
+    fn parent_index(&self, index: u32) -> Option<u32>;
 
     /// Return a path from the tree's root to the node at `index`.
     ///
     /// The return value is a vector of the indices of the nodes of the path, starting with the
     /// root.
-    fn path_to_node(&self, index: usize) -> Result<Vec<usize>, DispatchError>;
+    fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError>;
 
     /// Returns the next free index of the tree.
     ///
@@ -298,39 +290,45 @@ where
     /// - `neg`: The sign of the delta; `true` is the delta is negative.
     fn update_descendant_stake(
         &mut self,
-        index: usize,
+        index: u32,
         delta: BalanceOf<T>,
         neg: bool,
     ) -> DispatchResult;
 
     /// Mutate each of child of the node at `index` using `mutator`.
-    fn mutate_each_child<F>(&mut self, index: usize, mutator: F) -> DispatchResult
+    fn mutate_each_child<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
         F: FnMut(&mut Node<T>) -> DispatchResult;
 
     /// Return the number of nodes in the tree. Note that abandoned nodes are counted.
-    fn node_count(&self) -> usize;
+    fn node_count(&self) -> u32;
 
     /// Get a reference to the node at `index`.
-    fn get_node(&self, index: usize) -> Result<&Node<T>, DispatchError>;
+    fn get_node(&self, index: u32) -> Result<&Node<T>, DispatchError>;
 
     /// Get a mutable reference to the node at `index`.
-    fn get_node_mut(&mut self, index: usize) -> Result<&mut Node<T>, DispatchError>;
+    fn get_node_mut(&mut self, index: u32) -> Result<&mut Node<T>, DispatchError>;
 
     /// Get the node which belongs to `account`.
-    fn map_account_to_index(&self, account: &T::AccountId) -> Result<usize, DispatchError>;
+    fn map_account_to_index(&self, account: &T::AccountId) -> Result<u32, DispatchError>;
 
     /// Mutate the node at `index` using `mutator`.
-    fn mutate_node<F>(&mut self, index: usize, mutator: F) -> DispatchResult
+    fn mutate_node<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
         F: FnOnce(&mut Node<T>) -> DispatchResult;
+
+    /// Return the maximum allowed depth of the tree.
+    fn max_depth(&self) -> u32;
+
+    /// Return the maximum allowed amount of nodes in the tree.
+    fn max_node_count(&self) -> u32;
 }
 
 impl<T> LiquidityTreeHelper<T> for LiquidityTree<T>
 where
     T: Config,
 {
-    fn propagate_fees_to_node(&mut self, index: usize) -> DispatchResult {
+    fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult {
         let path = self.path_to_node(index)?;
         for i in path {
             self.propagate_fees(i)?;
@@ -338,7 +336,7 @@ where
         Ok(())
     }
 
-    fn propagate_fees(&mut self, index: usize) -> DispatchResult {
+    fn propagate_fees(&mut self, index: u32) -> DispatchResult {
         let node = self.get_node(index)?;
         if node.total_stake()? == Zero::zero() {
             return Ok(()); // Don't propagate if there are no LPs under this node.
@@ -373,10 +371,9 @@ where
         Ok(())
     }
 
-    fn children(&self, index: usize) -> Result<[Option<usize>; 2], DispatchError> {
-        let max_node_count = self.max_node_count()?;
-        let calculate_child =
-            |child_index: usize| Some(child_index).filter(|&i| i < max_node_count);
+    fn children(&self, index: u32) -> Result<[Option<u32>; 2], DispatchError> {
+        let max_node_count = self.max_node_count();
+        let calculate_child = |child_index: u32| Some(child_index).filter(|&i| i < max_node_count);
         let left_child_index = index.checked_mul_res(&2)?.checked_add_res(&1)?;
         let left_child = calculate_child(left_child_index);
         let right_child_index = left_child_index.checked_add_res(&1)?;
@@ -384,7 +381,7 @@ where
         Ok([left_child, right_child])
     }
 
-    fn parent_index(&self, index: usize) -> Option<usize> {
+    fn parent_index(&self, index: u32) -> Option<u32> {
         if index == 0 {
             None
         } else {
@@ -393,10 +390,10 @@ where
         }
     }
 
-    fn path_to_node(&self, mut index: usize) -> Result<Vec<usize>, DispatchError> {
+    fn path_to_node(&self, mut index: u32) -> Result<Vec<u32>, DispatchError> {
         let mut path = Vec::new();
         let mut iterations = 0;
-        let max_iterations = self.max_depth.checked_add_res(&1)?;
+        let max_iterations = self.max_depth().checked_add_res(&1)?;
         while let Some(parent_index) = self.parent_index(index) {
             if iterations == max_iterations {
                 return Err(LiquidityTreeError::MaxIterationsReached.to_dispatch::<T>());
@@ -405,7 +402,7 @@ where
             index = parent_index;
             iterations = iterations.checked_add_res(&1)?;
         }
-        path.push(0usize); // The tree's root is not considered in the loop above.
+        path.push(0u32); // The tree's root is not considered in the loop above.
         path.reverse(); // The path should be from root to the node
         Ok(path)
     }
@@ -413,7 +410,7 @@ where
     fn peek_next_free_node_index(&mut self) -> Result<NextNode, DispatchError> {
         if let Some(index) = self.abandoned_nodes.last() {
             Ok(NextNode::Abandoned(*index))
-        } else if self.nodes.len() < self.max_node_count()? {
+        } else if self.node_count() < self.max_node_count() {
             Ok(NextNode::Leaf)
         } else {
             Ok(NextNode::None)
@@ -422,7 +419,7 @@ where
 
     fn update_descendant_stake(
         &mut self,
-        index: usize,
+        index: u32,
         delta: BalanceOf<T>,
         neg: bool,
     ) -> DispatchResult {
@@ -437,7 +434,7 @@ where
         Ok(())
     }
 
-    fn mutate_each_child<F>(&mut self, index: usize, mut mutator: F) -> DispatchResult
+    fn mutate_each_child<F>(&mut self, index: u32, mut mutator: F) -> DispatchResult
     where
         F: FnMut(&mut Node<T>) -> DispatchResult,
     {
@@ -450,31 +447,43 @@ where
         Ok(())
     }
 
-    fn node_count(&self) -> usize {
-        self.nodes.len()
+    fn node_count(&self) -> u32 {
+        self.nodes.len() as u32
     }
 
-    fn get_node(&self, index: usize) -> Result<&Node<T>, DispatchError> {
-        self.nodes.get(index).ok_or(LiquidityTreeError::NodeNotFound.to_dispatch::<T>())
+    fn get_node(&self, index: u32) -> Result<&Node<T>, DispatchError> {
+        self.nodes.get(index as usize).ok_or(LiquidityTreeError::NodeNotFound.to_dispatch::<T>())
     }
 
-    fn get_node_mut(&mut self, index: usize) -> Result<&mut Node<T>, DispatchError> {
-        self.nodes.get_mut(index).ok_or(LiquidityTreeError::NodeNotFound.to_dispatch::<T>())
+    fn get_node_mut(&mut self, index: u32) -> Result<&mut Node<T>, DispatchError> {
+        self.nodes
+            .get_mut(index as usize)
+            .ok_or(LiquidityTreeError::NodeNotFound.to_dispatch::<T>())
     }
 
-    fn map_account_to_index(&self, who: &T::AccountId) -> Result<usize, DispatchError> {
+    fn map_account_to_index(&self, who: &T::AccountId) -> Result<u32, DispatchError> {
         self.account_to_index
             .get(who)
             .ok_or(LiquidityTreeError::AccountNotFound.to_dispatch::<T>())
             .copied()
     }
 
-    fn mutate_node<F>(&mut self, index: usize, mutator: F) -> DispatchResult
+    fn mutate_node<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
         F: FnOnce(&mut Node<T>) -> DispatchResult,
     {
         let mut node = self.get_node_mut(index)?;
         mutator(&mut node)
+    }
+
+    /// Return the maximum allowed depth of the tree.
+    fn max_depth(&self) -> u32 {
+        LIQUIDITY_TREE_MAX_DEPTH
+    }
+
+    /// Return the maximum allowed amount of nodes in the tree.
+    fn max_node_count(&self) -> u32 {
+        LiquidityTreeMaxNodes::get()
     }
 }
 

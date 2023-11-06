@@ -37,7 +37,7 @@ mod pallet {
         consts::MAX_ASSETS,
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{LiquidityTreeError, FeeDistribution, Pool, SoloLp},
+        types::{FeeDistribution, LiquidityTree, LiquidityTreeError, Pool, SoloLp},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
