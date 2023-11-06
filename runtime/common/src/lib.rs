@@ -55,16 +55,17 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_neo_swaps::migration::MigrateToLiquidityTree;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = ();
+        type Migrations = (MigrateToLiquidityTree<Runtime>);
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type Migrations = (MigrateToLiquidityTree<Runtime>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,

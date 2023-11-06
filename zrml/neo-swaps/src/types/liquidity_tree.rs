@@ -16,8 +16,10 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::LiquiditySharesManager, BalanceOf, Config, Error};
+use alloc::{vec, vec::Vec};
 use frame_support::{
     ensure,
+    pallet_prelude::RuntimeDebugNoBound,
     storage::{bounded_btree_map::BoundedBTreeMap, bounded_vec::BoundedVec},
     traits::Get,
     PalletError,
@@ -26,10 +28,10 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, CheckedSub, ConstU32, Zero},
-    DispatchError, DispatchResult, RuntimeDebug,
+    DispatchError, DispatchResult,
 };
 use zeitgeist_primitives::math::{
-    checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedPowRes, CheckedSubRes},
+    checked_ops_res::{CheckedAddRes, CheckedMulRes, CheckedSubRes},
     fixed::{FixedDiv, FixedMul},
 };
 
@@ -52,11 +54,11 @@ pub(crate) type LiquidityTreeMaxNodes = ConstU32<{ 2u32.pow(LIQUIDITY_TREE_MAX_D
 /// # Attributes
 ///
 /// - `nodes`: A vector which holds the nodes of the tree. The nodes are ordered by depth (the root
-///   is the first element of `nodes`) and from left to right. For example, the right-most grandchild
-///   of the root is at index `6`.
+///   is the first element of `nodes`) and from left to right. For example, the right-most
+///   grandchild of the root is at index `6`.
 /// - `account_to_index`: Maps an account to the node that belongs to it.
 /// - `abandoned_nodes`: A vector that contains the indices of abandoned nodes.
-#[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebugNoBound, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct LiquidityTree<T>
 where
@@ -84,11 +86,11 @@ where
         let root = Node::new(account.clone(), stake);
         let nodes = vec![root]
             .try_into()
-            .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
+            .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
         let mut account_to_index: BoundedBTreeMap<_, _, _> = Default::default();
         account_to_index
             .try_insert(account, 0u32)
-            .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
+            .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
         let abandoned_nodes = Default::default();
         Ok(LiquidityTree { nodes, account_to_index, abandoned_nodes })
     }
@@ -109,7 +111,7 @@ where
 // - `descendant_stake` does not contain the stake of `self`.
 // - `lazy_fees`, when propagated, is distributed not only to the descendants of `self`, but also to
 //   `self`.
-#[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebugNoBound, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub(crate) struct Node<T: Config> {
     pub account: Option<T::AccountId>,
@@ -169,7 +171,8 @@ where
                     node.account = Some(who.clone());
                     node.stake = stake;
                     node.fees = Zero::zero(); // Not necessary, but better safe than sorry.
-                    // Don't change `descendant_stake`; we're still maintaining it for abandoned nodes.
+                    // Don't change `descendant_stake`; we're still maintaining it for abandoned
+                    // nodes.
                     node.lazy_fees = Zero::zero();
                     self.abandoned_nodes.pop();
                     index
@@ -182,18 +185,18 @@ where
                     }
                     self.nodes
                         .try_push(Node::new(who.clone(), stake))
-                        .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
+                        .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
                     index
                 }
                 NextNode::None => {
                     return Err::<(), DispatchError>(
-                        LiquidityTreeError::TreeIsFull.to_dispatch::<T>(),
+                        LiquidityTreeError::TreeIsFull.into_dispatch::<T>(),
                     );
                 }
             };
             self.account_to_index
                 .try_insert(who.clone(), index)
-                .map_err(|_| LiquidityTreeError::TreeIsFull.to_dispatch::<T>())?;
+                .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
             index
         };
         if let Some(parent_index) = self.parent_index(index) {
@@ -206,16 +209,16 @@ where
         let index = self.map_account_to_index(who)?;
         self.propagate_fees_to_node(index)?;
         let node = self.get_node_mut(index)?;
-        ensure!(node.fees == Zero::zero(), LiquidityTreeError::UnclaimedFees.to_dispatch::<T>());
+        ensure!(node.fees == Zero::zero(), LiquidityTreeError::UnclaimedFees.into_dispatch::<T>());
         node.stake = node
             .stake
             .checked_sub(&stake)
-            .ok_or(LiquidityTreeError::InsufficientStake.to_dispatch::<T>())?;
+            .ok_or(LiquidityTreeError::InsufficientStake.into_dispatch::<T>())?;
         if node.stake == Zero::zero() {
             node.account = None;
             self.abandoned_nodes
                 .try_push(index)
-                .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
+                .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
             let _ = self.account_to_index.remove(who);
         }
         if let Some(parent_index) = self.parent_index(index) {
@@ -415,7 +418,7 @@ where
         let max_iterations = self.max_depth().checked_add_res(&1)?;
         while let Some(parent_index) = self.parent_index(index) {
             if iterations == max_iterations {
-                return Err(LiquidityTreeError::MaxIterationsReached.to_dispatch::<T>());
+                return Err(LiquidityTreeError::MaxIterationsReached.into_dispatch::<T>());
             }
             path.push(index);
             index = parent_index;
@@ -458,10 +461,8 @@ where
         F: FnMut(&mut Node<T>) -> DispatchResult,
     {
         let children_indices = self.children(index)?;
-        for child_option in children_indices {
-            if let Some(child_index) = child_option {
-                self.mutate_node(child_index, |node| mutator(node))?;
-            }
+        for child_index in children_indices.into_iter().flatten() {
+            self.mutate_node(child_index, |node| mutator(node))?;
         }
         Ok(())
     }
@@ -471,19 +472,19 @@ where
     }
 
     fn get_node(&self, index: u32) -> Result<&Node<T>, DispatchError> {
-        self.nodes.get(index as usize).ok_or(LiquidityTreeError::NodeNotFound.to_dispatch::<T>())
+        self.nodes.get(index as usize).ok_or(LiquidityTreeError::NodeNotFound.into_dispatch::<T>())
     }
 
     fn get_node_mut(&mut self, index: u32) -> Result<&mut Node<T>, DispatchError> {
         self.nodes
             .get_mut(index as usize)
-            .ok_or(LiquidityTreeError::NodeNotFound.to_dispatch::<T>())
+            .ok_or(LiquidityTreeError::NodeNotFound.into_dispatch::<T>())
     }
 
     fn map_account_to_index(&self, who: &T::AccountId) -> Result<u32, DispatchError> {
         self.account_to_index
             .get(who)
-            .ok_or(LiquidityTreeError::AccountNotFound.to_dispatch::<T>())
+            .ok_or(LiquidityTreeError::AccountNotFound.into_dispatch::<T>())
             .copied()
     }
 
@@ -491,8 +492,8 @@ where
     where
         F: FnOnce(&mut Node<T>) -> DispatchResult,
     {
-        let mut node = self.get_node_mut(index)?;
-        mutator(&mut node)
+        let node = self.get_node_mut(index)?;
+        mutator(node)
     }
 
     /// Return the maximum allowed depth of the tree.
@@ -506,7 +507,7 @@ where
     }
 }
 
-#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebugNoBound, TypeInfo)]
 pub enum LiquidityTreeError {
     /// There is no node which belongs to this account.
     AccountNotFound,
@@ -529,7 +530,7 @@ impl<T> From<LiquidityTreeError> for Error<T> {
 }
 
 impl LiquidityTreeError {
-    pub(crate) fn to_dispatch<T: Config>(self) -> DispatchError {
+    pub(crate) fn into_dispatch<T: Config>(self) -> DispatchError {
         Error::<T>::LiquidityTreeError(self).into()
     }
 }

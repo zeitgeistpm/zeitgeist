@@ -23,6 +23,7 @@ extern crate alloc;
 mod benchmarking;
 mod consts;
 mod math;
+pub mod migration;
 mod mock;
 mod tests;
 pub mod traits;
@@ -67,9 +68,10 @@ mod pallet {
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
+    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
     // These should not be config parameters to avoid misconfigurations.
     pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
-    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
     pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;

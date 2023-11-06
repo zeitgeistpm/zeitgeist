@@ -1,4 +1,5 @@
 [dependencies]
+cfg-if = { workspace = true }
 fixed = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }

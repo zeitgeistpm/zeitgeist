@@ -24,6 +24,7 @@ use sp_runtime::{
     DispatchError, DispatchResult, RuntimeDebug,
 };
 
+// TODO Remove in 0.4.4.
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
 pub struct SoloLp<T: Config> {
@@ -32,6 +33,7 @@ pub struct SoloLp<T: Config> {
     pub fees: BalanceOf<T>,
 }
 
+#[allow(dead_code)]
 impl<T: Config> SoloLp<T> {
     pub(crate) fn new(owner: T::AccountId, total_shares: BalanceOf<T>) -> SoloLp<T> {
         SoloLp { owner, total_shares, fees: Zero::zero() }
