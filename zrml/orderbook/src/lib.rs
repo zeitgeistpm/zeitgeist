@@ -411,10 +411,7 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
-            let outcome_asset_amount_minus_fees = outcome_asset_amount
-                .saturating_sub(T::ExternalFees::get_fee(market_id, outcome_asset_amount));
-
-            let order = match side {
+            match side {
                 OrderSide::Bid => {
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
@@ -422,40 +419,25 @@ mod pallet {
                         &who,
                         base_asset_amount,
                     )?;
-
-                    Order {
-                        market_id,
-                        side: side.clone(),
-                        maker: who.clone(),
-                        outcome_asset,
-                        base_asset,
-                        // maker requests outcome asset amount minus fees from taker(s)
-                        outcome_asset_amount: outcome_asset_amount_minus_fees,
-                        // maker gives full base asset amount (no fees charged yet)
-                        // the taker(s) get this and immediately fees are charged
-                        base_asset_amount,
-                    }
                 }
                 OrderSide::Ask => {
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
                         outcome_asset,
                         &who,
-                        outcome_asset_amount_minus_fees,
+                        outcome_asset_amount,
                     )?;
-
-                    Order {
-                        market_id,
-                        side: side.clone(),
-                        maker: who.clone(),
-                        outcome_asset,
-                        base_asset,
-                        // only outcome_asset_amount_minus_fees left to repatriate
-                        outcome_asset_amount: outcome_asset_amount_minus_fees,
-                        // maker requests full base asset amount (no fees charged yet) from taker(s)
-                        base_asset_amount,
-                    }
                 }
+            };
+
+            let order = Order {
+                market_id,
+                side: side.clone(),
+                maker: who.clone(),
+                outcome_asset,
+                base_asset,
+                outcome_asset_amount,
+                base_asset_amount,
             };
 
             <Orders<T>>::insert(order_id, order.clone());

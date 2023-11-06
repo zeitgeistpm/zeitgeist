@@ -143,10 +143,7 @@ fn it_places_orders() {
         ));
 
         let shares_reserved = AssetManager::reserved_balance(outcome_asset_1, &BOB);
-        let outcome_asset_fees =
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
-        let outcome_asset_minus_fees = outcome_asset_amount - outcome_asset_fees;
-        assert_eq!(shares_reserved, outcome_asset_minus_fees);
+        assert_eq!(shares_reserved, outcome_asset_amount);
     });
 }
 
@@ -175,9 +172,7 @@ fn it_fills_ask_orders_fully() {
         ));
 
         let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
-        let outcome_asset_fees =
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
-        assert_eq!(reserved_bob, outcome_asset_amount - outcome_asset_fees);
+        assert_eq!(reserved_bob, outcome_asset_amount);
 
         let market_creator_balance_before =
             AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
@@ -211,13 +206,12 @@ fn it_fills_ask_orders_fully() {
         let alice_shares = AssetManager::free_balance(outcome_asset, &ALICE);
         assert_eq!(alice_bal, INITIAL_BALANCE);
 
-        let filled_minus_fees = outcome_asset_amount - outcome_asset_fees;
-        assert_eq!(alice_shares, filled_minus_fees);
+        assert_eq!(alice_shares, outcome_asset_amount);
 
         let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
         let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
         assert_eq!(bob_bal, INITIAL_BALANCE + base_asset_amount - base_asset_fees);
-        assert_eq!(bob_shares, outcome_asset_fees);
+        assert_eq!(bob_shares, 0);
     });
 }
 
@@ -245,12 +239,8 @@ fn it_fills_bid_orders_fully() {
         let reserved_bob = AssetManager::reserved_balance(market.base_asset, &BOB);
         assert_eq!(reserved_bob, base_asset_amount);
 
-        let outcome_asset_fees =
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
-        let outcome_asset_amount_minus_fees = outcome_asset_amount - outcome_asset_fees;
-
         let order_id = 0u128;
-        assert_ok!(AssetManager::deposit(outcome_asset, &ALICE, outcome_asset_amount_minus_fees));
+        assert_ok!(AssetManager::deposit(outcome_asset, &ALICE, outcome_asset_amount));
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
 
         let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
@@ -261,7 +251,7 @@ fn it_fills_bid_orders_fully() {
                 order_id,
                 maker: BOB,
                 taker: ALICE,
-                filled: outcome_asset_amount_minus_fees,
+                filled: outcome_asset_amount,
                 unfilled_outcome_asset_amount: 0,
                 unfilled_base_asset_amount: 0,
             }
@@ -279,7 +269,7 @@ fn it_fills_bid_orders_fully() {
         let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
         let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
         assert_eq!(bob_bal, INITIAL_BALANCE - base_asset_amount);
-        assert_eq!(bob_shares, outcome_asset_amount_minus_fees);
+        assert_eq!(bob_shares, outcome_asset_amount);
     });
 }
 
@@ -323,14 +313,10 @@ fn it_fills_bid_orders_partially() {
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
         let order = <Orders<Runtime>>::get(order_id).unwrap();
-        let outcome_asset_amount_minus_fees = outcome_asset_amount
-            - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
-        let unfilled_outcome_asset_amount_minus_fees =
-            outcome_asset_amount_minus_fees - alice_portion;
+        let unfilled_outcome_asset_amount_minus_fees = outcome_asset_amount - alice_portion;
 
-        let filled_base_amount =
-            Perquintill::from_rational(alice_portion, outcome_asset_amount_minus_fees)
-                .mul_floor(base_asset_amount);
+        let filled_base_amount = Perquintill::from_rational(alice_portion, outcome_asset_amount)
+            .mul_floor(base_asset_amount);
         let unfilled_base_asset_amount = base_asset_amount - filled_base_amount;
 
         assert_eq!(
@@ -369,7 +355,9 @@ fn it_fills_bid_orders_partially() {
         let filled_base_asset_amount =
             Perquintill::from_rational(alice_portion, outcome_asset_amount)
                 .mul_floor(base_asset_amount);
-        assert_eq!(alice_bal, INITIAL_BALANCE + filled_base_asset_amount);
+        let filled_base_asset_amount_minus_fees = filled_base_asset_amount
+            - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, filled_base_asset_amount);
+        assert_eq!(alice_bal, INITIAL_BALANCE + filled_base_asset_amount_minus_fees);
         assert_eq!(alice_shares, alice_shares_left);
 
         let bob_bal = AssetManager::free_balance(market.base_asset, &BOB);
@@ -407,11 +395,7 @@ fn it_fills_ask_orders_partially() {
         ));
 
         let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
-        assert_eq!(
-            reserved_bob,
-            outcome_asset_amount
-                - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
-        );
+        assert_eq!(reserved_bob, outcome_asset_amount);
 
         let order_id = 0u128;
         let market_creator_free_balance_before =
@@ -430,18 +414,7 @@ fn it_fills_ask_orders_partially() {
         );
 
         let order = <Orders<Runtime>>::get(order_id).unwrap();
-        let filled_outcome_asset_without_fees = 860_000_000_000;
-        assert_eq!(
-            filled_outcome_asset_without_fees,
-            outcome_asset_amount
-                - Perbill::from_rational(alice_portion, base_asset_amount)
-                    .mul_floor(outcome_asset_amount)
-        );
-        let filled_outcome_asset_amount = filled_outcome_asset_without_fees
-            - ExternalFees::<Runtime, FeeAccount>::get_fee(
-                market_id,
-                filled_outcome_asset_without_fees,
-            );
+        let filled_outcome_asset_amount = 860_000_000_000;
         assert_eq!(
             order,
             Order {
@@ -477,22 +450,17 @@ fn it_fills_ask_orders_partially() {
         assert_eq!(alice_bal, INITIAL_BALANCE - alice_portion);
         assert_eq!(
             alice_shares,
-            Perbill::from_rational(alice_portion, base_asset_amount).mul_floor(
-                outcome_asset_amount
-                    - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
-            )
+            Perbill::from_rational(alice_portion, base_asset_amount)
+                .mul_floor(outcome_asset_amount)
         );
-        assert_eq!(alice_shares, 138_600_000_000);
+        assert_eq!(alice_shares, 140_000_000_000);
 
         let bob_bal = AssetManager::free_balance(Asset::Ztg, &BOB);
         let bob_shares = AssetManager::free_balance(outcome_asset, &BOB);
         let filled_minus_fees =
             alice_portion - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, alice_portion);
         assert_eq!(bob_bal, INITIAL_BALANCE + filled_minus_fees);
-        assert_eq!(
-            bob_shares,
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount)
-        );
+        assert_eq!(bob_shares, 0);
 
         let reserved_bob = AssetManager::reserved_balance(outcome_asset, &BOB);
         assert_eq!(reserved_bob, filled_outcome_asset_amount);
@@ -520,10 +488,6 @@ fn it_removes_orders() {
             base_asset_amount,
         ));
 
-        let outcome_asset_fees =
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, outcome_asset_amount);
-        let outcome_asset_amount_minus_fees = outcome_asset_amount - outcome_asset_fees;
-
         let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
         assert_eq!(reserved_funds, base_asset_amount);
 
@@ -537,7 +501,7 @@ fn it_removes_orders() {
                     maker: ALICE,
                     outcome_asset,
                     base_asset: Asset::Ztg,
-                    outcome_asset_amount: outcome_asset_amount_minus_fees,
+                    outcome_asset_amount,
                     base_asset_amount,
                 },
             }
@@ -553,7 +517,7 @@ fn it_removes_orders() {
                 maker: ALICE,
                 outcome_asset,
                 base_asset: Asset::Ztg,
-                outcome_asset_amount: outcome_asset_amount_minus_fees,
+                outcome_asset_amount,
                 base_asset_amount,
             }
         );
