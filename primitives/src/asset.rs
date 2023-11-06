@@ -232,5 +232,4 @@ mod tests {
     // Verify encode and decode index hack
     // Verify conversion from Assets enum to any other asset type
     // Verify conversion from any other asset type to assets enum
-    // Verify that compact encoding of foreign assets does not impact existing storage decoding
 }

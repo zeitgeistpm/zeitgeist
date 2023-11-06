@@ -504,7 +504,7 @@ parameter_type_with_key! {
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
-            Asset::ForeignAsset(id) => {
+            Asset::NewForeignAsset(id) | Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
                     orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
@@ -516,9 +516,12 @@ parameter_type_with_key! {
                 1
             }
             #[cfg(not(feature = "parachain"))]
-            Asset::ForeignAsset(_) => ExistentialDeposit::get(),
+            Asset::NewForeignAsset(_) | Asset::ForeignAsset(_) => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
             Asset::ParimutuelShare(_,_) => ExistentialDeposit::get(),
+
+            // The following assets are irrelevant, as they are managed by pallet-assets
+            Asset::NewParimutuelShare(_,_) | Asset::NewCategoricalOutcome(_, _) | Asset::NewCombinatorialOutcome | Asset::NewPoolShare(_) | Asset::NewScalarOutcome(_,_) | Asset::CustomAssetClass(_) | Asset::CampaignAssetClass(_) => ExistentialDeposit::get(),
         }
     };
 }
