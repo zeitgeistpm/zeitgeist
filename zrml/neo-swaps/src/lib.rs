@@ -37,7 +37,7 @@ mod pallet {
         consts::MAX_ASSETS,
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{FeeDistribution, LiquidityTree, LiquidityTreeError, Pool, SoloLp},
+        types::{FeeDistribution, LiquidityTree, LiquidityTreeError, Pool},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -81,7 +81,7 @@ mod pallet {
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type PoolOf<T> = Pool<T, SoloLp<T>>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTree<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -226,8 +226,6 @@ mod pallet {
         NotImplemented,
         /// Some value in the operation is too large or small.
         NumericalLimits,
-        /// Outstanding fees prevent liquidity withdrawal.
-        OutstandingFees,
         /// Specified market does not have a pool.
         PoolNotFound,
         /// Spot price is above the allowed maximum.
@@ -652,10 +650,6 @@ mod pallet {
             Pools::<T>::try_mutate_exists(market_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
-                ensure!(
-                    pool.liquidity_shares_manager.fees == Zero::zero(),
-                    Error::<T>::OutstandingFees
-                );
                 let ratio =
                     pool_shares_amount.bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_out = vec![];
@@ -771,7 +765,7 @@ mod pallet {
                 reserves: reserves.clone(),
                 collateral,
                 liquidity_parameter,
-                liquidity_shares_manager: SoloLp::new(who.clone(), amount),
+                liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
             };
             // FIXME Ensure that the existential deposit doesn't kill fees. This is an ugly hack and

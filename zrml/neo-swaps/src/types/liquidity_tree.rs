@@ -16,8 +16,12 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::LiquiditySharesManager, BalanceOf, Config, Error};
-use alloc::collections::BTreeMap;
-use frame_support::{ensure, storage::bounded_vec::BoundedVec, traits::Get, PalletError};
+use frame_support::{
+    ensure,
+    storage::{bounded_btree_map::BoundedBTreeMap, bounded_vec::BoundedVec},
+    traits::Get,
+    PalletError,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -59,7 +63,7 @@ where
     T: Config,
 {
     nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes>,
-    account_to_index: BTreeMap<T::AccountId, u32>,
+    account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes>,
     abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes>,
 }
 
@@ -81,8 +85,10 @@ where
         let nodes = vec![root]
             .try_into()
             .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
-        let mut account_to_index = BTreeMap::new();
-        account_to_index.insert(account, 0u32);
+        let mut account_to_index: BoundedBTreeMap<_, _, _> = Default::default();
+        account_to_index
+            .try_insert(account, 0u32)
+            .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
         let abandoned_nodes = Default::default();
         Ok(LiquidityTree { nodes, account_to_index, abandoned_nodes })
     }
@@ -186,7 +192,9 @@ where
                     );
                 }
             };
-            self.account_to_index.insert(who.clone(), index);
+            self.account_to_index
+                .try_insert(who.clone(), index)
+                .map_err(|_| LiquidityTreeError::TreeIsFull.to_dispatch::<T>())?;
             index
         };
         if let Some(parent_index) = self.parent_index(index) {
