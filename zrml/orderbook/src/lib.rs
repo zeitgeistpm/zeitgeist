@@ -341,7 +341,7 @@ mod pallet {
         ) {
             let base_asset_fill = if order_data.maker_asset == base_asset {
                 // charge fees from the taker,
-                // who already got the full base asset amount from the maker above (repatriate)
+                // who already got the full base asset amount from the maker previously (repatriate)
                 // taker_fill is the amount what the taker wants to have (base asset from maker)
                 taker_fill
             } else {
@@ -362,8 +362,7 @@ mod pallet {
         /// otherwise return the unchanged maker fill.
         /// In result, if the taker asset is the base asset,
         /// the maker gets the base asset amount minus fees.
-        /// Otherwise the maker gets the outcome asset amount,
-        /// which already was reduced by an external fee amount in `place_order`.
+        /// Otherwise the maker gets the outcome asset amount.
         fn maybe_adjust_maker_fill_if_base_asset(
             order_data: &OrderOf<T>,
             base_asset: AssetOf<T>,
@@ -371,14 +370,13 @@ mod pallet {
         ) -> Result<BalanceOf<T>, DispatchError> {
             let maybe_adjusted_maker_fill = if order_data.maker_asset == base_asset {
                 // maker_fill is the amount what the maker wants to have (outcome asset from taker)
-                // the fees were already charged,
-                // because the maker reserved an outcome asset amount minus fees
+                // do not charge fees from outcome assets, but rather from the base asset
                 maker_fill
             } else {
                 // maker_asset is outcome asset here
                 debug_assert!(order_data.taker_asset == base_asset);
 
-                // charge fees from the taker,
+                // accounting fees from the taker,
                 // who is responsible to pay the base asset minus fees to the maker.
                 let external_fees = T::ExternalFees::get_fee(
                     order_data.market_id,
@@ -466,47 +464,6 @@ mod pallet {
             Ok(())
         }
 
-        fn get_reservable_maker_amount(
-            market_id: MarketIdOf<T>,
-            base_asset: AssetOf<T>,
-            outcome_asset: AssetOf<T>,
-            maker_asset: AssetOf<T>,
-            maker_amount: BalanceOf<T>,
-            taker_asset: AssetOf<T>,
-        ) -> BalanceOf<T> {
-            if maker_asset == base_asset {
-                debug_assert!(taker_asset == outcome_asset);
-                maker_amount
-            } else {
-                debug_assert!(maker_asset == outcome_asset);
-                debug_assert!(taker_asset == base_asset);
-                // this is the outcome asset minus fees,
-                // what the taker(s) going to get
-                maker_amount.saturating_sub(T::ExternalFees::get_fee(market_id, maker_amount))
-            }
-        }
-
-        fn get_requested_taker_amount(
-            market_id: MarketIdOf<T>,
-            base_asset: AssetOf<T>,
-            outcome_asset: AssetOf<T>,
-            maker_asset: AssetOf<T>,
-            taker_asset: AssetOf<T>,
-            taker_amount: BalanceOf<T>,
-        ) -> BalanceOf<T> {
-            if maker_asset == base_asset {
-                debug_assert!(taker_asset == outcome_asset);
-                // As maker, request taker amount minus fee of outcome asset from the taker(s).
-                taker_amount.saturating_sub(T::ExternalFees::get_fee(market_id, taker_amount))
-            } else {
-                debug_assert!(maker_asset == outcome_asset);
-                debug_assert!(taker_asset == base_asset);
-                // As maker, request full amount from the taker(s),
-                // so that the taker(s) pays the external fee in base asset.
-                taker_amount
-            }
-        }
-
         fn do_place_order(
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
@@ -534,45 +491,16 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
-            // The taker gets the maker_asset minus fees, and the maker gets taker_asset minus fees.
-            // The outcome asset fee is taken into account here, the base asset fee is paid in fill_order
-            let filled_maker_amount = Self::get_reservable_maker_amount(
-                market_id,
-                base_asset,
-                outcome_asset,
-                maker_asset,
-                maker_amount,
-                taker_asset,
-            );
-            let unfilled_taker_amount = Self::get_requested_taker_amount(
-                market_id,
-                base_asset,
-                outcome_asset,
-                maker_asset,
-                taker_asset,
-                taker_amount,
-            );
-
-            // either maker_asset is base asset,
-            // then the external fees will be paid in base asset in the fill_order extrinsic
-            // so give full maker amount
-            // and the taker(s) will get base asset amount minus fees
-            // or maker_asset is outcome asset,
-            // then the taker will get outcome asset amount minus fees
-            T::AssetManager::reserve_named(
-                &Self::reserve_id(),
-                maker_asset,
-                &who,
-                filled_maker_amount,
-            )?;
+            // fees are always only charged in the base asset in fill_order
+            T::AssetManager::reserve_named(&Self::reserve_id(), maker_asset, &who, maker_amount)?;
 
             let order = Order {
                 market_id,
                 maker: who.clone(),
                 maker_asset,
-                maker_amount: filled_maker_amount,
+                maker_amount,
                 taker_asset,
-                taker_amount: unfilled_taker_amount,
+                taker_amount,
             };
 
             <Orders<T>>::insert(order_id, order.clone());
