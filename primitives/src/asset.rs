@@ -49,15 +49,39 @@ use scale_info::TypeInfo;
     PartialOrd,
     TypeInfo,
 )]
-pub enum Asset<MI: MaxEncodedLen> {
+pub enum Asset<MI: MaxEncodedLen + CompactAs> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
     PoolShare(SerdeWrapper<PoolId>),
     #[default]
     Ztg,
-    ForeignAsset(u32),
+    ForeignAsset(
+        #[codec(compact)] u32
+    ),
     ParimutuelShare(MI, CategoryIndex),
+    CampaignAssetClass(
+        #[codec(compact)] CampaignAssetId
+    ),
+    CustomAssetClass(
+        #[codec(compact)] CustomAssetId
+    ),
+    NewCategoricalOutcome(
+        #[codec(compact)] MI, 
+        #[codec(compact)] CategoryIndex,
+    ),
+    NewCombinatorialOutcome,
+    NewScalarOutcome(
+        #[codec(compact)] MI, 
+        ScalarPosition,
+    ),
+    NewParimutuelShare(
+        #[codec(compact)] MI,
+        #[codec(compact)] CategoryIndex,
+    ),
+    NewPoolShare(
+        #[codec(compact)] PoolId,
+    ),
 }
 
 /// The `MarketAsset` enum represents all types of assets available in the
@@ -187,4 +211,5 @@ mod tests {
     // Verify encode and decode index hack
     // Verify conversion from Assets enum to any other asset type
     // Verify conversion from any other asset type to assets enum
+    // Verify that compact encoding of foreign assets does not impact existing storage decoding
 }
