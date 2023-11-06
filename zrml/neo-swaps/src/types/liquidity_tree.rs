@@ -17,7 +17,7 @@
 
 use crate::{traits::LiquiditySharesManager, BalanceOf, Config, Error};
 use alloc::collections::BTreeMap;
-use frame_support::{ensure, traits::Get, PalletError};
+use frame_support::{ensure, storage::bounded_vec::BoundedVec, traits::Get, PalletError};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -52,15 +52,15 @@ pub(crate) type LiquidityTreeMaxNodes = ConstU32<{ 2u32.pow(LIQUIDITY_TREE_MAX_D
 ///   of the root is at index `6`.
 /// - `account_to_index`: Maps an account to the node that belongs to it.
 /// - `abandoned_nodes`: A vector that contains the indices of abandoned nodes.
-// #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
-// #[scale_info(skip_type_params(T))]
+#[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+#[scale_info(skip_type_params(T))]
 pub struct LiquidityTree<T>
 where
     T: Config,
 {
-    nodes: Vec<Node<T>>,
+    nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes>,
     account_to_index: BTreeMap<T::AccountId, u32>,
-    abandoned_nodes: Vec<u32>,
+    abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes>,
 }
 
 impl<T> LiquidityTree<T>
@@ -73,11 +73,18 @@ where
     ///
     /// - `account`: The account to which the tree's root belongs.
     /// - `stake`: The stake of the tree's root.
-    pub(crate) fn new(account: T::AccountId, stake: BalanceOf<T>) -> LiquidityTree<T> {
+    pub(crate) fn new(
+        account: T::AccountId,
+        stake: BalanceOf<T>,
+    ) -> Result<LiquidityTree<T>, DispatchError> {
         let root = Node::new(account.clone(), stake);
+        let nodes = vec![root]
+            .try_into()
+            .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
         let mut account_to_index = BTreeMap::new();
         account_to_index.insert(account, 0u32);
-        LiquidityTree { nodes: vec![root], account_to_index, abandoned_nodes: vec![] }
+        let abandoned_nodes = Default::default();
+        Ok(LiquidityTree { nodes, account_to_index, abandoned_nodes })
     }
 }
 
@@ -167,11 +174,14 @@ where
                     if let Some(parent_index) = self.parent_index(index) {
                         self.update_descendant_stake(parent_index, stake, false)?;
                     }
-                    self.nodes.push(Node::new(who.clone(), stake));
+                    self.nodes
+                        .try_push(Node::new(who.clone(), stake))
+                        .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
                     index
                 }
                 NextNode::None => {
                     return Err::<(), DispatchError>(
+                        // TODO
                         Into::<Error<T>>::into(LiquidityTreeError::TreeIsFull).into(),
                     );
                 }
@@ -196,7 +206,9 @@ where
             .ok_or(LiquidityTreeError::InsufficientStake.to_dispatch::<T>())?;
         if node.stake == Zero::zero() {
             node.account = None;
-            self.abandoned_nodes.push(index);
+            self.abandoned_nodes
+                .try_push(index)
+                .map_err(|_| LiquidityTreeError::AccountNotFound.to_dispatch::<T>())?;
             let _ = self.account_to_index.remove(who);
         }
         if let Some(parent_index) = self.parent_index(index) {
