@@ -61,10 +61,10 @@ macro_rules! decl_common_types {
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = (zrml_prediction_markets::migrations::AddEarlyCloseBonds<Runtime>,);
+        type Migrations = ();
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = (zrml_prediction_markets::migrations::AddEarlyCloseBonds<Runtime>,);
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,

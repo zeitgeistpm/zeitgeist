@@ -30,7 +30,7 @@
 // pallet
 // --chain=dev
 // --steps=10
-// --repeat=10
+// --repeat=1000
 // --pallet=zrml_orderbook
 // --extrinsic=*
 // --execution=wasm
@@ -99,7 +99,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Orderbook Orders (max_values: None, max_size: Some(142), added: 2617, mode: MaxEncodedLen)
     fn place_order() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `334`
+        //  Measured:  `372`
         //  Estimated: `7388`
         // Minimum execution time: 33_000 nanoseconds.
         Weight::from_parts(34_000_000, 7388)
