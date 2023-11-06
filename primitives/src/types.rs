@@ -84,11 +84,14 @@ pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B
 /// ID type for any asset class
 pub type CurrencyId = Asset<MarketId>;
 
-// ID type for asset classes that anyone can create
-pub type AssetId = u128;
+// ID type for campaign asset classes
+pub type CampaignAsset = CampaignAssetClass(u128);
+
+// ID type for custom asset classes
+pub type CustomAsset = CustomAssetClass(u128);
 
 // ID type for the asset classes are used within the prediction market protocol
-pub type MarketAsset = PredictionMarketAsset<MarketId>;
+pub type MarketAsset = MarketAssetClass<MarketId>;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.

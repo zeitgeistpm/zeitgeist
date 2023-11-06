@@ -23,6 +23,10 @@ use scale_info::TypeInfo;
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
 ///
+/// Never use this enum in storage. Use this enum only to interact with assets
+/// via an asset manager (transfer, freeze, etc.). Use other explicit and
+/// distinct asset classes instead if storage of asset information is needed.
+///
 /// **Deprecated:** Market and Pool assets are "lazy" migrated to pallet-assets
 /// Do not create any new market or pool assets using this enumeration.
 ///
@@ -65,14 +69,58 @@ pub enum Asset<MI: MaxEncodedLen> {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
-pub enum PredictionMarketAsset<MI: MaxEncodedLen> {
-    CategoricalOutcome(MI, CategoryIndex),
+pub enum MarketAssetClass<MI: MaxEncodedLen> {
+    // All "Old" variants will be removed once the lazy migration from
+    // orml-tokens to pallet-assets is complete
+    #[codec(index = 0)]
+    OldCategoricalOutcome(MI, CategoryIndex),
+    #[codec(index = 2)]
+    OldCombinatorialOutcome,
+    #[codec(index = 1)]
+    OldScalarOutcome(MI, ScalarPosition),
+    #[codec(index = 6)]
+    OldParimutuelShare(MI, CategoryIndex),
+    #[codec(index = 3)]
+    OldPoolShare(PoolId),
+    #[codec(index = 7)]
+    CategoricalOutcome(
+        #[codec(compact)] MI, 
+        #[codec(compact)] CategoryIndex
+    ),
+    #[codec(index = 8)]
     #[default]
     CombinatorialOutcome,
-    ScalarOutcome(MI, ScalarPosition),
-    ParimutuelShare(MI, CategoryIndex),
-    PoolShare(PoolId),
+    #[codec(index = 9)]
+    ScalarOutcome(
+        #[codec(compact)] MI, 
+        #[codec(compact)] ScalarPosition
+    ),
+    #[codec(index = 10)]
+    ParimutuelShare(
+        #[codec(compact)] MI,
+        #[codec(compact)] CategoryIndex
+    ),
+    #[codec(index = 11)]
+    PoolShare(
+        #[codec(compact)] PoolId
+    ),
 }
+
+/// The `CustomAsset` tuple struct represents all custom assets.
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+pub struct CampaignAssetClass(
+    #[codec(compact)] u128,
+);
+
+/// The `CustomAsset` tuple struct represents all custom assets.
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+pub struct CustomAssetClass(
+    #[codec(compact)] u128,
+);
 
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
@@ -86,4 +134,11 @@ pub enum PredictionMarketAsset<MI: MaxEncodedLen> {
 pub enum ScalarPosition {
     Long,
     Short,
+}
+
+mod tests {
+    // TODO
+    // Verify encode and decode index hack
+    // Verify conversion from Assets enum to any other asset type
+    // Verify conversion from any other asset type to assets enum
 }
