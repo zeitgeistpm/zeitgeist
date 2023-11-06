@@ -25,7 +25,7 @@ use frame_support::{
     storage::PrefixIterator,
     Parameter,
 };
-use parity_scale_codec::{FullCodec, MaxEncodedLen};
+use parity_scale_codec::{FullCodec, CompactAs, HasCompact, MaxEncodedLen};
 use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
@@ -55,6 +55,7 @@ pub trait MarketCommonsPalletApi {
         + Default
         + MaybeSerializeDeserialize
         + MaxEncodedLen
+        + CompactAs + HasCompact
         + Member
         + Parameter;
     type Moment: AtLeast32Bit + Copy + Default + Parameter + MaxEncodedLen;

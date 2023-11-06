@@ -24,7 +24,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::Weight;
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
 use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
@@ -45,7 +45,7 @@ pub trait DisputeApi {
     type Balance;
     type NegativeImbalance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + CompactAs + HasCompact;
     type Moment;
     type Origin;
 
@@ -157,7 +157,7 @@ pub trait DisputeResolutionApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + CompactAs + HasCompact;
     type Moment;
 
     /// Resolve a market.

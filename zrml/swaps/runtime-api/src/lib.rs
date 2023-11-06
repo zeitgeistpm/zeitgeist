@@ -19,7 +19,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
+use parity_scale_codec::{Codec, Decode, HasCompact, CompactAs, MaxEncodedLen};
 use sp_runtime::{
     traits::{MaybeDisplay, MaybeFromStr},
     DispatchError,
@@ -32,7 +32,7 @@ sp_api::decl_runtime_apis! {
         PoolId: Codec,
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen,
-        MarketId: Codec + MaxEncodedLen,
+        MarketId: Codec + CompactAs + HasCompact + MaxEncodedLen,
         Pool<Balance, MarketId>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;

@@ -41,7 +41,7 @@ mod pallet {
         traits::{Get, Hooks, StorageVersion, Time},
         Blake2_128Concat, PalletId, Parameter,
     };
-    use parity_scale_codec::{FullCodec, MaxEncodedLen};
+    use parity_scale_codec::{FullCodec, CompactAs, HasCompact, MaxEncodedLen};
     use sp_runtime::{
         traits::{
             AccountIdConversion, AtLeast32Bit, AtLeast32BitUnsigned, CheckedAdd,
@@ -83,6 +83,7 @@ mod pallet {
         type MarketId: AtLeast32Bit
             + Copy
             + Default
+            + CompactAs + HasCompact
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + Member

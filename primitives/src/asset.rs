@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::types::{CategoryIndex, CampaignAssetId, CustomAssetId, PoolId, SerdeWrapper};
-use parity_scale_codec::{Compact, CompactAs, Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Compact, HasCompact, CompactAs, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
@@ -54,33 +54,45 @@ pub enum Asset<MI: MaxEncodedLen + CompactAs> {
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
     PoolShare(SerdeWrapper<PoolId>),
+
     #[default]
     Ztg,
-    ForeignAsset(
-        #[codec(compact)] u32
-    ),
+
+    ForeignAsset(u32),
+
     ParimutuelShare(MI, CategoryIndex),
+
     CampaignAssetClass(
         #[codec(compact)] CampaignAssetId
     ),
+
     CustomAssetClass(
         #[codec(compact)] CustomAssetId
     ),
+
     NewCategoricalOutcome(
         #[codec(compact)] MI, 
         #[codec(compact)] CategoryIndex,
     ),
+
     NewCombinatorialOutcome,
+
     NewScalarOutcome(
         #[codec(compact)] MI, 
         ScalarPosition,
     ),
+
     NewParimutuelShare(
         #[codec(compact)] MI,
         #[codec(compact)] CategoryIndex,
     ),
+
     NewPoolShare(
         #[codec(compact)] PoolId,
+    ),
+
+    NewForeignAsset(
+        #[codec(compact)] u32
     ),
 }
 
@@ -93,37 +105,46 @@ pub enum Asset<MI: MaxEncodedLen + CompactAs> {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
-pub enum MarketAssetClass<MI: MaxEncodedLen> {
+pub enum MarketAssetClass<MI: CompactAs + HasCompact + MaxEncodedLen> {
     // All "Old" variants will be removed once the lazy migration from
     // orml-tokens to pallet-assets is complete
     #[codec(index = 0)]
     OldCategoricalOutcome(MI, CategoryIndex),
+
     #[codec(index = 2)]
     OldCombinatorialOutcome,
+
     #[codec(index = 1)]
     OldScalarOutcome(MI, ScalarPosition),
+
     #[codec(index = 6)]
     OldParimutuelShare(MI, CategoryIndex),
+
     #[codec(index = 3)]
     OldPoolShare(PoolId),
+
     #[codec(index = 7)]
     CategoricalOutcome(
         #[codec(compact)] MI, 
         #[codec(compact)] CategoryIndex,
     ),
+
     #[codec(index = 8)]
     #[default]
     CombinatorialOutcome,
+
     #[codec(index = 9)]
     ScalarOutcome(
         #[codec(compact)] MI, 
         ScalarPosition,
     ),
+
     #[codec(index = 10)]
     ParimutuelShare(
         #[codec(compact)] MI,
         #[codec(compact)] CategoryIndex,
     ),
+
     #[codec(index = 11)]
     PoolShare(
         #[codec(compact)] PoolId,

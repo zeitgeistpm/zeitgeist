@@ -18,12 +18,12 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, MaxEncodedLen};
+use parity_scale_codec::{Codec, CompactAs, HasCompact, MaxEncodedLen};
 use zeitgeist_primitives::types::Asset;
 
 sp_api::decl_runtime_apis! {
     pub trait PredictionMarketsApi<MarketId, Hash> where
-        MarketId: Codec + MaxEncodedLen,
+        MarketId: Codec + CompactAs + HasCompact + MaxEncodedLen,
         Hash: Codec,
     {
         fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<MarketId>;

@@ -21,11 +21,11 @@ use crate::types::{
 };
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
 
 pub trait Swaps<AccountId> {
     type Balance: MaxEncodedLen;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + CompactAs + HasCompact;
 
     /// Creates an initial active pool.
     ///

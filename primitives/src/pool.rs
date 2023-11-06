@@ -21,14 +21,14 @@ use crate::{
     types::{Asset, PoolStatus},
 };
 use alloc::{collections::BTreeMap, vec::Vec};
-use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen, CompactAs, HasCompact};
 use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 pub struct Pool<Balance, MarketId>
 where
-    MarketId: MaxEncodedLen,
+    MarketId: MaxEncodedLen + CompactAs + HasCompact,
 {
     pub assets: Vec<Asset<MarketId>>,
     pub base_asset: Asset<MarketId>,
@@ -43,7 +43,7 @@ where
 
 impl<Balance, MarketId> Pool<Balance, MarketId>
 where
-    MarketId: MaxEncodedLen + Ord,
+    MarketId: MaxEncodedLen + Ord + CompactAs + HasCompact,
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
         if let Some(weights) = &self.weights {
@@ -57,7 +57,7 @@ where
 impl<Balance, MarketId> MaxEncodedLen for Pool<Balance, MarketId>
 where
     Balance: MaxEncodedLen,
-    MarketId: MaxEncodedLen,
+    MarketId: MaxEncodedLen + CompactAs + HasCompact,
 {
     fn max_encoded_len() -> usize {
         let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();

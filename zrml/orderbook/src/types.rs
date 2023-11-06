@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, CompactAs, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use zeitgeist_primitives::types::Asset;
@@ -29,7 +29,7 @@ pub enum OrderSide {
 }
 
 #[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + CompactAs + HasCompact> {
     pub market_id: MarketId,
     pub side: OrderSide,
     pub maker: AccountId,
