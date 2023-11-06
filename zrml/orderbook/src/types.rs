@@ -29,7 +29,7 @@ pub enum OrderSide {
 }
 
 #[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + CompactAs + HasCompact> {
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + HasCompact> {
     pub market_id: MarketId,
     pub side: OrderSide,
     pub maker: AccountId,

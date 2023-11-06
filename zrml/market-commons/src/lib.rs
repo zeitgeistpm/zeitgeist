@@ -83,7 +83,7 @@ mod pallet {
         type MarketId: AtLeast32Bit
             + Copy
             + Default
-            + CompactAs + HasCompact
+            + HasCompact
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + Member

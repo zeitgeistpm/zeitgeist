@@ -55,7 +55,7 @@ pub trait MarketCommonsPalletApi {
         + Default
         + MaybeSerializeDeserialize
         + MaxEncodedLen
-        + CompactAs + HasCompact
+        + HasCompact
         + Member
         + Parameter;
     type Moment: AtLeast32Bit + Copy + Default + Parameter + MaxEncodedLen;

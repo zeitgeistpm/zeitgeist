@@ -25,7 +25,7 @@ use parity_scale_codec::{CompactAs, HasCompact, MaxEncodedLen};
 
 pub trait Swaps<AccountId> {
     type Balance: MaxEncodedLen;
-    type MarketId: MaxEncodedLen + CompactAs + HasCompact;
+    type MarketId: MaxEncodedLen + HasCompact;
 
     /// Creates an initial active pool.
     ///

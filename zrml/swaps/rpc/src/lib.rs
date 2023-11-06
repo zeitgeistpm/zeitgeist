@@ -43,7 +43,7 @@ pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 pub trait SwapsApi<BlockHash, BlockNumber, PoolId, AccountId, Balance, MarketId>
 where
     Balance: FromStr + Display + parity_scale_codec::MaxEncodedLen,
-    MarketId: FromStr + Display + CompactAs + HasCompact + MaxEncodedLen + Ord,
+    MarketId: FromStr + Display + HasCompact + MaxEncodedLen + Ord,
     PoolId: FromStr + Display,
     BlockNumber: Ord + parity_scale_codec::MaxEncodedLen + Display + FromStr,
 {
@@ -126,7 +126,7 @@ where
     PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr + Send + 'static,
     AccountId: Clone + Display + Codec + Send + 'static,
     Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
-    MarketId: Clone + Codec + CompactAs + HasCompact + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Ord + Send + 'static,
+    MarketId: Clone + Codec + HasCompact + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Ord + Send + 'static,
 {
     async fn pool_shares_id(
         &self,

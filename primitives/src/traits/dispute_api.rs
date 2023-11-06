@@ -45,7 +45,7 @@ pub trait DisputeApi {
     type Balance;
     type NegativeImbalance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen + CompactAs + HasCompact;
+    type MarketId: MaxEncodedLen + HasCompact;
     type Moment;
     type Origin;
 
@@ -157,7 +157,7 @@ pub trait DisputeResolutionApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen + CompactAs + HasCompact;
+    type MarketId: MaxEncodedLen + HasCompact;
     type Moment;
 
     /// Resolve a market.

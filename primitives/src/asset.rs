@@ -49,7 +49,7 @@ use scale_info::TypeInfo;
     PartialOrd,
     TypeInfo,
 )]
-pub enum Asset<MI: MaxEncodedLen + CompactAs> {
+pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
@@ -105,7 +105,7 @@ pub enum Asset<MI: MaxEncodedLen + CompactAs> {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
-pub enum MarketAssetClass<MI: CompactAs + HasCompact + MaxEncodedLen> {
+pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
     // All "Old" variants will be removed once the lazy migration from
     // orml-tokens to pallet-assets is complete
     #[codec(index = 0)]
