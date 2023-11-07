@@ -83,7 +83,7 @@ pub(crate) trait PoolOperations<T: Config> {
     fn calculate_numerical_threshold(&self) -> BalanceOf<T>;
 
     /// Calculate the ln argument used when calculating amounts out for buys. Underflows do not
-    /// raise an error and are rounded down instead.
+    /// raise an error and are rounded down to zero instead.
     ///
     /// # Parameters
     ///
