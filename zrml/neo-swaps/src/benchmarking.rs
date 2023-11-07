@@ -76,6 +76,7 @@ fn create_market<T: Config>(
 
 fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
     let mut result = vec![MIN_SPOT_PRICE.saturated_into(); (asset_count - 1) as usize];
+    // Price distribution has no bearing on the benchmarks.
     let remaining_u128 =
         ZeitgeistBase::<u128>::get().unwrap() - (asset_count - 1) as u128 * MIN_SPOT_PRICE;
     result.push(remaining_u128.saturated_into());
