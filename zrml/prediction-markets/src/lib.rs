@@ -1708,7 +1708,7 @@ mod pallet {
         #[pallet::weight((
             T::WeightInfo::manually_open_market(CacheSize::get())
                 .max(T::WeightInfo::manually_close_market(CacheSize::get())),
-            Pays::Yes
+            Pays::Yes,
         ))]
         #[transactional]
         pub fn manually_open_or_close_market(
