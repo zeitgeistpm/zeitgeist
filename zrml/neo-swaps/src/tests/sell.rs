@@ -256,7 +256,7 @@ fn sell_fails_if_amount_in_is_greater_than_numerical_threshold() {
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
-        let amount_in = 100 * pool.liquidity_parameter;
+        let amount_in = pool.calculate_numerical_threshold() + 1;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
             NeoSwaps::sell(

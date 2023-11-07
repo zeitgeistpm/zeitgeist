@@ -255,7 +255,8 @@ fn buy_fails_if_amount_in_is_greater_than_numerical_threshold() {
             CENT,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let amount_in = 100 * pool.liquidity_parameter;
+        // Using twice the threshold here to account for the removal of swap fees.
+        let amount_in = 2 * pool.calculate_numerical_threshold();
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
         assert_noop!(
             NeoSwaps::buy(
