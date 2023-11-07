@@ -504,7 +504,7 @@ parameter_type_with_key! {
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
-            Asset::NewForeignAsset(id) | Asset::ForeignAsset(id) => {
+            Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
                     orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
@@ -516,7 +516,7 @@ parameter_type_with_key! {
                 1
             }
             #[cfg(not(feature = "parachain"))]
-            Asset::NewForeignAsset(_) | Asset::ForeignAsset(_) => ExistentialDeposit::get(),
+            Asset::ForeignAsset(_) => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
             Asset::ParimutuelShare(_,_) => ExistentialDeposit::get(),
 

@@ -90,10 +90,6 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     NewPoolShare(
         #[codec(compact)] PoolId,
     ),
-
-    NewForeignAsset(
-        #[codec(compact)] u32
-    ),
 }
 
 /// The `MarketAsset` enum represents all types of assets available in the
