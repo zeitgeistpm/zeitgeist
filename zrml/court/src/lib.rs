@@ -235,6 +235,7 @@ mod pallet {
         BoundedVec<CourtPoolItemOf<T>, <T as Config>::MaxCourtParticipants>;
     pub(crate) type DrawOf<T> = Draw<AccountIdOf<T>, BalanceOf<T>, HashOf<T>, DelegatedStakesOf<T>>;
     pub(crate) type SelectedDrawsOf<T> = BoundedVec<DrawOf<T>, <T as Config>::MaxSelectedDraws>;
+    pub(crate) type RoundTimingOf<T> = RoundTiming<BlockNumberFor<T>>;
     pub(crate) type AppealOf<T> = AppealInfo<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type AppealsOf<T> = BoundedVec<AppealOf<T>, <T as Config>::MaxAppeals>;
     pub(crate) type RawCommitmentOf<T> = RawCommitment<AccountIdOf<T>, HashOf<T>>;
@@ -323,6 +324,8 @@ mod pallet {
             court_id: CourtId,
             vote_item: VoteItem,
             salt: T::Hash,
+            slashable_amount: BalanceOf<T>,
+            draw_weight: u32,
         },
         /// A juror vote has been denounced.
         DenouncedJurorVote {
@@ -339,7 +342,11 @@ mod pallet {
             delegated_jurors: Vec<T::AccountId>,
         },
         /// A market has been appealed.
-        CourtAppealed { court_id: CourtId, appeal_number: u32 },
+        CourtAppealed {
+            court_id: CourtId,
+            appeal_info: AppealOf<T>,
+            new_round_ends: Option<RoundTimingOf<T>>,
+        },
         /// A new token amount was minted for a court participant.
         MintedInCourt { court_participant: T::AccountId, amount: BalanceOf<T> },
         /// The juror and delegator stakes have been reassigned. The losing jurors have been slashed.
@@ -867,7 +874,9 @@ mod pallet {
             );
 
             let mut draws = <SelectedDraws<T>>::get(court_id);
-            match draws.binary_search_by_key(&who, |draw| draw.court_participant.clone()) {
+            let (slashable_amount, draw_weight) = match draws
+                .binary_search_by_key(&who, |draw| draw.court_participant.clone())
+            {
                 Ok(index) => {
                     let draw = draws[index].clone();
 
@@ -878,16 +887,31 @@ mod pallet {
 
                     let raw_vote =
                         Vote::Revealed { commitment, vote_item: vote_item.clone(), salt };
-                    draws[index] = Draw { court_participant: who.clone(), vote: raw_vote, ..draw };
+                    let slashable_amount = draw.slashable;
+                    let draw_weight = draw.weight;
+                    draws[index] = Draw {
+                        court_participant: who.clone(),
+                        vote: raw_vote,
+                        slashable: slashable_amount,
+                        weight: draw_weight,
+                    };
+                    (slashable_amount, draw_weight)
                 }
                 Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
-            }
+            };
 
             let draws_len = draws.len() as u32;
 
             <SelectedDraws<T>>::insert(court_id, draws);
 
-            Self::deposit_event(Event::JurorRevealedVote { juror: who, court_id, vote_item, salt });
+            Self::deposit_event(Event::JurorRevealedVote {
+                juror: who,
+                court_id,
+                vote_item,
+                salt,
+                slashable_amount,
+                draw_weight,
+            });
 
             Ok(Some(T::WeightInfo::reveal_vote(draws_len)).into())
         }
@@ -933,7 +957,7 @@ mod pallet {
             let appealed_vote_item =
                 Self::get_latest_winner_vote_item(court_id, old_draws.as_slice())?;
             let appeal_info = AppealInfo { backer: who.clone(), bond, appealed_vote_item };
-            court.appeals.try_push(appeal_info).map_err(|_| {
+            court.appeals.try_push(appeal_info.clone()).map_err(|_| {
                 debug_assert!(false, "Appeal bound is checked above.");
                 Error::<T>::MaxAppealsReached
             })?;
@@ -943,6 +967,7 @@ mod pallet {
             // used for benchmarking, juror pool is queried inside `select_participants`
             let pool_len = <CourtPool<T>>::decode_len().unwrap_or(0) as u32;
 
+            let mut new_round_ends = None;
             let mut ids_len_1 = 0u32;
             // if appeal_number == MaxAppeals, then don't start a new appeal round
             if appeal_number < T::MaxAppeals::get() as usize {
@@ -957,6 +982,7 @@ mod pallet {
                 };
                 // sets round ends one after the other from now
                 court.update_round(round_timing);
+                new_round_ends = Some(court.round_ends.clone());
                 let new_resolve_at = court.round_ends.appeal;
                 debug_assert!(new_resolve_at != last_resolve_at);
                 if let Some(market_id) = <CourtIdToMarketId<T>>::get(court_id) {
@@ -976,7 +1002,7 @@ mod pallet {
             <Courts<T>>::insert(court_id, court);
 
             let appeal_number = appeal_number as u32;
-            Self::deposit_event(Event::CourtAppealed { court_id, appeal_number });
+            Self::deposit_event(Event::CourtAppealed { court_id, appeal_info, new_round_ends });
 
             Ok(Some(T::WeightInfo::appeal(pool_len, appeal_number, ids_len_0, ids_len_1)).into())
         }
