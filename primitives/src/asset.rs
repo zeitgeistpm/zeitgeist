@@ -292,6 +292,7 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CustomAssetClass {
 }
 
 /// The `CurrencyClass` enum represents all non-ztg CurrencyClass
+// used in orml-tokens
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
@@ -329,6 +330,17 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CurrencyClass<MI> {
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
+            Asset::<MI>::CategoricalOutcome(marketid, catid) => {
+                Ok(Self::OldCategoricalOutcome(marketid, catid))
+            }
+            Asset::<MI>::CombinatorialOutcome => Ok(Self::OldCombinatorialOutcome),
+            Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
+                Ok(Self::OldScalarOutcome(marketid, scalarpos))
+            }
+            Asset::<MI>::ParimutuelShare(marketid, catid) => {
+                Ok(Self::OldParimutuelShare(marketid, catid))
+            }
+            Asset::<MI>::PoolShare(poolid) => Ok(Self::OldPoolShare(poolid)),
             Asset::<MI>::ForeignAsset(id) => Ok(Self::ForeignAsset(id)),
             _ => Err(()),
         }
@@ -351,7 +363,10 @@ pub enum ScalarPosition {
 
 #[cfg(test)]
 mod tests {
-    use super::{Asset, CurrencyClass, MarketAssetClass, ScalarPosition};
+    use super::{
+        Asset, CampaignAssetClass, CurrencyClass, CustomAssetClass, MarketAssetClass,
+        ScalarPosition,
+    };
     use crate::types::MarketId;
     use parity_scale_codec::{Decode, Encode};
 
@@ -360,6 +375,7 @@ mod tests {
         use super::*;
         use test_case::test_case;
 
+        // Assets <> MarketAssetClass
         #[test_case(
             Asset::<MarketId>::CategoricalOutcome(7, 7),
             MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7);
@@ -421,6 +437,7 @@ mod tests {
             assert_eq!(new_asset_decoded, new_asset);
         }
 
+        // Assets <> CurrencyClass
         #[test_case(
             Asset::<MarketId>::CategoricalOutcome(7, 7),
             CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7);
@@ -462,7 +479,244 @@ mod tests {
             assert_eq!(new_asset_decoded, new_asset);
         }
     }
+
     // Verify conversion from Assets enum to any other asset type
+    mod conversions {
+        use super::*;
+        use test_case::test_case;
+
+        // Assets <> MarketAssetClass
+        #[test_case(
+            Asset::<MarketId>::CategoricalOutcome(7, 7),
+            MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7);
+            "categorical_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
+            MarketAssetClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long);
+            "scalar_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::CombinatorialOutcome,
+            MarketAssetClass::<MarketId>::OldCombinatorialOutcome;
+            "combinatorial_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::PoolShare(7),
+            MarketAssetClass::<MarketId>::OldPoolShare(7);
+            "pool_share"
+        )]
+        #[test_case(
+            Asset::<MarketId>::ParimutuelShare(7, 7),
+            MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7);
+            "parimutuel_share"
+        )]
+        #[test_case(
+            Asset::<MarketId>::NewCategoricalOutcome(7, 7),
+            MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7);
+            "new_categorical_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long),
+            MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
+            "new_calar_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::NewCombinatorialOutcome,
+            MarketAssetClass::<MarketId>::CombinatorialOutcome;
+            "new_combinatorial_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::NewPoolShare(7),
+            MarketAssetClass::<MarketId>::PoolShare(7);
+            "new_pool_share"
+        )]
+        #[test_case(
+            Asset::<MarketId>::NewParimutuelShare(7, 7),
+            MarketAssetClass::<MarketId>::ParimutuelShare(7, 7);
+            "new_parimutuel_share"
+        )]
+        fn from_all_assets_to_market_assets(
+            old_asset: Asset<MarketId>,
+            new_asset: MarketAssetClass<MarketId>,
+        ) {
+            let new_asset_converted: MarketAssetClass<MarketId> = old_asset.try_into().unwrap();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        #[test_case(
+            MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7),
+            Asset::<MarketId>::CategoricalOutcome(7, 7);
+            "categorical_outcome"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long),
+            Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
+            "scalar_outcome"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::OldCombinatorialOutcome,
+            Asset::<MarketId>::CombinatorialOutcome;
+            "combinatorial_outcome"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::OldPoolShare(7),
+            Asset::<MarketId>::PoolShare(7);
+            "pool_share"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7),
+            Asset::<MarketId>::ParimutuelShare(7, 7);
+            "parimutuel_share"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7),
+            Asset::<MarketId>::NewCategoricalOutcome(7, 7);
+            "new_categorical_outcome"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
+            Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long);
+            "new_calar_outcome"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::CombinatorialOutcome,
+            Asset::<MarketId>::NewCombinatorialOutcome;
+            "new_combinatorial_outcome"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::PoolShare(7),
+            Asset::<MarketId>::NewPoolShare(7);
+            "new_pool_share"
+        )]
+        #[test_case(
+            MarketAssetClass::<MarketId>::ParimutuelShare(7, 7),
+            Asset::<MarketId>::NewParimutuelShare(7, 7);
+            "new_parimutuel_share"
+        )]
+        fn from_market_assets_to_all_assets(
+            old_asset: MarketAssetClass<MarketId>,
+            new_asset: Asset<MarketId>,
+        ) {
+            let new_asset_converted: Asset<MarketId> = old_asset.into();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        // Assets <> CurrencyClass
+        #[test_case(
+            Asset::<MarketId>::CategoricalOutcome(7, 7),
+            CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7);
+            "categorical_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
+            CurrencyClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long);
+            "scalar_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::CombinatorialOutcome,
+            CurrencyClass::<MarketId>::OldCombinatorialOutcome;
+            "combinatorial_outcome"
+        )]
+        #[test_case(
+            Asset::<MarketId>::PoolShare(7),
+            CurrencyClass::<MarketId>::OldPoolShare(7);
+            "pool_share"
+        )]
+        #[test_case(
+            Asset::<MarketId>::ParimutuelShare(7, 7),
+            CurrencyClass::<MarketId>::OldParimutuelShare(7, 7);
+            "parimutuel_share"
+        )]
+        #[test_case(
+            Asset::<MarketId>::ForeignAsset(7),
+            CurrencyClass::<MarketId>::ForeignAsset(7);
+            "foreign_asset"
+        )]
+        fn from_all_assets_to_currencies(
+            old_asset: Asset<MarketId>,
+            new_asset: CurrencyClass<MarketId>,
+        ) {
+            let new_asset_converted: CurrencyClass<MarketId> = old_asset.try_into().unwrap();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        #[test_case(
+            CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7),
+            Asset::<MarketId>::CategoricalOutcome(7, 7);
+            "categorical_outcome"
+        )]
+        #[test_case(
+            CurrencyClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long),
+            Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
+            "scalar_outcome"
+        )]
+        #[test_case(
+            CurrencyClass::<MarketId>::OldCombinatorialOutcome,
+            Asset::<MarketId>::CombinatorialOutcome;
+            "combinatorial_outcome"
+        )]
+        #[test_case(
+            CurrencyClass::<MarketId>::OldPoolShare(7),
+            Asset::<MarketId>::PoolShare(7);
+            "pool_share"
+        )]
+        #[test_case(
+            CurrencyClass::<MarketId>::OldParimutuelShare(7, 7),
+            Asset::<MarketId>::ParimutuelShare(7, 7);
+            "parimutuel_share"
+        )]
+        #[test_case(
+            CurrencyClass::<MarketId>::ForeignAsset(7),
+            Asset::<MarketId>::ForeignAsset(7);
+            "foreign_asset"
+        )]
+        fn from_currencies_to_all_assets(
+            old_asset: CurrencyClass<MarketId>,
+            new_asset: Asset<MarketId>,
+        ) {
+            let new_asset_converted: Asset<MarketId> = old_asset.into();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        // Assets <> CampaignAssetClass
+        #[test]
+        fn from_all_assets_to_campaign_assets() {
+            let old_asset = Asset::<MarketId>::CampaignAssetClass(7);
+            let new_asset = CampaignAssetClass(7);
+
+            let new_asset_converted: CampaignAssetClass = old_asset.try_into().unwrap();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        #[test]
+        fn from_campaign_assets_to_all_assets()
+        {
+            let old_asset = CampaignAssetClass(7);
+            let new_asset = Asset::<MarketId>::CampaignAssetClass(7);
+            let new_asset_converted: Asset<MarketId> = old_asset.into();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        // Assets <> CustomAssetClass
+        #[test]
+        fn from_all_assets_to_custom_assets() {
+            let old_asset = Asset::<MarketId>::CustomAssetClass(7);
+            let new_asset = CustomAssetClass(7);
+
+            let new_asset_converted: CustomAssetClass = old_asset.try_into().unwrap();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+
+        #[test]
+        fn from_custom_assets_to_all_assets()
+        {
+            let old_asset = CampaignAssetClass(7);
+            let new_asset = Asset::<MarketId>::CampaignAssetClass(7);
+            let new_asset_converted: Asset<MarketId> = old_asset.into();
+            assert_eq!(new_asset, new_asset_converted);
+        }
+    }
     // Verify conversion from any other asset type to assets enum
     // Verify asset type conversions
 }
