@@ -24,9 +24,7 @@
 #![allow(clippy::type_complexity)]
 
 use super::*;
-use crate::utils::market_mock;
-#[cfg(test)]
-use crate::Pallet as Orderbook;
+use crate::{utils::market_mock, Pallet as Orderbook};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::dispatch::UnfilteredDispatchable;
 use frame_system::RawOrigin;
@@ -100,14 +98,16 @@ benchmarks! {
         let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
         let (market_id, caller, maker_asset, maker_amount, taker_amount) =
             order_common_parameters::<T>(None)?;
-    }: place_order(
-        RawOrigin::Signed(caller),
-        market_id,
-        maker_asset,
-        maker_amount,
-        taker_asset,
-        taker_amount,
-    );
+    }: {
+        Orderbook::<T>::place_order(
+            RawOrigin::Signed(caller).into(),
+            market_id,
+            maker_asset,
+            maker_amount,
+            taker_asset,
+            taker_amount,
+        )?;
+    }
 
     impl_benchmark_test_suite!(
         Orderbook,

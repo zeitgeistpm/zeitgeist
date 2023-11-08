@@ -16,17 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{mock::*, utils::market_mock, Error, Event, Order, Orders};
+use crate::{mock::*, utils::market_mock, BalanceOf, Error, Event, Order, Orders};
 use frame_support::{assert_noop, assert_ok};
+use orml_tokens::Error as AError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{Perbill, Perquintill};
+use pallet_balances::Error as BError;
+use sp_runtime::{traits::Zero, Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::DistributeFees,
-    types::{Asset, ScoringRule},
+    types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
-use zrml_market_commons::{MarketCommonsPalletApi, Markets};
+use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
 #[test_case(ScoringRule::CPMM; "CPMM")]
 #[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
@@ -50,6 +52,38 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
                 25 * BASE,
             ),
             Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Suspended; "suspended")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = status;
+            Ok(())
+        }));
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                market.base_asset,
+                10 * BASE,
+                Asset::CategoricalOutcome(0, 2),
+                25 * BASE,
+            ),
+            Error::<Runtime>::MarketIsNotActive
         );
     });
 }
@@ -82,8 +116,361 @@ fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
         }));
 
         assert_noop!(
-            Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None),
+            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None),
             Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Suspended; "suspended")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+fn fill_order_fails_if_market_status_not_active(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            25 * BASE,
+        ));
+
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = status;
+            Ok(())
+        }));
+
+        assert_noop!(
+            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None),
+            Error::<Runtime>::MarketIsNotActive
+        );
+    });
+}
+
+#[test]
+fn fill_order_fails_if_amount_too_high_for_order() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+        let taker_amount = 25 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            taker_amount,
+        ));
+
+        assert_noop!(
+            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, Some(taker_amount + 1)),
+            Error::<Runtime>::AmountTooHighForOrder
+        );
+    });
+}
+
+#[test]
+fn fill_order_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+        let taker_amount = 25 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            taker_amount,
+        ));
+
+        assert_noop!(
+            Orderbook::fill_order(
+                RuntimeOrigin::signed(BOB),
+                order_id,
+                Some(BalanceOf::<Runtime>::zero())
+            ),
+            Error::<Runtime>::AmountIsZero
+        );
+    });
+}
+
+#[test]
+fn fill_order_fails_if_balance_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+        let taker_amount = 25 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            taker_amount,
+        ));
+
+        let bob_free_taker_asset = AssetManager::free_balance(taker_asset, &BOB);
+        assert_eq!(bob_free_taker_asset, 0);
+
+        assert_noop!(
+            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None),
+            AError::<Runtime>::BalanceTooLow
+        );
+    });
+}
+
+#[test]
+fn fill_order_fails_if_maker_partial_fill_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+        let taker_amount = 25 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            taker_amount,
+        ));
+
+        AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
+
+        assert_noop!(
+            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, Some(taker_amount - 1)),
+            Error::<Runtime>::MakerPartialFillTooLow
+        );
+    });
+}
+
+#[test]
+fn fill_order_removes_order() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+        let taker_amount = 25 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            taker_amount,
+        ));
+
+        AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
+
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None));
+
+        assert!(<Orders<Runtime>>::get(order_id).is_none());
+    });
+}
+
+#[test]
+fn fill_order_partially_fills_order() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let order_id = 0u128;
+        let taker_amount = 25 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            10 * BASE,
+            taker_asset,
+            taker_amount,
+        ));
+
+        AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
+
+        let order = <Orders<Runtime>>::get(order_id).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                maker: ALICE,
+                maker_asset,
+                maker_amount: 10 * BASE,
+                taker_asset,
+                taker_amount: 25 * BASE,
+            }
+        );
+
+        assert_ok!(Orderbook::fill_order(
+            RuntimeOrigin::signed(BOB),
+            order_id,
+            Some(taker_amount / 2)
+        ));
+
+        let order = <Orders<Runtime>>::get(order_id).unwrap();
+
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                maker: ALICE,
+                maker_asset,
+                maker_amount: 5 * BASE,
+                taker_asset,
+                taker_amount: 125_000_000_000,
+            }
+        );
+    });
+}
+
+#[test]
+fn place_order_fails_if_market_base_asset_not_present() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = Asset::CategoricalOutcome(0, 1);
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                maker_asset,
+                10 * BASE,
+                taker_asset,
+                25 * BASE,
+            ),
+            Error::<Runtime>::MarketBaseAssetNotPresent
+        );
+    });
+}
+
+#[test]
+fn place_order_fails_if_invalid_outcome_asset() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        assert_eq!(market.market_type, MarketType::Categorical(64u16));
+        let maker_asset = Asset::ScalarOutcome(0, ScalarPosition::Long);
+        let taker_asset = market.base_asset;
+
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                maker_asset,
+                10 * BASE,
+                taker_asset,
+                25 * BASE,
+            ),
+            Error::<Runtime>::InvalidOutcomeAsset
+        );
+    });
+}
+
+#[test]
+fn place_order_fails_if_market_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+
+        let maker_asset = Asset::Ztg;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                maker_asset,
+                10 * BASE,
+                taker_asset,
+                25 * BASE,
+            ),
+            MError::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn place_order_fails_if_maker_has_insufficient_funds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker = ALICE;
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+        let alice_free_maker_amount = AssetManager::free_balance(maker_asset, &maker);
+
+        AssetManager::withdraw(maker_asset, &ALICE, alice_free_maker_amount).unwrap();
+
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(maker),
+                market_id,
+                maker_asset,
+                10 * BASE,
+                taker_asset,
+                25 * BASE,
+            ),
+            BError::<Runtime>::InsufficientBalance,
         );
     });
 }
@@ -489,21 +876,6 @@ fn it_removes_order() {
         assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
-        System::assert_last_event(
-            Event::<Runtime>::OrderPlaced {
-                order_id,
-                order: Order {
-                    market_id,
-                    maker: ALICE,
-                    maker_asset,
-                    maker_amount,
-                    taker_asset,
-                    taker_amount,
-                },
-            }
-            .into(),
-        );
-
         let order = <Orders<Runtime>>::get(order_id).unwrap();
         assert_eq!(
             order,
@@ -524,7 +896,106 @@ fn it_removes_order() {
         assert_eq!(reserved_funds, 0);
 
         assert!(<Orders<Runtime>>::get(order_id).is_none());
+    });
+}
+
+#[test]
+fn remove_order_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let taker_amount = 25 * BASE;
+        let maker_amount = 10 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            maker_amount,
+            taker_asset,
+            taker_amount,
+        ));
+
+        let order_id = 0u128;
+
+        assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id));
 
         System::assert_last_event(Event::<Runtime>::OrderRemoved { order_id, maker: ALICE }.into());
+    });
+}
+
+#[test]
+fn remove_order_fails_if_not_order_creator() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let taker_amount = 25 * BASE;
+        let maker_amount = 10 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            maker_asset,
+            maker_amount,
+            taker_asset,
+            taker_amount,
+        ));
+
+        let order_id = 0u128;
+
+        assert_noop!(
+            Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id),
+            Error::<Runtime>::NotOrderCreator
+        );
+    });
+}
+
+#[test]
+fn place_order_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        let taker_amount = 25 * BASE;
+        let maker_amount = 10 * BASE;
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            maker_amount,
+            taker_asset,
+            taker_amount,
+        ));
+
+        let order_id = 0u128;
+        System::assert_last_event(
+            Event::<Runtime>::OrderPlaced {
+                order_id,
+                order: Order {
+                    market_id,
+                    maker: ALICE,
+                    maker_asset,
+                    maker_amount,
+                    taker_asset,
+                    taker_amount,
+                },
+            }
+            .into(),
+        );
     });
 }
