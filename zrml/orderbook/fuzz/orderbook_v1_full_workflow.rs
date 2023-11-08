@@ -47,7 +47,7 @@ fuzz_target!(|data: Data| {
             maker_partial_fill(data.maker_partial_fill),
         );
 
-        // Make arbitrary order and attempt to cancel
+        // Make arbitrary order and attempt to remove
         let _ = Orderbook::place_order(
             RuntimeOrigin::signed(data.place_order_origin.into()),
             data.market_id,
