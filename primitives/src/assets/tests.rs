@@ -1,5 +1,4 @@
 // Copyright 2023 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,18 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg(test)]
 
-extern crate alloc;
+use super::*;
+use crate::types::MarketId;
 
-mod assets;
-pub mod constants;
-mod market;
-pub mod math;
-mod max_runtime_usize;
-mod outcome_report;
-mod pool;
-mod pool_status;
-mod proxy_type;
-pub mod traits;
-pub mod types;
+mod conversion;
+mod scale_codec;

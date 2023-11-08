@@ -20,7 +20,7 @@
 
 pub use super::*;
 use crate::{
-    asset::Asset,
+    assets::Asset,
     types::{Assets, Balance, Moment},
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
