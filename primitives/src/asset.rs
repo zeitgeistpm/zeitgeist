@@ -23,12 +23,19 @@ use scale_info::TypeInfo;
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
 ///
-/// Never use this enum in storage. Use this enum only to interact with assets
-/// via an asset manager (transfer, freeze, etc.). Use other explicit and
-/// distinct asset classes instead if storage of asset information is needed.
+/// This complete enumeration is intended to abstract the common interaction
+/// with tokens away. For example, the developer is not forced to be aware
+/// about which exact implementation will handle the desired asset class to
+/// instruct operations such as `transfer` or `freeze`, instead it is
+/// sufficient to call a crate that manages the routing.
+/// While it is not recommended to use this enum in storage, it should not pose
+/// a problem as long as all other asset types use the same scale encoding for
+/// a matching asset variant in this enum.
 ///
-/// **Deprecated:** Market and Pool assets are "lazy" migrated to pallet-assets
-/// Do not create any new market or pool assets using this enumeration.
+/// **Deprecated:** Market and Pool assets are "lazy" migrated to
+/// pallet-assets.
+/// Do not create any new market or pool assets using the deprecated variants
+/// in this enum.
 ///
 /// # Types
 ///
@@ -690,8 +697,7 @@ mod tests {
         }
 
         #[test]
-        fn from_campaign_assets_to_all_assets()
-        {
+        fn from_campaign_assets_to_all_assets() {
             let old_asset = CampaignAssetClass(7);
             let new_asset = Asset::<MarketId>::CampaignAssetClass(7);
             let new_asset_converted: Asset<MarketId> = old_asset.into();
@@ -709,14 +715,11 @@ mod tests {
         }
 
         #[test]
-        fn from_custom_assets_to_all_assets()
-        {
+        fn from_custom_assets_to_all_assets() {
             let old_asset = CampaignAssetClass(7);
             let new_asset = Asset::<MarketId>::CampaignAssetClass(7);
             let new_asset_converted: Asset<MarketId> = old_asset.into();
             assert_eq!(new_asset, new_asset_converted);
         }
     }
-    // Verify conversion from any other asset type to assets enum
-    // Verify asset type conversions
 }
