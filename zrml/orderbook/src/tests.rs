@@ -16,12 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{mock::*, utils::market_mock, BalanceOf, Error, Event, Order, Orders};
+use crate::{mock::*, utils::market_mock, Error, Event, Order, Orders};
 use frame_support::{assert_noop, assert_ok};
 use orml_tokens::Error as AError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_balances::Error as BError;
-use sp_runtime::{traits::Zero, Perbill, Perquintill};
+use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -192,7 +192,7 @@ fn fill_order_fails_if_amount_too_high_for_order() {
 }
 
 #[test]
-fn fill_order_fails_if_amount_is_zero() {
+fn fill_order_fails_if_amount_is_below_minimum_balance() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -217,10 +217,55 @@ fn fill_order_fails_if_amount_is_zero() {
             Orderbook::fill_order(
                 RuntimeOrigin::signed(BOB),
                 order_id,
-                Some(BalanceOf::<Runtime>::zero())
+                Some(AssetManager::minimum_balance(taker_asset) - 1)
             ),
-            Error::<Runtime>::AmountIsZero
+            Error::<Runtime>::BelowMinimumBalance
         );
+    });
+}
+
+#[test]
+fn place_order_fails_if_amount_is_below_minimum_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                maker_asset,
+                AssetManager::minimum_balance(maker_asset) - 1,
+                taker_asset,
+                AssetManager::minimum_balance(taker_asset),
+            ),
+            Error::<Runtime>::BelowMinimumBalance
+        );
+
+        assert_noop!(
+            Orderbook::place_order(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                maker_asset,
+                AssetManager::minimum_balance(maker_asset),
+                taker_asset,
+                AssetManager::minimum_balance(taker_asset) - 1,
+            ),
+            Error::<Runtime>::BelowMinimumBalance
+        );
+
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            AssetManager::minimum_balance(maker_asset),
+            taker_asset,
+            AssetManager::minimum_balance(taker_asset),
+        ));
     });
 }
 

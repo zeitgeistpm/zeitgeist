@@ -156,14 +156,14 @@ mod pallet {
         InvalidScoringRule,
         /// The specified amount parameter is too high for the order.
         AmountTooHighForOrder,
-        /// The specified amount parameter is zero.
-        AmountIsZero,
         /// The specified outcome asset is not part of the market.
         InvalidOutcomeAsset,
         /// The maker partial fill leads to a too low quotient for the next order execution.
         MakerPartialFillTooLow,
         /// The market base asset is not present.
         MarketBaseAssetNotPresent,
+        /// The specified amount is below the minimum balance.
+        BelowMinimumBalance,
     }
 
     #[pallet::call]
@@ -310,8 +310,8 @@ mod pallet {
             // this ensures that partial fills, which fill nearly the whole order, are not executed
             // this protects the last fill happening
             // without a division by zero for `Perquintill::from_rational`
-            let is_ratio_quotient_valid =
-                maker_full_fill.is_zero() || maker_full_fill.saturated_into::<u128>() >= 100u128;
+            let is_ratio_quotient_valid = maker_full_fill.is_zero()
+                || maker_full_fill >= T::AssetManager::minimum_balance(order_data.taker_asset);
             ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
             Ok(())
         }
@@ -407,7 +407,10 @@ mod pallet {
             let base_asset = market.base_asset;
 
             let maker_fill = maker_partial_fill.unwrap_or(order_data.taker_amount);
-            ensure!(!maker_fill.is_zero(), Error::<T>::AmountIsZero);
+            ensure!(
+                maker_fill >= T::AssetManager::minimum_balance(order_data.taker_asset),
+                Error::<T>::BelowMinimumBalance
+            );
             ensure!(maker_fill <= order_data.taker_amount, Error::<T>::AmountTooHighForOrder);
 
             // clone required because of mutable borrow of order_data below
@@ -500,6 +503,14 @@ mod pallet {
             ensure!(
                 market_assets.binary_search(&outcome_asset).is_ok(),
                 Error::<T>::InvalidOutcomeAsset
+            );
+            ensure!(
+                maker_amount >= T::AssetManager::minimum_balance(maker_asset),
+                Error::<T>::BelowMinimumBalance
+            );
+            ensure!(
+                taker_amount >= T::AssetManager::minimum_balance(taker_asset),
+                Error::<T>::BelowMinimumBalance
             );
 
             let order_id = <NextOrderId<T>>::get();
