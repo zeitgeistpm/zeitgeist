@@ -54,7 +54,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
+        traits::{AccountIdConversion, CheckedSub, ConstU32, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -83,7 +83,7 @@ mod pallet {
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type PoolOf<T> = Pool<T, LiquidityTree<T>>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTree<T, ConstU32<10>>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {

@@ -17,6 +17,7 @@
 
 use crate::{traits::LiquiditySharesManager, BalanceOf, Config, Error};
 use alloc::{vec, vec::Vec};
+use core::marker::PhantomData;
 use frame_support::{
     ensure,
     pallet_prelude::RuntimeDebugNoBound,
@@ -27,7 +28,7 @@ use frame_support::{
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedSub, ConstU32, Zero},
+    traits::{AtLeast32BitUnsigned, CheckedSub, Zero},
     DispatchError, DispatchResult,
 };
 use zeitgeist_primitives::math::{
@@ -35,8 +36,22 @@ use zeitgeist_primitives::math::{
     fixed::{FixedDiv, FixedMul},
 };
 
-pub(crate) const LIQUIDITY_TREE_MAX_DEPTH: u32 = 10;
-pub(crate) type LiquidityTreeMaxNodes = ConstU32<{ 2u32.pow(LIQUIDITY_TREE_MAX_DEPTH) }>;
+/// Gets the maximum number of nodes allowed in the liquidity tree as a function of its depth.
+/// Saturates at `u32::MAX`.
+///
+/// # Generics
+///
+/// - `D`: A getter for the depth of the tree.
+pub struct LiquidityTreeMaxNodes<D>(PhantomData<D>);
+
+impl<D> Get<u32> for LiquidityTreeMaxNodes<D>
+where
+    D: Get<u32>,
+{
+    fn get() -> u32 {
+        2u32.saturating_pow(D::get())
+    }
+}
 
 /// A segment tree used to track balances of liquidity shares which allows `O(log(n))` distribution
 /// of fees.
@@ -49,7 +64,7 @@ pub(crate) type LiquidityTreeMaxNodes = ConstU32<{ 2u32.pow(LIQUIDITY_TREE_MAX_D
 /// Fees are lazily propagated down the tree. This allows fees to be deposited to the tree in `O(1)`
 /// (fees deposited at the root and later propagated down). If a particular node requires to know
 /// what its fees are, propagating fees to this node takes `O(depth)` operations (or, equivalently,
-/// `O(log(node_count))`).
+/// `O(log_2(node_count))`).
 ///
 /// # Attributes
 ///
@@ -58,20 +73,56 @@ pub(crate) type LiquidityTreeMaxNodes = ConstU32<{ 2u32.pow(LIQUIDITY_TREE_MAX_D
 ///   grandchild of the root is at index `6`.
 /// - `account_to_index`: Maps an account to the node that belongs to it.
 /// - `abandoned_nodes`: A vector that contains the indices of abandoned nodes.
-#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebugNoBound, TypeInfo)]
-#[scale_info(skip_type_params(T))]
-pub struct LiquidityTree<T>
+///
+/// # Generics
+///
+/// - `T`: The pallet configuration.
+/// - `U`: A getter for the maximum depth of the tree. Using a depth larger than `31` will result in
+///   undefined behavior.
+#[derive(Decode, Encode, Eq, MaxEncodedLen, RuntimeDebugNoBound, TypeInfo)]
+#[scale_info(skip_type_params(T, U))]
+pub struct LiquidityTree<T, U>
 where
     T: Config,
+    U: Get<u32>,
 {
-    pub(crate) nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes>,
-    pub(crate) account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes>,
-    pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes>,
+    pub(crate) nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes<U>>,
+    pub(crate) account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes<U>>,
+    pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes<U>>,
 }
 
-impl<T> LiquidityTree<T>
+// Boilerplate implementations because Rust is confused by the generic parameter `U`.
+impl<T, U> Clone for LiquidityTree<T, U>
 where
     T: Config,
+    U: Get<u32>,
+{
+    fn clone(&self) -> Self {
+        LiquidityTree {
+            nodes: self.nodes.clone(),
+            account_to_index: self.account_to_index.clone(),
+            abandoned_nodes: self.abandoned_nodes.clone(),
+        }
+    }
+}
+
+// Boilerplate implementations because Rust is confused by the generic parameter `U`.
+impl<T, U> PartialEq for LiquidityTree<T, U>
+where
+    T: Config,
+    U: Get<u32>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.nodes == other.nodes
+            && self.account_to_index == other.account_to_index
+            && self.abandoned_nodes == other.abandoned_nodes
+    }
+}
+
+impl<T, U> LiquidityTree<T, U>
+where
+    T: Config,
+    U: Get<u32>,
 {
     /// Create a new liquidity tree.
     ///
@@ -82,7 +133,7 @@ where
     pub(crate) fn new(
         account: T::AccountId,
         stake: BalanceOf<T>,
-    ) -> Result<LiquidityTree<T>, DispatchError> {
+    ) -> Result<LiquidityTree<T, U>, DispatchError> {
         let root = Node::new(account.clone(), stake);
         let nodes = vec![root]
             .try_into()
@@ -148,11 +199,12 @@ where
     }
 }
 
-impl<T> LiquiditySharesManager<T> for LiquidityTree<T>
+impl<T, U> LiquiditySharesManager<T> for LiquidityTree<T, U>
 where
     T: Config + frame_system::Config,
     T::AccountId: PartialEq<T::AccountId>,
     BalanceOf<T>: AtLeast32BitUnsigned + Copy + Zero,
+    U: Get<u32>,
 {
     fn join(&mut self, who: &T::AccountId, stake: BalanceOf<T>) -> DispatchResult {
         let index_maybe = self.account_to_index.get(who);
@@ -346,9 +398,10 @@ where
     fn max_node_count(&self) -> u32;
 }
 
-impl<T> LiquidityTreeHelper<T> for LiquidityTree<T>
+impl<T, U> LiquidityTreeHelper<T> for LiquidityTree<T, U>
 where
     T: Config,
+    U: Get<u32>,
 {
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult {
         let path = self.path_to_node(index)?;
@@ -498,12 +551,12 @@ where
 
     /// Return the maximum allowed depth of the tree.
     fn max_depth(&self) -> u32 {
-        LIQUIDITY_TREE_MAX_DEPTH
+        U::get()
     }
 
     /// Return the maximum allowed amount of nodes in the tree.
     fn max_node_count(&self) -> u32 {
-        LiquidityTreeMaxNodes::get()
+        LiquidityTreeMaxNodes::<U>::get()
     }
 }
 

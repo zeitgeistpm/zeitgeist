@@ -30,7 +30,7 @@ use sp_runtime::{
     DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
 };
 
-#[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct Pool<T: Config, LSM>
 where
