@@ -26,7 +26,7 @@
 use super::*;
 use crate::utils::market_mock;
 #[cfg(test)]
-use crate::Pallet as OrderBook;
+use crate::Pallet as Orderbook;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::dispatch::UnfilteredDispatchable;
 use frame_system::RawOrigin;
@@ -102,7 +102,7 @@ benchmarks! {
     }: place_order(RawOrigin::Signed(caller), market_id, maker_asset, maker_amount, taker_asset, taker_amount)
 
     impl_benchmark_test_suite!(
-        OrderBook,
+        Orderbook,
         crate::mock::ExtBuilder::default().build(),
         crate::mock::Runtime,
     );
