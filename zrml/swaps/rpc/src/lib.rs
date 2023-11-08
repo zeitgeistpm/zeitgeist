@@ -35,7 +35,7 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
 use std::collections::BTreeMap;
-use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::Asset;
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
@@ -52,7 +52,7 @@ where
         &self,
         pool_id: PoolId,
         at: Option<BlockHash>,
-    ) -> RpcResult<Asset<SerdeWrapper<MarketId>>>;
+    ) -> RpcResult<Asset<MarketId>>;
 
     #[method(name = "swaps_poolAccountId", aliases = ["swaps_poolAccountIdAt"])]
     async fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>)
@@ -66,7 +66,7 @@ where
         asset_out: Asset<MarketId>,
         with_fees: bool,
         at: Option<BlockHash>,
-    ) -> RpcResult<SerdeWrapper<Balance>>;
+    ) -> RpcResult<Balance>;
 
     #[method(name = "swaps_getSpotPrices")]
     async fn get_spot_prices(
@@ -76,7 +76,7 @@ where
         asset_out: Asset<MarketId>,
         with_fees: bool,
         blocks: Vec<BlockNumber>,
-    ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
+    ) -> RpcResult<Vec<Balance>>;
 
     #[method(name = "swaps_getAllSpotPrices")]
     async fn get_all_spot_prices(
@@ -125,14 +125,22 @@ where
     C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr + Send + 'static,
     AccountId: Clone + Display + Codec + Send + 'static,
-    Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
-    MarketId: Clone + Codec + HasCompact + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Ord + Send + 'static,
+    Balance: Codec + HasCompact + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
+    MarketId: Clone
+        + Codec
+        + HasCompact
+        + MaybeDisplay
+        + MaybeFromStr
+        + MaxEncodedLen
+        + Ord
+        + Send
+        + 'static,
 {
     async fn pool_shares_id(
         &self,
         pool_id: PoolId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> RpcResult<Asset<SerdeWrapper<MarketId>>> {
+    ) -> RpcResult<Asset<MarketId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block
@@ -176,7 +184,7 @@ where
         asset_out: Asset<MarketId>,
         with_fees: bool,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> RpcResult<SerdeWrapper<Balance>> {
+    ) -> RpcResult<Balance> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         let res =
@@ -197,7 +205,7 @@ where
         asset_out: Asset<MarketId>,
         with_fees: bool,
         blocks: Vec<NumberFor<Block>>,
-    ) -> RpcResult<Vec<SerdeWrapper<Balance>>> {
+    ) -> RpcResult<Vec<Balance>> {
         let api = self.client.runtime_api();
         blocks
             .into_iter()

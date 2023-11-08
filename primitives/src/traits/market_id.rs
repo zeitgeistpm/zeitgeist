@@ -23,7 +23,14 @@ use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::traits::AtLeast32Bit;
 
 pub trait MarketId:
-    AtLeast32Bit + Copy + Default + HasCompact + MaxEncodedLen + MaybeSerializeDeserialize + Member + Parameter
+    AtLeast32Bit
+    + Copy
+    + Default
+    + HasCompact
+    + MaxEncodedLen
+    + MaybeSerializeDeserialize
+    + Member
+    + Parameter
 {
 }
 

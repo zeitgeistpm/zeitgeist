@@ -94,7 +94,7 @@ mod pallet {
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
-            ScoringRule, SerdeWrapper,
+            ScoringRule,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -1714,7 +1714,7 @@ mod pallet {
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<MarketIdOf<T>> {
-            Asset::PoolShare(SerdeWrapper(pool_id))
+            Asset::PoolShare(pool_id)
         }
 
         pub fn pool_by_id(

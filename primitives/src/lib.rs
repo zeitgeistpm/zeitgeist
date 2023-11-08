@@ -29,6 +29,5 @@ mod outcome_report;
 mod pool;
 mod pool_status;
 mod proxy_type;
-mod serde_wrapper;
 pub mod traits;
 pub mod types;

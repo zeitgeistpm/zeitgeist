@@ -60,7 +60,7 @@ use zeitgeist_primitives::{
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -559,7 +559,7 @@ pub fn set_timestamp_for_on_initialize(time: Moment) {
 sp_api::mock_impl_runtime_apis! {
     impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<BlockTest<Runtime>, MarketId, Hash> for Runtime {
         fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
-            Asset::PoolShare(SerdeWrapper(1))
+            Asset::PoolShare(1)
         }
     }
 }

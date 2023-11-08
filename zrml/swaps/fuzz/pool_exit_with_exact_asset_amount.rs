@@ -25,7 +25,7 @@ use orml_traits::currency::MultiCurrency;
 use utils::{construct_asset, ExactAssetAmountData};
 use zrml_swaps::mock::AssetManager;
 
-use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::Asset;
 
 fuzz_target!(|data: ExactAssetAmountData| {
     let mut ext = ExtBuilder::default().build();
@@ -43,11 +43,7 @@ fuzz_target!(|data: ExactAssetAmountData| {
         let pool_creator = data.pool_creation.origin;
         let pool_id = data.pool_creation.create_pool();
         // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
-        let _ = AssetManager::deposit(
-            Asset::PoolShare(SerdeWrapper(pool_id)),
-            &pool_creator,
-            data.pool_amount,
-        );
+        let _ = AssetManager::deposit(Asset::PoolShare(pool_id), &pool_creator, data.pool_amount);
         let _ = Swaps::pool_exit_with_exact_asset_amount(
             RuntimeOrigin::signed(data.origin),
             pool_id,

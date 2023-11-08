@@ -18,7 +18,7 @@
 
 pub use crate::{
     asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
-    pool_status::PoolStatus, proxy_type::*, serde_wrapper::*,
+    pool_status::PoolStatus, proxy_type::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};

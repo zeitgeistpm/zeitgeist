@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{CategoryIndex, CampaignAssetId, CustomAssetId, PoolId, SerdeWrapper};
-use parity_scale_codec::{Compact, CompactAs, HasCompact, Decode, Encode, MaxEncodedLen};
+use crate::types::{CampaignAssetId, CategoryIndex, CustomAssetId, PoolId};
+use parity_scale_codec::{Compact, CompactAs, Decode, Encode, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
@@ -57,7 +57,7 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     #[codec(index = 2)]
     CombinatorialOutcome,
     #[codec(index = 3)]
-    PoolShare(SerdeWrapper<PoolId>),
+    PoolShare(PoolId),
 
     #[codec(index = 4)]
     #[default]
@@ -72,54 +72,51 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     // "New" outcomes will replace the previous outcome types after the lazy
     // migration completed
     #[codec(index = 7)]
-    NewCategoricalOutcome(
-        #[codec(compact)] MI, 
-        #[codec(compact)] CategoryIndex,
-    ),
+    NewCategoricalOutcome(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
 
     #[codec(index = 8)]
     NewCombinatorialOutcome,
 
     #[codec(index = 9)]
-    NewScalarOutcome(
-        #[codec(compact)] MI, 
-        ScalarPosition,
-    ),
+    NewScalarOutcome(#[codec(compact)] MI, ScalarPosition),
 
     #[codec(index = 10)]
-    NewParimutuelShare(
-        #[codec(compact)] MI,
-        #[codec(compact)] CategoryIndex,
-    ),
+    NewParimutuelShare(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
 
     #[codec(index = 11)]
-    NewPoolShare(
-        #[codec(compact)] PoolId,
-    ),
+    NewPoolShare(#[codec(compact)] PoolId),
 
     #[codec(index = 12)]
-    CampaignAssetClass(
-        #[codec(compact)] CampaignAssetId
-    ),
+    CampaignAssetClass(#[codec(compact)] CampaignAssetId),
 
     #[codec(index = 13)]
-    CustomAssetClass(
-        #[codec(compact)] CustomAssetId
-    ),
+    CustomAssetClass(#[codec(compact)] CustomAssetId),
 }
 
 impl<MI: HasCompact + MaxEncodedLen> From<MarketAssetClass<MI>> for Asset<MI> {
     fn from(value: MarketAssetClass<MI>) -> Self {
         match value {
-            MarketAssetClass::<MI>::OldCategoricalOutcome(marketid, catid) => Self::CategoricalOutcome(marketid, catid),
+            MarketAssetClass::<MI>::OldCategoricalOutcome(marketid, catid) => {
+                Self::CategoricalOutcome(marketid, catid)
+            }
             MarketAssetClass::<MI>::OldCombinatorialOutcome => Self::CombinatorialOutcome,
-            MarketAssetClass::<MI>::OldScalarOutcome(marketid, scalarpos) => Self::ScalarOutcome(marketid, scalarpos),
-            MarketAssetClass::<MI>::OldParimutuelShare(marketid, catid) => Self::ParimutuelShare(marketid, catid),
-            MarketAssetClass::<MI>::OldPoolShare(poolid) => Self::PoolShare(SerdeWrapper(poolid)),
-            MarketAssetClass::<MI>::CategoricalOutcome(marketid, catid) => Self::NewCategoricalOutcome(marketid, catid),
+            MarketAssetClass::<MI>::OldScalarOutcome(marketid, scalarpos) => {
+                Self::ScalarOutcome(marketid, scalarpos)
+            }
+            MarketAssetClass::<MI>::OldParimutuelShare(marketid, catid) => {
+                Self::ParimutuelShare(marketid, catid)
+            }
+            MarketAssetClass::<MI>::OldPoolShare(poolid) => Self::PoolShare(poolid),
+            MarketAssetClass::<MI>::CategoricalOutcome(marketid, catid) => {
+                Self::NewCategoricalOutcome(marketid, catid)
+            }
             MarketAssetClass::<MI>::CombinatorialOutcome => Self::NewCombinatorialOutcome,
-            MarketAssetClass::<MI>::ScalarOutcome(marketid, scalarpos) => Self::NewScalarOutcome(marketid, scalarpos),
-            MarketAssetClass::<MI>::ParimutuelShare(marketid, catid) => Self::NewParimutuelShare(marketid, catid),
+            MarketAssetClass::<MI>::ScalarOutcome(marketid, scalarpos) => {
+                Self::NewScalarOutcome(marketid, scalarpos)
+            }
+            MarketAssetClass::<MI>::ParimutuelShare(marketid, catid) => {
+                Self::NewParimutuelShare(marketid, catid)
+            }
             MarketAssetClass::<MI>::PoolShare(poolid) => Self::NewPoolShare(poolid),
         }
     }
@@ -140,11 +137,17 @@ impl<MI: HasCompact + MaxEncodedLen> From<CustomAssetClass> for Asset<MI> {
 impl<MI: HasCompact + MaxEncodedLen> From<CurrencyClass<MI>> for Asset<MI> {
     fn from(value: CurrencyClass<MI>) -> Self {
         match value {
-            CurrencyClass::<MI>::OldCategoricalOutcome(marketid, catid) => Self::CategoricalOutcome(marketid, catid),
+            CurrencyClass::<MI>::OldCategoricalOutcome(marketid, catid) => {
+                Self::CategoricalOutcome(marketid, catid)
+            }
             CurrencyClass::<MI>::OldCombinatorialOutcome => Self::CombinatorialOutcome,
-            CurrencyClass::<MI>::OldScalarOutcome(marketid, scalarpos) => Self::ScalarOutcome(marketid, scalarpos),
-            CurrencyClass::<MI>::OldParimutuelShare(marketid, catid) => Self::ParimutuelShare(marketid, catid),
-            CurrencyClass::<MI>::OldPoolShare(poolid) => Self::PoolShare(SerdeWrapper(poolid)),
+            CurrencyClass::<MI>::OldScalarOutcome(marketid, scalarpos) => {
+                Self::ScalarOutcome(marketid, scalarpos)
+            }
+            CurrencyClass::<MI>::OldParimutuelShare(marketid, catid) => {
+                Self::ParimutuelShare(marketid, catid)
+            }
+            CurrencyClass::<MI>::OldPoolShare(poolid) => Self::PoolShare(poolid),
             CurrencyClass::<MI>::ForeignAsset(assetid) => Self::ForeignAsset(assetid),
         }
     }
@@ -158,18 +161,7 @@ impl<MI: HasCompact + MaxEncodedLen> From<CurrencyClass<MI>> for Asset<MI> {
 /// * `MI`: Market Id
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
-    Clone, 
-    Copy,
-    Debug,
-    Decode,
-    Default,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    TypeInfo
-)]
+#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
 pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
     // All "Old" variants will be removed once the lazy migration from
     // orml-tokens to pallet-assets is complete
@@ -189,31 +181,20 @@ pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
     OldPoolShare(PoolId),
 
     #[codec(index = 7)]
-    CategoricalOutcome(
-        #[codec(compact)] MI, 
-        #[codec(compact)] CategoryIndex,
-    ),
+    CategoricalOutcome(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
 
     #[codec(index = 8)]
     #[default]
     CombinatorialOutcome,
 
     #[codec(index = 9)]
-    ScalarOutcome(
-        #[codec(compact)] MI, 
-        ScalarPosition,
-    ),
+    ScalarOutcome(#[codec(compact)] MI, ScalarPosition),
 
     #[codec(index = 10)]
-    ParimutuelShare(
-        #[codec(compact)] MI,
-        #[codec(compact)] CategoryIndex,
-    ),
+    ParimutuelShare(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
 
     #[codec(index = 11)]
-    PoolShare(
-        #[codec(compact)] PoolId,
-    ),
+    PoolShare(#[codec(compact)] PoolId),
 }
 
 impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for MarketAssetClass<MI> {
@@ -221,16 +202,28 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for MarketAssetClass<MI>
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
-            Asset::<MI>::NewCategoricalOutcome(marketid, catid) => Ok(Self::CategoricalOutcome(marketid, catid)),
+            Asset::<MI>::NewCategoricalOutcome(marketid, catid) => {
+                Ok(Self::CategoricalOutcome(marketid, catid))
+            }
             Asset::<MI>::NewCombinatorialOutcome => Ok(Self::CombinatorialOutcome),
-            Asset::<MI>::NewScalarOutcome(marketid, scalarpos) => Ok(Self::ScalarOutcome(marketid, scalarpos)),
-            Asset::<MI>::NewParimutuelShare(marketid, catid) => Ok(Self::ParimutuelShare(marketid, catid)),
+            Asset::<MI>::NewScalarOutcome(marketid, scalarpos) => {
+                Ok(Self::ScalarOutcome(marketid, scalarpos))
+            }
+            Asset::<MI>::NewParimutuelShare(marketid, catid) => {
+                Ok(Self::ParimutuelShare(marketid, catid))
+            }
             Asset::<MI>::NewPoolShare(poolid) => Ok(Self::PoolShare(poolid)),
-            Asset::<MI>::CategoricalOutcome(marketid, catid) => Ok(Self::OldCategoricalOutcome(marketid, catid)),
+            Asset::<MI>::CategoricalOutcome(marketid, catid) => {
+                Ok(Self::OldCategoricalOutcome(marketid, catid))
+            }
             Asset::<MI>::CombinatorialOutcome => Ok(Self::OldCombinatorialOutcome),
-            Asset::<MI>::ScalarOutcome(marketid, scalarpos) => Ok(Self::OldScalarOutcome(marketid, scalarpos)),
-            Asset::<MI>::ParimutuelShare(marketid, catid) => Ok(Self::OldParimutuelShare(marketid, catid)),
-            Asset::<MI>::PoolShare(SerdeWrapper(poolid)) => Ok(Self::OldPoolShare(poolid)),
+            Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
+                Ok(Self::OldScalarOutcome(marketid, scalarpos))
+            }
+            Asset::<MI>::ParimutuelShare(marketid, catid) => {
+                Ok(Self::OldParimutuelShare(marketid, catid))
+            }
+            Asset::<MI>::PoolShare(poolid) => Ok(Self::OldPoolShare(poolid)),
             _ => Err(()),
         }
     }
@@ -240,21 +233,9 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for MarketAssetClass<MI>
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, 
-    CompactAs,
-    Copy,
-    Debug,
-    Decode,
-    Default,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    TypeInfo
+    Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
 )]
-pub struct CampaignAssetClass(
-    #[codec(compact)] CampaignAssetId,
-);
+pub struct CampaignAssetClass(#[codec(compact)] CampaignAssetId);
 
 impl From<Compact<CampaignAssetId>> for CampaignAssetClass {
     fn from(value: Compact<CampaignAssetId>) -> CampaignAssetClass {
@@ -283,21 +264,9 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CampaignAssetClass {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, 
-    CompactAs,
-    Copy,
-    Debug,
-    Decode,
-    Default,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    TypeInfo
+    Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
 )]
-pub struct CustomAssetClass(
-    #[codec(compact)] CustomAssetId,
-);
+pub struct CustomAssetClass(#[codec(compact)] CustomAssetId);
 
 impl From<Compact<CampaignAssetId>> for CustomAssetClass {
     fn from(value: Compact<CampaignAssetId>) -> CustomAssetClass {
@@ -325,17 +294,7 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CustomAssetClass {
 /// The `CurrencyClass` enum represents all non-ztg CurrencyClass
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
-    Clone, 
-    Copy,
-    Debug,
-    Decode,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    TypeInfo
-)]
+#[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
 pub enum CurrencyClass<MI> {
     // All "Old" variants will be removed once the lazy migration from
     // orml-tokens to pallet-assets is complete
