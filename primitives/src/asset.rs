@@ -349,8 +349,12 @@ pub enum ScalarPosition {
     Short,
 }
 
+#[cfg(test)]
 mod tests {
+    use crate::types::MarketId;
+
     // TODO
+    // #[test_case(MarketAssetClass<MarketId>; "disputed")]
     // Verify encode and decode index hack
     // Verify conversion from Assets enum to any other asset type
     // Verify conversion from any other asset type to assets enum

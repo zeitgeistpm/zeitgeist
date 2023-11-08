@@ -49,8 +49,8 @@ use zeitgeist_primitives::{
         PmPalletId, SwapsPalletId, BASE,
     },
     types::{
-        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
+        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
+        BlockTest, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
         MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
         ScoringRule, UncheckedExtrinsicTest,
     },
@@ -168,7 +168,7 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
             &BASE_ASSET => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
@@ -205,7 +205,7 @@ where
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = CurrencyId;
+    type CurrencyId = Assets;
     type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;

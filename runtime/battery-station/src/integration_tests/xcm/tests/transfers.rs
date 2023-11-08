@@ -26,7 +26,7 @@ use crate::{
         test_net::{RococoNet, Sibling, TestNet, Zeitgeist},
     },
     xcm_config::{config::battery_station, fees::default_per_second},
-    AssetRegistry, Balance, Balances, CurrencyId, RuntimeOrigin, Tokens, XTokens,
+    AssetRegistry, Assets, Balance, Balances, RuntimeOrigin, Tokens, XTokens,
     ZeitgeistTreasuryAccount,
 };
 
@@ -59,7 +59,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
-            CurrencyId::Ztg,
+            Assets::Ztg,
             transfer_amount,
             Box::new(
                 MultiLocation::new(
@@ -195,8 +195,8 @@ fn transfer_btc_sibling_to_zeitgeist() {
         ));
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
-            // Target chain will interpret CurrencyId::Ztg as BTC in this context.
-            CurrencyId::Ztg,
+            // Target chain will interpret Assets::Ztg as BTC in this context.
+            Assets::Ztg,
             transfer_amount,
             Box::new(
                 MultiLocation::new(
@@ -384,7 +384,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
-            CurrencyId::Ztg,
+            Assets::Ztg,
             transfer_amount,
             Box::new(
                 MultiLocation::new(

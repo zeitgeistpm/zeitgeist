@@ -119,7 +119,7 @@ macro_rules! impl_foreign_fees {
 
         #[cfg(feature = "parachain")]
         pub(crate) fn get_fee_factor(
-            currency_id: CurrencyId,
+            currency_id: Assets,
         ) -> Result<Balance, TransactionValidityError> {
             let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id).ok_or(
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(

@@ -82,7 +82,7 @@ impl<'a> Arbitrary<'a> for MultiHash {
 pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
 
 /// ID type for any asset class
-pub type CurrencyId = Asset<MarketId>;
+pub type Assets = Asset<MarketId>;
 
 /// Asset type representing campaign assets
 pub type CampaignAsset = CampaignAssetClass;

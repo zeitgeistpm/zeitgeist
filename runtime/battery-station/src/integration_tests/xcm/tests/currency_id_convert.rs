@@ -26,7 +26,7 @@ use crate::{
         test_net::Zeitgeist,
     },
     xcm_config::config::{battery_station, general_key, AssetConvert},
-    CurrencyId,
+    Assets,
 };
 
 use frame_support::assert_err;
@@ -43,12 +43,12 @@ fn convert_native() {
     let ztg_location_inner: MultiLocation =
         MultiLocation::new(0, X1(general_key(battery_station::KEY)));
 
-    assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(CurrencyId::Ztg));
+    assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(Assets::Ztg));
 
     // The canonical way Ztg is represented out in the wild
     Zeitgeist::execute_with(|| {
         assert_eq!(
-            <AssetConvert as C2<_, _>>::convert(CurrencyId::Ztg),
+            <AssetConvert as C2<_, _>>::convert(Assets::Ztg),
             Some(foreign_ztg_multilocation())
         )
     });
@@ -117,6 +117,6 @@ fn convert_unkown_multilocation() {
 #[test]
 fn convert_unsupported_currency() {
     Zeitgeist::execute_with(|| {
-        assert_eq!(<AssetConvert as C2<_, _>>::convert(CurrencyId::CombinatorialOutcome), None)
+        assert_eq!(<AssetConvert as C2<_, _>>::convert(Assets::CombinatorialOutcome), None)
     });
 }
