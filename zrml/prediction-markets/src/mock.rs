@@ -59,8 +59,8 @@ use zeitgeist_primitives::{
     },
     traits::DeployPoolApi,
     types::{
-        Assets, AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, Hash,
-        Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
+        BlockTest, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
