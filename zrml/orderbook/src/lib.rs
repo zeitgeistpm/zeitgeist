@@ -287,8 +287,10 @@ mod pallet {
             let maker_full_fill = order_data.taker_amount;
             // the taker_full_fill is the maximum amount of what the taker wants to have
             let taker_full_fill = order_data.maker_amount;
-            // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
-            // This ensures that the reserve of the maker is always enough to repatriate successfully!
+            // Note that this always rounds down,
+            // i.e. the taker will always get a little bit less than what they asked for.
+            // This ensures that the reserve of the maker
+            // is always enough to repatriate successfully!
             let ratio = Perquintill::from_rational(
                 maker_fill.saturated_into::<u128>(),
                 // this is ensured to be never zero in `is_ratio_quotient_valid`
@@ -304,7 +306,8 @@ mod pallet {
         fn is_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
             let maker_full_fill = order_data.taker_amount;
             // this ensures that partial fills, which fill nearly the whole order, are not executed
-            // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
+            // this protects the last fill happening
+            // without a division by zero for `Perquintill::from_rational`
             let is_ratio_quotient_valid =
                 maker_full_fill.is_zero() || maker_full_fill.saturated_into::<u128>() >= 100u128;
             ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
@@ -410,7 +413,8 @@ mod pallet {
             let maker_asset = order_data.maker_asset;
             let taker_asset = order_data.taker_asset;
 
-            // the reserve of the maker should always be enough to repatriate successfully, e.g. taker gets a little bit less
+            // the reserve of the maker should always be enough
+            // to repatriate successfully, e.g. taker gets a little bit less
             // it should always ensure that the maker's request (maker_fill) is fully filled
             let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
 

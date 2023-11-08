@@ -98,8 +98,16 @@ benchmarks! {
 
     place_order {
         let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
-        let (market_id, caller, maker_asset, maker_amount, taker_amount) = order_common_parameters::<T>(None)?;
-    }: place_order(RawOrigin::Signed(caller), market_id, maker_asset, maker_amount, taker_asset, taker_amount)
+        let (market_id, caller, maker_asset, maker_amount, taker_amount) =
+            order_common_parameters::<T>(None)?;
+    }: place_order(
+        RawOrigin::Signed(caller),
+        market_id,
+        maker_asset,
+        maker_amount,
+        taker_asset,
+        taker_amount,
+    );
 
     impl_benchmark_test_suite!(
         Orderbook,
