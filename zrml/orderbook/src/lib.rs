@@ -37,7 +37,7 @@ use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
 use sp_runtime::{
     traits::{CheckedSub, Get, Zero},
-    ArithmeticError, Perquintill, SaturatedConversion, Saturating,
+    ArithmeticError, Perquintill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     traits::{DistributeFees, MarketCommonsPalletApi},
@@ -442,11 +442,7 @@ mod pallet {
             Self::decrease_order_amounts(&mut order_data, maker_fill, taker_fill)?;
             Self::is_ratio_quotient_valid(&order_data)?;
 
-            let unfilled_maker_amount = order_data.maker_amount;
-            let unfilled_taker_amount = order_data.taker_amount;
-            let total_unfilled = unfilled_maker_amount.saturating_add(unfilled_taker_amount);
-
-            if total_unfilled.is_zero() {
+            if order_data.maker_amount.is_zero() {
                 <Orders<T>>::remove(order_id);
             } else {
                 <Orders<T>>::insert(order_id, order_data.clone());
@@ -457,8 +453,8 @@ mod pallet {
                 maker,
                 taker: taker.clone(),
                 filled_taker_amount: maker_fill,
-                unfilled_maker_amount,
-                unfilled_taker_amount,
+                unfilled_maker_amount: order_data.maker_amount,
+                unfilled_taker_amount: order_data.taker_amount,
             });
 
             Ok(())
