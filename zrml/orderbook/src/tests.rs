@@ -151,7 +151,7 @@ fn it_places_orders() {
 }
 
 #[test]
-fn it_fills_ask_orders_fully() {
+fn it_fills_order_fully_maker_outcome_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -162,10 +162,8 @@ fn it_fills_ask_orders_fully() {
 
         let maker_amount = 100 * BASE;
         let taker_amount = 500 * BASE;
-        // Give some shares for Bob.
         assert_ok!(AssetManager::deposit(maker_asset, &BOB, maker_amount));
 
-        // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -218,7 +216,7 @@ fn it_fills_ask_orders_fully() {
 }
 
 #[test]
-fn it_fills_bid_orders_fully() {
+fn it_fills_order_fully_maker_base_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -276,7 +274,7 @@ fn it_fills_bid_orders_fully() {
 }
 
 #[test]
-fn it_fills_bid_orders_partially() {
+fn it_fills_order_partially_maker_base_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -370,7 +368,7 @@ fn it_fills_bid_orders_partially() {
 }
 
 #[test]
-fn it_fills_ask_orders_partially() {
+fn it_fills_order_partially_maker_outcome_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -466,7 +464,7 @@ fn it_fills_ask_orders_partially() {
 }
 
 #[test]
-fn it_removes_orders() {
+fn it_removes_order() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
