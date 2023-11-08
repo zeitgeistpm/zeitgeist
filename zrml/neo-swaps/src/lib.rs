@@ -54,7 +54,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, ConstU32, Saturating, Zero},
+        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -83,7 +83,7 @@ mod pallet {
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type PoolOf<T> = Pool<T, LiquidityTree<T, ConstU32<10>>>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -109,6 +109,11 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type WeightInfo: WeightInfoZeitgeist;
+
+        /// The maximum allowed liquidity tree depth per pool. Each pool can support `2^depth`
+        /// liquidity providers. **Must** be less than 31.
+        #[pallet::constant]
+        type MaxLiquidityTreeDepth: Get<u32>;
 
         #[pallet::constant]
         type MaxSwapFee: Get<BalanceOf<Self>>;

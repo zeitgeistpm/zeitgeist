@@ -1264,6 +1264,7 @@ macro_rules! impl_config_traits {
             type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
+            type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
             type MaxSwapFee = NeoSwapsMaxSwapFee;
             type PalletId = NeoSwapsPalletId;
         }

@@ -52,8 +52,8 @@ use zeitgeist_primitives::{
         GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
         InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
         MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
-        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxLocks,
-        MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
+        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxLiquidityTreeDepth,
+        MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
         MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
         MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
         MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
@@ -190,6 +190,7 @@ impl crate::Config for Runtime {
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
     type RuntimeEvent = RuntimeEvent;
+    type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
     type MaxSwapFee = NeoMaxSwapFee;
     type PalletId = NeoSwapsPalletId;
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;

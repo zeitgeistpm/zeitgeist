@@ -230,7 +230,7 @@ mod tests {
     {
         for (key, value) in data.iter().enumerate() {
             let storage_hash = utility::key_to_hash::<H, K>(K::try_from(key).unwrap());
-            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value.clone()));
+            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
         }
     }
 }
