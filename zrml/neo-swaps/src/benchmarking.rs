@@ -108,6 +108,7 @@ fn deposit_fees<T>(market_id: MarketIdOf<T>, amount: BalanceOf<T>) where T: Conf
 
 /// Populates the market's liquidity tree until almost full with one free leaf remaining and
 /// deposits fees to ensure that lazy propagation is triggered.
+#[allow(unused)]
 fn populate_liquidity_tree_with_free_leaf<T>(market_id: MarketIdOf<T>)
 where
     T: Config,
@@ -117,7 +118,6 @@ where
     let nodes_to_populate = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
     for i in 1..nodes_to_populate {
         let caller = account("", i, 0);
-        println!("{}", caller);
         assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
             caller.clone(),
@@ -140,6 +140,7 @@ where
 
 /// Populates the market's liquidity tree until almost full with one abandoned node remaining and
 /// deposits some fees to ensure that lazy propagation is triggered.
+#[allow(unused)]
 fn populate_liquidity_tree_with_abandoned_node<T>(market_id: MarketIdOf<T>)
 where
     T: Config,
