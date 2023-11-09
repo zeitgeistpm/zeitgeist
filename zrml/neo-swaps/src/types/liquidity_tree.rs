@@ -232,9 +232,7 @@ where
                 NextNode::Leaf => {
                     // Add new leaf. Propagate first so we don't propagate fees to the new leaf.
                     let index = self.nodes.len() as u32;
-                    if let Some(parent_index) = self.parent_index(index) {
-                        self.update_descendant_stake(parent_index, stake, false)?;
-                    }
+                    self.propagate_fees_to_node(index)?;
                     self.nodes
                         .try_push(Node::new(who.clone(), stake))
                         .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
