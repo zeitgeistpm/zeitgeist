@@ -458,9 +458,7 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n + d)` where `n` is the number of assets in the pool and `d` is the depth of the
-        /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
-        /// providers in the pool.
+        /// `O(n)` where `n` is the number of assets in the pool.
         #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::deploy_pool())]
         #[transactional]
