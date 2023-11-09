@@ -134,7 +134,7 @@ where
     T: Config,
 {
     // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
-    // stake, leaving an abandoned node at leaf.
+    // stake, leaving an abandoned node at a leaf.
     populate_liquidity_tree_with_free_leaf::<T>(market_id);
     let pool = Pools::<T>::get(market_id).unwrap();
     let caller = whitelisted_caller();
