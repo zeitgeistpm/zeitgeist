@@ -346,7 +346,9 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n)` where `n` is the number of assets in the pool.
+        /// `O(n + d)` where `n` is the number of assets in the pool and `d` is the depth of the
+        /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
+        /// providers in the pool.
         #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::join())]
         #[transactional]
@@ -390,7 +392,9 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n)` where `n` is the number of assets in the pool.
+        /// `O(n + d)` where `n` is the number of assets in the pool and `d` is the depth of the
+        /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
+        /// providers in the pool.
         #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::exit())]
         #[transactional]
@@ -454,7 +458,9 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n)` where `n` is the number of outcomes in the specified market.
+        /// `O(n + d)` where `n` is the number of assets in the pool and `d` is the depth of the
+        /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
+        /// providers in the pool.
         #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::deploy_pool())]
         #[transactional]
