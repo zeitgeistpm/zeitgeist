@@ -19,13 +19,15 @@
 
 use super::*;
 use crate::{
-    consts::*, traits::liquidity_shares_manager::LiquiditySharesManager, AssetOf, BalanceOf,
-    MarketIdOf, Pallet as NeoSwaps, Pools,
+    consts::*,
+    traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
+    AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools,
 };
 use frame_benchmarking::v2::*;
 use frame_support::{
     assert_ok,
     storage::{with_transaction, TransactionOutcome::*},
+    traits::Get,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -97,13 +99,77 @@ fn create_market_and_deploy_pool<T: Config>(
     market_id
 }
 
+/// Populates the market's liquidity tree until almost full with one free leaf remaining.
+fn populate_liquidity_tree_with_free_leaf<T>(market_id: MarketIdOf<T>)
+where
+    T: Config,
+{
+    let pool = Pools::<T>::get(market_id).unwrap();
+    // The tree has 2^d nodes; the root is already taken, so we need to populate 2^d - 2 nodes.
+    let nodes_to_populate = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
+    for _ in 1..nodes_to_populate {
+        let caller = whitelisted_caller();
+        assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
+        assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
+            caller.clone(),
+            market_id,
+            _100.saturated_into(),
+        ));
+        assert_ok!(NeoSwaps::<T>::join(
+            RawOrigin::Signed(caller).into(),
+            market_id,
+            _1.saturated_into(),
+            vec![u128::MAX.saturated_into(); pool.assets().len()]
+        ));
+    }
+    // Verify that we've got the right number of nodes.
+    let pool = Pools::<T>::get(market_id).unwrap();
+    let last = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
+    assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
+}
+
+/// Populates the market's liquidity tree until almost full with one abandoned node remaining.
+fn populate_liquidity_tree_with_abandoned_node<T>(market_id: MarketIdOf<T>)
+where
+    T: Config,
+{
+    // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
+    // stake, leaving an abandoned node at leaf.
+    populate_liquidity_tree_with_free_leaf::<T>(market_id);
+    let pool = Pools::<T>::get(market_id).unwrap();
+    let caller = whitelisted_caller();
+    assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
+    assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
+        caller.clone(),
+        market_id,
+        _100.saturated_into(),
+    ));
+    assert_ok!(NeoSwaps::<T>::join(
+        RawOrigin::Signed(caller.clone()).into(),
+        market_id,
+        _1.saturated_into(),
+        vec![u128::MAX.saturated_into(); pool.assets().len()]
+    ));
+    assert_ok!(NeoSwaps::<T>::exit(
+        RawOrigin::Signed(caller).into(),
+        market_id,
+        _1.saturated_into(),
+        vec![Zero::zero(); pool.assets().len()]
+    ));
+    // Verify that we've got the right number of nodes.
+    let pool = Pools::<T>::get(market_id).unwrap();
+    let last = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
+    assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
+    assert_eq!(pool.liquidity_shares_manager.abandoned_nodes, vec![last]);
+}
+
 #[benchmarks]
 mod benchmarks {
     use super::*;
 
     #[benchmark]
     fn buy() {
-        let alice: T::AccountId = whitelisted_caller();
+        let alice = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool::<T>(
@@ -125,7 +191,7 @@ mod benchmarks {
 
     #[benchmark]
     fn sell() {
-        let alice: T::AccountId = whitelisted_caller();
+        let alice = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let market_id =
             create_market_and_deploy_pool::<T>(alice, base_asset, 2u16, _10.saturated_into());
