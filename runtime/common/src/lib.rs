@@ -61,10 +61,6 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        #[cfg(feature = "parachain")]
-        type Migrations = (MigrateToLiquidityTree<Runtime>);
-
-        #[cfg(not(feature = "parachain"))]
         type Migrations = (MigrateToLiquidityTree<Runtime>);
 
         pub type Executive = frame_executive::Executive<
