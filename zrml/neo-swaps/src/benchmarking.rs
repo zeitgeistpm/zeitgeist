@@ -107,8 +107,9 @@ where
     let pool = Pools::<T>::get(market_id).unwrap();
     // The tree has 2^d nodes; the root is already taken, so we need to populate 2^d - 2 nodes.
     let nodes_to_populate = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
-    for _ in 1..nodes_to_populate {
-        let caller = whitelisted_caller();
+    for i in 1..nodes_to_populate {
+        let caller = account("", i, 0);
+        println!("{}", caller);
         assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
             caller.clone(),
@@ -217,13 +218,16 @@ mod benchmarks {
             _10.saturated_into(),
         );
         let pool_shares_amount = _1.saturated_into();
+        // Due to rounding, we need to buy a little more than the pool share amount.
+        let complete_set_amount = _2.saturated_into();
         let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
 
-        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, pool_shares_amount));
+        populate_liquidity_tree_with_free_leaf::<T>(market_id);
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, complete_set_amount));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
             alice.clone(),
             market_id,
-            pool_shares_amount
+            complete_set_amount,
         ));
 
         #[extrinsic_call]

@@ -232,7 +232,9 @@ where
                 NextNode::Leaf => {
                     // Add new leaf. Propagate first so we don't propagate fees to the new leaf.
                     let index = self.nodes.len() as u32;
-                    self.propagate_fees_to_node(index)?;
+                    if let Some(parent_index) = self.parent_index(index) {
+                        self.propagate_fees_to_node(parent_index)?;
+                    }
                     self.nodes
                         .try_push(Node::new(who.clone(), stake))
                         .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
@@ -445,7 +447,7 @@ where
     }
 
     fn children(&self, index: u32) -> Result<[Option<u32>; 2], DispatchError> {
-        let max_node_count = self.max_node_count();
+        let max_node_count = self.node_count();
         let calculate_child = |child_index: u32| Some(child_index).filter(|&i| i < max_node_count);
         let left_child_index = index.checked_mul_res(&2)?.checked_add_res(&1)?;
         let left_child = calculate_child(left_child_index);
@@ -511,8 +513,8 @@ where
     where
         F: FnMut(&mut Node<T>) -> DispatchResult,
     {
-        let children_indices = self.children(index)?;
-        for child_index in children_indices.into_iter().flatten() {
+        let child_indices = self.children(index)?;
+        for child_index in child_indices.into_iter().flatten() {
             self.mutate_node(child_index, |node| mutator(node))?;
         }
         Ok(())
