@@ -110,6 +110,46 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     Ok((caller, market_id))
 }
 
+fn create_trusted_market<T: Config + pallet_timestamp::Config>(
+    creation: MarketCreation,
+    options: MarketType,
+    scoring_rule: ScoringRule,
+    period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
+    let range_start: MomentOf<T> = 100_000u64.saturated_into();
+    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let creator_fee: Perbill = Perbill::zero();
+    let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
+    let caller: T::AccountId = whitelisted_caller();
+    T::AssetManager::deposit(Asset::Ztg, &caller, (100u128 * LIQUIDITY).saturated_into()).unwrap();
+    let oracle = caller.clone();
+    let deadlines = Deadlines::<T::BlockNumber> {
+        grace_period: 1_u32.into(),
+        oracle_duration: T::MinOracleDuration::get(),
+        dispute_duration: Zero::zero(),
+    };
+    let mut metadata = [0u8; 50];
+    metadata[0] = 0x15;
+    metadata[1] = 0x30;
+    let metadata = MultiHash::Sha3_384(metadata);
+    Call::<T>::create_market {
+        base_asset: Asset::Ztg,
+        creator_fee,
+        oracle,
+        period,
+        deadlines,
+        metadata,
+        creation,
+        market_type: options,
+        dispute_mechanism: None,
+        scoring_rule,
+    }
+    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    let market_id = <zrml_market_commons::Pallet<T>>::latest_market_id()?;
+    Ok((caller, market_id))
+}
+
 fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     permission: MarketCreation,
     options: MarketType,
@@ -1394,6 +1434,36 @@ benchmarks! {
 
         let call = Call::<T>::reject_early_close { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }
+
+    close_trusted_market {
+        let o in 0..63;
+        let c in 0..63;
+
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let (caller, market_id) = create_trusted_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..range_end)),
+        )?;
+
+        for i in 0..o {
+            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_start),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        for i in 0..c {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let call = Call::<T>::close_trusted_market { market_id };
+    }: { call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())? }
 
     create_market_and_deploy_pool {
         let m in 0..63; // Number of markets closing on the same block.

@@ -6342,6 +6342,91 @@ fn trusted_market_complete_lifecycle() {
     });
 }
 
+#[test]
+fn close_trusted_market_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 10;
+        let market_creator = ALICE;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(market_creator),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::CPMM,
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.dispute_mechanism, None);
+
+        run_to_block(end / 2);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(BOB), market_id),
+            Error::<Runtime>::CallerNotMarketCreator
+        );
+
+        assert_ok!(PredictionMarkets::close_trusted_market(
+            RuntimeOrigin::signed(market_creator),
+            market_id
+        ));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+    });
+}
+
+#[test]
+fn close_trusted_market_fails_if_not_trusted() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 10;
+        let market_creator = ALICE;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(market_creator),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::CPMM,
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.dispute_mechanism, Some(MarketDisputeMechanism::Court));
+
+        run_to_block(end / 2);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(market_creator), market_id),
+            Error::<Runtime>::MarketIsNotTrusted
+        );
+    });
+}
+
 fn deploy_swap_pool(
     market: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<u128>>,
     market_id: u128,
