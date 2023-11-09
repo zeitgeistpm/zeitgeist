@@ -235,7 +235,7 @@ where
                     self.propagate_fees_to_node(index)?;
                     self.nodes
                         .try_push(Node::new(who.clone(), stake))
-                        .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
+                        .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
                     index
                 }
                 NextNode::None => {
