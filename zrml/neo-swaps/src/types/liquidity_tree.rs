@@ -241,7 +241,7 @@ where
                     index
                 }
                 NextNode::None => {
-                    return Err::<(), DispatchError>(
+                    return Err(
                         LiquidityTreeError::TreeIsFull.into_dispatch::<T>(),
                     );
                 }

@@ -234,7 +234,7 @@ mod benchmarks {
         let complete_set_amount = _2.saturated_into();
         let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
 
-        populate_liquidity_tree_with_free_leaf::<T>(market_id);
+        populate_liquidity_tree_with_abandoned_node::<T>(market_id);
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, complete_set_amount));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
             alice.clone(),
