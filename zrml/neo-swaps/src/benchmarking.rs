@@ -48,11 +48,11 @@ macro_rules! assert_ok_with_transaction {
     }};
 }
 
-fn create_market<T: Config>(
+fn create_market<T>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
-) -> MarketIdOf<T> {
+) -> MarketIdOf<T> where T: Config, {
     let market = Market {
         base_asset,
         creation: MarketCreation::Permissionless,
@@ -75,12 +75,12 @@ fn create_market<T: Config>(
     maybe_market_id.unwrap()
 }
 
-fn create_market_and_deploy_pool<T: Config>(
+fn create_market_and_deploy_pool<T>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
     amount: BalanceOf<T>,
-) -> MarketIdOf<T> {
+) -> MarketIdOf<T> where T: Config {
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
     let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
     assert_ok!(T::MultiCurrency::deposit(base_asset, &caller, total_cost));
@@ -99,7 +99,15 @@ fn create_market_and_deploy_pool<T: Config>(
     market_id
 }
 
-/// Populates the market's liquidity tree until almost full with one free leaf remaining.
+fn deposit_fees<T>(market_id: MarketIdOf<T>, amount: BalanceOf<T>) where T: Config {
+    let mut pool = Pools::<T>::get(market_id).unwrap();
+    assert_ok!(T::MultiCurrency::deposit(pool.collateral, &pool.account_id, amount));
+    assert_ok!(pool.liquidity_shares_manager.deposit_fees(amount));
+    Pools::<T>::insert(market_id, pool);
+}
+
+/// Populates the market's liquidity tree until almost full with one free leaf remaining and
+/// deposits fees to ensure that lazy propagation is triggered.
 fn populate_liquidity_tree_with_free_leaf<T>(market_id: MarketIdOf<T>)
 where
     T: Config,
@@ -127,9 +135,11 @@ where
     let pool = Pools::<T>::get(market_id).unwrap();
     let last = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
     assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
+    deposit_fees::<T>(market_id, _1.saturated_into());
 }
 
-/// Populates the market's liquidity tree until almost full with one abandoned node remaining.
+/// Populates the market's liquidity tree until almost full with one abandoned node remaining and
+/// deposits some fees to ensure that lazy propagation is triggered.
 fn populate_liquidity_tree_with_abandoned_node<T>(market_id: MarketIdOf<T>)
 where
     T: Config,
@@ -162,6 +172,7 @@ where
     let last = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
     assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
     assert_eq!(pool.liquidity_shares_manager.abandoned_nodes, vec![last]);
+    deposit_fees::<T>(market_id, _1.saturated_into());
 }
 
 #[benchmarks]
@@ -265,13 +276,9 @@ mod benchmarks {
             2u16,
             _10.saturated_into(),
         );
-        let fee_amount = _1.saturated_into();
 
         // Mock up some fees.
-        let mut pool = Pools::<T>::get(market_id).unwrap();
-        assert_ok!(T::MultiCurrency::deposit(base_asset, &pool.account_id, fee_amount));
-        assert_ok!(pool.liquidity_shares_manager.deposit_fees(fee_amount));
-        Pools::<T>::insert(market_id, pool);
+        deposit_fees::<T>(market_id, _1.saturated_into());
 
         #[extrinsic_call]
         _(RawOrigin::Signed(alice), market_id);

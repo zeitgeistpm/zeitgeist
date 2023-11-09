@@ -404,6 +404,7 @@ where
     U: Get<u32>,
 {
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult {
+        // TODO Can actually stop propagating if the lazy fees are zero.
         let path = self.path_to_node(index)?;
         for i in path {
             self.propagate_fees(i)?;
@@ -424,6 +425,7 @@ where
                 Ok(())
             })?;
         } else {
+            // TODO What happens here if lazy_fees is zero?
             let mut remaining_lazy_fees =
                 node.descendant_stake.bdiv(node.total_stake()?)?.bmul(node.lazy_fees)?;
             let fees = node.lazy_fees.checked_sub_res(&remaining_lazy_fees)?;
