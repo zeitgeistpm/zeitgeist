@@ -112,15 +112,15 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
     /// The time in which the jurors can cast their secret vote.
-    pub const CourtVotePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    pub const CourtVotePeriod: BlockNumber = 10 * BLOCKS_PER_MINUTE;
     /// The time in which the jurors should reveal their secret vote.
-    pub const CourtAggregationPeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    pub const CourtAggregationPeriod: BlockNumber = 10 * BLOCKS_PER_MINUTE;
     /// The time in which a court case can get appealed.
-    pub const CourtAppealPeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const CourtAppealPeriod: BlockNumber = 10 * BLOCKS_PER_MINUTE;
     /// The lock identifier for the court votes.
     pub const CourtLockId: LockIdentifier = COURT_LOCK_ID;
     /// The time in which the inflation is periodically issued.
-    pub const InflationPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
+    pub const InflationPeriod: BlockNumber = 5 * BLOCKS_PER_MINUTE;
     /// The maximum number of appeals until the court fails.
     pub const MaxAppeals: u32 = 4;
     /// The maximum number of delegations per juror account.
@@ -132,7 +132,7 @@ parameter_types! {
     /// The minimum stake a user needs to reserve to become a juror.
     pub const MinJurorStake: Balance = 500 * BASE;
     /// The interval for requesting multiple court votes at once.
-    pub const RequestInterval: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const RequestInterval: BlockNumber = 3 * BLOCKS_PER_MINUTE;
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.
