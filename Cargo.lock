@@ -14532,6 +14532,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-asset-router"
+version = "0.4.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "pallet-assets",
+ "parity-scale-codec",
+ "scale-info",
+ "zeitgeist-primitives",
+]
+
+[[package]]
 name = "zrml-authorized"
 version = "0.4.1"
 dependencies = [

@@ -1,0 +1,25 @@
+[dependencies]
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-assets = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+orml-traits = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "orml-traits/std",
+    "pallet-assets/std",
+    "parity-scale-codec/std",
+    "zeitgeist-primitives/std",
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021"
+name = "zrml-asset-router"
+version = "0.4.1"
