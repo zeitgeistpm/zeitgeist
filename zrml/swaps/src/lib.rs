@@ -2064,7 +2064,16 @@ mod pallet {
 
                 let mut providers_and_pool_shares = vec![];
                 for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
-                    T::AssetManager::unreserve(base_asset, &provider.0, provider.1);
+                    let missing = T::AssetManager::unreserve(base_asset, &provider.0, provider.1);
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. asset: {:?}, who: {:?}, amount: \
+                         {:?}, missing: {:?}",
+                        base_asset,
+                        &provider.0,
+                        provider.1,
+                        missing,
+                    );
                     total_providers = total_providers.saturating_add(1);
                     providers_and_pool_shares.push(provider);
                 }
@@ -2121,7 +2130,17 @@ mod pallet {
                         let subsidy = provider.1;
 
                         if !account_created {
-                            T::AssetManager::unreserve(base_asset, &provider_address, subsidy);
+                            let missing =
+                                T::AssetManager::unreserve(base_asset, &provider_address, subsidy);
+                            debug_assert!(
+                                missing.is_zero(),
+                                "Could not unreserve all of the amount. asset: {:?}, who: {:?}, \
+                                 amount: {:?}, missing: {:?}",
+                                base_asset,
+                                &provider_address,
+                                subsidy,
+                                missing,
+                            );
                             T::AssetManager::transfer(
                                 base_asset,
                                 &provider_address,

@@ -189,7 +189,20 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                 }
                 if unreserve_amount != BalanceOf::<T>::zero() {
-                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
+                    let missing = T::Currency::unreserve_named(
+                        &Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, \
+                         who: {:?}, amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                        missing,
+                    );
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
