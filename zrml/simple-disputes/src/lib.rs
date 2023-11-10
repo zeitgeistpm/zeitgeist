@@ -55,7 +55,7 @@ mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::{
-        traits::{CheckedDiv, Saturating},
+        traits::{CheckedDiv, Saturating, Zero},
         DispatchError, SaturatedConversion,
     };
 
@@ -383,10 +383,18 @@ mod pallet {
 
                     correct_reporters.push(dispute.by.clone());
                 } else {
-                    let (imbalance, _) = T::Currency::slash_reserved_named(
+                    let (imbalance, missing) = T::Currency::slash_reserved_named(
                         &Self::reserve_id(),
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not slash all of the amount. reserve_id {:?}, who: {:?}, amount: \
+                         {:?}.",
+                        &Self::reserve_id(),
+                        &dispute.by,
+                        dispute.bond.saturated_into::<u128>(),
                     );
                     overall_imbalance.subsume(imbalance);
                 }

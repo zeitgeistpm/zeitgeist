@@ -1677,7 +1677,14 @@ mod pallet {
             // Check that the account has at least as many free shares as we wish to burn!
             T::AssetManager::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
-            T::AssetManager::slash(shares_id, from, amount);
+            let missing = T::AssetManager::slash(shares_id, from, amount);
+            debug_assert!(
+                missing.is_zero(),
+                "Could not slash all of the amount. shares_id {:?}, who: {:?}, amount: {:?}.",
+                shares_id,
+                &from,
+                amount,
+            );
             Ok(())
         }
 
@@ -2022,7 +2029,15 @@ mod pallet {
             let asset_len = pool.assets.len() as u32;
             for asset in pool.assets.into_iter() {
                 let amount = T::AssetManager::free_balance(asset, &pool_account);
-                T::AssetManager::slash(asset, &pool_account, amount);
+                let missing = T::AssetManager::slash(asset, &pool_account, amount);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount. asset {:?}, pool_account: {:?}, amount: \
+                     {:?}.",
+                    asset,
+                    &pool_account,
+                    amount,
+                );
             }
             // NOTE: Currently we don't clean up accounts with pool_share_id.
             // TODO(#792): Remove pool_share_id asset for accounts! It may require storage migration.
