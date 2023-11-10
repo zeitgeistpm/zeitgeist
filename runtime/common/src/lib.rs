@@ -289,7 +289,7 @@ macro_rules! create_runtime {
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
-                CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
+                CustomAsset: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
                 CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
                 MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>} = 19,
 
@@ -1484,7 +1484,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
-                    list_benchmark!(list, extra, pallet_assets, CustomAssets);
+                    list_benchmark!(list, extra, pallet_assets, CustomAsset);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
@@ -1589,7 +1589,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
-                    add_benchmark!(params, batches, pallet_assets, CustomAssets);
+                    add_benchmark!(params, batches, pallet_assets, CustomAsset);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);

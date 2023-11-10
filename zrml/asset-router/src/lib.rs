@@ -26,7 +26,7 @@ mod tests;
 #[frame_support::pallet]
 mod pallet {
     use core::marker::PhantomData;
-    use frame_support::{traits::{BalanceStatus as Status}, pallet_prelude::{DispatchError, DispatchResult}, transactional};
+    use frame_support::{traits::{tokens::fungibles::{Inspect}, BalanceStatus as Status}, pallet_prelude::{DispatchError, DispatchResult}, transactional};
     use orml_traits::{
         arithmetic::Signed,
         currency::{
@@ -36,18 +36,20 @@ mod pallet {
         LockIdentifier,
     };
     use orml_traits::BalanceStatus;
-    use zeitgeist_primitives::types::Assets;
+    use zeitgeist_primitives::types::{Assets, Currencies, CampaignAsset, CustomAsset, MarketAsset};
+
+    trait AssetTraits<T: Config>: From<pallet_assets::Call<T>> + frame_support::dispatch::Dispatchable + Inspect<T::AccountId, Balance = T::Balance> {}
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_assets::Config {
         type Currencies: TransferAll<Self::AccountId>
-            + MultiCurrencyExtended<Self::AccountId>
+            + MultiCurrencyExtended<Self::AccountId, CurrencyId = Assets, Balance = Self::Balance>
             + MultiLockableCurrency<Self::AccountId>
             + MultiReservableCurrency<Self::AccountId>
             + NamedMultiReservableCurrency<Self::AccountId>;
-        type CampaignAssets: From<pallet_assets::Call<Self>> + frame_support::dispatch::Dispatchable;
-        type CustomAssets: From<pallet_assets::Call<Self>> + frame_support::dispatch::Dispatchable;
-        type MarketAssets: From<pallet_assets::Call<Self>> + frame_support::dispatch::Dispatchable;
+        type CampaignAsset: AssetTraits<Self, AssetId = CampaignAsset>;
+        type CustomAsset: AssetTraits<Self, AssetId = CustomAsset>;
+        type MarketAssets: AssetTraits<Self, AssetId = MarketAsset>;
     }
 
     #[pallet::pallet]
@@ -56,17 +58,39 @@ mod pallet {
     impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
         #[transactional]
         fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
-            // TODO
-            Ok(())
+            // Only transfers assets maintained in orml-tokens, not implementable for pallet-assets
+            <T::Currencies as TransferAll<T::AccountId>>::transfer_all(source, dest)
         }
     }
+
+    /*
+    impl<T: Config> Pallet<T> {
+        fn get_asset_impl(asset: &Assets) -> impl AssetTraits<T>  {
+            if let Ok(_) = MarketAsset::try_from(*asset) {
+                return <T as Config>::MarketAssets::minimum_balance;
+            }
+
+            return <T as Config>::CampaignAsset::minimum_balance;
+        }
+    }
+    */
 
     impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
         type CurrencyId = Assets;
         type Balance = T::Balance;
 
         fn minimum_balance(currency_id: Self::CurrencyId) -> Self::Balance {
-            // TODO
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as MultiCurrency<T::AccountId>>::minimum_balance(currency_id);
+            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+                return <T as Config>::MarketAssets::minimum_balance(asset);
+            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
+                return <T as Config>::CampaignAsset::minimum_balance(asset);
+            } else if let Ok(asset) = CustomAsset::try_from(currency_id)  {
+                return <T as Config>::CustomAsset::minimum_balance(asset);
+            }
+
+            // Asset not found
             0u8.into()
         }
 
