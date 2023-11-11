@@ -49,7 +49,7 @@ where
     D: Get<u32>,
 {
     fn get() -> u32 {
-        2u32.saturating_pow(D::get())
+        2u32.saturating_pow(D::get() + 1).saturating_sub(1)
     }
 }
 
@@ -241,9 +241,7 @@ where
                     index
                 }
                 NextNode::None => {
-                    return Err(
-                        LiquidityTreeError::TreeIsFull.into_dispatch::<T>(),
-                    );
+                    return Err(LiquidityTreeError::TreeIsFull.into_dispatch::<T>());
                 }
             };
             self.account_to_index
@@ -449,8 +447,8 @@ where
     }
 
     fn children(&self, index: u32) -> Result<[Option<u32>; 2], DispatchError> {
-        let max_node_count = self.node_count();
-        let calculate_child = |child_index: u32| Some(child_index).filter(|&i| i < max_node_count);
+        let calculate_child =
+            |child_index: u32| Some(child_index).filter(|&i| i < self.node_count());
         let left_child_index = index.checked_mul_res(&2)?.checked_add_res(&1)?;
         let left_child = calculate_child(left_child_index);
         let right_child_index = left_child_index.checked_add_res(&1)?;
