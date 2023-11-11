@@ -52,7 +52,10 @@ fn create_market<T>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
-) -> MarketIdOf<T> where T: Config, {
+) -> MarketIdOf<T>
+where
+    T: Config,
+{
     let market = Market {
         base_asset,
         creation: MarketCreation::Permissionless,
@@ -80,7 +83,10 @@ fn create_market_and_deploy_pool<T>(
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
     amount: BalanceOf<T>,
-) -> MarketIdOf<T> where T: Config {
+) -> MarketIdOf<T>
+where
+    T: Config,
+{
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
     let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
     assert_ok!(T::MultiCurrency::deposit(base_asset, &caller, total_cost));
@@ -99,15 +105,19 @@ fn create_market_and_deploy_pool<T>(
     market_id
 }
 
-fn deposit_fees<T>(market_id: MarketIdOf<T>, amount: BalanceOf<T>) where T: Config {
+fn deposit_fees<T>(market_id: MarketIdOf<T>, amount: BalanceOf<T>)
+where
+    T: Config,
+{
     let mut pool = Pools::<T>::get(market_id).unwrap();
     assert_ok!(T::MultiCurrency::deposit(pool.collateral, &pool.account_id, amount));
     assert_ok!(pool.liquidity_shares_manager.deposit_fees(amount));
     Pools::<T>::insert(market_id, pool);
 }
 
-/// Populates the market's liquidity tree until almost full with one free leaf remaining and
-/// deposits fees to ensure that lazy propagation is triggered.
+// TODO Pass callers as argument!
+
+/// Populates the market's liquidity tree until almost full with one free leaf remaining.
 #[allow(unused)]
 fn populate_liquidity_tree_with_free_leaf<T>(market_id: MarketIdOf<T>)
 where
@@ -115,8 +125,9 @@ where
 {
     let pool = Pools::<T>::get(market_id).unwrap();
     // The tree has 2^d nodes; the root is already taken, so we need to populate 2^d - 2 nodes.
-    let nodes_to_populate = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
-    for i in 1..nodes_to_populate {
+    let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+    let last = max_node_count - 1;
+    for i in 1..last {
         let caller = account("", i, 0);
         assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
@@ -133,23 +144,23 @@ where
     }
     // Verify that we've got the right number of nodes.
     let pool = Pools::<T>::get(market_id).unwrap();
-    let last = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
     assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
-    deposit_fees::<T>(market_id, _1.saturated_into());
 }
 
-/// Populates the market's liquidity tree until almost full with one abandoned node remaining and
-/// deposits some fees to ensure that lazy propagation is triggered.
+/// Populates the market's liquidity tree until almost full with one abandoned node remaining. The
+/// `caller` is the owner of the abandoned node.
 #[allow(unused)]
-fn populate_liquidity_tree_with_abandoned_node<T>(market_id: MarketIdOf<T>)
+fn populate_liquidity_tree_with_abandoned_node<T>(market_id: MarketIdOf<T>, caller: T::AccountId)
 where
     T: Config,
 {
     // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
     // stake, leaving an abandoned node at a leaf.
     populate_liquidity_tree_with_free_leaf::<T>(market_id);
+    let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+    let last = max_node_count - 1;
+    let caller = account("", last, 0);
     let pool = Pools::<T>::get(market_id).unwrap();
-    let caller = whitelisted_caller();
     assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
     assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
         caller.clone(),
@@ -170,10 +181,9 @@ where
     ));
     // Verify that we've got the right number of nodes.
     let pool = Pools::<T>::get(market_id).unwrap();
-    let last = 2u32.pow(T::MaxLiquidityTreeDepth::get()) - 1;
-    assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
+    let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+    assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
     assert_eq!(pool.liquidity_shares_manager.abandoned_nodes, vec![last]);
-    deposit_fees::<T>(market_id, _1.saturated_into());
 }
 
 #[benchmarks]
@@ -195,7 +205,7 @@ mod benchmarks {
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
-        let bob: T::AccountId = whitelisted_caller();
+        let bob: T::AccountId = whitelisted_caller(); // TODO This is alice!
         assert_ok!(T::MultiCurrency::deposit(base_asset, &bob, amount_in));
 
         #[extrinsic_call]
@@ -212,7 +222,7 @@ mod benchmarks {
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
-        let bob: T::AccountId = whitelisted_caller();
+        let bob: T::AccountId = whitelisted_caller(); // TODO This is alice!
         assert_ok!(T::MultiCurrency::deposit(asset_in, &bob, amount_in));
 
         #[extrinsic_call]
@@ -234,7 +244,7 @@ mod benchmarks {
         let complete_set_amount = _2.saturated_into();
         let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
 
-        populate_liquidity_tree_with_abandoned_node::<T>(market_id);
+        populate_liquidity_tree_with_free_leaf::<T>(market_id);
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, complete_set_amount));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
             alice.clone(),
@@ -246,8 +256,12 @@ mod benchmarks {
         _(RawOrigin::Signed(alice), market_id, pool_shares_amount, max_amounts_in);
     }
 
-    // There are two execution paths in `exit`: 1) Keep pool alive or 2) destroy it. Clearly 1) is
-    // heavier.
+    // Worst-case benchmark of `exit`. A couple of conditions must be met to get the worst-case:
+    //
+    // - Caller withdraws their total share (the node is then abandoned, resulting in extra writes).
+    // - The pool is kept alive (changing the pool struct instead of destroying it is heavier).
+    // - The caller owns a leaf of maximum depth (equivalent to the second condition unless the tree
+    // has max depth zero).
     #[benchmark]
     fn exit() {
         let alice: T::AccountId = whitelisted_caller();
@@ -260,6 +274,8 @@ mod benchmarks {
         );
         let pool_shares_amount = _1.saturated_into();
         let min_amounts_out = vec![0u8.saturated_into(), 0u8.saturated_into()];
+
+        // populate_liquidity_tree_with_abandoned_node::<T>(market_id);
 
         #[extrinsic_call]
         _(RawOrigin::Signed(alice), market_id, pool_shares_amount, min_amounts_out);
