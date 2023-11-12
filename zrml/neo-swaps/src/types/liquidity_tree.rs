@@ -91,7 +91,7 @@ where
     pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes<U>>,
 }
 
-// Boilerplate implementations because Rust is confused by the generic parameter `U`.
+// Boilerplate implementation because Rust is confused by the generic parameter `U`.
 impl<T, U> Clone for LiquidityTree<T, U>
 where
     T: Config,
@@ -106,7 +106,7 @@ where
     }
 }
 
-// Boilerplate implementations because Rust is confused by the generic parameter `U`.
+// Boilerplate implementation because Rust is confused by the generic parameter `U`.
 impl<T, U> PartialEq for LiquidityTree<T, U>
 where
     T: Config,
@@ -199,6 +199,16 @@ where
     }
 }
 
+/// Execution path info for `join` calls.
+pub enum BenchmarkInfo {
+    /// The LP already owns a node in the tree.
+    InPlace,
+    /// The LP is reassigned an abandoned node.
+    Reassigned,
+    /// The LP is assigned a leaf of the tree.
+    Leaf,
+}
+
 impl<T, U> LiquiditySharesManager<T> for LiquidityTree<T, U>
 where
     T: Config + frame_system::Config,
@@ -206,17 +216,23 @@ where
     BalanceOf<T>: AtLeast32BitUnsigned + Copy + Zero,
     U: Get<u32>,
 {
-    fn join(&mut self, who: &T::AccountId, stake: BalanceOf<T>) -> DispatchResult {
+    type JoinBenchmarkInfo = BenchmarkInfo;
+
+    fn join(
+        &mut self,
+        who: &T::AccountId,
+        stake: BalanceOf<T>,
+    ) -> Result<Self::JoinBenchmarkInfo, DispatchError> {
         let index_maybe = self.account_to_index.get(who);
-        let index = if let Some(&index) = index_maybe {
+        let (index, benchmark_info) = if let Some(&index) = index_maybe {
             // Pile onto existing account.
             self.propagate_fees_to_node(index)?;
             let node = self.get_node_mut(index)?;
             node.stake = node.stake.checked_add_res(&stake)?;
-            index
+            (index, BenchmarkInfo::InPlace)
         } else {
             // Push onto new node.
-            let index = match self.peek_next_free_node_index()? {
+            let (index, benchmark_info) = match self.peek_next_free_node_index()? {
                 NextNode::Abandoned(index) => {
                     self.propagate_fees_to_node(index)?;
                     let node = self.get_node_mut(index)?;
@@ -227,7 +243,7 @@ where
                     // nodes.
                     node.lazy_fees = Zero::zero();
                     self.abandoned_nodes.pop();
-                    index
+                    (index, BenchmarkInfo::Reassigned)
                 }
                 NextNode::Leaf => {
                     // Add new leaf. Propagate first so we don't propagate fees to the new leaf.
@@ -238,7 +254,7 @@ where
                     self.nodes
                         .try_push(Node::new(who.clone(), stake))
                         .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
-                    index
+                    (index, BenchmarkInfo::Leaf)
                 }
                 NextNode::None => {
                     return Err(LiquidityTreeError::TreeIsFull.into_dispatch::<T>());
@@ -247,12 +263,12 @@ where
             self.account_to_index
                 .try_insert(who.clone(), index)
                 .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
-            index
+            (index, benchmark_info)
         };
         if let Some(parent_index) = self.parent_index(index) {
             self.update_descendant_stake(parent_index, stake, false)?;
         }
-        Ok(())
+        Ok(benchmark_info)
     }
 
     fn exit(&mut self, who: &T::AccountId, stake: BalanceOf<T>) -> DispatchResult {

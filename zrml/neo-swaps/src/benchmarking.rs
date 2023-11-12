@@ -23,6 +23,7 @@ use crate::{
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools,
 };
+use core::{cell::Cell, iter, marker::PhantomData};
 use frame_benchmarking::v2::*;
 use frame_support::{
     assert_ok,
@@ -32,7 +33,6 @@ use frame_support::{
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{Perbill, SaturatedConversion};
-use std::{cell::Cell, marker::PhantomData};
 use zeitgeist_primitives::{
     constants::CENT,
     traits::CompleteSetOperationsApi,
@@ -49,6 +49,7 @@ macro_rules! assert_ok_with_transaction {
     }};
 }
 
+/// Utilities for setting up benchmarks.
 struct BenchmarkHelper<T> {
     current_id: Cell<u32>,
     _marker: PhantomData<T>,
@@ -64,7 +65,7 @@ where
 
     /// Return an iterator which ranges over _unused_ accounts.
     fn accounts(&self) -> impl Iterator<Item = T::AccountId> + '_ {
-        std::iter::from_fn(move || {
+        iter::from_fn(move || {
             let id = self.current_id.get();
             self.current_id.set(id + 1);
             Some(account("", id, 0))
@@ -72,9 +73,10 @@ where
     }
 
     /// Populates the market's liquidity tree until almost full with one free leaf remaining.
-    fn populate_liquidity_tree_with_free_leaf(&mut self, market_id: MarketIdOf<T>) {
+    fn populate_liquidity_tree_with_free_leaf(&self, market_id: MarketIdOf<T>) {
         let pool = Pools::<T>::get(market_id).unwrap();
-        // The tree has 2^(d + 1) - 1 nodes; the root is already taken, so we need to populate 2^(d + 1) - 3 nodes.
+        // The tree has 2^(d + 1) - 1 nodes; the root is already taken, so we need to populate 2^(d
+        // + 1) - 3 nodes.
         let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
         let last = (max_node_count - 1) as usize;
         for caller in self.accounts().take(last - 1) {
@@ -93,21 +95,15 @@ where
         }
         // Verify that we've got the right number of nodes.
         let pool = Pools::<T>::get(market_id).unwrap();
-        assert_eq!(pool.liquidity_shares_manager.nodes.len(), last as usize);
+        assert_eq!(pool.liquidity_shares_manager.nodes.len(), last);
     }
 
-    /// Populates the market's liquidity tree until almost full with one abandoned node remaining. The
-    /// `caller` is the owner of the abandoned node.
-    fn populate_liquidity_tree_with_abandoned_node(
-        &mut self,
-        market_id: MarketIdOf<T>,
-        caller: T::AccountId,
-    ) {
+    /// Populates the market's liquidity tree until full. The `caller` is the owner of the last
+    /// leaf.
+    fn populate_liquidity_tree_until_full(&self, market_id: MarketIdOf<T>, caller: T::AccountId) {
         // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
         // stake, leaving an abandoned node at a leaf.
         self.populate_liquidity_tree_with_free_leaf(market_id);
-        let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
-        let last = max_node_count - 1;
         let pool = Pools::<T>::get(market_id).unwrap();
         assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
@@ -121,6 +117,23 @@ where
             _1.saturated_into(),
             vec![u128::MAX.saturated_into(); pool.assets().len()]
         ));
+        // Verify that we've got the right number of nodes.
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+        assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
+    }
+
+    /// Populates the market's liquidity tree until almost full with one abandoned node remaining. The
+    /// `caller` is the owner of the abandoned node.
+    fn populate_liquidity_tree_with_abandoned_node(
+        &self,
+        market_id: MarketIdOf<T>,
+        caller: T::AccountId,
+    ) {
+        // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
+        // stake, leaving an abandoned node at a leaf.
+        self.populate_liquidity_tree_until_full(market_id, caller.clone());
+        let pool = Pools::<T>::get(market_id).unwrap();
         assert_ok!(NeoSwaps::<T>::exit(
             RawOrigin::Signed(caller).into(),
             market_id,
@@ -131,7 +144,37 @@ where
         let pool = Pools::<T>::get(market_id).unwrap();
         let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
         assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
+        let last = max_node_count - 1;
         assert_eq!(pool.liquidity_shares_manager.abandoned_nodes, vec![last]);
+    }
+
+    /// Run the common setup of `join` benchmarks and return the target market's ID and Bob's
+    /// address (who will execute the call).
+    ///
+    /// Parameters:
+    ///
+    /// - `complete_set_amount`: The amount of complete sets to buy for Bob.
+    fn set_up_join_benchmark(
+        &self,
+        complete_set_amount: BalanceOf<T>,
+    ) -> (MarketIdOf<T>, T::AccountId) {
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice.clone(),
+            base_asset,
+            2u16,
+            _10.saturated_into(),
+        );
+
+        let bob = self.accounts().next().unwrap();
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &bob, complete_set_amount));
+        assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
+            bob.clone(),
+            market_id,
+            complete_set_amount,
+        ));
+        (market_id, bob)
     }
 }
 
@@ -221,7 +264,8 @@ mod benchmarks {
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
-        let bob: T::AccountId = whitelisted_caller(); // TODO This is alice!
+        let helper = BenchmarkHelper::<T>::new();
+        let bob = helper.accounts().next().unwrap();
         assert_ok!(T::MultiCurrency::deposit(base_asset, &bob, amount_in));
 
         #[extrinsic_call]
@@ -231,46 +275,66 @@ mod benchmarks {
     #[benchmark]
     fn sell() {
         let alice = whitelisted_caller();
-        let base_asset = Asset::Ztg;
         let market_id =
-            create_market_and_deploy_pool::<T>(alice, base_asset, 2u16, _10.saturated_into());
+            create_market_and_deploy_pool::<T>(alice, Asset::Ztg, 2u16, _10.saturated_into());
         let asset_in = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
-        let bob: T::AccountId = whitelisted_caller(); // TODO This is alice!
+        let helper = BenchmarkHelper::<T>::new();
+        let bob = helper.accounts().next().unwrap();
         assert_ok!(T::MultiCurrency::deposit(asset_in, &bob, amount_in));
 
         #[extrinsic_call]
         _(RawOrigin::Signed(bob), market_id, 2, asset_in, amount_in, min_amount_out);
     }
 
+    // Bob already owns a leaf at maximum depth in the tree but decides to increase his stake.
+    // Maximum propagation steps thanks to maximum depth.
     #[benchmark]
-    fn join() {
-        let alice: T::AccountId = whitelisted_caller();
-        let base_asset = Asset::Ztg;
-        let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
-            base_asset,
-            2u16,
-            _10.saturated_into(),
-        );
+    fn join_in_place() {
+        let helper = BenchmarkHelper::<T>::new();
         let pool_shares_amount = _1.saturated_into();
+        let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
         // Due to rounding, we need to buy a little more than the pool share amount.
         let complete_set_amount = _2.saturated_into();
-        let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
-
-        let mut helper = BenchmarkHelper::<T>::new();
-        helper.populate_liquidity_tree_with_free_leaf(market_id);
-        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, complete_set_amount));
-        assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
-            alice.clone(),
-            market_id,
-            complete_set_amount,
-        ));
+        let (market_id, bob) = helper.set_up_join_benchmark(complete_set_amount);
+        helper.populate_liquidity_tree_until_full(market_id, bob.clone());
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(alice), market_id, pool_shares_amount, max_amounts_in);
+        NeoSwaps::join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+    }
+
+    // Bob joins the pool and is assigned an abandoned node  at maximum depth in the tree. Maximum
+    // propagation steps thanks to maximum depth.
+    #[benchmark]
+    fn join_reassigned() {
+        let helper = BenchmarkHelper::<T>::new();
+        let pool_shares_amount = _1.saturated_into();
+        let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
+        // Due to rounding, we need to buy a little more than the pool share amount.
+        let complete_set_amount = _2.saturated_into();
+        let (market_id, bob) = helper.set_up_join_benchmark(complete_set_amount);
+        helper.populate_liquidity_tree_with_abandoned_node(market_id, bob.clone());
+
+        #[extrinsic_call]
+        NeoSwaps::join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+    }
+
+    // Bob joins the pool and is assigned a leaf at maximum depth in the tree. Maximum propagation
+    // steps thanks to maximum depth.
+    #[benchmark]
+    fn join_leaf() {
+        let helper = BenchmarkHelper::<T>::new();
+        let pool_shares_amount = _1.saturated_into();
+        let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
+        // Due to rounding, we need to buy a little more than the pool share amount.
+        let complete_set_amount = _2.saturated_into();
+        let (market_id, bob) = helper.set_up_join_benchmark(complete_set_amount);
+        helper.populate_liquidity_tree_with_free_leaf(market_id);
+
+        #[extrinsic_call]
+        NeoSwaps::join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
 
     // Worst-case benchmark of `exit`. A couple of conditions must be met to get the worst-case:
@@ -282,40 +346,42 @@ mod benchmarks {
     #[benchmark]
     fn exit() {
         let alice: T::AccountId = whitelisted_caller();
-        let base_asset = Asset::Ztg;
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
-            base_asset,
+            Asset::Ztg,
             2u16,
             _10.saturated_into(),
         );
         let pool_shares_amount = _1.saturated_into();
-        let min_amounts_out = vec![0u8.saturated_into(), 0u8.saturated_into()];
+        let min_amounts_out = vec![0u8.into(); 2];
 
-        // populate_liquidity_tree_with_abandoned_node::<T>(market_id);
+        let helper = BenchmarkHelper::<T>::new();
+        let bob = helper.accounts().next().unwrap();
+        helper.populate_liquidity_tree_until_full(market_id, bob.clone());
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(alice), market_id, pool_shares_amount, min_amounts_out);
+        _(RawOrigin::Signed(bob), market_id, pool_shares_amount, min_amounts_out);
 
         assert!(Pools::<T>::contains_key(market_id)); // Ensure we took the right turn.
     }
 
+    // Worst-case benchmark of `withdraw_fees`: Bob, who owns a leaf of maximum depth, withdraws his
+    // stake.
     #[benchmark]
     fn withdraw_fees() {
-        let alice: T::AccountId = whitelisted_caller();
-        let base_asset = Asset::Ztg;
-        let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
-            base_asset,
-            2u16,
-            _10.saturated_into(),
-        );
+        let helper = BenchmarkHelper::<T>::new();
+        let (market_id, bob) = helper.set_up_join_benchmark(_1.saturated_into());
+        let bob = helper.accounts().next().unwrap();
+        helper.populate_liquidity_tree_until_full(market_id, bob.clone());
 
-        // Mock up some fees.
-        deposit_fees::<T>(market_id, _1.saturated_into());
+        // Mock up some fees. Needs to be large enough to ensure that Bob's share is not smaller
+        // than the existential deposit.
+        let max_node_count = 2u128.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1; // TODO Make liquiditytreehelper pub(crate) and use it here!
+        let fee_amount = (max_node_count * _10).saturated_into();
+        deposit_fees::<T>(market_id, fee_amount);
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(alice), market_id);
+        _(RawOrigin::Signed(bob), market_id);
     }
 
     #[benchmark]

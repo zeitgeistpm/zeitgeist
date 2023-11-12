@@ -38,7 +38,7 @@ mod pallet {
         consts::MAX_ASSETS,
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{FeeDistribution, LiquidityTree, LiquidityTreeError, Pool},
+        types::{BenchmarkInfo, FeeDistribution, LiquidityTree, LiquidityTreeError, Pool},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -350,7 +350,11 @@ mod pallet {
         /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
         /// providers in the pool.
         #[pallet::call_index(2)]
-        #[pallet::weight(T::WeightInfo::join())]
+        #[pallet::weight(
+            T::WeightInfo::join_in_place()
+                .max(T::WeightInfo::join_reassigned())
+                .max(T::WeightInfo::join_leaf())
+        )]
         #[transactional]
         pub fn join(
             origin: OriginFor<T>,
@@ -361,8 +365,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(max_amounts_in.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
-            Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)?;
-            Ok(Some(T::WeightInfo::join()).into())
+            Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)
         }
 
         /// Exit the liquidity pool for the specified market.
@@ -615,11 +618,11 @@ mod pallet {
             market_id: MarketIdOf<T>,
             pool_shares_amount: BalanceOf<T>,
             max_amounts_in: Vec<BalanceOf<T>>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |pool| {
+            let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_in = vec![];
@@ -633,7 +636,8 @@ mod pallet {
                 for ((_, balance), amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
                     *balance = balance.checked_add_res(amount_in)?;
                 }
-                pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
+                let benchmark_info =
+                    pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
                 let new_liquidity_parameter = pool
                     .liquidity_parameter
                     .checked_add_res(&ratio.bmul(pool.liquidity_parameter)?)?;
@@ -645,8 +649,14 @@ mod pallet {
                     amounts_in,
                     new_liquidity_parameter,
                 });
-                Ok(())
-            })
+                Ok(benchmark_info)
+            })?;
+            let weight = match benchmark_info {
+                BenchmarkInfo::InPlace => T::WeightInfo::join_in_place(),
+                BenchmarkInfo::Reassigned => T::WeightInfo::join_reassigned(),
+                BenchmarkInfo::Leaf => T::WeightInfo::join_leaf(),
+            };
+            Ok((Some(weight)).into())
         }
 
         #[require_transactional]
@@ -850,9 +860,9 @@ mod pallet {
             })
         }
 
-        fn try_mutate_pool<F>(market_id: &MarketIdOf<T>, mutator: F) -> DispatchResult
+        fn try_mutate_pool<R, F>(market_id: &MarketIdOf<T>, mutator: F) -> Result<R, DispatchError>
         where
-            F: FnMut(&mut PoolOf<T>) -> DispatchResult,
+            F: FnMut(&mut PoolOf<T>) -> Result<R, DispatchError>,
         {
             Pools::<T>::try_mutate(market_id, |maybe_pool| {
                 maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)

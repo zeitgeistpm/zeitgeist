@@ -45,7 +45,9 @@ where
     T::AccountId: PartialEq<T::AccountId>,
     BalanceOf<T>: AtLeast32BitUnsigned + Copy + Zero,
 {
-    fn join(&mut self, who: &T::AccountId, shares: BalanceOf<T>) -> DispatchResult {
+    type JoinBenchmarkInfo = ();
+
+    fn join(&mut self, who: &T::AccountId, shares: BalanceOf<T>) -> Result<(), DispatchError> {
         ensure!(*who == self.owner, Error::<T>::NotAllowed);
         self.total_shares = self.total_shares.checked_add(&shares).ok_or(Error::<T>::MathError)?;
         Ok(())
