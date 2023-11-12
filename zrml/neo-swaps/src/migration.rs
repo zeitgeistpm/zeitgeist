@@ -159,9 +159,7 @@ mod tests {
             StorageVersion::new(NEO_SWAPS_NEXT_STORAGE_VERSION).put::<Pallet<Runtime>>();
             let (_, new_pools) = construct_old_new_tuple();
             populate_test_data::<Twox64Concat, MarketIdOf<Runtime>, PoolOf<Runtime>>(
-                NEO_SWAPS,
-                POOLS,
-                new_pools,
+                NEO_SWAPS, POOLS, new_pools,
             );
             let tmp = storage_root(StateVersion::V1);
             MigrateToLiquidityTree::<Runtime>::on_runtime_upgrade();

@@ -21,6 +21,7 @@ use super::*;
 use crate::{
     consts::*,
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
+    types::LiquidityTreeHelper,
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools,
 };
 use core::{cell::Cell, iter, marker::PhantomData};
@@ -28,7 +29,6 @@ use frame_benchmarking::v2::*;
 use frame_support::{
     assert_ok,
     storage::{with_transaction, TransactionOutcome::*},
-    traits::Get,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -73,11 +73,10 @@ where
     }
 
     /// Populates the market's liquidity tree until almost full with one free leaf remaining.
+    /// Ensures that the tree has the expected configuration of nodes.
     fn populate_liquidity_tree_with_free_leaf(&self, market_id: MarketIdOf<T>) {
         let pool = Pools::<T>::get(market_id).unwrap();
-        // The tree has 2^(d + 1) - 1 nodes; the root is already taken, so we need to populate 2^(d
-        // + 1) - 3 nodes.
-        let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+        let max_node_count = pool.liquidity_shares_manager.max_node_count();
         let last = (max_node_count - 1) as usize;
         for caller in self.accounts().take(last - 1) {
             assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
@@ -99,7 +98,7 @@ where
     }
 
     /// Populates the market's liquidity tree until full. The `caller` is the owner of the last
-    /// leaf.
+    /// leaf. Ensures that the tree has the expected configuration of nodes.
     fn populate_liquidity_tree_until_full(&self, market_id: MarketIdOf<T>, caller: T::AccountId) {
         // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
         // stake, leaving an abandoned node at a leaf.
@@ -119,12 +118,13 @@ where
         ));
         // Verify that we've got the right number of nodes.
         let pool = Pools::<T>::get(market_id).unwrap();
-        let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+        let max_node_count = pool.liquidity_shares_manager.max_node_count();
         assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
     }
 
-    /// Populates the market's liquidity tree until almost full with one abandoned node remaining. The
-    /// `caller` is the owner of the abandoned node.
+    /// Populates the market's liquidity tree until almost full with one abandoned node remaining.
+    /// The `caller` is the owner of the abandoned node. Ensures that the tree has the expected
+    /// configuration of nodes.
     fn populate_liquidity_tree_with_abandoned_node(
         &self,
         market_id: MarketIdOf<T>,
@@ -142,7 +142,7 @@ where
         ));
         // Verify that we've got the right number of nodes.
         let pool = Pools::<T>::get(market_id).unwrap();
-        let max_node_count = 2u32.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1;
+        let max_node_count = pool.liquidity_shares_manager.max_node_count();
         assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
         let last = max_node_count - 1;
         assert_eq!(pool.liquidity_shares_manager.abandoned_nodes, vec![last]);
@@ -376,7 +376,8 @@ mod benchmarks {
 
         // Mock up some fees. Needs to be large enough to ensure that Bob's share is not smaller
         // than the existential deposit.
-        let max_node_count = 2u128.pow(T::MaxLiquidityTreeDepth::get() + 1) - 1; // TODO Make liquiditytreehelper pub(crate) and use it here!
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let max_node_count = pool.liquidity_shares_manager.max_node_count() as u128;
         let fee_amount = (max_node_count * _10).saturated_into();
         deposit_fees::<T>(market_id, fee_amount);
 

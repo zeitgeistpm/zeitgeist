@@ -330,7 +330,7 @@ where
 }
 
 /// Type for specifying the next free node.
-enum NextNode {
+pub(crate) enum NextNode {
     Abandoned(u32),
     Leaf,
     None,
@@ -338,7 +338,7 @@ enum NextNode {
 
 /// A collection of member functions used in the implementation of `LiquiditySharesManager` for
 /// `LiquidityTree`.
-trait LiquidityTreeHelper<T>
+pub(crate) trait LiquidityTreeHelper<T>
 where
     T: Config,
 {
@@ -418,7 +418,6 @@ where
     U: Get<u32>,
 {
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult {
-        // TODO Can actually stop propagating if the lazy fees are zero.
         let path = self.path_to_node(index)?;
         for i in path {
             self.propagate_fees(i)?;

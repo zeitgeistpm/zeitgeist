@@ -16,11 +16,11 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::dispatch::DispatchError;
+use num_traits::{checked_pow, One};
 use sp_arithmetic::{
     traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub},
     ArithmeticError,
 };
-use num_traits::{One, checked_pow};
 
 pub trait CheckedAddRes
 where
