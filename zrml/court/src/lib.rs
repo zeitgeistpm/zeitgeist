@@ -715,16 +715,18 @@ mod pallet {
 
             match draws.binary_search_by_key(&who, |draw| draw.court_participant.clone()) {
                 Ok(index) => {
-                    let draw = draws[index].clone();
+                    if let Some(draw) = draws.get_mut(index) {
+                        // allow to override last vote
+                        ensure!(
+                            matches!(draw.vote, Vote::Drawn | Vote::Secret { commitment: _ }),
+                            Error::<T>::InvalidVoteState
+                        );
 
-                    // allow to override last vote
-                    ensure!(
-                        matches!(draws[index].vote, Vote::Drawn | Vote::Secret { commitment: _ }),
-                        Error::<T>::InvalidVoteState
-                    );
-
-                    let vote = Vote::Secret { commitment: commitment_vote };
-                    draws[index] = Draw { vote, ..draw };
+                        let vote = Vote::Secret { commitment: commitment_vote };
+                        draw.vote = vote;
+                    } else {
+                        debug_assert!(false, "Binary search should have found a valid index!");
+                    }
                 }
                 Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
             }
@@ -798,17 +800,23 @@ mod pallet {
             let mut draws = <SelectedDraws<T>>::get(court_id);
             match draws.binary_search_by_key(&juror, |draw| draw.court_participant.clone()) {
                 Ok(index) => {
-                    let draw = draws[index].clone();
+                    if let Some(draw) = draws.get_mut(index) {
+                        let raw_commmitment = RawCommitment {
+                            juror: juror.clone(),
+                            vote_item: vote_item.clone(),
+                            salt,
+                        };
 
-                    let raw_commmitment =
-                        RawCommitment { juror: juror.clone(), vote_item: vote_item.clone(), salt };
+                        let commitment =
+                            Self::get_hashed_commitment(draw.vote.clone(), raw_commmitment)?;
 
-                    let commitment = Self::get_hashed_commitment(draw.vote, raw_commmitment)?;
-
-                    // slash for the misbehaviour happens in reassign_court_stakes
-                    let raw_vote =
-                        Vote::Denounced { commitment, vote_item: vote_item.clone(), salt };
-                    draws[index] = Draw { vote: raw_vote, ..draw };
+                        // slash for the misbehaviour happens in reassign_court_stakes
+                        let raw_vote =
+                            Vote::Denounced { commitment, vote_item: vote_item.clone(), salt };
+                        draw.vote = raw_vote;
+                    } else {
+                        debug_assert!(false, "Binary search should have found a valid index!");
+                    }
                 }
                 Err(_) => return Err(Error::<T>::JurorNotDrawn.into()),
             }
@@ -874,31 +882,34 @@ mod pallet {
             );
 
             let mut draws = <SelectedDraws<T>>::get(court_id);
-            let (slashable_amount, draw_weight) = match draws
-                .binary_search_by_key(&who, |draw| draw.court_participant.clone())
-            {
-                Ok(index) => {
-                    let draw = draws[index].clone();
+            let (slashable_amount, draw_weight) =
+                match draws.binary_search_by_key(&who, |draw| draw.court_participant.clone()) {
+                    Ok(index) => {
+                        let mut slashable_amount = BalanceOf::<T>::zero();
+                        let mut draw_weight = 0u32;
+                        if let Some(draw) = draws.get_mut(index) {
+                            let raw_commitment = RawCommitment {
+                                juror: who.clone(),
+                                vote_item: vote_item.clone(),
+                                salt,
+                            };
 
-                    let raw_commitment =
-                        RawCommitment { juror: who.clone(), vote_item: vote_item.clone(), salt };
+                            let commitment =
+                                Self::get_hashed_commitment(draw.vote.clone(), raw_commitment)?;
 
-                    let commitment = Self::get_hashed_commitment(draw.vote, raw_commitment)?;
+                            let raw_vote =
+                                Vote::Revealed { commitment, vote_item: vote_item.clone(), salt };
+                            draw.vote = raw_vote;
 
-                    let raw_vote =
-                        Vote::Revealed { commitment, vote_item: vote_item.clone(), salt };
-                    let slashable_amount = draw.slashable;
-                    let draw_weight = draw.weight;
-                    draws[index] = Draw {
-                        court_participant: who.clone(),
-                        vote: raw_vote,
-                        slashable: slashable_amount,
-                        weight: draw_weight,
-                    };
-                    (slashable_amount, draw_weight)
-                }
-                Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
-            };
+                            slashable_amount = draw.slashable;
+                            draw_weight = draw.weight;
+                        } else {
+                            debug_assert!(false, "Binary search should have found a valid index!");
+                        }
+                        (slashable_amount, draw_weight)
+                    }
+                    Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
+                };
 
             let draws_len = draws.len() as u32;
 
@@ -1082,10 +1093,17 @@ mod pallet {
                                 .binary_search_by_key(&delegator, |(d, _)| d.clone())
                             {
                                 Ok(i) => {
-                                    juror_vote_with_stakes.delegations[i].1 =
-                                        juror_vote_with_stakes.delegations[i]
-                                            .1
-                                            .saturating_add(delegated_stake);
+                                    if let Some(delegations) =
+                                        juror_vote_with_stakes.delegations.get_mut(i)
+                                    {
+                                        delegations.1 =
+                                            delegations.1.saturating_add(delegated_stake);
+                                    } else {
+                                        debug_assert!(
+                                            false,
+                                            "Binary search should have found a valid index!"
+                                        );
+                                    }
                                 }
                                 Err(i) => {
                                     juror_vote_with_stakes
@@ -1426,7 +1444,11 @@ mod pallet {
         ) -> DelegatedStakesOf<T> {
             match delegated_stakes.binary_search_by_key(&delegated_juror, |(j, _)| j) {
                 Ok(index) => {
-                    delegated_stakes[index].1 = delegated_stakes[index].1.saturating_add(amount);
+                    if let Some(delegated_stake) = delegated_stakes.get_mut(index) {
+                        delegated_stake.1 = delegated_stake.1.saturating_add(amount);
+                    } else {
+                        debug_assert!(false, "Binary search should have found a valid index!");
+                    }
                 }
                 Err(index) => {
                     let _ = delegated_stakes
@@ -1790,7 +1812,11 @@ mod pallet {
             if let Ok(i) = pool.binary_search_by_key(&(stake, court_participant), |pool_item| {
                 (pool_item.stake, &pool_item.court_participant)
             }) {
-                return Some((i, &pool[i]));
+                if let Some(pool_item) = pool.get(i) {
+                    return Some((i, pool_item));
+                } else {
+                    debug_assert!(false, "Binary search should have found a valid index!");
+                }
             }
             // this None case can happen whenever the court participant decided to leave the court
             // or was kicked out of the court pool because of the lowest stake
