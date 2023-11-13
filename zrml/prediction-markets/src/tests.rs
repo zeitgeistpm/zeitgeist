@@ -6421,7 +6421,10 @@ fn close_trusted_market_fails_if_not_trusted() {
         assert_eq!(market.status, MarketStatus::Active);
 
         assert_noop!(
-            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(market_creator), market_id),
+            PredictionMarkets::close_trusted_market(
+                RuntimeOrigin::signed(market_creator),
+                market_id
+            ),
             Error::<Runtime>::MarketIsNotTrusted
         );
     });
