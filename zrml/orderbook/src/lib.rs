@@ -174,19 +174,39 @@ mod pallet {
 
             match order_data.side {
                 OrderSide::Bid => {
-                    T::AssetManager::unreserve_named(
+                    let missing = T::AssetManager::unreserve_named(
                         &Self::reserve_id(),
                         order_data.base_asset,
                         maker,
                         order_data.base_asset_amount,
                     );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, asset: {:?} \
+                         who: {:?}, amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        order_data.base_asset,
+                        maker,
+                        order_data.base_asset_amount,
+                        missing,
+                    );
                 }
                 OrderSide::Ask => {
-                    T::AssetManager::unreserve_named(
+                    let missing = T::AssetManager::unreserve_named(
                         &Self::reserve_id(),
                         order_data.outcome_asset,
                         maker,
                         order_data.outcome_asset_amount,
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, asset: {:?} \
+                         who: {:?}, amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        order_data.outcome_asset,
+                        maker,
+                        order_data.outcome_asset_amount,
+                        missing,
                     );
                 }
             }

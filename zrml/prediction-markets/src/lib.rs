@@ -122,7 +122,14 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                let missing = T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, value: {:?}.",
+                    &Self::reserve_id(),
+                    &bond.who,
+                    bond.value,
+                );
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
@@ -182,7 +189,20 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                 }
                 if unreserve_amount != BalanceOf::<T>::zero() {
-                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
+                    let missing = T::Currency::unreserve_named(
+                        &Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, \
+                         who: {:?}, amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                        missing,
+                    );
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
@@ -1063,7 +1083,15 @@ mod pallet {
 
             for (currency_id, payout, balance) in winning_assets {
                 // Destroy the shares.
-                T::AssetManager::slash(currency_id, &sender, balance);
+                let missing = T::AssetManager::slash(currency_id, &sender, balance);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount. currency_id {:?}, sender: {:?}, balance: \
+                     {:?}.",
+                    currency_id,
+                    &sender,
+                    balance,
+                );
 
                 // Pay out the winner.
                 let remaining_bal =
@@ -2591,7 +2619,14 @@ mod pallet {
 
             // write last.
             for asset in assets.iter() {
-                T::AssetManager::slash(*asset, &who, amount);
+                let missing = T::AssetManager::slash(*asset, &who, amount);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount. asset {:?}, who: {:?}, amount: {:?}.",
+                    asset,
+                    &who,
+                    amount,
+                );
             }
 
             T::AssetManager::transfer(market.base_asset, &market_account, &who, amount)?;
