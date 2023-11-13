@@ -426,7 +426,6 @@ where
     }
 
     fn propagate_fees(&mut self, index: u32) -> DispatchResult {
-        println!("propagate_fees({})", index);
         let node = self.get_node(index)?;
         if node.total_stake()? == Zero::zero() {
             return Ok(()); // Don't propagate if there are no LPs under this node.
@@ -450,7 +449,7 @@ where
                 Ok(())
             })?;
             let child_indices = self.children(index)?;
-            // Unwrap below can't fail
+            // Unwrap below can't fail since we're unwrapping from an array of length 2.
             match child_indices.get(0).unwrap_or(&None) {
                 Some(lhs_index) => {
                     self.mutate_node(*lhs_index, |lhs_node| {
@@ -467,6 +466,7 @@ where
                 }
                 None => (),
             }
+            // Unwrap below can't fail since we're unwrapping from an array of length 2.
             match child_indices.get(1).unwrap_or(&None) {
                 Some(rhs_index) => {
                     self.mutate_node(*rhs_index, |rhs_node| {
@@ -730,9 +730,30 @@ mod tests {
         }
     }
 
-    // TODO Add fees and test propagation
     #[test]
-    fn join_in_place_works() {
+    fn join_in_place_works_leaf() {
+        let mut tree = create_test_tree();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        let amount = _2;
+        nodes[0].descendant_stake += amount;
+        nodes[1].descendant_stake += amount;
+        nodes[3].descendant_stake += amount;
+        nodes[7].stake += amount;
+        // Distribute lazy fees of node at index 1 and 3.
+        nodes[1].lazy_fees = Zero::zero();
+        nodes[3].fees += 12_000_000_000; // 1.2
+        nodes[3].lazy_fees = Zero::zero();
+        nodes[4].lazy_fees += _1;
+        nodes[7].fees += 78_000_000_000; // 7.8 (4.8 propagated and 3 lazy fees in place)
+        nodes[7].lazy_fees = Zero::zero();
+        tree.join(&6, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes,);
+    }
+
+    #[test]
+    fn join_in_place_works_middle() {
         let mut tree = create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
