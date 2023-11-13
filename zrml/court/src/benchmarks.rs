@@ -533,6 +533,7 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
         deposit::<T>(&caller);
+        // adds resolve_at for the created market
         let (market_id, court_id) = setup_court::<T>()?;
 
         let mut court = <Courts<T>>::get(court_id).unwrap();
@@ -541,7 +542,6 @@ benchmarks! {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
         }
-        T::DisputeResolution::add_auto_resolve(&market_id, appeal_end).unwrap();
 
         let aggregation = court.round_ends.aggregation;
         for i in 0..a {
@@ -592,12 +592,13 @@ benchmarks! {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, new_resolve_at).unwrap();
         }
+        let old_resolve_at = appeal_end.clone();
     }: _(RawOrigin::Signed(caller), court_id)
     verify {
         let court = <Courts<T>>::get(court_id).unwrap();
         assert_eq!(court.round_ends.appeal, new_resolve_at);
         assert!(T::DisputeResolution::auto_resolve_exists(&market_id, new_resolve_at));
-        assert!(!T::DisputeResolution::auto_resolve_exists(&market_id, appeal_end));
+        assert!(!T::DisputeResolution::auto_resolve_exists(&market_id, old_resolve_at));
     }
 
     reassign_court_stakes {
