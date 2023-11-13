@@ -33,7 +33,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::math::{
     checked_ops_res::{CheckedAddRes, CheckedMulRes, CheckedSubRes},
-    fixed::{FixedDiv, FixedMul},
+    fixed::FixedMulDiv,
 };
 
 /// Gets the maximum number of nodes allowed in the liquidity tree as a function of its depth.
@@ -438,10 +438,9 @@ where
                 Ok(())
             })?;
         } else {
-            // TODO What happens here if lazy_fees is zero?
             // The lazy fees that will be propagated down the tree.
             let mut remaining_lazy_fees =
-                node.descendant_stake.bdiv(node.total_stake()?)?.bmul(node.lazy_fees)?;
+                node.descendant_stake.bmul_bdiv(node.lazy_fees, node.total_stake()?)?;
             // The fees that stay at this node.
             let fees = node.lazy_fees.checked_sub_res(&remaining_lazy_fees)?;
             self.mutate_node(index, |node| {
@@ -455,8 +454,7 @@ where
                     self.mutate_node(*lhs_index, |lhs_node| {
                         let child_lazy_fees = lhs_node
                             .total_stake()?
-                            .bdiv(descendant_stake)?
-                            .bmul(remaining_lazy_fees)?;
+                            .bmul_bdiv(remaining_lazy_fees, descendant_stake)?;
                         lhs_node.lazy_fees =
                             lhs_node.lazy_fees.checked_add_res(&child_lazy_fees)?;
                         remaining_lazy_fees =
@@ -636,7 +634,7 @@ mod tests {
 
     /// Create the following liquidity tree:
     ///
-    ///                                     (3, _1, _2, _12, 0)
+    ///                                     (3, _1, _2, _23, 0)
     ///                                       /               \
     ///                       (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
     ///                           /         \                          /         \
@@ -745,7 +743,7 @@ mod tests {
         nodes[1].lazy_fees += 300_000_000_000; // 30
         nodes[2].lazy_fees += 45_000_000_000; // 4.5
         tree.join(&3, amount).unwrap();
-        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes,);
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
     #[test]
@@ -767,7 +765,7 @@ mod tests {
         nodes[7].fees += 78_000_000_000; // 7.8 (4.8 propagated and 3 lazy fees in place)
         nodes[7].lazy_fees = Zero::zero();
         tree.join(&6, amount).unwrap();
-        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes,);
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
     #[test]
@@ -780,35 +778,99 @@ mod tests {
         nodes[0].descendant_stake += amount;
         nodes[1].descendant_stake += amount;
         nodes[3].stake += amount;
-        // Distribute lazy fees of node at index 1.
+        // Distribute lazy fees of node at index 1 and 3.
         nodes[1].lazy_fees = Zero::zero();
         nodes[3].fees += 12_000_000_000; // 1.2
         nodes[3].lazy_fees = 0;
         nodes[4].lazy_fees += _1;
         nodes[7].lazy_fees += 48_000_000_000; // 4.8
         tree.join(&5, amount).unwrap();
-        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes,);
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
     #[test]
-    fn join_leaf_works() {
-        let alice = 0;
-        let stake = _1;
-        let tree = LiquidityTreeOf::<Runtime>::new(alice, stake).unwrap();
-        assert_liquidity_tree_state!(
-            tree,
-            vec![Node::<Runtime> {
-                account: Some(alice),
-                stake,
-                fees: Zero::zero(),
-                descendant_stake: Zero::zero(),
-                lazy_fees: Zero::zero(),
-            }],
-            create_b_tree_map!({ 0 => 0 }),
-            Vec::<u32>::new(),
-        );
+    fn join_reassigned_works_middle() {
+        let mut tree = create_test_tree();
+        // Manipulate which node is joined by changing the order of abandoned nodes.
+        tree.abandoned_nodes[0] = 8;
+        tree.abandoned_nodes[3] = 1;
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account = 99;
+        let amount = _2;
+
+        // Add new account.
+        nodes[0].descendant_stake += amount;
+        nodes[1].account = Some(account);
+        nodes[1].stake = amount;
+        nodes[1].lazy_fees = Zero::zero();
+        // Propagate fees of node at index 1.
+        nodes[3].lazy_fees += _3;
+        nodes[4].lazy_fees += _1;
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        account_to_index.insert(account, 1);
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        abandoned_nodes.pop();
+
+        tree.join(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
     #[test]
-    fn join_abandoned_works() {}
+    fn join_reassigned_works_root() {
+        let mut tree = create_test_tree();
+        // Store original test tree.
+        let mut nodes = tree.nodes.clone().into_inner();
+        // Manipulate test tree so that it looks like root was abandoned.
+        tree.nodes[0].account = None;
+        tree.nodes[0].stake = Zero::zero();
+        tree.nodes[0].fees = Zero::zero();
+        tree.nodes[0].lazy_fees = 345_000_000_000; // 34.5
+        tree.abandoned_nodes.try_push(0).unwrap();
+        tree.account_to_index.remove(&3);
+
+        // Prepare expected data. The only things that have changed are that the 34.5 units of
+        // collateral are propagated to the nodes of depth 1; and the root.
+        let account = 99;
+        let amount = _3;
+        nodes[0].account = Some(account);
+        nodes[0].stake = amount;
+        nodes[0].fees = Zero::zero();
+        nodes[0].lazy_fees = Zero::zero();
+        nodes[1].lazy_fees += _30;
+        nodes[2].lazy_fees += 45_000_000_000; // 4.5
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        account_to_index.insert(account, 0);
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        abandoned_nodes.pop();
+
+        tree.join(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn join_reassigned_works_leaf() {
+        let mut tree = create_test_tree();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account = 99;
+        let amount = _3;
+        nodes[0].descendant_stake += amount;
+        nodes[1].descendant_stake += amount;
+        nodes[3].descendant_stake += amount;
+        nodes[8].account = Some(account);
+        nodes[8].stake = amount;
+        // Distribute lazy fees of node at index 1, 3 and 7 (same as join_reassigned_works_middle).
+        nodes[1].lazy_fees = Zero::zero();
+        nodes[3].fees += 12_000_000_000; // 1.2
+        nodes[3].lazy_fees = 0;
+        nodes[4].lazy_fees += _1;
+        nodes[7].lazy_fees += 48_000_000_000; // 4.8
+
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        account_to_index.insert(account, 8);
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        abandoned_nodes.pop();
+
+        tree.join(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
 }

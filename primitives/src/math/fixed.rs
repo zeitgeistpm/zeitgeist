@@ -90,6 +90,18 @@ where
     fn bdiv_ceil(&self, other: Self) -> Result<Self, DispatchError>;
 }
 
+/// TODO Testing!
+/// TODO Add to other ratio calculations!
+/// Performs fixed point multiplication and division, calculating `self * multiplier / divisor`.
+pub trait FixedMulDiv
+where
+    Self: Sized,
+{
+    fn bmul_bdiv(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError>;
+    fn bmul_bdiv_floor(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError>;
+    fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError>;
+}
+
 impl<T> FixedMul for T
 where
     T: AtLeast32BitUnsigned,
@@ -134,6 +146,43 @@ where
         let adjustment = other.checked_sub_res(&1u8.into())?;
         let prod_adjusted = prod.checked_add_res(&adjustment)?;
         prod_adjusted.checked_div_res(&other)
+    }
+}
+
+/// Helper function for implementing `FixedMulDiv` in a numerically clean way.
+fn checked_fixed_mul_div_res<T, F, G>(
+    x: &T,
+    multiplier: T,
+    divisor: T,
+    mul_func: F,
+    div_func: G,
+) -> Result<T, DispatchError>
+where
+    T: AtLeast32BitUnsigned + Copy,
+    F: Fn(&T, T) -> Result<T, DispatchError>,
+    G: Fn(&T, T) -> Result<T, DispatchError>,
+{
+    if divisor > ZeitgeistBase::get()? && multiplier < ZeitgeistBase::<T>::get()?.bdiv(divisor)? {
+        div_func(x, divisor).and_then(|result| mul_func(&result, multiplier))
+    } else {
+        mul_func(x, multiplier).and_then(|result| div_func(&result, divisor))
+    }
+}
+
+/// Numerically clean implementation of `FixedMulDiv` which ensures higher precision for extreme
+/// values.
+impl<T> FixedMulDiv for T
+where
+    T: AtLeast32BitUnsigned + Copy,
+{
+    fn bmul_bdiv(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
+        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul, Self::bdiv)
+    }
+    fn bmul_bdiv_floor(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
+        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul_floor, Self::bdiv_floor)
+    }
+    fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
+        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul, Self::bdiv)
     }
 }
 
