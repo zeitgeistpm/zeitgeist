@@ -57,6 +57,8 @@ fn withdraw_fees_works() {
                 descendant_stake: 0u128,
                 lazy_fees: 0u128,
             }],
+            { ALICE => 0 },
+            Vec::<u32>::new(),
         );
         System::assert_last_event(
             Event::FeesWithdrawn { who: ALICE, market_id, amount: fees }.into(),

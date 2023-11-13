@@ -53,6 +53,8 @@ fn deploy_pool_works_with_binary_markets() {
                 descendant_stake: 0u128,
                 lazy_fees: 0u128,
             }],
+            { ALICE => 0 },
+            Vec::<u32>::new(),
         );
         assert_eq!(pool.swap_fee, swap_fee);
         assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), buffer);
@@ -129,6 +131,8 @@ fn deploy_pool_works_with_scalar_marktes() {
                 descendant_stake: 0u128,
                 lazy_fees: 0u128,
             }],
+            { ALICE => 0 },
+            Vec::<u32>::new(),
         );
         assert_eq!(pool.swap_fee, swap_fee);
         assert_eq!(

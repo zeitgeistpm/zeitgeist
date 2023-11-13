@@ -22,6 +22,7 @@ extern crate alloc;
 
 mod benchmarking;
 mod consts;
+mod macros;
 mod math;
 pub mod migration;
 mod mock;
@@ -83,7 +84,8 @@ mod pallet {
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type PoolOf<T> = Pool<T, LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>>;
+    pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {

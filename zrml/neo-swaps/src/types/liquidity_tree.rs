@@ -375,7 +375,7 @@ where
     ///
     /// - `index`: The index of the node to modify.
     /// - `delta`: The (absolute) amount by which to modfiy the descendant stake.
-    /// - `neg`: The sign of the delta; `true` is the delta is negative.
+    /// - `neg`: The sign of the delta; `true` if the delta is negative.
     fn update_descendant_stake(
         &mut self,
         index: u32,
@@ -601,4 +601,109 @@ impl LiquidityTreeError {
     pub(crate) fn into_dispatch<T: Config>(self) -> DispatchError {
         Error::<T>::LiquidityTreeError(self).into()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        assert_liquidity_tree_state, consts::*, create_b_tree_map, mock::Runtime, LiquidityTreeOf,
+    };
+
+    // TODO Add fees and test propagation
+    #[test]
+    fn join_in_place_works() {
+        let mut tree = LiquidityTreeOf::<Runtime> {
+            nodes: vec![
+                Node::<Runtime> {
+                    account: Some(3),
+                    stake: _1,
+                    fees: Zero::zero(),
+                    descendant_stake: _5,
+                    lazy_fees: Zero::zero(),
+                },
+                Node::<Runtime> {
+                    account: None,
+                    stake: Zero::zero(),
+                    fees: Zero::zero(),
+                    descendant_stake: _2,
+                    lazy_fees: Zero::zero(),
+                },
+                Node::<Runtime> {
+                    account: Some(4),
+                    stake: _3,
+                    fees: Zero::zero(),
+                    descendant_stake: Zero::zero(),
+                    lazy_fees: Zero::zero(),
+                },
+                Node::<Runtime> {
+                    account: Some(2),
+                    stake: _2,
+                    fees: Zero::zero(),
+                    descendant_stake: Zero::zero(),
+                    lazy_fees: Zero::zero(),
+                },
+            ].try_into().unwrap(),
+            account_to_index: create_b_tree_map!({3 => 0, 4 => 2, 2 => 3}).try_into().unwrap(),
+            abandoned_nodes: vec![1].try_into().unwrap(),
+        };
+        tree.join(&4, _2).unwrap();
+        assert_liquidity_tree_state!(
+            tree,
+            vec![
+                Node::<Runtime> {
+                    account: Some(3),
+                    stake: _1,
+                    fees: Zero::zero(),
+                    descendant_stake: _7,
+                    lazy_fees: Zero::zero(),
+                },
+                Node::<Runtime> {
+                    account: None,
+                    stake: Zero::zero(),
+                    fees: Zero::zero(),
+                    descendant_stake: _2,
+                    lazy_fees: Zero::zero(),
+                },
+                Node::<Runtime> {
+                    account: Some(4),
+                    stake: _5,
+                    fees: Zero::zero(),
+                    descendant_stake: Zero::zero(),
+                    lazy_fees: Zero::zero(),
+                },
+                Node::<Runtime> {
+                    account: Some(2),
+                    stake: _2,
+                    fees: Zero::zero(),
+                    descendant_stake: Zero::zero(),
+                    lazy_fees: Zero::zero(),
+                },
+            ],
+            {3 => 0, 4 => 2, 2 => 3},
+            vec![1],
+        );
+    }
+
+    #[test]
+    fn join_leaf_works() {
+        let alice = 0;
+        let stake = _1;
+        let tree = LiquidityTreeOf::<Runtime>::new(alice, stake).unwrap();
+        assert_liquidity_tree_state!(
+            tree,
+            vec![Node::<Runtime> {
+                account: Some(alice),
+                stake,
+                fees: Zero::zero(),
+                descendant_stake: Zero::zero(),
+                lazy_fees: Zero::zero(),
+            }],
+            { 0 => 0 },
+            Vec::<u32>::new(),
+        );
+    }
+
+    #[test]
+    fn join_abandoned_works() {}
 }

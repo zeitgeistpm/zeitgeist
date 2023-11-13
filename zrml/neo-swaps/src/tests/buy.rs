@@ -70,6 +70,8 @@ fn buy_works() {
                 descendant_stake: 0u128,
                 lazy_fees: expected_swap_fee_amount,
             }],
+            { ALICE => 0 },
+            Vec::<u32>::new(),
         );
         let pool_outcomes_after: Vec<_> = pool
             .assets()

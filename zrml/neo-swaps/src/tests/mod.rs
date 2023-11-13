@@ -118,18 +118,3 @@ macro_rules! assert_approx {
         }
     };
 }
-
-#[macro_export]
-macro_rules! assert_liquidity_tree_state {
-    ($tree:expr, $expected_nodes:expr $(,)?) => {
-        let nodes = &$tree.nodes;
-        assert_eq!(nodes.len(), $expected_nodes.len());
-        for (index, expected) in $expected_nodes.iter().enumerate() {
-            assert_eq!(nodes[index].account, expected.account);
-            assert_eq!(nodes[index].stake, expected.stake);
-            assert_eq!(nodes[index].fees, expected.fees);
-            assert_eq!(nodes[index].descendant_stake, expected.descendant_stake);
-            assert_eq!(nodes[index].lazy_fees, expected.lazy_fees);
-        }
-    };
-}
