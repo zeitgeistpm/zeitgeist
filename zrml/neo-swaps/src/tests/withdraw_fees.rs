@@ -50,14 +50,14 @@ fn withdraw_fees_works() {
         let pool_after = Pools::<Runtime>::get(market_id).unwrap();
         assert_liquidity_tree_state!(
             pool_after.liquidity_shares_manager,
-            [Node::<Runtime> {
+            vec![Node::<Runtime> {
                 account: Some(ALICE),
                 stake: liquidity,
                 fees: 0u128,
                 descendant_stake: 0u128,
                 lazy_fees: 0u128,
             }],
-            { ALICE => 0 },
+            create_b_tree_map!({ ALICE => 0 }),
             Vec::<u32>::new(),
         );
         System::assert_last_event(

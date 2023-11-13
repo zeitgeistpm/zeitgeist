@@ -29,21 +29,43 @@ macro_rules! assert_liquidity_tree_state {
     (
         $tree:expr,
         $expected_nodes:expr,
-        { $($key:expr => $value:expr),* $(,)? },
+        $expected_account_to_index:expr,
         $expected_abandoned_nodes:expr $(,)?
     ) => {
-        let nodes = &$tree.nodes;
-        assert_eq!(nodes.len(), $expected_nodes.len());
-        for (index, expected) in $expected_nodes.iter().enumerate() {
-            assert_eq!(nodes[index], expected.clone());
-            // assert_eq!(nodes[index].account, expected.account);
-            // assert_eq!(nodes[index].stake, expected.stake);
-            // assert_eq!(nodes[index].fees, expected.fees);
-            // assert_eq!(nodes[index].descendant_stake, expected.descendant_stake);
-            // assert_eq!(nodes[index].lazy_fees, expected.lazy_fees);
+        let actual_nodes = $tree.nodes.clone().into_inner();
+        let max_len = std::cmp::max($expected_nodes.len(), actual_nodes.len());
+        let mut error = false;
+        for index in 0..max_len {
+            match ($expected_nodes.get(index), actual_nodes.get(index)) {
+                (Some(exp), Some(act)) => {
+                    if exp != act {
+                        error = true;
+                        eprintln!(
+                            "assert_liquidity_tree_state: Mismatched node at index {}",
+                            index,
+                        );
+                        eprintln!("    Expected node: {:?}", exp);
+                        eprintln!("    Actual node:   {:?}", act);
+                    }
+                },
+                (None, Some(act)) => {
+                    error = true;
+                    eprintln!("assert_liquidity_tree_state: Extra node at index {}", index);
+                    eprintln!("    {:?}", act);
+                },
+                (Some(exp), None) => {
+                    error = true;
+                    eprintln!("assert_liquidity_tree_state: Missing node at index {}", index);
+                    eprintln!("    
+                    {:?}", exp);
+                },
+                (None, None) => break,
+            }
         }
-        let expected_account_to_index = create_b_tree_map!({ $($key => $value),* });
-        assert_eq!(expected_account_to_index, $tree.account_to_index.clone().into_inner());
+        if error {
+            panic!();
+        }
+        assert_eq!($expected_account_to_index, $tree.account_to_index.clone().into_inner());
         assert_eq!($expected_abandoned_nodes, $tree.abandoned_nodes.clone().into_inner());
     };
 }

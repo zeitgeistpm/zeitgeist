@@ -46,14 +46,14 @@ fn deploy_pool_works_with_binary_markets() {
         assert_eq!(pool.collateral, BASE_ASSET);
         assert_liquidity_tree_state!(
             pool.liquidity_shares_manager,
-            [Node::<Runtime> {
+            vec![Node::<Runtime> {
                 account: Some(ALICE),
                 stake: amount,
                 fees: 0u128,
                 descendant_stake: 0u128,
                 lazy_fees: 0u128,
             }],
-            { ALICE => 0 },
+            create_b_tree_map!({ ALICE => 0 }),
             Vec::<u32>::new(),
         );
         assert_eq!(pool.swap_fee, swap_fee);
@@ -124,14 +124,14 @@ fn deploy_pool_works_with_scalar_marktes() {
         assert_eq!(pool.collateral, BASE_ASSET);
         assert_liquidity_tree_state!(
             pool.liquidity_shares_manager,
-            [Node::<Runtime> {
+            vec![Node::<Runtime> {
                 account: Some(ALICE),
                 stake: amount,
                 fees: 0u128,
                 descendant_stake: 0u128,
                 lazy_fees: 0u128,
             }],
-            { ALICE => 0 },
+            create_b_tree_map!({ ALICE => 0 }),
             Vec::<u32>::new(),
         );
         assert_eq!(pool.swap_fee, swap_fee);

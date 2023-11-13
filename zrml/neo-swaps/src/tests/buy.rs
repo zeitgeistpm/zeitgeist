@@ -63,14 +63,14 @@ fn buy_works() {
         assert_eq!(pool.liquidity_parameter, pool_liquidity_before);
         assert_liquidity_tree_state!(
             pool.liquidity_shares_manager,
-            [Node::<Runtime> {
+            vec![Node::<Runtime> {
                 account: Some(ALICE),
                 stake: liquidity,
                 fees: 0u128,
                 descendant_stake: 0u128,
                 lazy_fees: expected_swap_fee_amount,
             }],
-            { ALICE => 0 },
+            create_b_tree_map!({ ALICE => 0 }),
             Vec::<u32>::new(),
         );
         let pool_outcomes_after: Vec<_> = pool
