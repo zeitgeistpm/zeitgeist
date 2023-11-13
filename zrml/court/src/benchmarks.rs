@@ -592,13 +592,12 @@ benchmarks! {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, new_resolve_at).unwrap();
         }
-        let old_resolve_at = appeal_end.clone();
     }: _(RawOrigin::Signed(caller), court_id)
     verify {
         let court = <Courts<T>>::get(court_id).unwrap();
         assert_eq!(court.round_ends.appeal, new_resolve_at);
         assert!(T::DisputeResolution::auto_resolve_exists(&market_id, new_resolve_at));
-        assert!(!T::DisputeResolution::auto_resolve_exists(&market_id, old_resolve_at));
+        assert!(!T::DisputeResolution::auto_resolve_exists(&market_id, appeal_end));
     }
 
     reassign_court_stakes {
