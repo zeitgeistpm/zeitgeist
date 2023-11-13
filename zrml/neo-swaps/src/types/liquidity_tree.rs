@@ -651,7 +651,7 @@ mod tests {
                     account: Some(3),
                     stake: _1,
                     fees: _2,
-                    descendant_stake: _12,
+                    descendant_stake: _23,
                     lazy_fees: Zero::zero(),
                 },
                 // Depth 1
@@ -728,6 +728,24 @@ mod tests {
                 .unwrap(),
             abandoned_nodes: vec![1, 5, 6, 8].try_into().unwrap(),
         }
+    }
+
+    #[test]
+    fn join_in_place_works_root() {
+        let mut tree = create_test_tree();
+        tree.nodes[0].lazy_fees = _36;
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        let amount = _2;
+        nodes[0].stake += amount;
+        // Distribute lazy fees of node at index 0.
+        nodes[0].fees += 15_000_000_000; // 1.5
+        nodes[0].lazy_fees = Zero::zero();
+        nodes[1].lazy_fees += 300_000_000_000; // 30
+        nodes[2].lazy_fees += 45_000_000_000; // 4.5
+        tree.join(&3, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes,);
     }
 
     #[test]
