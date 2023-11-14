@@ -150,6 +150,9 @@ where
 }
 
 /// Helper function for implementing `FixedMulDiv` in a numerically clean way.
+///
+/// The idea is to change the order of operations to ensure that division causes as little a
+/// rounding error as possible.
 fn checked_fixed_mul_div_res<T, F, G>(
     x: &T,
     multiplier: T,
@@ -169,8 +172,8 @@ where
     }
 }
 
-/// Numerically clean implementation of `FixedMulDiv` which ensures higher precision for extreme
-/// values.
+/// Numerically clean implementation of `FixedMulDiv` which ensures higher precision than naive
+/// multiplication and division for extreme values.
 impl<T> FixedMulDiv for T
 where
     T: AtLeast32BitUnsigned + Copy,
