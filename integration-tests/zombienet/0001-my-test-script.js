@@ -1,5 +1,4 @@
 "use strict";
-// run this script by `./scripts/tests/zombienet.sh --test`
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -15,7 +14,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+        while (_) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -36,53 +35,56 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
+exports.__esModule = true;
+exports.run = void 0;
 var api_1 = require("@polkadot/api");
 var keyring_1 = require("@polkadot/keyring");
 var util_crypto_1 = require("@polkadot/util-crypto");
-function main() {
-    return __awaiter(this, void 0, void 0, function () {
-        var provider, api, keyring, alice, bob, aliceBalance, aliceAccountInfo, transfer, hash, bobBalance, bobAccountInfo;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    provider = new api_1.WsProvider('ws://127.0.0.1:9944');
-                    return [4 /*yield*/, api_1.ApiPromise.create({ provider: provider })];
-                case 1:
-                    api = _a.sent();
-                    // Wait for the crypto library to be ready
-                    return [4 /*yield*/, (0, util_crypto_1.cryptoWaitReady)()];
-                case 2:
-                    // Wait for the crypto library to be ready
-                    _a.sent();
-                    keyring = new keyring_1.Keyring({ type: 'sr25519' });
-                    alice = keyring.addFromUri('//Alice');
-                    bob = keyring.addFromUri('//Bob');
-                    return [4 /*yield*/, api.query.system.account(alice.address)];
-                case 3:
-                    aliceBalance = _a.sent();
-                    aliceAccountInfo = aliceBalance;
-                    transfer = api.tx.balances.transfer(bob.address, aliceAccountInfo.data.free);
-                    return [4 /*yield*/, transfer.signAndSend(alice)];
-                case 4:
-                    hash = _a.sent();
-                    console.log("Transfer sent with hash ".concat(hash));
-                    return [4 /*yield*/, api.query.system.account(bob.address)];
-                case 5:
-                    bobBalance = _a.sent();
-                    bobAccountInfo = bobBalance;
-                    // Check if the balance transfer was successful
-                    if (bobAccountInfo.data.free.gt(aliceAccountInfo.data.free)) {
-                        console.log("Transfer was successful. Transaction hash: ".concat(hash));
-                        return [2 /*return*/, 1];
-                    }
-                    else {
-                        console.log("Transfer failed.");
-                        return [2 /*return*/, 0];
-                    }
-                    return [2 /*return*/];
-            }
-        });
+// Addresses for Alice and Bob on the dev chain
+var ALICE = '//Alice';
+var BOB = '//Bob';
+var run = function (nodeName, networkInfo, args) { return __awaiter(void 0, void 0, void 0, function () {
+    var provider, api, keyring, alice, bob, aliceFreeBalanceBefore, bobFreeBalanceBefore, transfer, hash, aliceFreeBalanceAfter, bobFreeBalanceAfter, aliceLostAmount, bobGainedAmount;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                provider = new api_1.WsProvider('ws://127.0.0.1:9944');
+                return [4 /*yield*/, api_1.ApiPromise.create({ provider: provider })];
+            case 1:
+                api = _a.sent();
+                // Wait for the crypto library to be ready
+                return [4 /*yield*/, (0, util_crypto_1.cryptoWaitReady)()];
+            case 2:
+                // Wait for the crypto library to be ready
+                _a.sent();
+                keyring = new keyring_1.Keyring({ type: 'sr25519' });
+                alice = keyring.addFromUri(ALICE);
+                bob = keyring.addFromUri(BOB);
+                return [4 /*yield*/, api.query.system.account(alice.address)];
+            case 3:
+                aliceFreeBalanceBefore = (_a.sent());
+                return [4 /*yield*/, api.query.system.account(bob.address)];
+            case 4:
+                bobFreeBalanceBefore = (_a.sent());
+                console.log("Alice has ".concat(aliceFreeBalanceBefore));
+                console.log("Bob has ".concat(bobFreeBalanceBefore));
+                transfer = api.tx.balances.transfer(bob.address, 500000);
+                return [4 /*yield*/, transfer.signAndSend(alice)];
+            case 5:
+                hash = _a.sent();
+                console.log("Transfer sent with hash ".concat(hash));
+                return [4 /*yield*/, api.query.system.account(alice.address)];
+            case 6:
+                aliceFreeBalanceAfter = (_a.sent());
+                return [4 /*yield*/, api.query.system.account(bob.address)];
+            case 7:
+                bobFreeBalanceAfter = (_a.sent());
+                aliceLostAmount = aliceFreeBalanceBefore.data.free.sub(aliceFreeBalanceAfter.data.free);
+                bobGainedAmount = bobFreeBalanceAfter.data.free.sub(bobFreeBalanceBefore.data.free);
+                console.log("Alice lost ".concat(aliceLostAmount, " tokens"));
+                console.log("Bob gained ".concat(bobGainedAmount, " tokens"));
+                return [2 /*return*/, aliceLostAmount.eq(bobGainedAmount) ? 1 : 0];
+        }
     });
-}
-main().catch(console.error);
+}); };
+exports.run = run;

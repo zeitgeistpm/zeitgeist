@@ -1,11 +1,13 @@
-// run this script by `./scripts/tests/zombienet.sh --test`
-
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { Keyring } from '@polkadot/keyring';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { AccountInfo } from '@polkadot/types/interfaces';
 
-async function main() {
+// Addresses for Alice and Bob on the dev chain
+const ALICE = '//Alice';
+const BOB = '//Bob';
+
+export const run = async (nodeName: string, networkInfo: any, args: any) => {
     const provider = new WsProvider('ws://127.0.0.1:9944');
     const api = await ApiPromise.create({ provider });
 
@@ -13,32 +15,35 @@ async function main() {
     await cryptoWaitReady();
 
     const keyring = new Keyring({ type: 'sr25519' });
-    const alice = keyring.addFromUri('//Alice');
-    const bob = keyring.addFromUri('//Bob');
+    const alice = keyring.addFromUri(ALICE);
+    const bob = keyring.addFromUri(BOB);
 
-    const aliceBalance = await api.query.system.account(alice.address);
+    const aliceFreeBalanceBefore = await (api.query.system.account(alice.address)) as unknown as AccountInfo;
+    const bobFreeBalanceBefore = await (api.query.system.account(bob.address)) as unknown as AccountInfo;
 
-    // Cast the Codec type to AccountInfo type
-    const aliceAccountInfo = aliceBalance as AccountInfo;
+    console.log(`Alice has ${aliceFreeBalanceBefore.data.free}`);
+    console.log(`Bob has ${bobFreeBalanceBefore.data.free}`);
 
     // Create a transfer transaction from Alice to Bob
-    const transfer = api.tx.balances.transfer(bob.address, aliceAccountInfo.data.free);
+    const transfer = api.tx.balances.transfer(bob.address, aliceFreeBalanceBefore.data.free);
 
     const hash = await transfer.signAndSend(alice);
 
     console.log(`Transfer sent with hash ${hash}`);
 
-    const bobBalance = await api.query.system.account(bob.address);
-    const bobAccountInfo = bobBalance as AccountInfo;
+    const aliceFreeBalanceAfter = await (api.query.system.account(alice.address)) as unknown as AccountInfo;
+    const bobFreeBalanceAfter = await (api.query.system.account(bob.address)) as unknown as AccountInfo;
 
-    // Check if the balance transfer was successful
-    if (bobAccountInfo.data.free.gt(aliceAccountInfo.data.free)) {
-        console.log(`Transfer was successful. Transaction hash: ${hash}`);
-        return 1;
-    } else {
-        console.log(`Transfer failed.`);
-        return 0;
-    }
+    const aliceLostAmount = aliceFreeBalanceBefore.data.free.sub(aliceFreeBalanceAfter.data.free);
+    const bobGainedAmount = bobFreeBalanceAfter.data.free.sub(bobFreeBalanceBefore.data.free);
+
+    console.log(`Alice lost ${aliceLostAmount.toString()} tokens`);
+    console.log(`Bob gained ${bobGainedAmount.toString()} tokens`);
+
+    console.log(`Alice has ${aliceFreeBalanceAfter.data.free}`);
+    console.log(`Bob has ${bobFreeBalanceAfter.data.free}`);
+
+    return aliceLostAmount == bobGainedAmount ? 1 : 0;
 }
 
-main().catch(console.error);
+run("", {}, {}).then((code) => process.exit(code));
