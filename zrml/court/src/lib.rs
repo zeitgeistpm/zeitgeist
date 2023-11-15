@@ -36,15 +36,15 @@ use frame_support::{
     dispatch::DispatchResult,
     ensure, log,
     pallet_prelude::{
-        ConstU32, DispatchResultWithPostInfo, EnsureOrigin, Hooks, OptionQuery, StorageMap,
-        StorageValue, ValueQuery, Weight,
+        ConstU32, Decode, DispatchResultWithPostInfo, Encode, EnsureOrigin, Hooks, OptionQuery,
+        StorageMap, StorageValue, TypeInfo, ValueQuery, Weight,
     },
     traits::{
         Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
         NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
         WithdrawReasons,
     },
-    transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
+    transactional, Blake2_128Concat, BoundedVec, PalletId, RuntimeDebug, Twox64Concat,
 };
 use frame_system::{
     ensure_signed,
@@ -462,6 +462,16 @@ mod pallet {
         OutcomeMismatch,
         /// The vote item was expected to be an outcome, but is actually not an outcome.
         VoteItemIsNoOutcome,
+        /// Action cannot be completed because an unexpected error has occurred. This should be
+        /// reported to protocol maintainers.
+        Unexpected(UnexpectedError),
+    }
+
+    // NOTE: these errors should never happen.
+    #[derive(Encode, Decode, Eq, PartialEq, TypeInfo, frame_support::PalletError, RuntimeDebug)]
+    pub enum UnexpectedError {
+        /// The binary search by key functionality failed to find an element, although expected.
+        BinarySearchByKeyFailed,
     }
 
     #[pallet::hooks]
@@ -561,9 +571,10 @@ mod pallet {
             let pool = CourtPool::<T>::get();
             let is_valid_set = sorted_delegations.iter().all(|pretended_juror| {
                 <Participants<T>>::get(pretended_juror).map_or(false, |pretended_juror_info| {
-                    Self::get_pool_item(&pool, pretended_juror_info.stake, pretended_juror)
-                        .is_some()
-                        && pretended_juror_info.delegations.is_none()
+                    match Self::get_pool_item(&pool, pretended_juror_info.stake, pretended_juror) {
+                        Ok(Some(_)) => pretended_juror_info.delegations.is_none(),
+                        _ => false,
+                    }
                 })
             });
             ensure!(is_valid_set, Error::<T>::DelegatedToInvalidJuror);
@@ -610,7 +621,7 @@ mod pallet {
 
             // do not error in the else case
             // because the juror might have been already removed from the pool
-            if let Some((index, _)) = Self::get_pool_item(&pool, prev_p_info.stake, &who) {
+            if let Some((index, _)) = Self::get_pool_item(&pool, prev_p_info.stake, &who)? {
                 pool.remove(index);
                 <CourtPool<T>>::put(pool);
             }
@@ -715,18 +726,17 @@ mod pallet {
 
             match draws.binary_search_by_key(&who, |draw| draw.court_participant.clone()) {
                 Ok(index) => {
-                    if let Some(draw) = draws.get_mut(index) {
-                        // allow to override last vote
-                        ensure!(
-                            matches!(draw.vote, Vote::Drawn | Vote::Secret { commitment: _ }),
-                            Error::<T>::InvalidVoteState
-                        );
+                    let draw = draws
+                        .get_mut(index)
+                        .ok_or(Error::<T>::Unexpected(UnexpectedError::BinarySearchByKeyFailed))?;
+                    // allow to override last vote
+                    ensure!(
+                        matches!(draw.vote, Vote::Drawn | Vote::Secret { commitment: _ }),
+                        Error::<T>::InvalidVoteState
+                    );
 
-                        let vote = Vote::Secret { commitment: commitment_vote };
-                        draw.vote = vote;
-                    } else {
-                        debug_assert!(false, "Binary search should have found a valid index!");
-                    }
+                    let vote = Vote::Secret { commitment: commitment_vote };
+                    draw.vote = vote;
                 }
                 Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
             }
@@ -800,23 +810,19 @@ mod pallet {
             let mut draws = <SelectedDraws<T>>::get(court_id);
             match draws.binary_search_by_key(&juror, |draw| draw.court_participant.clone()) {
                 Ok(index) => {
-                    if let Some(draw) = draws.get_mut(index) {
-                        let raw_commmitment = RawCommitment {
-                            juror: juror.clone(),
-                            vote_item: vote_item.clone(),
-                            salt,
-                        };
+                    let draw = draws
+                        .get_mut(index)
+                        .ok_or(Error::<T>::Unexpected(UnexpectedError::BinarySearchByKeyFailed))?;
+                    let raw_commmitment =
+                        RawCommitment { juror: juror.clone(), vote_item: vote_item.clone(), salt };
 
-                        let commitment =
-                            Self::get_hashed_commitment(draw.vote.clone(), raw_commmitment)?;
+                    let commitment =
+                        Self::get_hashed_commitment(draw.vote.clone(), raw_commmitment)?;
 
-                        // slash for the misbehaviour happens in reassign_court_stakes
-                        let raw_vote =
-                            Vote::Denounced { commitment, vote_item: vote_item.clone(), salt };
-                        draw.vote = raw_vote;
-                    } else {
-                        debug_assert!(false, "Binary search should have found a valid index!");
-                    }
+                    // slash for the misbehaviour happens in reassign_court_stakes
+                    let raw_vote =
+                        Vote::Denounced { commitment, vote_item: vote_item.clone(), salt };
+                    draw.vote = raw_vote;
                 }
                 Err(_) => return Err(Error::<T>::JurorNotDrawn.into()),
             }
@@ -882,34 +888,27 @@ mod pallet {
             );
 
             let mut draws = <SelectedDraws<T>>::get(court_id);
-            let (slashable_amount, draw_weight) =
-                match draws.binary_search_by_key(&who, |draw| draw.court_participant.clone()) {
-                    Ok(index) => {
-                        let mut slashable_amount = BalanceOf::<T>::zero();
-                        let mut draw_weight = 0u32;
-                        if let Some(draw) = draws.get_mut(index) {
-                            let raw_commitment = RawCommitment {
-                                juror: who.clone(),
-                                vote_item: vote_item.clone(),
-                                salt,
-                            };
+            let (slashable_amount, draw_weight) = match draws
+                .binary_search_by_key(&who, |draw| draw.court_participant.clone())
+            {
+                Ok(index) => {
+                    let draw = draws
+                        .get_mut(index)
+                        .ok_or(Error::<T>::Unexpected(UnexpectedError::BinarySearchByKeyFailed))?;
+                    let raw_commitment =
+                        RawCommitment { juror: who.clone(), vote_item: vote_item.clone(), salt };
 
-                            let commitment =
-                                Self::get_hashed_commitment(draw.vote.clone(), raw_commitment)?;
+                    let commitment =
+                        Self::get_hashed_commitment(draw.vote.clone(), raw_commitment)?;
 
-                            let raw_vote =
-                                Vote::Revealed { commitment, vote_item: vote_item.clone(), salt };
-                            draw.vote = raw_vote;
+                    let raw_vote =
+                        Vote::Revealed { commitment, vote_item: vote_item.clone(), salt };
+                    draw.vote = raw_vote;
 
-                            slashable_amount = draw.slashable;
-                            draw_weight = draw.weight;
-                        } else {
-                            debug_assert!(false, "Binary search should have found a valid index!");
-                        }
-                        (slashable_amount, draw_weight)
-                    }
-                    Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
-                };
+                    (draw.slashable, draw.weight)
+                }
+                Err(_) => return Err(Error::<T>::CallerNotInSelectedDraws.into()),
+            };
 
             let draws_len = draws.len() as u32;
 
@@ -1065,7 +1064,7 @@ mod pallet {
             // map delegated jurors to own_slashable, vote item and Vec<(delegator, delegator_stake)>
             let mut jurors_to_stakes = BTreeMap::<T::AccountId, JurorVoteWithStakesOf<T>>::new();
 
-            let mut handle_vote = |draw: DrawOf<T>| {
+            let mut handle_vote = |draw: DrawOf<T>| -> DispatchResult {
                 match draw.vote {
                     Vote::Drawn
                     | Vote::Secret { commitment: _ }
@@ -1093,17 +1092,13 @@ mod pallet {
                                 .binary_search_by_key(&delegator, |(d, _)| d.clone())
                             {
                                 Ok(i) => {
-                                    if let Some(delegations) =
-                                        juror_vote_with_stakes.delegations.get_mut(i)
-                                    {
-                                        delegations.1 =
-                                            delegations.1.saturating_add(delegated_stake);
-                                    } else {
-                                        debug_assert!(
-                                            false,
-                                            "Binary search should have found a valid index!"
-                                        );
-                                    }
+                                    let delegations = juror_vote_with_stakes
+                                        .delegations
+                                        .get_mut(i)
+                                        .ok_or(Error::<T>::Unexpected(
+                                            UnexpectedError::BinarySearchByKeyFailed,
+                                        ))?;
+                                    delegations.1 = delegations.1.saturating_add(delegated_stake);
                                 }
                                 Err(i) => {
                                     juror_vote_with_stakes
@@ -1114,6 +1109,7 @@ mod pallet {
                         }
                     }
                 }
+                Ok(())
             };
 
             for draw in draws {
@@ -1131,7 +1127,7 @@ mod pallet {
                     debug_assert!(false);
                 }
 
-                handle_vote(draw);
+                handle_vote(draw)?;
             }
 
             Self::slash_losers_to_award_winners(court_id, jurors_to_stakes, &winner);
@@ -1219,7 +1215,8 @@ mod pallet {
             if let Some(prev_p_info) = <Participants<T>>::get(who) {
                 ensure!(amount >= prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
 
-                if let Some((index, pool_item)) = Self::get_pool_item(&pool, prev_p_info.stake, who)
+                if let Some((index, pool_item)) =
+                    Self::get_pool_item(&pool, prev_p_info.stake, who)?
                 {
                     active_lock = prev_p_info.active_lock;
                     consumed_stake = pool_item.consumed_stake;
@@ -1441,14 +1438,13 @@ mod pallet {
             mut delegated_stakes: DelegatedStakesOf<T>,
             delegated_juror: &T::AccountId,
             amount: BalanceOf<T>,
-        ) -> DelegatedStakesOf<T> {
+        ) -> Result<DelegatedStakesOf<T>, DispatchError> {
             match delegated_stakes.binary_search_by_key(&delegated_juror, |(j, _)| j) {
                 Ok(index) => {
-                    if let Some(delegated_stake) = delegated_stakes.get_mut(index) {
-                        delegated_stake.1 = delegated_stake.1.saturating_add(amount);
-                    } else {
-                        debug_assert!(false, "Binary search should have found a valid index!");
-                    }
+                    let delegated_stake = delegated_stakes
+                        .get_mut(index)
+                        .ok_or(Error::<T>::Unexpected(UnexpectedError::BinarySearchByKeyFailed))?;
+                    delegated_stake.1 = delegated_stake.1.saturating_add(amount);
                 }
                 Err(index) => {
                     let _ = delegated_stakes
@@ -1463,7 +1459,7 @@ mod pallet {
                 }
             }
 
-            delegated_stakes
+            Ok(delegated_stakes)
         }
 
         // Updates the `selections` map for the juror and the lock amount.
@@ -1475,7 +1471,7 @@ mod pallet {
             selections: &mut BTreeMap<T::AccountId, SelectionValueOf<T>>,
             court_participant: &T::AccountId,
             sel_add: SelectionAdd<AccountIdOf<T>, BalanceOf<T>>,
-        ) {
+        ) -> DispatchResult {
             if let Some(SelectionValue { weight, slashable, delegated_stakes }) =
                 selections.get_mut(court_participant)
             {
@@ -1490,7 +1486,7 @@ mod pallet {
                             delegated_stakes.clone(),
                             &delegated_juror,
                             lock,
-                        );
+                        )?;
                     }
                     SelectionAdd::DelegationWeight => {
                         *weight = weight.saturating_add(1);
@@ -1513,7 +1509,7 @@ mod pallet {
                             DelegatedStakesOf::<T>::default(),
                             &delegated_juror,
                             lock,
-                        );
+                        )?;
                         selections.insert(
                             court_participant.clone(),
                             SelectionValue { weight: 0, slashable: lock, delegated_stakes },
@@ -1531,10 +1527,14 @@ mod pallet {
                     }
                 };
             }
+
+            Ok(())
         }
 
         /// Return one delegated juror out of the delegations randomly.
-        fn get_valid_delegated_juror(delegations: &[T::AccountId]) -> Option<T::AccountId> {
+        fn get_valid_delegated_juror(
+            delegations: &[T::AccountId],
+        ) -> Result<Option<T::AccountId>, SelectionError> {
             let mut rng = Self::rng();
             let pool: CourtPoolOf<T> = CourtPool::<T>::get();
             let mut valid_delegated_jurors = Vec::new();
@@ -1545,15 +1545,27 @@ mod pallet {
                         // skip if delegated juror is delegator herself
                         continue;
                     }
-                    if Self::get_pool_item(&pool, delegated_juror_info.stake, delegated_juror)
-                        .is_some()
-                    {
+                    let pool_item =
+                        Self::get_pool_item(&pool, delegated_juror_info.stake, delegated_juror)
+                            .map_err(|err| {
+                                debug_assert!(
+                                    err == Error::<T>::Unexpected(
+                                        UnexpectedError::BinarySearchByKeyFailed
+                                    )
+                                    .into(),
+                                    "At the point of writing this, this was the only expected \
+                                     error."
+                                );
+                                SelectionError::BinarySearchByKeyFailed
+                            })?;
+
+                    if pool_item.is_some() {
                         valid_delegated_jurors.push(delegated_juror.clone());
                     }
                 }
             }
 
-            valid_delegated_jurors.choose(&mut rng).cloned()
+            Ok(valid_delegated_jurors.choose(&mut rng).cloned())
         }
 
         /// Add a juror or delegator with the provided `lock_added` to the `selections` map.
@@ -1566,23 +1578,55 @@ mod pallet {
                 .and_then(|p_info| p_info.delegations);
             match delegations_opt {
                 Some(delegations) => {
-                    let delegated_juror = Self::get_valid_delegated_juror(delegations.as_slice())
+                    let delegated_juror = Self::get_valid_delegated_juror(delegations.as_slice())?
                         .ok_or(SelectionError::NoValidDelegatedJuror)?;
-
                     // delegated juror gets the vote weight
                     let sel_add = SelectionAdd::DelegationWeight;
-                    Self::update_selections(selections, &delegated_juror, sel_add);
+                    Self::update_selections(selections, &delegated_juror, sel_add).map_err(
+                        |err| {
+                            debug_assert!(
+                                err == Error::<T>::Unexpected(
+                                    UnexpectedError::BinarySearchByKeyFailed
+                                )
+                                .into(),
+                                "At the point of writing this, this was the only expected error."
+                            );
+                            SelectionError::BinarySearchByKeyFailed
+                        },
+                    )?;
 
                     let sel_add = SelectionAdd::DelegationStake {
                         delegated_juror: delegated_juror.clone(),
                         lock: lock_added,
                     };
                     // delegator risks his stake (to delegated juror), but gets no vote weight
-                    Self::update_selections(selections, court_participant, sel_add);
+                    Self::update_selections(selections, court_participant, sel_add).map_err(
+                        |err| {
+                            debug_assert!(
+                                err == Error::<T>::Unexpected(
+                                    UnexpectedError::BinarySearchByKeyFailed
+                                )
+                                .into(),
+                                "At the point of writing this, this was the only expected error."
+                            );
+                            SelectionError::BinarySearchByKeyFailed
+                        },
+                    )?
                 }
                 None => {
                     let sel_add = SelectionAdd::SelfStake { lock: lock_added };
-                    Self::update_selections(selections, court_participant, sel_add);
+                    Self::update_selections(selections, court_participant, sel_add).map_err(
+                        |err| {
+                            debug_assert!(
+                                err == Error::<T>::Unexpected(
+                                    UnexpectedError::BinarySearchByKeyFailed
+                                )
+                                .into(),
+                                "At the point of writing this, this was the only expected error."
+                            );
+                            SelectionError::BinarySearchByKeyFailed
+                        },
+                    )?;
                 }
             }
 
@@ -1597,7 +1641,7 @@ mod pallet {
             pool: &mut CourtPoolOf<T>,
             random_section_ends: BTreeSet<u128>,
             cumulative_section_ends: Vec<(u128, bool)>,
-        ) -> BTreeMap<T::AccountId, SelectionValueOf<T>> {
+        ) -> Result<BTreeMap<T::AccountId, SelectionValueOf<T>>, DispatchError> {
             debug_assert!(pool.len() == cumulative_section_ends.len());
             debug_assert!({
                 let prev = cumulative_section_ends.clone();
@@ -1637,6 +1681,12 @@ mod pallet {
                             // if the juror fails to vote or reveal or gets denounced
                             invalid_juror_indices.push(range_index);
                         }
+                        Err(SelectionError::BinarySearchByKeyFailed) => {
+                            return Err(Error::<T>::Unexpected(
+                                UnexpectedError::BinarySearchByKeyFailed,
+                            )
+                            .into());
+                        }
                     }
 
                     Self::add_active_lock(&pool_item.court_participant, lock_added);
@@ -1650,7 +1700,7 @@ mod pallet {
                 pool.remove(i);
             }
 
-            selections
+            Ok(selections)
         }
 
         // Converts the `selections` map into a vector of `Draw` structs.
@@ -1733,7 +1783,7 @@ mod pallet {
             let random_section_ends =
                 Self::get_n_random_section_ends(draw_weight, total_unconsumed);
             let selections =
-                Self::get_selections(&mut pool, random_section_ends, cumulative_section_ends);
+                Self::get_selections(&mut pool, random_section_ends, cumulative_section_ends)?;
             <CourtPool<T>>::put(pool);
 
             Ok(Self::convert_selections_to_draws(selections))
@@ -1808,19 +1858,18 @@ mod pallet {
             pool: &'a [CourtPoolItemOf<T>],
             stake: BalanceOf<T>,
             court_participant: &T::AccountId,
-        ) -> Option<(usize, &'a CourtPoolItemOf<T>)> {
+        ) -> Result<Option<(usize, &'a CourtPoolItemOf<T>)>, DispatchError> {
             if let Ok(i) = pool.binary_search_by_key(&(stake, court_participant), |pool_item| {
                 (pool_item.stake, &pool_item.court_participant)
             }) {
-                if let Some(pool_item) = pool.get(i) {
-                    return Some((i, pool_item));
-                } else {
-                    debug_assert!(false, "Binary search should have found a valid index!");
-                }
+                let pool_item = pool
+                    .get(i)
+                    .ok_or(Error::<T>::Unexpected(UnexpectedError::BinarySearchByKeyFailed))?;
+                return Ok(Some((i, pool_item)));
             }
             // this None case can happen whenever the court participant decided to leave the court
             // or was kicked out of the court pool because of the lowest stake
-            None
+            Ok(None)
         }
 
         // Returns OK if the market is in a valid state to be appealed.
