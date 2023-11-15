@@ -877,13 +877,6 @@ mod tests {
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
-    ///                                     (3, _1, _2, _23, 0)
-    ///                                       /               \
-    ///                       (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
-    ///                           /         \                          /         \
-    ///          (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
-    ///              /       \                   /       
-    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
     #[test_case(false)]
     #[test_case(true)]
     fn exit_root(withdraw_all: bool) {
@@ -1046,6 +1039,30 @@ mod tests {
 
         assert_eq!(tree.withdraw_fees(&6).unwrap(), 88_000_000_000); // 1 (fees) + 7.8 (lazy)
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    ///                                     (3, _1, _2, _23, 0)
+    ///                                       /               \
+    ///                       (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
+    ///                           /         \                          /         \
+    ///          (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
+    ///              /       \                   /       
+    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
+    #[test]
+    fn shares_of_works() {
+        let tree = create_test_tree();
+        assert_eq!(tree.shares_of(&3).unwrap(), _1);
+        assert_eq!(tree.shares_of(&9).unwrap(), _3);
+        assert_eq!(tree.shares_of(&5).unwrap(), _3);
+        assert_eq!(tree.shares_of(&7).unwrap(), _1);
+        assert_eq!(tree.shares_of(&6).unwrap(), _12);
+        assert_eq!(tree.shares_of(&8).unwrap(), _4);
+    }
+
+    #[test]
+    fn total_shares() {
+        let tree = create_test_tree();
+        assert_eq!(tree.total_shares().unwrap(), _24);
     }
 
     // TODO withdraw fails if there are any fees on the path to the node.
