@@ -280,7 +280,6 @@ where
             .stake
             .checked_sub(&stake)
             .ok_or(LiquidityTreeError::InsufficientStake.into_dispatch::<T>())?;
-        println!("{:?}", node.stake);
         if node.stake == Zero::zero() {
             node.account = None;
             self.abandoned_nodes
@@ -643,6 +642,8 @@ mod tests {
     ///          (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
     ///              /       \                   /       
     /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
+    ///
+    /// This tree is used in all tests, but will sometime have to be modified.
     fn create_test_tree() -> LiquidityTreeOf<Runtime> {
         LiquidityTreeOf::<Runtime> {
             nodes: vec![
@@ -962,6 +963,33 @@ mod tests {
         }
 
         tree.exit(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn deposit_fees_works_root() {
+        let mut tree = create_test_tree();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        let amount = _12;
+        nodes[0].lazy_fees += amount;
+        tree.deposit_fees(amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn deposit_fees_works_no_root() {
+        let mut tree = create_test_tree();
+        tree.nodes[0].account = None;
+        tree.nodes[1].stake = Zero::zero();
+        tree.nodes[2].fees = Zero::zero();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        let amount = _12;
+        nodes[0].lazy_fees += amount;
+        tree.deposit_fees(amount).unwrap();
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
