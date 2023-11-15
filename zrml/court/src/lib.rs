@@ -977,10 +977,8 @@ mod pallet {
             // used for benchmarking, juror pool is queried inside `select_participants`
             let pool_len = <CourtPool<T>>::decode_len().unwrap_or(0) as u32;
 
-            let mut new_round_ends = None;
-            let mut ids_len_1 = 0u32;
             // if appeal_number == MaxAppeals, then don't start a new appeal round
-            if appeal_number < T::MaxAppeals::get() as usize {
+            let (new_round_ends, ids_len_1) = if appeal_number < T::MaxAppeals::get() as usize {
                 let new_draws = Self::select_participants(appeal_number)?;
                 let request_block = <RequestBlock<T>>::get();
                 debug_assert!(request_block >= now, "Request block must be greater than now.");
@@ -992,15 +990,20 @@ mod pallet {
                 };
                 // sets round ends one after the other from now
                 court.update_round(round_timing);
-                new_round_ends = Some(court.round_ends.clone());
+                let new_round_ends = Some(court.round_ends.clone());
                 let new_resolve_at = court.round_ends.appeal;
                 debug_assert!(new_resolve_at != last_resolve_at);
-                if let Some(market_id) = <CourtIdToMarketId<T>>::get(court_id) {
-                    ids_len_1 = T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?;
-                }
+                let ids_len_1 = if let Some(market_id) = <CourtIdToMarketId<T>>::get(court_id) {
+                    T::DisputeResolution::add_auto_resolve(&market_id, new_resolve_at)?
+                } else {
+                    0u32
+                };
                 <SelectedDraws<T>>::insert(court_id, new_draws);
                 Self::unlock_participants_from_last_draw(court_id, old_draws);
-            }
+                (new_round_ends, ids_len_1)
+            } else {
+                (None, 0u32)
+            };
 
             let mut ids_len_0 = 0u32;
             if let Some(market_id) = <CourtIdToMarketId<T>>::get(court_id) {
