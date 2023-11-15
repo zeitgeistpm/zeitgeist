@@ -280,6 +280,7 @@ where
             .stake
             .checked_sub(&stake)
             .ok_or(LiquidityTreeError::InsufficientStake.into_dispatch::<T>())?;
+        println!("{:?}", node.stake);
         if node.stake == Zero::zero() {
             node.account = None;
             self.abandoned_nodes
@@ -631,6 +632,7 @@ mod tests {
     use crate::{
         assert_liquidity_tree_state, consts::*, create_b_tree_map, mock::Runtime, LiquidityTreeOf,
     };
+    use test_case::test_case;
 
     /// Create the following liquidity tree:
     ///
@@ -873,4 +875,151 @@ mod tests {
         tree.join(&account, amount).unwrap();
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
+
+    ///                                     (3, _1, _2, _23, 0)
+    ///                                       /               \
+    ///                       (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
+    ///                           /         \                          /         \
+    ///          (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
+    ///              /       \                   /       
+    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
+    #[test_case(false)]
+    #[test_case(true)]
+    fn exit_root(withdraw_all: bool) {
+        let mut tree = create_test_tree();
+        // Remove lazy fees on the path to the node (and actual fees from the node).
+        tree.nodes[0].lazy_fees = Zero::zero();
+        tree.nodes[0].fees = Zero::zero();
+
+        let mut nodes = tree.nodes.clone().into_inner();
+        let amount = if withdraw_all { _1 } else { _1_2 };
+        let account = 3;
+        nodes[0].stake -= amount;
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        if withdraw_all {
+            nodes[0].account = None;
+            account_to_index.remove(&account);
+            abandoned_nodes.push(0);
+        }
+
+        tree.exit(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test_case(false)]
+    #[test_case(true)]
+    fn exit_middle(withdraw_all: bool) {
+        let mut tree = create_test_tree();
+        // Remove lazy fees on the path to the node (and actual fees from the node).
+        tree.nodes[0].lazy_fees = Zero::zero();
+        tree.nodes[1].lazy_fees = Zero::zero();
+        tree.nodes[3].lazy_fees = Zero::zero();
+        tree.nodes[3].fees = Zero::zero();
+
+        let mut nodes = tree.nodes.clone().into_inner();
+        let amount = if withdraw_all { _3 } else { _1 };
+        let account = 5;
+        nodes[0].descendant_stake -= amount;
+        nodes[1].descendant_stake -= amount;
+        nodes[3].stake -= amount;
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        if withdraw_all {
+            nodes[3].account = None;
+            account_to_index.remove(&account);
+            abandoned_nodes.push(3);
+        }
+
+        tree.exit(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test_case(false)]
+    #[test_case(true)]
+    fn exit_leaf(withdraw_all: bool) {
+        let mut tree = create_test_tree();
+        // Remove lazy fees on the path to the node (and actual fees from the node).
+        tree.nodes[0].lazy_fees = Zero::zero();
+        tree.nodes[1].lazy_fees = Zero::zero();
+        tree.nodes[3].lazy_fees = Zero::zero();
+        tree.nodes[7].lazy_fees = Zero::zero();
+        tree.nodes[7].fees = Zero::zero();
+
+        let mut nodes = tree.nodes.clone().into_inner();
+        let amount = if withdraw_all { _12 } else { _1 };
+        let account = 6;
+        nodes[0].descendant_stake -= amount;
+        nodes[1].descendant_stake -= amount;
+        nodes[3].descendant_stake -= amount;
+        nodes[7].stake -= amount;
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        if withdraw_all {
+            nodes[7].account = None;
+            account_to_index.remove(&account);
+            abandoned_nodes.push(7);
+        }
+
+        tree.exit(&account, amount).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn withdraw_fees_works_root() {
+        let mut tree = create_test_tree();
+        tree.nodes[0].lazy_fees = _36;
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+
+        // Distribute lazy fees of node at index 0.
+        nodes[0].fees = Zero::zero();
+        nodes[0].lazy_fees = Zero::zero();
+        nodes[1].lazy_fees += 300_000_000_000; // 30
+        nodes[2].lazy_fees += 45_000_000_000; // 4.5
+
+        assert_eq!(tree.withdraw_fees(&3).unwrap(), 35_000_000_000); // 2 (fees) + 1.5 (lazy)
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn withdraw_fees_works_middle() {
+        let mut tree = create_test_tree();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+
+        // Distribute lazy fees of node at index 1, 3 and 7 (same as join_reassigned_works_middle).
+        nodes[1].lazy_fees = Zero::zero();
+        nodes[3].fees = Zero::zero();
+        nodes[3].lazy_fees = Zero::zero();
+        nodes[4].lazy_fees += _1;
+        nodes[7].lazy_fees += 48_000_000_000; // 4.8
+
+        assert_eq!(tree.withdraw_fees(&5).unwrap(), 22_000_000_000); // 1 (fees) + 1.2 (lazy)
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn withdraw_fees_works_leaf() {
+        let mut tree = create_test_tree();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account_to_index = tree.account_to_index.clone().into_inner();
+        let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+
+        // Distribute lazy fees of node at index 1, 3 and 7 (same as join_reassigned_works_middle).
+        nodes[1].lazy_fees = Zero::zero();
+        nodes[3].fees += 12_000_000_000; // 1.2
+        nodes[3].lazy_fees = Zero::zero();
+        nodes[4].lazy_fees += _1;
+        nodes[7].fees = Zero::zero();
+        nodes[7].lazy_fees = Zero::zero();
+
+        assert_eq!(tree.withdraw_fees(&6).unwrap(), 88_000_000_000); // 1 (fees) + 7.8 (lazy)
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    // TODO withdraw fails if there are any fees on the path to the node.
+    // TODO enforce minimum deposit
 }
