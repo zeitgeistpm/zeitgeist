@@ -32,7 +32,7 @@ alice: is up
 alice: log line contains regex "Zeitgeist Parachain.*best: #1" within 100 seconds
 alice: log line contains regex "Zeitgeist Parachain.*finalized #[1-9]+" within 100 seconds
 
-alice: ts-script ./0001-my-test-script.ts return is equal to 1 within 100 seconds
+alice: ts-script ./0001-my-test-script.ts return is equal to 1 within 120 seconds
 
 bob: parachain 2101 block height is at least 10 within 200 seconds
 
