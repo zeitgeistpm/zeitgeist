@@ -4,13 +4,10 @@
     "typescript": "^5.2.2"
   },
   "devDependencies": {
+    "@moonwall/cli": "^4.4.1",
     "@polkadot/api": "^10.10.1",
     "@polkadot/types": "^10.10.1",
-    "@types/chai": "^4.3.10",
-    "@types/mocha": "^10.0.4",
     "@types/node": "^20.9.0",
-    "chai": "^4.3.10",
-    "mocha": "^10.2.0",
     "ts-node": "^10.9.1"
   },
   "description": "Integration tests",
