@@ -344,9 +344,14 @@ where
     T: Config,
 {
     /// Propagate lazy fees from the tree's root to the node at `index`.
+    ///
+    /// This includes moving the part of the lazy fees of each node on the path to the node at
+    /// `index` to the node's fees.
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult;
 
     /// Propagate lazy fees from the node at `index` to its children.
+    ///
+    /// This includes moving the node's share of the lazy fees to the node's fees.
     fn propagate_fees(&mut self, index: u32) -> DispatchResult;
 
     /// Return the indices of the children of the node at `index`.
@@ -361,7 +366,7 @@ where
     /// Return a path from the tree's root to the node at `index`.
     ///
     /// The return value is a vector of the indices of the nodes of the path, starting with the
-    /// root.
+    /// root and including `index`.
     fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError>;
 
     /// Returns the next free index of the tree.
@@ -822,7 +827,7 @@ mod tests {
 
     #[test_case(false)]
     #[test_case(true)]
-    fn exit_root(withdraw_all: bool) {
+    fn exit_root_works(withdraw_all: bool) {
         let mut tree = utility::create_test_tree();
         // Remove lazy fees on the path to the node (and actual fees from the node).
         tree.nodes[0].lazy_fees = Zero::zero();
@@ -846,7 +851,7 @@ mod tests {
 
     #[test_case(false)]
     #[test_case(true)]
-    fn exit_middle(withdraw_all: bool) {
+    fn exit_middle_works(withdraw_all: bool) {
         let mut tree = utility::create_test_tree();
         // Remove lazy fees on the path to the node (and actual fees from the node).
         tree.nodes[0].lazy_fees = Zero::zero();
@@ -874,7 +879,7 @@ mod tests {
 
     #[test_case(false)]
     #[test_case(true)]
-    fn exit_leaf(withdraw_all: bool) {
+    fn exit_leaf_works(withdraw_all: bool) {
         let mut tree = utility::create_test_tree();
         // Remove lazy fees on the path to the node (and actual fees from the node).
         tree.nodes[0].lazy_fees = Zero::zero();
@@ -919,6 +924,53 @@ mod tests {
             tree.exit(&account, amount),
             LiquidityTreeError::InsufficientStake.into_dispatch::<Runtime>(),
         );
+    }
+
+    #[test]
+    fn exit_fails_on_unclaimed_fees_at_root() {
+        let mut tree = utility::create_test_tree();
+        // Clear unclaimed fees except for root.
+        tree.nodes[0].lazy_fees = _1;
+        tree.nodes[1].lazy_fees = Zero::zero();
+        tree.nodes[3].fees = Zero::zero();
+        tree.nodes[3].lazy_fees = Zero::zero();
+        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+    }
+    ///                                    (3, _1, _2, _23, 0)
+    ///                                      /               \
+    ///                      (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
+    ///                          /         \                          /         \
+    ///        (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
+    ///              /       \                   /       
+    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
+
+    #[test]
+    fn exit_fails_on_unclaimed_fees_on_middle_of_path() {
+        let mut tree = utility::create_test_tree();
+        // Clear unclaimed fees except for the middle node.
+        tree.nodes[3].fees = Zero::zero();
+        tree.nodes[3].lazy_fees = Zero::zero();
+        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+    }
+
+    #[test]
+    fn exit_fails_on_unclaimed_fees_at_last_node_due_to_lazy_fees() {
+        let mut tree = utility::create_test_tree();
+        // Clear unclaimed fees except for the last node.
+        tree.nodes[1].lazy_fees = Zero::zero();
+        // This ensures that the error is caused by propagated lazy fees sitting in the node.
+        tree.nodes[3].fees = Zero::zero();
+        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+    }
+
+    #[test]
+    fn exit_fails_on_unclaimed_fees_at_last_node_due_to_fees() {
+        let mut tree = utility::create_test_tree();
+        // Clear unclaimed fees except for the last node.
+        tree.nodes[1].lazy_fees = Zero::zero();
+        // This ensures that the error is caused by normal fees.
+        tree.nodes[3].lazy_fees = Zero::zero();
+        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
     }
 
     #[test]
@@ -1019,10 +1071,6 @@ mod tests {
         let tree = utility::create_test_tree();
         assert_eq!(tree.total_shares().unwrap(), _24);
     }
-
-    // TODO withdraw fails if there are any fees on the path to the node.
-    // TODO enforce minimum deposit
-    // TODO Add tree diagram to each test
 
     mod utility {
         use super::*;

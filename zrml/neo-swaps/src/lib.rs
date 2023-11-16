@@ -409,6 +409,7 @@ mod pallet {
             #[pallet::compact] pool_shares_amount_out: BalanceOf<T>,
             min_amounts_out: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
+            // TODO enforce minimum deposit
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(min_amounts_out.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
