@@ -200,6 +200,7 @@ where
 }
 
 /// Execution path info for `join` calls.
+#[derive(Debug, PartialEq)]
 pub enum BenchmarkInfo {
     /// The LP already owns a node in the tree.
     InPlace,
@@ -406,10 +407,10 @@ where
         F: FnOnce(&mut Node<T>) -> DispatchResult;
 
     /// Return the maximum allowed depth of the tree.
-    fn max_depth(&self) -> u32;
+    fn max_depth() -> u32;
 
     /// Return the maximum allowed amount of nodes in the tree.
-    fn max_node_count(&self) -> u32;
+    fn max_node_count() -> u32;
 }
 
 impl<T, U> LiquidityTreeHelper<T> for LiquidityTree<T, U>
@@ -505,7 +506,7 @@ where
     fn path_to_node(&self, mut index: u32) -> Result<Vec<u32>, DispatchError> {
         let mut path = Vec::new();
         let mut iterations = 0;
-        let max_iterations = self.max_depth().checked_add_res(&1)?;
+        let max_iterations = Self::max_depth().checked_add_res(&1)?;
         while let Some(parent_index) = self.parent_index(index) {
             if iterations == max_iterations {
                 return Err(LiquidityTreeError::MaxIterationsReached.into_dispatch::<T>());
@@ -522,7 +523,7 @@ where
     fn peek_next_free_node_index(&mut self) -> Result<NextNode, DispatchError> {
         if let Some(index) = self.abandoned_nodes.last() {
             Ok(NextNode::Abandoned(*index))
-        } else if self.node_count() < self.max_node_count() {
+        } else if self.node_count() < Self::max_node_count() {
             Ok(NextNode::Leaf)
         } else {
             Ok(NextNode::None)
@@ -587,12 +588,12 @@ where
     }
 
     /// Return the maximum allowed depth of the tree.
-    fn max_depth(&self) -> u32 {
+    fn max_depth() -> u32 {
         U::get()
     }
 
     /// Return the maximum allowed amount of nodes in the tree.
-    fn max_node_count(&self) -> u32 {
+    fn max_node_count() -> u32 {
         LiquidityTreeMaxNodes::<U>::get()
     }
 }
@@ -625,115 +626,28 @@ impl LiquidityTreeError {
     }
 }
 
+/// Most tests use the same pattern:
+///
+/// - Create a test tree. In some cases the test tree needs to be modified as part of the test
+///   setup.
+/// - Clone the contents of the tests tree and modify them to obtain the expected state of the tree
+///   after executing the test.
+/// - Run the test.
+/// - Verify state.
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        assert_liquidity_tree_state, consts::*, create_b_tree_map, mock::Runtime, LiquidityTreeOf,
+        assert_liquidity_tree_state, consts::*, create_b_tree_map, mock::Runtime, AccountIdOf,
+        LiquidityTreeOf,
     };
+    use alloc::collections::BTreeMap;
+    use frame_support::assert_err;
     use test_case::test_case;
-
-    /// Create the following liquidity tree:
-    ///
-    ///                                     (3, _1, _2, _23, 0)
-    ///                                       /               \
-    ///                       (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
-    ///                           /         \                          /         \
-    ///          (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
-    ///              /       \                   /       
-    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
-    ///
-    /// This tree is used in all tests, but will sometime have to be modified.
-    fn create_test_tree() -> LiquidityTreeOf<Runtime> {
-        LiquidityTreeOf::<Runtime> {
-            nodes: vec![
-                // Root
-                Node::<Runtime> {
-                    account: Some(3),
-                    stake: _1,
-                    fees: _2,
-                    descendant_stake: _23,
-                    lazy_fees: Zero::zero(),
-                },
-                // Depth 1
-                Node::<Runtime> {
-                    account: None,
-                    stake: Zero::zero(),
-                    fees: Zero::zero(),
-                    descendant_stake: _20,
-                    lazy_fees: _4,
-                },
-                Node::<Runtime> {
-                    account: Some(9),
-                    stake: _3,
-                    fees: _5,
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: Zero::zero(),
-                },
-                // Depth 2
-                Node::<Runtime> {
-                    account: Some(5),
-                    stake: _3,
-                    fees: _1,
-                    descendant_stake: _12,
-                    lazy_fees: _3,
-                },
-                Node::<Runtime> {
-                    account: Some(7),
-                    stake: _1,
-                    fees: _1,
-                    descendant_stake: _4,
-                    lazy_fees: _3,
-                },
-                Node::<Runtime> {
-                    account: None,
-                    stake: Zero::zero(),
-                    fees: Zero::zero(),
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: Zero::zero(),
-                },
-                Node::<Runtime> {
-                    account: None,
-                    stake: Zero::zero(),
-                    fees: Zero::zero(),
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: Zero::zero(),
-                },
-                // Depth 3
-                Node::<Runtime> {
-                    account: Some(6),
-                    stake: _12,
-                    fees: _1,
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: _3,
-                },
-                Node::<Runtime> {
-                    account: None,
-                    stake: Zero::zero(),
-                    fees: Zero::zero(),
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: Zero::zero(),
-                },
-                Node::<Runtime> {
-                    account: Some(8),
-                    stake: _4,
-                    fees: _1,
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: Zero::zero(),
-                },
-            ]
-            .try_into()
-            .unwrap(),
-            account_to_index: create_b_tree_map!({3 => 0, 9 => 2, 5 => 3, 7 => 4, 6 => 7, 8 => 9})
-                .try_into()
-                .unwrap(),
-            abandoned_nodes: vec![1, 5, 6, 8].try_into().unwrap(),
-        }
-    }
 
     #[test]
     fn join_in_place_works_root() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         tree.nodes[0].lazy_fees = _36;
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
@@ -751,7 +665,7 @@ mod tests {
 
     #[test]
     fn join_in_place_works_leaf() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
         let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
@@ -773,7 +687,7 @@ mod tests {
 
     #[test]
     fn join_in_place_works_middle() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
         let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
@@ -793,7 +707,7 @@ mod tests {
 
     #[test]
     fn join_reassigned_works_middle() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         // Manipulate which node is joined by changing the order of abandoned nodes.
         tree.abandoned_nodes[0] = 8;
         tree.abandoned_nodes[3] = 1;
@@ -820,7 +734,7 @@ mod tests {
 
     #[test]
     fn join_reassigned_works_root() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         // Store original test tree.
         let mut nodes = tree.nodes.clone().into_inner();
         // Manipulate test tree so that it looks like root was abandoned.
@@ -852,7 +766,7 @@ mod tests {
 
     #[test]
     fn join_reassigned_works_leaf() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account = 99;
         let amount = _3;
@@ -877,10 +791,39 @@ mod tests {
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
+    #[test]
+    fn join_in_place_works_if_tree_is_full() {
+        let mut tree = utility::create_full_tree();
+        // Remove one node.
+        tree.nodes[0].descendant_stake -= tree.nodes[2].stake;
+        tree.nodes[2].account = None;
+        tree.nodes[2].stake = Zero::zero();
+        tree.account_to_index.remove(&2);
+        tree.abandoned_nodes.try_push(2).unwrap();
+        let mut nodes = tree.nodes.clone().into_inner();
+        let account = 99;
+        let stake = 2;
+        nodes[2].account = Some(account);
+        nodes[2].stake = stake;
+        nodes[0].descendant_stake += stake;
+        let mut account_to_index = tree.account_to_index.clone().into_inner();
+        let mut abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
+        account_to_index.insert(account, 2);
+        abandoned_nodes.pop();
+        tree.join(&account, stake).unwrap();
+        assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
+    }
+
+    #[test]
+    fn join_new_fails_if_tree_is_full() {
+        let mut tree = utility::create_full_tree();
+        assert_err!(tree.join(&99, _1), LiquidityTreeError::TreeIsFull.into_dispatch::<Runtime>());
+    }
+
     #[test_case(false)]
     #[test_case(true)]
     fn exit_root(withdraw_all: bool) {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         // Remove lazy fees on the path to the node (and actual fees from the node).
         tree.nodes[0].lazy_fees = Zero::zero();
         tree.nodes[0].fees = Zero::zero();
@@ -904,7 +847,7 @@ mod tests {
     #[test_case(false)]
     #[test_case(true)]
     fn exit_middle(withdraw_all: bool) {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         // Remove lazy fees on the path to the node (and actual fees from the node).
         tree.nodes[0].lazy_fees = Zero::zero();
         tree.nodes[1].lazy_fees = Zero::zero();
@@ -932,7 +875,7 @@ mod tests {
     #[test_case(false)]
     #[test_case(true)]
     fn exit_leaf(withdraw_all: bool) {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         // Remove lazy fees on the path to the node (and actual fees from the node).
         tree.nodes[0].lazy_fees = Zero::zero();
         tree.nodes[1].lazy_fees = Zero::zero();
@@ -959,9 +902,28 @@ mod tests {
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
+    #[test_case(3, _1 + 1)]
+    #[test_case(9, _3 + 1)]
+    #[test_case(5, _3 + 1)]
+    #[test_case(7, _1 + 1)]
+    #[test_case(6, _12 + 1)]
+    #[test_case(8, _4 + 1)]
+    fn exit_fails_on_insufficient_stake(account: AccountIdOf<Runtime>, amount: BalanceOf<Runtime>) {
+        let mut tree = utility::create_test_tree();
+        // Clear unclaimed fees.
+        for node in tree.nodes.iter_mut() {
+            node.fees = Zero::zero();
+            node.lazy_fees = Zero::zero();
+        }
+        assert_err!(
+            tree.exit(&account, amount),
+            LiquidityTreeError::InsufficientStake.into_dispatch::<Runtime>(),
+        );
+    }
+
     #[test]
     fn deposit_fees_works_root() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
         let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
@@ -973,7 +935,7 @@ mod tests {
 
     #[test]
     fn deposit_fees_works_no_root() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         tree.nodes[0].account = None;
         tree.nodes[1].stake = Zero::zero();
         tree.nodes[2].fees = Zero::zero();
@@ -988,7 +950,7 @@ mod tests {
 
     #[test]
     fn withdraw_fees_works_root() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         tree.nodes[0].lazy_fees = _36;
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
@@ -1006,7 +968,7 @@ mod tests {
 
     #[test]
     fn withdraw_fees_works_middle() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
         let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
@@ -1024,7 +986,7 @@ mod tests {
 
     #[test]
     fn withdraw_fees_works_leaf() {
-        let mut tree = create_test_tree();
+        let mut tree = utility::create_test_tree();
         let mut nodes = tree.nodes.clone().into_inner();
         let account_to_index = tree.account_to_index.clone().into_inner();
         let abandoned_nodes = tree.abandoned_nodes.clone().into_inner();
@@ -1041,16 +1003,9 @@ mod tests {
         assert_liquidity_tree_state!(tree, nodes, account_to_index, abandoned_nodes);
     }
 
-    ///                                     (3, _1, _2, _23, 0)
-    ///                                       /               \
-    ///                       (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
-    ///                           /         \                          /         \
-    ///          (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
-    ///              /       \                   /       
-    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
     #[test]
     fn shares_of_works() {
-        let tree = create_test_tree();
+        let tree = utility::create_test_tree();
         assert_eq!(tree.shares_of(&3).unwrap(), _1);
         assert_eq!(tree.shares_of(&9).unwrap(), _3);
         assert_eq!(tree.shares_of(&5).unwrap(), _3);
@@ -1061,10 +1016,145 @@ mod tests {
 
     #[test]
     fn total_shares() {
-        let tree = create_test_tree();
+        let tree = utility::create_test_tree();
         assert_eq!(tree.total_shares().unwrap(), _24);
     }
 
     // TODO withdraw fails if there are any fees on the path to the node.
     // TODO enforce minimum deposit
+    // TODO Add tree diagram to each test
+
+    mod utility {
+        use super::*;
+
+        /// Create the following liquidity tree:
+        ///
+        ///                                    (3, _1, _2, _23, 0)
+        ///                                      /               \
+        ///                      (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
+        ///                          /         \                          /         \
+        ///        (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
+        ///              /       \                   /       
+        /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
+        ///
+        /// This tree is used in most tests, but will sometime have to be modified.
+        pub(super) fn create_test_tree() -> LiquidityTreeOf<Runtime> {
+            LiquidityTreeOf::<Runtime> {
+                nodes: vec![
+                    // Root
+                    Node::<Runtime> {
+                        account: Some(3),
+                        stake: _1,
+                        fees: _2,
+                        descendant_stake: _23,
+                        lazy_fees: Zero::zero(),
+                    },
+                    // Depth 1
+                    Node::<Runtime> {
+                        account: None,
+                        stake: Zero::zero(),
+                        fees: Zero::zero(),
+                        descendant_stake: _20,
+                        lazy_fees: _4,
+                    },
+                    Node::<Runtime> {
+                        account: Some(9),
+                        stake: _3,
+                        fees: _5,
+                        descendant_stake: Zero::zero(),
+                        lazy_fees: Zero::zero(),
+                    },
+                    // Depth 2
+                    Node::<Runtime> {
+                        account: Some(5),
+                        stake: _3,
+                        fees: _1,
+                        descendant_stake: _12,
+                        lazy_fees: _3,
+                    },
+                    Node::<Runtime> {
+                        account: Some(7),
+                        stake: _1,
+                        fees: _1,
+                        descendant_stake: _4,
+                        lazy_fees: _3,
+                    },
+                    Node::<Runtime> {
+                        account: None,
+                        stake: Zero::zero(),
+                        fees: Zero::zero(),
+                        descendant_stake: Zero::zero(),
+                        lazy_fees: Zero::zero(),
+                    },
+                    Node::<Runtime> {
+                        account: None,
+                        stake: Zero::zero(),
+                        fees: Zero::zero(),
+                        descendant_stake: Zero::zero(),
+                        lazy_fees: Zero::zero(),
+                    },
+                    // Depth 3
+                    Node::<Runtime> {
+                        account: Some(6),
+                        stake: _12,
+                        fees: _1,
+                        descendant_stake: Zero::zero(),
+                        lazy_fees: _3,
+                    },
+                    Node::<Runtime> {
+                        account: None,
+                        stake: Zero::zero(),
+                        fees: Zero::zero(),
+                        descendant_stake: Zero::zero(),
+                        lazy_fees: Zero::zero(),
+                    },
+                    Node::<Runtime> {
+                        account: Some(8),
+                        stake: _4,
+                        fees: _1,
+                        descendant_stake: Zero::zero(),
+                        lazy_fees: Zero::zero(),
+                    },
+                ]
+                .try_into()
+                .unwrap(),
+                account_to_index:
+                    create_b_tree_map!({3 => 0, 9 => 2, 5 => 3, 7 => 4, 6 => 7, 8 => 9})
+                        .try_into()
+                        .unwrap(),
+                abandoned_nodes: vec![1, 5, 6, 8].try_into().unwrap(),
+            }
+        }
+
+        /// Create a full tree. All nodes have the same stake of 1.
+        pub(super) fn create_full_tree() -> LiquidityTreeOf<Runtime> {
+            let max_depth = LiquidityTreeOf::<Runtime>::max_depth();
+            let node_count = LiquidityTreeOf::<Runtime>::max_node_count();
+            let nodes = (0..node_count)
+                .map(|a| Node::<Runtime>::new(a as u128, 1))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap();
+            let account_to_index = (0..node_count)
+                .map(|a| (a as u128, a))
+                .collect::<BTreeMap<_, _>>()
+                .try_into()
+                .unwrap();
+            let mut tree = LiquidityTreeOf::<Runtime> {
+                nodes,
+                account_to_index,
+                abandoned_nodes: vec![].try_into().unwrap(),
+            };
+            // Nodes have the wrong descendant stake at this point, so let's fix that.
+            for (index, node) in tree.nodes.iter_mut().enumerate() {
+                let exp = max_depth + 1 - log2(index as u32 + 1);
+                node.descendant_stake = 2u128.pow(exp) - 2;
+            }
+            tree
+        }
+
+        fn log2(x: u32) -> u32 {
+            std::mem::size_of::<u32>() as u32 * 8 - x.leading_zeros() - 1
+        }
+    }
 }

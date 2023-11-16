@@ -19,7 +19,7 @@
 #[macro_export]
 macro_rules! create_b_tree_map {
     ({ $($key:expr => $value:expr),* $(,)? } $(,)?) => {
-        [$(($key, $value),)*].iter().cloned().collect::<std::collections::BTreeMap<_, _>>()
+        [$(($key, $value),)*].iter().cloned().collect::<alloc::collections::BTreeMap<_, _>>()
     }
 }
 
