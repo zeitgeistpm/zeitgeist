@@ -6369,7 +6369,9 @@ fn close_trusted_market_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.dispute_mechanism, None);
 
-        run_to_block(end / 2);
+        let new_end = end / 2;
+        assert_ne!(new_end, end);
+        run_to_block(new_end);
 
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Active);
@@ -6384,6 +6386,7 @@ fn close_trusted_market_works() {
             market_id
         ));
         let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.period, MarketPeriod::Block(0..new_end));
         assert_eq!(market.status, MarketStatus::Closed);
     });
 }

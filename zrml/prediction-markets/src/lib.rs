@@ -1706,7 +1706,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.creator == *who, Error::<T>::CallerNotMarketCreator);
+            ensure!(market.creator == who, Error::<T>::CallerNotMarketCreator);
             ensure!(market.dispute_mechanism.is_none(), Error::<T>::MarketIsNotTrusted);
             Self::ensure_market_is_active(&market)?;
             let open_ids_len = Self::clear_auto_open(&market_id)?;
