@@ -345,13 +345,17 @@ where
 {
     /// Propagate lazy fees from the tree's root to the node at `index`.
     ///
-    /// This includes moving the part of the lazy fees of each node on the path to the node at
-    /// `index` to the node's fees.
+    /// Propagation includes moving the part of the lazy fees of each node on the path to the node
+    /// at `index` to the node's fees.
+    ///
+    /// Assuming correct state this function can only fail if there is no node at `index`.
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult;
 
     /// Propagate lazy fees from the node at `index` to its children.
     ///
-    /// This includes moving the node's share of the lazy fees to the node's fees.
+    /// Propagation includes moving the node's share of the lazy fees to the node's fees.
+    ///
+    /// Assuming correct state this function can only fail if there is no node at `index`.
     fn propagate_fees(&mut self, index: u32) -> DispatchResult;
 
     /// Return the indices of the children of the node at `index`.
@@ -936,13 +940,6 @@ mod tests {
         tree.nodes[3].lazy_fees = Zero::zero();
         assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
     }
-    ///                                    (3, _1, _2, _23, 0)
-    ///                                      /               \
-    ///                      (None, 0, 0, _20, _4)           (9, _3, _5, 0, 0)
-    ///                          /         \                          /         \
-    ///        (5, _3, _1, _12, _1)    (7, _1, _1, _4, _3)  (None, 0, 0, 0, 0)  (None, 0, 0, 0, 0)
-    ///              /       \                   /       
-    /// (6, _12, _1, 0, _3)  (None, 0, 0, 0, 0)  (8, _4, _1, 0, 0)
 
     #[test]
     fn exit_fails_on_unclaimed_fees_on_middle_of_path() {
