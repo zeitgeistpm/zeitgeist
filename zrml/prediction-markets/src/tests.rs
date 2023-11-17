@@ -6376,6 +6376,9 @@ fn close_trusted_market_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Active);
 
+        let auto_closes = MarketIdsPerCloseBlock::<Runtime>::get(end);
+        assert_eq!(auto_closes.first().cloned().unwrap(), market_id);
+
         assert_noop!(
             PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(BOB), market_id),
             Error::<Runtime>::CallerNotMarketCreator
@@ -6388,6 +6391,9 @@ fn close_trusted_market_works() {
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.period, MarketPeriod::Block(0..new_end));
         assert_eq!(market.status, MarketStatus::Closed);
+
+        let auto_closes = MarketIdsPerCloseBlock::<Runtime>::get(end);
+        assert_eq!(auto_closes.len(), 0);
     });
 }
 
