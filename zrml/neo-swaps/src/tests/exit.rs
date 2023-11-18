@@ -102,48 +102,77 @@ fn exit_works(
 
 // TODO Test that full exit doesn't kill the pool if there's more than one LP.
 
-#[test]
-fn exit_destroys_pool() {
+#[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_705])]
+#[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_929])]
+fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<BalanceOf<Runtime>>) {
     ExtBuilder::default().build().execute_with(|| {
-        let liquidity = _10;
+        let liquidity = _4;
+        let spot_prices = vec![_1_6, _5_6 + 1];
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
             MarketType::Scalar(0..=1),
             liquidity,
-            vec![_1_6, _5_6 + 1],
+            spot_prices.clone(),
             CENT,
         );
         MarketCommons::mutate_market(&market_id, |market| {
-            market.status = MarketStatus::Resolved;
+            market.status = market_status;
             Ok(())
         })
         .unwrap();
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let amounts_out = vec![
-            pool.reserve_of(&pool.assets()[0]).unwrap(),
-            pool.reserve_of(&pool.assets()[1]).unwrap(),
-        ];
-        let alice_before = [
-            AssetManager::free_balance(pool.assets()[0], &ALICE),
-            AssetManager::free_balance(pool.assets()[1], &ALICE),
-        ];
+        let pool_account = pool.account_id;
+        let outcomes = pool.assets();
+        let alice_balances = [0, 35_929_776_071];
+        assert_balances!(ALICE, outcomes, alice_balances);
+        let pool_balances = vec![40_000_000_000, 4_070_223_929];
+        assert_pool_status!(
+            market_id,
+            pool_balances,
+            spot_prices,
+            22_324_425_057,
+            create_b_tree_map!({ALICE => _4}),
+        );
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
+        // Pool doesn't exist anymore and exit fees are cleared.
         assert!(!Pools::<Runtime>::contains_key(market_id));
-        assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), 0);
-        assert_eq!(AssetManager::free_balance(pool.assets()[0], &pool.account_id), 0);
-        assert_eq!(AssetManager::free_balance(pool.assets()[1], &pool.account_id), 0);
-        assert_eq!(
-            AssetManager::free_balance(pool.assets()[0], &ALICE),
-            alice_before[0] + amounts_out[0]
-        );
-        assert_eq!(
-            AssetManager::free_balance(pool.assets()[1], &ALICE),
-            alice_before[1] + amounts_out[1]
-        );
+        assert_balances!(pool_account, outcomes, vec![0, 0]);
         System::assert_last_event(
             Event::PoolDestroyed { who: ALICE, market_id, amounts_out }.into(),
         );
+    });
+}
+
+#[test]
+fn removing_lp_does_not_destroy_pool() {
+    // Verify that removing an LP doesn't destroy a pool
+    ExtBuilder::default().build().execute_with(|| {
+        // TODO
+        let liquidity = _5;
+        let spot_prices = vec![_1_6, _5_6 + 1];
+        let swap_fee = CENT;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Scalar(0..=1),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+        // Add a second LP to create a more generic situation, bringing the total of shares to _10.
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, liquidity));
+        assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            liquidity
+        ));
+        assert_ok!(NeoSwaps::join(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            liquidity,
+            vec![u128::MAX, u128::MAX],
+        ));
     });
 }
 
