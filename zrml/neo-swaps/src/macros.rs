@@ -30,7 +30,8 @@ macro_rules! assert_liquidity_tree_state {
         $tree:expr,
         $expected_nodes:expr,
         $expected_account_to_index:expr,
-        $expected_abandoned_nodes:expr $(,)?
+        $expected_abandoned_nodes:expr
+        $(,)?
     ) => {
         let actual_nodes = $tree.nodes.clone().into_inner();
         let max_len = std::cmp::max($expected_nodes.len(), actual_nodes.len());
@@ -72,7 +73,14 @@ macro_rules! assert_liquidity_tree_state {
 #[cfg(test)]
 #[macro_export]
 macro_rules! assert_pool_status {
-    ($market_id:expr, $reserves:expr, $spot_prices:expr, $liquidity_parameter:expr $(,)?) => {
+    (
+        $market_id:expr,
+        $reserves:expr,
+        $spot_prices:expr,
+        $liquidity_parameter:expr,
+        $liquidity_shares:expr
+        $(,)?
+    ) => {
         let pool = Pools::<Runtime>::get($market_id).unwrap();
         assert_eq!(
             pool.reserves.values().cloned().collect::<Vec<_>>(),
@@ -84,11 +92,28 @@ macro_rules! assert_pool_status {
             .iter()
             .map(|&a| pool.calculate_spot_price(a).unwrap())
             .collect::<Vec<_>>();
-        assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_status: Spot price mismatch",);
+        assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_status: Spot price mismatch");
         let invariant = actual_spot_prices.iter().sum::<u128>();
         assert_eq!(
             pool.liquidity_parameter, $liquidity_parameter,
             "assert_pool_status: Liquidity parameter mismatch"
+        );
+        let actual_liquidity_shares = pool
+            .liquidity_shares_manager
+            .account_to_index
+            .keys()
+            .map(|&account| {
+                (
+                    account,
+                    pool.liquidity_shares_manager.shares_of(&account).expect(
+                        format!("assert_pool_status: No shares found for {:?}", account).as_str(),
+                    ),
+                )
+            })
+            .collect::<alloc::collections::BTreeMap<_, _>>();
+        assert_eq!(
+            actual_liquidity_shares, $liquidity_shares,
+            "assert_pool_status: Liquidity shares mismatch"
         );
         assert_approx!(invariant, _1, 1);
     };
@@ -97,7 +122,7 @@ macro_rules! assert_pool_status {
 #[cfg(test)]
 #[macro_export]
 macro_rules! assert_balances {
-    ($account:expr, $assets:expr, $balances:expr) => {
+    ($account:expr, $assets:expr, $balances:expr $(,)?) => {
         assert_eq!(
             $assets.len(),
             $balances.len(),

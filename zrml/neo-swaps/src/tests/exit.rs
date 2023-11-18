@@ -62,7 +62,13 @@ fn exit_works(
         let alice_balances = [0, 44_912_220_089];
         assert_balances!(ALICE, outcomes, alice_balances);
         let pool_balances = vec![100_000_000_000, 10_175_559_822];
-        assert_pool_status!(market_id, pool_balances, spot_prices, 55_811_062_642);
+        assert_pool_status!(
+            market_id,
+            pool_balances,
+            spot_prices,
+            55_811_062_642,
+            create_b_tree_map!({ALICE => _5, BOB => _5})
+        );
         let pool_shares_amount = _4; // Remove 40% to the pool.
         assert_ok!(NeoSwaps::exit(
             RuntimeOrigin::signed(ALICE),
@@ -75,8 +81,13 @@ fn exit_works(
         let new_alice_balances =
             alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
         assert_balances!(ALICE, outcomes, new_alice_balances);
-        assert_pool_status!(market_id, new_pool_balances, spot_prices, new_liquidity_parameter);
-        // TODO Assert that Alice has actually lost the pool shares by extending assert_pool_status!
+        assert_pool_status!(
+            market_id,
+            new_pool_balances,
+            spot_prices,
+            new_liquidity_parameter,
+            create_b_tree_map!({ALICE => _1, BOB => _5})
+        );
         System::assert_last_event(
             Event::ExitExecuted {
                 who: ALICE,
