@@ -66,7 +66,7 @@ fn exit_works(
             pool_balances,
             spot_prices,
             55_811_062_642,
-            create_b_tree_map!({ALICE => _5, BOB => _5})
+            create_b_tree_map!({ ALICE => _5, BOB => _5 })
         );
         let pool_shares_amount = _4; // Remove 40% to the pool.
         assert_ok!(NeoSwaps::exit(
@@ -85,7 +85,7 @@ fn exit_works(
             new_pool_balances,
             spot_prices,
             new_liquidity_parameter,
-            create_b_tree_map!({ALICE => _1, BOB => _5})
+            create_b_tree_map!({ ALICE => _1, BOB => _5 })
         );
         System::assert_last_event(
             Event::ExitExecuted {
@@ -132,7 +132,7 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
             pool_balances,
             spot_prices,
             22_324_425_057,
-            create_b_tree_map!({ALICE => _4}),
+            create_b_tree_map!({ ALICE => _4 }),
         );
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
         let new_alice_balances =
@@ -148,8 +148,7 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
 }
 
 #[test]
-fn removing_lp_does_not_destroy_pool() {
-    // Verify that removing an LP doesn't destroy a pool
+fn removing_second_to_last_lp_does_not_destroy_pool_and_removes_node_from_liquidity_tree() {
     ExtBuilder::default().build().execute_with(|| {
         // TODO
         let liquidity = _5;
@@ -163,7 +162,7 @@ fn removing_lp_does_not_destroy_pool() {
             spot_prices.clone(),
             swap_fee,
         );
-        // Add a second LP to create a more generic situation, bringing the total of shares to _10.
+        // Add a second LP, bringing the total of shares to _10.
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, liquidity));
         assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
             RuntimeOrigin::signed(BOB),
@@ -176,6 +175,21 @@ fn removing_lp_does_not_destroy_pool() {
             liquidity,
             vec![u128::MAX, u128::MAX],
         ));
+        assert_pool_status!(
+            market_id,
+            [100_000_000_000, 10_175_559_822],
+            spot_prices,
+            55_811_062_642,
+            create_b_tree_map!({ ALICE => _5, BOB => _5 }),
+        );
+        assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(BOB), market_id, liquidity, vec![0, 0]));
+        assert_pool_status!(
+            market_id,
+            [50_050_000_000, 5_092_867_691],
+            spot_prices,
+            27_933_436_852,
+            create_b_tree_map!({ ALICE => _5 }),
+        );
     });
 }
 
@@ -296,7 +310,7 @@ fn exit_fails_on_outstanding_fees() {
             .as_mut()
             .unwrap()
             .liquidity_shares_manager
-            .deposit_fees(1)));
+            .deposit_fees(_10)));
         assert_noop!(
             NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _1, vec![0, 0]),
             LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>(),

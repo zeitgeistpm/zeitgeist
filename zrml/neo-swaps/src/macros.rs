@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+// TODO Document all these macros
+
 #[cfg(test)]
 #[macro_export]
 macro_rules! create_b_tree_map {
