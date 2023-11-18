@@ -33,6 +33,11 @@ fn exit_works() {
             spot_prices.clone(),
             swap_fee,
         );
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.status = MarketStatus::Resolved;
+            Ok(())
+        })
+        .unwrap();
         let pool_shares_amount = _4; // Remove 40% to the pool.
         let pool_before = Pools::<Runtime>::get(market_id).unwrap();
         let alice_outcomes_before = [
@@ -97,6 +102,11 @@ fn exit_destroys_pool() {
             vec![_1_6, _5_6 + 1],
             CENT,
         );
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.status = MarketStatus::Resolved;
+            Ok(())
+        })
+        .unwrap();
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let amounts_out = vec![
             pool.reserve_of(&pool.assets()[0]).unwrap(),

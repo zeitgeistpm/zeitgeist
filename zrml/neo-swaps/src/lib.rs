@@ -72,6 +72,7 @@ mod pallet {
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     // These should not be config parameters to avoid misconfigurations.
+    pub(crate) const EXIT_FEE: u128 = CENT / 10;
     pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
     pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
@@ -382,7 +383,9 @@ mod pallet {
         /// batch transaction is very useful here.
         ///
         /// If the LP withdraws all pool shares that exist, then the pool is afterwards destroyed. A
-        /// new pool can be deployed at any time, provided that the market is still open.
+        /// new pool can be deployed at any time, provided that the market is still open. If there
+        /// are funds left in the pool account (this can happen due to exit fees), the remaining
+        /// funds are destroyed.
         ///
         /// The LP is not allowed to leave a positive but small amount liquidity in the pool. If the
         /// liquidity parameter drops below a certain threshold, the transaction will fail. The only
@@ -670,30 +673,52 @@ mod pallet {
             min_amounts_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let _ = T::MarketCommons::market(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             Pools::<T>::try_mutate_exists(market_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
+                // TODO Abstract this entire calculation into a function of the pool.
                 let ratio =
                     pool_shares_amount.bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
                 let mut amounts_out = vec![];
                 for (&asset, &min_amount_out) in pool.assets().iter().zip(min_amounts_out.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
                     let amount_out = ratio.bmul_floor(balance_in_pool)?;
-                    amounts_out.push(amount_out);
-                    ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
-                    T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
+                    let amount_out_minus_exit_fees = if market.status == MarketStatus::Active {
+                        amount_out
+                            .checked_sub_res(&amount_out.bmul_ceil(EXIT_FEE.saturated_into())?)?
+                    } else {
+                        amount_out
+                    };
+                    amounts_out.push(amount_out_minus_exit_fees);
+                    ensure!(
+                        amount_out_minus_exit_fees >= min_amount_out,
+                        Error::<T>::AmountOutBelowMin,
+                    );
+                    T::MultiCurrency::transfer(
+                        asset,
+                        &pool.account_id,
+                        &who,
+                        amount_out_minus_exit_fees,
+                    )?;
                 }
                 for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter()) {
                     *balance = balance.checked_sub_res(amount_out)?;
                 }
                 pool.liquidity_shares_manager.exit(&who, pool_shares_amount)?;
                 if pool.liquidity_shares_manager.total_shares()? == Zero::zero() {
+                    let withdraw_remaining = |&asset| -> DispatchResult {
+                        let remaining = T::MultiCurrency::free_balance(asset, &pool.account_id);
+                        T::MultiCurrency::withdraw(asset, &pool.account_id, remaining)?;
+                        Ok(())
+                    };
                     // FIXME We will withdraw all remaining funds (the "buffer"). This is an ugly
-                    // hack and system should offer the option to whitelist accounts.
-                    let remaining =
-                        T::MultiCurrency::free_balance(pool.collateral, &pool.account_id);
-                    T::MultiCurrency::withdraw(pool.collateral, &pool.account_id, remaining)?;
+                    // hack and frame_system should offer the option to whitelist accounts.
+                    withdraw_remaining(&pool.collateral)?;
+                    // Clear left-over tokens. There naturally occur in the form of exit fees.
+                    for asset in pool.assets().iter() {
+                        withdraw_remaining(asset)?;
+                    }
                     *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
