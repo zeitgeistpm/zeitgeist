@@ -86,7 +86,6 @@ fn create_market_and_deploy_pool(
         market_id,
         amount,
     ));
-    println!("{:?}", AssetManager::free_balance(base_asset, &ALICE));
     assert_ok!(NeoSwaps::deploy_pool(
         RuntimeOrigin::signed(ALICE),
         market_id,

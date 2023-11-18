@@ -47,18 +47,17 @@ macro_rules! assert_liquidity_tree_state {
                         eprintln!("    Expected node: {:?}", exp);
                         eprintln!("    Actual node:   {:?}", act);
                     }
-                },
+                }
                 (None, Some(act)) => {
                     error = true;
                     eprintln!("assert_liquidity_tree_state: Extra node at index {}", index);
                     eprintln!("    {:?}", act);
-                },
+                }
                 (Some(exp), None) => {
                     error = true;
                     eprintln!("assert_liquidity_tree_state: Missing node at index {}", index);
-                    eprintln!("    
-                    {:?}", exp);
-                },
+                    eprintln!("    {:?}", exp);
+                }
                 (None, None) => break,
             }
         }
@@ -67,5 +66,45 @@ macro_rules! assert_liquidity_tree_state {
         }
         assert_eq!($expected_account_to_index, $tree.account_to_index.clone().into_inner());
         assert_eq!($expected_abandoned_nodes, $tree.abandoned_nodes.clone().into_inner());
+    };
+}
+
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_pool_status {
+    ($market_id:expr, $reserves:expr, $spot_prices:expr, $liquidity_parameter:expr $(,)?) => {
+        let pool = Pools::<Runtime>::get($market_id).unwrap();
+        assert_eq!(pool.reserves.values().cloned().collect::<Vec<_>>(), $reserves);
+        assert_eq!(
+            pool.assets()
+                .iter()
+                .map(|&a| pool.calculate_spot_price(a).unwrap())
+                .collect::<Vec<_>>(),
+            $spot_prices,
+        );
+        let invariant = $spot_prices.iter().sum::<u128>();
+        assert_approx!(invariant, _1, 1);
+        assert_eq!(pool.liquidity_parameter, $liquidity_parameter);
+    };
+}
+
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_balances {
+    ($account:expr, $assets:expr, $balances:expr) => {
+        assert_eq!(
+            $assets.len(),
+            $balances.len(),
+            "assert_balances: Assets and balances length mismatch"
+        );
+
+        for (&asset, &expected_balance) in $assets.iter().zip($balances.iter()) {
+            let actual_balance = AssetManager::free_balance(asset, &$account);
+            assert_eq!(
+                actual_balance, expected_balance,
+                "assert_balances: Balance mismatch for asset {:?}:\nExpected: {}\nActual:  {}",
+                asset, expected_balance, actual_balance
+            );
+        }
     };
 }

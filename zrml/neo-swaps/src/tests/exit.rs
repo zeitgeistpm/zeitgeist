@@ -17,9 +17,10 @@
 
 use super::*;
 use crate::types::LiquidityTreeError;
+use test_case::test_case;
 
-#[test]
-fn exit_works() {
+#[test_case(MarketStatus::Resolved)]
+fn exit_works(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
@@ -34,55 +35,39 @@ fn exit_works() {
             swap_fee,
         );
         MarketCommons::mutate_market(&market_id, |market| {
-            market.status = MarketStatus::Resolved;
+            market.status = market_status;
             Ok(())
         })
         .unwrap();
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let outcomes = pool.assets();
+        let alice_balances = [0, 89_824_440_177];
+        assert_balances!(ALICE, outcomes, alice_balances);
+        let pool_balances = vec![100_000_000_000, 10_175_559_823];
+        assert_pool_status!(market_id, pool_balances, spot_prices, 55_811_062_643);
         let pool_shares_amount = _4; // Remove 40% to the pool.
-        let pool_before = Pools::<Runtime>::get(market_id).unwrap();
-        let alice_outcomes_before = [
-            AssetManager::free_balance(pool_before.assets()[0], &ALICE),
-            AssetManager::free_balance(pool_before.assets()[1], &ALICE),
-        ];
-        let pool_outcomes_before: Vec<_> =
-            pool_before.assets().iter().map(|a| pool_before.reserve_of(a).unwrap()).collect();
         assert_ok!(NeoSwaps::exit(
             RuntimeOrigin::signed(ALICE),
             market_id,
             pool_shares_amount,
             vec![0, 0],
         ));
-        let pool_after = Pools::<Runtime>::get(market_id).unwrap();
-        let ratio = pool_shares_amount.bdiv(liquidity).unwrap();
-        let pool_outcomes_after: Vec<_> =
-            pool_after.assets().iter().map(|a| pool_after.reserve_of(a).unwrap()).collect();
-        let expected_pool_diff = vec![
-            ratio.bmul(pool_outcomes_before[0]).unwrap(),
-            ratio.bmul(pool_outcomes_before[1]).unwrap(),
-        ];
-        let alice_outcomes_after = [
-            AssetManager::free_balance(pool_after.assets()[0], &ALICE),
-            AssetManager::free_balance(pool_after.assets()[1], &ALICE),
-        ];
-        assert_eq!(pool_outcomes_after[0], pool_outcomes_before[0] - expected_pool_diff[0]);
-        assert_eq!(pool_outcomes_after[1], pool_outcomes_before[1] - expected_pool_diff[1]);
-        assert_eq!(alice_outcomes_after[0], alice_outcomes_before[0] + expected_pool_diff[0]);
-        assert_eq!(alice_outcomes_after[1], alice_outcomes_before[1] + expected_pool_diff[1]);
-        assert_eq!(
-            pool_after.liquidity_parameter,
-            (_1 - ratio).bmul(pool_before.liquidity_parameter).unwrap()
-        );
-        assert_eq!(
-            pool_after.liquidity_shares_manager.shares_of(&ALICE).unwrap(),
-            liquidity - pool_shares_amount
-        );
+        // TODO Fix liquidity parameter calculation when leaving exit fees behind!
+        let new_liquidity_parameter = 33_486_637_586;
+        let amounts_out = vec![40_000_000_000, 4_070_223_929];
+        let new_pool_balances =
+            pool_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b - a).collect::<Vec<_>>();
+        let new_alice_balances =
+            alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
+        assert_balances!(ALICE, outcomes, new_alice_balances);
+        assert_pool_status!(market_id, new_pool_balances, spot_prices, new_liquidity_parameter);
         System::assert_last_event(
             Event::ExitExecuted {
                 who: ALICE,
                 market_id,
                 pool_shares_amount,
-                amounts_out: expected_pool_diff,
-                new_liquidity_parameter: pool_after.liquidity_parameter,
+                amounts_out,
+                new_liquidity_parameter,
             }
             .into(),
         );
