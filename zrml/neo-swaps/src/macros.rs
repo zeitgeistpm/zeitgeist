@@ -75,16 +75,18 @@ macro_rules! assert_pool_status {
     ($market_id:expr, $reserves:expr, $spot_prices:expr, $liquidity_parameter:expr $(,)?) => {
         let pool = Pools::<Runtime>::get($market_id).unwrap();
         assert_eq!(pool.reserves.values().cloned().collect::<Vec<_>>(), $reserves);
-        assert_eq!(
-            pool.assets()
-                .iter()
-                .map(|&a| pool.calculate_spot_price(a).unwrap())
-                .collect::<Vec<_>>(),
-            $spot_prices,
-        );
-        let invariant = $spot_prices.iter().sum::<u128>();
+        let actual_spot_prices = pool
+            .assets()
+            .iter()
+            .map(|&a| pool.calculate_spot_price(a).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_status: Spot price mismatch",);
+        let invariant = actual_spot_prices.iter().sum::<u128>();
         assert_approx!(invariant, _1, 1);
-        assert_eq!(pool.liquidity_parameter, $liquidity_parameter);
+        assert_eq!(
+            pool.liquidity_parameter, $liquidity_parameter,
+            "assert_pool_status: Liquidity parameter mismatch"
+        );
     };
 }
 
@@ -102,8 +104,8 @@ macro_rules! assert_balances {
             let actual_balance = AssetManager::free_balance(asset, &$account);
             assert_eq!(
                 actual_balance, expected_balance,
-                "assert_balances: Balance mismatch for asset {:?}:\nExpected: {}\nActual:  {}",
-                asset, expected_balance, actual_balance
+                "assert_balances: Balance mismatch for asset {:?}",
+                asset,
             );
         }
     };

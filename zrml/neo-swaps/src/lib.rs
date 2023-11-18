@@ -62,12 +62,13 @@ mod pallet {
         constants::{BASE, CENT},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
-            fixed::{FixedDiv, FixedMul},
+            fixed::{FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
+    use zeitgeist_primitives::math::fixed::BaseProvider;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -678,29 +679,23 @@ mod pallet {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
                 // TODO Abstract this entire calculation into a function of the pool.
-                let ratio =
-                    pool_shares_amount.bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
+                let ratio = {
+                    let mut ratio = pool_shares_amount
+                        .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
+                    if market.status == MarketStatus::Active {
+                        let mult = ZeitgeistBase::<BalanceOf<T>>::get()?
+                            .checked_sub_res(&EXIT_FEE.saturated_into())?;
+                        ratio = ratio.bmul(mult)?;
+                    }
+                    ratio
+                };
                 let mut amounts_out = vec![];
                 for (&asset, &min_amount_out) in pool.assets().iter().zip(min_amounts_out.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
                     let amount_out = ratio.bmul_floor(balance_in_pool)?;
-                    let amount_out_minus_exit_fees = if market.status == MarketStatus::Active {
-                        amount_out
-                            .checked_sub_res(&amount_out.bmul_ceil(EXIT_FEE.saturated_into())?)?
-                    } else {
-                        amount_out
-                    };
-                    amounts_out.push(amount_out_minus_exit_fees);
-                    ensure!(
-                        amount_out_minus_exit_fees >= min_amount_out,
-                        Error::<T>::AmountOutBelowMin,
-                    );
-                    T::MultiCurrency::transfer(
-                        asset,
-                        &pool.account_id,
-                        &who,
-                        amount_out_minus_exit_fees,
-                    )?;
+                    amounts_out.push(amount_out);
+                    ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin,);
+                    T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
                 for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter()) {
                     *balance = balance.checked_sub_res(amount_out)?;

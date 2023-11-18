@@ -19,8 +19,13 @@ use super::*;
 use crate::types::LiquidityTreeError;
 use test_case::test_case;
 
-#[test_case(MarketStatus::Resolved)]
-fn exit_works(market_status: MarketStatus) {
+#[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_705], 33_508_962_011)]
+#[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_929], 33_486_637_586)]
+fn exit_works(
+    market_status: MarketStatus,
+    amounts_out: Vec<BalanceOf<Runtime>>,
+    new_liquidity_parameter: BalanceOf<Runtime>,
+) {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
@@ -52,15 +57,13 @@ fn exit_works(market_status: MarketStatus) {
             pool_shares_amount,
             vec![0, 0],
         ));
-        // TODO Fix liquidity parameter calculation when leaving exit fees behind!
-        let new_liquidity_parameter = 33_486_637_586;
-        let amounts_out = vec![40_000_000_000, 4_070_223_929];
         let new_pool_balances =
             pool_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b - a).collect::<Vec<_>>();
         let new_alice_balances =
             alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
         assert_balances!(ALICE, outcomes, new_alice_balances);
         assert_pool_status!(market_id, new_pool_balances, spot_prices, new_liquidity_parameter);
+        // TODO Assert that Alice has actually lost the pool shares by extending assert_pool_status!
         System::assert_last_event(
             Event::ExitExecuted {
                 who: ALICE,
