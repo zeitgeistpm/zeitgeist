@@ -135,6 +135,9 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
             create_b_tree_map!({ALICE => _4}),
         );
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
+        let new_alice_balances =
+            alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
+        assert_balances!(ALICE, outcomes, new_alice_balances);
         // Pool doesn't exist anymore and exit fees are cleared.
         assert!(!Pools::<Runtime>::contains_key(market_id));
         assert_balances!(pool_account, outcomes, vec![0, 0]);
