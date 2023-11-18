@@ -23,7 +23,6 @@ use test_case::test_case;
 #[test]
 fn deploy_pool_works_with_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
         let amount = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -89,7 +88,6 @@ fn deploy_pool_works_with_binary_markets() {
 #[test]
 fn deploy_pool_works_with_scalar_marktes() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
         let amount = _100;
         let spot_prices = vec![_1_6, _5_6 + 1];

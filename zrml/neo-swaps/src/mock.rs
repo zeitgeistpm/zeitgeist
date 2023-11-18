@@ -484,33 +484,37 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
-        #[cfg(feature = "parachain")]
-        use frame_support::traits::GenesisBuild;
-        #[cfg(feature = "parachain")]
-        orml_tokens::GenesisConfig::<Runtime> { balances: vec![(ALICE, FOREIGN_ASSET, _101)] }
-            .assimilate_storage(&mut t)
-            .unwrap();
-        #[cfg(feature = "parachain")]
-        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
-            allow_as_base_asset: true,
-            ..Default::default()
-        };
-        #[cfg(feature = "parachain")]
-        orml_asset_registry_mock::GenesisConfig {
-            metadata: vec![(
-                FOREIGN_ASSET,
-                AssetMetadata {
-                    decimals: 18,
-                    name: "MKL".as_bytes().to_vec(),
-                    symbol: "MKL".as_bytes().to_vec(),
-                    existential_deposit: 0,
-                    location: None,
-                    additional: custom_metadata,
-                },
-            )],
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "parachain")] {
+                use frame_support::traits::GenesisBuild;
+                orml_tokens::GenesisConfig::<Runtime> {
+                    balances: vec![(ALICE, FOREIGN_ASSET, _101)],
+                }
+                .assimilate_storage(&mut t)
+                .unwrap();
+                let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+                    allow_as_base_asset: true,
+                    ..Default::default()
+                };
+                orml_asset_registry_mock::GenesisConfig {
+                    metadata: vec![(
+                        FOREIGN_ASSET,
+                        AssetMetadata {
+                            decimals: 18,
+                            name: "MKL".as_bytes().to_vec(),
+                            symbol: "MKL".as_bytes().to_vec(),
+                            existential_deposit: 0,
+                            location: None,
+                            additional: custom_metadata,
+                        },
+                    )],
+                }
+                .assimilate_storage(&mut t)
+                .unwrap();
+            }
         }
-        .assimilate_storage(&mut t)
-        .unwrap();
-        t.into()
+        let mut test_ext: sp_io::TestExternalities = t.into();
+        test_ext.execute_with(|| System::set_block_number(1));
+        test_ext
     }
 }

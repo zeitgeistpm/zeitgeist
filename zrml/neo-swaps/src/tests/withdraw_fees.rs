@@ -21,7 +21,6 @@ use crate::types::Node;
 #[test]
 fn withdraw_fees_works() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
         let spot_prices = vec![_1_6, _5_6 + 1];
         let swap_fee = CENT;

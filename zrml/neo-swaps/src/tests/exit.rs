@@ -27,7 +27,6 @@ fn exit_works(
     new_liquidity_parameter: BalanceOf<Runtime>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _5;
         let spot_prices = vec![_1_6, _5_6 + 1];
         let swap_fee = CENT;
@@ -106,7 +105,6 @@ fn exit_works(
 #[test]
 fn exit_destroys_pool() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
         let market_id = create_market_and_deploy_pool(
             ALICE,

@@ -128,7 +128,6 @@ macro_rules! assert_balances {
             $balances.len(),
             "assert_balances: Assets and balances length mismatch"
         );
-
         for (&asset, &expected_balance) in $assets.iter().zip($balances.iter()) {
             let actual_balance = AssetManager::free_balance(asset, &$account);
             assert_eq!(

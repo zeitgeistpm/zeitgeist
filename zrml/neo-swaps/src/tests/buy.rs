@@ -24,7 +24,6 @@ use test_case::test_case;
 #[test]
 fn buy_works() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
         let swap_fee = CENT;
