@@ -74,7 +74,11 @@ macro_rules! assert_liquidity_tree_state {
 macro_rules! assert_pool_status {
     ($market_id:expr, $reserves:expr, $spot_prices:expr, $liquidity_parameter:expr $(,)?) => {
         let pool = Pools::<Runtime>::get($market_id).unwrap();
-        assert_eq!(pool.reserves.values().cloned().collect::<Vec<_>>(), $reserves);
+        assert_eq!(
+            pool.reserves.values().cloned().collect::<Vec<_>>(),
+            $reserves,
+            "assert_pool_status: Reserves mismatch"
+        );
         let actual_spot_prices = pool
             .assets()
             .iter()
@@ -82,11 +86,11 @@ macro_rules! assert_pool_status {
             .collect::<Vec<_>>();
         assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_status: Spot price mismatch",);
         let invariant = actual_spot_prices.iter().sum::<u128>();
-        assert_approx!(invariant, _1, 1);
         assert_eq!(
             pool.liquidity_parameter, $liquidity_parameter,
             "assert_pool_status: Liquidity parameter mismatch"
         );
+        assert_approx!(invariant, _1, 1);
     };
 }
 

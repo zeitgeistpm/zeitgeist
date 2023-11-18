@@ -19,8 +19,8 @@ use super::*;
 use crate::types::LiquidityTreeError;
 use test_case::test_case;
 
-#[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_705], 33_508_962_011)]
-#[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_929], 33_486_637_586)]
+#[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_704], 33_508_962_010)]
+#[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_928], 33_486_637_585)]
 fn exit_works(
     market_status: MarketStatus,
     amounts_out: Vec<BalanceOf<Runtime>>,
@@ -28,7 +28,7 @@ fn exit_works(
 ) {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        let liquidity = _10;
+        let liquidity = _5;
         let spot_prices = vec![_1_6, _5_6 + 1];
         let swap_fee = CENT;
         let market_id = create_market_and_deploy_pool(
@@ -39,6 +39,19 @@ fn exit_works(
             spot_prices.clone(),
             swap_fee,
         );
+        // Add a second LP to create a more generic situation, bringing the total of shares to _10.
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, liquidity));
+        assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            liquidity
+        ));
+        assert_ok!(NeoSwaps::join(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            liquidity,
+            vec![u128::MAX, u128::MAX],
+        ));
         MarketCommons::mutate_market(&market_id, |market| {
             market.status = market_status;
             Ok(())
@@ -46,10 +59,10 @@ fn exit_works(
         .unwrap();
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let outcomes = pool.assets();
-        let alice_balances = [0, 89_824_440_177];
+        let alice_balances = [0, 44_912_220_089];
         assert_balances!(ALICE, outcomes, alice_balances);
-        let pool_balances = vec![100_000_000_000, 10_175_559_823];
-        assert_pool_status!(market_id, pool_balances, spot_prices, 55_811_062_643);
+        let pool_balances = vec![100_000_000_000, 10_175_559_822];
+        assert_pool_status!(market_id, pool_balances, spot_prices, 55_811_062_642);
         let pool_shares_amount = _4; // Remove 40% to the pool.
         assert_ok!(NeoSwaps::exit(
             RuntimeOrigin::signed(ALICE),
@@ -76,6 +89,8 @@ fn exit_works(
         );
     });
 }
+
+// TODO Test that full exit doesn't kill the pool if there's more than one LP.
 
 #[test]
 fn exit_destroys_pool() {

@@ -636,6 +636,7 @@ mod pallet {
                 for (&asset, &max_amount_in) in pool.assets().iter().zip(max_amounts_in.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
                     let amount_in = ratio.bmul_ceil(balance_in_pool)?;
+                    println!("{:?}", amount_in);
                     amounts_in.push(amount_in);
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
                     T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_in)?;
@@ -678,7 +679,6 @@ mod pallet {
             Pools::<T>::try_mutate_exists(market_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
-                // TODO Abstract this entire calculation into a function of the pool.
                 let ratio = {
                     let mut ratio = pool_shares_amount
                         .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
@@ -694,7 +694,7 @@ mod pallet {
                     let balance_in_pool = pool.reserve_of(&asset)?;
                     let amount_out = ratio.bmul_floor(balance_in_pool)?;
                     amounts_out.push(amount_out);
-                    ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin,);
+                    ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
                 for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter()) {
@@ -710,7 +710,7 @@ mod pallet {
                     // FIXME We will withdraw all remaining funds (the "buffer"). This is an ugly
                     // hack and frame_system should offer the option to whitelist accounts.
                     withdraw_remaining(&pool.collateral)?;
-                    // Clear left-over tokens. There naturally occur in the form of exit fees.
+                    // Clear left-over tokens. These naturally occur in the form of exit fees.
                     for asset in pool.assets().iter() {
                         withdraw_remaining(asset)?;
                     }
