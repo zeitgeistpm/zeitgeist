@@ -140,6 +140,13 @@ macro_rules! assert_balances {
 }
 
 #[macro_export]
+macro_rules! assert_balance {
+    ($account:expr, $asset:expr, $balance:expr $(,)?) => {
+        assert_balances!($account, [$asset], [$balance]);
+    };
+}
+
+#[macro_export]
 macro_rules! assert_approx {
     ($left:expr, $right:expr, $precision:expr $(,)?) => {
         match (&$left, &$right, &$precision) {

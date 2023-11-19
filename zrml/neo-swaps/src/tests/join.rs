@@ -24,7 +24,6 @@ use alloc::collections::BTreeMap;
 use test_case::test_case;
 
 // TODO Buy distributes fees correctly
-// TODO Join works with multiple LPs
 
 #[test_case(ALICE, create_b_tree_map!({ ALICE => _14 }))]
 #[test_case(BOB, create_b_tree_map!({ ALICE => _10, BOB => _4 }))]
