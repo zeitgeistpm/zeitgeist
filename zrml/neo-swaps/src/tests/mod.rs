@@ -73,7 +73,7 @@ fn create_market(
 }
 
 fn create_market_and_deploy_pool(
-    creator: AccountIdTest,
+    creator: AccountIdOf<Runtime>,
     base_asset: Asset<MarketId>,
     market_type: MarketType,
     amount: BalanceOf<Runtime>,
@@ -96,24 +96,16 @@ fn create_market_and_deploy_pool(
     market_id
 }
 
-#[macro_export]
-macro_rules! assert_approx {
-    ($left:expr, $right:expr, $precision:expr $(,)?) => {
-        match (&$left, &$right, &$precision) {
-            (left_val, right_val, precision_val) => {
-                let diff = if *left_val > *right_val {
-                    *left_val - *right_val
-                } else {
-                    *right_val - *left_val
-                };
-                if diff > *precision_val {
-                    panic!(
-                        "assertion `left approx== right` failed\n      left: {}\n     right: {}\n \
-                         precision: {}\ndifference: {}",
-                        *left_val, *right_val, *precision_val, diff
-                    );
-                }
-            }
-        }
-    };
+fn deposit_complete_set(
+    market_id: MarketId,
+    account: AccountIdOf<Runtime>,
+    amount: BalanceOf<Runtime>,
+) {
+    let market = MarketCommons::market(&market_id).unwrap();
+    assert_ok!(AssetManager::deposit(market.base_asset, &account, amount));
+    assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
+        RuntimeOrigin::signed(account.into()),
+        market_id,
+        amount,
+    ));
 }

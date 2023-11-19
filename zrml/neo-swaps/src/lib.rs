@@ -22,6 +22,7 @@ extern crate alloc;
 
 mod benchmarking;
 mod consts;
+mod helpers;
 mod macros;
 mod math;
 pub mod migration;
@@ -62,13 +63,12 @@ mod pallet {
         constants::{BASE, CENT},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
-            fixed::{FixedDiv, FixedMul, ZeitgeistBase},
+            fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
-    use zeitgeist_primitives::math::fixed::BaseProvider;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 

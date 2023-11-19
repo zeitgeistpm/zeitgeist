@@ -16,7 +16,13 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::{
+    helpers::create_spot_prices,
+    types::{LiquidityTreeError, LiquidityTreeHelper},
+};
 use test_case::test_case;
+
+// TODO Join fails on max liquidity providers
 
 #[test]
 fn join_works() {
@@ -78,6 +84,48 @@ fn join_works() {
                 new_liquidity_parameter: pool_after.liquidity_parameter,
             }
             .into(),
+        );
+    });
+}
+
+#[test]
+fn join_fails_on_max_liquidity_providers() {
+    ExtBuilder::default().build().execute_with(|| {
+        let category_count = 2;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(category_count),
+            _10,
+            create_spot_prices::<Runtime>(category_count),
+            CENT,
+        );
+        // Populate the tree with the maximum allowed number of
+        let offset = 100u128;
+        let max_node_count = LiquidityTreeOf::<Runtime>::max_node_count() as u128;
+        let amount = _1;
+        for index in 1..max_node_count {
+            let account = offset + index;
+            // Adding a little more because ceil rounding may cause slightly higher prices for
+            // joining.
+            deposit_complete_set(market_id, account, amount + CENT);
+            assert_ok!(NeoSwaps::join(
+                RuntimeOrigin::signed(account.into()),
+                market_id,
+                amount,
+                vec![u128::MAX; category_count as usize],
+            ));
+        }
+        let account = offset + max_node_count;
+        deposit_complete_set(market_id, account, amount + CENT);
+        assert_noop!(
+            NeoSwaps::join(
+                RuntimeOrigin::signed(account),
+                market_id,
+                amount,
+                vec![u128::MAX; category_count as usize]
+            ),
+            LiquidityTreeError::TreeIsFull.into_dispatch::<Runtime>(),
         );
     });
 }

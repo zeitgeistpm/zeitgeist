@@ -17,7 +17,8 @@
 
 // TODO Document all these macros
 
-#[cfg(test)]
+#![cfg(all(feature = "mock", test))]
+
 #[macro_export]
 macro_rules! create_b_tree_map {
     ({ $($key:expr => $value:expr),* $(,)? } $(,)?) => {
@@ -25,7 +26,6 @@ macro_rules! create_b_tree_map {
     }
 }
 
-#[cfg(test)]
 #[macro_export]
 macro_rules! assert_liquidity_tree_state {
     (
@@ -72,7 +72,6 @@ macro_rules! assert_liquidity_tree_state {
     };
 }
 
-#[cfg(test)]
 #[macro_export]
 macro_rules! assert_pool_status {
     (
@@ -121,7 +120,6 @@ macro_rules! assert_pool_status {
     };
 }
 
-#[cfg(test)]
 #[macro_export]
 macro_rules! assert_balances {
     ($account:expr, $assets:expr, $balances:expr $(,)?) => {
@@ -140,3 +138,26 @@ macro_rules! assert_balances {
         }
     };
 }
+
+#[macro_export]
+macro_rules! assert_approx {
+    ($left:expr, $right:expr, $precision:expr $(,)?) => {
+        match (&$left, &$right, &$precision) {
+            (left_val, right_val, precision_val) => {
+                let diff = if *left_val > *right_val {
+                    *left_val - *right_val
+                } else {
+                    *right_val - *left_val
+                };
+                if diff > *precision_val {
+                    panic!(
+                        "assertion `left approx== right` failed\n      left: {}\n     right: {}\n \
+                         precision: {}\ndifference: {}",
+                        *left_val, *right_val, *precision_val, diff
+                    );
+                }
+            }
+        }
+    };
+}
+
