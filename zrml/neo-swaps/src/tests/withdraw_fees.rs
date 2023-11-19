@@ -23,7 +23,6 @@ fn withdraw_fees_works() {
     ExtBuilder::default().build().execute_with(|| {
         let category_count = 2;
         let spot_prices = vec![_3_4, _1_4];
-        let liquidity_parameter = 288539008176;
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
@@ -51,7 +50,8 @@ fn withdraw_fees_works() {
         assert_ok!(AssetManager::deposit(pool.collateral, &pool.account_id, fee_amount));
         assert_ok!(pool.liquidity_shares_manager.deposit_fees(fee_amount));
         Pools::<Runtime>::insert(market_id, pool.clone());
-        let pool_balances = [83007499856, 400000000000];
+        let liquidity_parameter = 288_539_008_176;
+        let pool_balances = [83_007_499_856, 400_000_000_000];
 
         let test_withdraw = |who: AccountIdOf<Runtime>, fees: BalanceOf<Runtime>| {
             // Make sure everybody's got at least the minimum deposit.
@@ -68,7 +68,7 @@ fn withdraw_fees_works() {
                 pool_balances,
                 spot_prices,
                 liquidity_parameter,
-                create_b_tree_map!({ ALICE => _12, BOB => _10, CHARLIE => _20 })
+                create_b_tree_map!({ ALICE => _10, BOB => _10, CHARLIE => _20 })
             );
             System::assert_last_event(Event::FeesWithdrawn { who, market_id, amount: fees }.into());
         };
@@ -90,4 +90,35 @@ fn withdraw_fees_fails_on_pool_not_found() {
     });
 }
 
-// TODO withdraw fees is noop if there are no fees
+#[test]
+fn withdraw_fees_is_noop_if_there_are_no_fees() {
+    ExtBuilder::default().build().execute_with(|| {
+        let spot_prices = vec![_3_4, _1_4];
+        let amount = _40;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(2),
+            amount,
+            spot_prices.clone(),
+            CENT,
+        );
+        let pool_balances = [83_007_499_856, 400_000_000_000];
+        let liquidity_parameter = 288_539_008_178;
+        assert_pool_status!(
+            market_id,
+            pool_balances,
+            spot_prices,
+            liquidity_parameter,
+            create_b_tree_map!({ ALICE => amount }),
+        );
+        assert_ok!(NeoSwaps::withdraw_fees(RuntimeOrigin::signed(ALICE), market_id));
+        assert_pool_status!(
+            market_id,
+            pool_balances,
+            spot_prices,
+            liquidity_parameter,
+            create_b_tree_map!({ ALICE => amount }),
+        );
+    });
+}
