@@ -53,59 +53,28 @@ fn withdraw_fees_works() {
         Pools::<Runtime>::insert(market_id, pool.clone());
         let pool_balances = [83007499856, 400000000000];
 
-        let test_withdraw = |who: AccountIdOf<Runtime>| -> BalanceOf<Runtime> {
+        let test_withdraw = |who: AccountIdOf<Runtime>, fees: BalanceOf<Runtime>| {
             // Make sure everybody's got at least the minimum deposit.
             assert_ok!(<Runtime as Config>::MultiCurrency::deposit(
                 BASE_ASSET,
                 &who,
                 <Runtime as Config>::MultiCurrency::minimum_balance(BASE_ASSET)
             ));
-            let balance = <Runtime as Config>::MultiCurrency::free_balance(BASE_ASSET, &who);
+            let old_balance = <Runtime as Config>::MultiCurrency::free_balance(BASE_ASSET, &who);
             assert_ok!(NeoSwaps::withdraw_fees(RuntimeOrigin::signed(who), market_id));
-            balance
+            assert_balance!(who, BASE_ASSET, old_balance + fees);
+            assert_pool_status!(
+                market_id,
+                pool_balances,
+                spot_prices,
+                liquidity_parameter,
+                create_b_tree_map!({ ALICE => _12, BOB => _10, CHARLIE => _20 })
+            );
+            System::assert_last_event(Event::FeesWithdrawn { who, market_id, amount: fees }.into());
         };
-
-        let alice_balance = test_withdraw(ALICE);
-        let alice_fees = _1 / 4;
-        assert_balance!(ALICE, BASE_ASSET, alice_balance + alice_fees);
-        assert_pool_status!(
-            market_id,
-            pool_balances,
-            spot_prices,
-            liquidity_parameter,
-            create_b_tree_map!({ ALICE => _10, BOB => _10, CHARLIE => _20 })
-        );
-        System::assert_last_event(
-            Event::FeesWithdrawn { who: ALICE, market_id, amount: alice_fees }.into(),
-        );
-
-        let bob_balance = test_withdraw(BOB);
-        let bob_fees = _1 / 4;
-        assert_balance!(BOB, BASE_ASSET, bob_balance + bob_fees);
-        assert_pool_status!(
-            market_id,
-            pool_balances,
-            spot_prices,
-            liquidity_parameter,
-            create_b_tree_map!({ ALICE => _10, BOB => _10, CHARLIE => _20 })
-        );
-        System::assert_last_event(
-            Event::FeesWithdrawn { who: BOB, market_id, amount: bob_fees }.into(),
-        );
-
-        let charlie_balance = test_withdraw(CHARLIE);
-        let charlie_fees = _1 / 2;
-        assert_balance!(CHARLIE, BASE_ASSET, charlie_balance + charlie_fees);
-        assert_pool_status!(
-            market_id,
-            pool_balances,
-            spot_prices,
-            liquidity_parameter,
-            create_b_tree_map!({ ALICE => _10, BOB => _10, CHARLIE => _20 })
-        );
-        System::assert_last_event(
-            Event::FeesWithdrawn { who: CHARLIE, market_id, amount: charlie_fees }.into(),
-        );
+        test_withdraw(ALICE, _1_4);
+        test_withdraw(BOB, _1_4);
+        test_withdraw(CHARLIE, _1_2);
     });
 }
 
