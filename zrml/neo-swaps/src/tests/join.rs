@@ -20,14 +20,18 @@ use crate::{
     helpers::create_spot_prices,
     types::{LiquidityTreeError, LiquidityTreeHelper},
 };
+use alloc::collections::BTreeMap;
 use test_case::test_case;
 
 // TODO Buy distributes fees correctly
 // TODO Join works with multiple LPs
 
-#[test_case(ALICE, 140_000_000_000)]
-#[test_case(BOB, 40_000_000_000)]
-fn join_works(who: AccountIdOf<Runtime>, new_pool_shares_amount: BalanceOf<Runtime>) {
+#[test_case(ALICE, create_b_tree_map!({ ALICE => _14 }))]
+#[test_case(BOB, create_b_tree_map!({ ALICE => _10, BOB => _4 }))]
+fn join_works(
+    who: AccountIdOf<Runtime>,
+    pool_shares: BTreeMap<AccountIdOf<Runtime>, BalanceOf<Runtime>>,
+) {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_6, _5_6 + 1];
@@ -42,44 +46,29 @@ fn join_works(who: AccountIdOf<Runtime>, new_pool_shares_amount: BalanceOf<Runti
         );
         let pool_shares_amount = _4; // Add 40% to the pool.
         deposit_complete_set(market_id, who, pool_shares_amount);
-        let pool_before = Pools::<Runtime>::get(market_id).unwrap();
-        let long_before = AssetManager::free_balance(pool_before.assets()[1], &who);
-        let pool_outcomes_before: Vec<_> =
-            pool_before.assets().iter().map(|a| pool_before.reserve_of(a).unwrap()).collect();
         assert_ok!(NeoSwaps::join(
             RuntimeOrigin::signed(who),
             market_id,
             pool_shares_amount,
             vec![u128::MAX; 2],
         ));
-        let pool_after = Pools::<Runtime>::get(market_id).unwrap();
-        let ratio = (liquidity + pool_shares_amount).bdiv(liquidity).unwrap();
-        let pool_outcomes_after: Vec<_> =
-            pool_after.assets().iter().map(|a| pool_after.reserve_of(a).unwrap()).collect();
-        assert_eq!(pool_outcomes_after[0], ratio.bmul(pool_outcomes_before[0]).unwrap());
-        assert_eq!(pool_outcomes_after[1], 14_245_783_753);
-        let long_diff = pool_outcomes_after[1] - pool_outcomes_before[1];
-        assert_eq!(AssetManager::free_balance(pool_after.assets()[0], &who), 0);
-        assert_eq!(
-            AssetManager::free_balance(pool_after.assets()[1], &who),
-            long_before - long_diff
+        let expected_pool_balances = vec![140_000_000_000, 14_245_783_753];
+        let new_liquidity_parameter = 78_135_487_700;
+        assert_pool_status!(
+            market_id,
+            expected_pool_balances,
+            spot_prices,
+            new_liquidity_parameter,
+            pool_shares
         );
-        assert_eq!(
-            pool_after.liquidity_parameter,
-            ratio.bmul(pool_before.liquidity_parameter).unwrap()
-        );
-        // TODO Use assert_pool_state! here!
-        assert_eq!(
-            pool_after.liquidity_shares_manager.shares_of(&who).unwrap(),
-            new_pool_shares_amount,
-        );
+        let amounts_in = vec![40_000_000_000, 4_070_223_930];
         System::assert_last_event(
             Event::JoinExecuted {
                 who,
                 market_id,
                 pool_shares_amount,
-                amounts_in: vec![pool_shares_amount, long_diff],
-                new_liquidity_parameter: pool_after.liquidity_parameter,
+                amounts_in,
+                new_liquidity_parameter,
             }
             .into(),
         );
