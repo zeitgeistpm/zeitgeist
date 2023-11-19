@@ -22,10 +22,12 @@ use crate::{
 };
 use test_case::test_case;
 
-// TODO Join fails on max liquidity providers
+// TODO Buy distributes fees correctly
+// TODO Join works with multiple LPs
 
-#[test]
-fn join_works() {
+#[test_case(ALICE, 140_000_000_000)]
+#[test_case(BOB, 40_000_000_000)]
+fn join_works(who: AccountIdOf<Runtime>, new_pool_shares_amount: BalanceOf<Runtime>) {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_6, _5_6 + 1];
@@ -39,21 +41,16 @@ fn join_works() {
             swap_fee,
         );
         let pool_shares_amount = _4; // Add 40% to the pool.
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &ALICE, pool_shares_amount));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            pool_shares_amount,
-        ));
+        deposit_complete_set(market_id, who, pool_shares_amount);
         let pool_before = Pools::<Runtime>::get(market_id).unwrap();
-        let alice_long_before = AssetManager::free_balance(pool_before.assets()[1], &ALICE);
+        let long_before = AssetManager::free_balance(pool_before.assets()[1], &who);
         let pool_outcomes_before: Vec<_> =
             pool_before.assets().iter().map(|a| pool_before.reserve_of(a).unwrap()).collect();
         assert_ok!(NeoSwaps::join(
-            RuntimeOrigin::signed(ALICE),
+            RuntimeOrigin::signed(who),
             market_id,
             pool_shares_amount,
-            vec![u128::MAX, u128::MAX],
+            vec![u128::MAX; 2],
         ));
         let pool_after = Pools::<Runtime>::get(market_id).unwrap();
         let ratio = (liquidity + pool_shares_amount).bdiv(liquidity).unwrap();
@@ -62,22 +59,23 @@ fn join_works() {
         assert_eq!(pool_outcomes_after[0], ratio.bmul(pool_outcomes_before[0]).unwrap());
         assert_eq!(pool_outcomes_after[1], 14_245_783_753);
         let long_diff = pool_outcomes_after[1] - pool_outcomes_before[1];
-        assert_eq!(AssetManager::free_balance(pool_after.assets()[0], &ALICE), 0);
+        assert_eq!(AssetManager::free_balance(pool_after.assets()[0], &who), 0);
         assert_eq!(
-            AssetManager::free_balance(pool_after.assets()[1], &ALICE),
-            alice_long_before - long_diff
+            AssetManager::free_balance(pool_after.assets()[1], &who),
+            long_before - long_diff
         );
         assert_eq!(
             pool_after.liquidity_parameter,
             ratio.bmul(pool_before.liquidity_parameter).unwrap()
         );
+        // TODO Use assert_pool_state! here!
         assert_eq!(
-            pool_after.liquidity_shares_manager.shares_of(&ALICE).unwrap(),
-            liquidity + pool_shares_amount
+            pool_after.liquidity_shares_manager.shares_of(&who).unwrap(),
+            new_pool_shares_amount,
         );
         System::assert_last_event(
             Event::JoinExecuted {
-                who: ALICE,
+                who,
                 market_id,
                 pool_shares_amount,
                 amounts_in: vec![pool_shares_amount, long_diff],
@@ -101,7 +99,7 @@ fn join_fails_on_max_liquidity_providers() {
             CENT,
         );
         // Populate the tree with the maximum allowed number of
-        let offset = 100u128;
+        let offset = 100;
         let max_node_count = LiquidityTreeOf::<Runtime>::max_node_count() as u128;
         let amount = _1;
         for index in 1..max_node_count {
