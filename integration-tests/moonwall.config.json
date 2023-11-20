@@ -1,6 +1,7 @@
 {
    "label": "moonwall_config",
    "defaultTestTimeout": 30000,
+   "scriptsDir": "scripts/",
    "environments": [
       {
          "name": "zombie_zeitgeist",
@@ -8,7 +9,9 @@
             "tests/"
          ],
          "runScripts": [
-            "build-zeitgeist-spec.sh"
+            "build-parachain.sh",
+            "build-zeitgeist-spec.sh",
+            "download-polkadot.sh"
          ],
          "foundation": {
             "launchSpec": [
