@@ -28,8 +28,12 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{DispatchError, DispatchResult},
+        sp_runtime::Saturating,
         traits::{
-            tokens::{fungibles::Inspect, WithdrawConsequence},
+            tokens::{
+                fungibles::{Inspect, Mutate, Transfer},
+                WithdrawConsequence,
+            },
             BalanceStatus as Status,
         },
         transactional,
@@ -50,6 +54,8 @@ mod pallet {
         From<pallet_assets::Call<T>>
         + frame_support::dispatch::Dispatchable
         + Inspect<T::AccountId, Balance = T::Balance>
+        + Transfer<T::AccountId, Balance = T::Balance>
+        + Mutate<T::AccountId, Balance = T::Balance>
     {
     }
 
@@ -85,20 +91,6 @@ mod pallet {
     /// This macro converts the invoked asset type into the respective
     /// implementation that handles it and finally calls the $method on it.
     macro_rules! route_call {
-        ($currency_id:expr, $method:ident) => {
-            if let Ok(currency) = Currencies::try_from($currency_id) {
-                Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$method(currency))
-            } else if let Ok(asset) = MarketAsset::try_from($currency_id) {
-                Ok(<T as Config>::MarketAssets::$method(asset))
-            } else if let Ok(asset) = CampaignAsset::try_from($currency_id) {
-                Ok(<T as Config>::CampaignAsset::$method(asset))
-            } else if let Ok(asset) = CustomAsset::try_from($currency_id)  {
-                Ok(<T as Config>::CustomAsset::$method(asset))
-            } else {
-                Err(Error::<T>::UnknownAsset)
-            }
-        };
-
         ($currency_id:expr, $currency_method:ident, $asset_method:ident) => {
             if let Ok(currency) = Currencies::try_from($currency_id) {
                 Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency))
@@ -113,7 +105,7 @@ mod pallet {
             }
         };
 
-        ($currency_id:expr, $currency_method:ident, $asset_method:ident, $($args:expr),*) => {
+        ($currency_id:expr, $currency_method:ident, $asset_method:ident, $($args:expr),+) => {
             if let Ok(currency) = Currencies::try_from($currency_id) {
                 Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency, $($args),*))
             } else if let Ok(asset) = MarketAsset::try_from($currency_id) {
@@ -133,12 +125,12 @@ mod pallet {
         type Balance = T::Balance;
 
         fn minimum_balance(currency_id: Self::CurrencyId) -> Self::Balance {
-            let min_balance = route_call!(currency_id, minimum_balance);
+            let min_balance = route_call!(currency_id, minimum_balance, minimum_balance);
             min_balance.unwrap_or(0u8.into())
         }
 
         fn total_issuance(currency_id: Self::CurrencyId) -> Self::Balance {
-            let total_issuance = route_call!(currency_id, total_issuance);
+            let total_issuance = route_call!(currency_id, total_issuance, total_issuance);
             total_issuance.unwrap_or(0u8.into())
         }
 
@@ -191,8 +183,17 @@ mod pallet {
             to: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                <T::Currencies as MultiCurrency<T::AccountId>>::transfer(currency, from, to, amount)
+            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+                <T as Config>::MarketAssets::transfer(asset, from, to, amount, false).map(|_| ())
+            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
+                <T as Config>::CampaignAsset::transfer(asset, from, to, amount, false).map(|_| ())
+            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
+                <T as Config>::CustomAsset::transfer(asset, from, to, amount, false).map(|_| ())
+            } else {
+                Err(Error::<T>::UnknownAsset.into())
+            }
         }
 
         fn deposit(
@@ -200,8 +201,7 @@ mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            route_call!(currency_id, deposit, mint_into, who, amount)?
         }
 
         fn withdraw(
@@ -209,34 +209,62 @@ mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                <T::Currencies as MultiCurrency<T::AccountId>>::deposit(currency, who, amount)
+            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+                // Resulting balance can be ignored as `burn_from` ensures that the
+                // requested amount can be burned.
+                <T as Config>::MarketAssets::burn_from(asset, who, amount).map(|_| ())
+            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
+                <T as Config>::CampaignAsset::burn_from(asset, who, amount).map(|_| ())
+            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
+                <T as Config>::CustomAsset::burn_from(asset, who, amount).map(|_| ())
+            } else {
+                Err(Error::<T>::UnknownAsset.into())
+            }
         }
 
-        // Check if `value` amount of free balance can be slashed from `who`.
         fn can_slash(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> bool {
             // TODO
-            true
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                <T::Currencies as MultiCurrency<T::AccountId>>::can_slash(currency, who, value)
+            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+                <T as Config>::MarketAssets::reducible_balance(asset, who, false) >= value
+            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
+                <T as Config>::CampaignAsset::reducible_balance(asset, who, false) >= value
+            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
+                <T as Config>::CustomAsset::reducible_balance(asset, who, false) >= value
+            } else {
+                false
+            }
         }
 
-        /// Is a no-op if `value` to be slashed is zero.
-        ///
-        /// NOTE: `slash()` prefers free balance, but assumes that reserve
-        /// balance can be drawn from in extreme circumstances. `can_slash()`
-        /// should be used prior to `slash()` to avoid having to draw from
-        /// reserved funds, however we err on the side of punishment if things
-        /// are inconsistent or `can_slash` wasn't used appropriately.
         fn slash(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> Self::Balance {
-            // TODO
-            0u8.into()
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                <T::Currencies as MultiCurrency<T::AccountId>>::slash(currency, who, amount)
+            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+                <T as Config>::MarketAssets::slash(asset, who, amount)
+                    .map(|b| amount.saturating_sub(b))
+                    .unwrap_or_else(|_| amount)
+            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
+                <T as Config>::CampaignAsset::slash(asset, who, amount)
+                    .map(|b| amount.saturating_sub(b))
+                    .unwrap_or_else(|_| amount)
+            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
+                <T as Config>::CustomAsset::slash(asset, who, amount)
+                    .map(|b| amount.saturating_sub(b))
+                    .unwrap_or_else(|_| amount)
+            } else {
+                amount
+            }
         }
     }
 
