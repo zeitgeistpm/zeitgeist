@@ -14,13 +14,6 @@ Moonwall - Test framework for testing chain networks.
 pnpm -g i @moonwall/cli
 ```
 
-### Local Installation
-
-1. `pnpm i` to install all dependencies.
-2. `pnpm build` to build the application locally.
-3. `pnpm start` to check that the application runs
-4. (In your project dir) `npm i <path_to_moonwall_repo>` to locally add moonwall to your other repo
-
 From here you can import the items you need from moonwall packages in your code:
 ```
 import { describeSuite , beforeAll, expect, ALITH_ADDRESS } from "@moonwall/cli";
