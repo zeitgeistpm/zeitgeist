@@ -4,8 +4,8 @@
         "provider": "native"
     },
     "relaychain": {
-        "chain": "rococo-local",
-        "default_command": "tmp/polkadot",
+        "chain": "rococo-dev",
+        "default_command": "./tmp/polkadot",
         "default_args": ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb", "--no-beefy"],
         "nodes": [
             {
@@ -22,14 +22,14 @@
     "parachains": [
         {
             "id": 2101,
-            "chain_spec_path": "specs/zeitgeist-parachain-2101.json",
+            "chain": "dev",
             "collators": [
                 {
                     "name": "alice",
                     "command": "../target/debug/zeitgeist",
                     "ws_port": 9944,
                     "p2p_port": 33049,
-                    "args": ["-lparachain=debug"]
+                    "args": ["-lparachain=debug", "--force-authoring"]
                 }
             ]
         }

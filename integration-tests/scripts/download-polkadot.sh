@@ -3,6 +3,12 @@
 # Exit on any error
 set -e
 
+# Check if the operating system is macOS
+if [[ $(uname) == "Darwin" ]]; then
+    echo "This script is not intended for MacOS. But keep in mind you need to have 'polkadot', 'polkadot-execute-worker', 'polkadot-prepare-worker' in any case! So compile those yourself! Exiting..."
+    exit 1
+fi
+
 # Grab Polkadot version
 branch=$(egrep -o '/polkadot.*#([^\"]*)' $(dirname $0)/../../Cargo.lock | head -1 | sed 's/.*release-//#')
 polkadot_release=$(echo $branch | sed 's/#.*//' | sed 's/\/polkadot-sdk?branch=tanssi-polkadot-v//')
@@ -17,24 +23,24 @@ if [[ -f tmp/polkadot ]]; then
 	else
 		echo "Updating polkadot binary..."
 
-		npx moonwall download polkadot $polkadot_release tmp
+		pnpm moonwall download polkadot $polkadot_release tmp
 		chmod +x tmp/polkadot
 
-		npx moonwall download polkadot-execute-worker $polkadot_release tmp
+		pnpm moonwall download polkadot-execute-worker $polkadot_release tmp
 		chmod +x tmp/polkadot-execute-worker
 
-		npx moonwall download polkadot-prepare-worker $polkadot_release tmp
+		pnpm moonwall download polkadot-prepare-worker $polkadot_release tmp
 		chmod +x tmp/polkadot-prepare-worker
 
 	fi
 else
 	echo "Polkadot binary not found, downloading..."
-	npx moonwall download polkadot $polkadot_release tmp
+	pnpm moonwall download polkadot $polkadot_release tmp
 	chmod +x tmp/polkadot
 
-	npx moonwall download polkadot-execute-worker $polkadot_release tmp
+	pnpm moonwall download polkadot-execute-worker $polkadot_release tmp
 	chmod +x tmp/polkadot-execute-worker
 
-	npx moonwall download polkadot-prepare-worker $polkadot_release tmp
+	pnpm moonwall download polkadot-prepare-worker $polkadot_release tmp
 	chmod +x tmp/polkadot-prepare-worker
 fi

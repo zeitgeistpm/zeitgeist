@@ -5,7 +5,7 @@ timeout = 1000
 [relaychain]
 chain = "rococo-dev"
 default_args = ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb"]
-default_command = "./tmp/polkadot"
+default_command = "./integration-tests/tmp/polkadot"
 
 [[relaychain.nodes]]
 name = "charlie"
