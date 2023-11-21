@@ -50,7 +50,7 @@ mod pallet {
         Assets, CampaignAsset, Currencies, CustomAsset, MarketAsset,
     };
 
-    trait AssetTraits<T: Config>:
+    pub trait AssetTraits<T: Config>:
         From<pallet_assets::Call<T>>
         + frame_support::dispatch::Dispatchable
         + Inspect<T::AccountId, Balance = T::Balance>
@@ -439,67 +439,67 @@ mod pallet {
     }
 
     impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
-        type ReserveIdentifier = [u8; 8];
+        type ReserveIdentifier = <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::ReserveIdentifier;
 
         fn reserved_balance_named(
             id: &Self::ReserveIdentifier,
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
         ) -> Self::Balance {
-            //TODO
-            0u8.into()
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::reserved_balance_named(
+                    id, currency, who,
+                );
+            }
+
+            Zero::zero()
         }
 
-        /// Move `value` from the free balance from `who` to a named reserve
-        /// balance.
-        ///
-        /// Is a no-op if value to be reserved is zero.
         fn reserve_named(
             id: &Self::ReserveIdentifier,
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> DispatchResult {
-            //TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::reserve_named(
+                    id, currency, who, value
+                );
+            }
+
+            Err(Error::<T>::Unsupported.into())
         }
 
-        /// Unreserve some funds, returning any amount that was unable to be
-        /// unreserved.
-        ///
-        /// Is a no-op if the value to be unreserved is zero.
         fn unreserve_named(
             id: &Self::ReserveIdentifier,
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> Self::Balance {
-            //TODO
-            0u8.into()
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::unreserve_named(
+                    id, currency, who, value
+                );
+            }
+
+            value
         }
 
-        /// Slash from reserved balance, returning the amount that was unable to be
-        /// slashed.
-        ///
-        /// Is a no-op if the value to be slashed is zero.
         fn slash_reserved_named(
             id: &Self::ReserveIdentifier,
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> Self::Balance {
-            //TODO
-            0u8.into()
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::slash_reserved_named(
+                    id, currency, who, value
+                );
+            }
+
+            value
         }
 
-        /// Move the reserved balance of one account into the balance of another,
-        /// according to `status`. If `status` is `Reserved`, the balance will be
-        /// reserved with given `id`.
-        ///
-        /// Is a no-op if:
-        /// - the value to be moved is zero; or
-        /// - the `slashed` id equal to `beneficiary` and the `status` is
-        ///   `Reserved`.
         fn repatriate_reserved_named(
             id: &Self::ReserveIdentifier,
             currency_id: Self::CurrencyId,
@@ -508,8 +508,13 @@ mod pallet {
             value: Self::Balance,
             status: Status,
         ) -> Result<Self::Balance, DispatchError> {
-            //TODO
-            Ok(0u8.into())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::repatriate_reserved_named(
+                    id, currency, slashed, beneficiary, value, status
+                );
+            }
+
+            Err(Error::<T>::Unsupported.into())
         }
     }
 }
