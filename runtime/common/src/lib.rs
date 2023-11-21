@@ -289,7 +289,7 @@ macro_rules! create_runtime {
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
-                CustomAsset: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
+                CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
                 CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
                 MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>} = 19,
 
