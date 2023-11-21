@@ -1459,7 +1459,7 @@ benchmarks! {
         }
 
         let range_start_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_start);
-        for i in 0..=o {
+        for i in 0..o {
             <MarketIdsPerOpenTimeFrame<T>>::try_mutate(range_start_time_frame, |ids| {
                 ids.try_push((i).into())
             }).unwrap();
