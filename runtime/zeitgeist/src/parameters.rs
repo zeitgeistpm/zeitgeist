@@ -497,10 +497,10 @@ parameter_type_with_key! {
     // Explicit match arms are used to ensure new asset types are respected.
     pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
-            Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
-            Asset::PoolShare(_)  => ExistentialDeposit::get(),
-            Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
+            Asset::OldCategoricalOutcome(_,_) => ExistentialDeposit::get(),
+            Asset::OldCombinatorialOutcome => ExistentialDeposit::get(),
+            Asset::OldPoolShare(_)  => ExistentialDeposit::get(),
+            Asset::OldScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
@@ -515,16 +515,6 @@ parameter_type_with_key! {
             }
             #[cfg(not(feature = "parachain"))]
             Asset::ForeignAsset(_) => ExistentialDeposit::get(),
-            Asset::Ztg => ExistentialDeposit::get(),
-            Asset::ParimutuelShare(_,_) => ExistentialDeposit::get(),
-
-            // The following assets are irrelevant, as they are managed by pallet-assets
-            // The following assets are irrelevant, as they are managed by pallet-assets
-            Asset::NewParimutuelShare(_,_) | Asset::NewCategoricalOutcome(_, _)
-            | Asset::NewCombinatorialOutcome | Asset::NewPoolShare(_)
-            | Asset::NewScalarOutcome(_,_) | Asset::CustomAssetClass(_)
-            | Asset::CampaignAssetClass(_) => ExistentialDeposit::get(),
-        }
     };
 }
 

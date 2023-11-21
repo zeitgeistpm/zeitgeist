@@ -22,9 +22,10 @@ extern crate alloc;
 
 mod mock;
 mod tests;
+pub use pallet::*;
 
 #[frame_support::pallet]
-mod pallet {
+pub mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{DispatchError, DispatchResult},
@@ -32,7 +33,7 @@ mod pallet {
             tokens::fungibles::{Inspect, Mutate, Transfer},
             BalanceStatus as Status,
         },
-        transactional,
+        transactional, Parameter,
     };
     use orml_traits::{
         arithmetic::Signed,
@@ -42,37 +43,60 @@ mod pallet {
         },
         BalanceStatus, LockIdentifier,
     };
+    use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
-        traits::{Bounded, Zero},
-        Saturating,
+        traits::{
+            AtLeast32BitUnsigned, Bounded, MaybeSerializeDeserialize, Member, Saturating, Zero,
+        },
+        FixedPointOperand,
     };
     use zeitgeist_primitives::types::{
         Assets, CampaignAsset, Currencies, CustomAsset, MarketAsset,
     };
 
-    pub trait AssetTraits<T: Config>:
-        From<pallet_assets::Call<T>>
-        + frame_support::dispatch::Dispatchable
-        + Inspect<T::AccountId, Balance = T::Balance>
-        + Transfer<T::AccountId, Balance = T::Balance>
-        + Mutate<T::AccountId, Balance = T::Balance>
+    pub trait AssetTraits<T: Config, A>:
+        Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
+        + Transfer<T::AccountId, AssetId = A,Balance = T::Balance>
+        + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>
     {
     }
 
+    impl<G, T, A> AssetTraits<T, A> for G where
+        G:         Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
+        + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
+        + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>,
+        T: Config {}
+
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_assets::Config {
+    pub trait Config: frame_system::Config {
+        type Balance: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + MaxEncodedLen
+            + FixedPointOperand;
         type Currencies: TransferAll<Self::AccountId>
             + MultiCurrencyExtended<Self::AccountId, CurrencyId = Currencies, Balance = Self::Balance>
             + MultiLockableCurrency<Self::AccountId>
             + MultiReservableCurrency<Self::AccountId>
             + NamedMultiReservableCurrency<Self::AccountId>;
-        type CampaignAsset: AssetTraits<Self, AssetId = CampaignAsset>;
-        type CustomAsset: AssetTraits<Self, AssetId = CustomAsset>;
-        type MarketAssets: AssetTraits<Self, AssetId = MarketAsset>;
+        type CampaignAsset: AssetTraits<Self, CampaignAsset>;
+        type CustomAsset: AssetTraits<Self, CustomAsset>;
+        type MarketAssets: AssetTraits<Self, MarketAsset>;
     }
+
+    use frame_support::pallet_prelude::Hooks;
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {}
 
     impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
         #[transactional]
@@ -439,7 +463,8 @@ mod pallet {
     }
 
     impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
-        type ReserveIdentifier = <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::ReserveIdentifier;
+        type ReserveIdentifier =
+            <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::ReserveIdentifier;
 
         fn reserved_balance_named(
             id: &Self::ReserveIdentifier,

@@ -326,6 +326,7 @@ macro_rules! create_runtime {
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
+                AssetRouter: zrml_asset_router::{Pallet} = 63,
 
                 $($additional_pallets)*
             }
@@ -579,13 +580,13 @@ macro_rules! impl_config_traits {
 
         impl orml_currencies::Config for Runtime {
             type GetNativeCurrencyId = GetNativeCurrencyId;
-            type MultiCurrency = Tokens;
+            type MultiCurrency = AssetRouter;
             type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
             type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
         }
 
         pub struct CurrencyHooks<R>(sp_std::marker::PhantomData<R>);
-        impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, Assets, Balance> for CurrencyHooks<C> {
+        impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, Currencies, Balance> for CurrencyHooks<C> {
             type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
             type OnKilledTokenAccount = ();
             type OnNewTokenAccount = ();
@@ -600,7 +601,7 @@ macro_rules! impl_config_traits {
             type Amount = Amount;
             type Balance = Balance;
             type CurrencyHooks = CurrencyHooks<Runtime>;
-            type CurrencyId = Assets;
+            type CurrencyId = Currencies;
             type DustRemovalWhitelist = DustRemovalWhitelist;
             type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposits = ExistentialDeposits;
@@ -1160,6 +1161,14 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl parachain_info::Config for Runtime {}
+
+        impl zrml_asset_router::Config for Runtime {
+            type Balance = Balance;
+            type Currencies = Tokens;
+            type CampaignAsset = CampaignAssets;
+            type CustomAsset = CustomAssets;
+            type MarketAssets = MarketAssets;
+        }
 
         impl zrml_authorized::Config for Runtime {
             type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
