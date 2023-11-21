@@ -1754,12 +1754,11 @@ mod pallet {
                 MarketPeriod::Timestamp(ref range) => range,
             };
 
-            let mut weight = None;
-
             let should_be_opened = range.start < now && now < range.end;
             let should_be_closed = range.end <= now;
+            debug_assert!(!(should_be_opened && should_be_closed), "Both cases can not happen.");
 
-            if should_be_opened {
+            let weight = if should_be_opened {
                 let range_start_time_frame = Self::calculate_time_frame_of_moment(range.start);
                 let open_ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
                     range_start_time_frame,
@@ -1774,10 +1773,8 @@ mod pallet {
                     },
                 )?;
                 Self::open_market(&market_id)?;
-                weight = Some(T::WeightInfo::manually_open_market(open_ids_len));
-            }
-
-            if should_be_closed {
+                T::WeightInfo::manually_open_market(open_ids_len)
+            } else if should_be_closed {
                 let range_end_time_frame = Self::calculate_time_frame_of_moment(range.end);
                 let close_ids_len = MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                     range_end_time_frame,
@@ -1792,10 +1789,12 @@ mod pallet {
                     },
                 )?;
                 Self::on_market_close(&market_id, market)?;
-                weight = Some(T::WeightInfo::manually_close_market(close_ids_len));
-            }
+                T::WeightInfo::manually_close_market(close_ids_len)
+            } else {
+                return Err(Error::<T>::MarketPeriodNotStartedYet.into());
+            };
 
-            Ok((weight, Pays::No).into())
+            Ok((Some(weight), Pays::No).into())
         }
     }
 
@@ -2154,6 +2153,8 @@ mod pallet {
         MarketNotInOpenTimeFrameList,
         /// The market is not in the close time frame list.
         MarketNotInCloseTimeFrameList,
+        /// The market period has not started yet.
+        MarketPeriodNotStartedYet,
     }
 
     #[pallet::event]
