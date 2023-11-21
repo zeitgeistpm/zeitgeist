@@ -1796,6 +1796,34 @@ mod pallet {
 
             Ok((Some(weight), Pays::No).into())
         }
+
+        /// Allows the market creator of a trusted market
+        /// to immediately move an open market to closed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::weight(T::WeightInfo::close_trusted_market(CacheSize::get(), CacheSize::get()))]
+        #[pallet::call_index(22)]
+        #[transactional]
+        pub fn close_trusted_market(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            ensure!(market.creator == who, Error::<T>::CallerNotMarketCreator);
+            ensure!(market.dispute_mechanism.is_none(), Error::<T>::MarketIsNotTrusted);
+            Self::ensure_market_is_active(&market)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
+            Self::close_market(&market_id)?;
+            Self::set_market_end(&market_id)?;
+            Ok(Some(T::WeightInfo::close_trusted_market(open_ids_len, close_ids_len)).into())
+        }
     }
 
     #[pallet::config]
@@ -2155,6 +2183,10 @@ mod pallet {
         MarketNotInCloseTimeFrameList,
         /// The market period has not started yet.
         MarketPeriodNotStartedYet,
+        /// The caller is not the market creator.
+        CallerNotMarketCreator,
+        /// The market is not trusted.
+        MarketIsNotTrusted,
     }
 
     #[pallet::event]
