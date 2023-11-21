@@ -533,6 +533,7 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
         deposit::<T>(&caller);
+        // adds resolve_at for the created market
         let (market_id, court_id) = setup_court::<T>()?;
 
         let mut court = <Courts<T>>::get(court_id).unwrap();
@@ -541,7 +542,6 @@ benchmarks! {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
         }
-        T::DisputeResolution::add_auto_resolve(&market_id, appeal_end).unwrap();
 
         let aggregation = court.round_ends.aggregation;
         for i in 0..a {
