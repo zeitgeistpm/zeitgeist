@@ -1757,7 +1757,7 @@ mod pallet {
             let mut weight = None;
 
             let should_be_opened = range.start < now && now < range.end;
-            let should_be_closed = range.end < now;
+            let should_be_closed = range.end <= now;
 
             if should_be_opened {
                 let range_start_time_frame = Self::calculate_time_frame_of_moment(range.start);
