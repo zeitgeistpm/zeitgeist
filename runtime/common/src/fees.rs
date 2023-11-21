@@ -187,7 +187,7 @@ macro_rules! impl_foreign_fees {
                 let converted_fee =
                     TTCBalanceToAssetBalance::to_asset_balance(native_fee, asset_id)?
                         .max(min_converted_fee);
-                let currency_id = Asset::ForeignAsset(asset_id);
+                let currency_id = Currencies::ForeignAsset(asset_id);
                 let can_withdraw =
                     <Tokens as Inspect<AccountId>>::can_withdraw(currency_id, who, converted_fee);
                 if can_withdraw != WithdrawConsequence::Success {
@@ -208,7 +208,7 @@ macro_rules! impl_foreign_fees {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
                 let asset_id = match paid.asset() {
-                    Asset::ForeignAsset(asset_id) => asset_id,
+                    Currencies::ForeignAsset(asset_id) => asset_id,
                     _ => {
                         return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
                             CustomTxError::NonForeignAssetPaid as u8,

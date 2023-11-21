@@ -56,16 +56,19 @@ pub mod pallet {
 
     pub trait AssetTraits<T: Config, A>:
         Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
-        + Transfer<T::AccountId, AssetId = A,Balance = T::Balance>
+        + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
         + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>
     {
     }
 
-    impl<G, T, A> AssetTraits<T, A> for G where
-        G:         Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
-        + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
-        + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>,
-        T: Config {}
+    impl<G, T, A> AssetTraits<T, A> for G
+    where
+        G: Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
+            + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
+            + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>,
+        T: Config,
+    {
+    }
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
