@@ -28,16 +28,16 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{DispatchError, DispatchResult},
-        sp_runtime::Saturating,
         traits::{
             tokens::{
                 fungibles::{Inspect, Mutate, Transfer},
-                WithdrawConsequence,
+                
             },
             BalanceStatus as Status,
         },
         transactional,
     };
+    use sp_runtime::{traits::{Bounded, Zero}, Saturating};
     use orml_traits::{
         arithmetic::Signed,
         currency::{
@@ -84,6 +84,8 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Cannot convert Amount (MultiCurrencyExtended implementation) into Balance type.
+        AmountIntoBalanceFailed,
         /// Asset conversion failed.
         UnknownAsset,
     }
@@ -269,18 +271,39 @@ mod pallet {
     }
 
     impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T>
-    where
-        <T as pallet_assets::Config>::Balance: Signed,
     {
-        type Amount = T::Balance;
+        type Amount = <T::Currencies as MultiCurrencyExtended<T::AccountId>>::Amount;
 
         fn update_balance(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             by_amount: Self::Amount,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as MultiCurrencyExtended<T::AccountId>>::update_balance(
+                    currency, who, by_amount,
+                );
+            }
+
+            if by_amount.is_zero() {
+                return Ok(());
+            }
+
+            // Ensure this doesn't overflow. There isn't any traits that exposes
+            // `saturating_abs` so we need to do it manually.
+            let by_amount_abs = if by_amount == Self::Amount::min_value() {
+                Self::Amount::max_value()
+            } else {
+                by_amount.abs()
+            };
+
+            let by_balance = TryInto::<Self::Balance>::try_into(by_amount_abs)
+                .map_err(|_| Error::<T>::AmountIntoBalanceFailed)?;
+            if by_amount.is_positive() {
+                Self::deposit(currency_id, who, by_balance)
+            } else {
+                Self::withdraw(currency_id, who, by_balance).map(|_| ())
+            }
         }
     }
 

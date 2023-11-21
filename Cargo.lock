@@ -14541,6 +14541,7 @@ dependencies = [
  "pallet-assets",
  "parity-scale-codec",
  "scale-info",
+ "sp-runtime",
  "zeitgeist-primitives",
 ]
 
