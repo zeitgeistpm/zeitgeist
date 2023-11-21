@@ -1449,15 +1449,6 @@ benchmarks! {
         let now = 500_000u32;
         assert!(range_start < (now as u64) && (now as u64) < range_end);
 
-        for _ in 0..63 {
-            create_market_common::<T>(
-                MarketCreation::Permissionless,
-                MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::CPMM,
-                Some(MarketPeriod::Timestamp(range_start..range_end)),
-            ).unwrap();
-        }
-
         let range_start_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_start);
         for i in 0..o {
             <MarketIdsPerOpenTimeFrame<T>>::try_mutate(range_start_time_frame, |ids| {
@@ -1484,13 +1475,11 @@ benchmarks! {
         let now = 1_500_000u32;
         assert!(range_end < now as u64);
 
-        for _ in 0..63 {
-            create_market_common::<T>(
-                MarketCreation::Permissionless,
-                MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::CPMM,
-                Some(MarketPeriod::Timestamp(range_start..range_end)),
-            ).unwrap();
+        let range_end_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_end);
+        for i in 0..o {
+            <MarketIdsPerCloseTimeFrame<T>>::try_mutate(range_end_time_frame, |ids| {
+                ids.try_push((i).into())
+            }).unwrap();
         }
 
         <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
