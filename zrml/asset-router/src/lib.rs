@@ -29,15 +29,11 @@ mod pallet {
     use frame_support::{
         pallet_prelude::{DispatchError, DispatchResult},
         traits::{
-            tokens::{
-                fungibles::{Inspect, Mutate, Transfer},
-                
-            },
+            tokens::fungibles::{Inspect, Mutate, Transfer},
             BalanceStatus as Status,
         },
         transactional,
     };
-    use sp_runtime::{traits::{Bounded, Zero}, Saturating};
     use orml_traits::{
         arithmetic::Signed,
         currency::{
@@ -45,6 +41,10 @@ mod pallet {
             NamedMultiReservableCurrency, TransferAll,
         },
         BalanceStatus, LockIdentifier,
+    };
+    use sp_runtime::{
+        traits::{Bounded, Zero},
+        Saturating,
     };
     use zeitgeist_primitives::types::{
         Assets, CampaignAsset, Currencies, CustomAsset, MarketAsset,
@@ -127,12 +127,12 @@ mod pallet {
     // This macro delegates a call to currencies if the asset represents a currency, otherwise
     // It returns an error
     macro_rules! only_currency {
-        ($currency_id:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
+        ($currency_id:expr, $error:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
             if let Ok(currency) = Currencies::try_from($currency_id) {
-                return <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+);
+                <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
+            } else {
+                $error
             }
-                
-            Err(Error::<T>::Unsupported.into())
         };
     }
 
@@ -284,8 +284,7 @@ mod pallet {
         }
     }
 
-    impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T>
-    {
+    impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
         type Amount = <T::Currencies as MultiCurrencyExtended<T::AccountId>>::Amount;
 
         fn update_balance(
@@ -331,7 +330,9 @@ mod pallet {
             amount: Self::Balance,
         ) -> DispatchResult {
             if let Ok(currency) = Currencies::try_from(currency_id) {
-                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::set_lock(lock_id, currency, who, amount);
+                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::set_lock(
+                    lock_id, currency, who, amount,
+                );
             }
 
             Err(Error::<T>::Unsupported.into())
@@ -344,7 +345,9 @@ mod pallet {
             amount: Self::Balance,
         ) -> DispatchResult {
             if let Ok(currency) = Currencies::try_from(currency_id) {
-                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::extend_lock(lock_id, currency, who, amount);
+                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::extend_lock(
+                    lock_id, currency, who, amount,
+                );
             }
 
             Err(Error::<T>::Unsupported.into())
@@ -356,7 +359,9 @@ mod pallet {
             who: &T::AccountId,
         ) -> DispatchResult {
             if let Ok(currency) = Currencies::try_from(currency_id) {
-                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::remove_lock(lock_id, currency, who);
+                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::remove_lock(
+                    lock_id, currency, who,
+                );
             }
 
             Err(Error::<T>::Unsupported.into())
@@ -364,69 +369,55 @@ mod pallet {
     }
 
     impl<T: Config> MultiReservableCurrency<T::AccountId> for Pallet<T> {
-        /// Check if `who` can reserve `value` from their free balance.
-        ///
-        /// Always `true` if value to be reserved is zero.
         fn can_reserve(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> bool {
-            // TODO
-            true
+            only_currency!(currency_id, false, MultiReservableCurrency, can_reserve, who, value)
         }
 
-        /// Slash from reserved balance, returning any amount that was unable to
-        /// be slashed.
-        ///
-        /// Is a no-op if the value to be slashed is zero.
         fn slash_reserved(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> Self::Balance {
-            // TODO
-            0u8.into()
+            only_currency!(currency_id, value, MultiReservableCurrency, slash_reserved, who, value)
         }
 
         fn reserved_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
-            // TODO
-            0u8.into()
+            only_currency!(
+                currency_id,
+                Zero::zero(),
+                MultiReservableCurrency,
+                reserved_balance,
+                who
+            )
         }
 
-        /// Move `value` from the free balance from `who` to their reserved
-        /// balance.
-        ///
-        /// Is a no-op if value to be reserved is zero.
         fn reserve(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            only_currency!(
+                currency_id,
+                Err(Error::<T>::Unsupported.into()),
+                MultiReservableCurrency,
+                reserve,
+                who,
+                value
+            )
         }
 
-        /// Unreserve some funds, returning any amount that was unable to be
-        /// unreserved.
-        ///
-        /// Is a no-op if the value to be unreserved is zero.
         fn unreserve(
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             value: Self::Balance,
         ) -> Self::Balance {
-            // TODO
-            0u8.into()
+            only_currency!(currency_id, value, MultiReservableCurrency, unreserve, who, value)
         }
 
-        /// Move the reserved balance of one account into the balance of
-        /// another, according to `status`.
-        ///
-        /// Is a no-op if:
-        /// - the value to be moved is zero; or
-        /// - the `slashed` id equal to `beneficiary` and the `status` is
-        ///   `Reserved`.
         fn repatriate_reserved(
             currency_id: Self::CurrencyId,
             slashed: &T::AccountId,
@@ -434,8 +425,16 @@ mod pallet {
             value: Self::Balance,
             status: BalanceStatus,
         ) -> Result<Self::Balance, DispatchError> {
-            // TODO
-            Ok(0u8.into())
+            only_currency!(
+                currency_id,
+                Err(Error::<T>::Unsupported.into()),
+                MultiReservableCurrency,
+                repatriate_reserved,
+                slashed,
+                beneficiary,
+                value,
+                status
+            )
         }
     }
 
