@@ -1566,7 +1566,6 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
 
-        // This block takes much longer than 12sec, but markets and pools still close correctly.
         set_timestamp_for_on_initialize(
             end + (crate::MAX_RECOVERY_TIME_FRAMES + 1) * MILLISECS_PER_BLOCK as u64,
         );

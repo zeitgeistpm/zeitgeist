@@ -1769,7 +1769,7 @@ mod pallet {
                             .iter()
                             .position(|i| i == &market_id)
                             .ok_or(Error::<T>::MarketNotInOpenTimeFrameList)?;
-                        ids.swap_remove(position);
+                        let _ = ids.swap_remove(position);
                         Ok(ids_len)
                     },
                 )?;
@@ -1787,7 +1787,7 @@ mod pallet {
                             .iter()
                             .position(|i| i == &market_id)
                             .ok_or(Error::<T>::MarketNotInCloseTimeFrameList)?;
-                        ids.swap_remove(position);
+                        let _ = ids.swap_remove(position);
                         Ok(ids_len)
                     },
                 )?;
@@ -3444,7 +3444,11 @@ mod pallet {
             let end = current_time_frame;
             let diff = end.saturating_sub(start);
             let start = if diff > MAX_RECOVERY_TIME_FRAMES {
-                log::warn!(target: LOG_TARGET, "Could not recover all time frames since the last time frame {:?}.", last_time_frame);
+                log::warn!(
+                    target: LOG_TARGET,
+                    "Could not recover all time frames since the last time frame {:?}.",
+                    last_time_frame,
+                );
                 let limit_time_frame = end.saturating_sub(MAX_RECOVERY_TIME_FRAMES);
                 Self::deposit_event(Event::RecoveryLimitReached {
                     last_time_frame,
