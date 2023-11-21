@@ -317,11 +317,22 @@ mod pallet {
             let maker = &order_data.maker;
             ensure!(who == *maker, Error::<T>::NotOrderCreator);
 
-            T::AssetManager::unreserve_named(
+            let missing = T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 order_data.maker_asset,
                 maker,
                 order_data.maker_amount,
+            );
+
+            debug_assert!(
+                missing.is_zero(),
+                "Could not unreserve all of the amount. reserve_id: {:?}, asset: {:?} who: {:?}, \
+                 amount: {:?}, missing: {:?}",
+                Self::reserve_id(),
+                order_data.maker_asset,
+                maker,
+                order_data.maker_amount,
+                missing,
             );
 
             <Orders<T>>::remove(order_id);

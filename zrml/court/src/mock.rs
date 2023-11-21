@@ -127,8 +127,11 @@ impl DisputeResolutionApi for MockResolution {
 
     fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
         <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
-            ids.retain(|id| id != market_id);
-            ids.len() as u32
+            let ids_len = ids.len() as u32;
+            if let Some(pos) = ids.iter().position(|i| i == market_id) {
+                ids.swap_remove(pos);
+            }
+            ids_len
         })
     }
 }
