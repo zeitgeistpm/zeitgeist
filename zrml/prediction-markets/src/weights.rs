@@ -87,6 +87,7 @@ pub trait WeightInfoZeitgeist {
     fn reject_early_close_after_authority(o: u32, n: u32) -> Weight;
     fn reject_early_close_after_dispute() -> Weight;
     fn create_market_and_deploy_pool(m: u32) -> Weight;
+    fn close_trusted_market(o: u32, c: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -896,5 +897,18 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(Weight::from_parts(24_164, 0).saturating_mul(m.into()))
             .saturating_add(T::DbWeight::get().reads(13))
             .saturating_add(T::DbWeight::get().writes(13))
+    }
+    fn close_trusted_market(o: u32, c: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `792 + o * (16 ±0) + c * (16 ±0)`
+        //  Estimated: `13229`
+        // Minimum execution time: 54_250 nanoseconds.
+        Weight::from_parts(59_415_334, 13229)
+            // Standard Error: 2_729
+            .saturating_add(Weight::from_parts(17_380, 0).saturating_mul(o.into()))
+            // Standard Error: 2_729
+            .saturating_add(Weight::from_parts(62_317, 0).saturating_mul(c.into()))
+            .saturating_add(T::DbWeight::get().reads(5))
+            .saturating_add(T::DbWeight::get().writes(3))
     }
 }
