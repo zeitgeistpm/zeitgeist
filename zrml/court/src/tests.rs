@@ -1002,8 +1002,15 @@ fn reveal_vote_works() {
             salt,
         ));
         System::assert_last_event(
-            Event::JurorRevealedVote { juror: ALICE, court_id, vote_item: vote_item.clone(), salt }
-                .into(),
+            Event::JurorRevealedVote {
+                juror: ALICE,
+                court_id,
+                vote_item: vote_item.clone(),
+                salt,
+                slashable_amount: MinJurorStake::get(),
+                draw_weight: 1u32,
+            }
+            .into(),
         );
 
         let new_draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -1504,7 +1511,13 @@ fn appeal_emits_event() {
 
         assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
-        System::assert_last_event(Event::CourtAppealed { court_id, appeal_number: 1u32 }.into());
+        let court = Courts::<Runtime>::get(court_id).unwrap();
+        let new_round_ends = Some(court.round_ends);
+        let appeal_info = court.appeals.get(0).unwrap().clone();
+
+        System::assert_last_event(
+            Event::CourtAppealed { court_id, appeal_info, new_round_ends }.into(),
+        );
     });
 }
 
