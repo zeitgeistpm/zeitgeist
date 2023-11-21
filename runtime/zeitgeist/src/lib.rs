@@ -125,6 +125,7 @@ impl Contains<RuntimeCall> for IsCallable {
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
         use zrml_prediction_markets::Call::{
+            admin_move_market_to_closed, admin_move_market_to_resolved,
             create_cpmm_market_and_deploy_assets, create_market, edit_market,
         };
 
@@ -177,6 +178,8 @@ impl Contains<RuntimeCall> for IsCallable {
                         dispute_mechanism: Some(Court | SimpleDisputes),
                         ..
                     } => false,
+                    admin_move_market_to_closed { .. } => false,
+                    admin_move_market_to_resolved { .. } => false,
                     _ => true,
                 }
             }

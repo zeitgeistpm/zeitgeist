@@ -2218,7 +2218,16 @@ mod pallet {
                     debug_assert!(missing.is_zero());
                     overall_imbalance.subsume(imb);
                 } else {
-                    T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
+                    let missing = T::Currency::unreserve_named(&Self::reserve_id(), backer, *bond);
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, \
+                         amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        backer,
+                        bond,
+                        missing,
+                    );
                 }
             }
 
