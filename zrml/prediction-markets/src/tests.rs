@@ -1650,6 +1650,81 @@ fn manually_open_market_after_long_stall() {
 }
 
 #[test]
+fn manually_open_market_fails_if_market_period_not_started_yet() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Mock last time frame to prevent it from defaulting.
+        LastTimeFrame::<Runtime>::set(Some(0));
+
+        let start: Moment = (33 * MILLISECS_PER_BLOCK).into();
+        let end: Moment = (666 * MILLISECS_PER_BLOCK).into();
+        let category_count = 3;
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            ALICE,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(50),
+            MarketType::Categorical(category_count),
+            Some(MarketDisputeMechanism::Court),
+            0,
+            LIQUIDITY,
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
+        ));
+
+        set_timestamp_for_on_initialize(start - 1 * MILLISECS_PER_BLOCK as u64);
+        run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
+
+        assert_noop!(
+            PredictionMarkets::manually_open_or_close_market(RuntimeOrigin::signed(ALICE), 0),
+            Error::<Runtime>::MarketPeriodNotStartedYet
+        );
+    });
+}
+
+#[test]
+fn manually_open_market_fails_if_market_not_in_open_time_frame_list() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Mock last time frame to prevent it from defaulting.
+        LastTimeFrame::<Runtime>::set(Some(0));
+
+        let start: Moment = (33 * MILLISECS_PER_BLOCK).into();
+        let end: Moment = (666 * MILLISECS_PER_BLOCK).into();
+        let category_count = 3;
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            ALICE,
+            MarketPeriod::Timestamp(start..end),
+            get_deadlines(),
+            gen_metadata(50),
+            MarketType::Categorical(category_count),
+            Some(MarketDisputeMechanism::Court),
+            0,
+            LIQUIDITY,
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
+        ));
+
+        // remove market from open time frame list
+        let range_start_time_frame =
+            crate::Pallet::<Runtime>::calculate_time_frame_of_moment(start);
+        crate::MarketIdsPerOpenTimeFrame::<Runtime>::remove(&range_start_time_frame);
+
+        set_timestamp_for_on_initialize(
+            start + (crate::MAX_RECOVERY_TIME_FRAMES + 1) * MILLISECS_PER_BLOCK as u64,
+        );
+        run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
+
+        assert_noop!(
+            PredictionMarkets::manually_open_or_close_market(RuntimeOrigin::signed(ALICE), 0),
+            Error::<Runtime>::MarketNotInOpenTimeFrameList
+        );
+    });
+}
+
+#[test]
 fn manually_close_market_after_long_stall() {
     // We check that `on_market_close` works correctly even if a block takes much longer than 12sec
     // to be produced and multiple markets are involved.
@@ -1716,6 +1791,86 @@ fn manually_close_market_after_long_stall() {
             1
         ));
         assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Closed);
+    });
+}
+
+#[test]
+fn manually_close_market_fails_if_market_not_in_close_time_frame_list() {
+    // We check that `on_market_close` works correctly even if a block takes much longer than 12sec
+    // to be produced and multiple markets are involved.
+    ExtBuilder::default().build().execute_with(|| {
+        // Mock last time frame to prevent it from defaulting.
+        LastTimeFrame::<Runtime>::set(Some(0));
+
+        let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
+        let category_count = 3;
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            get_deadlines(),
+            gen_metadata(50),
+            MarketType::Categorical(category_count),
+            Some(MarketDisputeMechanism::SimpleDisputes),
+            0,
+            LIQUIDITY,
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
+        ));
+
+        // remove market from open time frame list
+        let range_end_time_frame = crate::Pallet::<Runtime>::calculate_time_frame_of_moment(end);
+        crate::MarketIdsPerCloseTimeFrame::<Runtime>::remove(&range_end_time_frame);
+
+        // This block takes much longer than 12sec, but markets and pools still close correctly.
+        set_timestamp_for_on_initialize(
+            end + (crate::MAX_RECOVERY_TIME_FRAMES + 1) * MILLISECS_PER_BLOCK as u64,
+        );
+        run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
+
+        assert_noop!(
+            PredictionMarkets::manually_open_or_close_market(RuntimeOrigin::signed(ALICE), 0),
+            Error::<Runtime>::MarketNotInCloseTimeFrameList
+        );
+    });
+}
+
+#[test]
+fn manually_open_or_close_market_fails_if_not_allowed_for_block_based_markets() {
+    // We check that `on_market_close` works correctly even if a block takes much longer than 12sec
+    // to be produced and multiple markets are involved.
+    ExtBuilder::default().build().execute_with(|| {
+        // Mock last time frame to prevent it from defaulting.
+        LastTimeFrame::<Runtime>::set(Some(0));
+
+        let category_count = 3;
+        let end = 5;
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            ALICE,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(50),
+            MarketType::Categorical(category_count),
+            Some(MarketDisputeMechanism::SimpleDisputes),
+            0,
+            LIQUIDITY,
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
+        ));
+
+        // This block takes much longer than 12sec, but markets and pools still close correctly.
+        set_timestamp_for_on_initialize(
+            end + (crate::MAX_RECOVERY_TIME_FRAMES + 1) * MILLISECS_PER_BLOCK as u64,
+        );
+        run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
+
+        assert_noop!(
+            PredictionMarkets::manually_open_or_close_market(RuntimeOrigin::signed(ALICE), 0),
+            Error::<Runtime>::NotAllowedForBlockBasedMarkets
+        );
     });
 }
 
