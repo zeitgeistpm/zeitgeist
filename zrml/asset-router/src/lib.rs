@@ -88,6 +88,8 @@ mod pallet {
         AmountIntoBalanceFailed,
         /// Asset conversion failed.
         UnknownAsset,
+        /// Operation is not supported for given asset
+        Unsupported,
     }
 
     /// This macro converts the invoked asset type into the respective
@@ -109,16 +111,28 @@ mod pallet {
 
         ($currency_id:expr, $currency_method:ident, $asset_method:ident, $($args:expr),+) => {
             if let Ok(currency) = Currencies::try_from($currency_id) {
-                Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency, $($args),*))
+                Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency, $($args),+))
             } else if let Ok(asset) = MarketAsset::try_from($currency_id) {
-                Ok(<T as Config>::MarketAssets::$asset_method(asset, $($args),*))
+                Ok(<T as Config>::MarketAssets::$asset_method(asset, $($args),+))
             } else if let Ok(asset) = CampaignAsset::try_from($currency_id) {
-                Ok(<T as Config>::CampaignAsset::$asset_method(asset, $($args),*))
+                Ok(<T as Config>::CampaignAsset::$asset_method(asset, $($args),+))
             } else if let Ok(asset) = CustomAsset::try_from($currency_id)  {
-                Ok(<T as Config>::CustomAsset::$asset_method(asset, $($args),*))
+                Ok(<T as Config>::CustomAsset::$asset_method(asset, $($args),+))
             } else {
                 Err(Error::<T>::UnknownAsset)
             }
+        };
+    }
+
+    // This macro delegates a call to currencies if the asset represents a currency, otherwise
+    // It returns an error
+    macro_rules! only_currency {
+        ($currency_id:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
+            if let Ok(currency) = Currencies::try_from($currency_id) {
+                return <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+);
+            }
+                
+            Err(Error::<T>::Unsupported.into())
         };
     }
 
@@ -310,28 +324,30 @@ mod pallet {
     impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
         type Moment = T::BlockNumber;
 
-        // Set a lock on the balance of `who` under `currency_id`.
-        // Is a no-op if lock amount is zero.
         fn set_lock(
             lock_id: LockIdentifier,
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::set_lock(lock_id, currency, who, amount);
+            }
+
+            Err(Error::<T>::Unsupported.into())
         }
 
-        // Extend a lock on the balance of `who` under `currency_id`.
-        // Is a no-op if lock amount is zero
         fn extend_lock(
             lock_id: LockIdentifier,
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::extend_lock(lock_id, currency, who, amount);
+            }
+
+            Err(Error::<T>::Unsupported.into())
         }
 
         fn remove_lock(
@@ -339,8 +355,11 @@ mod pallet {
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
         ) -> DispatchResult {
-            // TODO
-            Ok(())
+            if let Ok(currency) = Currencies::try_from(currency_id) {
+                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::remove_lock(lock_id, currency, who);
+            }
+
+            Err(Error::<T>::Unsupported.into())
         }
     }
 
