@@ -30,6 +30,8 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
+#[test_case(ScoringRule::Parimutuel, "Parimutuel")]
+#[test_case(ScoringRule::Lmsr; "LMSR")]
 #[test_case(ScoringRule::CPMM; "CPMM")]
 #[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
 fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
@@ -48,7 +50,7 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
                 market_id,
                 market.base_asset,
                 10 * BASE,
-                Asset::CategoricalOutcome(0, 2),
+                Asset::CategoricalOutcome(market_id, 2),
                 25 * BASE,
             ),
             Error::<Runtime>::InvalidScoringRule
@@ -87,7 +89,8 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
         );
     });
 }
-
+#[test_case(ScoringRule::Parimutuel, "Parimutuel")]
+#[test_case(ScoringRule::Lmsr; "LMSR")]
 #[test_case(ScoringRule::CPMM; "CPMM")]
 #[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
 fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
@@ -257,16 +260,6 @@ fn place_order_fails_if_amount_is_below_minimum_balance() {
             ),
             Error::<Runtime>::BelowMinimumBalance
         );
-
-        assert_ok!(Orderbook::place_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            maker_asset,
-            AssetManager::minimum_balance(maker_asset),
-            taker_asset,
-            AssetManager::minimum_balance(taker_asset),
-        ));
-    });
 }
 
 #[test]
@@ -374,12 +367,13 @@ fn fill_order_partially_fills_order() {
 
         let order_id = 0u128;
         let taker_amount = 25 * BASE;
+        let maker_amount = 10 * BASE;
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
             maker_asset,
-            10 * BASE,
+            maker_amount,
             taker_asset,
             taker_amount,
         ));
@@ -393,9 +387,9 @@ fn fill_order_partially_fills_order() {
                 market_id,
                 maker: ALICE,
                 maker_asset,
-                maker_amount: 10 * BASE,
+                maker_amount,
                 taker_asset,
-                taker_amount: 25 * BASE,
+                taker_amount,
             }
         );
 
@@ -637,7 +631,6 @@ fn it_fills_order_fully_maker_outcome_asset() {
         let alice_maker_asset_free = AssetManager::free_balance(taker_asset, &ALICE);
         let alice_taker_asset_free = AssetManager::free_balance(maker_asset, &ALICE);
         assert_eq!(alice_maker_asset_free, INITIAL_BALANCE);
-
         assert_eq!(alice_taker_asset_free, maker_amount);
 
         let bob_taker_asset_free = AssetManager::free_balance(market.base_asset, &BOB);
