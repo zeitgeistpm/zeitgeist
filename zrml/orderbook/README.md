@@ -1,6 +1,6 @@
 # Orderbook Pallet
 
-A pallet of an on-chain orderbook, which allows to exchange the market's base
+A pallet of an on-chain order book, which allows to exchange the market's base
 asset for outcome assets and vice versa.
 
 ## Overview
