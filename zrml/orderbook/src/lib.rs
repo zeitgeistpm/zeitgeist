@@ -295,7 +295,7 @@ mod pallet {
             // is always enough to repatriate successfully!
             let ratio = Perquintill::from_rational(
                 maker_fill.saturated_into::<u128>(),
-                // this is ensured to be never zero in `is_ratio_quotient_valid`
+                // this is ensured to be never zero in `ensure_ratio_quotient_valid`
                 maker_full_fill.saturated_into::<u128>(),
             );
             // returns the (partial) amount of what the taker gets from the maker's amount
@@ -305,7 +305,7 @@ mod pallet {
                 .saturated_into::<BalanceOf<T>>()
         }
 
-        fn is_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
+        fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
             let maker_full_fill = order_data.taker_amount;
             // this ensures that partial fills, which fill nearly the whole order, are not executed
             // this protects the last fill happening
@@ -472,7 +472,7 @@ mod pallet {
             // the accounting system does not care about, whether fees were charged,
             // it just substracts the total maker_fill and taker_fill (including fees)
             Self::decrease_order_amounts(&mut order_data, maker_fill, taker_fill)?;
-            Self::is_ratio_quotient_valid(&order_data)?;
+            Self::ensure_ratio_quotient_valid(&order_data)?;
 
             if order_data.maker_amount.is_zero() {
                 <Orders<T>>::remove(order_id);
