@@ -75,22 +75,24 @@ fn place_default_order<T: Config>(
 
 benchmarks! {
     remove_order {
-        let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
+        let market_id = 0u32.into();
+        let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(market_id, 0);
         let (caller, _, order_id) = place_default_order::<T>(None, taker_asset)?;
     }: remove_order(RawOrigin::Signed(caller), order_id)
 
     fill_order {
-        let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
+        let market_id = 0u32.into();
+        let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(market_id, 0);
+        let (_, _, order_id) = place_default_order::<T>(Some(0), taker_asset)?;
         let caller = generate_funded_account::<T>(None, taker_asset)?;
-        let (_, market_id, order_id) = place_default_order::<T>(Some(0), taker_asset)?;
         let maker_asset = T::MarketCommons::market(&market_id).unwrap().base_asset;
         let caller = generate_funded_account::<T>(None, maker_asset)?;
     }: fill_order(RawOrigin::Signed(caller), order_id, None)
 
     place_order {
-        let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), 0);
         let (market_id, caller, maker_asset, maker_amount, taker_amount) =
             order_common_parameters::<T>(None)?;
+        let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(market_id, 0);
     }: {
         Orderbook::<T>::place_order(
             RawOrigin::Signed(caller).into(),

@@ -30,7 +30,7 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
-#[test_case(ScoringRule::Parimutuel, "Parimutuel")]
+#[test_case(ScoringRule::Parimutuel; "Parimutuel")]
 #[test_case(ScoringRule::Lmsr; "LMSR")]
 #[test_case(ScoringRule::CPMM; "CPMM")]
 #[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
@@ -89,7 +89,7 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
         );
     });
 }
-#[test_case(ScoringRule::Parimutuel, "Parimutuel")]
+#[test_case(ScoringRule::Parimutuel; "Parimutuel")]
 #[test_case(ScoringRule::Lmsr; "LMSR")]
 #[test_case(ScoringRule::CPMM; "CPMM")]
 #[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
@@ -260,6 +260,7 @@ fn place_order_fails_if_amount_is_below_minimum_balance() {
             ),
             Error::<Runtime>::BelowMinimumBalance
         );
+    });
 }
 
 #[test]
@@ -383,14 +384,7 @@ fn fill_order_partially_fills_order() {
         let order = <Orders<Runtime>>::get(order_id).unwrap();
         assert_eq!(
             order,
-            Order {
-                market_id,
-                maker: ALICE,
-                maker_asset,
-                maker_amount,
-                taker_asset,
-                taker_amount,
-            }
+            Order { market_id, maker: ALICE, maker_asset, maker_amount, taker_asset, taker_amount }
         );
 
         assert_ok!(Orderbook::fill_order(
