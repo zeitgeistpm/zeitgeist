@@ -32,7 +32,6 @@ use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::{constants::BASE, types::Asset};
 
-// Takes a `seed` and returns an account. Use None to generate a whitelisted caller
 fn generate_funded_account<T: Config>(
     seed: Option<u32>,
     asset: AssetOf<T>,
@@ -42,9 +41,6 @@ fn generate_funded_account<T: Config>(
     Ok(acc)
 }
 
-// Creates an account and gives it asset and currency. `seed` specifies the account seed,
-// None will return a whitelisted account
-// Returns `account`, `asset`, `outcome_asset_amount` and `base_asset_amount`
 fn order_common_parameters<T: Config>(
     seed: Option<u32>,
 ) -> Result<
@@ -62,9 +58,6 @@ fn order_common_parameters<T: Config>(
     Ok((market_id, acc, maker_asset, maker_amount, taker_amount))
 }
 
-// Creates an order of type `order_type`. `seed` specifies the account seed,
-// None will return a whitelisted account
-// Returns `account`, `asset`, `order_id`
 fn place_default_order<T: Config>(
     seed: Option<u32>,
     taker_asset: AssetOf<T>,
