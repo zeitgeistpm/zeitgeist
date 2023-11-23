@@ -520,7 +520,7 @@ mod pallet {
 
             let order = Order {
                 market_id,
-                maker: who.clone(),
+                maker: who,
                 maker_asset,
                 maker_amount,
                 taker_asset,
