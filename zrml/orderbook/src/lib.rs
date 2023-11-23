@@ -152,7 +152,7 @@ mod pallet {
         OrderDoesNotExist,
         /// The market is not active.
         MarketIsNotActive,
-        /// The scoring rule is not orderbook.
+        /// The scoring rule is not order book.
         InvalidScoringRule,
         /// The specified amount parameter is too high for the order.
         AmountTooHighForOrder,
@@ -241,7 +241,7 @@ mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// The reserve ID of the orderbook pallet.
+        /// The reserve ID of the order book pallet.
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
             T::PalletId::get().0
