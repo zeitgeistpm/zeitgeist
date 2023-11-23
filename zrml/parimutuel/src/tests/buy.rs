@@ -200,7 +200,7 @@ fn buy_fails_if_below_minimum_bet_size() {
         let amount = <Runtime as Config>::MinBetSize::get() - 1;
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
-            Error::<Runtime>::AmountTooSmall
+            Error::<Runtime>::AmountBelowMinimumBetSize
         );
     });
 }

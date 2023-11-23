@@ -144,7 +144,7 @@ mod pallet {
         /// The market is not active.
         MarketIsNotActive,
         /// The specified amount is below the minimum bet size.
-        AmountTooSmall,
+        AmountBelowMinimumBetSize,
         /// The specified asset is not a parimutuel share.
         NotParimutuelOutcome,
         /// The specified asset was not found in the market assets.
@@ -173,6 +173,10 @@ mod pallet {
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
         InconsistentState(InconsistentStateError),
+        /// The amount minus fees is below the existential deposit of the base asset.
+        AmountMinusFeesBelowBaseAssetExistentialDeposit,
+        /// The amount minus fees is below the existential deposit of the parimutuel share asset.
+        AmountMinusFeesBelowParimutuelShareExistentialDeposit,
     }
 
     // NOTE: these errors should never happen.
@@ -313,7 +317,7 @@ mod pallet {
         }
 
         fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
-            ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountTooSmall);
+            ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountBelowMinimumBetSize);
 
             let market_id = match asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
@@ -336,6 +340,19 @@ mod pallet {
             let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
             let amount_minus_fees =
                 amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
+
+            let existential_deposit_asset = T::AssetManager::minimum_balance(asset);
+            let existential_deposit_base_asset = T::AssetManager::minimum_balance(base_asset);
+            // TODO: distribute already charges the fees / modifies storage (verify first, write last rule broken)
+            // TODO: mitigate this by using `get_fee` and then `distribute` after the merge with PR https://github.com/zeitgeistpm/zeitgeist/pull/1183
+            ensure!(
+                amount_minus_fees >= existential_deposit_asset,
+                Error::<T>::AmountMinusFeesBelowParimutuelShareExistentialDeposit
+            );
+            ensure!(
+                amount_minus_fees >= existential_deposit_base_asset,
+                Error::<T>::AmountMinusFeesBelowBaseAssetExistentialDeposit
+            );
             let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
