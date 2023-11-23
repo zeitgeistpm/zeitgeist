@@ -25,7 +25,7 @@ use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, tra
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup, Zero},
     Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
@@ -73,7 +73,10 @@ where
         amount: Self::Balance,
     ) -> Self::Balance {
         let fees = Self::get_fee(_market_id, amount);
-        let _ = T::AssetManager::transfer(asset, account, &F::get(), fees);
+        match T::AssetManager::transfer(asset, account, &F::get(), fees) {
+            Ok(_) => fees,
+            Err(_) => Zero::zero(),
+        };
         fees
     }
 }

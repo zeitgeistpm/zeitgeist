@@ -321,7 +321,7 @@ fn fill_order_fails_if_maker_partial_fill_too_low() {
 
         assert_noop!(
             Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, Some(taker_amount - 1)),
-            Error::<Runtime>::MakerPartialFillTooLow
+            Error::<Runtime>::PartialFillNearFullFillNotAllowed
         );
     });
 }

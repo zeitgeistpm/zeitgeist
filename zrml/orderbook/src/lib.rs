@@ -57,6 +57,7 @@ pub mod weights;
 mod pallet {
     use super::*;
 
+    #[allow(dead_code)]
     const LOG_TARGET: &str = "runtime::zrml-orderbook";
 
     #[pallet::config]
