@@ -357,7 +357,7 @@ fn fill_order_removes_order() {
 
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None));
 
-        assert!(<Orders<Runtime>>::get(order_id).is_none());
+        assert!(Orders::<Runtime>::get(order_id).is_none());
     });
 }
 
@@ -386,7 +386,7 @@ fn fill_order_partially_fills_order() {
 
         AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
 
-        let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let order = Orders::<Runtime>::get(order_id).unwrap();
         assert_eq!(
             order,
             Order { market_id, maker: ALICE, maker_asset, maker_amount, taker_asset, taker_amount }
@@ -398,7 +398,7 @@ fn fill_order_partially_fills_order() {
             Some(taker_amount / 2)
         ));
 
-        let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let order = Orders::<Runtime>::get(order_id).unwrap();
 
         assert_eq!(
             order,
@@ -736,7 +736,7 @@ fn it_fills_order_partially_maker_base_asset() {
         let portion = Some(alice_portion);
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
-        let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let order = Orders::<Runtime>::get(order_id).unwrap();
         let unfilled_taker_amount = taker_amount - alice_portion;
 
         let filled_maker_amount =
@@ -835,7 +835,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
             ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, 70 * BASE)
         );
 
-        let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let order = Orders::<Runtime>::get(order_id).unwrap();
         let filled_maker_amount = 860_000_000_000;
         assert_eq!(
             order,
@@ -913,7 +913,7 @@ fn it_removes_order() {
         assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
-        let order = <Orders<Runtime>>::get(order_id).unwrap();
+        let order = Orders::<Runtime>::get(order_id).unwrap();
         assert_eq!(
             order,
             Order { market_id, maker: ALICE, maker_asset, maker_amount, taker_asset, taker_amount }
@@ -932,7 +932,7 @@ fn it_removes_order() {
         let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
         assert_eq!(reserved_funds, 0);
 
-        assert!(<Orders<Runtime>>::get(order_id).is_none());
+        assert!(Orders::<Runtime>::get(order_id).is_none());
     });
 }
 
