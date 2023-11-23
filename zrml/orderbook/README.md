@@ -5,8 +5,8 @@ asset for outcome assets and vice versa.
 
 ## Overview
 
-The order book can be set as a market's scoring rule. 
-It allows to place, partially or fully fill and remove orders.
+The order book can be set as a market's scoring rule. It allows to place,
+partially or fully fill and remove orders.
 
 ## Terminology
 
@@ -15,9 +15,10 @@ It allows to place, partially or fully fill and remove orders.
 - `taker_fill`: The amount of what the taker wants to fill.
 - `maker_asset`: The asset that the maker wants to sell.
 - `maker_amount`: The amount of the asset that the maker wants to sell.
-- `taker_asset`: The asset that the taker needs to have to buy the maker's asset.
-- `taker_amount`: The amount of the asset that the taker needs to have to buy the
-  maker's asset.
+- `taker_asset`: The asset that the taker needs to have to buy the maker's
+  asset.
+- `taker_amount`: The amount of the asset that the taker needs to have to buy
+  the maker's asset.
 
 ## Interface
 
