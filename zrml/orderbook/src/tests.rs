@@ -285,8 +285,9 @@ fn fill_order_fails_if_balance_too_low() {
             taker_amount,
         ));
 
+        AssetManager::deposit(taker_asset, &BOB, taker_amount - 1).unwrap();
         let bob_free_taker_asset = AssetManager::free_balance(taker_asset, &BOB);
-        assert_eq!(bob_free_taker_asset, 0);
+        assert_eq!(bob_free_taker_asset, taker_amount - 1);
 
         assert_noop!(
             Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None),
