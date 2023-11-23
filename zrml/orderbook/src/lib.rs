@@ -298,8 +298,8 @@ mod pallet {
                 // this is ensured to be never zero in `is_ratio_quotient_valid`
                 maker_full_fill.saturated_into::<u128>(),
             );
-            // returns the share (ratio) of what the taker gets from the maker's amount
-            // respected the partial fill from the taker of what the maker wants to fill
+            // returns the (partial) amount of what the taker gets from the maker's amount
+            // respected the partial fill from the taker of what the maker wants to get filled
             ratio
                 .mul_floor(taker_full_fill.saturated_into::<u128>())
                 .saturated_into::<BalanceOf<T>>()
