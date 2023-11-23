@@ -297,7 +297,7 @@ fn fill_order_fails_if_balance_too_low() {
 }
 
 #[test]
-fn fill_order_fails_if_maker_partial_fill_too_low() {
+fn fill_order_fails_if_partial_fill_near_full_fill_not_allowed() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
@@ -321,7 +321,11 @@ fn fill_order_fails_if_maker_partial_fill_too_low() {
         AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
 
         assert_noop!(
-            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, Some(taker_amount - 1)),
+            Orderbook::fill_order(
+                RuntimeOrigin::signed(BOB),
+                order_id,
+                Some(taker_amount - AssetManager::minimum_balance(taker_asset) + 1)
+            ),
             Error::<Runtime>::PartialFillNearFullFillNotAllowed
         );
     });
