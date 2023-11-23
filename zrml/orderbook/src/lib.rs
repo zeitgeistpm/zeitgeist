@@ -435,26 +435,14 @@ mod pallet {
             let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
-            let res = T::AssetManager::repatriate_reserved_named(
+            T::AssetManager::repatriate_reserved_named(
                 &Self::reserve_id(),
                 maker_asset,
                 &maker,
                 &taker,
                 taker_fill,
                 BalanceStatus::Free,
-            );
-            debug_assert!(res.is_ok(), "This should never fail!");
-            if res.is_err() {
-                log::error!(
-                    target: LOG_TARGET,
-                    "Repatriate unexpectedly failed: maker_asset: {:?}, maker: {:?}, taker: {:?}, \
-                     taker_fill {:?}.",
-                    maker_asset,
-                    maker,
-                    taker,
-                    taker_fill,
-                );
-            }
+            )?;
 
             // always charge fees from the base asset and not the outcome asset
             Self::charge_base_asset_fee(&order_data, base_asset, maker_fill, &taker, taker_fill);
