@@ -159,7 +159,7 @@ mod pallet {
         /// The specified outcome asset is not part of the market.
         InvalidOutcomeAsset,
         /// The maker partial fill leads to a too low quotient for the next order execution.
-        MakerPartialFillTooLow,
+        PartialFillNearFullFillNotAllowed,
         /// The market base asset is not present.
         MarketBaseAssetNotPresent,
         /// The specified amount is below the minimum balance.
@@ -312,7 +312,7 @@ mod pallet {
             // without a division by zero for `Perquintill::from_rational`
             let is_ratio_quotient_valid = maker_full_fill.is_zero()
                 || maker_full_fill >= T::AssetManager::minimum_balance(order_data.taker_asset);
-            ensure!(is_ratio_quotient_valid, Error::<T>::MakerPartialFillTooLow);
+            ensure!(is_ratio_quotient_valid, Error::<T>::PartialFillNearFullFillNotAllowed);
             Ok(())
         }
 
