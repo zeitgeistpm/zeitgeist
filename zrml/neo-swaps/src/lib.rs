@@ -638,10 +638,13 @@ mod pallet {
             let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
-                ensure!(
-                    ratio >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
-                    Error::<T>::MinRelativeLiquidityThresholdViolated,
-                );
+                // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE.
+                if let Err(_) = pool.liquidity_shares_manager.shares_of(&who) {
+                    ensure!(
+                        ratio >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
+                        Error::<T>::MinRelativeLiquidityThresholdViolated,
+                    );
+                }
                 let mut amounts_in = vec![];
                 for (&asset, &max_amount_in) in pool.assets().iter().zip(max_amounts_in.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
