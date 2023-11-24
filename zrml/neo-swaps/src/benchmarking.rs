@@ -76,7 +76,7 @@ where
     /// Ensures that the tree has the expected configuration of nodes.
     fn populate_liquidity_tree_with_free_leaf(&self, market_id: MarketIdOf<T>) {
         let pool = Pools::<T>::get(market_id).unwrap();
-        let max_node_count = pool.liquidity_shares_manager.max_node_count();
+        let max_node_count = LiquidityTreeOf::<T>::max_node_count();
         let last = (max_node_count - 1) as usize;
         for caller in self.accounts().take(last - 1) {
             assert_ok!(T::MultiCurrency::deposit(pool.collateral, &caller, _100.saturated_into()));
@@ -118,7 +118,7 @@ where
         ));
         // Verify that we've got the right number of nodes.
         let pool = Pools::<T>::get(market_id).unwrap();
-        let max_node_count = pool.liquidity_shares_manager.max_node_count();
+        let max_node_count = LiquidityTreeOf::<T>::max_node_count();
         assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
     }
 
@@ -142,7 +142,7 @@ where
         ));
         // Verify that we've got the right number of nodes.
         let pool = Pools::<T>::get(market_id).unwrap();
-        let max_node_count = pool.liquidity_shares_manager.max_node_count();
+        let max_node_count = LiquidityTreeOf::<T>::max_node_count();
         assert_eq!(pool.liquidity_shares_manager.nodes.len(), max_node_count as usize);
         let last = max_node_count - 1;
         assert_eq!(pool.liquidity_shares_manager.abandoned_nodes, vec![last]);
@@ -377,7 +377,7 @@ mod benchmarks {
         // Mock up some fees. Needs to be large enough to ensure that Bob's share is not smaller
         // than the existential deposit.
         let pool = Pools::<T>::get(market_id).unwrap();
-        let max_node_count = pool.liquidity_shares_manager.max_node_count() as u128;
+        let max_node_count = LiquidityTreeOf::<T>::max_node_count() as u128;
         let fee_amount = (max_node_count * _10).saturated_into();
         deposit_fees::<T>(market_id, fee_amount);
 
