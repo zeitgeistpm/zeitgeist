@@ -89,42 +89,6 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
     });
 }
 
-#[test_case(ScoringRule::Parimutuel; "Parimutuel")]
-#[test_case(ScoringRule::Lmsr; "LMSR")]
-#[test_case(ScoringRule::CPMM; "CPMM")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
-fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-        let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let maker_asset = market.base_asset;
-        let taker_asset = Asset::CategoricalOutcome(0, 2);
-
-        let order_id = 0u128;
-
-        assert_ok!(Orderbook::place_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            maker_asset,
-            10 * BASE,
-            taker_asset,
-            25 * BASE,
-        ));
-
-        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
-            market.scoring_rule = scoring_rule;
-            Ok(())
-        }));
-
-        assert_noop!(
-            Orderbook::fill_order(RuntimeOrigin::signed(BOB), order_id, None),
-            Error::<Runtime>::InvalidScoringRule
-        );
-    });
-}
-
 #[test_case(MarketStatus::Proposed; "proposed")]
 #[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]

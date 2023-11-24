@@ -388,7 +388,10 @@ mod pallet {
         ) -> DispatchResult {
             let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
-            ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
+            debug_assert!(
+                market.scoring_rule == ScoringRule::Orderbook,
+                "The call to place_order already ensured the scoring rule order book."
+            );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
 
