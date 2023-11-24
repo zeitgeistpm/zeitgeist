@@ -52,6 +52,7 @@ mod tests;
 pub mod types;
 mod utils;
 pub mod weights;
+pub mod migrations;
 
 #[frame_support::pallet]
 mod pallet {
@@ -92,7 +93,7 @@ mod pallet {
     }
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
