@@ -50,9 +50,8 @@ fn order_common_parameters<T: Config>(
     let market = market_mock::<T>();
     let maker_asset = market.base_asset;
     let acc = generate_funded_account::<T>(seed, maker_asset)?;
-    let maker_amount: BalanceOf<T> = 100u32.into();
-
-    let taker_amount: BalanceOf<T> = BASE.saturated_into();
+    let maker_amount: BalanceOf<T> = BASE.saturating_mul(1_000).saturated_into();
+    let taker_amount: BalanceOf<T> = BASE.saturating_mul(1_000).saturated_into();
     T::MarketCommons::push_market(market.clone()).unwrap();
     let market_id: MarketIdOf<T> = 0u32.into();
     Ok((market_id, acc, maker_asset, maker_amount, taker_amount))
