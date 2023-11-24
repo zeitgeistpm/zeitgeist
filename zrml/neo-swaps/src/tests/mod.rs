@@ -104,7 +104,7 @@ fn deposit_complete_set(
     let market = MarketCommons::market(&market_id).unwrap();
     assert_ok!(AssetManager::deposit(market.base_asset, &account, amount));
     assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
-        RuntimeOrigin::signed(account.into()),
+        RuntimeOrigin::signed(account),
         market_id,
         amount,
     ));

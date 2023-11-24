@@ -136,7 +136,7 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
         assert_balances!(ALICE, outcomes, new_alice_balances);
         // Pool doesn't exist anymore and exit fees are cleared.
         assert!(!Pools::<Runtime>::contains_key(market_id));
-        assert_balances!(pool_account, outcomes, vec![0, 0]);
+        assert_balances!(pool_account, outcomes, [0, 0]);
         System::assert_last_event(
             Event::PoolDestroyed { who: ALICE, market_id, amounts_out }.into(),
         );

@@ -95,7 +95,7 @@ fn join_fails_on_max_liquidity_providers() {
             // joining.
             deposit_complete_set(market_id, account, amount + CENT);
             assert_ok!(NeoSwaps::join(
-                RuntimeOrigin::signed(account.into()),
+                RuntimeOrigin::signed(account),
                 market_id,
                 amount,
                 vec![u128::MAX; category_count as usize],

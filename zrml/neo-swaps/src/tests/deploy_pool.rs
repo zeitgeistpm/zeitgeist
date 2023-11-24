@@ -45,7 +45,7 @@ fn deploy_pool_works_with_binary_markets() {
         assert_eq!(pool.collateral, BASE_ASSET);
         assert_liquidity_tree_state!(
             pool.liquidity_shares_manager,
-            vec![Node::<Runtime> {
+            [Node::<Runtime> {
                 account: Some(ALICE),
                 stake: amount,
                 fees: 0u128,
@@ -122,7 +122,7 @@ fn deploy_pool_works_with_scalar_marktes() {
         assert_eq!(pool.collateral, BASE_ASSET);
         assert_liquidity_tree_state!(
             pool.liquidity_shares_manager,
-            vec![Node::<Runtime> {
+            [Node::<Runtime> {
                 account: Some(ALICE),
                 stake: amount,
                 fees: 0u128,
