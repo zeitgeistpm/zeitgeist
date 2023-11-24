@@ -251,10 +251,6 @@ macro_rules! impl_market_creator_fees {
             type Balance = Balance;
             type MarketId = MarketId;
 
-            fn get_fee(market_id: Self::MarketId, amount: Self::Balance) -> Self::Balance {
-                Self::do_get_fee(market_id, amount).unwrap_or_else(|_| 0u8.saturated_into())
-            }
-
             fn distribute(
                 market_id: Self::MarketId,
                 asset: Self::Asset,
@@ -267,12 +263,6 @@ macro_rules! impl_market_creator_fees {
         }
 
         impl MarketCreatorFee {
-            fn do_get_fee(market_id: MarketId, amount: Balance) -> Result<Balance, DispatchError> {
-                let market = MarketCommons::market(&market_id)?; // Should never fail
-                let fee_amount = market.creator_fee.mul_floor(amount);
-                Ok(fee_amount)
-            }
-
             fn do_distribute(
                 market_id: MarketId,
                 asset: Asset<MarketId>,
@@ -280,7 +270,7 @@ macro_rules! impl_market_creator_fees {
                 amount: Balance,
             ) -> Result<Balance, DispatchError> {
                 let market = MarketCommons::market(&market_id)?; // Should never fail
-                let fee_amount = Self::do_get_fee(market_id, amount)?;
+                let fee_amount = market.creator_fee.mul_floor(amount);
                 // Might fail if the transaction is too small
                 <AssetManager as MultiCurrency<_>>::transfer(
                     asset,

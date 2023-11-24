@@ -51,6 +51,10 @@ parameter_types! {
     pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
 }
 
+pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
+    Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>())
+}
+
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
 
 impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
@@ -62,17 +66,13 @@ where
     type Balance = BalanceOf<T>;
     type MarketId = MarketIdOf<T>;
 
-    fn get_fee(_market_id: Self::MarketId, amount: Self::Balance) -> Self::Balance {
-        Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>())
-    }
-
     fn distribute(
         _market_id: Self::MarketId,
         asset: Self::Asset,
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = Self::get_fee(_market_id, amount);
+        let fees = calculate_fee::<T>(amount);
         match T::AssetManager::transfer(asset, account, &F::get(), fees) {
             Ok(_) => fees,
             Err(_) => Zero::zero(),

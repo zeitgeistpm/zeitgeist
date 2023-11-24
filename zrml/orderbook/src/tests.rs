@@ -25,7 +25,6 @@ use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
-    traits::DistributeFees,
     types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
@@ -609,7 +608,7 @@ fn it_fills_order_fully_maker_outcome_asset() {
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, None));
 
         let market_creator_balance_after = AssetManager::free_balance(taker_asset, &MARKET_CREATOR);
-        let taker_fees = ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, taker_amount);
+        let taker_fees = calculate_fee::<Runtime>(taker_amount);
         assert_eq!(market_creator_balance_after - market_creator_balance_before, taker_fees);
 
         let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
@@ -687,7 +686,7 @@ fn it_fills_order_fully_maker_base_asset() {
 
         let alice_maker_asset_free = AssetManager::free_balance(maker_asset, &ALICE);
         let alice_taker_asset_free = AssetManager::free_balance(taker_asset, &ALICE);
-        let maker_fees = ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, maker_amount);
+        let maker_fees = calculate_fee::<Runtime>(maker_amount);
         let maker_amount_minus_fees = maker_amount - maker_fees;
         assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + maker_amount_minus_fees);
         assert_eq!(alice_taker_asset_free, 0);
@@ -771,16 +770,15 @@ fn it_fills_order_partially_maker_base_asset() {
         );
 
         let market_creator_free_after = AssetManager::free_balance(maker_asset, &MARKET_CREATOR);
-        let maker_fees =
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, filled_maker_amount);
+        let maker_fees = calculate_fee::<Runtime>(filled_maker_amount);
         assert_eq!(market_creator_free_after - market_creator_free_before, maker_fees);
 
         let alice_maker_asset_free = AssetManager::free_balance(maker_asset, &ALICE);
         let alice_taker_asset_free = AssetManager::free_balance(taker_asset, &ALICE);
         let filled_maker_amount =
             Perquintill::from_rational(alice_portion, taker_amount).mul_floor(maker_amount);
-        let filled_maker_amount_minus_fees = filled_maker_amount
-            - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, filled_maker_amount);
+        let filled_maker_amount_minus_fees =
+            filled_maker_amount - calculate_fee::<Runtime>(filled_maker_amount);
         assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + filled_maker_amount_minus_fees);
         assert_eq!(alice_taker_asset_free, alice_taker_asset_free_left);
 
@@ -835,7 +833,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
             AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
         assert_eq!(
             market_creator_free_balance_after - market_creator_free_balance_before,
-            ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, 70 * BASE)
+            calculate_fee::<Runtime>(70 * BASE)
         );
 
         let order = Orders::<Runtime>::get(order_id).unwrap();
@@ -882,8 +880,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
 
         let bob_taker_asset_free = AssetManager::free_balance(taker_asset, &BOB);
         let bob_maker_asset_free = AssetManager::free_balance(maker_asset, &BOB);
-        let filled_minus_fees =
-            alice_portion - ExternalFees::<Runtime, FeeAccount>::get_fee(market_id, alice_portion);
+        let filled_minus_fees = alice_portion - calculate_fee::<Runtime>(alice_portion);
         assert_eq!(bob_taker_asset_free, INITIAL_BALANCE + filled_minus_fees);
         assert_eq!(bob_maker_asset_free, 0);
 
