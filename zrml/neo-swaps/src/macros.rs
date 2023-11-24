@@ -167,4 +167,3 @@ macro_rules! assert_approx {
         }
     };
 }
-

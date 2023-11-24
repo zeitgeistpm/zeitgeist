@@ -38,12 +38,7 @@ fn sell_works() {
         let pool_outcomes_before: Vec<_> =
             pool.assets().iter().map(|a| pool.reserve_of(a).unwrap()).collect();
         let pool_liquidity_before = pool.liquidity_parameter;
-        AssetManager::deposit(BASE_ASSET, &BOB, amount_in).unwrap();
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            amount_in,
-        ));
+        deposit_complete_set(market_id, BOB, amount_in);
         let asset_in = pool.assets()[1];
         assert_ok!(NeoSwaps::sell(
             RuntimeOrigin::signed(BOB),

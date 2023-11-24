@@ -19,6 +19,8 @@ use super::*;
 use crate::types::LiquidityTreeError;
 use test_case::test_case;
 
+// TODO Use deposit_complete_set everywhere!
+
 #[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_704], 33_508_962_010)]
 #[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_928], 33_486_637_585)]
 fn exit_works(
@@ -39,12 +41,7 @@ fn exit_works(
             swap_fee,
         );
         // Add a second LP to create a more generic situation, bringing the total of shares to _10.
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, liquidity));
-        assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            liquidity
-        ));
+        deposit_complete_set(market_id, BOB, liquidity);
         assert_ok!(NeoSwaps::join(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -100,8 +97,6 @@ fn exit_works(
     });
 }
 
-// TODO Test that full exit doesn't kill the pool if there's more than one LP.
-
 #[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_705])]
 #[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_929])]
 fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<BalanceOf<Runtime>>) {
@@ -150,7 +145,6 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
 #[test]
 fn removing_second_to_last_lp_does_not_destroy_pool_and_removes_node_from_liquidity_tree() {
     ExtBuilder::default().build().execute_with(|| {
-        // TODO
         let liquidity = _5;
         let spot_prices = vec![_1_6, _5_6 + 1];
         let swap_fee = CENT;
@@ -163,12 +157,7 @@ fn removing_second_to_last_lp_does_not_destroy_pool_and_removes_node_from_liquid
             swap_fee,
         );
         // Add a second LP, bringing the total of shares to _10.
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, liquidity));
-        assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            liquidity
-        ));
+        deposit_complete_set(market_id, BOB, liquidity);
         assert_ok!(NeoSwaps::join(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -333,6 +322,34 @@ fn exit_pool_fails_on_liquidity_too_low() {
         assert_noop!(
             NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _10 - _1_2, vec![0, 0]),
             Error::<Runtime>::LiquidityTooLow
+        );
+    });
+}
+
+#[test]
+fn exit_pool_fails_on_relative_liquidity_threshold_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Scalar(0..=1),
+            _100,
+            vec![_1_2, _1_2],
+            CENT,
+        );
+        // Bob contributes 3% of liquidity. Any removal (no matter how small the amount) should
+        // fail.
+        let amount = _3;
+        deposit_complete_set(market_id, BOB, amount);
+        assert_ok!(NeoSwaps::join(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            amount,
+            vec![u128::MAX, u128::MAX],
+        ));
+        assert_noop!(
+            NeoSwaps::exit(RuntimeOrigin::signed(BOB), market_id, CENT, vec![0, 0]),
+            Error::<Runtime>::MinRelativeLiquidityThresholdViolated
         );
     });
 }

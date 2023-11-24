@@ -18,6 +18,8 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// TODO Update LaTeX docs
+
 extern crate alloc;
 
 mod benchmarking;
@@ -78,6 +80,9 @@ mod pallet {
     pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
+    /// The minimum percentage each new LP position must increase the liquidity by, represented as
+    /// fractional (0.03 represents 3%).
+    pub(crate) const MIN_RELATIVE_LP_POSITION_VALUE: u128 = 3 * CENT; // 3%
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
@@ -253,6 +258,8 @@ mod pallet {
         ZeroAmount,
         /// An error occurred when handling the liquidty tree.
         LiquidityTreeError(LiquidityTreeError),
+        /// The relative value of a new LP position is too low.
+        MinRelativeLiquidityThresholdViolated,
     }
 
     #[pallet::call]
@@ -413,7 +420,6 @@ mod pallet {
             #[pallet::compact] pool_shares_amount_out: BalanceOf<T>,
             min_amounts_out: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
-            // TODO enforce minimum deposit
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(min_amounts_out.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
@@ -632,6 +638,10 @@ mod pallet {
             let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
+                ensure!(
+                    ratio >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
+                    Error::<T>::MinRelativeLiquidityThresholdViolated,
+                );
                 let mut amounts_in = vec![];
                 for (&asset, &max_amount_in) in pool.assets().iter().zip(max_amounts_in.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
@@ -720,12 +730,26 @@ mod pallet {
                         amounts_out,
                     });
                 } else {
-                    let liq = pool.liquidity_parameter;
-                    let new_liquidity_parameter = liq.checked_sub_res(&ratio.bmul(liq)?)?;
-                    ensure!(
-                        new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
-                        Error::<T>::LiquidityTooLow
-                    );
+                    let old_liquidity_parameter = pool.liquidity_parameter;
+                    let new_liquidity_parameter = old_liquidity_parameter
+                        .checked_sub_res(&ratio.bmul(old_liquidity_parameter)?)?;
+                    // If `who` still holds pool shares, check that their position has at least
+                    // minimum size.
+                    if let Ok(remaining_pool_shares_amount) =
+                        pool.liquidity_shares_manager.shares_of(&who)
+                    {
+                        ensure!(
+                            new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
+                            Error::<T>::LiquidityTooLow
+                        );
+                        let remaining_pool_shares_ratio = remaining_pool_shares_amount
+                            .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
+                        ensure!(
+                            remaining_pool_shares_ratio
+                                >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
+                            Error::<T>::MinRelativeLiquidityThresholdViolated
+                        );
+                    }
                     pool.liquidity_parameter = new_liquidity_parameter;
                     Self::deposit_event(Event::<T>::ExitExecuted {
                         who: who.clone(),

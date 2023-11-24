@@ -82,14 +82,14 @@ fn join_fails_on_max_liquidity_providers() {
             ALICE,
             BASE_ASSET,
             MarketType::Categorical(category_count),
-            _10,
+            _100,
             create_spot_prices::<Runtime>(category_count),
             CENT,
         );
-        // Populate the tree with the maximum allowed number of
+        // Populate the tree with the maximum allowed number of LPs.
         let offset = 100;
         let max_node_count = LiquidityTreeOf::<Runtime>::max_node_count() as u128;
-        let amount = _1;
+        let amount = _10;
         for index in 1..max_node_count {
             let account = offset + index;
             // Adding a little more because ceil rounding may cause slightly higher prices for
@@ -247,6 +247,32 @@ fn join_fails_on_amount_in_above_max() {
                 vec![pool_shares_amount - 1, pool_shares_amount]
             ),
             Error::<Runtime>::AmountInAboveMax
+        );
+    });
+}
+
+#[test]
+fn join_pool_fails_on_relative_liquidity_threshold_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Scalar(0..=1),
+            _100,
+            vec![_1_2, _1_2],
+            CENT,
+        );
+        // Bob contributes less than 3% of liquidity; this should fail.
+        let amount = _3 - 100;
+        deposit_complete_set(market_id, BOB, amount + CENT);
+        assert_noop!(
+            NeoSwaps::join(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                amount,
+                vec![u128::MAX, u128::MAX],
+            ),
+            Error::<Runtime>::MinRelativeLiquidityThresholdViolated
         );
     });
 }
