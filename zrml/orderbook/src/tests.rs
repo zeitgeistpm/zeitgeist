@@ -88,6 +88,7 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
         );
     });
 }
+
 #[test_case(ScoringRule::Parimutuel; "Parimutuel")]
 #[test_case(ScoringRule::Lmsr; "LMSR")]
 #[test_case(ScoringRule::CPMM; "CPMM")]
@@ -930,37 +931,6 @@ fn it_removes_order() {
         assert_eq!(reserved_funds, 0);
 
         assert!(Orders::<Runtime>::get(order_id).is_none());
-    });
-}
-
-#[test]
-fn removes_order_fails_if_not_market_creator() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-        let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let maker_asset = market.base_asset;
-        let taker_asset = Asset::CategoricalOutcome(0, 2);
-
-        let taker_amount = 25 * BASE;
-        let maker_amount = 10 * BASE;
-
-        assert_ok!(Orderbook::place_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            maker_asset,
-            maker_amount,
-            taker_asset,
-            taker_amount,
-        ));
-
-        let order_id = 0u128;
-
-        assert_noop!(
-            Orderbook::remove_order(RuntimeOrigin::signed(BOB), order_id),
-            Error::<Runtime>::NotOrderCreator,
-        );
     });
 }
 

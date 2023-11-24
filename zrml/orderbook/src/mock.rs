@@ -76,8 +76,7 @@ where
         match T::AssetManager::transfer(asset, account, &F::get(), fees) {
             Ok(_) => fees,
             Err(_) => Zero::zero(),
-        };
-        fees
+        }
     }
 }
 
