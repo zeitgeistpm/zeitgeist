@@ -33,6 +33,7 @@ mod pallet {
     use frame_support::{
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        require_transactional,
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
@@ -173,10 +174,6 @@ mod pallet {
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
         InconsistentState(InconsistentStateError),
-        /// The amount minus fees is below the existential deposit of the base asset.
-        AmountMinusFeesBelowBaseAssetExistentialDeposit,
-        /// The amount minus fees is below the existential deposit of the parimutuel share asset.
-        AmountMinusFeesBelowParimutuelShareExistentialDeposit,
     }
 
     // NOTE: these errors should never happen.
@@ -316,9 +313,8 @@ mod pallet {
             Err(Error::<T>::NotParimutuelOutcome.into())
         }
 
+        #[require_transactional]
         fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
-            ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountBelowMinimumBetSize);
-
             let market_id = match asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
@@ -340,19 +336,11 @@ mod pallet {
             let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
             let amount_minus_fees =
                 amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
+            ensure!(
+                amount_minus_fees >= T::MinBetSize::get(),
+                Error::<T>::AmountBelowMinimumBetSize
+            );
 
-            let existential_deposit_asset = T::AssetManager::minimum_balance(asset);
-            let existential_deposit_base_asset = T::AssetManager::minimum_balance(base_asset);
-            // TODO: distribute already charges the fees / modifies storage (verify first, write last rule broken)
-            // TODO: mitigate this by using `get_fee` and then `distribute` after the merge with PR https://github.com/zeitgeistpm/zeitgeist/pull/1183
-            ensure!(
-                amount_minus_fees >= existential_deposit_asset,
-                Error::<T>::AmountMinusFeesBelowParimutuelShareExistentialDeposit
-            );
-            ensure!(
-                amount_minus_fees >= existential_deposit_base_asset,
-                Error::<T>::AmountMinusFeesBelowBaseAssetExistentialDeposit
-            );
             let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
@@ -394,6 +382,7 @@ mod pallet {
             Ok(winning_asset)
         }
 
+        #[require_transactional]
         fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_parimutuel_market_resolved(&market)?;
@@ -454,6 +443,7 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
         fn do_claim_refunds(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
             let market_id = match refund_asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
