@@ -20,6 +20,21 @@ partially or fully fill and remove orders.
 - `taker_amount`: The amount of the asset that the taker needs to have to buy
   the maker's asset.
 
+## Notes
+
+- Orders must always bid or ask for the corresponding market's base asset.
+- External fees are always paid in the market's base asset after the order is
+  filled. In particular, the recipient of the collateral pays the fee. The
+  implementation, however, arranges the transfers slightly differently for
+  convenience:
+  - If the order is an ask (maker sells outcome tokens), then the external fees
+    are taken (not charged!) from the taker before the order is executed. The
+    taker still receives the full amount of outcome tokens, but the maker
+    receives only an adjusted amount.
+  - If the order is a bid (maker buys outcome tokens), then the external fees
+    are charged from the taker after the transaction is executed. In particular,
+    the maker still receives the full amount of outcome tokens.
+
 ## Interface
 
 ### Dispatches

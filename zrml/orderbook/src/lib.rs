@@ -349,63 +349,36 @@ mod pallet {
             Ok(())
         }
 
-        /// Charge the base asset fee.
-        fn charge_base_asset_fee(
+        /// Charge the external fees from `taker` and return the adjusted maker fill.
+        fn charge_external_fees(
             order_data: &OrderOf<T>,
             base_asset: AssetOf<T>,
             maker_fill: BalanceOf<T>,
             taker: &AccountIdOf<T>,
             taker_fill: BalanceOf<T>,
-        ) {
-            let base_asset_fill = if order_data.maker_asset == base_asset {
-                // charge fees from the taker,
-                // who already got the full base asset amount from the maker previously (repatriate)
-                // taker_fill is the amount what the taker wants to have (base asset from maker)
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let maker_asset_is_base = order_data.maker_asset == base_asset;
+            let base_asset_fill = if maker_asset_is_base {
                 taker_fill
             } else {
-                // maker_asset is outcome asset here
                 debug_assert!(order_data.taker_asset == base_asset);
-
-                // charge fees from the taker,
-                // who is responsible to pay the base asset minus fees to the maker.
-                // maker_fill is the amount what the maker wants to have (base asset from taker)
-                // taker is the one, who pays the base asset to the maker
-                // and the maker gets outcome asset amount minus fees in return
                 maker_fill
             };
-            T::ExternalFees::distribute(order_data.market_id, base_asset, taker, base_asset_fill);
-        }
-
-        /// Decrease the maker fill by external fees if the taker asset is the base asset,
-        /// otherwise return the unchanged maker fill.
-        /// In result, if the taker asset is the base asset,
-        /// the maker gets the base asset amount minus fees.
-        /// Otherwise the maker gets the outcome asset amount.
-        fn maybe_adjust_maker_fill_if_base_asset(
-            order_data: &OrderOf<T>,
-            base_asset: AssetOf<T>,
-            maker_fill: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            let maybe_adjusted_maker_fill = if order_data.maker_asset == base_asset {
+            let fee_amount = T::ExternalFees::distribute(
+                order_data.market_id,
+                base_asset,
+                taker,
+                base_asset_fill,
+            );
+            if maker_asset_is_base {
                 // maker_fill is the amount what the maker wants to have (outcome asset from taker)
                 // do not charge fees from outcome assets, but rather from the base asset
-                maker_fill
+                Ok(maker_fill)
             } else {
-                // maker_asset is outcome asset here
-                debug_assert!(order_data.taker_asset == base_asset);
-
                 // accounting fees from the taker,
                 // who is responsible to pay the base asset minus fees to the maker.
-                let external_fees = T::ExternalFees::get_fee(
-                    order_data.market_id,
-                    // maker_fill is the amount what the maker wants to have (base asset from taker)
-                    maker_fill,
-                );
-                // base asset amount from taker minus fees to the maker (maker_fill)
-                maker_fill.checked_sub(&external_fees).ok_or(ArithmeticError::Underflow)?
-            };
-
-            Ok(maybe_adjusted_maker_fill)
+                Ok(maker_fill.checked_sub(&fee_amount).ok_or(ArithmeticError::Underflow)?)
+            }
         }
 
         fn do_fill_order(
@@ -447,9 +420,13 @@ mod pallet {
             )?;
 
             // always charge fees from the base asset and not the outcome asset
-            Self::charge_base_asset_fee(&order_data, base_asset, maker_fill, &taker, taker_fill);
-            let maybe_adjusted_maker_fill =
-                Self::maybe_adjust_maker_fill_if_base_asset(&order_data, base_asset, maker_fill)?;
+            let maybe_adjusted_maker_fill = Self::charge_external_fees(
+                &order_data,
+                base_asset,
+                maker_fill,
+                &taker,
+                taker_fill,
+            )?;
 
             T::AssetManager::transfer(
                 taker_asset,
