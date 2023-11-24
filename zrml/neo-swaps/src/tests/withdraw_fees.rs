@@ -53,7 +53,9 @@ fn withdraw_fees_works() {
         let liquidity_parameter = 288_539_008_176;
         let pool_balances = [83_007_499_856, 400_000_000_000];
 
-        let test_withdraw = |who: AccountIdOf<Runtime>, fees: BalanceOf<Runtime>| {
+        let test_withdraw = |who: AccountIdOf<Runtime>,
+                             fees_withdrawn: BalanceOf<Runtime>,
+                             fees_remaining: BalanceOf<Runtime>| {
             // Make sure everybody's got at least the minimum deposit.
             assert_ok!(<Runtime as Config>::MultiCurrency::deposit(
                 BASE_ASSET,
@@ -62,19 +64,22 @@ fn withdraw_fees_works() {
             ));
             let old_balance = <Runtime as Config>::MultiCurrency::free_balance(BASE_ASSET, &who);
             assert_ok!(NeoSwaps::withdraw_fees(RuntimeOrigin::signed(who), market_id));
-            assert_balance!(who, BASE_ASSET, old_balance + fees);
-            assert_pool_status!(
+            assert_balance!(who, BASE_ASSET, old_balance + fees_withdrawn);
+            assert_pool_state!(
                 market_id,
                 pool_balances,
                 spot_prices,
                 liquidity_parameter,
-                create_b_tree_map!({ ALICE => _10, BOB => _10, CHARLIE => _20 })
+                create_b_tree_map!({ ALICE => _10, BOB => _10, CHARLIE => _20 }),
+                fees_remaining,
             );
-            System::assert_last_event(Event::FeesWithdrawn { who, market_id, amount: fees }.into());
+            System::assert_last_event(
+                Event::FeesWithdrawn { who, market_id, amount: fees_withdrawn }.into(),
+            );
         };
-        test_withdraw(ALICE, _1_4);
-        test_withdraw(BOB, _1_4);
-        test_withdraw(CHARLIE, _1_2);
+        test_withdraw(ALICE, _1_4, _3_4);
+        test_withdraw(BOB, _1_4, _1_2);
+        test_withdraw(CHARLIE, _1_2, 0);
     });
 }
 
@@ -105,20 +110,22 @@ fn withdraw_fees_is_noop_if_there_are_no_fees() {
         );
         let pool_balances = [83_007_499_856, 400_000_000_000];
         let liquidity_parameter = 288_539_008_178;
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             pool_balances,
             spot_prices,
             liquidity_parameter,
             create_b_tree_map!({ ALICE => amount }),
+            0,
         );
         assert_ok!(NeoSwaps::withdraw_fees(RuntimeOrigin::signed(ALICE), market_id));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             pool_balances,
             spot_prices,
             liquidity_parameter,
             create_b_tree_map!({ ALICE => amount }),
+            0,
         );
     });
 }

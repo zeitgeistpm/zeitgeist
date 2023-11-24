@@ -23,8 +23,6 @@ use crate::{
 use alloc::collections::BTreeMap;
 use test_case::test_case;
 
-// TODO Buy distributes fees correctly
-
 #[test_case(ALICE, create_b_tree_map!({ ALICE => _14 }))]
 #[test_case(BOB, create_b_tree_map!({ ALICE => _10, BOB => _4 }))]
 fn join_works(
@@ -53,12 +51,13 @@ fn join_works(
         ));
         let expected_pool_balances = vec![140_000_000_000, 14_245_783_753];
         let new_liquidity_parameter = 78_135_487_700;
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             expected_pool_balances,
             spot_prices,
             new_liquidity_parameter,
-            pool_shares
+            pool_shares,
+            0,
         );
         let amounts_in = vec![40_000_000_000, 4_070_223_930];
         System::assert_last_event(

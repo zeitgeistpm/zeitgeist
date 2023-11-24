@@ -73,31 +73,32 @@ macro_rules! assert_liquidity_tree_state {
 }
 
 #[macro_export]
-macro_rules! assert_pool_status {
+macro_rules! assert_pool_state {
     (
         $market_id:expr,
         $reserves:expr,
         $spot_prices:expr,
         $liquidity_parameter:expr,
-        $liquidity_shares:expr
+        $liquidity_shares:expr,
+        $total_fees:expr
         $(,)?
     ) => {
         let pool = Pools::<Runtime>::get($market_id).unwrap();
         assert_eq!(
             pool.reserves.values().cloned().collect::<Vec<_>>(),
             $reserves,
-            "assert_pool_status: Reserves mismatch"
+            "assert_pool_state: Reserves mismatch"
         );
         let actual_spot_prices = pool
             .assets()
             .iter()
             .map(|&a| pool.calculate_spot_price(a).unwrap())
             .collect::<Vec<_>>();
-        assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_status: Spot price mismatch");
+        assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_state: Spot price mismatch");
         let invariant = actual_spot_prices.iter().sum::<u128>();
         assert_eq!(
             pool.liquidity_parameter, $liquidity_parameter,
-            "assert_pool_status: Liquidity parameter mismatch"
+            "assert_pool_state: Liquidity parameter mismatch"
         );
         let actual_liquidity_shares = pool
             .liquidity_shares_manager
@@ -107,15 +108,21 @@ macro_rules! assert_pool_status {
                 (
                     account,
                     pool.liquidity_shares_manager.shares_of(&account).expect(
-                        format!("assert_pool_status: No shares found for {:?}", account).as_str(),
+                        format!("assert_pool_state: No shares found for {:?}", account).as_str(),
                     ),
                 )
             })
             .collect::<alloc::collections::BTreeMap<_, _>>();
         assert_eq!(
             actual_liquidity_shares, $liquidity_shares,
-            "assert_pool_status: Liquidity shares mismatch"
+            "assert_pool_state: Liquidity shares mismatch"
         );
+        let actual_total_fees = pool
+            .liquidity_shares_manager
+            .nodes
+            .iter()
+            .fold(0u128, |acc, node| acc + node.fees + node.lazy_fees);
+        assert_eq!(actual_total_fees, $total_fees);
         assert_approx!(invariant, _1, 1);
     };
 }

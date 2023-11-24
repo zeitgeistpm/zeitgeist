@@ -19,8 +19,6 @@ use super::*;
 use crate::types::LiquidityTreeError;
 use test_case::test_case;
 
-// TODO Use deposit_complete_set everywhere!
-
 #[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_704], 33_508_962_010)]
 #[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_928], 33_486_637_585)]
 fn exit_works(
@@ -58,12 +56,13 @@ fn exit_works(
         let alice_balances = [0, 44_912_220_089];
         assert_balances!(ALICE, outcomes, alice_balances);
         let pool_balances = vec![100_000_000_000, 10_175_559_822];
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             pool_balances,
             spot_prices,
             55_811_062_642,
-            create_b_tree_map!({ ALICE => _5, BOB => _5 })
+            create_b_tree_map!({ ALICE => _5, BOB => _5 }),
+            0,
         );
         let pool_shares_amount = _4; // Remove 40% to the pool.
         assert_ok!(NeoSwaps::exit(
@@ -77,12 +76,13 @@ fn exit_works(
         let new_alice_balances =
             alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
         assert_balances!(ALICE, outcomes, new_alice_balances);
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             new_pool_balances,
             spot_prices,
             new_liquidity_parameter,
-            create_b_tree_map!({ ALICE => _1, BOB => _5 })
+            create_b_tree_map!({ ALICE => _1, BOB => _5 }),
+            0,
         );
         System::assert_last_event(
             Event::ExitExecuted {
@@ -122,12 +122,13 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
         let alice_balances = [0, 35_929_776_071];
         assert_balances!(ALICE, outcomes, alice_balances);
         let pool_balances = vec![40_000_000_000, 4_070_223_929];
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             pool_balances,
             spot_prices,
             22_324_425_057,
             create_b_tree_map!({ ALICE => _4 }),
+            0,
         );
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
         let new_alice_balances =
@@ -164,20 +165,22 @@ fn removing_second_to_last_lp_does_not_destroy_pool_and_removes_node_from_liquid
             liquidity,
             vec![u128::MAX, u128::MAX],
         ));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             [100_000_000_000, 10_175_559_822],
             spot_prices,
             55_811_062_642,
             create_b_tree_map!({ ALICE => _5, BOB => _5 }),
+            0,
         );
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(BOB), market_id, liquidity, vec![0, 0]));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             [50_050_000_000, 5_092_867_691],
             spot_prices,
             27_933_436_852,
             create_b_tree_map!({ ALICE => _5 }),
+            0,
         );
     });
 }
