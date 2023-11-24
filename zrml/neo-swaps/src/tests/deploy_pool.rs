@@ -56,16 +56,16 @@ fn deploy_pool_works_with_binary_markets() {
             Vec::<u32>::new(),
         );
         assert_eq!(pool.swap_fee, swap_fee);
-        assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), buffer);
-        assert_eq!(AssetManager::free_balance(assets[0], &pool.account_id), amount);
-        assert_eq!(AssetManager::free_balance(assets[1], &pool.account_id), amount);
+        assert_balance!(pool.account_id, pool.collateral, buffer);
+        assert_balance!(pool.account_id, assets[0], amount);
+        assert_balance!(pool.account_id, assets[1], amount);
         assert_eq!(pool.reserve_of(&assets[0]).unwrap(), amount);
         assert_eq!(pool.reserve_of(&assets[1]).unwrap(), amount);
         assert_eq!(pool.calculate_spot_price(assets[0]).unwrap(), spot_prices[0]);
         assert_eq!(pool.calculate_spot_price(assets[1]).unwrap(), spot_prices[1]);
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
-        assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(assets[1], &ALICE), 0);
+        assert_balance!(ALICE, BASE_ASSET, alice_before - amount - buffer);
+        assert_balance!(ALICE, assets[0], 0);
+        assert_balance!(ALICE, assets[1], 0);
         let mut reserves = BTreeMap::new();
         reserves.insert(assets[0], amount);
         reserves.insert(assets[1], amount);
@@ -133,18 +133,15 @@ fn deploy_pool_works_with_scalar_marktes() {
             Vec::<u32>::new(),
         );
         assert_eq!(pool.swap_fee, swap_fee);
-        assert_eq!(
-            AssetManager::free_balance(assets[0], &pool.account_id),
-            expected_amounts[0] + rogue_funds
-        );
-        assert_eq!(AssetManager::free_balance(assets[1], &pool.account_id), expected_amounts[1]);
+        assert_balance!(pool.account_id, assets[0], expected_amounts[0] + rogue_funds);
+        assert_balance!(pool.account_id, assets[1], expected_amounts[1]);
         assert_eq!(pool.reserve_of(&assets[0]).unwrap(), expected_amounts[0]);
         assert_eq!(pool.reserve_of(&assets[1]).unwrap(), expected_amounts[1]);
         assert_eq!(pool.calculate_spot_price(assets[0]).unwrap(), spot_prices[0]);
         assert_eq!(pool.calculate_spot_price(assets[1]).unwrap(), spot_prices[1]);
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
-        assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(assets[1], &ALICE), amount - expected_amounts[1]);
+        assert_balance!(ALICE, BASE_ASSET, alice_before - amount - buffer);
+        assert_balance!(ALICE, assets[0], 0);
+        assert_balance!(ALICE, assets[1], amount - expected_amounts[1]);
         let price_sum =
             pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
         assert_eq!(price_sum, _1);

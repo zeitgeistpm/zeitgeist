@@ -18,6 +18,8 @@
 use super::*;
 use test_case::test_case;
 
+// TODO Use assert_balance everywhere!
+
 // Example taken from
 // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
 #[test]
@@ -58,7 +60,6 @@ fn buy_works() {
             0,
         ));
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        // TODO Same for sell.
         let expected_swap_amount_out = 58496250072;
         let expected_amount_in_minus_fees = _10 + 1; // Note: This is 1 Pennock off of the correct result.
         let expected_reserves = vec![
