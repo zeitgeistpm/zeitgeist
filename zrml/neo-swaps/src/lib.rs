@@ -18,8 +18,6 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// TODO Update LaTeX docs
-
 extern crate alloc;
 
 mod benchmarking;
