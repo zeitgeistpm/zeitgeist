@@ -151,8 +151,8 @@ pub mod pallet {
         };
     }
 
-    // This macro delegates a call to currencies if the asset represents a currency, otherwise
-    // It returns an error
+    /// This macro delegates a call to currencies if the asset represents a currency, otherwise
+    /// It returns an error
     macro_rules! only_currency {
         ($currency_id:expr, $error:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
             if let Ok(currency) = Currencies::try_from($currency_id) {

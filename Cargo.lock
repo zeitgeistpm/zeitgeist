@@ -14539,10 +14539,13 @@ version = "0.4.1"
 dependencies = [
  "frame-support",
  "frame-system",
+ "orml-tokens",
  "orml-traits",
  "pallet-assets",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
 ]

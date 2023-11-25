@@ -1,5 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,33 +19,34 @@
 
 extern crate alloc;
 
-use crate::{self as zrml_authorized, mock_storage::pallet as mock_storage};
+use crate::{self as zrml_asset_router};
 use alloc::{vec, vec::Vec};
 use frame_support::{
-    construct_runtime, ord_parameter_types,
-    pallet_prelude::{DispatchError, Weight},
-    traits::Everything,
+    construct_runtime,
+    traits::{AsEnsureOriginWithArg, Everything},
 };
-use frame_system::EnsureSignedBy;
+use frame_system::EnsureSigned;
+use orml_traits::parameter_type_with_key;
+use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, ConstU128, ConstU32, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::mock::{
-        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod,
-        PmPalletId, BASE,
-    },
-    traits::DisputeResolutionApi,
+    constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
-        Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CampaignAsset, CampaignAssetId,
+        Currencies, CustomAsset, CustomAssetId, Hash, Index, MarketAsset, UncheckedExtrinsicTest,
     },
 };
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
+
+type CustomAssetsInstance = pallet_assets::Instance1;
+type CampaignAssetsInstance = pallet_assets::Instance2;
+type MarketAssetsInstance = pallet_assets::Instance3;
 
 construct_runtime!(
     pub enum Runtime
@@ -55,83 +55,22 @@ construct_runtime!(
         NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
-        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
+        AssetRouter: zrml_asset_router::{Pallet},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
+        CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
+        MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        // Just a mock storage for testing.
-        MockStorage: mock_storage::{Storage},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
     }
 );
 
-ord_parameter_types! {
-    pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
-}
-
-// MockResolution implements DisputeResolutionApi with no-ops.
-pub struct MockResolution;
-
-impl DisputeResolutionApi for MockResolution {
-    type AccountId = AccountIdTest;
-    type Balance = Balance;
-    type BlockNumber = BlockNumber;
-    type MarketId = MarketId;
-    type Moment = Moment;
-
-    fn resolve(
-        _market_id: &Self::MarketId,
-        _market: &Market<
-            Self::AccountId,
-            Self::Balance,
-            Self::BlockNumber,
-            Self::Moment,
-            Asset<Self::MarketId>,
-        >,
-    ) -> Result<Weight, DispatchError> {
-        Ok(Weight::zero())
-    }
-
-    fn add_auto_resolve(
-        market_id: &Self::MarketId,
-        resolve_at: Self::BlockNumber,
-    ) -> Result<u32, DispatchError> {
-        let ids_len = <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::try_mutate(
-            resolve_at,
-            |ids| -> Result<u32, DispatchError> {
-                ids.try_push(*market_id).map_err(|_| DispatchError::Other("Storage Overflow"))?;
-                Ok(ids.len() as u32)
-            },
-        )?;
-        Ok(ids_len)
-    }
-
-    fn auto_resolve_exists(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> bool {
-        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::get(resolve_at).contains(market_id)
-    }
-
-    fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
-        <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
-            ids.retain(|id| id != market_id);
-            ids.len() as u32
-        })
-    }
-}
-
 impl crate::Config for Runtime {
-    type Currency = Balances;
-    type RuntimeEvent = ();
-    type CorrectionPeriod = CorrectionPeriod;
-    type DisputeResolution = MockResolution;
-    type MarketCommons = MarketCommons;
-    type PalletId = AuthorizedPalletId;
-    type AuthorizedDisputeResolutionOrigin =
-        EnsureSignedBy<AuthorizedDisputeResolutionUser, AccountIdTest>;
-    type WeightInfo = crate::weights::WeightInfo<Runtime>;
-}
-
-impl mock_storage::Config for Runtime {
-    type MarketCommons = MarketCommons;
+    type Balance = Balance;
+    type Currencies = Tokens;
+    type CampaignAsset = CampaignAssets;
+    type CustomAsset = CustomAssets;
+    type MarketAssets = MarketAssets;
 }
 
 impl frame_system::Config for Runtime {
@@ -144,7 +83,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -161,29 +100,132 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
-impl pallet_balances::Config for Runtime {
-    type AccountStore = System;
+parameter_type_with_key! {
+    pub ExistentialDeposits: |_currency_id: Currencies| -> Balance {
+        0
+    };
+}
+
+impl orml_tokens::Config for Runtime {
+    type Amount = Amount;
     type Balance = Balance;
-    type DustRemoval = ();
-    type RuntimeEvent = ();
-    type ExistentialDeposit = ();
-    type MaxLocks = ();
+    type CurrencyId = Currencies;
+    type DustRemovalWhitelist = ();
+    type RuntimeEvent = RuntimeEvent;
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
-impl zrml_market_commons::Config for Runtime {
-    type Balance = Balance;
-    type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
-    type Timestamp = Timestamp;
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+    pub struct AssetsBenchmarkHelper;
+
+    impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
+        for AssetsBenchmarkHelper
+    where
+        AssetIdParameter: From<u128>,
+    {
+        fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+            (id as u128).into()
+        }
+    }
 }
 
-impl pallet_timestamp::Config for Runtime {
-    type MinimumPeriod = MinimumPeriod;
-    type Moment = Moment;
-    type OnTimestampSet = ();
+impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
+    type ApprovalDeposit = ConstU128<0>;
+    type AssetAccountDeposit = ConstU128<0>;
+    type AssetDeposit = ConstU128<0>;
+    type AssetId = CustomAsset;
+    type AssetIdParameter = Compact<CustomAssetId>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = ConstU128<0>;
+    type MetadataDepositPerByte = ConstU128<0>;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = ConstU32<255>;
+    type WeightInfo = ();
+}
+
+impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
+    type ApprovalDeposit = ConstU128<0>;
+    type AssetAccountDeposit = ConstU128<0>;
+    type AssetDeposit = ConstU128<0>;
+    type AssetId = CampaignAsset;
+    type AssetIdParameter = Compact<CampaignAssetId>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = ConstU128<0>;
+    type MetadataDepositPerByte = ConstU128<0>;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = ConstU32<255>;
+    type WeightInfo = ();
+}
+
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+    pub struct MarketAssetsBenchmarkHelper;
+
+    impl pallet_assets::BenchmarkHelper<MarketAsset>
+        for MarketAssetsBenchmarkHelper
+    {
+        fn create_asset_id_parameter(id: u32) -> MarketAsset {
+            MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
+        }
+    }
+}
+
+impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
+    type ApprovalDeposit = ConstU128<0>;
+    type AssetAccountDeposit = ConstU128<0>;
+    type AssetDeposit = ConstU128<0>;
+    type AssetId = MarketAsset;
+    type AssetIdParameter = MarketAsset;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = MarketAssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = ConstU128<0>;
+    type MetadataDepositPerByte = ConstU128<0>;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = ConstU32<255>;
+    type WeightInfo = ();
+}
+
+impl pallet_balances::Config for Runtime {
+    type AccountStore = System;
+    type Balance = Balance;
+    type DustRemoval = ();
+    type RuntimeEvent = RuntimeEvent;
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 

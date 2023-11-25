@@ -8,6 +8,13 @@ sp-runtime = { workspace = true }
 orml-traits = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 
+[dev-dependencies]
+orml-tokens = { workspace = true, features = ["default"] }
+pallet-assets = { workspace = true, features = ["default"] }
+pallet-balances = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["default", "mock"] }
+
 [features]
 default = ["std"]
 std = [
