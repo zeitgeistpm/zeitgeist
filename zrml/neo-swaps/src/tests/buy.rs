@@ -18,8 +18,6 @@
 use super::*;
 use test_case::test_case;
 
-// TODO Use assert_balance everywhere!
-
 // Example taken from
 // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
 #[test]
