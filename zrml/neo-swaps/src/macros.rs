@@ -15,10 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-// TODO Document all these macros
-
 #![cfg(all(feature = "mock", test))]
 
+/// Creates an `alloc::collections::BTreeMap` from the pattern `{ key => value, ... }`.
+///
+/// ```rust
+/// // Example:
+/// let m = create_b_tree_map!({ 0 => 1, 2 => 3 });
+/// assert_eq!(m[2], 3);
+///
+/// // Overwriting a key:
+/// let m = create_b_tree_map!({ 0 => "foo", 0 => "bar" });
+/// assert_eq!(m[0], "bar");
+/// ```
 #[macro_export]
 macro_rules! create_b_tree_map {
     ({ $($key:expr => $value:expr),* $(,)? } $(,)?) => {
@@ -26,6 +35,14 @@ macro_rules! create_b_tree_map {
     }
 }
 
+/// Asserts that a liquidity tree has the specified state.
+///
+/// Parameters:
+///
+/// - `tree`: The `LiquidityTree<T, U>` to check.
+/// - `expected_nodes`: The expected `tree.nodes`.
+/// - `expected_accounts_to_index`: The expected `tree.accounts_to_index`.
+/// - `expected_abandoned_nodes`: The expected `tree.abandoned_nodes`.
 #[macro_export]
 macro_rules! assert_liquidity_tree_state {
     (
@@ -72,6 +89,20 @@ macro_rules! assert_liquidity_tree_state {
     };
 }
 
+/// Asserts that a market's LMSR liquidity pool has the specified state.
+///
+/// In addition to verifying the specified state, the macro also ensures that the pool's trading
+/// function is (approximately) equal to `1`.
+///
+/// Parameters:
+///
+/// - `market_id`: The ID of the market that the pool belongs to.
+/// - `reserves`: The expected reserves of the pool.
+/// - `spot_prices`: The expected spot prices of outcomes in the pool.
+/// - `liquidity_parameter`: The expected liquidity parameter of the pool.
+/// - `liquidity_shares`: An `alloc::collections::BTreeMap` which maps each liquidity provider to
+///   their expected stake.
+/// - `total_fees`: The sum of all fees (both lazy and distributed) in the pool's liquidity tree.
 #[macro_export]
 macro_rules! assert_pool_state {
     (
@@ -127,6 +158,8 @@ macro_rules! assert_pool_state {
     };
 }
 
+// FIXME Rewrite this using `BTreeMap` might be cool.
+/// Asserts that `account` has the specified `balances` of `assets`.
 #[macro_export]
 macro_rules! assert_balances {
     ($account:expr, $assets:expr, $balances:expr $(,)?) => {
@@ -146,6 +179,7 @@ macro_rules! assert_balances {
     };
 }
 
+/// Asserts that `account` has the specified `balance` of `asset`.
 #[macro_export]
 macro_rules! assert_balance {
     ($account:expr, $asset:expr, $balance:expr $(,)?) => {
@@ -153,6 +187,7 @@ macro_rules! assert_balance {
     };
 }
 
+/// Asserts that `abs(left - right) < precision`.
 #[macro_export]
 macro_rules! assert_approx {
     ($left:expr, $right:expr, $precision:expr $(,)?) => {
