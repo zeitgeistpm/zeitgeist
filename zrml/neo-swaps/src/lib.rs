@@ -639,7 +639,7 @@ mod pallet {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
                 // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE.
-                if let Err(_) = pool.liquidity_shares_manager.shares_of(&who) {
+                if pool.liquidity_shares_manager.shares_of(&who).is_err() {
                     ensure!(
                         ratio >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
                         Error::<T>::MinRelativeLiquidityThresholdViolated,
@@ -695,9 +695,9 @@ mod pallet {
                     let mut ratio = pool_shares_amount
                         .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
                     if market.status == MarketStatus::Active {
-                        let mult = ZeitgeistBase::<BalanceOf<T>>::get()?
+                        let multiplier = ZeitgeistBase::<BalanceOf<T>>::get()?
                             .checked_sub_res(&EXIT_FEE.saturated_into())?;
-                        ratio = ratio.bmul(mult)?;
+                        ratio = ratio.bmul_floor(multiplier)?;
                     }
                     ratio
                 };

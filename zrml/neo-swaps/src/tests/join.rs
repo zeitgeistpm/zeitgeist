@@ -27,7 +27,7 @@ use test_case::test_case;
 #[test_case(BOB, create_b_tree_map!({ ALICE => _10, BOB => _4 }))]
 fn join_works(
     who: AccountIdOf<Runtime>,
-    pool_shares: BTreeMap<AccountIdOf<Runtime>, BalanceOf<Runtime>>,
+    expected_pool_shares: BTreeMap<AccountIdOf<Runtime>, BalanceOf<Runtime>>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
@@ -56,7 +56,7 @@ fn join_works(
             expected_pool_balances,
             spot_prices,
             new_liquidity_parameter,
-            pool_shares,
+            expected_pool_shares,
             0,
         );
         let amounts_in = vec![40_000_000_000, 4_070_223_930];

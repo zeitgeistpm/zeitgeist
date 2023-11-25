@@ -149,10 +149,12 @@ where
     }
 }
 
+// TODO Test this function!
 /// Helper function for implementing `FixedMulDiv` in a numerically clean way.
 ///
 /// The idea is to change the order of operations to ensure that division causes as little a
-/// rounding error as possible.
+/// rounding error as possible. If one approach fails due to overflows of temporary variables, the
+/// less precise approach is taken in favor of erroring.
 fn checked_fixed_mul_div_res<T, F, G>(
     x: &T,
     multiplier: T,
@@ -165,10 +167,18 @@ where
     F: Fn(&T, T) -> Result<T, DispatchError>,
     G: Fn(&T, T) -> Result<T, DispatchError>,
 {
-    if divisor > ZeitgeistBase::get()? && multiplier < ZeitgeistBase::<T>::get()?.bdiv(divisor)? {
-        div_func(x, divisor).and_then(|result| mul_func(&result, multiplier))
+    // If the multiply-first approach fails due to an overflow, we fall back to the div-first
+    // approach.
+    let div_first_result = div_func(x, divisor).and_then(|result| mul_func(&result, multiplier));
+    if div_first_result.is_ok()
+        && divisor > ZeitgeistBase::get()?
+        && multiplier < ZeitgeistBase::<T>::get()?.bdiv(divisor)?
+    {
+        div_first_result
     } else {
-        mul_func(x, multiplier).and_then(|result| div_func(&result, divisor))
+        let mul_first_result =
+            mul_func(x, multiplier).and_then(|result| div_func(&result, divisor));
+        mul_first_result.or(div_first_result)
     }
 }
 
@@ -185,7 +195,7 @@ where
         checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul_floor, Self::bdiv_floor)
     }
     fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
-        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul, Self::bdiv)
+        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul_ceil, Self::bdiv_ceil)
     }
 }
 
