@@ -35,14 +35,31 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
     types::{
-        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CampaignAsset, CampaignAssetId,
-        Currencies, CustomAsset, CustomAssetId, Hash, Index, MarketAsset, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CampaignAsset,
+        CampaignAssetId, Currencies, CustomAsset, CustomAssetClass, CustomAssetId, Hash, Index,
+        MarketAsset, UncheckedExtrinsicTest,
     },
 };
 
-pub const ALICE: AccountIdTest = 0;
-pub const BOB: AccountIdTest = 1;
-pub const CHARLIE: AccountIdTest = 2;
+pub(super) const ALICE: AccountIdTest = 0;
+pub(super) const BOB: AccountIdTest = 1;
+pub(super) const CHARLIE: AccountIdTest = 2;
+
+use zeitgeist_primitives::types::{Assets, CampaignAssetClass};
+
+pub(super) const CAMPAIGN_ASSET: CampaignAssetClass = CampaignAssetClass(0);
+pub(super) const CAMPAIGN_ASSET_GENERAL: Assets = Assets::CampaignAssetClass(0);
+pub(super) const CUSTOM_ASSET: CustomAssetClass = CustomAssetClass(0);
+pub(super) const CUSTOM_ASSET_GENERAL: Assets = Assets::CustomAssetClass(0);
+pub(super) const MARKET_ASSET: MarketAsset = MarketAsset::CombinatorialOutcome;
+pub(super) const MARKET_ASSET_GENERAL: Assets = Assets::NewCombinatorialOutcome;
+pub(super) const CURRENCY: Currencies = Currencies::ForeignAsset(0);
+pub(super) const CURRENCY_GENERAL: Assets = Assets::ForeignAsset(0);
+
+pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 1;
+pub(super) const CUSTOM_ASSET_MIN_BALANCE: Balance = 2;
+pub(super) const MARKET_ASSET_MIN_BALANCE: Balance = 3;
+pub(super) const CURRENCY_MIN_BALANCE: Balance = 4;
 
 type CustomAssetsInstance = pallet_assets::Instance1;
 type CampaignAssetsInstance = pallet_assets::Instance2;
