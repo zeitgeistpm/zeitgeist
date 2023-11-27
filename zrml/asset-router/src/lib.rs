@@ -253,7 +253,7 @@ pub mod pallet {
             amount: Self::Balance,
         ) -> DispatchResult {
             if let Ok(currency) = Currencies::try_from(currency_id) {
-                <T::Currencies as MultiCurrency<T::AccountId>>::deposit(currency, who, amount)
+                <T::Currencies as MultiCurrency<T::AccountId>>::withdraw(currency, who, amount)
             } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
                 // Resulting balance can be ignored as `burn_from` ensures that the
                 // requested amount can be burned.
