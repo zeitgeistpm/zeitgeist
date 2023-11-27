@@ -46,13 +46,13 @@ use zeitgeist_primitives::{
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
+pub mod migrations;
 pub mod mock;
 #[cfg(test)]
 mod tests;
 pub mod types;
 mod utils;
 pub mod weights;
-pub mod migrations;
 
 #[frame_support::pallet]
 mod pallet {

@@ -15,11 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{BalanceOf, MarketIdOf, Config, MomentOf};
+use crate::{
+    types::{Order, OrderId},
+    AccountIdOf, BalanceOf, Config, MarketIdOf, Pallet as OrderbookPallet,
+};
 #[cfg(feature = "try-runtime")]
 use alloc::collections::BTreeMap;
 #[cfg(feature = "try-runtime")]
 use alloc::format;
+#[cfg(feature = "try-runtime")]
 use alloc::vec::Vec;
 #[cfg(feature = "try-runtime")]
 use frame_support::migration::storage_key_iter;
@@ -33,10 +37,7 @@ use frame_support::{
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::traits::Saturating;
-use zeitgeist_primitives::types::{
-    Asset, Bond, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-    MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
-};
+use zeitgeist_primitives::types::Asset;
 
 #[cfg(any(feature = "try-runtime", test))]
 const ORDER_BOOK: &[u8] = b"Orderbook";
@@ -63,30 +64,22 @@ pub struct OldOrder<AccountId, Balance, MarketId: MaxEncodedLen> {
     pub base_asset_amount: Balance,
 }
 
-type OldOrderOf<T> = OldOrder<
-    <T as frame_system::Config>::AccountId,
-    BalanceOf<T>,
-    MarketIdOf<T>,
->;
+type OldOrderOf<T> = OldOrder<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
 
 #[frame_support::storage_alias]
-pub(crate) type Orders<T: Config> = StorageMap<
-    OrderbookPallet<T>,
-    frame_support::Twox64Concat,
-    OrderId,
-    OldOrderOf<T>,
->;
+pub(crate) type Orders<T: Config> =
+    StorageMap<OrderbookPallet<T>, frame_support::Twox64Concat, OrderId, OldOrderOf<T>>;
 
 pub struct TranslateOrderStructure<T>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
-        let market_commons_version = StorageVersion::get::<OrderbookPallet<T>>();
-        if market_commons_version != ORDER_BOOK_REQUIRED_STORAGE_VERSION {
+        let order_book_pallet_version = StorageVersion::get::<OrderbookPallet<T>>();
+        if order_book_pallet_version != ORDER_BOOK_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "TranslateOrderStructure: market-commons version is {:?}, but {:?} is required",
-                market_commons_version,
+                "TranslateOrderStructure: order book pallet version is {:?}, but {:?} is required",
+                order_book_pallet_version,
                 ORDER_BOOK_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
@@ -94,16 +87,33 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
         log::info!("TranslateOrderStructure: Starting...");
 
         let mut translated = 0u64;
-        crate::Orders::<T>::translate::<OldOrderOf<T>, _>(|_key, old_order| {
+        crate::Orders::<T>::translate::<OldOrderOf<T>, _>(|_order_id, old_order| {
             translated.saturating_inc();
+
+            let (maker_asset, maker_amount, taker_asset, taker_amount) = match old_order.side {
+                // the maker reserved the base asset for bids
+                OldOrderSide::Bid => (
+                    old_order.base_asset,
+                    old_order.base_asset_amount,
+                    old_order.outcome_asset,
+                    old_order.outcome_asset_amount,
+                ),
+                // the maker reserved the outcome asset for asks
+                OldOrderSide::Ask => (
+                    old_order.outcome_asset,
+                    old_order.outcome_asset_amount,
+                    old_order.base_asset,
+                    old_order.base_asset_amount,
+                ),
+            };
 
             let new_order = Order {
                 market_id: old_order.market_id,
                 maker: old_order.maker,
-                maker_asset: old_order.outcome_asset,
-                maker_amount: old_order.outcome_asset_amount,
-                taker_asset: old_order.base_asset,
-                taker_amount: old_order.base_asset_amount,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
             };
 
             Some(new_order)
@@ -112,7 +122,7 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
-        StorageVersion::new(ORDER_BOOK_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
+        StorageVersion::new(ORDER_BOOK_NEXT_STORAGE_VERSION).put::<OrderbookPallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         log::info!("TranslateOrderStructure: Done!");
         total_weight
@@ -122,22 +132,20 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         use frame_support::pallet_prelude::Twox64Concat;
 
-        let old_markets = storage_key_iter::<MarketIdOf<T>, OldOrderOf<T>, Twox64Concat>(
-            ORDER_BOOK,
-            ORDERS,
-        )
-        .collect::<BTreeMap<_, _>>();
+        let old_orders =
+            storage_key_iter::<OrderId, OldOrderOf<T>, Twox64Concat>(ORDER_BOOK, ORDERS)
+                .collect::<BTreeMap<_, _>>();
 
         let orders = Orders::<T>::iter_keys().count() as u32;
         let decodable_orders = Orders::<T>::iter_values().count() as u32;
-        if orders != decodable_orders {
+        if orders == decodable_orders {
+            log::info!("All orders could successfully be decoded, order_count: {}.", orders);
+        } else {
             log::error!(
                 "Can only decode {} of {} orders - others will be dropped",
                 decodable_orders,
                 orders
             );
-        } else {
-            log::info!("orders: {}, Decodable orders: {}", orders, decodable_orders);
         }
 
         Ok(old_orders.encode())
@@ -145,23 +153,53 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
-        let old_orders: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
-            Decode::decode(&mut &previous_state[..])
-                .expect("Failed to decode state: Invalid state");
-        let new_order_count = <zrml_market_commons::Pallet<T>>::market_iter().count();
+        use orml_traits::NamedMultiReservableCurrency;
+        use sp_runtime::traits::Zero;
+        use zeitgeist_primitives::traits::MarketCommonsPalletApi;
+
+        let old_orders: BTreeMap<OrderId, OldOrderOf<T>> = Decode::decode(&mut &previous_state[..])
+            .expect("Failed to decode state: Invalid state");
+        let mut new_order_count = 0usize;
         assert_eq!(old_orders.len(), new_order_count);
         for (order_id, new_order) in crate::Orders::<T>::iter() {
-            let old_order = old_orders
-                .get(&market_id)
-                .expect(&format!("Market {:?} not found", market_id)[..]);
+            let old_order =
+                old_orders.get(&order_id).expect(&format!("Order {:?} not found", order_id)[..]);
             // assert old fields
-            assert_eq!(new_order.base_asset, old_order.base_asset);
+            assert_eq!(old_order.market_id, new_order.market_id);
+            assert_eq!(old_order.maker, new_order.maker);
             // assert new fields
-            assert_eq!(new_order.bonds.outsider, None);
+            let reserved = T::AssetManager::reserved_balance_named(
+                &OrderbookPallet::<T>::reserve_id(),
+                new_order.maker_asset,
+                &new_order.maker,
+            );
+            assert!(reserved > BalanceOf::<T>::zero());
+            assert_eq!(reserved, new_order.maker_amount);
+
+            if let Ok(market) = T::MarketCommons::market(&new_order.market_id) {
+                let base_asset = market.base_asset;
+                if new_order.maker_asset == base_asset {
+                    assert_eq!(new_order.maker_asset, old_order.base_asset);
+                    assert_eq!(new_order.maker_amount, old_order.base_asset_amount);
+                    assert_eq!(new_order.taker_amount, old_order.outcome_asset_amount);
+                    assert_eq!(new_order.taker_asset, old_order.outcome_asset);
+                } else {
+                    assert_eq!(new_order.taker_asset, base_asset);
+                    assert_eq!(new_order.taker_asset, old_order.base_asset);
+                    assert_eq!(new_order.taker_amount, old_order.base_asset_amount);
+                    assert_eq!(new_order.maker_amount, old_order.outcome_asset_amount);
+                    assert_eq!(new_order.maker_asset, old_order.outcome_asset);
+                }
+            } else {
+                log::error!(
+                    "The market should be present for the order market id {:?}!",
+                    new_order.market_id
+                );
+            }
+
+            new_order_count.saturating_inc();
         }
         log::info!("TranslateOrderStructure: Order Counter post-upgrade is {}!", new_order_count);
-        // TODO maybe remove this since we have no orders in production at the moment
-        assert!(new_order_count > 0);
         Ok(())
     }
 }
@@ -171,12 +209,13 @@ mod tests {
     use super::*;
     use crate::{
         mock::{ExtBuilder, Runtime},
-        MarketIdOf, MarketOf,
+        OrderOf,
     };
+    use alloc::vec::Vec;
     use frame_support::{
-        dispatch::fmt::Debug, migration::put_storage_value, Twox64Concat, StorageHasher,
+        dispatch::fmt::Debug, migration::put_storage_value, StorageHasher, Twox64Concat,
     };
-    use zrml_market_commons::MarketCommonsPalletApi;
+    use zeitgeist_primitives::types::ScalarPosition;
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
@@ -184,9 +223,29 @@ mod tests {
             set_up_version();
             TranslateOrderStructure::<Runtime>::on_runtime_upgrade();
             assert_eq!(
-                StorageVersion::get::<MarketCommonsPallet<Runtime>>(),
+                StorageVersion::get::<OrderbookPallet<Runtime>>(),
                 ORDER_BOOK_NEXT_STORAGE_VERSION
             );
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_works_as_expected() {
+        ExtBuilder::default().build().execute_with(|| {
+            // Don't set up chain to signal that storage is already up to date.
+            let (old_orders, new_orders) = construct_old_new_tuple();
+            populate_test_data::<Twox64Concat, OrderId, OldOrderOf<Runtime>>(
+                ORDER_BOOK,
+                ORDERS,
+                old_orders.clone(),
+            );
+            TranslateOrderStructure::<Runtime>::on_runtime_upgrade();
+
+            let actual = crate::Orders::<Runtime>::get(0).unwrap();
+            assert_eq!(actual, new_orders[0]);
+
+            let actual = crate::Orders::<Runtime>::get(1).unwrap();
+            assert_eq!(actual, new_orders[1]);
         });
     }
 
@@ -195,19 +254,83 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             // Don't set up chain to signal that storage is already up to date.
             let (_, new_orders) = construct_old_new_tuple();
-            populate_test_data::<Twox64Concat, MarketIdOf<Runtime>, OrderOf<Runtime>>(
+            populate_test_data::<Twox64Concat, OrderId, OrderOf<Runtime>>(
                 ORDER_BOOK,
                 ORDERS,
                 new_orders.clone(),
             );
             TranslateOrderStructure::<Runtime>::on_runtime_upgrade();
+
             let actual = crate::Orders::<Runtime>::get(0).unwrap();
             assert_eq!(actual, new_orders[0]);
+
+            let actual = crate::Orders::<Runtime>::get(1).unwrap();
+            assert_eq!(actual, new_orders[1]);
         });
     }
 
     fn set_up_version() {
-        StorageVersion::new(ORDER_BOOK_REQUIRED_STORAGE_VERSION)
-            .put::<MarketCommonsPallet<Runtime>>();
+        StorageVersion::new(ORDER_BOOK_REQUIRED_STORAGE_VERSION).put::<OrderbookPallet<Runtime>>();
+    }
+
+    fn construct_old_new_tuple() -> (Vec<OldOrderOf<Runtime>>, Vec<OrderOf<Runtime>>) {
+        let market_id_0 = 0;
+        let outcome_asset_amoun_0 = 42000;
+        let base_asset_amount_0 = 69000;
+        let old_order_0 = OldOrder {
+            market_id: market_id_0,
+            side: OldOrderSide::Bid,
+            maker: 1,
+            outcome_asset: Asset::CategoricalOutcome(market_id_0, 0u16),
+            base_asset: Asset::Ztg,
+            outcome_asset_amount: outcome_asset_amoun_0,
+            base_asset_amount: base_asset_amount_0,
+        };
+        let new_order_0 = Order {
+            market_id: market_id_0,
+            maker: 1,
+            // the maker reserved the base asset for order side bid
+            maker_asset: Asset::Ztg,
+            maker_amount: base_asset_amount_0,
+            taker_asset: Asset::CategoricalOutcome(market_id_0, 0u16),
+            taker_amount: outcome_asset_amoun_0,
+        };
+
+        let market_id_1 = 1;
+        let outcome_asset_amoun_1 = 42000;
+        let base_asset_amount_1 = 69000;
+        let old_order_1 = OldOrder {
+            market_id: market_id_1,
+            side: OldOrderSide::Ask,
+            maker: 1,
+            outcome_asset: Asset::ScalarOutcome(market_id_1, ScalarPosition::Long),
+            base_asset: Asset::Ztg,
+            outcome_asset_amount: outcome_asset_amoun_1,
+            base_asset_amount: base_asset_amount_1,
+        };
+        let new_order_1 = Order {
+            market_id: market_id_1,
+            maker: 1,
+            // the maker reserved the outcome asset for order side ask
+            maker_asset: Asset::ScalarOutcome(market_id_1, ScalarPosition::Long),
+            maker_amount: outcome_asset_amoun_1,
+            taker_asset: Asset::Ztg,
+            taker_amount: base_asset_amount_1,
+        };
+        (vec![old_order_0, old_order_1], vec![new_order_0, new_order_1])
+    }
+
+    #[allow(unused)]
+    fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
+    where
+        H: StorageHasher,
+        K: TryFrom<usize> + Encode,
+        V: Encode + Clone,
+        <K as TryFrom<usize>>::Error: Debug,
+    {
+        for (key, value) in data.iter().enumerate() {
+            let storage_hash = K::try_from(key).unwrap().using_encoded(H::hash).as_ref().to_vec();
+            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
+        }
     }
 }
