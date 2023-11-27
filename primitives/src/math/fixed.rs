@@ -149,36 +149,35 @@ where
     }
 }
 
-// TODO Test this function!
+// TODO Use in other ratio calculations.
 /// Helper function for implementing `FixedMulDiv` in a numerically clean way.
 ///
-/// The idea is to change the order of operations to ensure that division causes as little a
-/// rounding error as possible. If one approach fails due to overflows of temporary variables, the
-/// less precise approach is taken in favor of erroring.
-fn checked_fixed_mul_div_res<T, F, G>(
-    x: &T,
-    multiplier: T,
-    divisor: T,
-    mul_func: F,
-    div_func: G,
-) -> Result<T, DispatchError>
+/// The main idea is to keep the fixed point number scaled up between the multiplication and
+/// division operation, so as to not lose any precision. Multiplication-first is preferred as it
+/// grants better precision, but may suffer from overflows. If an overflow occurs, division-first is
+/// used instead.
+fn bmul_bdiv_common<T>(x: &T, multiplier: T, divisor: T, adjustment: T) -> Result<T, DispatchError>
 where
     T: AtLeast32BitUnsigned + Copy,
-    F: Fn(&T, T) -> Result<T, DispatchError>,
-    G: Fn(&T, T) -> Result<T, DispatchError>,
 {
-    // If the multiply-first approach fails due to an overflow, we fall back to the div-first
-    // approach.
-    let div_first_result = div_func(x, divisor).and_then(|result| mul_func(&result, multiplier));
-    if div_first_result.is_ok()
-        && divisor > ZeitgeistBase::get()?
-        && multiplier < ZeitgeistBase::<T>::get()?.bdiv(divisor)?
-    {
-        div_first_result
+    // Try to multiply first, then divide. This overflows if the (mathematical) product of `x` and
+    // `multiplier` is around 3M. Use divide-first if this is the case.
+    let maybe_prod = x.checked_mul_res(&multiplier);
+    let maybe_scaled_prod = maybe_prod.and_then(|r| r.checked_mul_res(&ZeitgeistBase::get()?));
+    if let Ok(scaled_prod) = maybe_scaled_prod {
+        // Multiply first, then divide.
+        let quot = scaled_prod.checked_div_res(&divisor)?;
+        let adjusted_quot = quot + adjustment;
+        adjusted_quot.checked_div_res(&ZeitgeistBase::get()?)
     } else {
-        let mul_first_result =
-            mul_func(x, multiplier).and_then(|result| div_func(&result, divisor));
-        mul_first_result.or(div_first_result)
+        // Divide first, multiply later. It's cleaner to use the maximum of (x, multiplier) as
+        // divident.
+        let (u, v) = if *x < multiplier { (*x, multiplier) } else { (multiplier, *x) };
+        let scaled_divident = v.checked_mul_res(&ZeitgeistBase::get()?)?;
+        let quot = scaled_divident.checked_div_res(&divisor)?;
+        let prod = quot.checked_mul_res(&u)?;
+        let adjusted_prod = prod.checked_add_res(&adjustment)?;
+        adjusted_prod.checked_div_res(&ZeitgeistBase::get()?)
     }
 }
 
@@ -189,13 +188,17 @@ where
     T: AtLeast32BitUnsigned + Copy,
 {
     fn bmul_bdiv(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
-        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul, Self::bdiv)
+        let adjustment = ZeitgeistBase::<T>::get()?.checked_div_res(&2u8.into())?;
+        bmul_bdiv_common(self, multiplier, divisor, adjustment)
     }
+
     fn bmul_bdiv_floor(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
-        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul_floor, Self::bdiv_floor)
+        bmul_bdiv_common(self, multiplier, divisor, Zero::zero())
     }
+
     fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
-        checked_fixed_mul_div_res(self, multiplier, divisor, Self::bmul_ceil, Self::bdiv_ceil)
+        let adjustment = ZeitgeistBase::<T>::get()?.checked_sub_res(&1u8.into())?;
+        bmul_bdiv_common(self, multiplier, divisor, adjustment)
     }
 }
 
@@ -564,6 +567,86 @@ mod tests {
             123456789u128.bdiv_ceil(0),
             Err(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
         );
+    }
+
+    // bmul tests
+    #[test_case(0, 0, _1, 0)]
+    #[test_case(0, _1, _1, 0)]
+    #[test_case(0, _2, _1, 0)]
+    #[test_case(0, _3, _1, 0)]
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_1, _1, _1, _1)]
+    #[test_case(_1, _2, _1, _2)]
+    #[test_case(_1, _3, _1, _3)]
+    #[test_case(_2, 0, _1, 0)]
+    #[test_case(_2, _1, _1, _2)]
+    #[test_case(_2, _2, _1, _4)]
+    #[test_case(_2, _3, _1, _6)]
+    #[test_case(_3, 0, _1, 0)]
+    #[test_case(_3, _1, _1, _3)]
+    #[test_case(_3, _2, _1, _6)]
+    #[test_case(_3, _3, _1, _9)]
+    #[test_case(_4, _1_2, _1, _2)]
+    #[test_case(_5, _1 + _1_2, _1, _7 + _1_2)]
+    #[test_case(_1 + 1, _2, _1, _2 + 2)]
+    #[test_case(9_999_999_999, _2, _1, 19_999_999_998)]
+    #[test_case(9_999_999_999, _10, _1, 99_999_999_990)]
+    // Rounding behavior when multiplying with small numbers
+    #[test_case(9_999_999_999, _1_2, _1, _1_2)] // 4999999999.5
+    #[test_case(9_999_999_997, _1_4, _1, 2_499_999_999)] // 2499999999.25
+    #[test_case(9_999_999_996, _1_3, _1, 3_333_333_332)] // 3333333331.666...
+    #[test_case(10_000_000_001, _1_10, _1, _1_10)]
+    #[test_case(10_000_000_005, _1_10, _1, _1_10 + 1)] //
+
+    // bdiv tests
+    #[test_case(0, _1, _3, 0)]
+    #[test_case(_1, _1, _2, _1_2)]
+    #[test_case(_2, _1, _2, _1)]
+    #[test_case(_3,_1,  _2, _1 + _1_2)]
+    #[test_case(_3, _1, _3, _1)]
+    #[test_case(_3 + _1_2, _1, _1_2, _7)]
+    #[test_case(99_999_999_999, _1, 1, 99_999_999_999 * _1)]
+    // Rounding behavior
+    #[test_case(_2, _1, _3, _2_3 + 1)]
+    #[test_case(99_999_999_999, _1, _10, _1)]
+    #[test_case(99_999_999_994, _1, _10, 9_999_999_999)]
+    #[test_case(5, _1, _10, 1)]
+    #[test_case(4, _1, _10, 0)] //
+
+    // Normal Cases
+    #[test_case(_2, _2, _2, _2)]
+    #[test_case(_1, _2, _3, _2_3 + 1)]
+    #[test_case(_2, _3, _4, _1 + _1_2)]
+    #[test_case(_1 + 1, _2, _3, (_2 + 2) / 3)]
+    #[test_case(_5, _6, _7, _5 * _6 / _7)]
+    #[test_case(_100, _101, _20, _100 * _101 / _20)] //
+
+    // Boundary cases
+    #[test_case(u128::MAX / _1, _1, _2, u128::MAX / _2)]
+    #[test_case(0, _1, _2, 0)]
+    #[test_case(_1, u128::MAX / _1, u128::MAX / _1, _1)] //
+
+    // Special rounding cases
+    #[test_case(_1, _1_2, _1, _1_2)]
+    #[test_case(_1, _1_3, _1, _1_3)]
+    #[test_case(_1, _2_3, _1, _2_3)]
+    #[test_case(_9, _1_2, _1, _9 / 2)]
+    #[test_case(_9, _1_3, _1, 29_999_999_997)]
+    #[test_case(_9, _2_3, _1, 59_999_999_994)] //
+
+    // Divide-first value
+    #[test_case(1_000_000 * _1, 1_000_000 * _1, _10, 100000000000 * _1)]
+    #[test_case(1_234_567 * _1, 9_876_543 * _1, 123_456, 9876599000357212286158412534)]
+    #[test_case(1_000_000 * _1, 9_876_543 * _1, 1_000_000 * _1, 9_876_543 * _1)]
+
+    fn fixed_mul_div_works(lhs: u128, multiplier: u128, divisor: u128, expected: u128) {
+        assert_eq!(lhs.bmul_bdiv(multiplier, divisor).unwrap(), expected);
+    }
+
+    #[test_case(_1, u128::MAX, u128::MAX, DispatchError::Arithmetic(ArithmeticError::Overflow))]
+    #[test_case(_1, _2, 0, DispatchError::Arithmetic(ArithmeticError::DivisionByZero))]
+    fn fixed_mul_div_fails(lhs: u128, multiplier: u128, divisor: u128, expected: DispatchError) {
+        assert_eq!(lhs.bmul_bdiv(multiplier, divisor), Err(expected));
     }
 
     #[test_case(0, 10, 0.0)]
