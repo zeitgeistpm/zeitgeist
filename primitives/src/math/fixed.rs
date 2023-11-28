@@ -192,13 +192,17 @@ where
         bmul_bdiv_common(self, multiplier, divisor, adjustment)
     }
 
-    fn bmul_bdiv_floor(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
-        bmul_bdiv_common(self, multiplier, divisor, Zero::zero())
+    fn bmul_bdiv_floor(&self, _multiplier: Self, _divisor: Self) -> Result<Self, DispatchError> {
+        // FIXME Untested!
+        // bmul_bdiv_common(self, multiplier, divisor, Zero::zero())
+        Err(DispatchError::Other("not implemented"))
     }
 
-    fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
-        let adjustment = ZeitgeistBase::<T>::get()?.checked_sub_res(&1u8.into())?;
-        bmul_bdiv_common(self, multiplier, divisor, adjustment)
+    fn bmul_bdiv_ceil(&self, _multiplier: Self, _divisor: Self) -> Result<Self, DispatchError> {
+        // FIXME Untested!
+        // let adjustment = ZeitgeistBase::<T>::get()?.checked_sub_res(&1u8.into())?;
+        // bmul_bdiv_common(self, multiplier, divisor, adjustment)
+        Err(DispatchError::Other("not implemented"))
     }
 }
 
