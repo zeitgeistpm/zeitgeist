@@ -291,12 +291,7 @@ fn join_pool_fails_on_small_amounts() {
         );
         deposit_complete_set(market_id, BOB, CENT);
         assert_noop!(
-            NeoSwaps::join(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                1,
-                vec![u128::MAX, u128::MAX],
-            ),
+            NeoSwaps::join(RuntimeOrigin::signed(BOB), market_id, 1, vec![u128::MAX, u128::MAX],),
             Error::<Runtime>::MinRelativeLiquidityThresholdViolated
         );
     });
