@@ -275,3 +275,29 @@ fn join_pool_fails_on_relative_liquidity_threshold_violated() {
         );
     });
 }
+
+#[test]
+fn join_pool_fails_on_small_amounts() {
+    // This tests verifies that joining with miniscule amounts of pool shares can't be exploited to
+    // funnel money from the pool.
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Scalar(0..=1),
+            100_000_000_000 * _1,
+            vec![_1_2, _1_2],
+            CENT,
+        );
+        deposit_complete_set(market_id, BOB, CENT);
+        assert_noop!(
+            NeoSwaps::join(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                1,
+                vec![u128::MAX, u128::MAX],
+            ),
+            Error::<Runtime>::MinRelativeLiquidityThresholdViolated
+        );
+    });
+}

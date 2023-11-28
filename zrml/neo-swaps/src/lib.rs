@@ -636,7 +636,8 @@ mod pallet {
             let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
-                // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE.
+                // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE. Note that
+                // this ensures that the ratio can never be zero.
                 if pool.liquidity_shares_manager.shares_of(&who).is_err() {
                     ensure!(
                         ratio >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),

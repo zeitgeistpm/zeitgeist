@@ -473,7 +473,7 @@ pub struct ExtBuilder {
 #[allow(unused)]
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, _101), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
+        Self { balances: vec![(ALICE, 100_000_000_001 * _1), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
     }
 }
 
