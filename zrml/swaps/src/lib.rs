@@ -61,7 +61,7 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
-        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
@@ -925,11 +925,6 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn pools_cached_for_arbitrage)]
     pub type PoolsCachedForArbitrage<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn subsidy_providers)]
-    pub type SubsidyProviders<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, T::AccountId, BalanceOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
