@@ -35,7 +35,7 @@ use frame_support::{
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-    traits::{One, SaturatedConversion, Saturating, Zero},
+    traits::{SaturatedConversion, Saturating, Zero},
     Perbill,
 };
 use zeitgeist_primitives::{
@@ -48,7 +48,6 @@ use zeitgeist_primitives::{
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus, ScoringRule,
-        SubsidyUntil,
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
@@ -882,25 +881,6 @@ benchmarks! {
         let now = 2u64.saturated_into::<T::BlockNumber>();
     }: { Pallet::<T>::on_initialize(now) }
 
-    // Benchmark iteration and market validity check without ending subsidy / discarding market.
-    process_subsidy_collecting_markets_raw {
-        // Number of markets collecting subsidy.
-        let a in 0..10;
-
-        let market_info = SubsidyUntil {
-            market_id: MarketIdOf::<T>::zero(),
-            period: MarketPeriod::Block(T::BlockNumber::one()..T::BlockNumber::one())
-        };
-
-        let markets = BoundedVec::try_from(vec![market_info; a as usize]).unwrap();
-        <MarketsCollectingSubsidy<T>>::put(markets);
-    }: {
-        Pallet::<T>::process_subsidy_collecting_markets(
-            T::BlockNumber::zero(),
-            MomentOf::<T>::zero()
-        );
-    }
-
     redeem_shares_categorical {
         let (caller, market_id) = setup_redeem_shares_common::<T>(
             MarketType::Categorical(T::MaxCategories::get())
@@ -1174,15 +1154,6 @@ benchmarks! {
                 Ok(())
             },
         ).unwrap();
-    }
-
-    process_subsidy_collecting_markets_dummy {
-        let current_block: T::BlockNumber = 0u64.saturated_into::<T::BlockNumber>();
-        let current_time: MomentOf<T> = 0u64.saturated_into::<MomentOf<T>>();
-        let markets = BoundedVec::try_from(Vec::new()).unwrap();
-        <MarketsCollectingSubsidy<T>>::put(markets);
-    }: {
-        let _ = <Pallet<T>>::process_subsidy_collecting_markets(current_block, current_time);
     }
 
     schedule_early_close_as_authority {

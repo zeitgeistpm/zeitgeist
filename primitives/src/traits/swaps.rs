@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{
-    Asset, MarketType, OutcomeReport, Pool, PoolId, ResultWithWeightInfo, ScoringRule,
-};
+use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId, ScoringRule};
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
 use parity_scale_codec::MaxEncodedLen;
@@ -58,17 +56,6 @@ pub trait Swaps<AccountId> {
 
     /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
     fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
-
-    /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
-    /// state and all other conditions are met. Returns the result of the operation and
-    /// the total weight. If the result is false, not enough subsidy was gathered and the
-    /// state transition was aborted.
-    ///
-    /// # Arguments
-    ///
-    /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
-    /// than the given value.
-    fn end_subsidy_phase(pool_id: PoolId) -> Result<ResultWithWeightInfo<bool>, DispatchError>;
 
     /// All supporters will receive their reserved funds back and the pool is destroyed.
     ///

@@ -67,7 +67,7 @@ mod pallet {
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
+    use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
     use sp_arithmetic::{
         traits::{Saturating, Zero},
@@ -92,7 +92,7 @@ mod pallet {
         },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
             ScoringRule, SerdeWrapper,
         },
     };
@@ -1770,159 +1770,6 @@ mod pallet {
 
             Pools::<T>::remove(pool_id);
             Ok(T::WeightInfo::destroy_pool_in_subsidy_phase(total_providers.saturated_into()))
-        }
-
-        /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
-        /// state and all other conditions are met. Returns result=true if everything succeeded,
-        /// result=false if not enough subsidy was collected and an error in all other cases.
-        ///
-        /// # Arguments
-        ///
-        /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
-        /// than the given value.
-        fn end_subsidy_phase(pool_id: PoolId) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
-            let do_mutate = || {
-                let mut total_providers = 0usize;
-                let mut total_assets = 0;
-
-                let result = Self::mutate_pool(pool_id, |pool| {
-                    // Ensure all preconditions are met.
-                    if pool.pool_status != PoolStatus::CollectingSubsidy {
-                        return Err(Error::<T>::InvalidStateTransition.into());
-                    }
-
-                    let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
-                    ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                    let base_asset = pool.base_asset;
-                    let pool_account = Pallet::<T>::pool_account_id(&pool_id);
-                    let pool_shares_id = Self::pool_shares_id(pool_id);
-                    let mut account_created = false;
-                    let mut total_balance = BalanceOf::<T>::zero();
-                    total_assets = pool.assets.len();
-                    let mut providers_and_pool_shares = vec![];
-
-                    // Transfer all reserved funds to the pool account and distribute pool shares.
-                    for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
-                        total_providers = total_providers.saturating_add(1);
-                        let provider_address = provider.0;
-                        let subsidy = provider.1;
-
-                        if !account_created {
-                            let missing =
-                                T::AssetManager::unreserve(base_asset, &provider_address, subsidy);
-                            debug_assert!(
-                                missing.is_zero(),
-                                "Could not unreserve all of the amount. asset: {:?}, who: {:?}, \
-                                 amount: {:?}, missing: {:?}",
-                                base_asset,
-                                &provider_address,
-                                subsidy,
-                                missing,
-                            );
-                            T::AssetManager::transfer(
-                                base_asset,
-                                &provider_address,
-                                &pool_account,
-                                subsidy,
-                            )?;
-                            total_balance = subsidy;
-                            T::AssetManager::deposit(pool_shares_id, &provider_address, subsidy)?;
-                            account_created = true;
-                            providers_and_pool_shares.push((provider_address, subsidy));
-                            continue;
-                        }
-
-                        let remaining = T::AssetManager::repatriate_reserved(
-                            base_asset,
-                            &provider_address,
-                            &pool_account,
-                            subsidy,
-                            BalanceStatus::Free,
-                        )?;
-                        let transferred = subsidy.saturating_sub(remaining);
-
-                        if transferred != subsidy {
-                            log::warn!(
-                                target: LOG_TARGET,
-                                "Data inconsistency: In end_subsidy_phase - More subsidy \
-                                 provided than currently reserved.
-                            Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
-                                pool_id,
-                                provider_address,
-                                transferred,
-                                subsidy
-                            );
-                        }
-
-                        T::AssetManager::deposit(pool_shares_id, &provider_address, transferred)?;
-                        total_balance = total_balance.saturating_add(transferred);
-                        providers_and_pool_shares.push((provider_address, transferred));
-                    }
-
-                    ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                    pool.total_subsidy = Some(total_balance);
-
-                    // Assign the initial set of outstanding assets to the pool account.
-                    let outstanding_assets_per_event =
-                        T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
-                            pool_id,
-                            pool.assets.len().saturated_into::<u32>().saturating_sub(1),
-                            total_balance,
-                        )?;
-
-                    for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                        T::AssetManager::deposit(
-                            *asset,
-                            &pool_account,
-                            outstanding_assets_per_event,
-                        )?;
-                    }
-
-                    pool.pool_status = PoolStatus::Active;
-                    Self::deposit_event(Event::SubsidyCollected(
-                        pool_id,
-                        providers_and_pool_shares,
-                        total_balance,
-                    ));
-                    Ok(())
-                });
-
-                if let Err(err) = result {
-                    if err == Error::<T>::InsufficientSubsidy.into() {
-                        return Ok(ResultWithWeightInfo {
-                            result: false,
-                            weight: T::WeightInfo::end_subsidy_phase(
-                                total_assets.saturated_into(),
-                                total_providers.saturated_into(),
-                            ),
-                        });
-                    }
-
-                    return Err(err);
-                }
-
-                Ok(ResultWithWeightInfo {
-                    result: true,
-                    weight: T::WeightInfo::end_subsidy_phase(
-                        total_assets.saturated_into(),
-                        total_providers.saturated_into(),
-                    ),
-                })
-            };
-
-            with_transaction(|| {
-                let output = do_mutate();
-                match output {
-                    Ok(res) => {
-                        if res.result {
-                            TransactionOutcome::Commit(Ok(res))
-                        } else {
-                            TransactionOutcome::Rollback(Ok(res))
-                        }
-                    }
-                    Err(err) => TransactionOutcome::Rollback(Err(err)),
-                }
-            })
         }
 
         fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
