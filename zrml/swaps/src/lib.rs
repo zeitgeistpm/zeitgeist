@@ -630,7 +630,7 @@ mod pallet {
 
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
-
+        
         /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;
     }
@@ -653,8 +653,6 @@ mod pallet {
         InsufficientBalance,
         /// Liquidity provided to new CPMM pool is less than the minimum allowed balance.
         InsufficientLiquidity,
-        /// The market was not started since the subsidy goal was not reached.
-        InsufficientSubsidy,
         /// Could not create CPMM pool since no amount was specified.
         InvalidAmountArgument,
         /// Could not create CPMM pool since no fee was supplied.
@@ -688,9 +686,6 @@ mod pallet {
         /// The total weight of all assets within a CPMM pool is above a treshhold specified
         /// by a constant.
         MaxTotalWeight,
-        /// It was tried to remove subsidy from a pool which does not have subsidy provided by
-        /// the address that tried to remove the subsidy.
-        NoSubsidyProvided,
         /// The pool in question does not exist.
         PoolDoesNotExist,
         /// A pool balance dropped below the allowed minimum.
