@@ -2925,8 +2925,6 @@ mod pallet {
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
-            let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
-            total_weight = total_weight.saturating_add(clean_up_weight);
             // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
             // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
@@ -3026,22 +3024,6 @@ mod pallet {
                 market_ids_per_report_block.len() as u32,
                 market_ids_per_dispute_block.len() as u32,
             ))
-        }
-
-        // If a market has a pool that is `Active`, then changes from `Active` to `Clean`. If
-        // the market does not exist or the market does not have a pool, does nothing.
-        fn clean_up_pool(
-            market: &MarketOf<T>,
-            market_id: &MarketIdOf<T>,
-            outcome_report: &OutcomeReport,
-        ) -> Result<Weight, DispatchError> {
-            let pool_id = if let Ok(el) = <zrml_market_commons::Pallet<T>>::market_pool(market_id) {
-                el
-            } else {
-                return Ok(T::DbWeight::get().reads(1));
-            };
-            let weight = T::Swaps::clean_up_pool(&market.market_type, pool_id, outcome_report)?;
-            Ok(weight.saturating_add(T::DbWeight::get().reads(2)))
         }
 
         fn construct_market(
