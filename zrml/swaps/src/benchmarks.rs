@@ -31,11 +31,7 @@ use super::*;
 use crate::Pallet as Swaps;
 use crate::{pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
 use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
-use frame_support::{
-    dispatch::{DispatchResult},
-    traits::Get,
-    weights::Weight,
-};
+use frame_support::{dispatch::DispatchResult, traits::Get, weights::Weight};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
@@ -131,7 +127,6 @@ fn initialize_pool<T: Config>(
     caller: &T::AccountId,
     asset_count: Option<usize>,
     asset_amount: Option<BalanceOf<T>>,
-    scoring_rule: ScoringRule,
     weights: Option<Vec<u128>>,
 ) -> (PoolId, Vec<Asset<MarketIdOf<T>>>, MarketIdOf<T>) {
     let asset_count_unwrapped: usize = {
@@ -155,10 +150,9 @@ fn initialize_pool<T: Config>(
         assets.clone(),
         base_asset,
         market_id,
-        scoring_rule,
-        if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
-        if scoring_rule == ScoringRule::CPMM { Some(LIQUIDITY.saturated_into()) } else { None },
-        if scoring_rule == ScoringRule::CPMM { some_weights } else { None },
+        Some(Zero::zero()),
+        Some(LIQUIDITY.saturated_into()),
+        some_weights,
     )
     .unwrap();
 
@@ -171,16 +165,11 @@ fn bench_create_pool<T: Config>(
     caller: T::AccountId,
     asset_count: Option<usize>,
     asset_amount: Option<BalanceOf<T>>,
-    scoring_rule: ScoringRule,
     weights: Option<Vec<u128>>,
 ) -> (u128, Vec<Asset<MarketIdOf<T>>>, MarketIdOf<T>) {
     let (pool_id, assets, market_id) =
-        initialize_pool::<T>(&caller, asset_count, asset_amount, scoring_rule, weights);
-
-    if scoring_rule == ScoringRule::CPMM {
-        let _ = Pallet::<T>::open_pool(pool_id);
-    }
-
+        initialize_pool::<T>(&caller, asset_count, asset_amount, weights);
+    let _ = Pallet::<T>::open_pool(pool_id);
     (pool_id, assets, market_id)
 }
 
@@ -221,7 +210,6 @@ benchmarks! {
             caller,
             Some(a as usize),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
@@ -263,7 +251,6 @@ benchmarks! {
             caller,
             Some(asset_count),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
@@ -298,7 +285,6 @@ benchmarks! {
                 assets.clone(),
                 base_asset,
                 market_id,
-                ScoringRule::CPMM,
                 Some(Zero::zero()),
                 Some(balance),
                 Some(weights.clone()),
@@ -367,7 +353,6 @@ benchmarks! {
             assets.clone(),
             base_asset,
             market_id,
-            ScoringRule::CPMM,
             Some(Zero::zero()),
             Some(balance),
             Some(weights.clone()),
@@ -424,7 +409,6 @@ benchmarks! {
             assets.clone(),
             base_asset,
             market_id,
-            ScoringRule::CPMM,
             Some(Zero::zero()),
             Some(balance),
             Some(weights.clone()),
@@ -474,7 +458,6 @@ benchmarks! {
             assets,
             base_asset,
             market_id,
-            ScoringRule::CPMM,
             Some(Zero::zero()),
             Some(balance),
             Some(weights.clone()),
@@ -494,7 +477,6 @@ benchmarks! {
             caller.clone(),
             Some(a as usize),
             Some((2u128 * LIQUIDITY).saturated_into()),
-            ScoringRule::CPMM,
             None,
         );
         let pool_amount = (LIQUIDITY / 2u128).saturated_into();
@@ -508,7 +490,6 @@ benchmarks! {
             caller.clone(),
             Some(a as usize),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
@@ -522,7 +503,6 @@ benchmarks! {
             caller.clone(),
             Some(a as usize),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let min_asset_amount = 0u32.into();
@@ -536,7 +516,6 @@ benchmarks! {
             caller.clone(),
             Some(a as usize),
             Some((2u128 * LIQUIDITY).saturated_into()),
-            ScoringRule::CPMM,
             None,
         );
         let pool_amount = LIQUIDITY.saturated_into();
@@ -550,7 +529,6 @@ benchmarks! {
             caller.clone(),
             Some(a as usize),
             Some((2u128 * LIQUIDITY).saturated_into()),
-            ScoringRule::CPMM,
             None,
         );
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
@@ -564,7 +542,6 @@ benchmarks! {
             caller.clone(),
             Some(a as usize),
             Some((2u128 * LIQUIDITY).saturated_into()),
-            ScoringRule::CPMM,
             None,
         );
         let pool_amount = BASE.saturated_into();
@@ -584,7 +561,6 @@ benchmarks! {
             caller,
             Some(a.saturated_into()),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
@@ -613,7 +589,6 @@ benchmarks! {
             caller.clone(),
             Some(asset_count as usize),
             Some(balance),
-            ScoringRule::CPMM,
             Some(weights),
         );
         set_default_creator_fee::<T>(market_id)?;
@@ -654,7 +629,6 @@ benchmarks! {
             caller.clone(),
             Some(asset_count as usize),
             Some(balance),
-            ScoringRule::CPMM,
             Some(weights),
         );
         set_default_creator_fee::<T>(market_id)?;
@@ -681,7 +655,6 @@ benchmarks! {
             &caller,
             Some(a as usize),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
@@ -701,7 +674,6 @@ benchmarks! {
             caller,
             Some(a as usize),
             None,
-            ScoringRule::CPMM,
             None,
         );
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
@@ -721,7 +693,6 @@ benchmarks! {
             caller,
             Some(a as usize),
             None,
-            ScoringRule::CPMM,
             None,
         );
         assert!(Pallet::<T>::pool_by_id(pool_id).is_ok());

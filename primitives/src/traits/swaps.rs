@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId, ScoringRule};
+use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId};
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
 use parity_scale_codec::MaxEncodedLen;
@@ -45,7 +45,6 @@ pub trait Swaps<AccountId> {
         assets: Vec<Asset<Self::MarketId>>,
         base_asset: Asset<Self::MarketId>,
         market_id: Self::MarketId,
-        scoring_rule: ScoringRule,
         swap_fee: Option<Self::Balance>,
         amount: Option<Self::Balance>,
         weights: Option<Vec<u128>>,

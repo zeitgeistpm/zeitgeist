@@ -912,7 +912,6 @@ mod pallet {
                 assets,
                 market.base_asset,
                 market_id,
-                ScoringRule::CPMM,
                 Some(swap_fee),
                 Some(amount),
                 Some(weights),

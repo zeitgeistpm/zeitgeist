@@ -88,7 +88,7 @@ mod pallet {
         constants::CENT,
         math::{
             checked_ops_res::{CheckedAddRes, CheckedMulRes, CheckedSubRes},
-            fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+            fixed::{BaseProvider, FixedMul, ZeitgeistBase},
         },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
@@ -97,7 +97,6 @@ mod pallet {
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_rikiddo::{
-        constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoMVPallet,
         types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
     };
@@ -1114,85 +1113,31 @@ mod pallet {
             ensure!(pool.assets.binary_search(asset_in).is_ok(), Error::<T>::AssetNotInPool);
             ensure!(pool.assets.binary_search(asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
+            let balance_in = T::AssetManager::free_balance(*asset_in, &pool_account);
+            let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
+            let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
+            let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
-            if pool.scoring_rule == ScoringRule::CPMM {
-                let balance_in = T::AssetManager::free_balance(*asset_in, &pool_account);
-                let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
-                let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
-                let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
-
-                let swap_fee = if with_fees {
-                    let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
-                    let market = T::MarketCommons::market(&pool.market_id)?;
-                    market
-                        .creator_fee
-                        .mul_floor(ZeitgeistBase::<u128>::get()?)
-                        .checked_add(swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
-                        .ok_or(Error::<T>::SwapFeeTooHigh)?
-                } else {
-                    BalanceOf::<T>::zero().saturated_into()
-                };
-
-                return Ok(crate::math::calc_spot_price(
-                    balance_in.saturated_into(),
-                    in_weight,
-                    balance_out.saturated_into(),
-                    out_weight,
-                    swap_fee,
-                )?
-                .saturated_into());
-            }
-
-            // TODO(#880): For now rikiddo does not respect with_fees flag.
-            // Price when using Rikiddo.
-            ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::PoolIsNotActive);
-            let mut balances = Vec::new();
-            let base_asset = pool.base_asset;
-
-            // Fees are estimated here. The error scales with the fee. For the future, we'll have
-            // to figure out how to extract the fee out of the price when using Rikiddo.
-            if asset_in == asset_out {
-                return T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?
-                    .checked_add_res(&ZeitgeistBase::get()?);
-            }
-
-            let mut balance_in = BalanceOf::<T>::zero();
-            let mut balance_out = BalanceOf::<T>::zero();
-
-            for asset in pool.assets.iter().filter(|asset| **asset != base_asset) {
-                let issuance = T::AssetManager::total_issuance(*asset);
-
-                if asset == asset_in {
-                    balance_in = issuance;
-                } else if asset == asset_out {
-                    balance_out = issuance;
-                }
-
-                balances.push(issuance);
-            }
-
-            if *asset_in == base_asset {
-                T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)
-            } else if *asset_out == base_asset {
-                let price_with_inverse_fee = ZeitgeistBase::<BalanceOf<T>>::get()?
-                    .bdiv(T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?)?;
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?;
-                let fee_plus_one =
-                    ZeitgeistBase::<BalanceOf<T>>::get()?.checked_add_res(&fee_pct)?;
-                let price_with_fee =
-                    fee_plus_one.bmul(price_with_inverse_fee.bmul(fee_plus_one)?)?;
-                Ok(price_with_fee)
+            let swap_fee = if with_fees {
+                let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
+                let market = T::MarketCommons::market(&pool.market_id)?;
+                market
+                    .creator_fee
+                    .mul_floor(ZeitgeistBase::<u128>::get()?)
+                    .checked_add(swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
+                    .ok_or(Error::<T>::SwapFeeTooHigh)?
             } else {
-                let price_without_fee =
-                    T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_out, &balances)?.bdiv(
-                        T::RikiddoSigmoidFeeMarketEma::price(*pool_id, balance_in, &balances)?,
-                    )?;
-                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(*pool_id)?;
-                let fee_plus_one =
-                    ZeitgeistBase::<BalanceOf<T>>::get()?.checked_add_res(&fee_pct)?;
-                let price_with_fee = fee_plus_one.bmul(price_without_fee)?;
-                Ok(price_with_fee)
-            }
+                BalanceOf::<T>::zero().saturated_into()
+            };
+
+            Ok(crate::math::calc_spot_price(
+                balance_in.saturated_into(),
+                in_weight,
+                balance_out.saturated_into(),
+                out_weight,
+                swap_fee,
+            )?
+            .saturated_into())
         }
 
         // Returns vector of pairs `(a, p)` where `a` ranges over all assets in the pool and `p` is
@@ -1509,7 +1454,6 @@ mod pallet {
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
         /// * `market_id`: The market id of the market the pool belongs to.
-        /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
         /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
         ///     ratio (0.1 equals 10% swap fee)
         /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
@@ -1521,7 +1465,6 @@ mod pallet {
             assets: Vec<Asset<MarketIdOf<T>>>,
             base_asset: Asset<MarketIdOf<T>>,
             market_id: MarketIdOf<T>,
-            scoring_rule: ScoringRule,
             swap_fee: Option<BalanceOf<T>>,
             amount: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
@@ -1543,112 +1486,56 @@ mod pallet {
                 .zip(sorted_assets.iter().skip(1))
                 .fold(false, |acc, (&x, &y)| acc || x == y);
             ensure!(!has_duplicates, Error::<T>::SomeIdenticalAssets);
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
 
-            let (pool_status, total_subsidy, total_weight, weights, pool_amount) =
-                match scoring_rule {
-                    ScoringRule::CPMM => {
-                        ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
-                        // `amount` must be larger than all minimum balances. As we deposit `amount`
-                        // liquidity shares, we must also ensure that `amount` is larger than the
-                        // existential deposit of the liquidity shares.
-                        ensure!(
-                            amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
-                            Error::<T>::InsufficientLiquidity
-                        );
+            ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
+            // `amount` must be larger than all minimum balances. As we deposit `amount`
+            // liquidity shares, we must also ensure that `amount` is larger than the
+            // existential deposit of the liquidity shares.
+            ensure!(
+                amount_unwrapped >= Self::min_balance_of_pool(next_pool_id, &assets),
+                Error::<T>::InsufficientLiquidity
+            );
 
-                        let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
-                        let total_fee = market
-                            .creator_fee
-                            .mul_floor(ZeitgeistBase::<u128>::get()?)
-                            .checked_add(
-                                swap_fee_unwrapped
-                                    .try_into()
-                                    .map_err(|_| Error::<T>::SwapFeeTooHigh)?,
-                            )
-                            .ok_or(Error::<T>::SwapFeeTooHigh)?;
+            let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+            let total_fee = market
+                .creator_fee
+                .mul_floor(ZeitgeistBase::<u128>::get()?)
+                .checked_add(swap_fee_unwrapped.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
+                .ok_or(Error::<T>::SwapFeeTooHigh)?;
 
-                        let total_fee_as_balance = <BalanceOf<T>>::try_from(total_fee)
-                            .map_err(|_| Error::<T>::SwapFeeTooHigh)?;
+            let total_fee_as_balance =
+                <BalanceOf<T>>::try_from(total_fee).map_err(|_| Error::<T>::SwapFeeTooHigh)?;
 
-                        ensure!(
-                            total_fee_as_balance <= T::MaxSwapFee::get(),
-                            Error::<T>::SwapFeeTooHigh
-                        );
-                        ensure!(
-                            total_fee <= ZeitgeistBase::<u128>::get()?,
-                            Error::<T>::SwapFeeTooHigh
-                        );
+            ensure!(total_fee_as_balance <= T::MaxSwapFee::get(), Error::<T>::SwapFeeTooHigh);
+            ensure!(total_fee <= ZeitgeistBase::<u128>::get()?, Error::<T>::SwapFeeTooHigh);
 
-                        let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
-                        Self::check_provided_values_len_must_equal_assets_len(
-                            &assets,
-                            &weights_unwrapped,
-                        )?;
+            let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
+            Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
 
-                        for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
-                            let free_balance = T::AssetManager::free_balance(asset, &who);
-                            ensure!(
-                                free_balance >= amount_unwrapped,
-                                Error::<T>::InsufficientBalance
-                            );
-                            ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
-                            ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
-                            map.insert(asset, weight);
-                            total_weight = total_weight.checked_add_res(&weight)?;
-                            T::AssetManager::transfer(
-                                asset,
-                                &who,
-                                &pool_account,
-                                amount_unwrapped,
-                            )?;
-                        }
+            for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
+                let free_balance = T::AssetManager::free_balance(asset, &who);
+                ensure!(free_balance >= amount_unwrapped, Error::<T>::InsufficientBalance);
+                ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+                ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
+                map.insert(asset, weight);
+                total_weight = total_weight.checked_add_res(&weight)?;
+                T::AssetManager::transfer(asset, &who, &pool_account, amount_unwrapped)?;
+            }
 
-                        ensure!(
-                            total_weight <= T::MaxTotalWeight::get(),
-                            Error::<T>::MaxTotalWeight
-                        );
-                        T::AssetManager::deposit(pool_shares_id, &who, amount_unwrapped)?;
+            ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
+            T::AssetManager::deposit(pool_shares_id, &who, amount_unwrapped)?;
 
-                        let pool_status = PoolStatus::Initialized;
-                        let total_subsidy = None;
-                        let total_weight = Some(total_weight);
-                        let weights = Some(map);
-                        let pool_amount = amount_unwrapped;
-                        (pool_status, total_subsidy, total_weight, weights, pool_amount)
-                    }
-                    ScoringRule::RikiddoSigmoidFeeMarketEma => {
-                        let mut rikiddo_instance: RikiddoSigmoidMV<
-                            T::FixedTypeU,
-                            T::FixedTypeS,
-                            FeeSigmoid<T::FixedTypeS>,
-                            EmaMarketVolume<T::FixedTypeU>,
-                        > = Default::default();
-                        rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
-                        rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
-                        rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
-                        T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
-
-                        let pool_status = PoolStatus::CollectingSubsidy;
-                        let total_subsidy = Some(BalanceOf::<T>::zero());
-                        let total_weight = None;
-                        let weights = None;
-                        let pool_amount = BalanceOf::<T>::zero();
-                        (pool_status, total_subsidy, total_weight, weights, pool_amount)
-                    }
-                    ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-                        return Err(Error::<T>::InvalidScoringRule.into());
-                    }
-                };
             let pool = Pool {
                 assets: sorted_assets,
                 base_asset,
                 market_id,
-                pool_status,
-                scoring_rule,
+                pool_status: PoolStatus::Initialized,
+                scoring_rule: market.scoring_rule,
                 swap_fee,
-                total_subsidy,
-                total_weight,
-                weights,
+                total_subsidy: None,
+                total_weight: Some(total_weight),
+                weights: Some(map),
             };
 
             <Pools<T>>::insert(next_pool_id, Some(pool.clone()));
@@ -1656,7 +1543,7 @@ mod pallet {
             Self::deposit_event(Event::PoolCreate(
                 CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
-                pool_amount,
+                amount_unwrapped,
                 pool_account,
             ));
 
