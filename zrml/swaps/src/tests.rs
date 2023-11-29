@@ -535,7 +535,6 @@ fn most_operations_fail_if_pool_is_clean() {
             } else {
                 0
             }),
-            &Default::default()
         ));
 
         assert_noop!(
@@ -1407,7 +1406,6 @@ fn clean_up_pool_leaves_only_correct_assets() {
             &MarketType::Categorical(4),
             DEFAULT_POOL_ID,
             &OutcomeReport::Categorical(cat_idx),
-            &Default::default()
         ));
         let pool = Swaps::pool(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.pool_status, PoolStatus::Clean);
@@ -1433,7 +1431,6 @@ fn clean_up_pool_handles_rikiddo_pools_properly() {
             &MarketType::Categorical(4),
             DEFAULT_POOL_ID,
             &OutcomeReport::Categorical(cat_idx),
-            &Default::default()
         ));
 
         // Rikiddo instance does not exist anymore.
@@ -1458,7 +1455,6 @@ fn clean_up_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
                 &MarketType::Categorical(4),
                 DEFAULT_POOL_ID,
                 &OutcomeReport::Categorical(cat_idx),
-                &Default::default()
             ),
             Error::<Runtime>::InvalidStateTransition
         );
@@ -1475,7 +1471,6 @@ fn clean_up_pool_fails_if_winning_asset_is_not_found() {
                 &MarketType::Categorical(1337),
                 DEFAULT_POOL_ID,
                 &OutcomeReport::Categorical(1337),
-                &Default::default()
             ),
             Error::<Runtime>::WinningAssetNotFound
         );

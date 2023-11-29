@@ -3446,12 +3446,10 @@ mod pallet {
             } else {
                 return Ok(T::DbWeight::get().reads(1));
             };
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(*market_id);
             let weight = T::Swaps::clean_up_pool(
                 &market.market_type,
                 pool_id,
                 outcome_report,
-                &market_account,
             )?;
             Ok(weight.saturating_add(T::DbWeight::get().reads(2)))
         }

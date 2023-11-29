@@ -137,7 +137,6 @@ pub trait Swaps<AccountId> {
         market_type: &MarketType,
         pool_id: PoolId,
         outcome_report: &OutcomeReport,
-        winner_payout_account: &AccountId,
     ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount in

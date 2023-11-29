@@ -30,7 +30,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use crate::{pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
-use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
+use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::{
     dispatch::{DispatchResult},
     traits::Get,
@@ -592,11 +592,7 @@ benchmarks! {
             Ok(())
         });
     }: {
-        Pallet::<T>::clean_up_pool_categorical(
-            pool_id,
-            &OutcomeReport::Categorical(0),
-            &account("ScrapCollector", 0, 0),
-        )?;
+        Pallet::<T>::clean_up_pool_categorical(pool_id, &OutcomeReport::Categorical(0))?;
     }
 
     swap_exact_amount_in_cpmm {

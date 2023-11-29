@@ -70,7 +70,7 @@ mod pallet {
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
     use sp_arithmetic::{
-        traits::{CheckedSub, Saturating, Zero},
+        traits::{Saturating, Zero},
         Perbill,
     };
     use sp_runtime::{
@@ -151,7 +151,6 @@ mod pallet {
                 &market.market_type,
                 pool_id,
                 &outcome_report,
-                &Self::pool_account_id(&pool_id),
             )?;
             let weight_info = match market.market_type {
                 MarketType::Scalar(_) => T::WeightInfo::admin_clean_up_pool_cpmm_scalar(),
@@ -961,136 +960,6 @@ mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub(crate) fn distribute_pool_share_rewards(
-            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
-            pool_id: PoolId,
-            base_asset: Asset<MarketIdOf<T>>,
-            winning_asset: Asset<MarketIdOf<T>>,
-            winner_payout_account: &T::AccountId,
-        ) -> Weight {
-            // CPMM handling of market profit not supported
-            if pool.scoring_rule == ScoringRule::CPMM {
-                return Weight::from_ref_time(1_000_000);
-            }
-
-            // Total pool shares
-            let shares_id = Self::pool_shares_id(pool_id);
-            let total_pool_shares = T::AssetManager::total_issuance(shares_id);
-
-            // Total AMM balance
-            let pool_account = Self::pool_account_id(&pool_id);
-            let total_amm_funds = T::AssetManager::free_balance(base_asset, &pool_account);
-
-            // Total winning shares
-            // The pool account still holds the winning asset, burn it.
-            let free_balance = T::AssetManager::free_balance(winning_asset, &pool_account);
-            let _ = T::AssetManager::withdraw(winning_asset, &pool_account, free_balance);
-            let total_winning_assets = T::AssetManager::total_issuance(winning_asset);
-
-            // Profit = AMM balance - total winning shares
-            let amm_profit_checked = total_amm_funds.checked_sub(&total_winning_assets);
-            let amm_profit = if let Some(profit) = amm_profit_checked {
-                profit
-            } else {
-                // In case the AMM balance does not suffice to pay out every winner, the pool
-                // rewards will not be distributed (requires investigation and update).
-                log::error!(
-                    target: LOG_TARGET,
-                    "The AMM balance does not suffice to pay out every winner.
-                    market_id: {:?}, pool_id: {:?}, total AMM balance: {:?}, total reward value: \
-                     {:?}",
-                    pool.market_id,
-                    pool_id,
-                    total_amm_funds,
-                    total_winning_assets
-                );
-                return T::DbWeight::get().reads(6);
-            };
-
-            // Iterate through every share holder and exchange shares for rewards.
-            let (total_accounts_num, share_accounts) =
-                T::AssetManager::accounts_by_currency_id(shares_id).unwrap_or((0usize, vec![]));
-            let share_accounts_num = share_accounts.len();
-
-            for share_holder in share_accounts {
-                let share_holder_account = share_holder.0;
-                let share_holder_balance = share_holder.1.free;
-                let reward_pct_unadjusted =
-                    share_holder_balance.bdiv(total_pool_shares).unwrap_or(0u8.into());
-
-                // Seems like bdiv does arithmetic rounding. To ensure that we will have enough
-                // reward for everyone and not run into an error, we'll round down in any case.
-                let reward_pct = reward_pct_unadjusted.saturating_sub(1u8.into());
-                let holder_reward_unadjusted = amm_profit.bmul(reward_pct).unwrap_or(0u8.into());
-
-                // Same for bmul.
-                let holder_reward = holder_reward_unadjusted.saturating_sub(1u8.into());
-
-                let transfer_result = T::AssetManager::transfer(
-                    base_asset,
-                    &pool_account,
-                    &share_holder_account,
-                    holder_reward.saturated_into(),
-                );
-
-                // Should be impossible.
-                if let Err(err) = transfer_result {
-                    let current_amm_holding =
-                        T::AssetManager::free_balance(base_asset, &pool_account);
-                    log::error!(
-                        target: LOG_TARGET,
-                        "The AMM failed to pay out the share holder reward.
-                        market_id: {:?}, pool_id: {:?}, current AMM holding: {:?},
-                        transfer size: {:?}, to: {:?}, error: {:?}",
-                        pool.market_id,
-                        pool_id,
-                        current_amm_holding,
-                        holder_reward,
-                        share_holder_account,
-                        err,
-                    );
-
-                    if current_amm_holding < holder_reward.saturated_into() {
-                        let _ = T::AssetManager::transfer(
-                            base_asset,
-                            &pool_account,
-                            &share_holder_account,
-                            current_amm_holding.saturated_into(),
-                        );
-                    }
-                }
-
-                // We can use the lightweight withdraw here, since pool shares are not reserved.
-                // We can ignore the result since the balance to transfer is the query result of
-                // the free balance (always sufficient).
-                let _ = T::AssetManager::withdraw(
-                    shares_id,
-                    &share_holder_account,
-                    share_holder_balance,
-                );
-            }
-
-            let remaining_pool_funds = T::AssetManager::free_balance(base_asset, &pool_account);
-            // Transfer winner payout - Infallible since the balance was just read from storage.
-            let _ = T::AssetManager::transfer(
-                base_asset,
-                &pool_account,
-                winner_payout_account,
-                remaining_pool_funds,
-            );
-
-            Self::deposit_event(Event::<T>::DistributeShareHolderRewards(
-                pool_id,
-                share_accounts_num.saturated_into(),
-                amm_profit,
-            ));
-
-            T::WeightInfo::distribute_pool_share_rewards(
-                total_accounts_num.saturated_into(),
-                share_accounts_num.saturated_into(),
-            )
-        }
-
         /// Execute arbitrage on as many cached pools until `weight` is spent.
         ///
         /// Arguments:
@@ -1591,7 +1460,7 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        /// Remove losing assets from the pool and distribute Rikiddo rewards.
+        /// Remove losing assets from the pool.
         ///
         /// # Weight
         ///
@@ -1599,9 +1468,7 @@ mod pallet {
         pub(crate) fn clean_up_pool_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
-            winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut extra_weight = Weight::zero();
             let mut total_assets = 0;
 
             Self::mutate_pool(pool_id, |pool| {
@@ -1624,28 +1491,14 @@ mod pallet {
 
                 total_assets = pool.assets.len();
 
-                let winning_asset_unwrapped = winning_asset?;
-
-                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
-                    let distribute_weight = Self::distribute_pool_share_rewards(
-                        pool,
-                        pool_id,
-                        base_asset,
-                        winning_asset_unwrapped,
-                        winner_payout_account,
-                    );
-                    extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
-                    extra_weight = extra_weight.saturating_add(distribute_weight);
-                }
+                let _ = winning_asset?;
 
                 Ok(())
             })?;
 
             Ok(T::WeightInfo::clean_up_pool_categorical_without_reward_distribution(
                 total_assets.saturated_into(),
-            )
-            .saturating_add(extra_weight))
+            ))
         }
 
         /// Calculate the exit fee percentage for `pool`.
@@ -2226,7 +2079,6 @@ mod pallet {
         /// * `market_type`: Type of the market.
         /// * `pool_id`: Unique pool identifier associated with the pool to be made closed.
         /// * `outcome_report`: The reported outcome.
-        /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
         ///
         /// # Errors
         ///
@@ -2239,7 +2091,6 @@ mod pallet {
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
-            winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = Weight::zero();
             Self::mutate_pool(pool_id, |pool| {
@@ -2252,7 +2103,6 @@ mod pallet {
                 let extra_weight = Self::clean_up_pool_categorical(
                     pool_id,
                     outcome_report,
-                    winner_payout_account,
                 )?;
                 weight = weight.saturating_add(extra_weight);
             }
