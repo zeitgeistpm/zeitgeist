@@ -19,11 +19,11 @@
 
 use super::mock::*;
 use frame_support::{assert_ok, traits::tokens::fungibles::Create};
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiCurrencyExtended};
 use zeitgeist_primitives::types::Assets;
 
 fn multicurrency_test_helper<
-    M: MultiCurrency<
+    M: MultiCurrencyExtended<
             <Runtime as frame_system::Config>::AccountId,
             Balance = <Runtime as crate::Config>::Balance,
             CurrencyId = Assets,
@@ -47,6 +47,9 @@ fn multicurrency_test_helper<
     assert!(M::can_slash(asset, &ALICE, 1));
     assert_eq!(M::slash(asset, &ALICE, 1), 0);
     assert_eq!(M::free_balance(asset, &ALICE), initial_amount - min_balance - 2);
+    assert_ok!(M::update_balance(asset, &ALICE, M::Amount::from(1u8) - M::Amount::from(2u8)));
+    assert_eq!(M::free_balance(asset, &ALICE), initial_amount - min_balance - 3);
+    
 }
 
 #[test]
