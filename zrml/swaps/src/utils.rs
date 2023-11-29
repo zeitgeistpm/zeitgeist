@@ -29,10 +29,7 @@ use crate::{
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure};
 use orml_traits::MultiCurrency;
-use sp_runtime::{
-    traits::{Saturating, Zero},
-    DispatchError,
-};
+use sp_runtime::{traits::Zero, DispatchError};
 use zeitgeist_primitives::{
     math::{
         checked_ops_res::CheckedSubRes,
@@ -40,7 +37,6 @@ use zeitgeist_primitives::{
     },
     types::{Asset, Pool, PoolId, ScoringRule},
 };
-use zrml_rikiddo::traits::RikiddoMVPallet;
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
 pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, F5, T>(
@@ -173,6 +169,7 @@ where
     F3: FnMut(SwapEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
     T: crate::Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     ensure!(p.pool.assets.binary_search(&p.asset_in).is_ok(), Error::<T>::AssetNotInPool);
     ensure!(p.pool.assets.binary_search(&p.asset_out).is_ok(), Error::<T>::AssetNotInPool);
@@ -194,74 +191,23 @@ where
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    match p.pool.scoring_rule {
-        ScoringRule::CPMM => {
-            T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-            T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
-            (p.cache_for_arbitrage)();
-        }
-        ScoringRule::RikiddoSigmoidFeeMarketEma => {
-            let base_asset = p.pool.base_asset;
-
-            if p.asset_in == base_asset {
-                T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-                T::AssetManager::deposit(p.asset_out, &p.who, asset_amount_out)?;
-            } else if p.asset_out == base_asset {
-                // We can use the lightweight withdraw here, since event assets are not reserved.
-                T::AssetManager::withdraw(p.asset_in, &p.who, asset_amount_in)?;
-                T::AssetManager::transfer(
-                    p.asset_out,
-                    p.pool_account_id,
-                    &p.who,
-                    asset_amount_out,
-                )?;
-            } else {
-                // Just for safety, should already be checked in p.asset_amounts.
-                return Err(Error::<T>::UnsupportedTrade.into());
-            }
-        }
-        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-            return Err(Error::<T>::InvalidScoringRule.into());
-        }
-    }
+    T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+    T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+    (p.cache_for_arbitrage)();
 
     let spot_price_after =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
 
-    // Allow little tolerance
-    match p.pool.scoring_rule {
-        ScoringRule::CPMM => {
-            ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation)
-        }
-        ScoringRule::RikiddoSigmoidFeeMarketEma => ensure!(
-            spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
-            Error::<T>::MathApproximation
-        ),
-        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-            return Err(Error::<T>::InvalidScoringRule.into());
-        }
-    }
+    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
 
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
     }
 
-    match p.pool.scoring_rule {
-        ScoringRule::CPMM => ensure!(
-            spot_price_before_without_fees <= asset_amount_in.bdiv(asset_amount_out)?,
-            Error::<T>::MathApproximation
-        ),
-        ScoringRule::RikiddoSigmoidFeeMarketEma => {
-            // Currently the only allowed trades are base_currency <-> event asset. We count the
-            // volume in base_currency.
-            let base_asset = p.pool.base_asset;
-            let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
-            T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
-        }
-        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-            return Err(Error::<T>::InvalidScoringRule.into());
-        }
-    }
+    ensure!(
+        spot_price_before_without_fees <= asset_amount_in.bdiv(asset_amount_out)?,
+        Error::<T>::MathApproximation
+    );
 
     (p.event)(SwapEvent {
         asset_amount_in,
