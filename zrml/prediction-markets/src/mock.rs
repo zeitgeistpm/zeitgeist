@@ -37,33 +37,30 @@ use sp_runtime::{
     DispatchError, DispatchResult,
 };
 use std::cell::RefCell;
-use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
-        BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod,
-        CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
-        CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, CloseEarlyTimeFramePeriod,
-        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
-        InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
-        MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
-        MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio,
-        MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
-        MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
-        BASE, CENT, MILLISECS_PER_BLOCK,
+        BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
+        CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
+        CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
+        ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
+        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
+        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories, MaxCourtParticipants,
+        MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
+        MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
+        MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
+        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
-use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -171,7 +168,6 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
@@ -368,21 +364,6 @@ impl zrml_market_commons::Config for Runtime {
     type Timestamp = Timestamp;
 }
 
-impl zrml_rikiddo::Config for Runtime {
-    type Timestamp = Timestamp;
-    type Balance = Balance;
-    type FixedTypeU = FixedU128<U33>;
-    type FixedTypeS = FixedI128<U33>;
-    type BalanceFractionalDecimals = BalanceFractionalDecimals;
-    type PoolId = PoolId;
-    type Rikiddo = RikiddoSigmoidMV<
-        Self::FixedTypeU,
-        Self::FixedTypeS,
-        FeeSigmoid<Self::FixedTypeS>,
-        EmaMarketVolume<Self::FixedTypeU>,
-    >;
-}
-
 impl zrml_simple_disputes::Config for Runtime {
     type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
@@ -415,8 +396,6 @@ impl zrml_global_disputes::Config for Runtime {
 impl zrml_swaps::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFee;
-    type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
-    type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxAssets = MaxAssets;
@@ -428,7 +407,6 @@ impl zrml_swaps::Config for Runtime {
     type MinAssets = MinAssets;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }

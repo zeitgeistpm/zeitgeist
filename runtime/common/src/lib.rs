@@ -1224,8 +1224,6 @@ macro_rules! impl_config_traits {
         impl zrml_swaps::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             type ExitFee = ExitFee;
-            type FixedTypeU = FixedU128<U33>;
-            type FixedTypeS = FixedI128<U33>;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
@@ -1240,7 +1238,6 @@ macro_rules! impl_config_traits {
             type MaxWeight = MaxWeight;
             type MinWeight = MinWeight;
             type PalletId = SwapsPalletId;
-            type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
             type AssetManager = AssetManager;
             type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
         }

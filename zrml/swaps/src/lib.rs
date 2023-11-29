@@ -68,21 +68,12 @@ mod pallet {
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
-    use parity_scale_codec::{Decode, Encode};
     use sp_arithmetic::{
         traits::{Saturating, Zero},
         Perbill,
     };
     use sp_runtime::{
         traits::AccountIdConversion, DispatchError, DispatchResult, SaturatedConversion,
-    };
-    use substrate_fixed::{
-        traits::{FixedSigned, FixedUnsigned, LossyFrom},
-        types::{
-            extra::{U127, U128, U24, U31, U32},
-            I9F23, U1F127,
-        },
-        FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
         constants::CENT,
@@ -96,10 +87,6 @@ mod pallet {
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
-    use zrml_rikiddo::{
-        traits::RikiddoMVPallet,
-        types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
-    };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
@@ -599,32 +586,6 @@ mod pallet {
         #[pallet::constant]
         type ExitFee: Get<BalanceOf<Self>>;
 
-        /// Will be used for the fractional part of the fixed point numbers
-        /// Calculation: Select FixedTYPE<UWIDTH>, such that TYPE = the type of Balance (i.e. FixedU128)
-        /// Select the generic UWIDTH = floor(log2(10.pow(fractional_decimals)))
-        type FixedTypeU: Decode
-            + Encode
-            + FixedUnsigned
-            + From<u8>
-            + LossyFrom<FixedU32<U24>>
-            + LossyFrom<FixedU32<U32>>
-            + LossyFrom<FixedU128<U128>>;
-
-        /// Will be used for the fractional part of the fixed point numbers
-        /// Calculation: Select FixedTYPE, such that it is the signed variant of FixedTypeU
-        /// It is possible to reduce the fractional bit count by one, effectively eliminating
-        /// conversion overflows when the MSB of the unsigned fixed type is set, but in exchange
-        /// Reducing the fractional precision by one bit.
-        type FixedTypeS: Decode
-            + Encode
-            + FixedSigned
-            + From<I9F23>
-            + LossyFrom<FixedI32<U24>>
-            + LossyFrom<FixedI32<U31>>
-            + LossyFrom<U1F127>
-            + LossyFrom<FixedI128<U127>>
-            + PartialOrd<I9F23>;
-
         type LiquidityMining: LiquidityMiningPalletApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
@@ -666,19 +627,6 @@ mod pallet {
         /// The module identifier.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
-
-        /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
-        type RikiddoSigmoidFeeMarketEma: RikiddoMVPallet<
-                Balance = BalanceOf<Self>,
-                PoolId = PoolId,
-                FU = Self::FixedTypeU,
-                Rikiddo = RikiddoSigmoidMV<
-                    Self::FixedTypeU,
-                    Self::FixedTypeS,
-                    FeeSigmoid<Self::FixedTypeS>,
-                    EmaMarketVolume<Self::FixedTypeU>,
-                >,
-            >;
 
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;

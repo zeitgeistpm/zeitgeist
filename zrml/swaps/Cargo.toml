@@ -7,10 +7,8 @@ parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"
 scale-info = { workspace = true, features = ["derive"] }
 sp-arithmetic = { workspace = true }
 sp-runtime = { workspace = true }
-substrate-fixed = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-liquidity-mining = { workspace = true }
-zrml-rikiddo = { workspace = true }
 
 # Mock
 
@@ -53,10 +51,8 @@ std = [
     "orml-traits/std",
     "parity-scale-codec/std",
     "sp-runtime/std",
-    "substrate-fixed/std",
     "zeitgeist-primitives/std",
     "zrml-liquidity-mining/std",
-    "zrml-rikiddo/std",
 ]
 try-runtime = [
     "frame-support/try-runtime",
