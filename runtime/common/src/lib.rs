@@ -1154,9 +1154,7 @@ macro_rules! impl_config_traits {
             type MaxGracePeriod = MaxGracePeriod;
             type MaxOracleDuration = MaxOracleDuration;
             type MinOracleDuration = MinOracleDuration;
-            type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MinCategories = MinCategories;
-            type MinSubsidyPeriod = MinSubsidyPeriod;
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;

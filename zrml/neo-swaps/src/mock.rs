@@ -52,12 +52,12 @@ use zeitgeist_primitives::{
         LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCourtParticipants, MaxCreatorFee,
         MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
         MaxGracePeriod, MaxInRatio, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinOutcomeVoteAmount, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
-        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId,
-        VotePeriod, VotingOutcomeFee, CENT,
+        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSwapFee, MaxTotalWeight,
+        MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+        MinOutcomeVoteAmount, MinWeight, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId,
+        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
+        CENT,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -223,10 +223,8 @@ impl zrml_prediction_markets::Config for Runtime {
     type MaxDisputeDuration = MaxDisputeDuration;
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;
-    type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketLifetime = MaxMarketLifetime;
     type MinCategories = MinCategories;
-    type MinSubsidyPeriod = MinSubsidyPeriod;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;

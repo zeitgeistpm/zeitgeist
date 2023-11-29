@@ -1851,10 +1851,6 @@ mod pallet {
         #[pallet::constant]
         type MaxCategories: Get<u16>;
 
-        /// The shortest period of collecting subsidy for a Rikiddo market.
-        #[pallet::constant]
-        type MaxSubsidyPeriod: Get<MomentOf<Self>>;
-
         /// The minimum number of categories available for categorical markets.
         #[pallet::constant]
         type MinCategories: Get<u16>;
@@ -1862,10 +1858,6 @@ mod pallet {
         /// A upper bound for the fee that is charged each trade and given to the market creator.
         #[pallet::constant]
         type MaxCreatorFee: Get<Perbill>;
-
-        /// The shortest period of collecting subsidy for a Rikiddo market.
-        #[pallet::constant]
-        type MinSubsidyPeriod: Get<MomentOf<Self>>;
 
         /// The maximum number of disputes allowed on any single market.
         #[pallet::constant]

@@ -499,8 +499,8 @@ benchmarks! {
 
         let (caller, oracle, deadlines, metadata) = create_market_common_parameters::<T>(true)?;
 
-        let range_end = T::MaxSubsidyPeriod::get();
-        let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..range_end);
+        let range_end = 200_000;
+        let period = MarketPeriod::Timestamp(100_000..range_end);
 
         for i in 0..m {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -779,7 +779,7 @@ benchmarks! {
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM,
-            Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
+            Some(MarketPeriod::Timestamp(100_000..200_000)),
             Some(MarketDisputeMechanism::Court),
         )?;
         let market = <zrml_market_commons::Pallet::<T>>::market(&market_id.saturated_into())?;

@@ -95,13 +95,9 @@ parameter_types! {
     pub const MaxMarketLifetime: BlockNumber = 100_000_000_000;
     pub const MaxOracleDuration: BlockNumber = 30;
     pub const MaxRejectReasonLen: u32 = 1024;
-    // 2_678_400_000 = 31 days.
-    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     pub const MinCategories: u16 = 2;
     pub const MinDisputeDuration: BlockNumber = 2;
     pub const MinOracleDuration: BlockNumber = 2;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    pub const MinSubsidyPeriod: Moment = 60_000;
     pub const OracleBond: Balance = 50 * CENT;
     pub const OutsiderBond: Balance = 2 * OracleBond::get();
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");

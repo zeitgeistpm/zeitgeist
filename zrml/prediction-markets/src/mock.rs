@@ -48,12 +48,12 @@ use zeitgeist_primitives::{
         LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories, MaxCourtParticipants,
         MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
         MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxMarketLifetime, MaxOracleDuration,
-        MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
-        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
-        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond,
-        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSwapFee,
+        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinOutcomeVoteAmount, MinWeight, MinimumPeriod, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -207,10 +207,8 @@ impl crate::Config for Runtime {
     type MaxDisputeDuration = MaxDisputeDuration;
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;
-    type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketLifetime = MaxMarketLifetime;
     type MinCategories = MinCategories;
-    type MinSubsidyPeriod = MinSubsidyPeriod;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
