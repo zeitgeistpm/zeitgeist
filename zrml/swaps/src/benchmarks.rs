@@ -44,7 +44,7 @@ use zeitgeist_primitives::{
     traits::{MarketCommonsPalletApi, Swaps as _},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        MarketPeriod, MarketStatus, MarketType, PoolId, PoolStatus, ScoringRule,
     },
 };
 
@@ -174,91 +174,6 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
-    admin_clean_up_pool_cpmm_categorical {
-        // We're excluding the case of two assets, which would leave us with only one outcome
-        // token and cause `create_market` to error.
-        let a in 3..T::MaxAssets::get().into();
-        let category_count = (a - 1) as u16;
-        let caller: T::AccountId = whitelisted_caller();
-        let market_id = T::MarketCommons::push_market(
-            Market {
-                base_asset: Asset::Ztg,
-                creation: MarketCreation::Permissionless,
-                creator_fee: Perbill::zero(),
-                creator: caller.clone(),
-                market_type: MarketType::Categorical(category_count),
-                dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
-                metadata: vec![0; 50],
-                oracle: caller.clone(),
-                period: MarketPeriod::Block(0u32.into()..1u32.into()),
-                deadlines: Deadlines {
-                    grace_period: 1_u32.into(),
-                    oracle_duration: 1_u32.into(),
-                    dispute_duration: 1_u32.into(),
-                },
-                report: None,
-                resolved_outcome: None,
-                scoring_rule: ScoringRule::CPMM,
-                status: MarketStatus::Active,
-                bonds: MarketBonds::default(),
-                early_close: None,
-            }
-        )?;
-        let pool_id: PoolId = 0;
-        let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
-        let _ = bench_create_pool::<T>(
-            caller,
-            Some(a as usize),
-            None,
-            None,
-        );
-        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
-            pool.pool_status = PoolStatus::Closed;
-            Ok(())
-        });
-    }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Categorical(0))
-
-    admin_clean_up_pool_cpmm_scalar {
-        let caller: T::AccountId = whitelisted_caller();
-        let market_id = T::MarketCommons::push_market(
-            Market {
-                base_asset: Asset::Ztg,
-                creation: MarketCreation::Permissionless,
-                creator_fee: Perbill::zero(),
-                creator: caller.clone(),
-                market_type: MarketType::Scalar(0..=99),
-                dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
-                metadata: vec![0; 50],
-                oracle: caller.clone(),
-                period: MarketPeriod::Block(0u32.into()..1u32.into()),
-                deadlines: Deadlines {
-                    grace_period: 1_u32.into(),
-                    oracle_duration: 1_u32.into(),
-                    dispute_duration: 1_u32.into(),
-                },
-                report: None,
-                resolved_outcome: None,
-                scoring_rule: ScoringRule::CPMM,
-                status: MarketStatus::Active,
-                bonds: MarketBonds::default(),
-                early_close: None,
-            }
-        )?;
-        let pool_id: PoolId = 0;
-        let asset_count = 3;
-        let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
-        let _ = bench_create_pool::<T>(
-            caller,
-            Some(asset_count),
-            None,
-            None,
-        );
-        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
-            pool.pool_status = PoolStatus::Closed;
-            Ok(())
-        });
-    }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Scalar(33))
-
     // This is a worst-case benchmark for arbitraging a number of pools.
     apply_to_cached_pools_execute_arbitrage {
         let a in 0..63; // The number of cached pools.
@@ -547,29 +462,6 @@ benchmarks! {
         let pool_amount = BASE.saturated_into();
         let max_asset_amount: BalanceOf<T> = LIQUIDITY.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
-
-    clean_up_pool_categorical_without_reward_distribution {
-        // Total possible outcomes
-        let a in 3..T::MaxAssets::get().into();
-
-        let amount = BASE;
-
-        // Create pool with a assets
-        let caller = whitelisted_caller();
-
-        let (pool_id, _, _) = bench_create_pool::<T>(
-            caller,
-            Some(a.saturated_into()),
-            None,
-            None,
-        );
-        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
-            pool.pool_status = PoolStatus::Closed;
-            Ok(())
-        });
-    }: {
-        Pallet::<T>::clean_up_pool_categorical(pool_id, &OutcomeReport::Categorical(0))?;
-    }
 
     swap_exact_amount_in_cpmm {
         // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have

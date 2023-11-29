@@ -66,7 +66,7 @@ mod pallet {
         traits::{Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::{
         traits::{Saturating, Zero},
@@ -82,9 +82,7 @@ mod pallet {
             fixed::{BaseProvider, FixedMul, ZeitgeistBase},
         },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
-        types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
-        },
+        types::{Asset, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper},
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
 
@@ -105,49 +103,6 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Clean up the pool of a resolved market.
-        ///
-        /// # Arguments
-        ///
-        /// - `origin`: The root origin.
-        /// - `market_id`: The id of the market that the pool belongs to.
-        /// - `outcome_report`: The report that resolved the market.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
-        /// assets in the pool if the market is categorical.
-        #[pallet::call_index(0)]
-        #[pallet::weight(
-            T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
-                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar())
-        )]
-        #[transactional]
-        pub fn admin_clean_up_pool(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-            outcome_report: OutcomeReport,
-        ) -> DispatchResultWithPostInfo {
-            // TODO(#785): This is not properly benchmarked for Rikiddo yet!
-            ensure_root(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
-            let pool_id = T::MarketCommons::market_pool(&market_id)?;
-            Self::clean_up_pool(&market.market_type, pool_id, &outcome_report)?;
-            let weight_info = match market.market_type {
-                MarketType::Scalar(_) => T::WeightInfo::admin_clean_up_pool_cpmm_scalar(),
-                // This is a time-efficient way of getting the number of assets, but makes the
-                // assumption that `assets = category_count + 1`. This is definitely a code smell
-                // and a result of not separating `prediction-markets` from `swaps` properly in
-                // this function.
-                MarketType::Categorical(category_count) => {
-                    T::WeightInfo::admin_clean_up_pool_cpmm_categorical(
-                        category_count.saturating_add(1) as u32,
-                    )
-                }
-            };
-            Ok(Some(weight_info).into())
-        }
-
         /// Pool - Exit
         ///
         /// Retrieves a given set of assets from `pool_id` to `origin`.
@@ -1310,47 +1265,6 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        /// Remove losing assets from the pool.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(n)` where `n` is the number of assets in the pool.
-        pub(crate) fn clean_up_pool_categorical(
-            pool_id: PoolId,
-            outcome_report: &OutcomeReport,
-        ) -> Result<Weight, DispatchError> {
-            let mut total_assets = 0;
-
-            Self::mutate_pool(pool_id, |pool| {
-                // Find winning asset, remove losing assets from pool
-                let base_asset = pool.base_asset;
-                let mut winning_asset: Result<_, DispatchError> =
-                    Err(Error::<T>::WinningAssetNotFound.into());
-                if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
-                    pool.assets.retain(|el| {
-                        if let Asset::CategoricalOutcome(_, idx) = *el {
-                            if idx == *winning_asset_idx {
-                                winning_asset = Ok(*el);
-                                return true;
-                            };
-                        }
-
-                        *el == base_asset
-                    });
-                }
-
-                total_assets = pool.assets.len();
-
-                let _ = winning_asset?;
-
-                Ok(())
-            })?;
-
-            Ok(T::WeightInfo::clean_up_pool_categorical_without_reward_distribution(
-                total_assets.saturated_into(),
-            ))
-        }
-
         /// Calculate the exit fee percentage for `pool`.
         fn calc_exit_fee(pool: &Pool<BalanceOf<T>, MarketIdOf<T>>) -> BalanceOf<T> {
             // We don't charge exit fees on closed or cleaned up pools (no need to punish LPs for
@@ -1657,41 +1571,6 @@ mod pallet {
 
         fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, MarketIdOf<T>>, DispatchError> {
             Self::pool_by_id(pool_id)
-        }
-
-        /// Remove losing assets and distribute Rikiddo pool share rewards.
-        ///
-        /// # Arguments
-        ///
-        /// * `market_type`: Type of the market.
-        /// * `pool_id`: Unique pool identifier associated with the pool to be made closed.
-        /// * `outcome_report`: The reported outcome.
-        ///
-        /// # Errors
-        ///
-        /// * Returns `Error::<T>::PoolDoesNotExist` if there is no pool with `pool_id`.
-        /// * Returns `Error::<T>::WinningAssetNotFound` if the reported asset is not found in the
-        ///   pool and the scoring rule is Rikiddo.
-        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not closed
-        #[frame_support::transactional]
-        fn clean_up_pool(
-            market_type: &MarketType,
-            pool_id: PoolId,
-            outcome_report: &OutcomeReport,
-        ) -> Result<Weight, DispatchError> {
-            let mut weight = Weight::zero();
-            Self::mutate_pool(pool_id, |pool| {
-                pool.pool_status = PoolStatus::Clean;
-                Ok(())
-            })?;
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1)); // mutate_pool
-            if let MarketType::Categorical(_) = market_type {
-                let extra_weight = Self::clean_up_pool_categorical(pool_id, outcome_report)?;
-                weight = weight.saturating_add(extra_weight);
-            }
-            Self::deposit_event(Event::<T>::PoolCleanedUp(pool_id));
-            // (No extra work required for scalar markets!)
-            Ok(weight)
         }
 
         /// Swap - Exact amount in

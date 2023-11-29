@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId};
+use crate::types::{Asset, Pool, PoolId};
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
 use parity_scale_codec::MaxEncodedLen;
@@ -102,21 +102,6 @@ pub trait Swaps<AccountId> {
 
     /// Returns the pool instance of a corresponding `pool_id`.
     fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError>;
-
-    /// If the market is categorical, removes everything that is not ZTG or winning assets from the
-    /// selected pool. Additionally, it distributes the rewards to all pool share holders.
-    ///
-    /// # Arguments
-    ///
-    /// * `market_type`: Type of the market (e.g. categorical or scalar).
-    /// * `pool_id`: Unique pool identifier associated with the pool to be cleaned up.
-    /// * `outcome_report`: The resulting outcome.
-    /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
-    fn clean_up_pool(
-        market_type: &MarketType,
-        pool_id: PoolId,
-        outcome_report: &OutcomeReport,
-    ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount in
     ///

@@ -31,9 +31,7 @@ use crate::{
     mock::*,
     BalanceOf, Config, Error, Event, MarketIdOf, PoolsCachedForArbitrage, ARBITRAGE_MAX_ITERATIONS,
 };
-use frame_support::{
-    assert_err, assert_noop, assert_ok, error::BadOrigin, traits::Hooks, weights::Weight,
-};
+use frame_support::{assert_err, assert_noop, assert_ok, traits::Hooks, weights::Weight};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{GetByKey, MultiCurrency};
 use sp_arithmetic::{traits::SaturatedConversion, Perbill};
@@ -43,9 +41,7 @@ use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
-    types::{
-        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
-    },
+    types::{AccountIdTest, Asset, MarketId, PoolId, PoolStatus, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -494,87 +490,6 @@ fn pool_join_fails_if_pool_is_closed() {
     });
 }
 
-#[test]
-fn most_operations_fail_if_pool_is_clean() {
-    ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool_with_funds_for_alice(Some(0), true);
-        assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
-        assert_ok!(Swaps::clean_up_pool(
-            &MarketType::Categorical(0),
-            DEFAULT_POOL_ID,
-            &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
-                idx
-            } else {
-                0
-            }),
-        ));
-
-        assert_noop!(
-            Swaps::pool_join(RuntimeOrigin::signed(ALICE), DEFAULT_POOL_ID, _1, vec![_10]),
-            Error::<Runtime>::InvalidPoolStatus,
-        );
-        assert_noop!(
-            Swaps::pool_exit_with_exact_asset_amount(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                ASSET_A,
-                _1,
-                _2
-            ),
-            Error::<Runtime>::PoolIsNotActive
-        );
-        assert_noop!(
-            Swaps::pool_exit_with_exact_pool_amount(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                ASSET_A,
-                _1,
-                _1_2
-            ),
-            Error::<Runtime>::PoolIsNotActive
-        );
-        assert_noop!(
-            Swaps::pool_join_with_exact_asset_amount(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                ASSET_E,
-                1,
-                1
-            ),
-            Error::<Runtime>::PoolIsNotActive
-        );
-        assert_noop!(
-            Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_E, 1, 1),
-            Error::<Runtime>::PoolIsNotActive
-        );
-        assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
-        assert_noop!(
-            Swaps::swap_exact_amount_in(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                ASSET_A,
-                u64::MAX.into(),
-                ASSET_B,
-                Some(_1),
-                Some(_1),
-            ),
-            Error::<Runtime>::PoolIsNotActive
-        );
-        assert_noop!(
-            Swaps::swap_exact_amount_out(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                ASSET_A,
-                Some(u64::MAX.into()),
-                ASSET_B,
-                _1,
-                Some(_1),
-            ),
-            Error::<Runtime>::PoolIsNotActive
-        );
-    });
-}
-
 #[test_case(_3, _3, _100, _100, 0, 10_000_000_000, 10_000_000_000)]
 #[test_case(_3, _3, _100, _150, 0, 6_666_666_667, 6_666_666_667)]
 #[test_case(_3, _4, _100, _100, 0, 13_333_333_333, 13_333_333_333)]
@@ -848,23 +763,6 @@ fn pool_join_with_exact_pool_amount_satisfies_max_out_ratio_constraints() {
 }
 
 #[test]
-fn admin_clean_up_pool_fails_if_origin_is_not_root() {
-    ExtBuilder::default().build().execute_with(|| {
-        let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
-        create_initial_pool_with_funds_for_alice(Some(0), true);
-        assert_ok!(MarketCommons::insert_market_pool(DEFAULT_MARKET_ID, DEFAULT_POOL_ID));
-        assert_noop!(
-            Swaps::admin_clean_up_pool(
-                alice_signed(),
-                DEFAULT_POOL_ID,
-                OutcomeReport::Categorical(idx)
-            ),
-            BadOrigin
-        );
-    });
-}
-
-#[test]
 fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(Some(0), true);
@@ -1028,49 +926,6 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
                 pool_amount: _10,
             })
             .into(),
-        );
-    })
-}
-
-#[test]
-fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
-    // Test is the same as
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        create_initial_pool_with_funds_for_alice(Some(0), true);
-        assert_ok!(MarketCommons::insert_market_pool(DEFAULT_MARKET_ID, DEFAULT_POOL_ID));
-
-        assert_ok!(Swaps::pool_join(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
-        assert_ok!(Swaps::admin_clean_up_pool(
-            RuntimeOrigin::root(),
-            DEFAULT_POOL_ID,
-            OutcomeReport::Categorical(65),
-        ));
-        assert_ok!(Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1),));
-
-        System::assert_last_event(
-            Event::PoolExit(PoolAssetsEvent {
-                assets: vec![ASSET_A, ASSET_D],
-                bounds: vec![_1, _1],
-                cpep: CommonPoolEventParams { pool_id: DEFAULT_POOL_ID, who: 0 },
-                transferred: vec![_1 + 1, _1 + 1],
-                pool_amount: _1,
-            })
-            .into(),
-        );
-        assert_all_parameters(
-            [_25 + 1, _24, _24, _25 + 1],
-            0,
-            // Note: Although the asset is deleted from the pool, the assets B/C still remain on the
-            // pool account.
-            [
-                DEFAULT_LIQUIDITY - 1,
-                DEFAULT_LIQUIDITY + _1,
-                DEFAULT_LIQUIDITY + _1,
-                DEFAULT_LIQUIDITY - 1,
-            ],
-            DEFAULT_LIQUIDITY,
         );
     })
 }
@@ -1357,41 +1212,6 @@ fn provided_values_len_must_equal_assets_len() {
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _5, vec![]),
             Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
-        );
-    });
-}
-
-#[test]
-fn clean_up_pool_leaves_only_correct_assets() {
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        create_initial_pool(Some(0), true);
-        assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
-        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
-        assert_ok!(Swaps::clean_up_pool(
-            &MarketType::Categorical(4),
-            DEFAULT_POOL_ID,
-            &OutcomeReport::Categorical(cat_idx),
-        ));
-        let pool = Swaps::pool(DEFAULT_POOL_ID).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Clean);
-        assert_eq!(Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap().assets, vec![ASSET_A, ASSET_D]);
-        System::assert_last_event(Event::PoolCleanedUp(DEFAULT_POOL_ID).into());
-    });
-}
-
-#[test]
-fn clean_up_pool_fails_if_winning_asset_is_not_found() {
-    ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool(Some(0), true);
-        assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
-        assert_noop!(
-            Swaps::clean_up_pool(
-                &MarketType::Categorical(1337),
-                DEFAULT_POOL_ID,
-                &OutcomeReport::Categorical(1337),
-            ),
-            Error::<Runtime>::WinningAssetNotFound
         );
     });
 }
