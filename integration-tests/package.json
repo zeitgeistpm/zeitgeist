@@ -5,6 +5,7 @@
   },
   "devDependencies": {
     "@moonwall/cli": "^4.4.1",
+    "@moonwall/util": "^4.4.1",
     "@polkadot/api": "^10.10.1",
     "@polkadot/types": "^10.10.1",
     "@types/node": "^20.9.0",

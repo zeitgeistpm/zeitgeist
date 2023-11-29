@@ -31,9 +31,15 @@ import { ALITH_ADDRESS } from "@moonwall/util";
 
 ### Usage Examples (non-exhaustive)
 
+Most commons commands:
+
+- `pnpm exec moonwall test zombienet_zeitgeist_upgrade`
+
+Other moonwall commands:
+
 - `moonwall` : If you have globally installed moonwall, here is the most minimal entrypoint
 
-- `pnpm moonwall` : This can be used if locally installed, and will launch the main menu..
+- `pnpm moonwall` : This can be used if locally installed, and will launch the main menu.. However, there were many bugs experienced when using this cli.
 
 - `pnpx @moonwall/cli run <ENV_NAME>` : To download and run the latest moonwall binary from npm.js repository, and run a network specified in your config file.
 

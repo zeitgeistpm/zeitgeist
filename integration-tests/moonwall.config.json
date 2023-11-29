@@ -1,12 +1,12 @@
 {
    "label": "moonwall_config",
-   "defaultTestTimeout": 30000,
+   "defaultTestTimeout": 120000,
    "scriptsDir": "scripts/",
    "environments": [
       {
-         "name": "zombie_zeitgeist",
+         "name": "zombienet_zeitgeist_upgrade",
          "testFileDir": [
-            "tests/"
+            "tests/rt-upgrade-zombienet"
          ],
          "runScripts": [
             "build-parachain.sh",
@@ -19,6 +19,7 @@
                   "binPath": "../target/debug/zeitgeist"
                }
             ],
+            "rtUpgradePath": "../target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
             "type": "zombie",
             "zombieSpec": {
                "configPath": "./configs/zombieZeitgeist.json"
@@ -31,10 +32,32 @@
                "endpoints": ["ws://127.0.0.1:9947"]
             },
             {
-               "name": "Zeitgeist-Parachain-2101",
+               "name": "parachain",
                "type": "polkadotJs",
                "endpoints": ["ws://127.0.0.1:9944"]
             }
+         ]
+      },
+      {
+         "name": "chopsticks_zeitgeist_upgrade",
+         "testFileDir": ["tests/rt-upgrade-chopsticks"],
+         "foundation": {
+             "type": "chopsticks",
+             "rtUpgradePath": "../target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+             "launchSpec": [
+                 {
+                     "name": "db",
+                     "type": "parachain",
+                     "configPath": "./configs/zeitgeist.yml"
+                 }
+             ]
+         },
+         "connections": [
+             {
+                 "name": "DB",
+                 "type": "polkadotJs",
+                 "endpoints": ["ws://127.0.0.1:8000"]
+             }
          ]
       }
    ]
