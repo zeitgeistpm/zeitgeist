@@ -57,13 +57,6 @@ pub trait Swaps<AccountId> {
     /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
     fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
-    /// All supporters will receive their reserved funds back and the pool is destroyed.
-    ///
-    /// # Arguments
-    ///
-    /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
-    fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> Result<Weight, DispatchError>;
-
     fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
     /// Pool - Exit with exact pool amount

@@ -67,7 +67,7 @@ mod pallet {
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::{MultiCurrency, MultiReservableCurrency};
+    use orml_traits::MultiCurrency;
     use parity_scale_codec::{Decode, Encode};
     use sp_arithmetic::{
         traits::{Saturating, Zero},
@@ -92,8 +92,7 @@ mod pallet {
         },
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
-            ScoringRule, SerdeWrapper,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -147,11 +146,7 @@ mod pallet {
             ensure_root(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
-            Self::clean_up_pool(
-                &market.market_type,
-                pool_id,
-                &outcome_report,
-            )?;
+            Self::clean_up_pool(&market.market_type, pool_id, &outcome_report)?;
             let weight_info = match market.market_type {
                 MarketType::Scalar(_) => T::WeightInfo::admin_clean_up_pool_cpmm_scalar(),
                 // This is a time-efficient way of getting the number of assets, but makes the
@@ -1724,54 +1719,6 @@ mod pallet {
             Ok(T::WeightInfo::destroy_pool(asset_len))
         }
 
-        /// All supporters will receive their reserved funds back and the pool is destroyed.
-        ///
-        /// # Arguments
-        ///
-        /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
-        fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            let mut total_providers = 0usize;
-
-            Self::mutate_pool(pool_id, |pool| {
-                // Ensure all preconditions are met.
-                if pool.pool_status != PoolStatus::CollectingSubsidy {
-                    return Err(Error::<T>::InvalidStateTransition.into());
-                }
-
-                let base_asset = pool.base_asset;
-
-                let mut providers_and_pool_shares = vec![];
-                for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
-                    let missing = T::AssetManager::unreserve(base_asset, &provider.0, provider.1);
-                    debug_assert!(
-                        missing.is_zero(),
-                        "Could not unreserve all of the amount. asset: {:?}, who: {:?}, amount: \
-                         {:?}, missing: {:?}",
-                        base_asset,
-                        &provider.0,
-                        provider.1,
-                        missing,
-                    );
-                    total_providers = total_providers.saturating_add(1);
-                    providers_and_pool_shares.push(provider);
-                }
-
-                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
-                }
-
-                Self::deposit_event(Event::PoolDestroyedInSubsidyPhase(
-                    pool_id,
-                    providers_and_pool_shares,
-                ));
-
-                Ok(())
-            })?;
-
-            Pools::<T>::remove(pool_id);
-            Ok(T::WeightInfo::destroy_pool_in_subsidy_phase(total_providers.saturated_into()))
-        }
-
         fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| -> DispatchResult {
                 ensure!(
@@ -1947,10 +1894,7 @@ mod pallet {
             })?;
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1)); // mutate_pool
             if let MarketType::Categorical(_) = market_type {
-                let extra_weight = Self::clean_up_pool_categorical(
-                    pool_id,
-                    outcome_report,
-                )?;
+                let extra_weight = Self::clean_up_pool_categorical(pool_id, outcome_report)?;
                 weight = weight.saturating_add(extra_weight);
             }
             Self::deposit_event(Event::<T>::PoolCleanedUp(pool_id));
