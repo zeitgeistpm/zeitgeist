@@ -1024,26 +1024,6 @@ benchmarks! {
         )?;
     }: _(RawOrigin::Signed(caller), market_id, amount)
 
-    start_subsidy {
-        // Total event outcome assets.
-        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-
-        // Create advised rikiddo market with a assets (advised -> start_subsidy not invoked).
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(a.saturated_into()),
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-            Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
-            Some(MarketDisputeMechanism::Court),
-        )?;
-        let mut market_clone = None;
-        <zrml_market_commons::Pallet::<T>>::mutate_market(&market_id, |market| {
-            market.status = MarketStatus::CollectingSubsidy;
-            market_clone = Some(market.clone());
-            Ok(())
-        })?;
-    }: { Pallet::<T>::start_subsidy(&market_clone.unwrap(), market_id)? }
-
     market_status_manager {
         let b in 1..31;
         let f in 1..31;

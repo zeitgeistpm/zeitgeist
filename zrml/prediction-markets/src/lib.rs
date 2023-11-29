@@ -435,7 +435,6 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
-            let mut extra_weight = Weight::zero();
             let mut status = MarketStatus::Active;
 
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
@@ -455,7 +454,6 @@ mod pallet {
                     ScoringRule::RikiddoSigmoidFeeMarketEma => {
                         m.status = MarketStatus::CollectingSubsidy;
                         status = MarketStatus::CollectingSubsidy;
-                        extra_weight = Self::start_subsidy(m, market_id)?;
                     }
                 }
 
@@ -466,8 +464,7 @@ mod pallet {
 
             Self::deposit_event(Event::MarketApproved(market_id, status));
             // The ApproveOrigin should not pay fees for providing this service
-            Ok((Some(T::WeightInfo::approve_market().saturating_add(extra_weight)), Pays::No)
-                .into())
+            Ok((Some(T::WeightInfo::approve_market()), Pays::No).into())
         }
 
         /// Request an edit to a proposed market.
@@ -2447,10 +2444,6 @@ mod pallet {
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
 
-            if market.status == MarketStatus::CollectingSubsidy {
-                let _ = Self::start_subsidy(&market, market_id)?;
-            }
-
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
@@ -3276,49 +3269,8 @@ mod pallet {
             } else {
                 return Ok(T::DbWeight::get().reads(1));
             };
-            let weight = T::Swaps::clean_up_pool(
-                &market.market_type,
-                pool_id,
-                outcome_report,
-            )?;
+            let weight = T::Swaps::clean_up_pool(&market.market_type, pool_id, outcome_report)?;
             Ok(weight.saturating_add(T::DbWeight::get().reads(2)))
-        }
-
-        // Creates a pool for the market and registers the market in the list of markets
-        // currently collecting subsidy.
-        pub(crate) fn start_subsidy(
-            market: &MarketOf<T>,
-            market_id: MarketIdOf<T>,
-        ) -> Result<Weight, DispatchError> {
-            ensure!(
-                market.status == MarketStatus::CollectingSubsidy,
-                Error::<T>::MarketIsNotCollectingSubsidy
-            );
-
-            let mut assets = Self::outcome_assets(market_id, market);
-            assets.push(market.base_asset);
-            let total_assets = assets.len();
-
-            let pool_id = T::Swaps::create_pool(
-                market.creator.clone(),
-                assets,
-                market.base_asset,
-                market_id,
-                market.scoring_rule,
-                None,
-                None,
-                None,
-            )?;
-
-            // This errors if a pool already exists!
-            <zrml_market_commons::Pallet<T>>::insert_market_pool(market_id, pool_id)?;
-            <MarketsCollectingSubsidy<T>>::try_mutate(|markets| {
-                markets
-                    .try_push(SubsidyUntil { market_id, period: market.period.clone() })
-                    .map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
-
-            Ok(T::WeightInfo::start_subsidy(total_assets.saturated_into()))
         }
 
         fn construct_market(
