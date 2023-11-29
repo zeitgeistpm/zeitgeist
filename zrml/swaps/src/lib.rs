@@ -661,15 +661,6 @@ mod pallet {
         /// The minimum amount of assets in a pool.
         type MinAssets: Get<u16>;
 
-        /// The minimum amount of subsidy required to state transit a market into active state.
-        /// Must be greater than 0, but can be arbitrarily close to 0.
-        #[pallet::constant]
-        type MinSubsidy: Get<BalanceOf<Self>>;
-
-        /// The minimum amount of subsidy that each subsidy provider must contribute.
-        #[pallet::constant]
-        type MinSubsidyPerAccount: Get<BalanceOf<Self>>;
-
         #[pallet::constant]
         type MinWeight: Get<u128>;
 

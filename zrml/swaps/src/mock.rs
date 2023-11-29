@@ -45,7 +45,7 @@ use zeitgeist_primitives::{
     constants::mock::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, GetNativeCurrencyId,
         LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinSubsidy, MinWeight, MinimumPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, MinimumPeriod,
         PmPalletId, SwapsPalletId, BASE,
     },
     types::{
@@ -86,7 +86,6 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 // Mocked exit fee for easier calculations
 parameter_types! {
     pub storage ExitFeeMock: Balance = BASE / 10;
-    pub const MinSubsidyPerAccount: Balance = BASE;
 }
 
 construct_runtime!(
@@ -124,8 +123,6 @@ impl crate::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinSubsidy = MinSubsidy;
-    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;

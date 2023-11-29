@@ -1238,8 +1238,6 @@ macro_rules! impl_config_traits {
             type MaxSwapFee = MaxSwapFee;
             type MaxTotalWeight = MaxTotalWeight;
             type MaxWeight = MaxWeight;
-            type MinSubsidy = MinSubsidy;
-            type MinSubsidyPerAccount = MinSubsidyPerAccount;
             type MinWeight = MinWeight;
             type PalletId = SwapsPalletId;
             type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;

@@ -56,10 +56,10 @@ use zeitgeist_primitives::{
         MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
         MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
         MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        MinOutcomeVoteAmount, MinSubsidyPeriod, MinWeight, MinimumPeriod,
         NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
         RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId,
-        VotePeriod, VotingOutcomeFee, BASE, CENT,
+        VotePeriod, VotingOutcomeFee, CENT,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -97,7 +97,6 @@ parameter_types! {
     pub storage NeoMinSwapFee: Balance = 0;
 }
 parameter_types! {
-    pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 0;
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
     pub const OracleBond: Balance = 0;
@@ -427,8 +426,6 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinSubsidy = MinSubsidy;
-    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;

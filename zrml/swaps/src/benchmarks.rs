@@ -575,7 +575,7 @@ benchmarks! {
         // Total possible outcomes
         let a in 3..T::MaxAssets::get().into();
 
-        let amount = T::MinSubsidy::get();
+        let amount = BASE;
 
         // Create pool with a assets
         let caller = whitelisted_caller();
