@@ -2165,25 +2165,6 @@ mod pallet {
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
 
             let _ = with_transaction(|| {
-                let open = Self::market_status_manager::<
-                    _,
-                    MarketIdsPerOpenBlock<T>,
-                    MarketIdsPerOpenTimeFrame<T>,
-                >(
-                    now,
-                    last_time_frame,
-                    current_time_frame,
-                    |market_id, _| {
-                        let weight = Self::open_market(market_id)?;
-                        total_weight = total_weight.saturating_add(weight);
-                        Ok(())
-                    },
-                );
-
-                total_weight = total_weight.saturating_add(open.unwrap_or_else(|_| {
-                    T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get())
-                }));
-
                 let close = Self::market_status_manager::<
                     _,
                     MarketIdsPerCloseBlock<T>,
@@ -2228,7 +2209,7 @@ mod pallet {
                 LastTimeFrame::<T>::set(Some(current_time_frame));
                 total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
-                match open.and(close).and(resolve) {
+                match close.and(resolve) {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
                         log::error!(
@@ -2800,17 +2781,6 @@ mod pallet {
         fn ensure_market_is_closed(market: &MarketOf<T>) -> DispatchResult {
             ensure!(market.status == MarketStatus::Closed, Error::<T>::MarketIsNotClosed);
             Ok(())
-        }
-
-        pub(crate) fn open_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
-            // Is no-op if market has no pool. This should never happen, but it's safer to not
-            // error in this case.
-            let mut total_weight = T::DbWeight::get().reads(1); // (For the `market_pool` read)
-            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(market_id) {
-                let open_pool_weight = T::Swaps::open_pool(pool_id)?;
-                total_weight = total_weight.saturating_add(open_pool_weight);
-            }
-            Ok(total_weight)
         }
 
         pub(crate) fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {

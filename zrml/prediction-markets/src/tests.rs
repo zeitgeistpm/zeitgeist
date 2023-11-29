@@ -1224,39 +1224,6 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
 }
 
 #[test]
-fn on_market_open_successfully_auto_opens_market_pool_with_blocks() {
-    ExtBuilder::default().build().execute_with(|| {
-        let start = 33;
-        let end = 66;
-        let category_count = 3;
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            ALICE,
-            MarketPeriod::Block(start..end),
-            get_deadlines(),
-            gen_metadata(50),
-            MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            0,
-            LIQUIDITY,
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
-        ));
-        let market_id = 0;
-        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
-
-        run_to_block(start - 1);
-        let pool_before_open = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_before_open.pool_status, PoolStatus::Initialized);
-
-        run_to_block(start);
-        let pool_after_open = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_after_open.pool_status, PoolStatus::Active);
-    });
-}
-
-#[test]
 fn on_market_close_successfully_auto_closes_market_with_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 33;
@@ -1291,42 +1258,6 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
         assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
 
         System::assert_last_event(Event::MarketClosed(market_id).into());
-    });
-}
-
-#[test]
-fn on_market_open_successfully_auto_opens_market_with_timestamps() {
-    ExtBuilder::default().build().execute_with(|| {
-        let start: Moment = (33 * MILLISECS_PER_BLOCK).into();
-        let end: Moment = (66 * MILLISECS_PER_BLOCK).into();
-        let category_count = 3;
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            ALICE,
-            MarketPeriod::Timestamp(start..end),
-            get_deadlines(),
-            gen_metadata(50),
-            MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            0,
-            LIQUIDITY,
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
-        ));
-        let market_id = 0;
-        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
-
-        // (Check that the market doesn't close too soon)
-        set_timestamp_for_on_initialize(start - 1);
-        run_blocks(1); // Trigger hook!
-        let pool_before_close = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_before_close.pool_status, PoolStatus::Initialized);
-
-        set_timestamp_for_on_initialize(start);
-        run_blocks(1); // Trigger hook!
-        let pool_after_close = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_after_close.pool_status, PoolStatus::Active);
     });
 }
 
@@ -1368,54 +1299,6 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
 
         System::assert_last_event(Event::MarketClosed(market_id).into());
-    });
-}
-
-#[test]
-fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
-    // We check that `on_market_open` works correctly even if a block takes much longer than 12sec
-    // to be produced and multiple markets are involved.
-    ExtBuilder::default().build().execute_with(|| {
-        // Mock last time frame to prevent it from defaulting.
-        LastTimeFrame::<Runtime>::set(Some(0));
-
-        let start: Moment = (33 * MILLISECS_PER_BLOCK).into();
-        let end: Moment = (666 * MILLISECS_PER_BLOCK).into();
-        let category_count = 3;
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            ALICE,
-            MarketPeriod::Timestamp(start..end),
-            get_deadlines(),
-            gen_metadata(50),
-            MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            0,
-            LIQUIDITY,
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
-        ));
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            ALICE,
-            MarketPeriod::Timestamp(start..end),
-            get_deadlines(),
-            gen_metadata(50),
-            MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            0,
-            LIQUIDITY,
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
-        ));
-
-        // This block takes much longer than 12sec, but markets and pools still close correctly.
-        set_timestamp_for_on_initialize(end / 2);
-        run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
-        assert_eq!(Swaps::pool(0).unwrap().pool_status, PoolStatus::Active);
-        assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Active);
     });
 }
 
