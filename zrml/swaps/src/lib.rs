@@ -630,7 +630,7 @@ mod pallet {
 
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
-        
+
         /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;
     }

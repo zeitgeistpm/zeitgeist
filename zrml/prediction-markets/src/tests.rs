@@ -5513,56 +5513,6 @@ fn report_fails_on_market_state_closed_for_advised_market() {
 }
 
 #[test]
-fn report_fails_on_market_state_collecting_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Timestamp(100_000_000..200_000_000),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Advised,
-            MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::RikiddoSigmoidFeeMarketEma
-        ));
-        assert_noop!(
-            PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
-            Error::<Runtime>::MarketIsNotClosed,
-        );
-    });
-}
-
-#[test]
-fn report_fails_on_market_state_insufficient_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Timestamp(100_000_000..200_000_000),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Advised,
-            MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::RikiddoSigmoidFeeMarketEma
-        ));
-        let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = MarketStatus::InsufficientSubsidy;
-            Ok(())
-        });
-        assert_noop!(
-            PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
-            Error::<Runtime>::MarketIsNotClosed,
-        );
-    });
-}
-
-#[test]
 fn report_fails_on_market_state_active() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(

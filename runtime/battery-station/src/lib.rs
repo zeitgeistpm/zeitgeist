@@ -183,30 +183,21 @@ impl Contains<RuntimeCall> for IsCallable {
         match call {
             RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
-            RuntimeCall::PredictionMarkets(inner_call) => {
-                match inner_call {
-                    // Disable Rikiddo and SimpleDisputes markets
-                    create_market {
-                        scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
-                    } => false,
-                    create_market {
-                        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
-                        ..
-                    } => false,
-                    edit_market {
-                        scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, ..
-                    } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
-                        ..
-                    } => false,
-                    edit_market {
-                        dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
-                        ..
-                    } => false,
-                    _ => true,
-                }
-            }
+            RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
+                create_market {
+                    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
+                    ..
+                } => false,
+                create_cpmm_market_and_deploy_assets {
+                    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
+                    ..
+                } => false,
+                edit_market {
+                    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
+                    ..
+                } => false,
+                _ => true,
+            },
             _ => true,
         }
     }

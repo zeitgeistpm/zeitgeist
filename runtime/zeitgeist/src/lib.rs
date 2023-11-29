@@ -120,10 +120,7 @@ impl Contains<RuntimeCall> for IsCallable {
         };
         use pallet_vesting::Call::force_vested_transfer;
 
-        use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        };
+        use zeitgeist_primitives::types::MarketDisputeMechanism::{Court, SimpleDisputes};
         use zrml_prediction_markets::Call::{
             admin_move_market_to_closed, admin_move_market_to_resolved,
             create_cpmm_market_and_deploy_assets, create_market, edit_market,
@@ -168,9 +165,6 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
-                    // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
                     edit_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,

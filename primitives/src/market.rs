@@ -71,10 +71,9 @@ pub struct Market<AI, BA, BN, M, A> {
 impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
-            ScoringRule::CPMM
-            | ScoringRule::Lmsr
-            | ScoringRule::Orderbook
-            | ScoringRule::RikiddoSigmoidFeeMarketEma => ResolutionMechanism::RedeemTokens,
+            ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
+                ResolutionMechanism::RedeemTokens
+            }
             ScoringRule::Parimutuel => ResolutionMechanism::Noop,
         }
     }

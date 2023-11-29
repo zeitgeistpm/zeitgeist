@@ -42,10 +42,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId,
-        LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, MinimumPeriod, PmPalletId,
-        SwapsPalletId, BASE,
+        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId, LiquidityMiningPalletId,
+        MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxSwapFee, MaxTotalWeight,
+        MaxWeight, MinAssets, MinWeight, MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,

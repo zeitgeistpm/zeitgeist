@@ -30,7 +30,6 @@ use zeitgeist_primitives::{
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
 
 #[test_case(ScoringRule::CPMM; "CPMM")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
 fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
@@ -56,7 +55,6 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
 }
 
 #[test_case(ScoringRule::CPMM; "CPMM")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
 fn fill_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;

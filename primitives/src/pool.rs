@@ -83,7 +83,6 @@ where
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum ScoringRule {
     CPMM,
-    RikiddoSigmoidFeeMarketEma,
     Lmsr,
     Orderbook,
     Parimutuel,

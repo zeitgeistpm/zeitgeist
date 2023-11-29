@@ -435,7 +435,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
-            let mut status = MarketStatus::Active;
+            let new_status = MarketStatus::Active;
 
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
@@ -443,26 +443,13 @@ mod pallet {
                     !MarketIdsForEdit::<T>::contains_key(market_id),
                     Error::<T>::MarketEditRequestAlreadyInProgress
                 );
-
-                match m.scoring_rule {
-                    ScoringRule::CPMM
-                    | ScoringRule::Lmsr
-                    | ScoringRule::Parimutuel
-                    | ScoringRule::Orderbook => {
-                        m.status = MarketStatus::Active;
-                    }
-                    ScoringRule::RikiddoSigmoidFeeMarketEma => {
-                        m.status = MarketStatus::CollectingSubsidy;
-                        status = MarketStatus::CollectingSubsidy;
-                    }
-                }
-
+                m.status = new_status;
                 Ok(())
             })?;
 
             Self::unreserve_creation_bond(&market_id)?;
 
-            Self::deposit_event(Event::MarketApproved(market_id, status));
+            Self::deposit_event(Event::MarketApproved(market_id, new_status));
             // The ApproveOrigin should not pay fees for providing this service
             Ok((Some(T::WeightInfo::approve_market()), Pays::No).into())
         }
@@ -2838,34 +2825,6 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_market_start_is_in_time(
-            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
-        ) -> DispatchResult {
-            let interval = match period {
-                MarketPeriod::Block(range) => {
-                    let interval_blocks: u128 = range
-                        .start
-                        .saturating_sub(<frame_system::Pallet<T>>::block_number())
-                        .saturated_into();
-                    interval_blocks.saturating_mul(MILLISECS_PER_BLOCK.into())
-                }
-                MarketPeriod::Timestamp(range) => range
-                    .start
-                    .saturating_sub(<zrml_market_commons::Pallet<T>>::now())
-                    .saturated_into(),
-            };
-
-            ensure!(
-                <MomentOf<T>>::saturated_from(interval) >= T::MinSubsidyPeriod::get(),
-                <Error<T>>::MarketStartTooSoon
-            );
-            ensure!(
-                <MomentOf<T>>::saturated_from(interval) <= T::MaxSubsidyPeriod::get(),
-                <Error<T>>::MarketStartTooLate
-            );
-            Ok(())
-        }
-
         pub(crate) fn open_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
             // Is no-op if market has no pool. This should never happen, but it's safer to not
             // error in this case.
@@ -3309,17 +3268,8 @@ mod pallet {
             Self::ensure_market_deadlines_are_valid(&deadlines, dispute_mechanism.is_none())?;
             Self::ensure_market_type_is_valid(&market_type)?;
 
-            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(&period)?;
-            }
             let status: MarketStatus = match creation {
-                MarketCreation::Permissionless => match scoring_rule {
-                    ScoringRule::CPMM
-                    | ScoringRule::Lmsr
-                    | ScoringRule::Parimutuel
-                    | ScoringRule::Orderbook => MarketStatus::Active,
-                    ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
-                },
+                MarketCreation::Permissionless => MarketStatus::Active,
                 MarketCreation::Advised => MarketStatus::Proposed,
             };
             Ok(Market {
