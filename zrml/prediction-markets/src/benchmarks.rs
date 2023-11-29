@@ -248,7 +248,6 @@ benchmarks! {
     }
 
     admin_move_market_to_closed {
-        let o in 0..63;
         let c in 0..63;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
@@ -260,13 +259,6 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
-
-        for i in 0..o {
-            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
 
         for i in 0..c {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -577,63 +569,7 @@ benchmarks! {
             scoring_rule
     )
 
-    deploy_swap_pool_for_market_future_pool {
-        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-        let o in 0..63;
-
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Categorical(a.saturated_into()),
-            ScoringRule::CPMM,
-            Some(MarketPeriod::Timestamp(range_start..range_end)),
-            Some(MarketDisputeMechanism::Court),
-        )?;
-
-        assert!(
-            Pallet::<T>::calculate_time_frame_of_moment(<zrml_market_commons::Pallet::<T>>::now())
-                < Pallet::<T>::calculate_time_frame_of_moment(range_start)
-        );
-
-        for i in 0..o {
-            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
-
-        let prev_len = MarketIdsPerOpenTimeFrame::<T>::get(
-            Pallet::<T>::calculate_time_frame_of_moment(range_start)).len();
-
-        let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
-        let min_liquidity: BalanceOf::<T> = LIQUIDITY.saturated_into();
-        Pallet::<T>::buy_complete_set(
-            RawOrigin::Signed(caller.clone()).into(),
-            market_id,
-            min_liquidity,
-        )?;
-
-        let weight_len: usize = MaxRuntimeUsize::from(a).into();
-        let weights = vec![MinWeight::get(); weight_len];
-
-        let call = Call::<T>::deploy_swap_pool_for_market {
-            market_id,
-            swap_fee: max_swap_fee,
-            amount: min_liquidity,
-            weights,
-        };
-    }: {
-        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
-    } verify {
-        let current_len = MarketIdsPerOpenTimeFrame::<T>::get(
-            Pallet::<T>::calculate_time_frame_of_moment(range_start),
-        )
-        .len();
-        assert_eq!(current_len, prev_len + 1);
-    }
-
-    deploy_swap_pool_for_market_open_pool {
+    deploy_swap_pool_for_market {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
         // We need to ensure, that period range start is now,
@@ -895,7 +831,6 @@ benchmarks! {
 
     reject_market {
         let c in 0..63;
-        let o in 0..63;
         let r in 0..<T as Config>::MaxRejectReasonLen::get();
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
@@ -907,13 +842,6 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
-
-        for i in 0..o {
-            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
 
         for i in 0..c {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -1024,6 +952,9 @@ benchmarks! {
         )?;
     }: _(RawOrigin::Signed(caller), market_id, amount)
 
+    // Benchmarks `market_status_manager` for any type of cache by using `MarketIdsPerClose*` as
+    // sample. If `MarketIdsPerClose*` ever gets removed and we want to keep using
+    // `market_status_manager`, we need to benchmark it with a different cache.
     market_status_manager {
         let b in 1..31;
         let f in 1..31;
@@ -1054,37 +985,35 @@ benchmarks! {
         }
 
         let block_number: T::BlockNumber = Zero::zero();
-        let last_time_frame: TimeFrame = Zero::zero();
         for i in 1..=b {
-            <MarketIdsPerOpenBlock<T>>::try_mutate(block_number, |ids| {
+            MarketIdsPerCloseBlock::<T>::try_mutate(block_number, |ids| {
                 ids.try_push(i.into())
             }).unwrap();
         }
 
+        let last_time_frame: TimeFrame = Zero::zero();
         let last_offset: TimeFrame = last_time_frame + 1.saturated_into::<u64>();
         //* quadratic complexity should not be allowed in substrate blockchains
         //* assume at first that the last time frame is one block before the current time frame
         let t = 0;
         let current_time_frame: TimeFrame = last_offset + t.saturated_into::<u64>();
         for i in 1..=f {
-            <MarketIdsPerOpenTimeFrame<T>>::try_mutate(current_time_frame, |ids| {
-                // + 31 to not conflict with the markets of MarketIdsPerOpenBlock
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(current_time_frame, |ids| {
+                // + 31 to not conflict with the markets of MarketIdsPerCloseBlock
                 ids.try_push((i + 31).into())
             }).unwrap();
         }
     }: {
         Pallet::<T>::market_status_manager::<
             _,
-            MarketIdsPerOpenBlock<T>,
-            MarketIdsPerOpenTimeFrame<T>,
+            MarketIdsPerCloseBlock<T>,
+            MarketIdsPerCloseTimeFrame<T>,
         >(
             block_number,
             last_time_frame,
             current_time_frame,
-            |market_id, market| {
-                // noop, because weight is already measured somewhere else
-                Ok(())
-            },
+            // noop, because weight is already measured somewhere else
+            |market_id, market| Ok(()),
         )
         .unwrap();
     }
@@ -1385,7 +1314,6 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(close_origin)? }
 
     close_trusted_market {
-        let o in 0..63;
         let c in 0..63;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
@@ -1397,13 +1325,6 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             None,
         )?;
-
-        for i in 0..o {
-            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                Pallet::<T>::calculate_time_frame_of_moment(range_start),
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
 
         for i in 0..c {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(

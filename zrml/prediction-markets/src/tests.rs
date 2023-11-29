@@ -23,8 +23,7 @@ extern crate alloc;
 
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
-    MarketIdsPerCloseTimeFrame, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
-    MarketIdsPerReportBlock, TimeFrame,
+    MarketIdsPerCloseTimeFrame, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, TimeFrame,
 };
 use alloc::collections::BTreeMap;
 use core::ops::{Range, RangeInclusive};
@@ -299,7 +298,7 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: Mark
 }
 
 #[test]
-fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
+fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
@@ -330,29 +329,10 @@ fn admin_move_market_to_closed_correctly_clears_auto_open_and_close_blocks() {
             LIQUIDITY,
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            ALICE,
-            MarketPeriod::Block(22..33),
-            get_deadlines(),
-            gen_metadata(50),
-            MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            0,
-            LIQUIDITY,
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
-        ));
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(RuntimeOrigin::signed(SUDO), 0));
 
-        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
-        assert_eq!(auto_close.len(), 1);
-        assert_eq!(auto_close[0], 1);
-
-        let auto_open = MarketIdsPerOpenBlock::<Runtime>::get(22);
-        assert_eq!(auto_open.len(), 1);
-        assert_eq!(auto_open[0], 2);
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66).into_inner();
+        assert_eq!(auto_close, vec![1]);
     });
 }
 
