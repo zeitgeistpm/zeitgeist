@@ -2022,17 +2022,7 @@ mod pallet {
                 );
             }
 
-            match pool.scoring_rule {
-                ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_out_cpmm()),
-                ScoringRule::RikiddoSigmoidFeeMarketEma => {
-                    Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(
-                        pool.assets.len().saturated_into(),
-                    ))
-                }
-                ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-                    Err(Error::<T>::InvalidScoringRule.into())
-                }
-            }
+            Ok(T::WeightInfo::swap_exact_amount_out_cpmm())
         }
     }
 }
