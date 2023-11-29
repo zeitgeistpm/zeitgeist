@@ -54,9 +54,7 @@ use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_prediction_markets::Call::{
-    buy_complete_set, create_cpmm_market_and_deploy_assets, create_market,
-    deploy_swap_pool_and_additional_liquidity, deploy_swap_pool_for_market, dispute, edit_market,
-    redeem_shares, report, sell_complete_set,
+    buy_complete_set, create_market, dispute, edit_market, redeem_shares, report, sell_complete_set,
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zrml_swaps::Call::{
@@ -125,8 +123,6 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
                     buy_complete_set { .. } => true,
-                    deploy_swap_pool_and_additional_liquidity { .. } => true,
-                    deploy_swap_pool_for_market { .. } => true,
                     dispute { .. } => true,
                     // Only allow CPMM markets using Authorized or Court dispute mechanism
                     create_market {
@@ -134,12 +130,6 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                             Some(MarketDisputeMechanism::Authorized)
                             | Some(MarketDisputeMechanism::Court),
                         scoring_rule: ScoringRule::CPMM,
-                        ..
-                    } => true,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism:
-                            Some(MarketDisputeMechanism::Authorized)
-                            | Some(MarketDisputeMechanism::Court),
                         ..
                     } => true,
                     edit_market {
@@ -185,10 +175,6 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
                 create_market {
-                    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
-                    ..
-                } => false,
-                create_cpmm_market_and_deploy_assets {
                     dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
                     ..
                 } => false,

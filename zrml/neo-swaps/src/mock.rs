@@ -47,17 +47,15 @@ use zeitgeist_primitives::{
         BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
         CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-        ExistentialDeposit, ExistentialDeposits, ExitFee, GdVotingPeriod, GetNativeCurrencyId,
+        ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCourtParticipants, MaxCreatorFee,
-        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxInRatio, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio,
-        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxSwapFee, MaxTotalWeight,
-        MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinWeight, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId,
-        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
-        CENT,
+        LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
+        MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves,
+        MaxSelectedDraws, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+        MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -171,7 +169,6 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
-        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
@@ -236,7 +233,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;
-    type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
@@ -389,24 +385,6 @@ impl zrml_global_disputes::Config for Runtime {
     type GdVotingPeriod = GdVotingPeriod;
     type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
-}
-
-impl zrml_swaps::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type ExitFee = ExitFee;
-    type LiquidityMining = LiquidityMining;
-    type MarketCommons = MarketCommons;
-    type MaxAssets = MaxAssets;
-    type MaxInRatio = MaxInRatio;
-    type MaxOutRatio = MaxOutRatio;
-    type MaxSwapFee = MaxSwapFee;
-    type MaxTotalWeight = MaxTotalWeight;
-    type MaxWeight = MaxWeight;
-    type MinAssets = MinAssets;
-    type MinWeight = MinWeight;
-    type PalletId = SwapsPalletId;
-    type AssetManager = AssetManager;
-    type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
 impl pallet_treasury::Config for Runtime {

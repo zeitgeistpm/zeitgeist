@@ -40,14 +40,14 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        CloseEarlyProtectionTimeFramePeriod, CloseEarlyTimeFramePeriod, MaxSwapFee, MinWeight,
-        BASE, CENT, MILLISECS_PER_BLOCK,
+        CloseEarlyProtectionTimeFramePeriod, CloseEarlyTimeFramePeriod, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     math::fixed::{BaseProvider, ZeitgeistBase},
-    traits::{DisputeApi, Swaps},
+    traits::DisputeApi,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus, ScoringRule,
+        MarketType, MultiHash, OutcomeReport, ScoringRule,
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
@@ -188,30 +188,19 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     Ok((caller, market_id))
 }
 
-fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Config>(
+fn setup_reported_categorical_market<T>(
     categories: u32,
     report_outcome: OutcomeReport,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str>
+where
+    T: Config + pallet_timestamp::Config,
+{
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories.saturated_into()),
         ScoringRule::CPMM,
         None,
         Some(MarketDisputeMechanism::Court),
-    )?;
-
-    let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
-    let min_liquidity: BalanceOf<T> = LIQUIDITY.saturated_into();
-    Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    let weight_len: usize = MaxRuntimeUsize::from(categories).into();
-    let weights = vec![MinWeight::get(); weight_len];
-    Pallet::<T>::deploy_swap_pool_for_market(
-        RawOrigin::Signed(caller.clone()).into(),
-        market_id,
-        max_swap_fee,
-        min_liquidity,
-        weights,
     )?;
 
     Call::<T>::admin_move_market_to_closed { market_id }
@@ -307,7 +296,7 @@ benchmarks! {
         let r in 0..63;
 
         let categories = T::MaxCategories::get();
-        let (_, market_id) = setup_reported_categorical_market_with_pool::<T>(
+        let (_, market_id) = setup_reported_categorical_market::<T>(
             categories.into(),
             OutcomeReport::Categorical(0u16),
         )?;
@@ -396,7 +385,7 @@ benchmarks! {
 
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
-            setup_reported_categorical_market_with_pool::<T>(
+            setup_reported_categorical_market::<T>(
                 categories.into(),
                 OutcomeReport::Categorical(2)
             )?;
@@ -569,49 +558,6 @@ benchmarks! {
             scoring_rule
     )
 
-    deploy_swap_pool_for_market {
-        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-
-        // We need to ensure, that period range start is now,
-        // because we would like to open the pool now
-        let range_start: MomentOf<T> = <zrml_market_commons::Pallet::<T>>::now();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Categorical(a.saturated_into()),
-            ScoringRule::CPMM,
-            Some(MarketPeriod::Timestamp(range_start..range_end)),
-            Some(MarketDisputeMechanism::Court),
-        )?;
-
-        let market = <zrml_market_commons::Pallet::<T>>::market(&market_id.saturated_into())?;
-
-        let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
-        let min_liquidity: BalanceOf::<T> = LIQUIDITY.saturated_into();
-        Pallet::<T>::buy_complete_set(
-            RawOrigin::Signed(caller.clone()).into(),
-            market_id,
-            min_liquidity,
-        )?;
-
-        let weight_len: usize = MaxRuntimeUsize::from(a).into();
-        let weights = vec![MinWeight::get(); weight_len];
-
-        let call = Call::<T>::deploy_swap_pool_for_market {
-            market_id,
-            swap_fee: max_swap_fee,
-            amount: min_liquidity,
-            weights,
-        };
-    }: {
-        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
-    } verify {
-        let market_pool_id =
-            <zrml_market_commons::Pallet::<T>>::market_pool(&market_id.saturated_into())?;
-        let pool = T::Swaps::pool(market_pool_id)?;
-        assert_eq!(pool.pool_status, PoolStatus::Active);
-    }
-
     start_global_dispute {
         let m in 1..CacheSize::get();
         let n in 1..CacheSize::get();
@@ -723,7 +669,7 @@ benchmarks! {
 
     internal_resolve_categorical_reported {
         let categories = T::MaxCategories::get();
-        let (_, market_id) = setup_reported_categorical_market_with_pool::<T>(
+        let (_, market_id) = setup_reported_categorical_market::<T>(
             categories.into(),
             OutcomeReport::Categorical(1u16),
         )?;
@@ -742,7 +688,7 @@ benchmarks! {
     internal_resolve_categorical_disputed {
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
-            setup_reported_categorical_market_with_pool::<T>(
+            setup_reported_categorical_market::<T>(
                 categories.into(),
                 OutcomeReport::Categorical(1u16)
             )?;

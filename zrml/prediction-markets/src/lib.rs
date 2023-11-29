@@ -64,7 +64,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
+            DisputeResolutionApi, ZeitgeistAssetManager,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -576,89 +576,6 @@ mod pallet {
             Ok((Some(weight)).into())
         }
 
-        /// Create a permissionless market, buy complete sets and deploy a pool with specified
-        /// liquidity.
-        ///
-        /// # Arguments
-        ///
-        /// * `oracle`: The oracle of the market who will report the correct outcome.
-        /// * `period`: The active period of the market.
-        /// * `metadata`: A hash pointer to the metadata of the market.
-        /// * `market_type`: The type of the market.
-        /// * `dispute_mechanism`: The market dispute mechanism.
-        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
-        /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each asset price.
-        ///
-        /// # Weight
-        ///
-        /// Complexity:
-        /// - create_market: `O(n)`, where `n` is the number of market ids,
-        /// which close at the same time as the specified market.
-        /// - buy_complete_set: `O(n)`, where `n` is the number of outcome assets
-        /// for the categorical market.
-        /// - deploy_swap_pool_for_market: `O(n)`,
-        /// where n is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
-        /// where `n` is the number of outcome assets for the categorical market
-        /// and `m` is the number of market ids,
-        /// which open at the same time as the specified market.
-        #[pallet::call_index(7)]
-        #[pallet::weight(
-            T::WeightInfo::create_market(CacheSize::get())
-                .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-                .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                    weights.len() as u32,
-                ))
-        )]
-        #[transactional]
-        pub fn create_cpmm_market_and_deploy_assets(
-            origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
-            creator_fee: Perbill,
-            oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Deadlines<T::BlockNumber>,
-            metadata: MultiHash,
-            market_type: MarketType,
-            dispute_mechanism: Option<MarketDisputeMechanism>,
-            #[pallet::compact] swap_fee: BalanceOf<T>,
-            #[pallet::compact] amount: BalanceOf<T>,
-            weights: Vec<u128>,
-        ) -> DispatchResultWithPostInfo {
-            let _ = ensure_signed(origin.clone())?;
-
-            let create_market_weight = Self::create_market(
-                origin.clone(),
-                base_asset,
-                creator_fee,
-                oracle,
-                period,
-                deadlines,
-                metadata,
-                MarketCreation::Permissionless,
-                market_type.clone(),
-                dispute_mechanism,
-                ScoringRule::CPMM,
-            )?
-            .actual_weight
-            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
-
-            // Deploy the swap pool and populate it.
-            let market_id = <zrml_market_commons::Pallet<T>>::latest_market_id()?;
-            let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
-                origin,
-                market_id,
-                swap_fee,
-                amount,
-                weights.clone(),
-            )?
-            .actual_weight
-            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
-
-            Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
-        }
-
         /// Creates a market.
         ///
         /// # Weight
@@ -771,120 +688,6 @@ mod pallet {
             Self::deposit_event(Event::MarketEdited(market_id, edited_market));
 
             Ok(Some(T::WeightInfo::edit_market(ids_amount)).into())
-        }
-
-        /// Buy complete sets and deploy a pool with specified liquidity for a market.
-        ///
-        /// # Arguments
-        ///
-        /// * `market_id`: The id of the market.
-        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
-        /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
-        ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
-        ///     swaps pallet.
-        ///
-        /// # Weight
-        ///
-        /// Complexity:
-        /// - buy_complete_set: `O(n)`,
-        /// where `n` is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market: `O(n)`,
-        /// where `n` is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
-        /// where `n` is the number of outcome assets for the categorical market,
-        /// and `m` is the number of market ids,
-        /// which open at the same time as the specified market.
-        #[pallet::call_index(10)]
-        #[pallet::weight(
-            T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()).saturating_add(
-                T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32),
-            )
-        )]
-        #[transactional]
-        pub fn deploy_swap_pool_and_additional_liquidity(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-            #[pallet::compact] swap_fee: BalanceOf<T>,
-            #[pallet::compact] amount: BalanceOf<T>,
-            weights: Vec<u128>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_signed(origin.clone())?;
-            let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
-                .actual_weight
-                .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
-            let weight_deploy =
-                Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?
-                    .actual_weight
-                    .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
-            Ok(Some(weight_bcs.saturating_add(weight_deploy)).into())
-        }
-
-        /// Deploy a pool with specified liquidity for a market.
-        ///
-        /// The sender must have enough funds to cover all of the required shares to seed the pool.
-        ///
-        /// # Arguments
-        ///
-        /// * `market_id`: The id of the market.
-        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
-        /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
-        ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
-        ///     swaps pallet.
-        ///
-        /// # Weight
-        ///
-        /// Complexity:
-        /// - deploy_swap_pool_for_market: `O(n)`,
-        /// where `n` is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
-        /// where `n` is the number of outcome assets for the categorical market,
-        /// and `m` is the number of market ids,
-        /// which open at the same time as the specified market.
-        #[pallet::call_index(11)]
-        #[pallet::weight(T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32))]
-        #[transactional]
-        pub fn deploy_swap_pool_for_market(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-            #[pallet::compact] swap_fee: BalanceOf<T>,
-            #[pallet::compact] amount: BalanceOf<T>,
-            mut weights: Vec<u128>,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
-            Self::ensure_market_is_active(&market)?;
-
-            let mut assets = Self::outcome_assets(market_id, &market);
-            let weights_len = weights.len() as u32;
-            // although this extrinsic is transactional and this check is inside Swaps::create_pool
-            // the iteration over weights happens still before the check in Swaps::create_pool
-            // this could stall the chain, because a malicious user puts a large vector in
-            ensure!(weights.len() == assets.len(), Error::<T>::WeightsLenMustEqualAssetsLen);
-
-            assets.push(market.base_asset);
-
-            let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
-            weights.push(base_asset_weight);
-
-            let pool_id = T::Swaps::create_pool(
-                sender,
-                assets,
-                market.base_asset,
-                market_id,
-                Some(swap_fee),
-                Some(amount),
-                Some(weights),
-            )?;
-
-            T::Swaps::open_pool(pool_id)?;
-
-            // This errors if a pool already exists!
-            <zrml_market_commons::Pallet<T>>::insert_market_pool(market_id, pool_id)?;
-            Ok(Some(T::WeightInfo::deploy_swap_pool_for_market(weights_len)).into())
         }
 
         /// Redeems the winning shares of a prediction market.
@@ -1861,9 +1664,6 @@ mod pallet {
 
         /// Handler for slashed funds.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
-
-        /// Swaps pallet API
-        type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
         /// The base amount of currency that must be bonded for a permissionless market,
         /// guaranteeing that it will resolve as anything but `Invalid`.

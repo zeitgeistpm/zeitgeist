@@ -122,8 +122,7 @@ impl Contains<RuntimeCall> for IsCallable {
 
         use zeitgeist_primitives::types::MarketDisputeMechanism::{Court, SimpleDisputes};
         use zrml_prediction_markets::Call::{
-            admin_move_market_to_closed, admin_move_market_to_resolved,
-            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+            admin_move_market_to_closed, admin_move_market_to_resolved, create_market, edit_market,
         };
 
         #[allow(clippy::match_like_matches_macro)]
@@ -168,10 +167,6 @@ impl Contains<RuntimeCall> for IsCallable {
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
                     edit_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Some(Court | SimpleDisputes),
-                        ..
-                    } => false,
                     admin_move_market_to_closed { .. } => false,
                     admin_move_market_to_resolved { .. } => false,
                     _ => true,
