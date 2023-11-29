@@ -755,13 +755,6 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
-        /// Someone has (partially) exited a pool by removing subsidy. \[asset, bound, pool_id, who, amount\]
-        PoolExitSubsidy(
-            Asset<MarketIdOf<T>>,
-            BalanceOf<T>,
-            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
-            BalanceOf<T>,
-        ),
         /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolExitWithExactAssetAmount(
             PoolAssetEvent<
@@ -786,12 +779,6 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
-        /// Someone has joined a pool by providing subsidy. \[asset, amount, pool_id, who\]
-        PoolJoinSubsidy(
-            Asset<MarketIdOf<T>>,
-            BalanceOf<T>,
-            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
-        ),
         /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolJoinWithExactAssetAmount(
             PoolAssetEvent<
@@ -807,12 +794,6 @@ mod pallet {
                 Asset<MarketIdOf<T>>,
                 BalanceOf<T>,
             >,
-        ),
-        /// Total subsidy collected for a pool. \[pool_id, \[(provider, subsidy), ...\], total_subsidy\]
-        SubsidyCollected(
-            PoolId,
-            Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
-            BalanceOf<T>,
         ),
         /// Pool was manually destroyed. \[pool_id\]
         PoolDestroyed(PoolId),

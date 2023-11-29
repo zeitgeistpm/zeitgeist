@@ -70,7 +70,7 @@ mod pallet {
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
             MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
             MarketType, MultiHash, OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo,
-            ScalarPosition, ScoringRule, SubsidyUntil,
+            ScalarPosition, ScoringRule,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
@@ -2095,11 +2095,6 @@ mod pallet {
         MarketCreated(MarketIdOf<T>, T::AccountId, MarketOf<T>),
         /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
-        /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
-        MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
-        /// A market was discarded after failing to gather enough subsidy.
-        /// \[market_id, new_market_status\]
-        MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed. \[market_id\]
         MarketClosed(MarketIdOf<T>),
         /// A market has been scheduled to close early.
@@ -2328,16 +2323,6 @@ mod pallet {
         Twox64Concat,
         T::BlockNumber,
         BoundedVec<MarketIdOf<T>, CacheSize>,
-        ValueQuery,
-    >;
-
-    /// Contains a list of all markets that are currently collecting subsidy and the deadline.
-    // All the values are "cached" here. Results in data duplication, but speeds up the iteration
-    // over every market significantly (otherwise 25µs per relevant market per block).
-    #[pallet::storage]
-    pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
-        _,
-        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<16>>,
         ValueQuery,
     >;
 
