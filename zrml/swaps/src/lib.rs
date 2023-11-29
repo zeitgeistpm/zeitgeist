@@ -1681,7 +1681,6 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             let mut weight = Weight::zero();
             Self::mutate_pool(pool_id, |pool| {
-                ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Clean;
                 Ok(())
             })?;

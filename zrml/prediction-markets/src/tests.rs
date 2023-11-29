@@ -29,7 +29,7 @@ use alloc::collections::BTreeMap;
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
-    dispatch::{DispatchError, DispatchResultWithPostInfo},
+    dispatch::DispatchError,
     traits::{NamedReservableCurrency, OnInitialize},
 };
 use sp_runtime::{traits::BlakeTwo256, Perquintill};
@@ -46,11 +46,10 @@ use zeitgeist_primitives::{
         CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, MaxAppeals, MaxSelectedDraws,
         MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK,
     },
-    traits::Swaps as SwapsPalletApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, Market, MarketBonds,
-        MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType,
-        Moment, MultiHash, OutcomeReport, PoolStatus, Report, ScalarPosition, ScoringRule,
+        AccountIdTest, Asset, Balance, BlockNumber, Bond, Deadlines, MarketBonds, MarketCreation,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
+        MultiHash, OutcomeReport, Report, ScalarPosition, ScoringRule,
     },
 };
 use zrml_global_disputes::{
@@ -1223,19 +1222,14 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
         let market_id = 0;
-        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
 
         run_to_block(end - 1);
         let market_before_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_before_close.status, MarketStatus::Active);
-        let pool_before_close = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
 
         run_to_block(end);
         let market_after_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after_close.status, MarketStatus::Closed);
-        let pool_after_close = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
 
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
@@ -1261,22 +1255,17 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
         let market_id = 0;
-        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
 
         // (Check that the market doesn't close too soon)
         set_timestamp_for_on_initialize(end - 1);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
         let market_before_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_before_close.status, MarketStatus::Active);
-        let pool_before_close = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
 
         set_timestamp_for_on_initialize(end);
         run_blocks(1);
         let market_after_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after_close.status, MarketStatus::Closed);
-        let pool_after_close = Swaps::pool(pool_id).unwrap();
-        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
 
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
@@ -1327,14 +1316,10 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
 
         let market_after_close = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_close.status, MarketStatus::Closed);
-        let pool_after_close = Swaps::pool(0).unwrap();
-        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
         System::assert_has_event(Event::MarketClosed(0).into());
 
         let market_after_close = MarketCommons::market(&1).unwrap();
         assert_eq!(market_after_close.status, MarketStatus::Closed);
-        let pool_after_close = Swaps::pool(1).unwrap();
-        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
         System::assert_has_event(Event::MarketClosed(1).into());
     });
 }
@@ -4352,47 +4337,6 @@ fn reject_market_fails_on_approved_market() {
 }
 
 #[test]
-fn market_resolve_does_not_hold_liquidity_withdraw() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 100;
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Block(0..end),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(3),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
-        ));
-        deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(ALICE), 0, BASE));
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * BASE));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(CHARLIE),
-            0,
-            3 * BASE
-        ));
-        let market = MarketCommons::market(&0).unwrap();
-
-        let grace_period = end + market.deadlines.grace_period;
-        run_to_block(grace_period + 1);
-        assert_ok!(PredictionMarkets::report(
-            RuntimeOrigin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(2)
-        ));
-
-        run_to_block(grace_period + market.deadlines.dispute_duration + 2);
-        assert_ok!(Swaps::pool_exit(RuntimeOrigin::signed(FRED), 0, BASE * 100, vec![0, 0]));
-        assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(BOB), 0));
-    })
-}
-
-#[test]
 fn authorized_correctly_resolves_disputed_market() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
     let test = |base_asset: Asset<MarketId>| {
@@ -6154,26 +6098,6 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
             Error::<Runtime>::MarketIsNotActive
         );
     });
-}
-
-fn deploy_swap_pool(
-    market: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<u128>>,
-    market_id: u128,
-) -> DispatchResultWithPostInfo {
-    assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(FRED), 0, 100 * BASE));
-    assert_ok!(Balances::transfer(
-        RuntimeOrigin::signed(FRED),
-        <Runtime as crate::Config>::PalletId::get().into_account_truncating(),
-        100 * BASE
-    ));
-    let outcome_assets_len = PredictionMarkets::outcome_assets(market_id, &market).len();
-    PredictionMarkets::deploy_swap_pool_for_market(
-        RuntimeOrigin::signed(FRED),
-        0,
-        <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
-        LIQUIDITY,
-        vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); outcome_assets_len],
-    )
 }
 
 // Common code of `scalar_market_correctly_resolves_*`

@@ -2656,6 +2656,7 @@ mod pallet {
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
 
+                // TODO Are we actually benchmarking this?
                 if let Some(p) = &market.early_close {
                     match p.state {
                         EarlyCloseState::ScheduledAsMarketCreator => {
@@ -2682,10 +2683,6 @@ mod pallet {
                 Ok(())
             })?;
             let mut total_weight = T::DbWeight::get().reads_writes(1, 1);
-            if let Ok(pool_id) = <zrml_market_commons::Pallet<T>>::market_pool(market_id) {
-                let close_pool_weight = T::Swaps::close_pool(pool_id)?;
-                total_weight = total_weight.saturating_add(close_pool_weight);
-            };
             Self::deposit_event(Event::MarketClosed(*market_id));
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             Ok(total_weight)
