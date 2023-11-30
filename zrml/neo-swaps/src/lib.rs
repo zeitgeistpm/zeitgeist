@@ -23,9 +23,7 @@ extern crate alloc;
 mod benchmarking;
 mod consts;
 mod math;
-#[cfg(test)]
 mod mock;
-#[cfg(test)]
 mod tests;
 pub mod traits;
 pub mod types;
