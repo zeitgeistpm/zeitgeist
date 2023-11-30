@@ -35,8 +35,8 @@ use zeitgeist_primitives::{
     constants::mock::{
         AggregationPeriod, AppealBond, AppealPeriod, BlockHashCount, BlocksPerYear, CourtPalletId,
         InflationPeriod, LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxDelegations,
-        MaxReserves, MaxSelectedDraws, MinJurorStake, MinimumPeriod, PmPalletId, RequestInterval,
-        VotePeriod, BASE,
+        MaxReserves, MaxSelectedDraws, MinJurorStake, MinimumPeriod, RequestInterval, VotePeriod,
+        BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -204,7 +204,6 @@ impl pallet_balances::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

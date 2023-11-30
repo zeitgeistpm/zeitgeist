@@ -50,6 +50,7 @@ mod pallet {
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use sp_runtime::traits::AccountIdConversion;
 
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
@@ -707,7 +708,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
+            let market_account = Self::market_account(market_id);
 
             ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
             ensure!(market.is_redeemable(), Error::<T>::InvalidResolutionMechanism);
@@ -2033,6 +2034,11 @@ mod pallet {
         impl_is_bond_pending!(is_close_request_bond_pending, close_request);
         impl_is_bond_pending!(is_dispute_bond_pending, dispute);
 
+        #[inline]
+        pub(crate) fn market_account(market_id: MarketIdOf<T>) -> AccountIdOf<T> {
+            T::PalletId::get().into_sub_account_truncating(market_id.saturated_into::<u128>())
+        }
+
         #[require_transactional]
         fn do_create_market(
             who: T::AccountId,
@@ -2085,7 +2091,7 @@ mod pallet {
             )?;
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
+            let market_account = Self::market_account(market_id);
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
@@ -2233,7 +2239,7 @@ mod pallet {
                 Error::<T>::InvalidScoringRule
             );
 
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
+            let market_account = Self::market_account(market_id);
             ensure!(
                 T::AssetManager::free_balance(market.base_asset, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
@@ -2291,7 +2297,7 @@ mod pallet {
             );
             Self::ensure_market_is_active(&market)?;
 
-            let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
+            let market_account = Self::market_account(market_id);
             T::AssetManager::transfer(market.base_asset, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);

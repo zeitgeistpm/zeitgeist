@@ -84,9 +84,6 @@ pub trait MarketCommonsPalletApi {
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;
 
-    /// Return the account id of a market's prize pool.
-    fn market_account(market_id: Self::MarketId) -> Self::AccountId;
-
     // MarketPool
 
     /// Connects a pool identified by `pool_id` to a market identified by `market_id`.

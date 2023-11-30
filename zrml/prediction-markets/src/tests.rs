@@ -696,7 +696,7 @@ fn create_categorical_market_deposits_the_correct_event() {
         );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
-        let market_account = MarketCommons::market_account(market_id);
+        let market_account = PredictionMarkets::market_account(market_id);
         System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
@@ -713,7 +713,7 @@ fn create_scalar_market_deposits_the_correct_event() {
         );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
-        let market_account = MarketCommons::market_account(market_id);
+        let market_account = PredictionMarkets::market_account(market_id);
         System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
@@ -1379,7 +1379,7 @@ fn it_allows_to_buy_a_complete_set() {
             assert_eq!(bal, CENT);
         }
 
-        let market_account = MarketCommons::market_account(0);
+        let market_account = PredictionMarkets::market_account(0);
         let bal = AssetManager::free_balance(base_asset, &BOB);
         assert_eq!(bal, 1_000 * BASE - CENT);
 

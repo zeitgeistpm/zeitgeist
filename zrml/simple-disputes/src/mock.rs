@@ -31,7 +31,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxDisputes, MaxReserves,
-        MinimumPeriod, OutcomeBond, OutcomeFactor, PmPalletId, SimpleDisputesPalletId, BASE,
+        MinimumPeriod, OutcomeBond, OutcomeFactor, SimpleDisputesPalletId, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -185,7 +185,6 @@ impl orml_tokens::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 
