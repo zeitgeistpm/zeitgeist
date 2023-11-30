@@ -39,7 +39,7 @@ use pallet_balances::{BalanceLock, NegativeImbalance};
 use rand::seq::SliceRandom;
 use sp_runtime::{
     traits::{BlakeTwo256, Hash, Zero},
-    Perquintill,
+    Perbill, Perquintill,
 };
 use test_case::test_case;
 use zeitgeist_primitives::{
@@ -3056,6 +3056,8 @@ fn random_jurors_returns_a_subset_of_jurors() {
 #[test]
 fn handle_inflation_works() {
     ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Court::set_inflation(RuntimeOrigin::root(), Perbill::from_percent(2u32)));
+
         let mut jurors = <CourtPool<Runtime>>::get();
         let mut free_balances_before = BTreeMap::new();
         let jurors_list = [1000, 10_000, 100_000, 1_000_000, 10_000_000];
