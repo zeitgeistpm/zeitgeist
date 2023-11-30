@@ -301,14 +301,8 @@ pub enum MarketStatus {
     Proposed,
     /// Trading on the market is active.
     Active,
-    /// Trading on the market is temporarily paused.
-    Suspended,
     /// Trading on the market has concluded.
     Closed,
-    /// The market is collecting subsidy.
-    CollectingSubsidy,
-    /// The market was discarded due to insufficient subsidy.
-    InsufficientSubsidy,
     /// The market has been reported.
     Reported,
     /// The market outcome is being disputed.

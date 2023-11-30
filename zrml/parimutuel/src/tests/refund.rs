@@ -46,10 +46,7 @@ fn refund_fails_if_not_parimutuel_outcome() {
 
 #[test_case(MarketStatus::Active; "active")]
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 fn refund_fails_if_market_not_resolved(status: MarketStatus) {

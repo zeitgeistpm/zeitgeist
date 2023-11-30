@@ -123,10 +123,7 @@ fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
 }
 
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {

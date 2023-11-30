@@ -173,10 +173,7 @@ fn deploy_pool_fails_on_market_not_found() {
 }
 
 #[test_case(MarketStatus::Proposed)]
-#[test_case(MarketStatus::Suspended)]
 #[test_case(MarketStatus::Closed)]
-#[test_case(MarketStatus::CollectingSubsidy)]
-#[test_case(MarketStatus::InsufficientSubsidy)]
 #[test_case(MarketStatus::Reported)]
 #[test_case(MarketStatus::Disputed)]
 #[test_case(MarketStatus::Resolved)]

@@ -142,10 +142,7 @@ fn simple_create_scalar_market(
 }
 
 #[test_case(MarketStatus::Proposed)]
-#[test_case(MarketStatus::Suspended)]
 #[test_case(MarketStatus::Closed)]
-#[test_case(MarketStatus::CollectingSubsidy)]
-#[test_case(MarketStatus::InsufficientSubsidy)]
 #[test_case(MarketStatus::Reported)]
 #[test_case(MarketStatus::Disputed)]
 #[test_case(MarketStatus::Resolved)]
@@ -273,8 +270,6 @@ fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
 #[test_case(MarketStatus::Disputed; "disputed")]
 #[test_case(MarketStatus::Resolved; "resolved")]
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
@@ -624,11 +619,10 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
     });
 }
 
-#[test_case(MarketStatus::Active; "Active")]
-#[test_case(MarketStatus::Closed; "Closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "CollectingSubsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "InsufficientSubsidy")]
-fn admin_move_market_to_resovled_fails_if_market_is_not_reported_or_disputed(
+#[test_case(MarketStatus::Active)]
+#[test_case(MarketStatus::Closed)]
+#[test_case(MarketStatus::Resolved)]
+fn admin_move_market_to_resolved_fails_if_market_is_not_reported_or_disputed(
     market_status: MarketStatus,
 ) {
     ExtBuilder::default().build().execute_with(|| {
@@ -3612,8 +3606,6 @@ fn it_appeals_a_court_market_to_global_dispute() {
 }
 
 #[test_case(MarketStatus::Active; "active")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting_subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient_subsidy")]
 #[test_case(MarketStatus::Closed; "closed")]
 #[test_case(MarketStatus::Proposed; "proposed")]
 #[test_case(MarketStatus::Resolved; "resolved")]
@@ -5063,33 +5055,6 @@ fn report_fails_on_market_state_active() {
 }
 
 #[test]
-fn report_fails_on_market_state_suspended() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Timestamp(0..100_000_000),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
-        ));
-        let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = MarketStatus::Suspended;
-            Ok(())
-        });
-        assert_noop!(
-            PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
-            Error::<Runtime>::MarketIsNotClosed,
-        );
-    });
-}
-
-#[test]
 fn report_fails_on_market_state_resolved() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
@@ -5586,14 +5551,11 @@ fn close_trusted_market_fails_if_not_trusted() {
     });
 }
 
-#[test_case(MarketStatus::CollectingSubsidy; "collecting_subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient_subsidy")]
 #[test_case(MarketStatus::Closed; "closed")]
 #[test_case(MarketStatus::Proposed; "proposed")]
 #[test_case(MarketStatus::Resolved; "resolved")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 #[test_case(MarketStatus::Reported; "report")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let end = 10;
