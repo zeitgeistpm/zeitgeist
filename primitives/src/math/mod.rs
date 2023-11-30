@@ -17,3 +17,4 @@
 
 pub mod checked_ops_res;
 pub mod fixed;
+pub mod root;
