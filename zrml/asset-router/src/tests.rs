@@ -17,10 +17,36 @@
 
 #![cfg(test)]
 
-use super::mock::*;
-use frame_support::{assert_ok, traits::tokens::fungibles::Create};
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use super::{mock::*, Error};
+use frame_support::{assert_err, assert_ok, traits::tokens::fungibles::Create};
+use orml_traits::{BalanceStatus, MultiCurrency, MultiCurrencyExtended, MultiReservableCurrency};
 use zeitgeist_primitives::types::Assets;
+
+fn multi_reserveable_currency_unroutable_test_helper<
+    M: MultiCurrency<
+            <Runtime as frame_system::Config>::AccountId,
+            Balance = <Runtime as crate::Config>::Balance,
+            CurrencyId = Assets,
+        > + MultiReservableCurrency<
+            <Runtime as frame_system::Config>::AccountId,
+            Balance = <Runtime as crate::Config>::Balance,
+            CurrencyId = Assets,
+        >,
+>(
+    asset: Assets,
+    initial_amount: <Runtime as crate::Config>::Balance,
+) {
+    assert_ok!(M::deposit(asset, &ALICE, initial_amount));
+    assert!(!M::can_reserve(asset, &ALICE, initial_amount));
+    assert_err!(M::reserve(asset, &ALICE, initial_amount), Error::<Runtime>::Unsupported);
+    assert_eq!(M::reserved_balance(asset, &ALICE), 0);
+    assert_eq!(M::slash_reserved(asset, &ALICE, 1), 1);
+    assert_err!(
+        M::repatriate_reserved(asset, &ALICE, &BOB, 1, BalanceStatus::Reserved),
+        Error::<Runtime>::Unsupported
+    );
+    assert_eq!(M::unreserve(asset, &ALICE, 1), 1);
+}
 
 fn multicurrency_test_helper<
     M: MultiCurrencyExtended<
@@ -49,20 +75,17 @@ fn multicurrency_test_helper<
     assert_eq!(M::free_balance(asset, &ALICE), initial_amount - min_balance - 2);
     assert_ok!(M::update_balance(asset, &ALICE, M::Amount::from(1u8) - M::Amount::from(2u8)));
     assert_eq!(M::free_balance(asset, &ALICE), initial_amount - min_balance - 3);
-    
 }
 
 #[test]
 fn multicurrency_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        // Create asset classes and fund ALICE
-        <CampaignAssets as Create<AccountId>>::create(
+        assert_ok!(<CampaignAssets as Create<AccountId>>::create(
             CAMPAIGN_ASSET,
             ALICE,
             true,
             CAMPAIGN_ASSET_MIN_BALANCE,
-        )
-        .unwrap();
+        ));
 
         multicurrency_test_helper::<AssetRouter>(
             CAMPAIGN_ASSET_GENERAL,
@@ -85,14 +108,12 @@ fn multicurrency_routes_campaign_assets_correctly() {
 #[test]
 fn multicurrency_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        // Create asset classes and fund ALICE
-        <CustomAssets as Create<AccountId>>::create(
+        assert_ok!(<CustomAssets as Create<AccountId>>::create(
             CUSTOM_ASSET,
             ALICE,
             true,
             CUSTOM_ASSET_MIN_BALANCE,
-        )
-        .unwrap();
+        ));
 
         multicurrency_test_helper::<AssetRouter>(
             CUSTOM_ASSET_GENERAL,
@@ -115,14 +136,12 @@ fn multicurrency_routes_custom_assets_correctly() {
 #[test]
 fn multicurrency_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        // Create asset classes and fund ALICE
-        <MarketAssets as Create<AccountId>>::create(
+        assert_ok!(<MarketAssets as Create<AccountId>>::create(
             MARKET_ASSET,
             ALICE,
             true,
             MARKET_ASSET_MIN_BALANCE,
-        )
-        .unwrap();
+        ));
 
         multicurrency_test_helper::<AssetRouter>(
             MARKET_ASSET_GENERAL,
@@ -162,6 +181,139 @@ fn multicurrency_routes_currencies_correctly() {
         assert_eq!(
             <AssetRouter as MultiCurrency<AccountId>>::total_issuance(MARKET_ASSET_GENERAL),
             0
+        );
+    });
+}
+
+#[test]
+fn multi_reserveable_currency_routes_currencies_correctly() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(<AssetRouter as MultiCurrency<AccountId>>::deposit(
+            CURRENCY_GENERAL,
+            &ALICE,
+            CURRENCY_INITIAL_AMOUNT
+        ));
+
+        assert!(<AssetRouter as MultiReservableCurrency<AccountId>>::can_reserve(
+            CURRENCY_GENERAL,
+            &ALICE,
+            CURRENCY_INITIAL_AMOUNT
+        ));
+        assert!(!<AssetRouter as MultiReservableCurrency<AccountId>>::can_reserve(
+            CURRENCY_GENERAL,
+            &ALICE,
+            CURRENCY_INITIAL_AMOUNT + 1
+        ));
+        assert_ok!(<AssetRouter as MultiReservableCurrency<AccountId>>::reserve(
+            CURRENCY_GENERAL,
+            &ALICE,
+            CURRENCY_INITIAL_AMOUNT
+        ));
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::reserved_balance(
+                CURRENCY_GENERAL,
+                &ALICE
+            ),
+            CURRENCY_INITIAL_AMOUNT
+        );
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::slash_reserved(
+                CURRENCY_GENERAL,
+                &ALICE,
+                1
+            ),
+            0
+        );
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::repatriate_reserved(
+                CURRENCY_GENERAL,
+                &ALICE,
+                &BOB,
+                CURRENCY_MIN_BALANCE,
+                BalanceStatus::Reserved
+            )
+            .unwrap(),
+            0
+        );
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::reserved_balance(
+                CURRENCY_GENERAL,
+                &BOB
+            ),
+            CURRENCY_MIN_BALANCE
+        );
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::reserved_balance(
+                CURRENCY_GENERAL,
+                &ALICE
+            ),
+            CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 1
+        );
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::unreserve(
+                CURRENCY_GENERAL,
+                &ALICE,
+                1
+            ),
+            0
+        );
+        assert_eq!(
+            <AssetRouter as MultiReservableCurrency<AccountId>>::reserved_balance(
+                CURRENCY_GENERAL,
+                &ALICE
+            ),
+            CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 2
+        );
+    });
+}
+
+#[test]
+fn multi_reserveable_currency_routes_campaign_assets_correctly() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(<CampaignAssets as Create<AccountId>>::create(
+            CAMPAIGN_ASSET,
+            ALICE,
+            true,
+            CAMPAIGN_ASSET_MIN_BALANCE,
+        ));
+
+        multi_reserveable_currency_unroutable_test_helper::<AssetRouter>(
+            CAMPAIGN_ASSET_GENERAL,
+            CAMPAIGN_ASSET_INITIAL_AMOUNT,
+        );
+    });
+}
+
+#[test]
+fn multi_reserveable_currency_routes_custom_assets_correctly() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(<CustomAssets as Create<AccountId>>::create(
+            CUSTOM_ASSET,
+            ALICE,
+            true,
+            CUSTOM_ASSET_MIN_BALANCE,
+        ));
+
+        multi_reserveable_currency_unroutable_test_helper::<AssetRouter>(
+            CUSTOM_ASSET_GENERAL,
+            CUSTOM_ASSET_INITIAL_AMOUNT,
+        );
+    });
+}
+
+#[test]
+fn multi_reserveable_currency_routes_market_assets_correctly() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(<MarketAssets as Create<AccountId>>::create(
+            MARKET_ASSET,
+            ALICE,
+            true,
+            MARKET_ASSET_MIN_BALANCE,
+        ));
+
+        multi_reserveable_currency_unroutable_test_helper::<AssetRouter>(
+            MARKET_ASSET_GENERAL,
+            MARKET_ASSET_INITIAL_AMOUNT,
         );
     });
 }
