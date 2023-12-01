@@ -18,6 +18,7 @@
 #![cfg(test)]
 
 use super::*;
+use orml_traits::MultiCurrency;
 
 fn multi_lockable_currency_unroutable_test_helper(asset: Assets) {
     assert_err!(

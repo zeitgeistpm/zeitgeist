@@ -18,13 +18,17 @@
 #![cfg(test)]
 
 use super::{mock::*, Error};
-use frame_support::{assert_err, assert_ok, traits::tokens::fungibles::Create};
+use frame_support::{
+    assert_err, assert_ok,
+    traits::tokens::{fungibles::Create, DepositConsequence, WithdrawConsequence},
+};
 use orml_traits::{
-    BalanceStatus, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-    MultiReservableCurrency, NamedMultiReservableCurrency,
+    BalanceStatus, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
+    NamedMultiReservableCurrency,
 };
 use zeitgeist_primitives::types::Assets;
 
+mod inspect;
 mod multi_currency;
 mod multi_lockable_currency;
 mod multi_reservable_currency;

@@ -18,6 +18,7 @@
 #![cfg(test)]
 
 use super::*;
+use orml_traits::MultiCurrency;
 
 fn multicurrency_test_helper(
     asset: Assets,
