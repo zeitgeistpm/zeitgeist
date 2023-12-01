@@ -770,13 +770,7 @@ mod pallet {
             let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
             let swap_fee = if with_fees {
-                let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
-                let market = T::MarketCommons::market(&pool.market_id)?;
-                market
-                    .creator_fee
-                    .mul_floor(ZeitgeistBase::<u128>::get()?)
-                    .checked_add(swap_fee.try_into().map_err(|_| Error::<T>::SwapFeeTooHigh)?)
-                    .ok_or(Error::<T>::SwapFeeTooHigh)?
+                pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?.saturated_into()
             } else {
                 BalanceOf::<T>::zero().saturated_into()
             };
