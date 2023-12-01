@@ -91,7 +91,7 @@ const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = MARKET_COMMONS_REQUIRED_STORAGE
 
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
-    StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, MarketOf<T>>;
+    StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, OldMarketOf<T>>;
 
 pub struct MigrateScoringRuleAndMarketStatus<T>(PhantomData<T>);
 
@@ -112,13 +112,13 @@ impl<T: Config> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T> {
         log::info!("MigrateScoringRuleAndMarketStatus: Starting...");
 
         let mut translated = 0u64;
-        Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
+        crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
             // We proceed by deleting markets which use the Rikiddo scoring rule or have a status
             // that was removed.
             translated.saturating_inc();
             let scoring_rule = match old_market.scoring_rule {
                 OldScoringRule::RikiddoSigmoidFeeMarketEma => return None,
-                OldScoringRule::CPMM => ScoringRule::CPMM,
+                OldScoringRule::CPMM => return None,
                 OldScoringRule::Lmsr => ScoringRule::Lmsr,
                 OldScoringRule::Orderbook => ScoringRule::Orderbook,
                 OldScoringRule::Parimutuel => ScoringRule::Parimutuel,
@@ -225,16 +225,117 @@ mod tests {
     }
 
     // TODO Remove CPMM from scoring rule.
-    // TODO Add test matrix
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Proposed), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Active), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Suspended), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Closed), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::CollectingSubsidy), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::InsufficientSubsidy), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Reported), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Disputed), None)]
+    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Resolved), None)]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Proposed), None)]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Active), None)]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Suspended), None)]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Closed), None)]
     #[test_case(
-        (OldScoringRule::CPMM, OldMarketStatus::Active),
-        Some((ScoringRule::CPMM, MarketStatus::Active))
+        (OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::CollectingSubsidy),
+        None
+    )]
+    #[test_case(
+        (OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::InsufficientSubsidy),
+        None
+    )]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Reported), None)]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Disputed), None)]
+    #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Resolved), None)]
+    #[test_case(
+        (OldScoringRule::Lmsr, OldMarketStatus::Proposed),
+        Some((ScoringRule::Lmsr, MarketStatus::Proposed))
+    )]
+    #[test_case(
+        (OldScoringRule::Lmsr, OldMarketStatus::Active),
+        Some((ScoringRule::Lmsr, MarketStatus::Active))
+    )]
+    #[test_case((OldScoringRule::Lmsr, OldMarketStatus::Suspended), None)]
+    #[test_case(
+        (OldScoringRule::Lmsr, OldMarketStatus::Closed),
+        Some((ScoringRule::Lmsr, MarketStatus::Closed))
+    )]
+    #[test_case((OldScoringRule::Lmsr, OldMarketStatus::CollectingSubsidy), None)]
+    #[test_case((OldScoringRule::Lmsr, OldMarketStatus::InsufficientSubsidy), None)]
+    #[test_case(
+        (OldScoringRule::Lmsr, OldMarketStatus::Reported),
+        Some((ScoringRule::Lmsr, MarketStatus::Reported))
+    )]
+    #[test_case(
+        (OldScoringRule::Lmsr, OldMarketStatus::Disputed),
+        Some((ScoringRule::Lmsr, MarketStatus::Disputed))
+    )]
+    #[test_case(
+        (OldScoringRule::Lmsr, OldMarketStatus::Resolved),
+        Some((ScoringRule::Lmsr, MarketStatus::Resolved))
+    )]
+    #[test_case(
+        (OldScoringRule::Orderbook, OldMarketStatus::Proposed),
+        Some((ScoringRule::Orderbook, MarketStatus::Proposed))
+    )]
+    #[test_case(
+        (OldScoringRule::Orderbook, OldMarketStatus::Active),
+        Some((ScoringRule::Orderbook, MarketStatus::Active))
+    )]
+    #[test_case((OldScoringRule::Orderbook, OldMarketStatus::Suspended), None)]
+    #[test_case(
+        (OldScoringRule::Orderbook, OldMarketStatus::Closed),
+        Some((ScoringRule::Orderbook, MarketStatus::Closed))
+    )]
+    #[test_case((OldScoringRule::Orderbook, OldMarketStatus::CollectingSubsidy), None)]
+    #[test_case((OldScoringRule::Orderbook, OldMarketStatus::InsufficientSubsidy), None)]
+    #[test_case(
+        (OldScoringRule::Orderbook, OldMarketStatus::Reported),
+        Some((ScoringRule::Orderbook, MarketStatus::Reported))
+    )]
+    #[test_case(
+        (OldScoringRule::Orderbook, OldMarketStatus::Disputed),
+        Some((ScoringRule::Orderbook, MarketStatus::Disputed))
+    )]
+    #[test_case(
+        (OldScoringRule::Orderbook, OldMarketStatus::Resolved),
+        Some((ScoringRule::Orderbook, MarketStatus::Resolved))
+    )]
+    #[test_case(
+        (OldScoringRule::Parimutuel, OldMarketStatus::Proposed),
+        Some((ScoringRule::Parimutuel, MarketStatus::Proposed))
+    )]
+    #[test_case(
+        (OldScoringRule::Parimutuel, OldMarketStatus::Active),
+        Some((ScoringRule::Parimutuel, MarketStatus::Active))
+    )]
+    #[test_case((OldScoringRule::Parimutuel, OldMarketStatus::Suspended), None)]
+    #[test_case(
+        (OldScoringRule::Parimutuel, OldMarketStatus::Closed),
+        Some((ScoringRule::Parimutuel, MarketStatus::Closed))
+    )]
+    #[test_case((OldScoringRule::Parimutuel, OldMarketStatus::CollectingSubsidy), None)]
+    #[test_case((OldScoringRule::Parimutuel, OldMarketStatus::InsufficientSubsidy), None)]
+    #[test_case(
+        (OldScoringRule::Parimutuel, OldMarketStatus::Reported),
+        Some((ScoringRule::Parimutuel, MarketStatus::Reported))
+    )]
+    #[test_case(
+        (OldScoringRule::Parimutuel, OldMarketStatus::Disputed),
+        Some((ScoringRule::Parimutuel, MarketStatus::Disputed))
+    )]
+    #[test_case(
+        (OldScoringRule::Parimutuel, OldMarketStatus::Resolved),
+        Some((ScoringRule::Parimutuel, MarketStatus::Resolved))
     )]
     fn on_runtime_upgrade_works_as_expected(
         old_data: (OldScoringRule, OldMarketStatus),
         new_data: Option<(ScoringRule, MarketStatus)>,
     ) {
         ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
             let base_asset = Asset::Ztg;
             let creator = 0;
             let creation = MarketCreation::Permissionless;
@@ -305,7 +406,7 @@ mod tests {
             );
             MigrateScoringRuleAndMarketStatus::<Runtime>::on_runtime_upgrade();
 
-            let actual = Markets::<Runtime>::get(0);
+            let actual = crate::Markets::<Runtime>::get(0);
             assert_eq!(actual, opt_new_market);
         });
     }
