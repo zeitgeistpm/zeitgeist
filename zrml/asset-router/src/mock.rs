@@ -35,9 +35,9 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
     types::{
-        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CampaignAsset, CampaignAssetId,
-        Currencies, CustomAsset, CustomAssetId, Hash, Index, MarketAsset,
-        UncheckedExtrinsicTest, Assets
+        AccountIdTest, Amount, Assets, Balance, BlockNumber, BlockTest, CampaignAsset,
+        CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetClass,
+        CustomAssetId, Hash, Index, MarketAsset, UncheckedExtrinsicTest,
     },
 };
 
@@ -46,8 +46,11 @@ pub(super) const BOB: AccountIdTest = 1;
 pub(super) const CHARLIE: AccountIdTest = 2;
 
 pub(super) const CAMPAIGN_ASSET: Assets = Assets::CampaignAssetClass(0);
+pub(super) const CAMPAIGN_ASSET_INTERNAL: CampaignAssetClass = CampaignAssetClass(0);
 pub(super) const CUSTOM_ASSET: Assets = Assets::CustomAssetClass(0);
+pub(super) const CUSTOM_ASSET_INTERNAL: CustomAssetClass = CustomAssetClass(0);
 pub(super) const MARKET_ASSET: Assets = Assets::NewCombinatorialOutcome;
+pub(super) const MARKET_ASSET_INTERNAL: MarketAsset = MarketAsset::CombinatorialOutcome;
 pub(super) const CURRENCY: Assets = Assets::ForeignAsset(0);
 
 pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 1;
@@ -61,9 +64,9 @@ pub(super) const MARKET_ASSET_INITIAL_AMOUNT: Balance = 30;
 pub(super) const CURRENCY_INITIAL_AMOUNT: Balance = 40;
 
 pub(super) type AccountId = <Runtime as frame_system::Config>::AccountId;
-type CustomAssetsInstance = pallet_assets::Instance1;
-type CampaignAssetsInstance = pallet_assets::Instance2;
-type MarketAssetsInstance = pallet_assets::Instance3;
+pub(super) type CustomAssetsInstance = pallet_assets::Instance1;
+pub(super) type CampaignAssetsInstance = pallet_assets::Instance2;
+pub(super) type MarketAssetsInstance = pallet_assets::Instance3;
 
 construct_runtime!(
     pub enum Runtime

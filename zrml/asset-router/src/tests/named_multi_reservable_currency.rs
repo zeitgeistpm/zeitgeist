@@ -54,14 +54,8 @@ fn named_multi_reserveable_currency_routes_currencies_correctly() {
             &ALICE,
             CURRENCY_INITIAL_AMOUNT
         ));
-        assert_eq!(
-            AssetRouter::reserved_balance(CURRENCY, &ALICE),
-            CURRENCY_INITIAL_AMOUNT
-        );
-        assert_eq!(
-            AssetRouter::slash_reserved_named(&Default::default(), CURRENCY, &ALICE, 1),
-            0
-        );
+        assert_eq!(AssetRouter::reserved_balance(CURRENCY, &ALICE), CURRENCY_INITIAL_AMOUNT);
+        assert_eq!(AssetRouter::slash_reserved_named(&Default::default(), CURRENCY, &ALICE, 1), 0);
         assert_eq!(
             AssetRouter::repatriate_reserved_named(
                 &Default::default(),
@@ -79,10 +73,7 @@ fn named_multi_reserveable_currency_routes_currencies_correctly() {
             AssetRouter::reserved_balance(CURRENCY, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 1
         );
-        assert_eq!(
-            AssetRouter::unreserve_named(&Default::default(), CURRENCY, &ALICE, 1),
-            0
-        );
+        assert_eq!(AssetRouter::unreserve_named(&Default::default(), CURRENCY, &ALICE, 1), 0);
         assert_eq!(
             AssetRouter::reserved_balance(CURRENCY, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 2
@@ -93,12 +84,7 @@ fn named_multi_reserveable_currency_routes_currencies_correctly() {
 #[test]
 fn named_multi_reserveable_currency_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::create(
-            CAMPAIGN_ASSET,
-            ALICE,
-            true,
-            CAMPAIGN_ASSET_MIN_BALANCE,
-        ));
+        assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE,));
 
         named_multi_reserveable_currency_unroutable_test_helper(
             CAMPAIGN_ASSET,
@@ -110,12 +96,7 @@ fn named_multi_reserveable_currency_routes_campaign_assets_correctly() {
 #[test]
 fn named_multi_reserveable_currency_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::create(
-            CUSTOM_ASSET,
-            ALICE,
-            true,
-            CUSTOM_ASSET_MIN_BALANCE,
-        ));
+        assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE,));
 
         named_multi_reserveable_currency_unroutable_test_helper(
             CUSTOM_ASSET,
@@ -127,12 +108,7 @@ fn named_multi_reserveable_currency_routes_custom_assets_correctly() {
 #[test]
 fn named_multi_reserveable_currency_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::create(
-            MARKET_ASSET,
-            ALICE,
-            true,
-            MARKET_ASSET_MIN_BALANCE,
-        ));
+        assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
 
         named_multi_reserveable_currency_unroutable_test_helper(
             MARKET_ASSET,

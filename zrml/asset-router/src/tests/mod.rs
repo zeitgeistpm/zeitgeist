@@ -20,7 +20,14 @@
 use super::{mock::*, Error};
 use frame_support::{
     assert_err, assert_ok,
-    traits::tokens::{fungibles::Create, DepositConsequence, WithdrawConsequence},
+    dispatch::RawOrigin::Signed,
+    traits::{
+        tokens::{
+            fungibles::{Create, Destroy},
+            DepositConsequence, WithdrawConsequence,
+        },
+        UnfilteredDispatchable,
+    },
 };
 use orml_traits::{
     BalanceStatus, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
@@ -29,6 +36,7 @@ use orml_traits::{
 use zeitgeist_primitives::types::Assets;
 
 mod create;
+mod destroy;
 mod inspect;
 mod multi_currency;
 mod multi_lockable_currency;
