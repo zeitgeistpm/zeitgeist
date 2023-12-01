@@ -744,24 +744,6 @@ mod pallet {
         SwapExactAmountOut(
             SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
         ),
-        /// Fees were paid to the market creator. \[market_id , payer, payee, amount, asset\]
-        MarketCreatorFeesPaid(
-            MarketIdOf<T>,
-            <T as frame_system::Config>::AccountId,
-            <T as frame_system::Config>::AccountId,
-            BalanceOf<T>,
-            Asset<MarketIdOf<T>>,
-        ),
-        /// Fee payment to market creator failed (usually due to existential deposit requirements)
-        /// \[market_id, payer, payee, amount, asset, error\]
-        MarketCreatorFeePaymentFailed(
-            MarketIdOf<T>,
-            <T as frame_system::Config>::AccountId,
-            <T as frame_system::Config>::AccountId,
-            BalanceOf<T>,
-            Asset<MarketIdOf<T>>,
-            DispatchError,
-        ),
     }
 
     #[pallet::pallet]

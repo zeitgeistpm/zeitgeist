@@ -20,6 +20,7 @@ use crate::{
     AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, MarketIdOf, MomentOf,
     Pallet as MarketCommons,
 };
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
     log,
@@ -200,7 +201,7 @@ where
     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
         let old_markets: BTreeMap<MarketId, OldMarketOf<T>> =
             Decode::decode(&mut &previous_state[..]).unwrap();
-        let old_market_count = old_markets.iter().count();
+        let old_market_count = old_markets.len();
         let new_market_count = Markets::<T>::iter().count();
         assert_eq!(old_market_count, new_market_count);
         log::info!(
