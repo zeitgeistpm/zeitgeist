@@ -1225,10 +1225,6 @@ macro_rules! impl_config_traits {
         impl zrml_swaps::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             type ExitFee = ExitFee;
-            // LiquidityMining is currently unstable.
-            // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
-            type LiquidityMining = NoopLiquidityMining;
-            // type LiquidityMining = LiquidityMining;
             type MarketCommons = MarketCommons;
             type MinAssets = MinAssets;
             type MaxAssets = MaxAssets;

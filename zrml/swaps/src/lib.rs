@@ -77,7 +77,6 @@ mod pallet {
         traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
         types::{Asset, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper},
     };
-    use zrml_liquidity_mining::LiquidityMiningPalletApi;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
@@ -140,7 +139,6 @@ mod pallet {
                 transfer_asset: |amount, amount_bound, asset| {
                     Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
-                    T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
                     T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
                     Ok(())
                 },
@@ -251,7 +249,6 @@ mod pallet {
                         Error::<T>::MaxOutRatio
                     );
                     Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
-                    T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(asset_amount)
                 },
                 bound: min_asset_amount,
@@ -314,7 +311,6 @@ mod pallet {
                 transfer_asset: |amount, amount_bound, asset| {
                     ensure!(amount <= amount_bound, Error::<T>::LimitIn);
                     T::AssetManager::transfer(asset, &who, &pool_account_id, amount)?;
-                    T::LiquidityMining::add_shares(who.clone(), pool.market_id, amount);
                     Ok(())
                 },
                 transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
@@ -415,7 +411,6 @@ mod pallet {
                         asset_amount <= asset_balance.checked_mul_res(&T::MaxInRatio::get())?,
                         Error::<T>::MaxInRatio
                     );
-                    T::LiquidityMining::add_shares(who.clone(), pool.market_id, asset_amount);
                     Ok(asset_amount)
                 },
                 bound: max_asset_amount,
@@ -525,13 +520,6 @@ mod pallet {
         /// The fee for exiting a pool.
         #[pallet::constant]
         type ExitFee: Get<BalanceOf<Self>>;
-
-        type LiquidityMining: LiquidityMiningPalletApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                BlockNumber = Self::BlockNumber,
-                MarketId = MarketIdOf<Self>,
-            >;
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
@@ -1216,7 +1204,6 @@ mod pallet {
                     ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
                     Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
-                    T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(pool_amount)
                 },
                 event: |evt| Self::deposit_event(Event::PoolExitWithExactAssetAmount(evt)),
@@ -1275,7 +1262,6 @@ mod pallet {
                     )?
                     .saturated_into();
                     ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);
-                    T::LiquidityMining::add_shares(who.clone(), pool_ref.market_id, asset_amount);
                     Ok(pool_amount)
                 },
                 event: |evt| Self::deposit_event(Event::PoolJoinWithExactAssetAmount(evt)),

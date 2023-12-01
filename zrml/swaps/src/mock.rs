@@ -42,9 +42,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId, LiquidityMiningPalletId,
+        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId,
         MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxSwapFee, MaxTotalWeight,
-        MaxWeight, MinAssets, MinWeight, MinimumPeriod, PmPalletId, SwapsPalletId, BASE,
+        MaxWeight, MinAssets, MinWeight, MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -94,7 +94,6 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currencies: orml_currencies::{Pallet},
-        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
@@ -108,7 +107,6 @@ pub type AssetManager = Currencies;
 impl crate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
-    type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
@@ -174,7 +172,7 @@ where
     frame_support::PalletId: AccountIdConversion<AccountIdTest>,
 {
     fn contains(ai: &AccountIdTest) -> bool {
-        let pallets = vec![LiquidityMiningPalletId::get(), PmPalletId::get(), SwapsPalletId::get()];
+        let pallets = vec![SwapsPalletId::get()];
 
         if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {
             return pallets.contains(&pallet_id.0);
@@ -216,15 +214,6 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-}
-
-impl zrml_liquidity_mining::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type Currency = Balances;
-    type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
-    type PalletId = LiquidityMiningPalletId;
-    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_market_commons::Config for Runtime {
