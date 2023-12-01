@@ -35,6 +35,14 @@ use zeitgeist_primitives::types::{
 };
 
 cfg_if::cfg_if! {
+    if #[cfg(feature = "try-runtime")] {
+        use alloc::collections::BTreeMap;
+        use frame_support::migration::storage_key_iter;
+        use zeitgeist_primitives::types::MarketId;
+    }
+}
+
+cfg_if::cfg_if! {
     if #[cfg(any(feature = "try-runtime", test))] {
         const MARKET_COMMONS: &[u8] = b"MarketCommons";
         const MARKETS: &[u8] = b"Markets";
@@ -96,7 +104,10 @@ pub(crate) type Markets<T: Config> =
 pub struct MigrateScoringRuleAndMarketStatus<T>(PhantomData<T>);
 
 /// Deletes all Rikiddo markets from storage and
-impl<T: Config> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T> {
+impl<T> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T>
+where
+    T: Config,
+{
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommons<T>>();
@@ -165,9 +176,11 @@ impl<T: Config> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T> {
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-        let old_markets =
-            storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(MARKETS)
-                .collect::<BTreeMap<_, _>>();
+        let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
+            MARKET_COMMONS,
+            MARKETS,
+        )
+        .collect::<BTreeMap<_, _>>();
         let markets = Markets::<T>::iter_keys().count();
         let decodable_markets = Markets::<T>::iter_values().count();
         if markets != decodable_markets {
@@ -185,12 +198,9 @@ impl<T: Config> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
-        use orml_traits::NamedMultiReservableCurrency;
-        use sp_runtime::traits::Zero;
-        use zeitgeist_primitives::traits::MarketCommonsPalletApi;
-
-        let old_market_count: BTreeMap<MarketId, OldMarketOf<T>> =
-            Decode::decode(&mut &previous_state[..]).unwrap().iter().count();
+        let old_markets: BTreeMap<MarketId, OldMarketOf<T>> =
+            Decode::decode(&mut &previous_state[..]).unwrap();
+        let old_market_count = old_markets.iter().count();
         let new_market_count = Markets::<T>::iter().count();
         assert_eq!(old_market_count, new_market_count);
         log::info!(
