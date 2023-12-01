@@ -29,7 +29,7 @@ use zeitgeist_primitives::{
         MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
-    types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
+    types::{Asset, PoolId, ScalarPosition, SerdeWrapper},
 };
 use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
 
@@ -71,7 +71,6 @@ impl ValidPoolData {
             self.assets.into_iter().map(construct_asset).collect(),
             construct_asset(self.base_asset),
             DEFAULT_MARKET_ID,
-            ScoringRule::CPMM,
             construct_swap_fee(self.swap_fee),
             Some(self.amount),
             Some(self.weights),
