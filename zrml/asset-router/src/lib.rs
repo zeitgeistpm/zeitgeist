@@ -557,11 +557,6 @@ pub mod pallet {
         }
     }
 
-    /*
-    only_asset {
-        ($asset_id:expr, $error:expr, $asset_trait:ident, $asset_method:ident, $($args:expr),+)
-    */
-
     // Supertrait of Create and Destroy
     impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         type AssetId = Assets;
