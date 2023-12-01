@@ -56,14 +56,12 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
 
-    type BalanceOf<T> = <T as Config>::Balance;
-    type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        Asset<MarketIdOf<T>>,
-    >;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type BalanceOf<T> = <T as Config>::Balance;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+    pub(crate) type MarketOf<T> =
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, AssetOf<T>>;
     pub type MarketIdOf<T> = <T as Config>::MarketId;
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
@@ -139,7 +137,7 @@ mod pallet {
         T: Config,
         <T as Config>::Timestamp: Time,
     {
-        type AccountId = T::AccountId;
+        type AccountId = AccountIdOf<T>;
         type BlockNumber = T::BlockNumber;
         type Balance = T::Balance;
         type MarketId = T::MarketId;
