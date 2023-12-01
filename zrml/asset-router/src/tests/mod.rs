@@ -28,6 +28,7 @@ use orml_traits::{
 };
 use zeitgeist_primitives::types::Assets;
 
+mod create;
 mod inspect;
 mod multi_currency;
 mod multi_lockable_currency;

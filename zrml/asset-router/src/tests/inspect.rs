@@ -40,75 +40,74 @@ fn inspect_test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>
 #[test]
 fn inspect_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<CampaignAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             CAMPAIGN_ASSET,
             ALICE,
             true,
             CAMPAIGN_ASSET_MIN_BALANCE,
         ));
 
-        inspect_test_helper(CAMPAIGN_ASSET_GENERAL, CAMPAIGN_ASSET_INITIAL_AMOUNT);
+        inspect_test_helper(CAMPAIGN_ASSET, CAMPAIGN_ASSET_INITIAL_AMOUNT);
 
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET_GENERAL), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET_GENERAL), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY_GENERAL), 0);
+        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
+        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
+        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
     });
 }
 
 #[test]
 fn inspect_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<CustomAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             CUSTOM_ASSET,
             ALICE,
             true,
             CUSTOM_ASSET_MIN_BALANCE,
         ));
 
-        inspect_test_helper(CUSTOM_ASSET_GENERAL, CUSTOM_ASSET_INITIAL_AMOUNT);
+        inspect_test_helper(CUSTOM_ASSET, CUSTOM_ASSET_INITIAL_AMOUNT);
 
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET_GENERAL), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET_GENERAL), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY_GENERAL), 0);
+        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
+        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
+        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
     });
 }
 
 #[test]
 fn inspect_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<MarketAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             MARKET_ASSET,
             ALICE,
             true,
             MARKET_ASSET_MIN_BALANCE,
         ));
 
-        inspect_test_helper(MARKET_ASSET_GENERAL, MARKET_ASSET_INITIAL_AMOUNT);
+        inspect_test_helper(MARKET_ASSET, MARKET_ASSET_INITIAL_AMOUNT);
 
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET_GENERAL), 0);
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET_GENERAL), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY_GENERAL), 0);
+        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
+        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
+        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
     });
 }
 
 #[test]
 fn multicurrency_routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert!(!AssetRouter::asset_exists(CURRENCY_GENERAL));
         assert_ok!(<AssetRouter as orml_traits::MultiCurrency<AccountId>>::deposit(
-            CURRENCY_GENERAL,
+            CURRENCY,
             &ALICE,
             CURRENCY_INITIAL_AMOUNT
         ));
-        assert_eq!(AssetRouter::total_issuance(CURRENCY_GENERAL), 0);
-        assert_eq!(AssetRouter::balance(CURRENCY_GENERAL, &ALICE), 0);
-        assert_eq!(AssetRouter::reducible_balance(CURRENCY_GENERAL, &ALICE, false), 0);
+        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(AssetRouter::balance(CURRENCY, &ALICE), 0);
+        assert_eq!(AssetRouter::reducible_balance(CURRENCY, &ALICE, false), 0);
         assert_eq!(
-            AssetRouter::can_withdraw(CURRENCY_GENERAL, &ALICE, CURRENCY_INITIAL_AMOUNT),
+            AssetRouter::can_withdraw(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT),
             WithdrawConsequence::UnknownAsset
         );
         assert_eq!(
-            AssetRouter::can_deposit(CURRENCY_GENERAL, &ALICE, 1, true),
+            AssetRouter::can_deposit(CURRENCY, &ALICE, 1, true),
             DepositConsequence::UnknownAsset
         );
     });

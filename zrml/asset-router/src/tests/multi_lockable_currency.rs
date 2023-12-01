@@ -38,8 +38,8 @@ fn multi_lockable_currency_unroutable_test_helper(asset: Assets) {
 #[test]
 fn multi_lockable_currency_routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::deposit(CURRENCY_GENERAL, &ALICE, CURRENCY_INITIAL_AMOUNT));
-        assert_ok!(AssetRouter::set_lock(Default::default(), CURRENCY_GENERAL, &ALICE, 1));
+        assert_ok!(AssetRouter::deposit(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert_ok!(AssetRouter::set_lock(Default::default(), CURRENCY, &ALICE, 1));
         assert_eq!(
             orml_tokens::Accounts::<Runtime>::get::<
                 u128,
@@ -48,7 +48,7 @@ fn multi_lockable_currency_routes_currencies_correctly() {
             .frozen,
             1
         );
-        assert_ok!(AssetRouter::extend_lock(Default::default(), CURRENCY_GENERAL, &ALICE, 2));
+        assert_ok!(AssetRouter::extend_lock(Default::default(), CURRENCY, &ALICE, 2));
         assert_eq!(
             orml_tokens::Accounts::<Runtime>::get::<
                 u128,
@@ -57,7 +57,7 @@ fn multi_lockable_currency_routes_currencies_correctly() {
             .frozen,
             2
         );
-        assert_ok!(AssetRouter::remove_lock(Default::default(), CURRENCY_GENERAL, &ALICE));
+        assert_ok!(AssetRouter::remove_lock(Default::default(), CURRENCY, &ALICE));
         assert_eq!(
             orml_tokens::Accounts::<Runtime>::get::<
                 u128,
@@ -72,41 +72,41 @@ fn multi_lockable_currency_routes_currencies_correctly() {
 #[test]
 fn multi_lockable_currency_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<CampaignAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             CAMPAIGN_ASSET,
             ALICE,
             true,
             CAMPAIGN_ASSET_MIN_BALANCE,
         ));
 
-        multi_lockable_currency_unroutable_test_helper(CAMPAIGN_ASSET_GENERAL);
+        multi_lockable_currency_unroutable_test_helper(CAMPAIGN_ASSET);
     });
 }
 
 #[test]
 fn multi_lockable_currency_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<CustomAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             CUSTOM_ASSET,
             ALICE,
             true,
             CUSTOM_ASSET_MIN_BALANCE,
         ));
 
-        multi_lockable_currency_unroutable_test_helper(CUSTOM_ASSET_GENERAL);
+        multi_lockable_currency_unroutable_test_helper(CUSTOM_ASSET);
     });
 }
 
 #[test]
 fn multi_lockable_currency_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<MarketAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             MARKET_ASSET,
             ALICE,
             true,
             MARKET_ASSET_MIN_BALANCE,
         ));
 
-        multi_lockable_currency_unroutable_test_helper(MARKET_ASSET_GENERAL);
+        multi_lockable_currency_unroutable_test_helper(MARKET_ASSET);
     });
 }

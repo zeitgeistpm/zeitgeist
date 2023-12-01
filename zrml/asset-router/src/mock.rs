@@ -36,8 +36,8 @@ use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
     types::{
         AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CampaignAsset, CampaignAssetId,
-        Currencies, CustomAsset, CustomAssetClass, CustomAssetId, Hash, Index, MarketAsset,
-        UncheckedExtrinsicTest,
+        Currencies, CustomAsset, CustomAssetId, Hash, Index, MarketAsset,
+        UncheckedExtrinsicTest, Assets
     },
 };
 
@@ -45,15 +45,10 @@ pub(super) const ALICE: AccountIdTest = 0;
 pub(super) const BOB: AccountIdTest = 1;
 pub(super) const CHARLIE: AccountIdTest = 2;
 
-use zeitgeist_primitives::types::{Assets, CampaignAssetClass};
-
-pub(super) const CAMPAIGN_ASSET: CampaignAssetClass = CampaignAssetClass(0);
-pub(super) const CAMPAIGN_ASSET_GENERAL: Assets = Assets::CampaignAssetClass(0);
-pub(super) const CUSTOM_ASSET: CustomAssetClass = CustomAssetClass(0);
-pub(super) const CUSTOM_ASSET_GENERAL: Assets = Assets::CustomAssetClass(0);
-pub(super) const MARKET_ASSET: MarketAsset = MarketAsset::CombinatorialOutcome;
-pub(super) const MARKET_ASSET_GENERAL: Assets = Assets::NewCombinatorialOutcome;
-pub(super) const CURRENCY_GENERAL: Assets = Assets::ForeignAsset(0);
+pub(super) const CAMPAIGN_ASSET: Assets = Assets::CampaignAssetClass(0);
+pub(super) const CUSTOM_ASSET: Assets = Assets::CustomAssetClass(0);
+pub(super) const MARKET_ASSET: Assets = Assets::NewCombinatorialOutcome;
+pub(super) const CURRENCY: Assets = Assets::ForeignAsset(0);
 
 pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 1;
 pub(super) const CUSTOM_ASSET_MIN_BALANCE: Balance = 2;

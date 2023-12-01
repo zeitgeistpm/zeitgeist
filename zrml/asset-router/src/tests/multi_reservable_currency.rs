@@ -39,19 +39,19 @@ fn multi_reserveable_currency_unroutable_test_helper(
 #[test]
 fn multi_reserveable_currency_routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::deposit(CURRENCY_GENERAL, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert_ok!(AssetRouter::deposit(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
 
-        assert!(AssetRouter::can_reserve(CURRENCY_GENERAL, &ALICE, CURRENCY_INITIAL_AMOUNT));
-        assert!(!AssetRouter::can_reserve(CURRENCY_GENERAL, &ALICE, CURRENCY_INITIAL_AMOUNT + 1));
-        assert_ok!(AssetRouter::reserve(CURRENCY_GENERAL, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert!(AssetRouter::can_reserve(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert!(!AssetRouter::can_reserve(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT + 1));
+        assert_ok!(AssetRouter::reserve(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
         assert_eq!(
-            AssetRouter::reserved_balance(CURRENCY_GENERAL, &ALICE),
+            AssetRouter::reserved_balance(CURRENCY, &ALICE),
             CURRENCY_INITIAL_AMOUNT
         );
-        assert_eq!(AssetRouter::slash_reserved(CURRENCY_GENERAL, &ALICE, 1), 0);
+        assert_eq!(AssetRouter::slash_reserved(CURRENCY, &ALICE, 1), 0);
         assert_eq!(
             AssetRouter::repatriate_reserved(
-                CURRENCY_GENERAL,
+                CURRENCY,
                 &ALICE,
                 &BOB,
                 CURRENCY_MIN_BALANCE,
@@ -60,14 +60,14 @@ fn multi_reserveable_currency_routes_currencies_correctly() {
             .unwrap(),
             0
         );
-        assert_eq!(AssetRouter::reserved_balance(CURRENCY_GENERAL, &BOB), CURRENCY_MIN_BALANCE);
+        assert_eq!(AssetRouter::reserved_balance(CURRENCY, &BOB), CURRENCY_MIN_BALANCE);
         assert_eq!(
-            AssetRouter::reserved_balance(CURRENCY_GENERAL, &ALICE),
+            AssetRouter::reserved_balance(CURRENCY, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 1
         );
-        assert_eq!(AssetRouter::unreserve(CURRENCY_GENERAL, &ALICE, 1), 0);
+        assert_eq!(AssetRouter::unreserve(CURRENCY, &ALICE, 1), 0);
         assert_eq!(
-            AssetRouter::reserved_balance(CURRENCY_GENERAL, &ALICE),
+            AssetRouter::reserved_balance(CURRENCY, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 2
         );
     });
@@ -76,7 +76,7 @@ fn multi_reserveable_currency_routes_currencies_correctly() {
 #[test]
 fn multi_reserveable_currency_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<CampaignAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             CAMPAIGN_ASSET,
             ALICE,
             true,
@@ -84,7 +84,7 @@ fn multi_reserveable_currency_routes_campaign_assets_correctly() {
         ));
 
         multi_reserveable_currency_unroutable_test_helper(
-            CAMPAIGN_ASSET_GENERAL,
+            CAMPAIGN_ASSET,
             CAMPAIGN_ASSET_INITIAL_AMOUNT,
         );
     });
@@ -93,7 +93,7 @@ fn multi_reserveable_currency_routes_campaign_assets_correctly() {
 #[test]
 fn multi_reserveable_currency_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<CustomAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             CUSTOM_ASSET,
             ALICE,
             true,
@@ -101,7 +101,7 @@ fn multi_reserveable_currency_routes_custom_assets_correctly() {
         ));
 
         multi_reserveable_currency_unroutable_test_helper(
-            CUSTOM_ASSET_GENERAL,
+            CUSTOM_ASSET,
             CUSTOM_ASSET_INITIAL_AMOUNT,
         );
     });
@@ -110,7 +110,7 @@ fn multi_reserveable_currency_routes_custom_assets_correctly() {
 #[test]
 fn multi_reserveable_currency_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<MarketAssets as Create<AccountId>>::create(
+        assert_ok!(AssetRouter::create(
             MARKET_ASSET,
             ALICE,
             true,
@@ -118,7 +118,7 @@ fn multi_reserveable_currency_routes_market_assets_correctly() {
         ));
 
         multi_reserveable_currency_unroutable_test_helper(
-            MARKET_ASSET_GENERAL,
+            MARKET_ASSET,
             MARKET_ASSET_INITIAL_AMOUNT,
         );
     });
