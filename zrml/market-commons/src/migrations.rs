@@ -118,8 +118,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T> {
             translated.saturating_inc();
             let scoring_rule = match old_market.scoring_rule {
                 OldScoringRule::RikiddoSigmoidFeeMarketEma => return None,
-                OldScoringRule::CPMM => return None,
-                OldScoringRule::Lmsr => ScoringRule::Lmsr,
+                OldScoringRule::CPMM | OldScoringRule::Lmsr => ScoringRule::Lmsr,
                 OldScoringRule::Orderbook => ScoringRule::Orderbook,
                 OldScoringRule::Parimutuel => ScoringRule::Parimutuel,
             };
@@ -224,16 +223,33 @@ mod tests {
         });
     }
 
-    // TODO Remove CPMM from scoring rule.
-    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Proposed), None)]
-    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Active), None)]
+    #[test_case(
+        (OldScoringRule::CPMM, OldMarketStatus::Proposed),
+        Some((ScoringRule::Lmsr, MarketStatus::Proposed))
+    )]
+    #[test_case(
+        (OldScoringRule::CPMM, OldMarketStatus::Active),
+        Some((ScoringRule::Lmsr, MarketStatus::Active))
+    )]
     #[test_case((OldScoringRule::CPMM, OldMarketStatus::Suspended), None)]
-    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Closed), None)]
+    #[test_case(
+        (OldScoringRule::CPMM, OldMarketStatus::Closed),
+        Some((ScoringRule::Lmsr, MarketStatus::Closed))
+    )]
     #[test_case((OldScoringRule::CPMM, OldMarketStatus::CollectingSubsidy), None)]
     #[test_case((OldScoringRule::CPMM, OldMarketStatus::InsufficientSubsidy), None)]
-    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Reported), None)]
-    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Disputed), None)]
-    #[test_case((OldScoringRule::CPMM, OldMarketStatus::Resolved), None)]
+    #[test_case(
+        (OldScoringRule::CPMM, OldMarketStatus::Reported),
+        Some((ScoringRule::Lmsr, MarketStatus::Reported))
+    )]
+    #[test_case(
+        (OldScoringRule::CPMM, OldMarketStatus::Disputed),
+        Some((ScoringRule::Lmsr, MarketStatus::Disputed))
+    )]
+    #[test_case(
+        (OldScoringRule::CPMM, OldMarketStatus::Resolved),
+        Some((ScoringRule::Lmsr, MarketStatus::Resolved))
+    )]
     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Proposed), None)]
     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Active), None)]
     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Suspended), None)]
