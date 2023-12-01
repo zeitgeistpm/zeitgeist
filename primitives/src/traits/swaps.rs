@@ -126,7 +126,6 @@ pub trait Swaps<AccountId> {
         asset_out: Asset<Self::MarketId>,
         min_asset_amount_out: Option<Self::Balance>,
         max_price: Option<Self::Balance>,
-        handle_fees: bool,
     ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount out
@@ -152,6 +151,5 @@ pub trait Swaps<AccountId> {
         asset_out: Asset<Self::MarketId>,
         asset_amount_out: Self::Balance,
         max_price: Option<Self::Balance>,
-        handle_fees: bool,
     ) -> Result<Weight, DispatchError>;
 }
