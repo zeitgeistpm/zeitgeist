@@ -299,10 +299,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
-            ensure!(
-                matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
-                Error::<T>::InvalidPoolStatus,
-            );
+            ensure!(pool.status == PoolStatus::Open, Error::<T>::InvalidPoolStatus);
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
 
             let params = PoolParams {
@@ -789,7 +786,7 @@ mod pallet {
             pool: &PoolOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
-            if pool.pool_status == PoolStatus::Clean {
+            if pool.status == PoolStatus::Closed {
                 return Ok(());
             }
             let pool_shares_id = Self::pool_shares_id(pool_id);
@@ -807,7 +804,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             // No need to prevent a clean pool from getting drained.
-            if pool.pool_status == PoolStatus::Clean {
+            if pool.status == PoolStatus::Closed {
                 return Ok(());
             }
             let pool_account = Self::pool_account_id(&pool_id);
@@ -851,9 +848,9 @@ mod pallet {
             Ok(())
         }
 
-        pub(crate) fn check_if_pool_is_active(pool: &PoolOf<T>) -> DispatchResult {
-            match pool.pool_status {
-                PoolStatus::Active => Ok(()),
+        pub(crate) fn ensure_pool_is_active(pool: &PoolOf<T>) -> DispatchResult {
+            match pool.status {
+                PoolStatus::Open => Ok(()),
                 _ => Err(Error::<T>::PoolIsNotActive.into()),
             }
         }
@@ -910,8 +907,8 @@ mod pallet {
         fn calc_exit_fee(pool: &PoolOf<T>) -> BalanceOf<T> {
             // We don't charge exit fees on closed or cleaned up pools (no need to punish LPs for
             // leaving the pool)!
-            match pool.pool_status {
-                PoolStatus::Active => T::ExitFee::get().saturated_into(),
+            match pool.status {
+                PoolStatus::Open => T::ExitFee::get().saturated_into(),
                 _ => 0u128.saturated_into(),
             }
         }
@@ -988,7 +985,7 @@ mod pallet {
             let pool = Pool {
                 assets: sorted_assets,
                 swap_fee,
-                pool_status: PoolStatus::Initialized,
+                status: PoolStatus::Closed,
                 total_weight,
                 weights: map,
             };
@@ -1006,14 +1003,12 @@ mod pallet {
         }
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            // TODO Benchmark worst case and get rid of asset_len dependency
             let asset_len =
-                <Pools<T>>::try_mutate(pool_id, |pool| -> Result<u32, DispatchError> {
-                    let pool = pool.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
-                    ensure!(
-                        matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
-                        Error::<T>::InvalidStateTransition,
-                    );
-                    pool.pool_status = PoolStatus::Closed;
+                <Pools<T>>::try_mutate(pool_id, |opt_pool| -> Result<u32, DispatchError> {
+                    let pool = opt_pool.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
+                    ensure!(pool.status == PoolStatus::Open, Error::<T>::InvalidStateTransition);
+                    pool.status = PoolStatus::Closed;
                     Ok(pool.assets.len() as u32)
                 })?;
             Self::deposit_event(Event::PoolClosed(pool_id));
@@ -1044,14 +1039,13 @@ mod pallet {
         }
 
         fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            // TODO Ensure pool owner.
             Self::mutate_pool(pool_id, |pool| -> DispatchResult {
-                ensure!(
-                    pool.pool_status == PoolStatus::Initialized,
-                    Error::<T>::InvalidStateTransition
-                );
-                pool.pool_status = PoolStatus::Active;
+                ensure!(pool.status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
+                pool.status = PoolStatus::Open;
                 Ok(())
             })?;
+            // TODO Remove this and benchmark with the worst-case.
             let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
             let asset_len = pool.assets.len() as u32;
             Self::deposit_event(Event::PoolActive(pool_id));

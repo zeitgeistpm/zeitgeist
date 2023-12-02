@@ -27,7 +27,7 @@ use sp_runtime::{RuntimeDebug, SaturatedConversion};
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 pub struct Pool<Asset, Balance> {
     pub assets: Vec<Asset>,
-    pub pool_status: PoolStatus, // TODO Remove
+    pub status: PoolStatus,
     pub swap_fee: Balance,
     pub total_weight: u128,
     pub weights: BTreeMap<Asset, u128>,
@@ -48,11 +48,11 @@ where
     Balance: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
-        // TODO Update when open is added to the pool
         let assets_size = Asset::max_encoded_len().saturating_mul(MAX_ASSETS.saturated_into());
+        let status_size = PoolStatus::max_encoded_len();
         let swap_fee_size = Balance::max_encoded_len();
         let total_weight_size = u128::max_encoded_len();
-        let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
+        let max_encoded_length_bytes = Compact::<u64>::max_encoded_len();
         let weights_size =
             1usize
                 .saturating_add(MAX_ASSETS.saturated_into::<usize>().saturating_mul(
@@ -60,6 +60,7 @@ where
                 ))
                 .saturating_add(max_encoded_length_bytes);
         assets_size
+            .saturating_add(status_size)
             .saturating_add(swap_fee_size)
             .saturating_add(total_weight_size)
             .saturating_add(weights_size)

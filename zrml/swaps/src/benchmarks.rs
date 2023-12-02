@@ -226,12 +226,12 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller, a as usize, None, None, false);
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Initialized);
+        assert_eq!(pool.status, PoolStatus::Closed);
     }: {
         Pallet::<T>::open_pool(pool_id).unwrap();
     } verify {
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Active);
+        assert_eq!(pool.status, PoolStatus::Open);
     }
 
     close_pool {
@@ -240,12 +240,12 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller, a as usize, None, None, true);
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Active);
+        assert_eq!(pool.status, PoolStatus::Open);
     }: {
         Pallet::<T>::close_pool(pool_id).unwrap();
     } verify {
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Closed);
+        assert_eq!(pool.status, PoolStatus::Closed);
     }
 
     destroy_pool {

@@ -33,13 +33,7 @@
 )]
 pub enum PoolStatus {
     /// Shares can be normally negotiated.
-    Active,
-    /// No trading is allowed. The pool is waiting to be subsidized.
-    CollectingSubsidy,
+    Open,
     /// No trading/adding liquidity is allowed.
     Closed,
-    /// The pool has been cleaned up, usually after the corresponding market has been resolved.
-    Clean,
-    /// The pool has just been created.
-    Initialized,
 }

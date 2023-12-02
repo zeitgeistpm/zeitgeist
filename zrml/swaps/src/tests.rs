@@ -368,9 +368,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
     });
 }
 
-#[test_case(PoolStatus::Initialized; "Initialized")]
 #[test_case(PoolStatus::Closed; "Closed")]
-#[test_case(PoolStatus::Clean; "Clean")]
 fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status: PoolStatus) {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(0, true);
@@ -379,7 +377,7 @@ fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status:
         // in other tests easier.
         assert_ok!(Currencies::deposit(Swaps::pool_shares_id(DEFAULT_POOL_ID), &ALICE, _25));
         assert_ok!(Swaps::mutate_pool(DEFAULT_POOL_ID, |pool| {
-            pool.pool_status = status;
+            pool.status = status;
             Ok(())
         }));
 
@@ -1685,14 +1683,12 @@ fn close_pool_fails_if_pool_does_not_exist() {
     });
 }
 
-#[test_case(PoolStatus::Closed; "closed")]
-#[test_case(PoolStatus::Clean; "clean")]
-#[test_case(PoolStatus::CollectingSubsidy; "collecting_subsidy")]
-fn close_pool_fails_if_pool_is_not_active_or_initialized(pool_status: PoolStatus) {
+#[test_case(PoolStatus::Closed)]
+fn close_pool_fails_if_pool_is_not_active_or_initialized(status: PoolStatus) {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(0, true);
         assert_ok!(Swaps::mutate_pool(DEFAULT_POOL_ID, |pool| {
-            pool.pool_status = pool_status;
+            pool.status = status;
             Ok(())
         }));
         assert_noop!(Swaps::close_pool(0), Error::<Runtime>::InvalidStateTransition);
@@ -1706,7 +1702,7 @@ fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         create_initial_pool(0, true);
         assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
         let pool = Swaps::pool(DEFAULT_POOL_ID).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Closed);
+        assert_eq!(pool.status, PoolStatus::Closed);
         System::assert_last_event(Event::PoolClosed(DEFAULT_POOL_ID).into());
     });
 }
@@ -1718,15 +1714,12 @@ fn open_pool_fails_if_pool_does_not_exist() {
     });
 }
 
-#[test_case(PoolStatus::Active; "active")]
-#[test_case(PoolStatus::Clean; "clean")]
-#[test_case(PoolStatus::CollectingSubsidy; "collecting_subsidy")]
-#[test_case(PoolStatus::Closed; "closed")]
-fn open_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
+#[test_case(PoolStatus::Open)]
+fn open_pool_fails_if_pool_is_not_closed(status: PoolStatus) {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(1, true);
         assert_ok!(Swaps::mutate_pool(DEFAULT_POOL_ID, |pool| {
-            pool.pool_status = pool_status;
+            pool.status = status;
             Ok(())
         }));
         assert_noop!(Swaps::open_pool(DEFAULT_POOL_ID), Error::<Runtime>::InvalidStateTransition);
@@ -1750,7 +1743,7 @@ fn open_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         ));
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
         let pool = Swaps::pool(DEFAULT_POOL_ID).unwrap();
-        assert_eq!(pool.pool_status, PoolStatus::Active);
+        assert_eq!(pool.status, PoolStatus::Open);
         System::assert_last_event(Event::PoolActive(DEFAULT_POOL_ID).into());
     });
 }
