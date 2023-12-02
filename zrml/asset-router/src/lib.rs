@@ -28,7 +28,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use core::marker::PhantomData;
+    use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
         pallet_prelude::{DispatchError, DispatchResult},
         traits::{
@@ -48,15 +48,13 @@ pub mod pallet {
         },
         BalanceStatus, LockIdentifier,
     };
-    use parity_scale_codec::MaxEncodedLen;
+    use parity_scale_codec::{FullCodec, MaxEncodedLen};
+    use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{
             AtLeast32BitUnsigned, Bounded, MaybeSerializeDeserialize, Member, Saturating, Zero,
         },
         FixedPointOperand,
-    };
-    use zeitgeist_primitives::types::{
-        Assets, CampaignAsset, Currencies, CustomAsset, MarketAsset,
     };
 
     pub trait AssetTraits<T: Config, A>:
@@ -81,6 +79,20 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The overarching asset type that contains all assets classes.
+        type AssetType: Copy
+            + Debug
+            + Eq
+            + From<Self::CurrencyType>
+            + From<Self::CampaignAssetType>
+            + From<Self::CustomAssetType>
+            + From<Self::MarketAssetType>
+            + FullCodec
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + TypeInfo;
+
+        /// The type that represents balances.
         type Balance: Parameter
             + Member
             + AtLeast32BitUnsigned
@@ -89,14 +101,65 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + MaxEncodedLen
             + FixedPointOperand;
+
+        /// Logic that handles campaign assets by providing multiple fungible
+        /// trait implementations.
+        type CampaignAssets: AssetTraits<Self, Self::CampaignAssetType>;
+        /// The custom asset type.
+        type CampaignAssetType: TryFrom<Self::AssetType>
+            + Copy
+            + Debug
+            + Eq
+            + FullCodec
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + TypeInfo;
+        
+        /// Logic that handles currencies by providing multiple currencies
+        /// trait implementations.
         type Currencies: TransferAll<Self::AccountId>
-            + MultiCurrencyExtended<Self::AccountId, CurrencyId = Currencies, Balance = Self::Balance>
-            + MultiLockableCurrency<Self::AccountId>
+            + MultiCurrencyExtended<
+                Self::AccountId,
+                CurrencyId = Self::CurrencyType,
+                Balance = Self::Balance,
+            > + MultiLockableCurrency<Self::AccountId>
             + MultiReservableCurrency<Self::AccountId>
             + NamedMultiReservableCurrency<Self::AccountId>;
-        type CampaignAsset: AssetTraits<Self, CampaignAsset>;
-        type CustomAsset: AssetTraits<Self, CustomAsset>;
-        type MarketAssets: AssetTraits<Self, MarketAsset>;
+        /// The currency type.
+        type CurrencyType: TryFrom<Self::AssetType>
+            + Copy
+            + Debug
+            + Eq
+            + FullCodec
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + TypeInfo;
+
+        /// Logic that handles custom assets by providing multiple fungible
+        /// trait implementations.
+        type CustomAssets: AssetTraits<Self, Self::CustomAssetType>;
+        /// The custom asset type.
+        type CustomAssetType: TryFrom<Self::AssetType>
+            + Copy
+            + Debug
+            + Eq
+            + FullCodec
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + TypeInfo;
+
+        /// Logic that handles market assets by providing multiple fungible
+        /// trait implementations.
+        type MarketAssets: AssetTraits<Self, Self::MarketAssetType>;
+        /// The market asset type.
+        type MarketAssetType: TryFrom<Self::AssetType>
+            + Copy
+            + Debug
+            + Eq
+            + FullCodec
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + TypeInfo;
     }
 
     use frame_support::pallet_prelude::Hooks;
@@ -132,14 +195,14 @@ pub mod pallet {
     /// implementation that handles it and finally calls the $method on it.
     macro_rules! route_call {
         ($currency_id:expr, $currency_method:ident, $asset_method:ident, $($args:expr),*) => {
-            if let Ok(currency) = Currencies::try_from($currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
                 Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency, $($args),*))
-            } else if let Ok(asset) = MarketAsset::try_from($currency_id) {
+            } else if let Ok(asset) = T::MarketAssetType::try_from($currency_id) {
                 Ok(T::MarketAssets::$asset_method(asset, $($args),*))
-            } else if let Ok(asset) = CampaignAsset::try_from($currency_id) {
-                Ok(T::CampaignAsset::$asset_method(asset, $($args),*))
-            } else if let Ok(asset) = CustomAsset::try_from($currency_id)  {
-                Ok(T::CustomAsset::$asset_method(asset, $($args),*))
+            } else if let Ok(asset) = T::CampaignAssetType::try_from($currency_id) {
+                Ok(T::CampaignAssets::$asset_method(asset, $($args),*))
+            } else if let Ok(asset) = T::CustomAssetType::try_from($currency_id)  {
+                Ok(T::CustomAssets::$asset_method(asset, $($args),*))
             } else {
                 Err(Error::<T>::UnknownAsset)
             }
@@ -150,7 +213,7 @@ pub mod pallet {
     /// it returns an error.
     macro_rules! only_currency {
         ($currency_id:expr, $error:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
-            if let Ok(currency) = Currencies::try_from($currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
                 <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
             } else {
                 $error
@@ -162,12 +225,12 @@ pub mod pallet {
     /// it returns an error.
     macro_rules! only_asset {
         ($asset_id:expr, $error:expr, $asset_trait:ident, $asset_method:ident, $($args:expr),*) => {
-            if let Ok(asset) = MarketAsset::try_from($asset_id) {
+            if let Ok(asset) = T::MarketAssetType::try_from($asset_id) {
                 <T::MarketAssets as $asset_trait<T::AccountId>>::$asset_method(asset, $($args),*)
-            } else if let Ok(asset) = CampaignAsset::try_from($asset_id) {
-                T::CampaignAsset::$asset_method(asset, $($args),*)
-            } else if let Ok(asset) = CustomAsset::try_from($asset_id)  {
-                T::CustomAsset::$asset_method(asset, $($args),*)
+            } else if let Ok(asset) = T::CampaignAssetType::try_from($asset_id) {
+                T::CampaignAssets::$asset_method(asset, $($args),*)
+            } else if let Ok(asset) = T::CustomAssetType::try_from($asset_id)  {
+                T::CustomAssets::$asset_method(asset, $($args),*)
             } else {
                 $error
             }
@@ -175,7 +238,7 @@ pub mod pallet {
     }
 
     impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
-        type CurrencyId = Assets;
+        type CurrencyId = T::AssetType;
         type Balance = T::Balance;
 
         fn minimum_balance(currency_id: Self::CurrencyId) -> Self::Balance {
@@ -194,14 +257,14 @@ pub mod pallet {
         }
 
         fn free_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::free_balance(currency, who)
-            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+            } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 T::MarketAssets::reducible_balance(asset, who, false)
-            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
-                T::CampaignAsset::reducible_balance(asset, who, false)
-            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
-                T::CustomAsset::reducible_balance(asset, who, false)
+            } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+                T::CampaignAssets::reducible_balance(asset, who, false)
+            } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+                T::CustomAssets::reducible_balance(asset, who, false)
             } else {
                 0u8.into()
             }
@@ -212,18 +275,18 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as MultiCurrency<T::AccountId>>::ensure_can_withdraw(
                     currency, who, amount,
                 );
             }
 
-            let withdraw_reason = if let Ok(asset) = MarketAsset::try_from(currency_id) {
+            let withdraw_reason = if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 T::MarketAssets::can_withdraw(asset, who, amount)
-            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
-                T::CampaignAsset::can_withdraw(asset, who, amount)
-            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
-                T::CustomAsset::can_withdraw(asset, who, amount)
+            } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+                T::CampaignAssets::can_withdraw(asset, who, amount)
+            } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+                T::CustomAssets::can_withdraw(asset, who, amount)
             } else {
                 return Err(Error::<T>::UnknownAsset.into());
             };
@@ -237,14 +300,14 @@ pub mod pallet {
             to: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::transfer(currency, from, to, amount)
-            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+            } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 T::MarketAssets::transfer(asset, from, to, amount, false).map(|_| ())
-            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
-                T::CampaignAsset::transfer(asset, from, to, amount, false).map(|_| ())
-            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
-                T::CustomAsset::transfer(asset, from, to, amount, false).map(|_| ())
+            } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+                T::CampaignAssets::transfer(asset, from, to, amount, false).map(|_| ())
+            } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+                T::CustomAssets::transfer(asset, from, to, amount, false).map(|_| ())
             } else {
                 Err(Error::<T>::UnknownAsset.into())
             }
@@ -263,16 +326,16 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::withdraw(currency, who, amount)
-            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+            } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 // Resulting balance can be ignored as `burn_from` ensures that the
                 // requested amount can be burned.
                 T::MarketAssets::burn_from(asset, who, amount).map(|_| ())
-            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
-                T::CampaignAsset::burn_from(asset, who, amount).map(|_| ())
-            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
-                T::CustomAsset::burn_from(asset, who, amount).map(|_| ())
+            } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+                T::CampaignAssets::burn_from(asset, who, amount).map(|_| ())
+            } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+                T::CustomAssets::burn_from(asset, who, amount).map(|_| ())
             } else {
                 Err(Error::<T>::UnknownAsset.into())
             }
@@ -284,14 +347,14 @@ pub mod pallet {
             value: Self::Balance,
         ) -> bool {
             // TODO
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::can_slash(currency, who, value)
-            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+            } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 T::MarketAssets::reducible_balance(asset, who, false) >= value
-            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
-                T::CampaignAsset::reducible_balance(asset, who, false) >= value
-            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
-                T::CustomAsset::reducible_balance(asset, who, false) >= value
+            } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+                T::CampaignAssets::reducible_balance(asset, who, false) >= value
+            } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+                T::CustomAssets::reducible_balance(asset, who, false) >= value
             } else {
                 false
             }
@@ -302,18 +365,18 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> Self::Balance {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::slash(currency, who, amount)
-            } else if let Ok(asset) = MarketAsset::try_from(currency_id) {
+            } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 T::MarketAssets::slash(asset, who, amount)
                     .map(|b| amount.saturating_sub(b))
                     .unwrap_or_else(|_| amount)
-            } else if let Ok(asset) = CampaignAsset::try_from(currency_id) {
-                T::CampaignAsset::slash(asset, who, amount)
+            } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+                T::CampaignAssets::slash(asset, who, amount)
                     .map(|b| amount.saturating_sub(b))
                     .unwrap_or_else(|_| amount)
-            } else if let Ok(asset) = CustomAsset::try_from(currency_id) {
-                T::CustomAsset::slash(asset, who, amount)
+            } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+                T::CustomAssets::slash(asset, who, amount)
                     .map(|b| amount.saturating_sub(b))
                     .unwrap_or_else(|_| amount)
             } else {
@@ -330,7 +393,7 @@ pub mod pallet {
             who: &T::AccountId,
             by_amount: Self::Amount,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as MultiCurrencyExtended<T::AccountId>>::update_balance(
                     currency, who, by_amount,
                 );
@@ -367,7 +430,7 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as MultiLockableCurrency<T::AccountId>>::set_lock(
                     lock_id, currency, who, amount,
                 );
@@ -382,7 +445,7 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as MultiLockableCurrency<T::AccountId>>::extend_lock(
                     lock_id, currency, who, amount,
                 );
@@ -396,7 +459,7 @@ pub mod pallet {
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as MultiLockableCurrency<T::AccountId>>::remove_lock(
                     lock_id, currency, who,
                 );
@@ -485,7 +548,7 @@ pub mod pallet {
             currency_id: Self::CurrencyId,
             who: &T::AccountId,
         ) -> Self::Balance {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::reserved_balance_named(
                     id, currency, who,
                 );
@@ -500,7 +563,7 @@ pub mod pallet {
             who: &T::AccountId,
             value: Self::Balance,
         ) -> DispatchResult {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::reserve_named(
                     id, currency, who, value
                 );
@@ -515,7 +578,7 @@ pub mod pallet {
             who: &T::AccountId,
             value: Self::Balance,
         ) -> Self::Balance {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::unreserve_named(
                     id, currency, who, value
                 );
@@ -530,7 +593,7 @@ pub mod pallet {
             who: &T::AccountId,
             value: Self::Balance,
         ) -> Self::Balance {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::slash_reserved_named(
                     id, currency, who, value
                 );
@@ -547,7 +610,7 @@ pub mod pallet {
             value: Self::Balance,
             status: Status,
         ) -> Result<Self::Balance, DispatchError> {
-            if let Ok(currency) = Currencies::try_from(currency_id) {
+            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::repatriate_reserved_named(
                     id, currency, slashed, beneficiary, value, status
                 );
@@ -559,7 +622,7 @@ pub mod pallet {
 
     // Supertrait of Create and Destroy
     impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
-        type AssetId = Assets;
+        type AssetId = T::AssetType;
         type Balance = T::Balance;
 
         fn total_issuance(asset: Self::AssetId) -> Self::Balance {

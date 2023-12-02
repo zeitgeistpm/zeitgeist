@@ -86,10 +86,15 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
+    type AssetType = Assets;
     type Balance = Balance;
+    type CurrencyType = Currencies;
     type Currencies = Tokens;
-    type CampaignAsset = CampaignAssets;
-    type CustomAsset = CustomAssets;
+    type CampaignAssetType = CampaignAsset;
+    type CampaignAssets = CampaignAssets;
+    type CustomAssetType = CustomAsset;
+    type CustomAssets = CustomAssets;
+    type MarketAssetType = MarketAsset;
     type MarketAssets = MarketAssets;
 }
 
