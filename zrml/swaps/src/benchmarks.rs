@@ -29,7 +29,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{AssetOf, Config, Event};
+use crate::{types::PoolStatus, AssetOf, Config, Event};
 use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
@@ -39,7 +39,7 @@ use zeitgeist_primitives::{
     constants::{BASE, CENT},
     math::fixed::FixedMul,
     traits::Swaps as SwapsApi,
-    types::{Asset, PoolStatus},
+    types::Asset,
 };
 
 const LIQUIDITY: u128 = 100 * BASE;

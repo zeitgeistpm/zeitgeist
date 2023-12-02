@@ -38,6 +38,7 @@ pub mod math;
 pub mod migrations;
 pub mod mock;
 mod tests;
+mod types;
 pub mod weights;
 
 pub use pallet::*;
@@ -46,6 +47,7 @@ pub use pallet::*;
 mod pallet {
     use crate::{
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
+        types::{Pool, PoolStatus},
         utils::{
             pool_exit_with_exact_amount, pool_join_with_exact_amount, swap_exact_amount,
             PoolExitWithExactAmountParams, PoolJoinWithExactAmountParams, PoolParams,
@@ -77,7 +79,7 @@ mod pallet {
             fixed::FixedMul,
         },
         traits::{Swaps, ZeitgeistAssetManager},
-        types::{Asset, Pool, PoolId, PoolStatus, SerdeWrapper},
+        types::{Asset, PoolId, SerdeWrapper},
     };
 
     /// The current storage version.
@@ -1168,10 +1170,6 @@ mod pallet {
             };
             let weight = T::WeightInfo::pool_join_with_exact_asset_amount();
             pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
-        }
-
-        fn pool(pool_id: PoolId) -> Result<PoolOf<T>, DispatchError> {
-            Self::pool_by_id(pool_id)
         }
 
         /// Swap - Exact amount in

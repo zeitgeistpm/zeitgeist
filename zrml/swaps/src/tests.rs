@@ -29,6 +29,7 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     math::calc_out_given_in,
     mock::*,
+    types::PoolStatus,
     AssetOf, BalanceOf, Config, Error, Event,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
@@ -39,7 +40,7 @@ use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
-    types::{Asset, MarketId, PoolId, PoolStatus},
+    types::{Asset, MarketId, PoolId},
 };
 
 const _1_2: u128 = BASE / 2;
@@ -138,7 +139,7 @@ fn destroy_pool_correctly_cleans_up_pool() {
             Currencies::free_balance(ASSET_D, &ALICE),
         ];
         assert_ok!(Swaps::destroy_pool(DEFAULT_POOL_ID));
-        assert_err!(Swaps::pool(DEFAULT_POOL_ID), Error::<Runtime>::PoolDoesNotExist);
+        assert_err!(Swaps::pool_by_id(DEFAULT_POOL_ID), Error::<Runtime>::PoolDoesNotExist);
         // Ensure that funds _outside_ of the pool are not impacted!
         // TODO(#792): Remove pool shares.
         let total_pool_shares = Currencies::total_issuance(Swaps::pool_shares_id(DEFAULT_POOL_ID));
@@ -1701,7 +1702,7 @@ fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(0, true);
         assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
-        let pool = Swaps::pool(DEFAULT_POOL_ID).unwrap();
+        let pool = Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.status, PoolStatus::Closed);
         System::assert_last_event(Event::PoolClosed(DEFAULT_POOL_ID).into());
     });
@@ -1742,7 +1743,7 @@ fn open_pool_succeeds_and_emits_correct_event_if_pool_exists() {
             vec!(_1, _2, _3, _4),
         ));
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
-        let pool = Swaps::pool(DEFAULT_POOL_ID).unwrap();
+        let pool = Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.status, PoolStatus::Open);
         System::assert_last_event(Event::PoolActive(DEFAULT_POOL_ID).into());
     });
@@ -1878,7 +1879,7 @@ fn create_pool_correctly_associates_weights_with_assets() {
             DEFAULT_LIQUIDITY,
             vec!(_1, _2, _3, _4),
         ));
-        let pool = Swaps::pool(0).unwrap();
+        let pool = Swaps::pool_by_id(0).unwrap();
         assert_eq!(pool.weights[&ASSET_A], _4);
         assert_eq!(pool.weights[&ASSET_B], _2);
         assert_eq!(pool.weights[&ASSET_C], _3);

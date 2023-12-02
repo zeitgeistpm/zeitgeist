@@ -19,9 +19,9 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
+use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
-use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
@@ -29,7 +29,6 @@ sp_api::decl_runtime_apis! {
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen,
         MarketId: Codec + MaxEncodedLen,
-        Pool<Asset<MarketId>, Balance>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
 

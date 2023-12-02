@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pool::ScoringRule, types::OutcomeReport};
+use crate::types::OutcomeReport;
 use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -291,6 +291,14 @@ pub struct Deadlines<BN> {
     pub grace_period: BN,
     pub oracle_duration: BN,
     pub dispute_duration: BN,
+}
+
+#[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
+pub enum ScoringRule {
+    CPMM,
+    Lmsr,
+    Orderbook,
+    Parimutuel,
 }
 
 /// Defines the state of the market.

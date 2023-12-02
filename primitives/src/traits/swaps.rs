@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{Pool, PoolId};
+use crate::types::PoolId;
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
 use parity_scale_codec::MaxEncodedLen;
@@ -97,9 +97,6 @@ pub trait Swaps<AccountId> {
         asset_amount: Self::Balance,
         min_pool_amount: Self::Balance,
     ) -> Result<Weight, DispatchError>;
-
-    /// Returns the pool instance of a corresponding `pool_id`.
-    fn pool(pool_id: PoolId) -> Result<Pool<Self::Asset, Self::Balance>, DispatchError>;
 
     /// Swap - Exact amount in
     ///
