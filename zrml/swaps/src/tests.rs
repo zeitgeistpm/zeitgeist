@@ -347,7 +347,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
 
         let pool = Swaps::pools(DEFAULT_POOL_ID).unwrap();
 
-        assert_eq!(pool.assets, ASSETS);
+        assert_eq!(pool.assets.clone().into_inner(), ASSETS);
         assert_eq!(pool.swap_fee, 1);
         assert_eq!(pool.total_weight, _10);
 

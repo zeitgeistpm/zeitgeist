@@ -142,7 +142,7 @@ where
     (p.transfer_pool)()?;
 
     (p.event)(PoolAssetsEvent {
-        assets: p.pool.assets.clone(),
+        assets: p.pool.assets.clone().into_inner(),
         bounds: p.asset_bounds,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred,

@@ -62,15 +62,16 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletId, Parameter,
+        transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
-    use parity_scale_codec::MaxEncodedLen;
+    use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+    use scale_info::TypeInfo;
     use sp_arithmetic::traits::{Saturating, Zero};
     use sp_runtime::{
         traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member},
-        DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::CENT,
@@ -649,6 +650,20 @@ mod pallet {
         WinningAssetNotFound,
         /// Some amount in a transaction equals zero.
         ZeroAmount,
+        /// An unexpected error occurred. This is the result of faulty pallet logic and should be
+        /// reported to the pallet maintainers.
+        Unexpected(UnexpectedError),
+    }
+
+    #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+    pub enum UnexpectedError {
+        StorageOverflow,
+    }
+
+    impl<T> From<UnexpectedError> for Error<T> {
+        fn from(error: UnexpectedError) -> Error<T> {
+            Error::<T>::Unexpected(error)
+        }
     }
 
     #[pallet::event]
@@ -716,12 +731,12 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pools)]
-    pub type Pools<T: Config> =
+    pub(crate) type Pools<T: Config> =
         StorageMap<_, Blake2_128Concat, PoolId, Option<PoolOf<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
-    pub type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
+    pub(crate) type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
         pub fn get_spot_price(
@@ -985,11 +1000,15 @@ mod pallet {
             T::AssetManager::deposit(pool_shares_id, &who, amount)?;
 
             let pool = Pool {
-                assets: sorted_assets,
+                assets: sorted_assets
+                    .try_into()
+                    .map_err(|_| Error::<T>::Unexpected(UnexpectedError::StorageOverflow))?,
                 swap_fee,
                 status: PoolStatus::Closed,
                 total_weight,
-                weights: map,
+                weights: map
+                    .try_into()
+                    .map_err(|_| Error::<T>::Unexpected(UnexpectedError::StorageOverflow))?,
             };
 
             <Pools<T>>::insert(next_pool_id, Some(pool.clone()));
