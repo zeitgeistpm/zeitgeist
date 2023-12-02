@@ -22,9 +22,7 @@
 use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
 use sp_runtime::{
     traits::{MaybeDisplay, MaybeFromStr},
-    DispatchError,
 };
-use sp_std::vec::Vec;
 use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
@@ -36,16 +34,14 @@ sp_api::decl_runtime_apis! {
         Pool<Balance, MarketId>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
+
         fn pool_account_id(pool_id: &PoolId) -> AccountId;
+
         fn get_spot_price(
             pool_id: &PoolId,
             asset_in: &Asset<MarketId>,
             asset_out: &Asset<MarketId>,
             with_fees: bool,
         ) -> SerdeWrapper<Balance>;
-        fn get_all_spot_prices(
-            pool_id: &PoolId,
-            with_fees: bool
-        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError>;
     }
 }

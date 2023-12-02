@@ -43,11 +43,9 @@ pub trait Swaps<AccountId> {
     fn create_pool(
         creator: AccountId,
         assets: Vec<Asset<Self::MarketId>>,
-        base_asset: Asset<Self::MarketId>,
-        market_id: Self::MarketId,
-        swap_fee: Option<Self::Balance>,
-        amount: Option<Self::Balance>,
-        weights: Option<Vec<u128>>,
+        swap_fee: Self::Balance,
+        amount: Self::Balance,
+        weights: Vec<u128>,
     ) -> Result<PoolId, DispatchError>;
 
     /// Close the specified pool.

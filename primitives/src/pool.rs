@@ -25,20 +25,17 @@ use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
+// TODO Remove total_subsidy and make total_weight and weights non-optional, etc.
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 pub struct Pool<Balance, MarketId>
 where
     MarketId: MaxEncodedLen,
 {
     pub assets: Vec<Asset<MarketId>>,
-    pub base_asset: Asset<MarketId>,
-    pub market_id: MarketId,
     pub pool_status: PoolStatus,
-    pub scoring_rule: ScoringRule,
-    pub swap_fee: Option<Balance>,
-    pub total_subsidy: Option<Balance>,
-    pub total_weight: Option<u128>,
-    pub weights: Option<BTreeMap<Asset<MarketId>, u128>>,
+    pub swap_fee: Balance,
+    pub total_weight: u128,
+    pub weights: BTreeMap<Asset<MarketId>, u128>,
 }
 
 impl<Balance, MarketId> Pool<Balance, MarketId>
@@ -46,11 +43,7 @@ where
     MarketId: MaxEncodedLen + Ord,
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
-        if let Some(weights) = &self.weights {
-            return BTreeMap::get(weights, asset).is_some();
-        }
-
-        false
+        self.weights.get(asset).is_some()
     }
 }
 
@@ -70,10 +63,7 @@ where
         <Asset<MarketId>>::max_encoded_len()
             .saturating_mul(MAX_ASSETS.saturated_into::<usize>())
             .saturating_add(max_encoded_length_bytes)
-            .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
-            .saturating_add(MarketId::max_encoded_len())
             .saturating_add(PoolStatus::max_encoded_len())
-            .saturating_add(ScoringRule::max_encoded_len())
             .saturating_add(<Option<Balance>>::max_encoded_len().saturating_mul(2))
             .saturating_add(<Option<u128>>::max_encoded_len())
             .saturating_add(b_tree_map_size)

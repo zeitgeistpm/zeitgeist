@@ -35,7 +35,7 @@ use zeitgeist_primitives::{
         checked_ops_res::CheckedSubRes,
         fixed::{FixedDiv, FixedMul},
     },
-    types::{Asset, Pool, PoolId, ScoringRule},
+    types::{Asset, Pool, PoolId},
 };
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
@@ -50,7 +50,6 @@ where
     T: Config,
 {
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(&p.pool_id);
 
@@ -87,7 +86,6 @@ where
     F3: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(&p.pool_id);
@@ -122,7 +120,6 @@ where
     F4: FnMut(BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
@@ -164,15 +161,11 @@ where
     F2: FnMut(SwapEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
     T: crate::Config,
 {
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     ensure!(p.pool.assets.binary_search(&p.asset_in).is_ok(), Error::<T>::AssetNotInPool);
     ensure!(p.pool.assets.binary_search(&p.asset_out).is_ok(), Error::<T>::AssetNotInPool);
-
-    if p.pool.scoring_rule == ScoringRule::CPMM {
-        ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
-        ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
-    }
+    ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
+    ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
 
     let spot_price_before =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;

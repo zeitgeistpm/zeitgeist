@@ -38,7 +38,6 @@ use sp_arithmetic::Perbill;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    DispatchError,
 };
 use zeitgeist_primitives::{
     constants::mock::{
@@ -279,13 +278,6 @@ sp_api::mock_impl_runtime_apis! {
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
-        }
-
-        fn get_all_spot_prices(
-            pool_id: &PoolId,
-            with_fees: bool
-        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
-            Swaps::get_all_spot_prices(pool_id, with_fees)
         }
     }
 }
