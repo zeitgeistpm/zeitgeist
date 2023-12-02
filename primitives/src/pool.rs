@@ -16,57 +16,53 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    constants::MAX_ASSETS,
-    types::{Asset, PoolStatus},
-};
+use crate::{constants::MAX_ASSETS, types::PoolStatus};
 use alloc::{collections::BTreeMap, vec::Vec};
 use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
-// TODO Remove total_subsidy and make total_weight and weights non-optional, etc.
+// TODO Move  out of primitives
+// TODO Use bounded
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
-pub struct Pool<Balance, MarketId>
-where
-    MarketId: MaxEncodedLen,
-{
-    pub assets: Vec<Asset<MarketId>>,
-    pub pool_status: PoolStatus,
+pub struct Pool<Asset, Balance> {
+    pub assets: Vec<Asset>,
+    pub pool_status: PoolStatus, // TODO Remove
     pub swap_fee: Balance,
     pub total_weight: u128,
-    pub weights: BTreeMap<Asset<MarketId>, u128>,
+    pub weights: BTreeMap<Asset, u128>,
 }
 
-impl<Balance, MarketId> Pool<Balance, MarketId>
+impl<Asset, Balance> Pool<Asset, Balance>
 where
-    MarketId: MaxEncodedLen + Ord,
+    Asset: Ord,
 {
-    pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
+    pub fn bound(&self, asset: &Asset) -> bool {
         self.weights.get(asset).is_some()
     }
 }
 
-impl<Balance, MarketId> MaxEncodedLen for Pool<Balance, MarketId>
+impl<Asset, Balance> MaxEncodedLen for Pool<Asset, Balance>
 where
+    Asset: MaxEncodedLen,
     Balance: MaxEncodedLen,
-    MarketId: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
+        // TODO Update when open is added to the pool
+        let assets_size = Asset::max_encoded_len().saturating_mul(MAX_ASSETS.saturated_into());
+        let swap_fee_size = Balance::max_encoded_len();
+        let total_weight_size = u128::max_encoded_len();
         let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
-        let b_tree_map_size = 1usize
-            .saturating_add(MAX_ASSETS.saturated_into::<usize>().saturating_mul(
-                <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
-            ))
-            .saturating_add(max_encoded_length_bytes);
-
-        <Asset<MarketId>>::max_encoded_len()
-            .saturating_mul(MAX_ASSETS.saturated_into::<usize>())
-            .saturating_add(max_encoded_length_bytes)
-            .saturating_add(PoolStatus::max_encoded_len())
-            .saturating_add(<Option<Balance>>::max_encoded_len().saturating_mul(2))
-            .saturating_add(<Option<u128>>::max_encoded_len())
-            .saturating_add(b_tree_map_size)
+        let weights_size =
+            1usize
+                .saturating_add(MAX_ASSETS.saturated_into::<usize>().saturating_mul(
+                    Asset::max_encoded_len().saturating_add(u128::max_encoded_len()),
+                ))
+                .saturating_add(max_encoded_length_bytes);
+        assets_size
+            .saturating_add(swap_fee_size)
+            .saturating_add(total_weight_size)
+            .saturating_add(weights_size)
     }
 }
 

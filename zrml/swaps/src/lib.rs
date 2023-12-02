@@ -60,13 +60,15 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletId,
+        transactional, Blake2_128Concat, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
+    use parity_scale_codec::MaxEncodedLen;
     use sp_arithmetic::traits::{Saturating, Zero};
     use sp_runtime::{
-        traits::AccountIdConversion, DispatchError, DispatchResult, SaturatedConversion,
+        traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member},
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::CENT,
@@ -74,18 +76,20 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedMulRes},
             fixed::FixedMul,
         },
-        traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
+        traits::{Swaps, ZeitgeistAssetManager},
         types::{Asset, Pool, PoolId, PoolStatus, SerdeWrapper},
     };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
-    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type AssetOf<T> = Asset<<T as Config>::MarketId>;
+    // pub(crate) type AssetOf<T> =
+    //     <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
+    pub(crate) type BalanceOf<T> =
+        <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
+    pub(crate) type PoolOf<T> = Pool<AssetOf<T>, BalanceOf<T>>;
 
     const MIN_BALANCE: u128 = CENT;
 
@@ -178,7 +182,7 @@ mod pallet {
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset: Asset<MarketIdOf<T>>,
+            asset: AssetOf<T>,
             #[pallet::compact] asset_amount: BalanceOf<T>,
             #[pallet::compact] max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -216,7 +220,7 @@ mod pallet {
         pub fn pool_exit_with_exact_pool_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset: Asset<MarketIdOf<T>>,
+            asset: AssetOf<T>,
             #[pallet::compact] pool_amount: BalanceOf<T>,
             #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -345,7 +349,7 @@ mod pallet {
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset_in: Asset<MarketIdOf<T>>,
+            asset_in: AssetOf<T>,
             #[pallet::compact] asset_amount: BalanceOf<T>,
             #[pallet::compact] min_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -383,7 +387,7 @@ mod pallet {
         pub fn pool_join_with_exact_pool_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset: Asset<MarketIdOf<T>>,
+            asset: AssetOf<T>,
             #[pallet::compact] pool_amount: BalanceOf<T>,
             #[pallet::compact] max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -449,9 +453,9 @@ mod pallet {
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset_in: Asset<MarketIdOf<T>>,
+            asset_in: AssetOf<T>,
             #[pallet::compact] asset_amount_in: BalanceOf<T>,
-            asset_out: Asset<MarketIdOf<T>>,
+            asset_out: AssetOf<T>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
@@ -493,9 +497,9 @@ mod pallet {
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset_in: Asset<MarketIdOf<T>>,
+            asset_in: AssetOf<T>,
             max_asset_amount_in: Option<BalanceOf<T>>,
-            asset_out: Asset<MarketIdOf<T>>,
+            asset_out: AssetOf<T>,
             #[pallet::compact] asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
@@ -515,17 +519,26 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// Shares of outcome assets and native currency
+        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<Self::MarketId>>;
+
+        // FIXME Remove this thing in the new asset system.
+        type MarketId: AtLeast32Bit
+            + Copy
+            + Default
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + Member
+            + Parameter;
+
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+        /// The weight information for swap's dispatchable functions.
+        type WeightInfo: WeightInfoZeitgeist;
 
         /// The fee for exiting a pool.
         #[pallet::constant]
         type ExitFee: Get<BalanceOf<Self>>;
-
-        type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
-                Balance = BalanceOf<Self>,
-            >;
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
@@ -555,12 +568,6 @@ mod pallet {
         /// The module identifier.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
-
-        /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
-
-        /// The weight information for swap's dispatchable functions.
-        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
@@ -656,7 +663,7 @@ mod pallet {
         /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount, pool_account\]
         PoolCreate(
             CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
-            Pool<BalanceOf<T>, MarketIdOf<T>>,
+            PoolOf<T>,
             BalanceOf<T>,
             T::AccountId,
         ),
@@ -667,52 +674,24 @@ mod pallet {
         /// A pool was opened. \[pool_id\]
         PoolActive(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
-        PoolExit(
-            PoolAssetsEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<MarketIdOf<T>>,
-                BalanceOf<T>,
-            >,
-        ),
+        PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>),
         /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolExitWithExactAssetAmount(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<MarketIdOf<T>>,
-                BalanceOf<T>,
-            >,
+            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
         ),
         /// Exits a pool given an exact pool's amount. \[PoolAssetEvent\]
         PoolExitWithExactPoolAmount(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<MarketIdOf<T>>,
-                BalanceOf<T>,
-            >,
+            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
         ),
         /// Someone has joined a pool. \[PoolAssetsEvent\]
-        PoolJoin(
-            PoolAssetsEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<MarketIdOf<T>>,
-                BalanceOf<T>,
-            >,
-        ),
+        PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>),
         /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolJoinWithExactAssetAmount(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<MarketIdOf<T>>,
-                BalanceOf<T>,
-            >,
+            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
         ),
         /// Joins a pool given an exact pool's amount. \[PoolAssetEvent\]
         PoolJoinWithExactPoolAmount(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<MarketIdOf<T>>,
-                BalanceOf<T>,
-            >,
+            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
         ),
         /// Pool was manually destroyed. \[pool_id\]
         PoolDestroyed(PoolId),
@@ -723,11 +702,11 @@ mod pallet {
         ),
         /// An exact amount of an asset is entering the pool. \[SwapEvent\]
         SwapExactAmountIn(
-            SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
+            SwapEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
         ),
         /// An exact amount of an asset is leaving the pool. \[SwapEvent\]
         SwapExactAmountOut(
-            SwapEvent<<T as frame_system::Config>::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>,
+            SwapEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
         ),
     }
 
@@ -738,13 +717,8 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pools)]
-    pub type Pools<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        PoolId,
-        Option<Pool<BalanceOf<T>, MarketIdOf<T>>>,
-        ValueQuery,
-    >;
+    pub type Pools<T: Config> =
+        StorageMap<_, Blake2_128Concat, PoolId, Option<PoolOf<T>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
@@ -753,8 +727,8 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn get_spot_price(
             pool_id: &PoolId,
-            asset_in: &Asset<MarketIdOf<T>>,
-            asset_out: &Asset<MarketIdOf<T>>,
+            asset_in: &AssetOf<T>,
+            asset_out: &AssetOf<T>,
             with_fees: bool,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pool = Self::pool_by_id(*pool_id)?;
@@ -788,7 +762,7 @@ mod pallet {
         }
 
         /// The minimum allowed balance of `asset` in a liquidity pool.
-        pub(crate) fn min_balance(asset: Asset<MarketIdOf<T>>) -> BalanceOf<T> {
+        pub(crate) fn min_balance(asset: AssetOf<T>) -> BalanceOf<T> {
             T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
         }
 
@@ -801,10 +775,7 @@ mod pallet {
         ///
         /// **Should** only be called if `assets` is non-empty. Note that the existence of a pool
         /// with the specified `pool_id` is not mandatory.
-        pub(crate) fn min_balance_of_pool(
-            pool_id: PoolId,
-            assets: &[Asset<MarketIdOf<T>>],
-        ) -> BalanceOf<T> {
+        pub(crate) fn min_balance_of_pool(pool_id: PoolId, assets: &[AssetOf<T>]) -> BalanceOf<T> {
             assets
                 .iter()
                 .map(|asset| Self::min_balance(*asset))
@@ -815,7 +786,7 @@ mod pallet {
 
         fn ensure_minimum_liquidity_shares(
             pool_id: PoolId,
-            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
+            pool: &PoolOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             if pool.pool_status == PoolStatus::Clean {
@@ -831,8 +802,8 @@ mod pallet {
 
         fn ensure_minimum_balance(
             pool_id: PoolId,
-            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
-            asset: Asset<MarketIdOf<T>>,
+            pool: &PoolOf<T>,
+            asset: AssetOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             // No need to prevent a clean pool from getting drained.
@@ -868,7 +839,7 @@ mod pallet {
 
         #[inline]
         pub(crate) fn check_provided_values_len_must_equal_assets_len<U>(
-            assets: &[Asset<MarketIdOf<T>>],
+            assets: &[AssetOf<T>],
             provided_values: &[U],
         ) -> Result<(), Error<T>>
         where
@@ -880,9 +851,7 @@ mod pallet {
             Ok(())
         }
 
-        pub(crate) fn check_if_pool_is_active(
-            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
-        ) -> DispatchResult {
+        pub(crate) fn check_if_pool_is_active(pool: &PoolOf<T>) -> DispatchResult {
             match pool.pool_status {
                 PoolStatus::Active => Ok(()),
                 _ => Err(Error::<T>::PoolIsNotActive.into()),
@@ -898,13 +867,11 @@ mod pallet {
             T::AssetManager::deposit(shares_id, to, amount)
         }
 
-        pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<MarketIdOf<T>> {
+        pub(crate) fn pool_shares_id(pool_id: PoolId) -> AssetOf<T> {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
 
-        pub fn pool_by_id(
-            pool_id: PoolId,
-        ) -> Result<Pool<BalanceOf<T>, MarketIdOf<T>>, DispatchError>
+        pub fn pool_by_id(pool_id: PoolId) -> Result<PoolOf<T>, DispatchError>
         where
             T: Config,
         {
@@ -923,7 +890,7 @@ mod pallet {
         // Mutates a stored pool. Returns `Err` if `pool_id` does not exist.
         pub(crate) fn mutate_pool<F>(pool_id: PoolId, mut cb: F) -> DispatchResult
         where
-            F: FnMut(&mut Pool<BalanceOf<T>, MarketIdOf<T>>) -> DispatchResult,
+            F: FnMut(&mut PoolOf<T>) -> DispatchResult,
         {
             <Pools<T>>::try_mutate(pool_id, |pool| {
                 let pool = if let Some(el) = pool {
@@ -935,15 +902,12 @@ mod pallet {
             })
         }
 
-        fn pool_weight_rslt(
-            pool: &Pool<BalanceOf<T>, MarketIdOf<T>>,
-            asset: &Asset<MarketIdOf<T>>,
-        ) -> Result<u128, Error<T>> {
+        fn pool_weight_rslt(pool: &PoolOf<T>, asset: &AssetOf<T>) -> Result<u128, Error<T>> {
             pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
         }
 
         /// Calculate the exit fee percentage for `pool`.
-        fn calc_exit_fee(pool: &Pool<BalanceOf<T>, MarketIdOf<T>>) -> BalanceOf<T> {
+        fn calc_exit_fee(pool: &PoolOf<T>) -> BalanceOf<T> {
             // We don't charge exit fees on closed or cleaned up pools (no need to punish LPs for
             // leaving the pool)!
             match pool.pool_status {
@@ -957,8 +921,8 @@ mod pallet {
     where
         T: Config,
     {
+        type Asset = AssetOf<T>;
         type Balance = BalanceOf<T>;
-        type MarketId = MarketIdOf<T>;
 
         /// Creates an initial active pool.
         ///
@@ -977,7 +941,7 @@ mod pallet {
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
-            assets: Vec<Asset<MarketIdOf<T>>>,
+            assets: Vec<AssetOf<T>>,
             swap_fee: BalanceOf<T>,
             amount: BalanceOf<T>,
             weights: Vec<u128>,
@@ -1023,8 +987,8 @@ mod pallet {
 
             let pool = Pool {
                 assets: sorted_assets,
-                pool_status: PoolStatus::Initialized,
                 swap_fee,
+                pool_status: PoolStatus::Initialized,
                 total_weight,
                 weights: map,
             };
@@ -1111,7 +1075,7 @@ mod pallet {
         fn pool_exit_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
-            asset: Asset<MarketIdOf<T>>,
+            asset: AssetOf<T>,
             asset_amount: BalanceOf<T>,
             max_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
@@ -1173,7 +1137,7 @@ mod pallet {
         fn pool_join_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
-            asset_in: Asset<MarketIdOf<T>>,
+            asset_in: AssetOf<T>,
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
@@ -1212,7 +1176,7 @@ mod pallet {
             pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
         }
 
-        fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, MarketIdOf<T>>, DispatchError> {
+        fn pool(pool_id: PoolId) -> Result<PoolOf<T>, DispatchError> {
             Self::pool_by_id(pool_id)
         }
 
@@ -1234,9 +1198,9 @@ mod pallet {
         fn swap_exact_amount_in(
             who: T::AccountId,
             pool_id: PoolId,
-            asset_in: Asset<MarketIdOf<T>>,
+            asset_in: AssetOf<T>,
             asset_amount_in: BalanceOf<T>,
-            asset_out: Asset<MarketIdOf<T>>,
+            asset_out: AssetOf<T>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
@@ -1313,9 +1277,9 @@ mod pallet {
         fn swap_exact_amount_out(
             who: T::AccountId,
             pool_id: PoolId,
-            asset_in: Asset<MarketIdOf<T>>,
+            asset_in: AssetOf<T>,
             max_asset_amount_in: Option<BalanceOf<T>>,
-            asset_out: Asset<MarketIdOf<T>>,
+            asset_out: AssetOf<T>,
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {

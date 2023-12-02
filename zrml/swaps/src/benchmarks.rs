@@ -29,7 +29,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{Config, Event, MarketIdOf};
+use crate::{AssetOf, Config, Event};
 use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
@@ -38,7 +38,7 @@ use sp_runtime::traits::{SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
     math::fixed::FixedMul,
-    traits::Swaps as _,
+    traits::Swaps as SwapsApi,
     types::{Asset, PoolStatus},
 };
 
@@ -52,8 +52,8 @@ fn generate_assets<T: Config>(
     owner: &T::AccountId,
     asset_count: usize,
     opt_asset_amount: Option<BalanceOf<T>>,
-) -> (Vec<Asset<MarketIdOf<T>>>, BalanceOf<T>) {
-    let mut assets: Vec<Asset<MarketIdOf<T>>> = Vec::new();
+) -> (Vec<AssetOf<T>>, BalanceOf<T>) {
+    let mut assets: Vec<AssetOf<T>> = Vec::new();
     let asset_amount = opt_asset_amount.unwrap_or_else(|| LIQUIDITY.saturated_into());
     for i in 0..asset_count {
         let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
@@ -71,7 +71,7 @@ fn bench_create_pool<T: Config>(
     opt_asset_amount: Option<BalanceOf<T>>,
     opt_weights: Option<Vec<u128>>,
     open: bool,
-) -> (u128, Vec<Asset<MarketIdOf<T>>>, BalanceOf<T>) {
+) -> (u128, Vec<AssetOf<T>>, BalanceOf<T>) {
     let (assets, asset_amount) = generate_assets::<T>(&caller, asset_count, opt_asset_amount);
     let weights = opt_weights.unwrap_or_else(|| vec![T::MinWeight::get(); asset_count]);
     let pool_id = Pallet::<T>::create_pool(
@@ -93,13 +93,8 @@ benchmarks! {
         // TODO Use a different account for joining (otherwise, we get fewer storage reads)
         let a in 2 .. T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, _, asset_amount) = bench_create_pool::<T>(
-            caller.clone(),
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, _, asset_amount) =
+            bench_create_pool::<T>(caller.clone(), a as usize, None, None, true);
         let pool_amount = (asset_amount / 2u8.into()).saturated_into();
         let min_assets_out = vec![0u32.into(); a as usize];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, min_assets_out)
@@ -107,13 +102,8 @@ benchmarks! {
     pool_exit_with_exact_asset_amount {
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, asset_amount) = bench_create_pool::<T>(
-            caller.clone(),
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, assets, asset_amount) =
+            bench_create_pool::<T>(caller.clone(), a as usize, None, None, true);
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
         let pool_amount = asset_amount.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, pool_amount)
@@ -121,13 +111,8 @@ benchmarks! {
     pool_exit_with_exact_pool_amount {
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
-            caller.clone(),
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, assets, ..) =
+            bench_create_pool::<T>(caller.clone(), a as usize, None, None, true);
         let min_asset_amount = 0u32.into();
         let pool_amount: BalanceOf<T> = CENT.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, min_asset_amount)
@@ -135,13 +120,8 @@ benchmarks! {
     pool_join {
         let a in 2 .. T::MaxAssets::get().into(); // asset_count
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, _, asset_amount) = bench_create_pool::<T>(
-            caller.clone(),
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, _, asset_amount) =
+            bench_create_pool::<T>(caller.clone(), a as usize, None, None, true);
         generate_assets::<T>(&caller, a as usize, Some(asset_amount));
         let pool_amount = asset_amount.saturated_into();
         let max_assets_in = vec![u128::MAX.saturated_into(); a as usize];
@@ -150,13 +130,8 @@ benchmarks! {
     pool_join_with_exact_asset_amount {
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
-            caller.clone(),
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, assets, ..) =
+            bench_create_pool::<T>(caller.clone(), a as usize, None, None, true);
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
         generate_assets::<T>(&caller, a as usize, Some(asset_amount));
         let min_pool_amount = 0u32.into();
@@ -166,13 +141,8 @@ benchmarks! {
         // TODO This is still off. Explicitly state liquidity here!
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, asset_amount) = bench_create_pool::<T>(
-            caller.clone(),
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, assets, asset_amount) =
+            bench_create_pool::<T>(caller.clone(), a as usize, None, None, true);
         let pool_amount = BASE.saturated_into();
         generate_assets::<T>(&caller, a as usize, Some(asset_amount));
         let max_asset_amount: BalanceOf<T> = u128::MAX.saturated_into();
@@ -254,13 +224,7 @@ benchmarks! {
         let a in 2..T::MaxAssets::get().into();
 
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, ..) = bench_create_pool::<T>(
-            caller,
-            a as usize,
-            None,
-            None,
-            false,
-        );
+        let (pool_id, ..) = bench_create_pool::<T>(caller, a as usize, None, None, false);
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
         assert_eq!(pool.pool_status, PoolStatus::Initialized);
     }: {
@@ -274,13 +238,7 @@ benchmarks! {
         let a in 2..T::MaxAssets::get().into();
 
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, ..) = bench_create_pool::<T>(
-            caller,
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, ..) = bench_create_pool::<T>(caller, a as usize, None, None, true);
         let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
         assert_eq!(pool.pool_status, PoolStatus::Active);
     }: {
@@ -294,21 +252,13 @@ benchmarks! {
         let a in 2..T::MaxAssets::get().into();
 
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, ..) = bench_create_pool::<T>(
-            caller,
-            a as usize,
-            None,
-            None,
-            true,
-        );
+        let (pool_id, ..) = bench_create_pool::<T>(caller, a as usize, None, None, true);
         assert!(Pallet::<T>::pool_by_id(pool_id).is_ok());
     }: {
         Pallet::<T>::destroy_pool(pool_id).unwrap();
     } verify {
         assert!(Pallet::<T>::pool_by_id(pool_id).is_err());
-        assert_last_event::<T>(Event::PoolDestroyed::<T>(
-            pool_id,
-        ).into());
+        assert_last_event::<T>(Event::PoolDestroyed::<T>(pool_id).into());
     }
 
     impl_benchmark_test_suite!(

@@ -34,25 +34,21 @@ use frame_support::{
     traits::{Contains, Everything},
 };
 use orml_traits::parameter_type_with_key;
-use sp_arithmetic::Perbill;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId,
-        MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxSwapFee, MaxTotalWeight,
-        MaxWeight, MinAssets, MinWeight, MinimumPeriod, SwapsPalletId, BASE,
+        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId, MaxAssets, MaxInRatio, MaxLocks,
+        MaxOutRatio, MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight,
+        MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
-        ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -93,7 +89,6 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currencies: orml_currencies::{Pallet},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -104,9 +99,9 @@ construct_runtime!(
 pub type AssetManager = Currencies;
 
 impl crate::Config for Runtime {
+    type MarketId = MarketId;
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
-    type MarketCommons = MarketCommons;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
@@ -249,13 +244,7 @@ impl ExtBuilder {
             .assimilate_storage(&mut storage)
             .unwrap();
 
-        let mut ext = sp_io::TestExternalities::from(storage);
-
-        ext.execute_with(|| {
-            MarketCommons::push_market(mock_market(4)).unwrap();
-        });
-
-        ext
+        sp_io::TestExternalities::from(storage)
     }
 }
 
@@ -279,28 +268,5 @@ sp_api::mock_impl_runtime_apis! {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
-    }
-}
-
-pub(super) fn mock_market(
-    categories: u16,
-) -> Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> {
-    Market {
-        base_asset: BASE_ASSET,
-        creation: MarketCreation::Permissionless,
-        creator_fee: Perbill::from_parts(0),
-        creator: DEFAULT_MARKET_CREATOR,
-        market_type: MarketType::Categorical(categories),
-        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
-        metadata: vec![0; 50],
-        oracle: DEFAULT_MARKET_ORACLE,
-        period: MarketPeriod::Block(0..1),
-        deadlines: Deadlines::default(),
-        report: None,
-        resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
-        status: MarketStatus::Active,
-        bonds: MarketBonds::default(),
-        early_close: None,
     }
 }

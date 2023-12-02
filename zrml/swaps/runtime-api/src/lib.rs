@@ -20,9 +20,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::{Codec, Decode, MaxEncodedLen};
-use sp_runtime::{
-    traits::{MaybeDisplay, MaybeFromStr},
-};
+use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 use zeitgeist_primitives::types::{Asset, Pool, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
@@ -31,7 +29,7 @@ sp_api::decl_runtime_apis! {
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen,
         MarketId: Codec + MaxEncodedLen,
-        Pool<Balance, MarketId>: Decode,
+        Pool<Asset<MarketId>, Balance>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
 

@@ -118,6 +118,7 @@ where
     }
 }
 
+// FIXME Replace BTreeMap with BoundedBTreeMap
 impl<T: Config, LSM: LiquiditySharesManager<T>> MaxEncodedLen for Pool<T, LSM>
 where
     T::AccountId: MaxEncodedLen,

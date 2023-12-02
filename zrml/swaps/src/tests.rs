@@ -29,7 +29,7 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     math::calc_out_given_in,
     mock::*,
-    BalanceOf, Config, Error, Event, MarketIdOf,
+    AssetOf, BalanceOf, Config, Error, Event,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use more_asserts::{assert_ge, assert_le};
@@ -100,7 +100,7 @@ macro_rules! assert_approx {
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_A]; "start and end")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_E]; "successive at end")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_A, ASSET_E, ASSET_D]; "start and middle")]
-fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<MarketIdOf<Runtime>>>) {
+fn create_pool_fails_with_duplicate_assets(assets: Vec<AssetOf<Runtime>>) {
     ExtBuilder::default().build().execute_with(|| {
         assets.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, _10000);
@@ -339,13 +339,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount));
         });
-        assert_ok!(Swaps::create_pool(
-            BOB,
-            ASSETS.to_vec(),
-            1,
-            amount,
-            vec!(_4, _3, _2, _1),
-        ));
+        assert_ok!(Swaps::create_pool(BOB, ASSETS.to_vec(), 1, amount, vec!(_4, _3, _2, _1),));
 
         let next_pool_after = Swaps::next_pool_id();
         assert_eq!(next_pool_after, 1);
@@ -1467,13 +1461,7 @@ fn create_pool_fails_on_too_many_assets() {
         });
 
         assert_noop!(
-            Swaps::create_pool(
-                BOB,
-                assets.clone(),
-                0,
-                DEFAULT_LIQUIDITY,
-                weights,
-            ),
+            Swaps::create_pool(BOB, assets.clone(), 0, DEFAULT_LIQUIDITY, weights,),
             Error::<Runtime>::TooManyAssets
         );
     });
@@ -1608,13 +1596,7 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
         });
         let weight = <Runtime as crate::Config>::MaxTotalWeight::get() / 4 + 100;
         assert_noop!(
-            Swaps::create_pool(
-                BOB,
-                ASSETS.to_vec(),
-                0,
-                DEFAULT_LIQUIDITY,
-                vec![weight; 4],
-            ),
+            Swaps::create_pool(BOB, ASSETS.to_vec(), 0, DEFAULT_LIQUIDITY, vec![weight; 4],),
             Error::<Runtime>::MaxTotalWeight,
         );
     });
