@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::storage::bounded_vec::BoundedVec;
-use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
+use frame_support::storage::{bounded_btree_map::BoundedBTreeMap, bounded_vec::BoundedVec};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::Get, RuntimeDebug};

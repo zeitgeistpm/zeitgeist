@@ -261,7 +261,7 @@ mod tests {
                 Asset::CategoricalOutcome(market_id, 0),
                 Asset::CategoricalOutcome(market_id, 1),
                 Asset::CategoricalOutcome(market_id, 2),
-                base_asset.clone(),
+                base_asset,
             ];
             let swap_fee = 5;
             let total_weight = 8;
@@ -269,7 +269,7 @@ mod tests {
                 Asset::CategoricalOutcome(market_id, 0) => 1,
                 Asset::CategoricalOutcome(market_id, 1) => 2,
                 Asset::CategoricalOutcome(market_id, 2) => 1,
-                base_asset.clone() => 8,
+                base_asset => 8,
             });
             let opt_old_pool = Some(OldPool {
                 assets: assets.clone(),
@@ -314,7 +314,7 @@ mod tests {
                 Asset::CategoricalOutcome(market_id, 0),
                 Asset::CategoricalOutcome(market_id, 1),
                 Asset::CategoricalOutcome(market_id, 2),
-                base_asset.clone(),
+                base_asset,
             ];
             let opt_old_pool = Some(OldPool {
                 assets: assets.clone(),
@@ -342,23 +342,23 @@ mod tests {
     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
             StorageVersion::new(SWAPS_NEXT_STORAGE_VERSION).put::<Swaps<Runtime>>();
-            let assets = vec![
-                Asset::ForeignAsset(0),
-                Asset::ForeignAsset(1),
-                Asset::ForeignAsset(2),
-            ];
+            let assets =
+                vec![Asset::ForeignAsset(0), Asset::ForeignAsset(1), Asset::ForeignAsset(2)];
             let weights = create_b_tree_map!({
                 Asset::ForeignAsset(0) => 3,
                 Asset::ForeignAsset(1) => 4,
                 Asset::ForeignAsset(2) => 5,
             });
-            crate::Pools::<Runtime>::insert(0, Pool {
-                assets: assets.try_into().unwrap(),
-                status: PoolStatus::Open,
-                swap_fee: 4,
-                total_weight: 12,
-                weights: weights.try_into().unwrap(),
-            });
+            crate::Pools::<Runtime>::insert(
+                0,
+                Pool {
+                    assets: assets.try_into().unwrap(),
+                    status: PoolStatus::Open,
+                    swap_fee: 4,
+                    total_weight: 12,
+                    weights: weights.try_into().unwrap(),
+                },
+            );
             let tmp = storage_root(StateVersion::V1);
             MigratePools::<Runtime>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));
