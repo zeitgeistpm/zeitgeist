@@ -443,7 +443,32 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION)
                 .put::<MarketCommons<Runtime>>();
-            // TODO Add markets
+            let market = Market {
+                base_asset: Asset::<MarketIdOf<Runtime>>::ForeignAsset(0),
+                creator: 1,
+                creation: MarketCreation::Permissionless,
+                creator_fee: Perbill::from_rational(2u32, 3u32),
+                oracle: 4,
+                metadata: vec![0x05; 50],
+                market_type: MarketType::Categorical(999),
+                period: MarketPeriod::<BlockNumberOf<Runtime>, MomentOf<Runtime>>::Block(6..7),
+                deadlines: Deadlines { grace_period: 7, oracle_duration: 8, dispute_duration: 9 },
+                scoring_rule: ScoringRule::Parimutuel,
+                status: MarketStatus::Active,
+                report: Some(Report { at: 13, by: 14, outcome: OutcomeReport::Categorical(10) }),
+                resolved_outcome: None,
+                dispute_mechanism: Some(MarketDisputeMechanism::Court),
+                bonds: MarketBonds {
+                    creation: Some(Bond::new(11, 12)),
+                    oracle: None,
+                    outsider: None,
+                    dispute: None,
+                    close_dispute: None,
+                    close_request: None,
+                },
+                early_close: None,
+            };
+            crate::Markets::<Runtime>::insert(333, market);
             let tmp = storage_root(StateVersion::V1);
             MigrateScoringRuleAndMarketStatus::<Runtime>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));
