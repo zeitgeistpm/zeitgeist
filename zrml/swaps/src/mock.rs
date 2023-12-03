@@ -69,10 +69,6 @@ pub const BASE_ASSET: Asset<MarketId> = if let Some(asset) = ASSETS.last() {
     panic!("Invalid asset vector");
 };
 
-pub const DEFAULT_MARKET_ID: MarketId = 0;
-pub const DEFAULT_MARKET_ORACLE: AccountIdTest = DAVE;
-pub const DEFAULT_MARKET_CREATOR: AccountIdTest = DAVE;
-
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 // Mocked exit fee for easier calculations

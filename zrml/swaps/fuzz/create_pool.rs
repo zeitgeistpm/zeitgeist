@@ -21,7 +21,7 @@
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::traits::Swaps as SwapsTrait;
 
-use zrml_swaps::mock::{ExtBuilder, Swaps, DEFAULT_MARKET_ID};
+use zrml_swaps::mock::{ExtBuilder, Swaps};
 
 mod utils;
 use utils::{construct_asset, PoolCreationData};
@@ -32,8 +32,6 @@ fuzz_target!(|data: PoolCreationData| {
         let _ = Swaps::create_pool(
             data.origin,
             data.assets.into_iter().map(construct_asset).collect(),
-            construct_asset(data.base_asset),
-            DEFAULT_MARKET_ID,
             data.swap_fee,
             data.amount,
             data.weights,
