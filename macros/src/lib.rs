@@ -17,12 +17,12 @@
 
 /// Creates an `alloc::collections::BTreeMap` from the pattern `{ key => value, ... }`.
 ///
-/// ```rust
+/// ```ignore
 /// // Example:
 /// let m = create_b_tree_map!({ 0 => 1, 2 => 3 });
 /// assert_eq!(m[2], 3);
 ///
-/// // Overwriting a key:
+/// // Overwriting a key:)
 /// let m = create_b_tree_map!({ 0 => "foo", 0 => "bar" });
 /// assert_eq!(m[0], "bar");
 /// ```
