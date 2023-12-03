@@ -44,11 +44,11 @@ where
 {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
-        let market_commons_version = StorageVersion::get::<PredictionMarkets<T>>();
-        if market_commons_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+        let prediction_markets_version = StorageVersion::get::<PredictionMarkets<T>>();
+        if prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
             log::info!(
                 "DrainDeprecatedStorage: prediction-markets version is {:?}, but {:?} is required",
-                market_commons_version,
+                prediction_markets_version,
                 PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
@@ -87,8 +87,70 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use frame_support::{dispatch::fmt::Debug, migration::put_storage_value, StorageHasher};
+    use crate::{
+        mock::{ExtBuilder, Runtime},
+        CacheSize,
+    };
+    use frame_support::{
+        dispatch::fmt::Debug, migration::put_storage_value, storage_root, StorageHasher,
+    };
     use parity_scale_codec::Encode;
+    use sp_runtime::{traits::ConstU32, BoundedVec, StateVersion};
+    use zeitgeist_primitives::types::{MarketPeriod, SubsidyUntil};
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_version() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            DrainDeprecatedStorage::<Runtime>::on_runtime_upgrade();
+            assert_eq!(
+                StorageVersion::get::<PredictionMarkets<Runtime>>(),
+                PREDICTION_MARKETS_NEXT_STORAGE_VERSION
+            );
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_works() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            set_up_storage();
+            DrainDeprecatedStorage::<Runtime>::on_runtime_upgrade();
+            assert_eq!(MarketIdsPerOpenBlock::<Runtime>::iter().count(), 0);
+            assert_eq!(MarketIdsPerOpenTimeFrame::<Runtime>::iter().count(), 0);
+            assert!(!MarketsCollectingSubsidy::<Runtime>::exists());
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION)
+                .put::<PredictionMarkets<Runtime>>();
+            set_up_storage();
+            let tmp = storage_root(StateVersion::V1);
+            DrainDeprecatedStorage::<Runtime>::on_runtime_upgrade();
+            assert_eq!(tmp, storage_root(StateVersion::V1));
+        });
+    }
+
+    fn set_up_version() {
+        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION)
+            .put::<PredictionMarkets<Runtime>>();
+    }
+
+    fn set_up_storage() {
+        let market_ids_per_open_block: BoundedVec<_, CacheSize> = vec![1, 2, 3].try_into().unwrap();
+        MarketIdsPerOpenBlock::<Runtime>::insert(1, market_ids_per_open_block);
+        let market_ids_per_open_time_frame: BoundedVec<_, CacheSize> =
+            vec![4, 5, 6].try_into().unwrap();
+        MarketIdsPerOpenTimeFrame::<Runtime>::insert(2, market_ids_per_open_time_frame);
+        let subsidy_until: BoundedVec<_, ConstU32<16>> =
+            vec![SubsidyUntil { market_id: 7, period: MarketPeriod::Block(8..9) }]
+                .try_into()
+                .unwrap();
+        MarketsCollectingSubsidy::<Runtime>::put(subsidy_until);
+    }
 
     #[allow(unused)]
     fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
