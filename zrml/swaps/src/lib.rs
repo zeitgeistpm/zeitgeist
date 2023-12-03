@@ -60,7 +60,7 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType, StorageVersion},
         transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
     };
@@ -84,7 +84,7 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<<T as Config>::MarketId>;
@@ -732,7 +732,7 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn pools)]
     pub(crate) type Pools<T: Config> =
-        StorageMap<_, Blake2_128Concat, PoolId, Option<PoolOf<T>>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, PoolId, PoolOf<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
@@ -1011,7 +1011,7 @@ mod pallet {
                     .map_err(|_| Error::<T>::Unexpected(UnexpectedError::StorageOverflow))?,
             };
 
-            <Pools<T>>::insert(next_pool_id, Some(pool.clone()));
+            Pools::<T>::insert(next_pool_id, pool.clone());
 
             Self::deposit_event(Event::PoolCreate(
                 CommonPoolEventParams { pool_id: next_pool_id, who },

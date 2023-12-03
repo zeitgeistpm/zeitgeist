@@ -227,8 +227,10 @@ mod pallet {
     #[pallet::storage]
     pub type MarketCounter<T: Config> = StorageValue<_, T::MarketId, ValueQuery>;
 
-    /// Maps a market id to a related pool id. It is up to the caller to keep and sync valid
+    /// Maps a market ID to a related pool ID. It is up to the caller to keep and sync valid
     /// existent markets with valid existent pools.
+    ///
+    /// Beware! DEPRECATED as of v0.5.0.
     #[pallet::storage]
     pub type MarketPool<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, PoolId>;
 }

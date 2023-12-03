@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -21,503 +22,364 @@
 // balancer-core repository
 // <https://github.com/balancer-labs/balancer-core>.
 
-// use crate::{
-//     AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, MarketIdOf, MomentOf,
-//     Pallet as MarketCommons,
-// };
-// use alloc::vec::Vec;
-// use core::marker::PhantomData;
-// use frame_support::{
-//     log,
-//     pallet_prelude::{Blake2_128Concat, StorageVersion, Weight},
-//     traits::{Get, OnRuntimeUpgrade},
-// };
-// use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-// use scale_info::TypeInfo;
-// use sp_runtime::{Perbill, RuntimeDebug, Saturating};
-// use zeitgeist_primitives::types::{
-//     Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-//     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
-// };
-// 
-// cfg_if::cfg_if! {
-//     if #[cfg(feature = "try-runtime")] {
-//         use alloc::collections::BTreeMap;
-//         use frame_support::migration::storage_key_iter;
-//         use zeitgeist_primitives::types::MarketId;
-//     }
-// }
-// 
-// cfg_if::cfg_if! {
-//     if #[cfg(any(feature = "try-runtime", test))] {
-//         const MARKET_COMMONS: &[u8] = b"MarketCommons";
-//         const MARKETS: &[u8] = b"Markets";
-//     }
-// }
-// 
-// #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
-// pub struct OldPool<Balance, MarketId>
-// where
-//     MarketId: MaxEncodedLen,
-// {
-//     pub assets: Vec<Asset<MarketId>>,
-//     pub base_asset: Asset<MarketId>,
-//     pub market_id: MarketId,
-//     pub pool_status: OldPoolStatus,
-//     pub scoring_rule: OldScoringRule,
-//     pub swap_fee: Option<Balance>,
-//     pub total_subsidy: Option<Balance>,
-//     pub total_weight: Option<u128>,
-//     pub weights: Option<BTreeMap<Asset<MarketId>, u128>>,
-// }
-// 
-// impl<Balance, MarketId> Pool<Balance, MarketId>
-// where
-//     MarketId: MaxEncodedLen + Ord,
-// {
-//     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
-//         if let Some(weights) = &self.weights {
-//             return BTreeMap::get(weights, asset).is_some();
-//         }
-// 
-//         false
-//     }
-// }
-// 
-// impl<Balance, MarketId> MaxEncodedLen for OldPool<Balance, MarketId>
-// where
-//     Balance: MaxEncodedLen,
-//     MarketId: MaxEncodedLen,
-// {
-//     fn max_encoded_len() -> usize {
-//         let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
-//         let b_tree_map_size = 1usize
-//             .saturating_add(MAX_ASSETS.saturated_into::<usize>().saturating_mul(
-//                 <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
-//             ))
-//             .saturating_add(max_encoded_length_bytes);
-// 
-//         <Asset<MarketId>>::max_encoded_len()
-//             .saturating_mul(MAX_ASSETS.saturated_into::<usize>())
-//             .saturating_add(max_encoded_length_bytes)
-//             .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
-//             .saturating_add(MarketId::max_encoded_len())
-//             .saturating_add(PoolStatus::max_encoded_len())
-//             .saturating_add(ScoringRule::max_encoded_len())
-//             .saturating_add(<Option<Balance>>::max_encoded_len().saturating_mul(2))
-//             .saturating_add(<Option<u128>>::max_encoded_len())
-//             .saturating_add(b_tree_map_size)
-//     }
-// }
-// 
-// #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
-// pub enum OldScoringRule {
-//     CPMM,
-//     RikiddoSigmoidFeeMarketEma,
-//     Lmsr,
-//     Orderbook,
-//     Parimutuel,
-// }
-// 
-// #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-// #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-// #[derive(
-//     parity_scale_codec::Decode,
-//     parity_scale_codec::Encode,
-//     parity_scale_codec::MaxEncodedLen,
-//     scale_info::TypeInfo,
-//     Clone,
-//     Copy,
-//     Debug,
-//     Eq,
-//     Ord,
-//     PartialEq,
-//     PartialOrd,
-// )]
-// pub enum OldPoolStatus {
-//     /// Shares can be normally negotiated.
-//     Active,
-//     /// No trading is allowed. The pool is waiting to be subsidized.
-//     CollectingSubsidy,
-//     /// No trading/adding liquidity is allowed.
-//     Closed,
-//     /// The pool has been cleaned up, usually after the corresponding market has been resolved.
-//     Clean,
-//     /// The pool has just been created.
-//     Initialized,
-// }
-// 
-// const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 7;
-// const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = MARKET_COMMONS_REQUIRED_STORAGE_VERSION + 1;
-// 
-// #[frame_support::storage_alias]
-// pub(crate) type Markets<T: Config> =
-//     StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, OldMarketOf<T>>;
-// 
-// pub struct MigrateScoringRuleAndMarketStatus<T>(PhantomData<T>);
-// 
-// /// Deletes all Rikiddo markets from storage and
-// impl<T> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T>
-// where
-//     T: Config,
-// {
-//     fn on_runtime_upgrade() -> Weight {
-//         let mut total_weight = T::DbWeight::get().reads(1);
-//         let market_commons_version = StorageVersion::get::<MarketCommons<T>>();
-//         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
-//             log::info!(
-//                 "MigrateScoringRuleAndMarketStatus: market-commons version is {:?}, but {:?} is \
-//                  required",
-//                 market_commons_version,
-//                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
-//             );
-//             return total_weight;
-//         }
-//         log::info!("MigrateScoringRuleAndMarketStatus: Starting...");
-// 
-//         let mut translated = 0u64;
-//         crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
-//             // We proceed by deleting markets which use the Rikiddo scoring rule or have a status
-//             // that was removed.
-//             translated.saturating_inc();
-//             let scoring_rule = match old_market.scoring_rule {
-//                 OldScoringRule::RikiddoSigmoidFeeMarketEma => return None,
-//                 OldScoringRule::CPMM | OldScoringRule::Lmsr => ScoringRule::Lmsr,
-//                 OldScoringRule::Orderbook => ScoringRule::Orderbook,
-//                 OldScoringRule::Parimutuel => ScoringRule::Parimutuel,
-//             };
-//             let status = match old_market.status {
-//                 OldMarketStatus::Proposed => MarketStatus::Proposed,
-//                 OldMarketStatus::Active => MarketStatus::Active,
-//                 OldMarketStatus::Suspended => return None,
-//                 OldMarketStatus::Closed => MarketStatus::Closed,
-//                 OldMarketStatus::CollectingSubsidy => return None,
-//                 OldMarketStatus::InsufficientSubsidy => return None,
-//                 OldMarketStatus::Reported => MarketStatus::Reported,
-//                 OldMarketStatus::Disputed => MarketStatus::Disputed,
-//                 OldMarketStatus::Resolved => MarketStatus::Resolved,
-//             };
-//             let new_market = Market {
-//                 base_asset: old_market.base_asset,
-//                 creator: old_market.creator,
-//                 creation: old_market.creation,
-//                 creator_fee: old_market.creator_fee,
-//                 oracle: old_market.oracle,
-//                 metadata: old_market.metadata,
-//                 market_type: old_market.market_type,
-//                 period: old_market.period,
-//                 deadlines: old_market.deadlines,
-//                 scoring_rule,
-//                 status,
-//                 report: old_market.report,
-//                 resolved_outcome: old_market.resolved_outcome,
-//                 dispute_mechanism: old_market.dispute_mechanism,
-//                 bonds: old_market.bonds,
-//                 early_close: old_market.early_close,
-//             };
-//             Some(new_market)
-//         });
-//         log::info!("MigrateScoringRuleAndMarketStatus: Upgraded {} markets.", translated);
-//         total_weight =
-//             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
-// 
-//         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommons<T>>();
-//         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-//         log::info!("MigrateScoringRuleAndMarketStatus: Done!");
-//         total_weight
-//     }
-// 
-//     #[cfg(feature = "try-runtime")]
-//     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-//         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
-//             MARKET_COMMONS,
-//             MARKETS,
-//         )
-//         .collect::<BTreeMap<_, _>>();
-//         let markets = Markets::<T>::iter_keys().count();
-//         let decodable_markets = Markets::<T>::iter_values().count();
-//         if markets != decodable_markets {
-//             log::info!("All {} markets could successfully be decoded.", markets);
-//         } else {
-//             log::error!(
-//                 "Can only decode {} of {} markets - others will be dropped.",
-//                 decodable_markets,
-//                 markets
-//             );
-//         }
-// 
-//         Ok(old_markets.encode())
-//     }
-// 
-//     #[cfg(feature = "try-runtime")]
-//     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
-//         let old_markets: BTreeMap<MarketId, OldMarketOf<T>> =
-//             Decode::decode(&mut &previous_state[..]).unwrap();
-//         let old_market_count = old_markets.len();
-//         let new_market_count = Markets::<T>::iter().count();
-//         assert_eq!(old_market_count, new_market_count);
-//         log::info!(
-//             "MigrateScoringRuleAndMarketStatus: Market counter post-upgrade is {}!",
-//             new_market_count
-//         );
-//         Ok(())
-//     }
-// }
-// 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::mock::{ExtBuilder, Runtime};
-//     use alloc::fmt::Debug;
-//     use frame_support::{migration::put_storage_value, storage_root, StorageHasher};
-//     use sp_runtime::{Perbill, StateVersion};
-//     use test_case::test_case;
-//     use zeitgeist_primitives::types::{Asset, Bond, MarketId};
-// 
-//     #[test]
-//     fn on_runtime_upgrade_increments_the_storage_version() {
-//         ExtBuilder::default().build().execute_with(|| {
-//             set_up_version();
-//             MigrateScoringRuleAndMarketStatus::<Runtime>::on_runtime_upgrade();
-//             assert_eq!(
-//                 StorageVersion::get::<MarketCommons<Runtime>>(),
-//                 MARKET_COMMONS_NEXT_STORAGE_VERSION
-//             );
-//         });
-//     }
-// 
-//     #[test_case(
-//         (OldScoringRule::CPMM, OldMarketStatus::Proposed),
-//         Some((ScoringRule::Lmsr, MarketStatus::Proposed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::CPMM, OldMarketStatus::Active),
-//         Some((ScoringRule::Lmsr, MarketStatus::Active))
-//     )]
-//     #[test_case((OldScoringRule::CPMM, OldMarketStatus::Suspended), None)]
-//     #[test_case(
-//         (OldScoringRule::CPMM, OldMarketStatus::Closed),
-//         Some((ScoringRule::Lmsr, MarketStatus::Closed))
-//     )]
-//     #[test_case((OldScoringRule::CPMM, OldMarketStatus::CollectingSubsidy), None)]
-//     #[test_case((OldScoringRule::CPMM, OldMarketStatus::InsufficientSubsidy), None)]
-//     #[test_case(
-//         (OldScoringRule::CPMM, OldMarketStatus::Reported),
-//         Some((ScoringRule::Lmsr, MarketStatus::Reported))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::CPMM, OldMarketStatus::Disputed),
-//         Some((ScoringRule::Lmsr, MarketStatus::Disputed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::CPMM, OldMarketStatus::Resolved),
-//         Some((ScoringRule::Lmsr, MarketStatus::Resolved))
-//     )]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Proposed), None)]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Active), None)]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Suspended), None)]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Closed), None)]
-//     #[test_case(
-//         (OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::CollectingSubsidy),
-//         None
-//     )]
-//     #[test_case(
-//         (OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::InsufficientSubsidy),
-//         None
-//     )]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Reported), None)]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Disputed), None)]
-//     #[test_case((OldScoringRule::RikiddoSigmoidFeeMarketEma, OldMarketStatus::Resolved), None)]
-//     #[test_case(
-//         (OldScoringRule::Lmsr, OldMarketStatus::Proposed),
-//         Some((ScoringRule::Lmsr, MarketStatus::Proposed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Lmsr, OldMarketStatus::Active),
-//         Some((ScoringRule::Lmsr, MarketStatus::Active))
-//     )]
-//     #[test_case((OldScoringRule::Lmsr, OldMarketStatus::Suspended), None)]
-//     #[test_case(
-//         (OldScoringRule::Lmsr, OldMarketStatus::Closed),
-//         Some((ScoringRule::Lmsr, MarketStatus::Closed))
-//     )]
-//     #[test_case((OldScoringRule::Lmsr, OldMarketStatus::CollectingSubsidy), None)]
-//     #[test_case((OldScoringRule::Lmsr, OldMarketStatus::InsufficientSubsidy), None)]
-//     #[test_case(
-//         (OldScoringRule::Lmsr, OldMarketStatus::Reported),
-//         Some((ScoringRule::Lmsr, MarketStatus::Reported))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Lmsr, OldMarketStatus::Disputed),
-//         Some((ScoringRule::Lmsr, MarketStatus::Disputed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Lmsr, OldMarketStatus::Resolved),
-//         Some((ScoringRule::Lmsr, MarketStatus::Resolved))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Orderbook, OldMarketStatus::Proposed),
-//         Some((ScoringRule::Orderbook, MarketStatus::Proposed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Orderbook, OldMarketStatus::Active),
-//         Some((ScoringRule::Orderbook, MarketStatus::Active))
-//     )]
-//     #[test_case((OldScoringRule::Orderbook, OldMarketStatus::Suspended), None)]
-//     #[test_case(
-//         (OldScoringRule::Orderbook, OldMarketStatus::Closed),
-//         Some((ScoringRule::Orderbook, MarketStatus::Closed))
-//     )]
-//     #[test_case((OldScoringRule::Orderbook, OldMarketStatus::CollectingSubsidy), None)]
-//     #[test_case((OldScoringRule::Orderbook, OldMarketStatus::InsufficientSubsidy), None)]
-//     #[test_case(
-//         (OldScoringRule::Orderbook, OldMarketStatus::Reported),
-//         Some((ScoringRule::Orderbook, MarketStatus::Reported))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Orderbook, OldMarketStatus::Disputed),
-//         Some((ScoringRule::Orderbook, MarketStatus::Disputed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Orderbook, OldMarketStatus::Resolved),
-//         Some((ScoringRule::Orderbook, MarketStatus::Resolved))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Parimutuel, OldMarketStatus::Proposed),
-//         Some((ScoringRule::Parimutuel, MarketStatus::Proposed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Parimutuel, OldMarketStatus::Active),
-//         Some((ScoringRule::Parimutuel, MarketStatus::Active))
-//     )]
-//     #[test_case((OldScoringRule::Parimutuel, OldMarketStatus::Suspended), None)]
-//     #[test_case(
-//         (OldScoringRule::Parimutuel, OldMarketStatus::Closed),
-//         Some((ScoringRule::Parimutuel, MarketStatus::Closed))
-//     )]
-//     #[test_case((OldScoringRule::Parimutuel, OldMarketStatus::CollectingSubsidy), None)]
-//     #[test_case((OldScoringRule::Parimutuel, OldMarketStatus::InsufficientSubsidy), None)]
-//     #[test_case(
-//         (OldScoringRule::Parimutuel, OldMarketStatus::Reported),
-//         Some((ScoringRule::Parimutuel, MarketStatus::Reported))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Parimutuel, OldMarketStatus::Disputed),
-//         Some((ScoringRule::Parimutuel, MarketStatus::Disputed))
-//     )]
-//     #[test_case(
-//         (OldScoringRule::Parimutuel, OldMarketStatus::Resolved),
-//         Some((ScoringRule::Parimutuel, MarketStatus::Resolved))
-//     )]
-//     fn on_runtime_upgrade_works_as_expected(
-//         old_data: (OldScoringRule, OldMarketStatus),
-//         new_data: Option<(ScoringRule, MarketStatus)>,
-//     ) {
-//         ExtBuilder::default().build().execute_with(|| {
-//             set_up_version();
-//             let base_asset = Asset::Ztg;
-//             let creator = 0;
-//             let creation = MarketCreation::Permissionless;
-//             let creator_fee = Perbill::from_rational(1u32, 1_000u32);
-//             let oracle = 2;
-//             let metadata = vec![0x03; 50];
-//             let market_type = MarketType::Categorical(4);
-//             let period = MarketPeriod::Block(5..6);
-//             let deadlines = Deadlines { grace_period: 7, oracle_duration: 8, dispute_duration: 9 };
-//             let report = Some(Report { at: 13, by: 14, outcome: OutcomeReport::Categorical(10) });
-//             let resolved_outcome = None;
-//             let dispute_mechanism = Some(MarketDisputeMechanism::Court);
-//             let bonds = MarketBonds {
-//                 creation: Some(Bond::new(11, 12)),
-//                 oracle: None,
-//                 outsider: None,
-//                 dispute: None,
-//                 close_dispute: None,
-//                 close_request: None,
-//             };
-//             let early_close = None;
-//             let (old_scoring_rule, old_market_status) = old_data;
-//             let old_market = OldMarket {
-//                 base_asset,
-//                 creator,
-//                 creation: creation.clone(),
-//                 creator_fee,
-//                 oracle,
-//                 metadata: metadata.clone(),
-//                 market_type: market_type.clone(),
-//                 period: period.clone(),
-//                 deadlines,
-//                 scoring_rule: old_scoring_rule,
-//                 status: old_market_status,
-//                 report: report.clone(),
-//                 resolved_outcome: resolved_outcome.clone(),
-//                 dispute_mechanism: dispute_mechanism.clone(),
-//                 bonds: bonds.clone(),
-//                 early_close: early_close.clone(),
-//             };
-//             let opt_new_market = if let Some((new_scoring_rule, new_status)) = new_data {
-//                 Some(Market {
-//                     base_asset,
-//                     creator,
-//                     creation,
-//                     creator_fee,
-//                     oracle,
-//                     metadata,
-//                     market_type,
-//                     period,
-//                     deadlines,
-//                     scoring_rule: new_scoring_rule,
-//                     status: new_status,
-//                     report,
-//                     resolved_outcome,
-//                     dispute_mechanism,
-//                     bonds,
-//                     early_close,
-//                 })
-//             } else {
-//                 None
-//             };
-//             // Don't set up chain to signal that storage is already up to date.
-//             populate_test_data::<Blake2_128Concat, MarketId, OldMarketOf<Runtime>>(
-//                 MARKET_COMMONS,
-//                 MARKETS,
-//                 vec![old_market],
-//             );
-//             MigrateScoringRuleAndMarketStatus::<Runtime>::on_runtime_upgrade();
-// 
-//             let actual = crate::Markets::<Runtime>::get(0);
-//             assert_eq!(actual, opt_new_market);
-//         });
-//     }
-// 
-//     #[test]
-//     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
-//         ExtBuilder::default().build().execute_with(|| {
-//             StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION)
-//                 .put::<MarketCommons<Runtime>>();
-//             let tmp = storage_root(StateVersion::V1);
-//             MigrateScoringRuleAndMarketStatus::<Runtime>::on_runtime_upgrade();
-//             assert_eq!(tmp, storage_root(StateVersion::V1));
-//         });
-//     }
-// 
-//     fn set_up_version() {
-//         StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION)
-//             .put::<MarketCommons<Runtime>>();
-//     }
-// 
-//     #[allow(unused)]
-//     fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
-//     where
-//         H: StorageHasher,
-//         K: TryFrom<usize> + Encode,
-//         V: Encode + Clone,
-//         <K as TryFrom<usize>>::Error: Debug,
-//     {
-//         for (key, value) in data.iter().enumerate() {
-//             let storage_hash = K::try_from(key).unwrap().using_encoded(H::hash).as_ref().to_vec();
-//             put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
-//         }
-//     }
-// }
-// 
+use crate::{
+    types::{Pool, PoolStatus},
+    BalanceOf, Config, Pallet as Swaps, PoolOf,
+};
+use alloc::{collections::BTreeMap, vec::Vec};
+use core::marker::PhantomData;
+use frame_support::{
+    log,
+    pallet_prelude::{Blake2_128Concat, StorageVersion, Weight},
+    traits::{Get, OnRuntimeUpgrade},
+};
+use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_runtime::{RuntimeDebug, SaturatedConversion, Saturating};
+use zeitgeist_primitives::{
+    constants::MAX_ASSETS,
+    types::{Asset, PoolId, ScoringRule},
+};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "try-runtime")] {
+        use frame_support::migration::storage_key_iter;
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(any(feature = "try-runtime", test))] {
+        const SWAPS: &[u8] = b"Swaps";
+        const POOLS: &[u8] = b"Pools";
+    }
+}
+
+#[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+pub struct OldPool<Balance, MarketId>
+where
+    MarketId: MaxEncodedLen,
+{
+    pub assets: Vec<Asset<MarketId>>,
+    pub base_asset: Asset<MarketId>,
+    pub market_id: MarketId,
+    pub pool_status: OldPoolStatus,
+    pub scoring_rule: OldScoringRule,
+    pub swap_fee: Option<Balance>,
+    pub total_subsidy: Option<Balance>,
+    pub total_weight: Option<u128>,
+    pub weights: Option<BTreeMap<Asset<MarketId>, u128>>,
+}
+
+impl<Balance, MarketId> MaxEncodedLen for OldPool<Balance, MarketId>
+where
+    Balance: MaxEncodedLen,
+    MarketId: MaxEncodedLen,
+{
+    fn max_encoded_len() -> usize {
+        let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
+        let b_tree_map_size = 1usize
+            .saturating_add(MAX_ASSETS.saturated_into::<usize>().saturating_mul(
+                <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
+            ))
+            .saturating_add(max_encoded_length_bytes);
+
+        <Asset<MarketId>>::max_encoded_len()
+            .saturating_mul(MAX_ASSETS.saturated_into::<usize>())
+            .saturating_add(max_encoded_length_bytes)
+            .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
+            .saturating_add(MarketId::max_encoded_len())
+            .saturating_add(PoolStatus::max_encoded_len())
+            .saturating_add(ScoringRule::max_encoded_len())
+            .saturating_add(<Option<Balance>>::max_encoded_len().saturating_mul(2))
+            .saturating_add(<Option<u128>>::max_encoded_len())
+            .saturating_add(b_tree_map_size)
+    }
+}
+
+#[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
+pub enum OldScoringRule {
+    CPMM,
+    RikiddoSigmoidFeeMarketEma,
+    Lmsr,
+    Orderbook,
+    Parimutuel,
+}
+
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum OldPoolStatus {
+    Active,
+    CollectingSubsidy,
+    Closed,
+    Clean,
+    Initialized,
+}
+
+pub(crate) type OldPoolOf<T> = OldPool<BalanceOf<T>, <T as Config>::MarketId>;
+
+#[frame_support::storage_alias]
+pub(crate) type Pools<T: Config> =
+    StorageMap<Swaps<T>, Blake2_128Concat, PoolId, Option<OldPoolOf<T>>>;
+
+const SWAPS_REQUIRED_STORAGE_VERSION: u16 = 3;
+const SWAPS_NEXT_STORAGE_VERSION: u16 = 4;
+
+#[frame_support::storage_alias]
+pub(crate) type Markets<T: Config> = StorageMap<Swaps<T>, Blake2_128Concat, PoolId, OldPoolOf<T>>;
+
+pub struct MigratePools<T>(PhantomData<T>);
+
+/// Deletes all Rikiddo markets from storage and
+impl<T> OnRuntimeUpgrade for MigratePools<T>
+where
+    T: Config,
+{
+    fn on_runtime_upgrade() -> Weight {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let market_commons_version = StorageVersion::get::<Swaps<T>>();
+        if market_commons_version != SWAPS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "MigratePools: swaps version is {:?}, but {:?} is required",
+                market_commons_version,
+                SWAPS_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("MigratePools: Starting...");
+
+        let mut translated = 0u64;
+        crate::Pools::<T>::translate::<Option<OldPoolOf<T>>, _>(|_, opt_old_pool| {
+            // We proceed by deleting Rikiddo pools; CPMM pools are migrated to the new version.
+            translated.saturating_inc();
+            let old_pool = opt_old_pool?;
+            if old_pool.scoring_rule != OldScoringRule::CPMM {
+                return None;
+            }
+            // These should all be infallible.
+            let assets = old_pool.assets.try_into().ok()?;
+            let status = match old_pool.pool_status {
+                OldPoolStatus::Active => PoolStatus::Open,
+                OldPoolStatus::CollectingSubsidy => return None,
+                OldPoolStatus::Closed => PoolStatus::Closed,
+                OldPoolStatus::Clean => PoolStatus::Closed,
+                OldPoolStatus::Initialized => PoolStatus::Closed,
+            };
+            let swap_fee = old_pool.swap_fee?;
+            let weights = old_pool.weights?.try_into().ok()?;
+            let total_weight = old_pool.total_weight?;
+            let new_pool: PoolOf<T> = Pool { assets, status, swap_fee, total_weight, weights };
+            Some(new_pool)
+        });
+        log::info!("MigratePools: Upgraded {} markets.", translated);
+        total_weight =
+            total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
+
+        StorageVersion::new(SWAPS_NEXT_STORAGE_VERSION).put::<Swaps<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("MigratePools: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        let old_pools =
+            storage_key_iter::<PoolId, Option<OldPoolOf<T>>, Blake2_128Concat>(SWAPS, POOLS)
+                .collect::<BTreeMap<_, _>>();
+        let pools = Pools::<T>::iter_keys().count();
+        let decodable_pools = Pools::<T>::iter_values().count();
+        if pools != decodable_pools {
+            log::info!("All {} pools could successfully be decoded.", pools);
+        } else {
+            log::error!(
+                "Can only decode {} of {} pools - others will be dropped.",
+                decodable_pools,
+                pools
+            );
+        }
+
+        Ok(old_pools.encode())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
+        let old_pools: BTreeMap<PoolId, Option<OldPoolOf<T>>> =
+            Decode::decode(&mut &previous_state[..]).unwrap();
+        let old_pool_count = old_pools.len();
+        let new_pool_count = Pools::<T>::iter().count();
+        assert_eq!(old_pool_count, new_pool_count);
+        log::info!("MigratePools: Pool counter post-upgrade is {}!", new_pool_count);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mock::{ExtBuilder, Runtime};
+    use alloc::fmt::Debug;
+    use frame_support::{migration::put_storage_value, storage_root, StorageHasher};
+    use sp_runtime::StateVersion;
+    use test_case::test_case;
+    use zeitgeist_macros::create_b_tree_map;
+    use zeitgeist_primitives::types::Asset;
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_version() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            MigratePools::<Runtime>::on_runtime_upgrade();
+            assert_eq!(StorageVersion::get::<Swaps<Runtime>>(), SWAPS_NEXT_STORAGE_VERSION);
+        });
+    }
+
+    #[test_case(OldPoolStatus::Active, PoolStatus::Open)]
+    #[test_case(OldPoolStatus::Closed, PoolStatus::Closed)]
+    #[test_case(OldPoolStatus::Clean, PoolStatus::Closed)]
+    #[test_case(OldPoolStatus::Initialized, PoolStatus::Closed)]
+    fn on_runtime_upgrade_works_as_expected_with_cpmm(
+        old_pool_status: OldPoolStatus,
+        new_pool_status: PoolStatus,
+    ) {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            let base_asset = Asset::ForeignAsset(4);
+            let market_id = 1;
+            let assets = vec![
+                Asset::CategoricalOutcome(market_id, 0),
+                Asset::CategoricalOutcome(market_id, 1),
+                Asset::CategoricalOutcome(market_id, 2),
+                base_asset.clone(),
+            ];
+            let swap_fee = 5;
+            let total_weight = 8;
+            let weights = create_b_tree_map!({
+                Asset::CategoricalOutcome(market_id, 0) => 1,
+                Asset::CategoricalOutcome(market_id, 1) => 2,
+                Asset::CategoricalOutcome(market_id, 2) => 1,
+                base_asset.clone() => 8,
+            });
+            let opt_old_pool = Some(OldPool {
+                assets: assets.clone(),
+                base_asset,
+                market_id,
+                pool_status: old_pool_status,
+                scoring_rule: OldScoringRule::CPMM,
+                swap_fee: Some(swap_fee),
+                total_subsidy: None,
+                total_weight: Some(total_weight),
+                weights: Some(weights.clone()),
+            });
+            populate_test_data::<Blake2_128Concat, PoolId, Option<OldPoolOf<Runtime>>>(
+                SWAPS,
+                POOLS,
+                vec![opt_old_pool],
+            );
+            MigratePools::<Runtime>::on_runtime_upgrade();
+            let actual = crate::Pools::<Runtime>::get(0);
+            let expected = Some(Pool {
+                assets: assets.try_into().unwrap(),
+                status: new_pool_status,
+                swap_fee,
+                total_weight,
+                weights: weights.try_into().unwrap(),
+            });
+            assert_eq!(actual, expected);
+        });
+    }
+
+    #[test_case(OldPoolStatus::Active)]
+    #[test_case(OldPoolStatus::CollectingSubsidy)]
+    #[test_case(OldPoolStatus::Closed)]
+    #[test_case(OldPoolStatus::Clean)]
+    #[test_case(OldPoolStatus::Initialized)]
+    fn on_runtime_upgrade_works_as_expected_with_rikiddo(pool_status: OldPoolStatus) {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            let base_asset = Asset::ForeignAsset(4);
+            let market_id = 1;
+            let assets = vec![
+                Asset::CategoricalOutcome(market_id, 0),
+                Asset::CategoricalOutcome(market_id, 1),
+                Asset::CategoricalOutcome(market_id, 2),
+                base_asset.clone(),
+            ];
+            let opt_old_pool = Some(OldPool {
+                assets: assets.clone(),
+                base_asset,
+                market_id,
+                pool_status,
+                scoring_rule: OldScoringRule::RikiddoSigmoidFeeMarketEma,
+                swap_fee: Some(5),
+                total_subsidy: Some(123),
+                total_weight: None,
+                weights: None,
+            });
+            populate_test_data::<Blake2_128Concat, PoolId, Option<OldPoolOf<Runtime>>>(
+                SWAPS,
+                POOLS,
+                vec![opt_old_pool],
+            );
+            MigratePools::<Runtime>::on_runtime_upgrade();
+            let actual = crate::Pools::<Runtime>::get(0);
+            assert_eq!(actual, None);
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            StorageVersion::new(SWAPS_NEXT_STORAGE_VERSION).put::<Swaps<Runtime>>();
+            let assets = vec![
+                Asset::ForeignAsset(0),
+                Asset::ForeignAsset(1),
+                Asset::ForeignAsset(2),
+            ];
+            let weights = create_b_tree_map!({
+                Asset::ForeignAsset(0) => 3,
+                Asset::ForeignAsset(1) => 4,
+                Asset::ForeignAsset(2) => 5,
+            });
+            crate::Pools::<Runtime>::insert(0, Pool {
+                assets: assets.try_into().unwrap(),
+                status: PoolStatus::Open,
+                swap_fee: 4,
+                total_weight: 12,
+                weights: weights.try_into().unwrap(),
+            });
+            let tmp = storage_root(StateVersion::V1);
+            MigratePools::<Runtime>::on_runtime_upgrade();
+            assert_eq!(tmp, storage_root(StateVersion::V1));
+        });
+    }
+
+    fn set_up_version() {
+        StorageVersion::new(SWAPS_REQUIRED_STORAGE_VERSION).put::<Swaps<Runtime>>();
+    }
+
+    #[allow(unused)]
+    fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
+    where
+        H: StorageHasher,
+        K: TryFrom<usize> + Encode,
+        V: Encode + Clone,
+        <K as TryFrom<usize>>::Error: Debug,
+    {
+        for (key, value) in data.iter().enumerate() {
+            let storage_hash = K::try_from(key).unwrap().using_encoded(H::hash).as_ref().to_vec();
+            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
+        }
+    }
+}

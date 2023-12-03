@@ -1,4 +1,5 @@
 [dependencies]
+cfg-if = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
@@ -25,6 +26,7 @@ zrml-swaps-runtime-api = { workspace = true, optional = true }
 [dev-dependencies]
 more-asserts = { workspace = true }
 test-case = { workspace = true }
+zeitgeist-macros = { workspace = true }
 zrml-swaps = { workspace = true, features = ["mock"] }
 
 [features]

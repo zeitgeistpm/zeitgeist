@@ -95,8 +95,8 @@ pub enum OldMarketStatus {
     Resolved,
 }
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 7;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = MARKET_COMMONS_REQUIRED_STORAGE_VERSION + 1;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 6;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 7;
 
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
@@ -104,7 +104,7 @@ pub(crate) type Markets<T: Config> =
 
 pub struct MigrateScoringRuleAndMarketStatus<T>(PhantomData<T>);
 
-/// Deletes all Rikiddo markets from storage and
+/// Deletes all Rikiddo markets from storage and migrates CPMM markets to LMSR.
 impl<T> OnRuntimeUpgrade for MigrateScoringRuleAndMarketStatus<T>
 where
     T: Config,
@@ -443,6 +443,7 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION)
                 .put::<MarketCommons<Runtime>>();
+            // TODO Add markets
             let tmp = storage_root(StateVersion::V1);
             MigrateScoringRuleAndMarketStatus::<Runtime>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));
