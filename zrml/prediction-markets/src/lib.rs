@@ -71,7 +71,7 @@ mod pallet {
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
             MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-            MarketType, MultiHash, OldMarketDispute, OutcomeReport, Report, ResultWithWeightInfo,
+            MarketType, MultiHash, OutcomeReport, Report, ResultWithWeightInfo,
             ScalarPosition, ScoringRule,
         },
     };
@@ -1946,18 +1946,6 @@ mod pallet {
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
-
-    // TODO(#986) after storage migration of release-dispute-system branch is complete, delete this Disputes storage item
-    /// For each market, this holds the dispute information for each dispute that's
-    /// been issued.
-    #[pallet::storage]
-    pub type Disputes<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        BoundedVec<OldMarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
-        ValueQuery,
-    >;
 
     // TODO Remove in v0.5.1
     #[pallet::storage]

@@ -164,11 +164,8 @@ where
         crate::Pools::<T>::translate::<Option<OldPoolOf<T>>, _>(|_, opt_old_pool| {
             // We proceed by deleting Rikiddo pools; CPMM pools are migrated to the new version.
             translated.saturating_inc();
-            log::info!("translate");
             let old_pool = opt_old_pool?;
-            log::info!("unwrapped option");
             if old_pool.scoring_rule != OldScoringRule::CPMM {
-                log::info!("not cpmm");
                 return None;
             }
             // These should all be infallible.
@@ -219,7 +216,6 @@ where
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
-        log::info!("MigratePools: post-upgrade...");
         let old_pools: BTreeMap<PoolId, Option<OldPoolOf<T>>> =
             Decode::decode(&mut &previous_state[..]).unwrap();
         let old_pool_count = old_pools.len();

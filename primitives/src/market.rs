@@ -219,14 +219,6 @@ pub struct GlobalDisputeItem<AccountId, Balance> {
     pub initial_vote_amount: Balance,
 }
 
-// TODO to remove, when Disputes storage item is removed
-#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OldMarketDispute<AccountId, BlockNumber> {
-    pub at: BlockNumber,
-    pub by: AccountId,
-    pub outcome: OutcomeReport,
-}
-
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct MarketDispute<AccountId, BlockNumber, Balance> {
     pub at: BlockNumber,
