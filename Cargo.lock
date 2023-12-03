@@ -14715,6 +14715,7 @@ dependencies = [
 name = "zrml-prediction-markets"
 version = "0.4.2"
 dependencies = [
+ "cfg-if",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

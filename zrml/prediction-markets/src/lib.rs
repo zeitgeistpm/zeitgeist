@@ -51,6 +51,7 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::traits::AccountIdConversion;
+    use zeitgeist_primitives::types::SubsidyUntil;
 
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
@@ -79,7 +80,7 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(9);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
 
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
@@ -1962,6 +1963,26 @@ mod pallet {
         ValueQuery,
     >;
 
+    // TODO Remove in v0.5.1
+    #[pallet::storage]
+    pub type MarketIdsPerOpenBlock<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::BlockNumber,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
+        ValueQuery,
+    >;
+
+    // TODO Remove in v0.5.1
+    #[pallet::storage]
+    pub type MarketIdsPerOpenTimeFrame<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        TimeFrame,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
+        ValueQuery,
+    >;
+
     /// A mapping of market identifiers to the block their market ends on.
     #[pallet::storage]
     pub type MarketIdsPerCloseBlock<T: Config> = StorageMap<
@@ -2012,6 +2033,17 @@ mod pallet {
     #[pallet::storage]
     pub type MarketIdsForEdit<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
+
+    // TODO Remove in v0.5.1
+    /// Contains a list of all markets that are currently collecting subsidy and the deadline.
+    // All the values are "cached" here. Results in data duplication, but speeds up the iteration
+    // over every market significantly (otherwise 25µs per relevant market per block).
+    #[pallet::storage]
+    pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
+        _,
+        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<16>>,
+        ValueQuery,
+    >;
 
     impl<T: Config> Pallet<T> {
         impl_unreserve_bond!(unreserve_creation_bond, creation);

@@ -16,6 +16,74 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{
+    Config, MarketIdsPerOpenBlock, MarketIdsPerOpenTimeFrame, MarketsCollectingSubsidy,
+    Pallet as PredictionMarkets,
+};
+use core::marker::PhantomData;
+use frame_support::{
+    log,
+    pallet_prelude::{StorageVersion, Weight},
+    traits::{Get, OnRuntimeUpgrade},
+};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "try-runtime")] {
+        use alloc::vec::Vec;
+    }
+}
+
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 8;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 9;
+
+pub struct DrainDeprecatedStorage<T>(PhantomData<T>);
+
+impl<T> OnRuntimeUpgrade for DrainDeprecatedStorage<T>
+where
+    T: Config,
+{
+    fn on_runtime_upgrade() -> Weight {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let market_commons_version = StorageVersion::get::<PredictionMarkets<T>>();
+        if market_commons_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "DrainDeprecatedStorage: prediction-markets version is {:?}, but {:?} is required",
+                market_commons_version,
+                PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("DrainDeprecatedStorage: Starting...");
+        let mut reads_writes = 1u64; // For killing MarketsCollectingSubsidy
+        reads_writes =
+            reads_writes.saturating_add(MarketIdsPerOpenBlock::<T>::drain().count() as u64);
+        reads_writes =
+            reads_writes.saturating_add(MarketIdsPerOpenTimeFrame::<T>::drain().count() as u64);
+        MarketsCollectingSubsidy::<T>::kill();
+        log::info!("DrainDeprecatedStorage: Drained {} keys.", reads_writes);
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads_writes(reads_writes, reads_writes));
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<PredictionMarkets<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("DrainDeprecatedStorage: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+        if !MarketIdsPerOpenBlock::<T>::iter().count() != 0 {
+            return Err("DrainDeprecatedStorage: MarketIdsPerOpenBlock is not empty!");
+        }
+        if !MarketIdsPerOpenTimeFrame::<T>::iter().count() != 0 {
+            return Err("DrainDeprecatedStorage: MarketIdsPerOpenTimeFrame is not empty!");
+        }
+        if !MarketsCollectingSubsidy::<T>::exists() {
+            return Err("DrainDeprecatedStorage: MarketsCollectingSubsidy still exists!");
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
