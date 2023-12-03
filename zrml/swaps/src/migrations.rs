@@ -181,7 +181,6 @@ where
             let weights = old_pool.weights?.try_into().ok()?;
             let total_weight = old_pool.total_weight?;
             let new_pool: PoolOf<T> = Pool { assets, status, swap_fee, total_weight, weights };
-            log::info!("{:?}", new_pool);
             Some(new_pool)
         });
         log::info!("MigratePools: Upgraded {} markets.", translated);

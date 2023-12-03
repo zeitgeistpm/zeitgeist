@@ -446,7 +446,6 @@ mod pallet {
         ///
         /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
         /// assets if the scoring rule is Rikiddo.
-        // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
         #[pallet::call_index(9)]
         #[pallet::weight(T::WeightInfo::swap_exact_amount_in_cpmm())]
         #[transactional]
@@ -490,7 +489,6 @@ mod pallet {
         ///
         /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
         /// assets if the scoring rule is Rikiddo.
-        // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
         #[pallet::call_index(10)]
         #[pallet::weight(T::WeightInfo::swap_exact_amount_out_cpmm())]
         #[transactional]
@@ -1024,7 +1022,6 @@ mod pallet {
         }
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            // TODO Benchmark worst case and get rid of asset_len dependency
             let asset_len =
                 <Pools<T>>::try_mutate(pool_id, |opt_pool| -> Result<u32, DispatchError> {
                     let pool = opt_pool.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
@@ -1060,13 +1057,11 @@ mod pallet {
         }
 
         fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            // TODO Ensure pool owner.
             Self::mutate_pool(pool_id, |pool| -> DispatchResult {
                 ensure!(pool.status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
                 pool.status = PoolStatus::Open;
                 Ok(())
             })?;
-            // TODO Remove this and benchmark with the worst-case.
             let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
             let asset_len = pool.assets.len() as u32;
             Self::deposit_event(Event::PoolActive(pool_id));

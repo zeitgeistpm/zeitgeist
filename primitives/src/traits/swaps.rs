@@ -19,11 +19,10 @@
 use crate::types::PoolId;
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
-use parity_scale_codec::MaxEncodedLen;
 
 pub trait Swaps<AccountId> {
-    type Asset: MaxEncodedLen; // TODO Do we need max encoded len?
-    type Balance: MaxEncodedLen; // TODO Do we need max encoded len?
+    type Asset;
+    type Balance;
     // TODO Add weight type which implements `Into<Balance>` and `From<Balance>`
 
     /// Creates an initial active pool.

@@ -30,7 +30,6 @@ impl Get<u32> for MaxAssets {
     }
 }
 
-// TODO Use bounded btreemap
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub struct Pool<Asset, Balance> {
     pub assets: BoundedVec<Asset, MaxAssets>,

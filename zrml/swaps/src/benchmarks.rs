@@ -90,7 +90,6 @@ fn bench_create_pool<T: Config>(
 
 benchmarks! {
     pool_exit {
-        // TODO Use a different account for joining (otherwise, we get fewer storage reads)
         let a in 2 .. T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, _, asset_amount) =
@@ -138,7 +137,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, min_pool_amount)
 
     pool_join_with_exact_pool_amount {
-        // TODO This is still off. Explicitly state liquidity here!
+        // FIXME Explicitly state liquidity here!
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, asset_amount) =

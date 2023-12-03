@@ -2478,7 +2478,6 @@ mod pallet {
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
 
-                // TODO Are we actually benchmarking this?
                 if let Some(p) = &market.early_close {
                     match p.state {
                         EarlyCloseState::ScheduledAsMarketCreator => {
