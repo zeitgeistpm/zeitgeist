@@ -33,8 +33,8 @@ cfg_if::cfg_if! {
     }
 }
 
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 8;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 9;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 7;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 8;
 
 pub struct DrainDeprecatedStorage<T>(PhantomData<T>);
 
@@ -71,13 +71,13 @@ where
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
-        if !MarketIdsPerOpenBlock::<T>::iter().count() != 0 {
+        if MarketIdsPerOpenBlock::<T>::iter().count() != 0 {
             return Err("DrainDeprecatedStorage: MarketIdsPerOpenBlock is not empty!");
         }
-        if !MarketIdsPerOpenTimeFrame::<T>::iter().count() != 0 {
+        if MarketIdsPerOpenTimeFrame::<T>::iter().count() != 0 {
             return Err("DrainDeprecatedStorage: MarketIdsPerOpenTimeFrame is not empty!");
         }
-        if !MarketsCollectingSubsidy::<T>::exists() {
+        if MarketsCollectingSubsidy::<T>::exists() {
             return Err("DrainDeprecatedStorage: MarketsCollectingSubsidy still exists!");
         }
         Ok(())

@@ -95,8 +95,8 @@ pub enum OldMarketStatus {
     Resolved,
 }
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 6;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 7;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 9;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 10;
 
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
@@ -184,7 +184,7 @@ where
         .collect::<BTreeMap<_, _>>();
         let markets = Markets::<T>::iter_keys().count();
         let decodable_markets = Markets::<T>::iter_values().count();
-        if markets != decodable_markets {
+        if markets == decodable_markets {
             log::info!("All {} markets could successfully be decoded.", markets);
         } else {
             log::error!(

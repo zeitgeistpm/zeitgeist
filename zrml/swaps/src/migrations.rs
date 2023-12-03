@@ -164,8 +164,11 @@ where
         crate::Pools::<T>::translate::<Option<OldPoolOf<T>>, _>(|_, opt_old_pool| {
             // We proceed by deleting Rikiddo pools; CPMM pools are migrated to the new version.
             translated.saturating_inc();
+            log::info!("translate");
             let old_pool = opt_old_pool?;
+            log::info!("unwrapped option");
             if old_pool.scoring_rule != OldScoringRule::CPMM {
+                log::info!("not cpmm");
                 return None;
             }
             // These should all be infallible.
@@ -181,6 +184,7 @@ where
             let weights = old_pool.weights?.try_into().ok()?;
             let total_weight = old_pool.total_weight?;
             let new_pool: PoolOf<T> = Pool { assets, status, swap_fee, total_weight, weights };
+            log::info!("{:?}", new_pool);
             Some(new_pool)
         });
         log::info!("MigratePools: Upgraded {} markets.", translated);
@@ -200,7 +204,7 @@ where
                 .collect::<BTreeMap<_, _>>();
         let pools = Pools::<T>::iter_keys().count();
         let decodable_pools = Pools::<T>::iter_values().count();
-        if pools != decodable_pools {
+        if pools == decodable_pools {
             log::info!("All {} pools could successfully be decoded.", pools);
         } else {
             log::error!(
@@ -215,10 +219,11 @@ where
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
+        log::info!("MigratePools: post-upgrade...");
         let old_pools: BTreeMap<PoolId, Option<OldPoolOf<T>>> =
             Decode::decode(&mut &previous_state[..]).unwrap();
         let old_pool_count = old_pools.len();
-        let new_pool_count = Pools::<T>::iter().count();
+        let new_pool_count = crate::Pools::<T>::iter().count();
         assert_eq!(old_pool_count, new_pool_count);
         log::info!("MigratePools: Pool counter post-upgrade is {}!", new_pool_count);
         Ok(())

@@ -55,16 +55,19 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_market_commons::migrations::MigrateScoringRuleAndMarketStatus;
+        use zrml_prediction_markets::migrations::DrainDeprecatedStorage;
+        use zrml_swaps::migrations::MigratePools;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        #[cfg(feature = "parachain")]
-        type Migrations = ();
-
-        #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type Migrations = (
+            MigratePools<Runtime>,
+            DrainDeprecatedStorage<Runtime>,
+            MigrateScoringRuleAndMarketStatus<Runtime>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,

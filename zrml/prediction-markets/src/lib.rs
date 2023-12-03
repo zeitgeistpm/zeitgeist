@@ -80,7 +80,7 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(9);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
 
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
@@ -340,7 +340,6 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            // TODO(#638): Handle Rikiddo markets!
             T::CloseOrigin::ensure_origin(origin)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
@@ -426,7 +425,6 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
             let new_status = MarketStatus::Active;
 
@@ -600,7 +598,6 @@ mod pallet {
             dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
-            // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             let (ids_len, _) = Self::do_create_market(
                 sender,
@@ -652,7 +649,6 @@ mod pallet {
             dispute_mechanism: Option<MarketDisputeMechanism>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
-            // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             ensure!(
                 MarketIdsForEdit::<T>::contains_key(market_id),
