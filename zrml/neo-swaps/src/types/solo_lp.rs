@@ -24,7 +24,7 @@ use sp_runtime::{
     DispatchError, DispatchResult, RuntimeDebug,
 };
 
-// TODO Remove in 0.4.4.
+// Deprecated as of v0.5.0. TODO Remove in 0.5.1!
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
 pub struct SoloLp<T: Config> {
