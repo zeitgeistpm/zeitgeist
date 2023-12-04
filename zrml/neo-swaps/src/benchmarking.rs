@@ -331,7 +331,7 @@ mod benchmarks {
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), Some(complete_set_amount));
 
         #[extrinsic_call]
-        NeoSwaps::join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+        join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
 
     // Bob joins the pool and is assigned an abandoned node  at maximum depth in the tree. Maximum
@@ -355,7 +355,7 @@ mod benchmarks {
         let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
 
         #[extrinsic_call]
-        NeoSwaps::join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+        join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
 
     // Bob joins the pool and is assigned a leaf at maximum depth in the tree. Maximum propagation
@@ -379,7 +379,7 @@ mod benchmarks {
         let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
 
         #[extrinsic_call]
-        NeoSwaps::join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+        join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
 
     // Worst-case benchmark of `exit`. A couple of conditions must be met to get the worst-case:
