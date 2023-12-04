@@ -446,14 +446,14 @@ where
         if node.total_stake()? == Zero::zero() {
             return Ok(()); // Don't propagate if there are no LPs under this node.
         }
-        // Temporary storage to ensure that the borrow checker doesn't get upset.
-        let descendant_stake = node.descendant_stake;
         if node.is_weak_leaf() {
             self.mutate_node(index, |node| {
                 node.fees = node.fees.checked_add_res(&node.lazy_fees)?;
                 Ok(())
             })?;
         } else {
+            // Temporary storage to ensure that the borrow checker doesn't get upset.
+            let node_descendant_stake = node.descendant_stake;
             // The lazy fees that will be propagated down the tree.
             let mut remaining_lazy_fees =
                 node.descendant_stake.bmul_bdiv(node.lazy_fees, node.total_stake()?)?;
@@ -470,7 +470,7 @@ where
                     self.mutate_node(*lhs_index, |lhs_node| {
                         let child_lazy_fees = lhs_node
                             .total_stake()?
-                            .bmul_bdiv(remaining_lazy_fees, descendant_stake)?;
+                            .bmul_bdiv(remaining_lazy_fees, node_descendant_stake)?;
                         lhs_node.lazy_fees =
                             lhs_node.lazy_fees.checked_add_res(&child_lazy_fees)?;
                         remaining_lazy_fees =
