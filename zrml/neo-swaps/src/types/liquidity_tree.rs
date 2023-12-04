@@ -264,7 +264,7 @@ where
             (index, benchmark_info)
         };
         if let Some(parent_index) = self.parent_index(index) {
-            self.update_descendant_stake(parent_index, stake, false)?;
+            self.update_descendant_stake(parent_index, stake, UpdateDescendantStakeOperation::Add)?;
         }
         Ok(benchmark_info)
     }
@@ -289,7 +289,7 @@ where
             let _ = self.account_to_index.remove(who);
         }
         if let Some(parent_index) = self.parent_index(index) {
-            self.update_descendant_stake(parent_index, stake, true)?;
+            self.update_descendant_stake(parent_index, stake, UpdateDescendantStakeOperation::Sub)?;
         }
         Ok(())
     }
@@ -335,6 +335,12 @@ pub(crate) enum NextNode {
     Abandoned(u32),
     Leaf,
     None,
+}
+
+/// Type for specifying a sign for `update_descendant_stake`.
+pub(crate) enum UpdateDescendantStakeOperation {
+    Add,
+    Sub,
 }
 
 /// A collection of member functions used in the implementation of `LiquiditySharesManager` for
@@ -390,7 +396,7 @@ where
         &mut self,
         index: u32,
         delta: BalanceOf<T>,
-        neg: bool,
+        op: UpdateDescendantStakeOperation,
     ) -> DispatchResult;
 
     /// Mutate each of child of the node at `index` using `mutator`.
@@ -543,14 +549,17 @@ where
         &mut self,
         index: u32,
         delta: BalanceOf<T>,
-        neg: bool,
+        op: UpdateDescendantStakeOperation,
     ) -> DispatchResult {
         for &i in self.path_to_node(index)?.iter() {
             let node = self.get_node_mut(i)?;
-            if neg {
-                node.descendant_stake = node.descendant_stake.checked_sub_res(&delta)?;
-            } else {
-                node.descendant_stake = node.descendant_stake.checked_add_res(&delta)?;
+            match op {
+                UpdateDescendantStakeOperation::Add => {
+                    node.descendant_stake = node.descendant_stake.checked_add_res(&delta)?
+                }
+                UpdateDescendantStakeOperation::Sub => {
+                    node.descendant_stake = node.descendant_stake.checked_sub_res(&delta)?
+                }
             }
         }
         Ok(())
