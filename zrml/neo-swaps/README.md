@@ -52,6 +52,37 @@ operations.
 The design of the liquidity tree is based on
 [Azuro-protocol/LiquidityTree](https://github.com/Azuro-protocol/LiquidityTree).
 
+#### Lazy Propagation
+
+Fees are propagated up the tree in a "lazy" manner, i.e., the propagation
+happens when liquidity providers deposit liquidity, or withdraw liquidity or
+fees. The process of lazy propagation at a node `node` is as follows:
+
+```
+If node.descendant_stake == 0 then
+    node.fees ← node.fees + node.lazy_fees
+Else
+    total_stake ← node.stake + node.descendant_stake
+    fees ← (node.descendant_stake / total_stake) * node.lazy_fees
+    node.fees ← node.fees + fees
+    remaining ← node.lazy_fees - fees
+    For each child in node.children() do
+        child.lazy_fees ← child.lazy_fees + (child.descendant_stake / total_stake) * remaining
+    End For
+End If
+node.lazy_fees ← 0
+```
+
+This means that at every node, the remaining lazy fees are distributed pro rata
+between the current node and its two children. With the total stake defined as
+the sum of the current node's stake and the stake of its descendants, the
+process is as follows:
+
+- The current node's fees are increased by `node.stake / total_stake` of the
+  remaining lazy fees.
+- Each child's lazy fees are increased by `child.descendant_stake / total_stake`
+  of the remaining lazy fees.
+
 ### Notes
 
 - The `Pool` struct tracks the reserve held in the pool account. The reserve

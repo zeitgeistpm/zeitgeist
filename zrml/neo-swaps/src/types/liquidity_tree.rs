@@ -163,7 +163,7 @@ pub(crate) struct Node<T: Config> {
     pub stake: BalanceOf<T>,
     // The fees owed to the owner.
     pub fees: BalanceOf<T>,
-    // The sum of the stake of all descendant's of this node.
+    // The sum of the stake of all descendants of this node.
     pub descendant_stake: BalanceOf<T>,
     // The amount of fees to be lazily propagated down the tree.
     pub lazy_fees: BalanceOf<T>,
