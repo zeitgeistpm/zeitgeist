@@ -37,7 +37,7 @@ which the `Pool` struct uses to manage liquidity provider's positions. Liquidity
 shares managers in general handles how many pool shares\_ each LP owns (similar
 to pallet-balances), as well as the distribution of fees.
 
-The liquidity tree is binary segment tree. Each node represents one liquidity
+The liquidity tree is a binary segment tree. Each node represents one liquidity
 provider and stores what their stake in the pool is and how much fees they're
 owed. As opposed to a naked list, the liquidity tree solves one particular
 problem: Naively distributing every time a trade is executed takes
