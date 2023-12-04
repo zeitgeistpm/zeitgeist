@@ -91,7 +91,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        traits::{MarketCommonsPalletApi, Swaps, ZeitgeistAssetManager},
+        traits::{MarketCommonsPalletApi, Swaps},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule,
@@ -872,7 +872,11 @@ mod pallet {
             >;
 
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<MarketIdOf<Self>>>;
+        type AssetManager: MultiReservableCurrency<
+                Self::AccountId,
+                // Balance = BalanceOf<Self>,
+                CurrencyId = Asset<MarketIdOf<Self>>,
+            >;
 
         /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;
@@ -1183,8 +1187,16 @@ mod pallet {
             };
 
             // Iterate through every share holder and exchange shares for rewards.
+            // TODO(#1199): Remove Rikiddo. Since Rikiddo is not used in production,
+            // No share holders can be assumed here for now.
+            /*
             let (total_accounts_num, share_accounts) =
                 T::AssetManager::accounts_by_currency_id(shares_id).unwrap_or((0usize, vec![]));
+            */
+            let (total_accounts_num, share_accounts): (
+                usize,
+                Vec<(T::AccountId, orml_tokens::AccountData<BalanceOf<T>>)>,
+            ) = (0usize, vec![]);
             let share_accounts_num = share_accounts.len();
 
             for share_holder in share_accounts {
