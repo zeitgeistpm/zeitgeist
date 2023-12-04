@@ -126,7 +126,6 @@ macro_rules! assert_pool_state {
             .map(|&a| pool.calculate_spot_price(a).unwrap())
             .collect::<Vec<_>>();
         assert_eq!(actual_spot_prices, $spot_prices, "assert_pool_state: Spot price mismatch");
-        let invariant = actual_spot_prices.iter().sum::<u128>();
         assert_eq!(
             pool.liquidity_parameter, $liquidity_parameter,
             "assert_pool_state: Liquidity parameter mismatch"
@@ -154,6 +153,7 @@ macro_rules! assert_pool_state {
             .iter()
             .fold(0u128, |acc, node| acc + node.fees + node.lazy_fees);
         assert_eq!(actual_total_fees, $total_fees);
+        let invariant = actual_spot_prices.iter().sum::<u128>();
         assert_approx!(invariant, _1, 1);
     };
 }
