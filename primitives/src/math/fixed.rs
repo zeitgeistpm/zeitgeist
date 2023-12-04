@@ -170,7 +170,7 @@ where
     if let Ok(scaled_prod) = maybe_scaled_prod {
         // Multiply first, then divide.
         let quot = scaled_prod.checked_div_res(&divisor)?;
-        let adjusted_quot = quot + adjustment;
+        let adjusted_quot = quot.checked_add_res(&adjustment)?;
         adjusted_quot.checked_div_res(&ZeitgeistBase::get()?)
     } else {
         // Divide first, multiply later. It's cleaner to use the maximum of (x, multiplier) as
