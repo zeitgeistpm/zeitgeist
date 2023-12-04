@@ -43,8 +43,7 @@ owed. As opposed to a naked list, the liquidity tree solves one particular
 problem: Naively distributing every time a trade is executed takes
 `O(liquidity_providers)`, which is unacceptable. The problem is solved by
 lazily distributing fees using lazy propagation. Whenever changes are made to a
-node in the tree, e.g. an LP joins, leaves or withdraws fees, then fees are
-lazily propagated to the corresponding node of the tree before any other changes
+node in the tree, e.g. an LP joins, leaves or withdraws fees, fees are then lazily propagated to the corresponding node of the tree before any other changes
 are enacted. This brings the complexity of distributing fees to constant time,
 while lazy propagation only requires `O(log(liquidity_providers))` operations.
 
