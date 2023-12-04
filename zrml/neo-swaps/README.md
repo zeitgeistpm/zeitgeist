@@ -41,7 +41,7 @@ The liquidity tree is a binary segment tree. Each node represents one liquidity
 provider and stores what their stake in the pool is and how much fees they're
 owed. As opposed to a naked list, the liquidity tree solves one particular
 problem: Naively distributing every time a trade is executed takes
-`O(liquidity_providers)`, which is unnacceptable. The problem is solved by
+`O(liquidity_providers)`, which is unacceptable. The problem is solved by
 lazily distributing fees using lazy propagation. Whenever changes are made to a
 node in the tree, e.g. an LP joins, leaves or withdraws fees, then fees are
 lazily propagated to the corresponding node of the tree before any other changes
