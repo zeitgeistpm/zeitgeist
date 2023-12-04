@@ -158,7 +158,6 @@ macro_rules! assert_pool_state {
     };
 }
 
-// FIXME Rewrite this using `BTreeMap` might be cool.
 /// Asserts that `account` has the specified `balances` of `assets`.
 #[macro_export]
 macro_rules! assert_balances {
