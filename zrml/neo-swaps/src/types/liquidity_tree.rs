@@ -273,7 +273,10 @@ where
         let index = self.map_account_to_index(who)?;
         self.propagate_fees_to_node(index)?;
         let node = self.get_node_mut(index)?;
-        ensure!(node.fees == Zero::zero(), LiquidityTreeError::UnclaimedFees.into_dispatch::<T>());
+        ensure!(
+            node.fees == Zero::zero(),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<T>()
+        );
         node.stake = node
             .stake
             .checked_sub(&stake)
@@ -611,7 +614,7 @@ pub enum LiquidityTreeError {
     /// There is no node with this index.
     NodeNotFound,
     /// Operation can't be executed while there are unclaimed fees.
-    UnclaimedFees,
+    UnwithdrawnFees,
     /// The liquidity tree is full and can't accept any new nodes.
     TreeIsFull,
     /// This node doesn't hold enough stake.
@@ -937,7 +940,10 @@ mod tests {
         tree.nodes[1].lazy_fees = Zero::zero();
         tree.nodes[3].fees = Zero::zero();
         tree.nodes[3].lazy_fees = Zero::zero();
-        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+        assert_err!(
+            tree.exit(&5, 1),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+        );
     }
 
     #[test]
@@ -946,7 +952,10 @@ mod tests {
         // Clear unclaimed fees except for the middle node.
         tree.nodes[3].fees = Zero::zero();
         tree.nodes[3].lazy_fees = Zero::zero();
-        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+        assert_err!(
+            tree.exit(&5, 1),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+        );
     }
 
     #[test]
@@ -956,7 +965,10 @@ mod tests {
         tree.nodes[1].lazy_fees = Zero::zero();
         // This ensures that the error is caused by propagated lazy fees sitting in the node.
         tree.nodes[3].fees = Zero::zero();
-        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+        assert_err!(
+            tree.exit(&5, 1),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+        );
     }
 
     #[test]
@@ -966,7 +978,10 @@ mod tests {
         tree.nodes[1].lazy_fees = Zero::zero();
         // This ensures that the error is caused by normal fees.
         tree.nodes[3].lazy_fees = Zero::zero();
-        assert_err!(tree.exit(&5, 1), LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>());
+        assert_err!(
+            tree.exit(&5, 1),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+        );
     }
 
     #[test]

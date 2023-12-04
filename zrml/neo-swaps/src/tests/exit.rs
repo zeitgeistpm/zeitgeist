@@ -305,7 +305,7 @@ fn exit_fails_on_outstanding_fees() {
             .deposit_fees(_10)));
         assert_noop!(
             NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _1, vec![0, 0]),
-            LiquidityTreeError::UnclaimedFees.into_dispatch::<Runtime>(),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>(),
         );
     });
 }
