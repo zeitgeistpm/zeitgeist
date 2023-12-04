@@ -484,8 +484,8 @@ impl ExtBuilder {
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "parachain")] {
+        #[cfg(feature = "parachain")] 
+        {
                 use frame_support::traits::GenesisBuild;
                 orml_tokens::GenesisConfig::<Runtime> {
                     balances: vec![(ALICE, FOREIGN_ASSET, _101)],
@@ -511,7 +511,6 @@ impl ExtBuilder {
                 }
                 .assimilate_storage(&mut t)
                 .unwrap();
-            }
         }
         let mut test_ext: sp_io::TestExternalities = t.into();
         test_ext.execute_with(|| System::set_block_number(1));
