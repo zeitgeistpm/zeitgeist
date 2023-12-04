@@ -44,8 +44,10 @@ mod pallet {
         require_transactional,
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            fungibles::{Create, Destroy},
+            tokens::BalanceStatus,
+            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
+            OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
@@ -1704,6 +1706,10 @@ mod pallet {
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
+        /// Implemention that has the capability to create and destroy assets
+        type AssetLifetime: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>
+            + Destroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
         /// Shares of outcome assets and native currency
         type AssetManager: MultiCurrency<Self::AccountId, Balance = BalanceOf<Self>, CurrencyId = AssetOf<Self>>
             + NamedMultiReservableCurrency<
@@ -2626,9 +2632,11 @@ mod pallet {
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             T::AssetManager::transfer(market.base_asset, &who, &market_account, amount)?;
-
             let assets = Self::outcome_assets(market_id, &market);
+
             for asset in assets.iter() {
+                let min_balance = T::AssetManager::minimum_balance(*asset);
+                T::AssetLifetime::create(*asset, market_account.clone(), false, min_balance)?;
                 T::AssetManager::deposit(*asset, &who, amount)?;
             }
 
