@@ -41,6 +41,9 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
+// Same behavior as `assert_ok!`, except that it wraps the call inside a transaction layer. Required
+// when calling into functions marked `require_transactional` to avoid a `Transactional(NoLayer)`
+// error.
 macro_rules! assert_ok_with_transaction {
     ($expr:expr) => {{
         assert_ok!(with_transaction(|| match $expr {
