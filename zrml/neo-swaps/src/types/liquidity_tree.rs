@@ -1215,14 +1215,10 @@ mod tests {
             };
             // Nodes have the wrong descendant stake at this point, so let's fix that.
             for (index, node) in tree.nodes.iter_mut().enumerate() {
-                let exp = max_depth + 1 - log2(index as u32 + 1);
+                let exp = max_depth + 1 - (index + 1).checked_ilog2().unwrap();
                 node.descendant_stake = 2u128.pow(exp) - 2;
             }
             tree
-        }
-
-        fn log2(x: u32) -> u32 {
-            std::mem::size_of::<u32>() as u32 * 8 - x.leading_zeros() - 1
         }
     }
 }
