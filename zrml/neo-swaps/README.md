@@ -61,11 +61,11 @@ The design of the liquidity tree is based on
   manipulate prices by sending funds to the pool account.
 - Pool shares are not recorded using the `ZeitgeistAssetManager` trait. Instead,
   they are part of the `Pool` object and can be tracked using events.
-- When the native currency is used as collateral, the pallet mints the
-  existential deposit to the pool account (which holds the swap fees). This is
-  done to ensure that small amounts of fees don't cause the entire transaction
-  to fail with `ExistentialDeposit`. This "buffer" is burned when the pool is
-  destroyed. The pool account is expected to be whitelisted from dusting for all
-  other assets.
+- When a pool is deployed, the pallet charges the signer an extra fee to the
+  tune of the collateral's existential deposit. This fee is moved into the pool
+  account (which holds the swap fees). This is done to ensure that small amounts
+  of fees don't cause the entire transaction to fail with `ExistentialDeposit`.
+  This "buffer" is burned when the pool is destroyed. The pool account is
+  expected to be whitelisted from dusting for all other assets.
 
 [docslink]: ./docs/docs.pdf
