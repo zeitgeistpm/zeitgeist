@@ -149,7 +149,6 @@ where
     }
 }
 
-// TODO Use in other ratio calculations.
 /// Helper function for implementing `FixedMulDiv` in a numerically clean way.
 ///
 /// The main idea is to keep the fixed point number scaled up between the multiplication and
