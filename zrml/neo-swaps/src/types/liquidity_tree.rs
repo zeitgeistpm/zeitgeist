@@ -49,6 +49,7 @@ where
     D: Get<u32>,
 {
     fn get() -> u32 {
+        debug_assert!(D::get() < 16); // Misconfiguration check!
         2u32.saturating_pow(D::get() + 1).saturating_sub(1)
     }
 }
