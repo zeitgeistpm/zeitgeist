@@ -190,8 +190,8 @@ where
     }
 
     /// Return `true` is the node is a leaf in the sense that none of its descendants hold any
-    /// stake. (Strictly speaking, it's not always a leaf!)
-    pub(crate) fn is_leaf(&self) -> bool {
+    /// stake. (Strictly speaking, it's not always a leaf, as there might be abandoned nodes!)
+    pub(crate) fn is_weak_leaf(&self) -> bool {
         self.descendant_stake == Zero::zero()
     }
 }
@@ -439,7 +439,7 @@ where
         }
         // Temporary storage to ensure that the borrow checker doesn't get upset.
         let descendant_stake = node.descendant_stake;
-        if node.is_leaf() {
+        if node.is_weak_leaf() {
             self.mutate_node(index, |node| {
                 node.fees = node.fees.checked_add_res(&node.lazy_fees)?;
                 Ok(())
