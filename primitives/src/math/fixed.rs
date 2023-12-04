@@ -90,15 +90,19 @@ where
     fn bdiv_ceil(&self, other: Self) -> Result<Self, DispatchError>;
 }
 
-/// TODO Testing!
-/// TODO Add to other ratio calculations!
 /// Performs fixed point multiplication and division, calculating `self * multiplier / divisor`.
 pub trait FixedMulDiv
 where
     Self: Sized,
 {
+    /// Calculates the fixed point product `self * multiplier / divisor` and rounds to the nearest
+    /// representable fixed point number.
     fn bmul_bdiv(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError>;
+
+    /// Calculates the fixed point product `self * multiplier / divisor` and rounds down.
     fn bmul_bdiv_floor(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError>;
+
+    /// Calculates the fixed point product `self * multiplier / divisor` and rounds up.
     fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError>;
 }
 
