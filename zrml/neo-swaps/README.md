@@ -27,7 +27,7 @@ For a detailed description of the underlying mathematics see [here][docslink].
 - _Swap fees_: Part of the collateral paid or received by informants that is
   moved to a separate account owned by the liquidity providers. They need to be
   withdrawn using the `withdraw_fees` extrinsic.
-- _Liquidity Tree_: A data structure used to store a pool's liquidity provider's
+- _Liquidity Tree_: A data structure used to store a pool's liquidity providers'
   positions.
 
 ### Liquidity Tree
