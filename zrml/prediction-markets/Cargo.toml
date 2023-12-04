@@ -21,6 +21,7 @@ zrml-simple-disputes = { workspace = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
+pallet-assets = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
 pallet-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
@@ -29,6 +30,7 @@ sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 substrate-fixed = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
+zrml-asset-router = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 zrml-rikiddo = { workspace = true, optional = true }
 zrml-swaps = { workspace = true, optional = true }
@@ -43,7 +45,8 @@ default = ["std"]
 mock = [
     "orml-currencies/default",
     "orml-tokens/default",
-    "pallet-balances",
+    "pallet-assets/default",
+    "pallet-balances/default",
     "pallet-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",
@@ -52,6 +55,7 @@ mock = [
     "sp-io/default",
     "substrate-fixed",
     "zeitgeist-primitives/mock",
+    "zrml-asset-router/default",
     "zrml-prediction-markets-runtime-api/default",
     "zrml-rikiddo/default",
     "zrml-swaps/default",

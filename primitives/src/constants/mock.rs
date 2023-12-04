@@ -21,7 +21,7 @@
 pub use super::*;
 use crate::{
     assets::Asset,
-    types::{Assets, Balance, Moment},
+    types::{Assets, Currencies, Balance, Moment},
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
@@ -165,10 +165,9 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
+    pub ExistentialDeposits: |currency_id: Currencies| -> Balance {
         match currency_id {
-            Asset::Ztg => ExistentialDeposit::get(),
-            _ => 10
+            _ => ExistentialDeposit::get(),
         }
     };
 }

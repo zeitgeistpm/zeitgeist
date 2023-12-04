@@ -25,11 +25,15 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
+    traits::{
+        AsEnsureOriginWithArg, ConstU128, ConstU32, Everything, NeverEnsureOrigin, OnFinalize,
+        OnInitialize,
+    },
 };
-use frame_system::{EnsureRoot, EnsureSignedBy};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
+use parity_scale_codec::Compact;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
@@ -60,7 +64,8 @@ use zeitgeist_primitives::{
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
-        BlockTest, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        BlockTest, CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash,
+        Index, MarketAsset, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -74,6 +79,10 @@ pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
+
+pub(super) type CustomAssetsInstance = pallet_assets::Instance1;
+pub(super) type CampaignAssetsInstance = pallet_assets::Instance2;
+pub(super) type MarketAssetsInstance = pallet_assets::Instance3;
 
 #[allow(unused)]
 pub struct DeployPoolMock;
@@ -164,11 +173,15 @@ construct_runtime!(
         NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        AssetRouter: zrml_asset_router::{Pallet},
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
+        CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
         Court: zrml_court::{Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
@@ -187,6 +200,8 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type AssetLifetime = AssetRouter;
+    type AssetManager = AssetManager;
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
@@ -226,7 +241,6 @@ impl crate::Config for Runtime {
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;
     type Swaps = Swaps;
@@ -263,7 +277,7 @@ impl frame_system::Config for Runtime {
 
 impl orml_currencies::Config for Runtime {
     type GetNativeCurrencyId = GetNativeCurrencyId;
-    type MultiCurrency = Tokens;
+    type MultiCurrency = AssetRouter;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
@@ -271,7 +285,7 @@ impl orml_currencies::Config for Runtime {
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Assets;
+    type CurrencyId = Currencies;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -288,6 +302,103 @@ crate::orml_asset_registry::impl_mock_registry! {
     Assets,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
+}
+
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+    pub struct AssetsBenchmarkHelper;
+
+    impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
+        for AssetsBenchmarkHelper
+    where
+        AssetIdParameter: From<u128>,
+    {
+        fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+            (id as u128).into()
+        }
+    }
+}
+
+impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
+    type ApprovalDeposit = ConstU128<0>;
+    type AssetAccountDeposit = ConstU128<0>;
+    type AssetDeposit = ConstU128<0>;
+    type AssetId = CustomAsset;
+    type AssetIdParameter = Compact<CustomAssetId>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = ConstU128<0>;
+    type MetadataDepositPerByte = ConstU128<0>;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = ConstU32<255>;
+    type WeightInfo = ();
+}
+
+impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
+    type ApprovalDeposit = ConstU128<0>;
+    type AssetAccountDeposit = ConstU128<0>;
+    type AssetDeposit = ConstU128<0>;
+    type AssetId = CampaignAsset;
+    type AssetIdParameter = Compact<CampaignAssetId>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = ConstU128<0>;
+    type MetadataDepositPerByte = ConstU128<0>;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = ConstU32<255>;
+    type WeightInfo = ();
+}
+
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+    pub struct MarketAssetsBenchmarkHelper;
+
+    impl pallet_assets::BenchmarkHelper<MarketAsset>
+        for MarketAssetsBenchmarkHelper
+    {
+        fn create_asset_id_parameter(id: u32) -> MarketAsset {
+            MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
+        }
+    }
+}
+
+impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
+    type ApprovalDeposit = ConstU128<0>;
+    type AssetAccountDeposit = ConstU128<0>;
+    type AssetDeposit = ConstU128<0>;
+    type AssetId = MarketAsset;
+    type AssetIdParameter = MarketAsset;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = MarketAssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = ConstU128<0>;
+    type MetadataDepositPerByte = ConstU128<0>;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = ConstU32<255>;
+    type WeightInfo = ();
 }
 
 impl pallet_balances::Config for Runtime {
@@ -313,6 +424,19 @@ impl pallet_timestamp::Config for Runtime {
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
+impl zrml_asset_router::Config for Runtime {
+    type AssetType = Assets;
+    type Balance = Balance;
+    type CurrencyType = Currencies;
+    type Currencies = Tokens;
+    type CampaignAssetType = CampaignAsset;
+    type CampaignAssets = CampaignAssets;
+    type CustomAssetType = CustomAsset;
+    type CustomAssets = CustomAssets;
+    type MarketAssetType = MarketAsset;
+    type MarketAssets = MarketAssets;
 }
 
 impl zrml_authorized::Config for Runtime {
