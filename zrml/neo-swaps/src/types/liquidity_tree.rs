@@ -85,7 +85,9 @@ where
     pub(crate) nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes<U>>,
     /// Maps an account to the node that belongs to it.
     pub(crate) account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes<U>>,
-    /// A vector that contains the indices of abandoned nodes.
+    /// A vector that contains the indices of abandoned nodes. Sorted in the order in which the
+    /// nodes were abandoned, with the last element of the vector being the most recently abandoned
+    /// node.
     pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes<U>>,
 }
 
