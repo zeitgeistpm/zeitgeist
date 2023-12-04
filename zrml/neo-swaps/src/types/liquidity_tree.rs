@@ -468,6 +468,7 @@ where
             match child_indices.get(0).unwrap_or(&None) {
                 Some(lhs_index) => {
                     self.mutate_node(*lhs_index, |lhs_node| {
+                        // The descendant's share of the stake:
                         let child_lazy_fees = lhs_node
                             .total_stake()?
                             .bmul_bdiv(remaining_lazy_fees, node_descendant_stake)?;
