@@ -162,7 +162,8 @@ where
 
         let mut translated = 0u64;
         crate::Pools::<T>::translate::<Option<OldPoolOf<T>>, _>(|_, opt_old_pool| {
-            // We proceed by deleting Rikiddo pools; CPMM pools are migrated to the new version.
+            // We proceed by deleting Rikiddo pools; CPMM pools are migrated to the new version
+            // _and_ closed (because their respective markets are being switched to LMSR).
             translated.saturating_inc();
             let old_pool = opt_old_pool?;
             if old_pool.scoring_rule != OldScoringRule::CPMM {
@@ -171,7 +172,7 @@ where
             // These should all be infallible.
             let assets = old_pool.assets.try_into().ok()?;
             let status = match old_pool.pool_status {
-                OldPoolStatus::Active => PoolStatus::Open,
+                OldPoolStatus::Active => PoolStatus::Closed,
                 OldPoolStatus::CollectingSubsidy => return None,
                 OldPoolStatus::Closed => PoolStatus::Closed,
                 OldPoolStatus::Clean => PoolStatus::Closed,
@@ -245,14 +246,11 @@ mod tests {
         });
     }
 
-    #[test_case(OldPoolStatus::Active, PoolStatus::Open)]
-    #[test_case(OldPoolStatus::Closed, PoolStatus::Closed)]
-    #[test_case(OldPoolStatus::Clean, PoolStatus::Closed)]
-    #[test_case(OldPoolStatus::Initialized, PoolStatus::Closed)]
-    fn on_runtime_upgrade_works_as_expected_with_cpmm(
-        old_pool_status: OldPoolStatus,
-        new_pool_status: PoolStatus,
-    ) {
+    #[test_case(OldPoolStatus::Active)]
+    #[test_case(OldPoolStatus::Closed)]
+    #[test_case(OldPoolStatus::Clean)]
+    #[test_case(OldPoolStatus::Initialized)]
+    fn on_runtime_upgrade_works_as_expected_with_cpmm(old_pool_status: OldPoolStatus) {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
             let base_asset = Asset::ForeignAsset(4);
@@ -291,7 +289,7 @@ mod tests {
             let actual = crate::Pools::<Runtime>::get(0);
             let expected = Some(Pool {
                 assets: assets.try_into().unwrap(),
-                status: new_pool_status,
+                status: PoolStatus::Closed,
                 swap_fee,
                 total_weight,
                 weights: weights.try_into().unwrap(),
