@@ -29,8 +29,8 @@ use sp_runtime::traits::Saturating;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "try-runtime")] {
-        use crate::{types::Node, MarketIdOf, Pools};
-        use alloc::{collections::BTreeMap, format, vec, vec::Vec};
+        use crate::{MarketIdOf, Pools};
+        use alloc::{collections::BTreeMap, format, vec::Vec};
         use frame_support::{migration::storage_key_iter, pallet_prelude::Twox64Concat};
         use parity_scale_codec::{Decode, Encode};
         use sp_runtime::traits::Zero;
@@ -112,17 +112,21 @@ impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for MigrateToLiqu
             assert_eq!(new_pool.reserves, old_pool.reserves);
             assert_eq!(new_pool.collateral, old_pool.collateral);
             assert_eq!(new_pool.liquidity_parameter, old_pool.liquidity_parameter);
-            assert_eq!(
-                new_pool.liquidity_shares_manager.nodes,
-                vec![Node {
-                    account: Some(old_pool.account_id.clone()),
-                    stake: old_pool.liquidity_shares_manager.total_shares,
-                    fees: old_pool.liquidity_shares_manager.fees,
-                    descendant_stake: Zero::zero(),
-                    lazy_fees: Zero::zero(),
-                }]
-            );
             assert_eq!(new_pool.swap_fee, old_pool.swap_fee);
+            let tree = new_pool.liquidity_shares_manager;
+            let solo = &old_pool.liquidity_shares_manager;
+            assert_eq!(tree.nodes.len(), 1);
+            assert_eq!(tree.abandoned_nodes.len(), 0);
+            assert_eq!(tree.account_to_index.len(), 1);
+            let root = tree.nodes[0].clone();
+            let account = root.account.clone();
+            assert_eq!(root.account, Some(solo.owner.clone()));
+            assert_eq!(root.stake, solo.total_shares);
+            assert_eq!(root.fees, solo.fees);
+            assert_eq!(root.descendant_stake, Zero::zero());
+            assert_eq!(root.lazy_fees, Zero::zero());
+            let address = account.unwrap();
+            assert_eq!(tree.account_to_index.get(&address), Some(&0));
         }
         log::info!("MigrateToLiquidityTree: Post-upgrade pool count is {}!", new_pool_count);
         Ok(())
