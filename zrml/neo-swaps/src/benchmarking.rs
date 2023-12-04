@@ -113,8 +113,8 @@ where
     /// Populates the market's liquidity tree until full. The `caller` is the owner of the last
     /// leaf. Ensures that the tree has the expected configuration of nodes.
     fn populate_liquidity_tree_until_full(&self, market_id: MarketIdOf<T>, caller: T::AccountId) {
-        // Start by populating the entire tree. `caller` will own one of the leaves, withdraw their
-        // stake, leaving an abandoned node at a leaf.
+        // Start by populating the entire tree except for one node. `caller` will then join and
+        // occupy the last node.
         self.populate_liquidity_tree_with_free_leaf(market_id);
         add_liquidity_provider_to_market::<T>(market_id, caller);
         // Verify that we've got the right number of nodes.
