@@ -126,7 +126,7 @@ where
 {
     /// Create a new liquidity tree.
     ///
-    /// Parameter:
+    /// # Parameters
     ///
     /// - `account`: The account to which the tree's root belongs.
     /// - `stake`: The stake of the tree's root.
