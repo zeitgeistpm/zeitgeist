@@ -137,11 +137,11 @@ where
         let root = Node::new(account.clone(), stake);
         let nodes = vec![root]
             .try_into()
-            .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
+            .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
         let mut account_to_index: BoundedBTreeMap<_, _, _> = Default::default();
         account_to_index
             .try_insert(account, 0u32)
-            .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
+            .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
         let abandoned_nodes = Default::default();
         Ok(LiquidityTree { nodes, account_to_index, abandoned_nodes })
     }
@@ -251,7 +251,7 @@ where
                     }
                     self.nodes
                         .try_push(Node::new(who.clone(), stake))
-                        .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
+                        .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
                     (index, BenchmarkInfo::Leaf)
                 }
                 NextNode::None => {
@@ -260,7 +260,7 @@ where
             };
             self.account_to_index
                 .try_insert(who.clone(), index)
-                .map_err(|_| LiquidityTreeError::TreeIsFull.into_dispatch::<T>())?;
+                .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
             (index, benchmark_info)
         };
         if let Some(parent_index) = self.parent_index(index) {
@@ -282,7 +282,7 @@ where
             node.account = None;
             self.abandoned_nodes
                 .try_push(index)
-                .map_err(|_| LiquidityTreeError::AccountNotFound.into_dispatch::<T>())?;
+                .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
             let _ = self.account_to_index.remove(who);
         }
         if let Some(parent_index) = self.parent_index(index) {
@@ -618,6 +618,8 @@ pub enum LiquidityTreeError {
     InsufficientStake,
     /// A while loop exceeded the expected number of iterations. This is unexpected behavior.
     MaxIterationsReached,
+    /// Unexpected storage overflow.
+    StorageOverflow,
 }
 
 impl<T> From<LiquidityTreeError> for Error<T> {
