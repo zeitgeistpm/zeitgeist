@@ -38,14 +38,16 @@ shares managers in general handles how many pool shares\_ each LP owns (similar
 to pallet-balances), as well as the distribution of fees.
 
 The liquidity tree is a binary segment tree. Each node represents one liquidity
-provider and stores what their stake in the pool is and how much fees they're
-owed. As opposed to a naked list, the liquidity tree solves one particular
-problem: Naively distributing fees every time a trade is executed takes
-`O(liquidity_providers)`, which is unacceptable. The problem is solved by
-lazily distributing fees using lazy propagation. Whenever changes are made to a
-node in the tree, e.g. an LP joins, leaves or withdraws fees, fees are then lazily propagated to the corresponding node of the tree before any other changes
-are enacted. This brings the complexity of distributing fees to constant time,
-while lazy propagation only requires `O(log(liquidity_providers))` operations.
+provider and stores their stake in the pool and how much fees they're owed. As
+opposed to a naked list, the liquidity tree solves one particular problem:
+Naively distributing fees every time a trade is executed requires
+`O(liquidity_providers)` operations, which is unacceptable. The problem is
+solved by lazily distributing fees using lazy propagation. Whenever changes are
+made to a node in the tree, e.g. an LP joins, leaves or withdraws fees, fees are
+then lazily propagated to the corresponding node of the tree before any other
+changes are enacted. This brings the complexity of distributing fees to constant
+time, while lazy propagation only requires `O(log(liquidity_providers))`
+operations.
 
 The design of the liquidity tree is based on
 [Azuro-protocol/LiquidityTree](https://github.com/Azuro-protocol/LiquidityTree).
@@ -55,14 +57,14 @@ The design of the liquidity tree is based on
 - The `Pool` struct tracks the reserve held in the pool account. The reserve
   changes when trades are executed or the liquidity changes, but the reserve
   does not take into account funds that are sent to the pool account
-  unsolicitedly. This fixes a griefing vector which allows an attacker to manipulate
-  prices by sending funds to the pool account.
+  unsolicitedly. This fixes a griefing vector which allows an attacker to
+  manipulate prices by sending funds to the pool account.
 - Pool shares are not recorded using the `ZeitgeistAssetManager` trait. Instead,
   they are part of the `Pool` object and can be tracked using events.
 - When the native currency is used as collateral, the pallet mints the
   existential deposit to the pool account (which holds the swap fees). This is
   done to ensure that small amounts of fees don't cause the entire transaction
-  to error with `ExistentialDeposit`. This "buffer" is burned when the pool is
+  to fail with `ExistentialDeposit`. This "buffer" is burned when the pool is
   destroyed. The pool account is expected to be whitelisted from dusting for all
   other assets.
 
