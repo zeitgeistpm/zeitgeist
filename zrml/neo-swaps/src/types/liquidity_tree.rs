@@ -67,14 +67,6 @@ where
 /// what its fees are, propagating fees to this node takes `O(depth)` operations (or, equivalently,
 /// `O(log_2(node_count))`).
 ///
-/// # Attributes
-///
-/// - `nodes`: A vector which holds the nodes of the tree. The nodes are ordered by depth (the root
-///   is the first element of `nodes`) and from left to right. For example, the right-most
-///   grandchild of the root is at index `6`.
-/// - `account_to_index`: Maps an account to the node that belongs to it.
-/// - `abandoned_nodes`: A vector that contains the indices of abandoned nodes.
-///
 /// # Generics
 ///
 /// - `T`: The pallet configuration.
@@ -87,8 +79,13 @@ where
     T: Config,
     U: Get<u32>,
 {
+    /// A vector which holds the nodes of the tree. The nodes are ordered by depth (the root is the
+    /// first element of `nodes`) and from left to right. For example, the right-most grandchild of
+    /// the root is at index `6`.
     pub(crate) nodes: BoundedVec<Node<T>, LiquidityTreeMaxNodes<U>>,
+    /// Maps an account to the node that belongs to it.
     pub(crate) account_to_index: BoundedBTreeMap<T::AccountId, u32, LiquidityTreeMaxNodes<U>>,
+    /// A vector that contains the indices of abandoned nodes.
     pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes<U>>,
 }
 
@@ -150,14 +147,6 @@ where
 
 // Type for nodes of a liquidity tree.
 //
-// # Attributes
-//
-// - `account`: The account that the node belongs to. `None` signifies an abandoned node.
-// - `stake`: The stake belonging to the owner.
-// - `fees`: The fees owed to the owner.
-// - `descendant_stake`: The sum of the stake of all descendant's of this node.
-// - `lazy_fees`: The amount of fees to be lazily propagated down the tree.
-//
 // # Notes
 //
 // - `descendant_stake` does not contain the stake of `self`.
@@ -166,10 +155,15 @@ where
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebugNoBound, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub(crate) struct Node<T: Config> {
+    // The account that the node belongs to. `None` signifies an abandoned node.
     pub account: Option<T::AccountId>,
+    // The stake belonging to the owner.
     pub stake: BalanceOf<T>,
+    // The fees owed to the owner.
     pub fees: BalanceOf<T>,
+    // The sum of the stake of all descendant's of this node.
     pub descendant_stake: BalanceOf<T>,
+    // The amount of fees to be lazily propagated down the tree.
     pub lazy_fees: BalanceOf<T>,
 }
 
