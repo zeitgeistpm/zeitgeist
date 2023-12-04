@@ -221,8 +221,8 @@ where
         who: &T::AccountId,
         stake: BalanceOf<T>,
     ) -> Result<Self::JoinBenchmarkInfo, DispatchError> {
-        let index_maybe = self.account_to_index.get(who);
-        let (index, benchmark_info) = if let Some(&index) = index_maybe {
+        let opt_index = self.account_to_index.get(who);
+        let (index, benchmark_info) = if let Some(&index) = opt_index {
             // Pile onto existing account.
             self.propagate_fees_to_node(index)?;
             let node = self.get_node_mut(index)?;
