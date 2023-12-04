@@ -62,7 +62,7 @@ The design of the liquidity tree is based on
 - When the native currency is used as collateral, the pallet mints the
   existential deposit to the pool account (which holds the swap fees). This is
   done to ensure that small amounts of fees don't cause the entire transaction
-  to error with `ExistentialDeposit`. This "buffer" is removed when the pool is
+  to error with `ExistentialDeposit`. This "buffer" is burned when the pool is
   destroyed. The pool account is expected to be whitelisted from dusting for all
   other assets.
 
