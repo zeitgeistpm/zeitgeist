@@ -175,10 +175,11 @@ where
     } else {
         // Divide first, multiply later. It's cleaner to use the maximum of (x, multiplier) as
         // divident.
-        let (u, v) = if *x < multiplier { (*x, multiplier) } else { (multiplier, *x) };
-        let scaled_divident = v.checked_mul_res(&ZeitgeistBase::get()?)?;
+        let smallest = x.min(&multiplier);
+        let largest = x.max(&multiplier);
+        let scaled_divident = largest.checked_mul_res(&ZeitgeistBase::get()?)?;
         let quot = scaled_divident.checked_div_res(&divisor)?;
-        let prod = quot.checked_mul_res(&u)?;
+        let prod = quot.checked_mul_res(smallest)?;
         let adjusted_prod = prod.checked_add_res(&adjustment)?;
         adjusted_prod.checked_div_res(&ZeitgeistBase::get()?)
     }
