@@ -55,7 +55,7 @@ The design of the liquidity tree is based on
 - The `Pool` struct tracks the reserve held in the pool account. The reserve
   changes when trades are executed or the liquidity changes, but the reserve
   does not take into account funds that are sent to the pool account
-  unsolicitedly. This fixes a griefing vector which allows an attacker to change
+  unsolicitedly. This fixes a griefing vector which allows an attacker to manipulate
   prices by sending funds to the pool account.
 - Pool shares are not recorded using the `ZeitgeistAssetManager` trait. Instead,
   they are part of the `Pool` object and can be tracked using events.
