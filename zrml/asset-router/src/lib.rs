@@ -114,7 +114,7 @@ pub mod pallet {
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + TypeInfo;
-        
+
         /// Logic that handles currencies by providing multiple currencies
         /// trait implementations.
         type Currencies: TransferAll<Self::AccountId>

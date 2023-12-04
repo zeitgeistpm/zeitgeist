@@ -64,7 +64,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
+            DisputeResolutionApi, Swaps,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -81,6 +81,7 @@ mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
 
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type NegativeImbalanceOf<T> =
@@ -1704,10 +1705,11 @@ mod pallet {
         type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
+        type AssetManager: MultiCurrency<Self::AccountId, Balance = BalanceOf<Self>, CurrencyId = AssetOf<Self>>
+            + NamedMultiReservableCurrency<
                 Self::AccountId,
                 Balance = BalanceOf<Self>,
-                CurrencyId = Asset<MarketIdOf<Self>>,
+                CurrencyId = AssetOf<Self>,
                 ReserveIdentifier = [u8; 8],
             >;
 
