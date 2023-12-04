@@ -58,19 +58,19 @@ Fees are propagated up the tree in a "lazy" manner, i.e., the propagation
 happens when liquidity providers deposit liquidity, or withdraw liquidity or
 fees. The process of lazy propagation at a node `node` is as follows:
 
-```
+```ignore
 If node.descendant_stake == 0 then
-    node.fees <- node.fees + node.lazy_fees
+    node.fees ← node.fees + node.lazy_fees
 Else
-    total_stake <- node.stake + node.descendant_stake
-    fees <- (node.descendant_stake / total_stake) * node.lazy_fees
-    node.fees <- node.fees + fees
-    remaining <- node.lazy_fees - fees
+    total_stake ← node.stake + node.descendant_stake
+    fees ← (node.descendant_stake / total_stake) * node.lazy_fees
+    node.fees ← node.fees + fees
+    remaining ← node.lazy_fees - fees
     For each child in node.children() do
-        child.lazy_fees <- child.lazy_fees + (child.descendant_stake / total_stake) * remaining
+        child.lazy_fees ← child.lazy_fees + (child.descendant_stake / total_stake) * remaining
     End For
 End If
-node.lazy_fees <- 0
+node.lazy_fees ← 0
 ```
 
 This means that at every node, the remaining lazy fees are distributed pro rata
