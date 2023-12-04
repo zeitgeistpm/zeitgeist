@@ -330,6 +330,12 @@ mod benchmarks {
         let complete_set_amount = _100.saturated_into();
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), Some(complete_set_amount));
 
+        // Double check that there's no abandoned node or free leaf.
+        let pool = Pools::<T>::get(market_id).unwrap();
+        assert_eq!(pool.liquidity_shares_manager.abandoned_nodes.len(), 0);
+        let max_node_count = LiquidityTreeOf::<T>::max_node_count();
+        assert_eq!(pool.liquidity_shares_manager.node_count(), max_node_count);
+
         #[extrinsic_call]
         join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
@@ -354,8 +360,14 @@ mod benchmarks {
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), None);
         let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
 
+        // Double check that there's an abandoned node.
+        assert_eq!(pool.liquidity_shares_manager.abandoned_nodes.len(), 1);
+
         #[extrinsic_call]
         join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+
+        let pool = Pools::<T>::get(market_id).unwrap();
+        assert_eq!(pool.liquidity_shares_manager.abandoned_nodes.len(), 0);
     }
 
     // Bob joins the pool and is assigned a leaf at maximum depth in the tree. Maximum propagation
@@ -378,8 +390,16 @@ mod benchmarks {
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), None);
         let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
 
+        // Double-check that there's a free leaf.
+        let max_node_count = LiquidityTreeOf::<T>::max_node_count();
+        assert_eq!(pool.liquidity_shares_manager.node_count(), max_node_count - 1);
+
         #[extrinsic_call]
         join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
+
+        // Ensure that the leaf is taken.
+        let pool = Pools::<T>::get(market_id).unwrap();
+        assert_eq!(pool.liquidity_shares_manager.node_count(), max_node_count);
     }
 
     // Worst-case benchmark of `exit`. A couple of conditions must be met to get the worst-case:
