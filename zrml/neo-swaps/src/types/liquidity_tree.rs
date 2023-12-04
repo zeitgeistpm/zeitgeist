@@ -399,7 +399,7 @@ where
         op: UpdateDescendantStakeOperation,
     ) -> DispatchResult;
 
-    /// Mutate each of child of the node at `index` using `mutator`.
+    /// Mutate each child of the node at `index` using `mutator`.
     fn mutate_each_child<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
         F: FnMut(&mut Node<T>) -> DispatchResult;
