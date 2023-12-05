@@ -23,7 +23,7 @@ use frame_support::{
     pallet_prelude::RuntimeDebugNoBound,
     storage::{bounded_btree_map::BoundedBTreeMap, bounded_vec::BoundedVec},
     traits::Get,
-    PalletError,
+    CloneNoBound, PalletError, PartialEqNoBound,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -72,7 +72,9 @@ where
 /// - `T`: The pallet configuration.
 /// - `U`: A getter for the maximum depth of the tree. Using a depth larger than `31` will result in
 ///   undefined behavior.
-#[derive(Decode, Encode, Eq, MaxEncodedLen, RuntimeDebugNoBound, TypeInfo)]
+#[derive(
+    CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
 #[scale_info(skip_type_params(T, U))]
 pub struct LiquidityTree<T, U>
 where
@@ -89,34 +91,6 @@ where
     /// nodes were abandoned, with the last element of the vector being the most recently abandoned
     /// node.
     pub(crate) abandoned_nodes: BoundedVec<u32, LiquidityTreeMaxNodes<U>>,
-}
-
-// Boilerplate implementation because Rust is confused by the generic parameter `U`.
-impl<T, U> Clone for LiquidityTree<T, U>
-where
-    T: Config,
-    U: Get<u32>,
-{
-    fn clone(&self) -> Self {
-        LiquidityTree {
-            nodes: self.nodes.clone(),
-            account_to_index: self.account_to_index.clone(),
-            abandoned_nodes: self.abandoned_nodes.clone(),
-        }
-    }
-}
-
-// Boilerplate implementation because Rust is confused by the generic parameter `U`.
-impl<T, U> PartialEq for LiquidityTree<T, U>
-where
-    T: Config,
-    U: Get<u32>,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.nodes == other.nodes
-            && self.account_to_index == other.account_to_index
-            && self.abandoned_nodes == other.abandoned_nodes
-    }
 }
 
 impl<T, U> LiquidityTree<T, U>
