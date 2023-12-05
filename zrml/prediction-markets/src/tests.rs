@@ -4039,10 +4039,22 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
 
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), amount);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), amount);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
+        assert_eq!(
+            AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account),
+            amount
+        );
+        assert_eq!(
+            AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account),
+            amount
+        );
+        assert_eq!(
+            AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account),
+            amount
+        );
+        assert_eq!(
+            AssetManager::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account),
+            amount
+        );
         assert_eq!(AssetManager::free_balance(base_asset, &pool_account), amount);
 
         let pool = Pools::<Runtime>::get(0).unwrap();

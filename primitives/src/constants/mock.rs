@@ -21,7 +21,7 @@
 pub use super::*;
 use crate::{
     assets::Asset,
-    types::{Assets, Currencies, Balance, Moment},
+    types::{Assets, Balance, Currencies, Moment},
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;

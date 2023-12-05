@@ -2405,6 +2405,11 @@ mod pallet {
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
+            for asset in Self::outcome_assets(market_id, &market) {
+                let min_balance = T::AssetManager::minimum_balance(asset);
+                T::AssetLifetime::create(asset, market_account.clone(), false, min_balance)?;
+            }
+
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
             Ok((ids_amount, market_id))
@@ -2635,8 +2640,6 @@ mod pallet {
             let assets = Self::outcome_assets(market_id, &market);
 
             for asset in assets.iter() {
-                let min_balance = T::AssetManager::minimum_balance(*asset);
-                T::AssetLifetime::create(*asset, market_account.clone(), false, min_balance)?;
                 T::AssetManager::deposit(*asset, &who, amount)?;
             }
 

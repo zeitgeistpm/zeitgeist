@@ -125,6 +125,12 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
+parameter_type_with_key! {
+    pub ExistentialDeposits: |_currency_id: Currencies| -> Balance {
+        CURRENCY_MIN_BALANCE
+    };
+}
+
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;

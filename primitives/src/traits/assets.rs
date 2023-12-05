@@ -18,11 +18,21 @@
 use frame_support::traits::tokens::fungibles::Destroy;
 use sp_runtime::DispatchResult;
 
-
 /// Manage the complete destruction of an asset.
-pub trait ManagedDestroy: Destroy {
+pub trait ManagedDestroy<AccountId>: Destroy<AccountId> {
     /// Invoking this function will lead to a guaranteed complete destruction
     /// of an asset and the return of any deposits associated to it. The duration
     /// of the destrution process may vary.
-    fn managed_destruction(asset: AssetId) -> DispatchResult;
+    fn managed_destroy(
+        asset: Self::AssetId,
+        maybe_check_owner: Option<AccountId>,
+    ) -> DispatchResult;
+
+    /// Invoking this function will lead to a guaranteed complete destruction
+    /// of an vector of assets and the return of any deposits associated to it. The duration
+    /// of the destrution process may vary.
+    fn managed_destroy_multi(
+        asset: Vec<Self::AssetId>,
+        maybe_check_owners: Option<Vec<Option<AccountId>>>,
+    ) -> DispatchResult;
 }

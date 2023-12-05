@@ -30,15 +30,15 @@ pub use pallet::*;
 pub mod pallet {
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
-        pallet_prelude::{DispatchError, DispatchResult},
+        pallet_prelude::{DispatchError, DispatchResult, StorageValue, ValueQuery},
         traits::{
             tokens::{
                 fungibles::{Create, Destroy, Inspect, Mutate, Transfer},
                 DepositConsequence, WithdrawConsequence,
             },
-            BalanceStatus as Status,
+            BalanceStatus as Status, ConstU32,
         },
-        transactional, Parameter,
+        transactional, BoundedVec, Parameter,
     };
     use orml_traits::{
         arithmetic::Signed,
@@ -56,6 +56,7 @@ pub mod pallet {
         },
         FixedPointOperand,
     };
+    use zeitgeist_primitives::traits::ManagedDestroy;
 
     pub trait AssetTraits<T: Config, A>:
         Create<T::AccountId, AssetId = A, Balance = T::Balance>
@@ -90,6 +91,7 @@ pub mod pallet {
             + FullCodec
             + MaxEncodedLen
             + MaybeSerializeDeserialize
+            + PartialOrd
             + TypeInfo;
 
         /// The type that represents balances.
@@ -162,34 +164,28 @@ pub mod pallet {
             + TypeInfo;
     }
 
-    use frame_support::pallet_prelude::Hooks;
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
-    impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
-        #[transactional]
-        fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
-            // Only transfers assets maintained in orml-tokens, not implementable for pallet-assets
-            <T::Currencies as TransferAll<T::AccountId>>::transfer_all(source, dest)
-        }
-    }
-
     #[pallet::error]
     pub enum Error<T> {
         /// Cannot convert Amount (MultiCurrencyExtended implementation) into Balance type.
         AmountIntoBalanceFailed,
+        /// The vector holding all assets to destroy reached it's boundary.
+        TooManyManagedDestroys,
         /// Asset conversion failed.
         UnknownAsset,
         /// Operation is not supported for given asset
         Unsupported,
     }
+
+    /// Keeps track of assets that have to be destroyed
+    #[pallet::storage]
+    pub type DestroyAssets<T: Config> =
+        StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
 
     /// This macro converts the invoked asset type into the respective
     /// implementation that handles it and finally calls the $method on it.
@@ -235,6 +231,14 @@ pub mod pallet {
                 $error
             }
         };
+    }
+
+    impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
+        #[transactional]
+        fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
+            // Only transfers assets maintained in orml-tokens, not implementable for pallet-assets
+            <T::Currencies as TransferAll<T::AccountId>>::transfer_all(source, dest)
+        }
     }
 
     impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
@@ -737,6 +741,31 @@ pub mod pallet {
 
         fn finish_destroy(id: Self::AssetId) -> DispatchResult {
             only_asset!(id, Err(Error::<T>::Unsupported.into()), Destroy, finish_destroy,)
+        }
+    }
+
+    impl<T: Config> ManagedDestroy<T::AccountId> for Pallet<T> {
+        fn managed_destroy(
+            asset: Self::AssetId,
+            maybe_check_owner: Option<T::AccountId>,
+        ) -> DispatchResult {
+            Self::asset_exists(asset).then_some(()).ok_or_else(|| Error::<T>::UnknownAsset)?;
+            Self::start_destroy(asset, maybe_check_owner)?;
+
+            DestroyAssets::<T>::try_mutate(|assets| {
+                let idx = assets.partition_point(|&x| x < asset);
+                assets.try_insert(idx, asset).map_err(|_| Error::<T>::TooManyManagedDestroys)
+            })?;
+
+            Ok(())
+        }
+
+        fn managed_destroy_multi(
+            asset: Vec<Self::AssetId>,
+            maybe_check_owners: Option<Vec<Option<T::AccountId>>>,
+        ) -> DispatchResult {
+            // TODO
+            Ok(())
         }
     }
 }
