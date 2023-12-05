@@ -296,7 +296,7 @@ mod tests {
         };
 
         let market_id_1 = 1;
-        let outcome_asset_amoun_1 = 42000;
+        let outcome_asset_amount_1 = 42000;
         let base_asset_amount_1 = 69000;
         let old_order_1 = OldOrder {
             market_id: market_id_1,
@@ -304,7 +304,7 @@ mod tests {
             maker: 1,
             outcome_asset: Asset::ScalarOutcome(market_id_1, ScalarPosition::Long),
             base_asset: Asset::Ztg,
-            outcome_asset_amount: outcome_asset_amoun_1,
+            outcome_asset_amount: outcome_asset_amount_1,
             base_asset_amount: base_asset_amount_1,
         };
         let new_order_1 = Order {
@@ -312,7 +312,7 @@ mod tests {
             maker: 1,
             // the maker reserved the outcome asset for order side ask
             maker_asset: Asset::ScalarOutcome(market_id_1, ScalarPosition::Long),
-            maker_amount: outcome_asset_amoun_1,
+            maker_amount: outcome_asset_amount_1,
             taker_asset: Asset::Ztg,
             taker_amount: base_asset_amount_1,
         };
