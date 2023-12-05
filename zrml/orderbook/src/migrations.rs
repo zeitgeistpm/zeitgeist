@@ -274,7 +274,7 @@ mod tests {
 
     fn construct_old_new_tuple() -> (Vec<OldOrderOf<Runtime>>, Vec<OrderOf<Runtime>>) {
         let market_id_0 = 0;
-        let outcome_asset_amoun_0 = 42000;
+        let outcome_asset_amount_0 = 42000;
         let base_asset_amount_0 = 69000;
         let old_order_0 = OldOrder {
             market_id: market_id_0,
@@ -282,7 +282,7 @@ mod tests {
             maker: 1,
             outcome_asset: Asset::CategoricalOutcome(market_id_0, 0u16),
             base_asset: Asset::Ztg,
-            outcome_asset_amount: outcome_asset_amoun_0,
+            outcome_asset_amount: outcome_asset_amount_0,
             base_asset_amount: base_asset_amount_0,
         };
         let new_order_0 = Order {
@@ -292,7 +292,7 @@ mod tests {
             maker_asset: Asset::Ztg,
             maker_amount: base_asset_amount_0,
             taker_asset: Asset::CategoricalOutcome(market_id_0, 0u16),
-            taker_amount: outcome_asset_amoun_0,
+            taker_amount: outcome_asset_amount_0,
         };
 
         let market_id_1 = 1;
