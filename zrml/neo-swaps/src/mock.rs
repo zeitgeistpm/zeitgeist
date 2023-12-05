@@ -36,7 +36,7 @@ use orml_asset_registry::AssetMetadata;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, Get, IdentityLookup},
+    traits::{BlakeTwo256, Get, IdentityLookup, Zero},
     DispatchResult, Percent, SaturatedConversion,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -143,8 +143,10 @@ where
         let fees = zeitgeist_primitives::math::fixed::bmul(amount.saturated_into(), EXTERNAL_FEES)
             .unwrap()
             .saturated_into();
-        let _ = T::MultiCurrency::transfer(asset, account, &F::get(), fees);
-        fees
+        match T::MultiCurrency::transfer(asset, account, &F::get(), fees) {
+            Ok(_) => fees,
+            Err(_) => Zero::zero(),
+        }
     }
 }
 
