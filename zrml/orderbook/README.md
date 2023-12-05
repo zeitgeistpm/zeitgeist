@@ -10,7 +10,7 @@ partially or fully fill and remove orders.
 
 ## Terminology
 
-- `maker_partial_fill`: The partial amount of what the maker wants to fill.
+- `maker_partial_fill`: The partial amount of what the maker wants to get filled.
 - `maker_fill`: The amount of what the maker wants to fill.
 - `taker_fill`: The amount of what the taker wants to fill.
 - `maker_asset`: The asset that the maker wants to sell.

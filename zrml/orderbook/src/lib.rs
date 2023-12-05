@@ -192,7 +192,8 @@ mod pallet {
         ///
         /// External fees are paid in the base asset.
         ///
-        /// NOTE: The `maker_partial_fill` is the partial amount of what the maker wants to fill.
+        /// NOTE: The `maker_partial_fill` is the partial amount
+        /// of what the maker wants to get filled.
         ///
         /// # Weight
         ///

@@ -154,7 +154,6 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
         use orml_traits::NamedMultiReservableCurrency;
-        use sp_runtime::traits::Zero;
         use zeitgeist_primitives::traits::MarketCommonsPalletApi;
 
         let old_orders: BTreeMap<OrderId, OldOrderOf<T>> = Decode::decode(&mut &previous_state[..])
