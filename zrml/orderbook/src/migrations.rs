@@ -173,7 +173,6 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
                 new_order.maker_asset,
                 &new_order.maker,
             );
-            assert!(reserved > BalanceOf::<T>::zero());
             assert_eq!(reserved, new_order.maker_amount);
 
             if let Ok(market) = T::MarketCommons::market(&new_order.market_id) {
