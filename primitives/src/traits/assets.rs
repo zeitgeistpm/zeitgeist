@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use alloc::collections::BTreeMap;
 use frame_support::traits::tokens::fungibles::Destroy;
 use sp_runtime::DispatchResult;
 
@@ -31,8 +32,12 @@ pub trait ManagedDestroy<AccountId>: Destroy<AccountId> {
     /// Invoking this function will lead to a guaranteed complete destruction
     /// of an vector of assets and the return of any deposits associated to it. The duration
     /// of the destrution process may vary.
+    ///
+    /// # Arguments:
+    ///
+    /// - `assets`: Mapping from asset id's to an `Option<AccountId>` that determines
+    ///     whether the `AccountId` must match the owner of that asset
     fn managed_destroy_multi(
-        asset: Vec<Self::AssetId>,
-        maybe_check_owners: Option<Vec<Option<AccountId>>>,
+        assets: BTreeMap<Self::AssetId, Option<AccountId>>,
     ) -> DispatchResult;
 }

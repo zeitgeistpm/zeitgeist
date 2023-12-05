@@ -28,6 +28,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use alloc::collections::BTreeMap;
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
         pallet_prelude::{DispatchError, DispatchResult, StorageValue, ValueQuery},
@@ -750,21 +751,34 @@ pub mod pallet {
             maybe_check_owner: Option<T::AccountId>,
         ) -> DispatchResult {
             Self::asset_exists(asset).then_some(()).ok_or_else(|| Error::<T>::UnknownAsset)?;
+
+            let mut destroy_assets = DestroyAssets::<T>::get();
+            frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
+            let idx = destroy_assets.partition_point(|&idx| idx < asset);
+            destroy_assets.try_insert(idx, asset).map_err(|_| Error::<T>::TooManyManagedDestroys)?;
+            DestroyAssets::<T>::set(destroy_assets);
+
             Self::start_destroy(asset, maybe_check_owner)?;
-
-            DestroyAssets::<T>::try_mutate(|assets| {
-                let idx = assets.partition_point(|&x| x < asset);
-                assets.try_insert(idx, asset).map_err(|_| Error::<T>::TooManyManagedDestroys)
-            })?;
-
             Ok(())
         }
 
+        #[frame_support::transactional]
         fn managed_destroy_multi(
-            asset: Vec<Self::AssetId>,
-            maybe_check_owners: Option<Vec<Option<T::AccountId>>>,
+            assets: BTreeMap<Self::AssetId, Option<T::AccountId>>,
         ) -> DispatchResult {
-            // TODO
+            let mut destroy_assets = DestroyAssets::<T>::get();
+
+            for (asset, maybe_check_owner) in assets {
+                Self::asset_exists(asset).then_some(()).ok_or_else(|| Error::<T>::UnknownAsset)?;
+
+                frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
+                let idx = destroy_assets.partition_point(|&idx| idx < asset);
+                destroy_assets.try_insert(idx, asset).map_err(|_| Error::<T>::TooManyManagedDestroys)?;
+                
+                Self::start_destroy(asset, maybe_check_owner)?;
+            }
+
+            DestroyAssets::<T>::set(destroy_assets);
             Ok(())
         }
     }
