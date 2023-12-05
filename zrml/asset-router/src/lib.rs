@@ -31,7 +31,7 @@ pub mod pallet {
     use alloc::collections::BTreeMap;
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
-        pallet_prelude::{DispatchError, DispatchResult, StorageValue, ValueQuery},
+        pallet_prelude::{DispatchError, DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
         traits::{
             tokens::{
                 fungibles::{Create, Destroy, Inspect, Mutate, Transfer},
@@ -53,11 +53,11 @@ pub mod pallet {
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{
-            AtLeast32BitUnsigned, Bounded, MaybeSerializeDeserialize, Member, Saturating, Zero,
+            AtLeast32BitUnsigned, Bounded, Get, MaybeSerializeDeserialize, Member, Saturating, Zero,
         },
-        FixedPointOperand,
+        FixedPointOperand, SaturatedConversion,
     };
-    use zeitgeist_primitives::traits::ManagedDestroy;
+    use zeitgeist_primitives::traits::{CheckedDivPerComponent, ManagedDestroy};
 
     pub trait AssetTraits<T: Config, A>:
         Create<T::AccountId, AssetId = A, Balance = T::Balance>
@@ -163,13 +163,12 @@ pub mod pallet {
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + TypeInfo;
+
+        // TODO: get fn
+        type DestroyAccountWeight: Get<Weight>;
+        type DestroyApprovalWeight: Get<Weight>;
+        type DestroyFinishWeight: Get<Weight>;
     }
-
-    #[pallet::pallet]
-    pub struct Pallet<T>(PhantomData<T>);
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {}
 
     #[pallet::error]
     pub enum Error<T> {
@@ -179,14 +178,20 @@ pub mod pallet {
         TooManyManagedDestroys,
         /// Asset conversion failed.
         UnknownAsset,
-        /// Operation is not supported for given asset
+        /// Operation is not supported for given asset.
         Unsupported,
     }
 
-    /// Keeps track of assets that have to be destroyed
+    /// Keeps track of assets that have to be destroyed.
     #[pallet::storage]
     pub type DestroyAssets<T: Config> =
         StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
+
+    #[pallet::pallet]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {}
 
     /// This macro converts the invoked asset type into the respective
     /// implementation that handles it and finally calls the $method on it.
@@ -232,6 +237,75 @@ pub mod pallet {
                 $error
             }
         };
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
+            let mut destroy_assets = DestroyAssets::<T>::get();
+            let destroy_account_weight = T::DestroyAccountWeight::get();
+            let destroy_approval_weight = T::DestroyApprovalWeight::get();
+            let destroy_finish_weight = T::DestroyFinishWeight::get();
+            remaining_weight = remaining_weight.saturating_sub(T::DbWeight::get().reads(1));
+
+            if destroy_assets.len() == 0 {
+                return remaining_weight;
+            }
+
+            remaining_weight = remaining_weight.saturating_sub(T::DbWeight::get().writes(1));
+
+            while let Some(asset) = destroy_assets.pop() {
+                let abort = |destroy_assets: &mut BoundedVec<_, _>| -> Weight {
+                    destroy_assets.force_push(asset);
+                    DestroyAssets::<T>::put(destroy_assets);
+                    return remaining_weight;
+                };
+
+                // Destroy accounts
+                if let Some(destroy_account_cap) =
+                    remaining_weight.checked_div_per_component(&destroy_account_weight)
+                {
+                    let destroyed_accounts =
+                        Self::destroy_accounts(asset, destroy_account_cap.saturated_into())
+                            .unwrap_or_else(|_| 0);
+                    //remaining_weight = remaining_weight
+                    //    .saturating_sub(destroy_account_weight.saturating_mul(destroyed_accounts));
+
+                    if destroyed_accounts == destroy_account_cap.saturated_into::<u32>() {
+                        return abort(&mut destroy_assets);
+                    }
+                } else {
+                    return abort(&mut destroy_assets);
+                }
+
+                // Destroy approvals
+                if let Some(destroy_approval_cap) =
+                    remaining_weight.checked_div_per_component(&destroy_approval_weight)
+                {
+                    let destroyed_approvals =
+                        Self::destroy_approvals(asset, destroy_approval_cap.saturated_into())
+                            .unwrap_or_else(|_| 0);
+                    //remaining_weight = remaining_weight
+                    //    .saturating_sub(destroy_approval_weight.saturating_mul(destroyed_approvals));
+
+                    if destroyed_approvals == destroy_approval_cap.saturated_into::<u32>() {
+                        return abort(&mut destroy_assets);
+                    }
+                } else {
+                    return abort(&mut destroy_assets);
+                }
+
+                // Finalize asset destruction
+                if remaining_weight.all_gte(destroy_finish_weight) {
+                    let _ = Self::finish_destroy(asset);
+                    remaining_weight.saturating_sub(destroy_finish_weight);
+                } else {
+                    return abort(&mut destroy_assets);
+                }
+            }
+
+            remaining_weight
+        }
     }
 
     impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
@@ -755,7 +829,9 @@ pub mod pallet {
             let mut destroy_assets = DestroyAssets::<T>::get();
             frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
             let idx = destroy_assets.partition_point(|&idx| idx < asset);
-            destroy_assets.try_insert(idx, asset).map_err(|_| Error::<T>::TooManyManagedDestroys)?;
+            destroy_assets
+                .try_insert(idx, asset)
+                .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
             DestroyAssets::<T>::set(destroy_assets);
 
             Self::start_destroy(asset, maybe_check_owner)?;
@@ -771,10 +847,15 @@ pub mod pallet {
             for (asset, maybe_check_owner) in assets {
                 Self::asset_exists(asset).then_some(()).ok_or_else(|| Error::<T>::UnknownAsset)?;
 
-                frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
+                frame_support::ensure!(
+                    !destroy_assets.is_full(),
+                    Error::<T>::TooManyManagedDestroys
+                );
                 let idx = destroy_assets.partition_point(|&idx| idx < asset);
-                destroy_assets.try_insert(idx, asset).map_err(|_| Error::<T>::TooManyManagedDestroys)?;
-                
+                destroy_assets
+                    .try_insert(idx, asset)
+                    .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
+
                 Self::start_destroy(asset, maybe_check_owner)?;
             }
 
