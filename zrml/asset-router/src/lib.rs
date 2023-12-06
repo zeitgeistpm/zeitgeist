@@ -93,7 +93,7 @@ pub mod pallet {
             + FullCodec
             + MaxEncodedLen
             + MaybeSerializeDeserialize
-            + PartialOrd
+            + Ord
             + TypeInfo;
 
         /// The type that represents balances.
@@ -174,6 +174,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Cannot convert Amount (MultiCurrencyExtended implementation) into Balance type.
         AmountIntoBalanceFailed,
+        /// Cannot start managed destruction as a destruction for the asset is in progress.
+        DestructionInProgress,
         /// The vector holding all assets to destroy reached it's boundary.
         TooManyManagedDestroys,
         /// Asset conversion failed.
@@ -345,9 +347,10 @@ pub mod pallet {
             }
 
             if let Some(asset) = indestructible_asset {
-                if let Err(e) =
-                    IndestructibleAssets::<T>::try_mutate(|assets| assets.try_push(asset))
-                {
+                if let Err(e) = IndestructibleAssets::<T>::try_mutate(|assets| {
+                    let idx = assets.partition_point(|&asset_inner| asset_inner < asset);
+                    assets.try_insert(idx, asset)
+                }) {
                     log::error!(
                         "Error during storage of indestructible asset {:?}, dropping asset: {:?}",
                         asset,
@@ -883,13 +886,25 @@ pub mod pallet {
 
             let mut destroy_assets = DestroyAssets::<T>::get();
             frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
-            let idx = destroy_assets.partition_point(|&idx| idx < asset);
+
+            let idx = match destroy_assets.binary_search(&asset) {
+                Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
+                Err(idx) => {
+                    IndestructibleAssets::<T>::get()
+                        .binary_search(&asset)
+                        .map_err(|_| Error::<T>::DestructionInProgress)?;
+
+                    idx
+                }
+            };
+
             destroy_assets
                 .try_insert(idx, asset)
                 .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
-            DestroyAssets::<T>::set(destroy_assets);
 
             Self::start_destroy(asset, maybe_check_owner)?;
+            DestroyAssets::<T>::put(destroy_assets);
+
             Ok(())
         }
 
@@ -906,7 +921,18 @@ pub mod pallet {
                     !destroy_assets.is_full(),
                     Error::<T>::TooManyManagedDestroys
                 );
-                let idx = destroy_assets.partition_point(|&idx| idx < asset);
+
+                let idx = match destroy_assets.binary_search(&asset) {
+                    Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
+                    Err(idx) => {
+                        IndestructibleAssets::<T>::get()
+                            .binary_search(&asset)
+                            .map_err(|_| Error::<T>::DestructionInProgress)?;
+
+                        idx
+                    }
+                };
+
                 destroy_assets
                     .try_insert(idx, asset)
                     .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
@@ -914,7 +940,7 @@ pub mod pallet {
                 Self::start_destroy(asset, maybe_check_owner)?;
             }
 
-            DestroyAssets::<T>::set(destroy_assets);
+            DestroyAssets::<T>::put(destroy_assets);
             Ok(())
         }
     }

@@ -38,6 +38,7 @@ use zeitgeist_primitives::types::Assets;
 mod create;
 mod destroy;
 mod inspect;
+mod managed_destroy;
 mod multi_currency;
 mod multi_lockable_currency;
 mod multi_reservable_currency;
