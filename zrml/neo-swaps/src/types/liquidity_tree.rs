@@ -73,14 +73,7 @@ where
 /// - `U`: A getter for the maximum depth of the tree. Using a depth larger than `31` will result in
 ///   undefined behavior.
 #[derive(
-    CloneNoBound,
-    Decode,
-    Encode,
-    Eq,
-    MaxEncodedLen,
-    PartialEqNoBound,
-    RuntimeDebugNoBound,
-    TypeInfo,
+    CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
 #[scale_info(skip_type_params(T, U))]
 pub struct LiquidityTree<T, U>
@@ -211,33 +204,28 @@ where
             (index, BenchmarkInfo::InPlace)
         } else {
             // Push onto new node.
-            let (index, benchmark_info) = match self.peek_next_free_node_index()? {
-                NextNode::Abandoned(index) => {
-                    self.propagate_fees_to_node(index)?;
-                    let node = self.get_node_mut(index)?;
-                    node.account = Some(who.clone());
-                    node.stake = stake;
-                    node.fees = Zero::zero(); // Not necessary, but better safe than sorry.
-                    // Don't change `descendant_stake`; we're still maintaining it for abandoned
-                    // nodes.
-                    node.lazy_fees = Zero::zero();
-                    self.abandoned_nodes.pop();
-                    (index, BenchmarkInfo::Reassigned)
+            let (index, benchmark_info) = if let Some(index) = self.take_last_abandoned_node_index()
+            {
+                self.propagate_fees_to_node(index)?;
+                let node = self.get_node_mut(index)?;
+                node.account = Some(who.clone());
+                node.stake = stake;
+                node.fees = Zero::zero(); // Not necessary, but better safe than sorry.
+                // Don't change `descendant_stake`; we're still maintaining it for abandoned
+                // nodes.
+                node.lazy_fees = Zero::zero();
+                (index, BenchmarkInfo::Reassigned)
+            } else if let Some(index) = self.peek_next_free_leaf() {
+                // Add new leaf. Propagate first so we don't propagate fees to the new leaf.
+                if let Some(parent_index) = self.parent_index(index) {
+                    self.propagate_fees_to_node(parent_index)?;
                 }
-                NextNode::Leaf => {
-                    // Add new leaf. Propagate first so we don't propagate fees to the new leaf.
-                    let index = self.nodes.len() as u32;
-                    if let Some(parent_index) = self.parent_index(index) {
-                        self.propagate_fees_to_node(parent_index)?;
-                    }
-                    self.nodes
-                        .try_push(Node::new(who.clone(), stake))
-                        .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
-                    (index, BenchmarkInfo::Leaf)
-                }
-                NextNode::None => {
-                    return Err(LiquidityTreeError::TreeIsFull.into_dispatch::<T>());
-                }
+                self.nodes
+                    .try_push(Node::new(who.clone(), stake))
+                    .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
+                (index, BenchmarkInfo::Leaf)
+            } else {
+                return Err(LiquidityTreeError::TreeIsFull.into_dispatch::<T>());
             };
             self.account_to_index
                 .try_insert(who.clone(), index)
@@ -311,13 +299,6 @@ where
     }
 }
 
-/// Type for specifying the next free node.
-pub(crate) enum NextNode {
-    Abandoned(u32),
-    Leaf,
-    None,
-}
-
 /// Type for specifying a sign for `update_descendant_stake`.
 pub(crate) enum UpdateDescendantStakeOperation {
     Add,
@@ -360,11 +341,12 @@ where
     /// root and including `index`.
     fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError>;
 
-    /// Returns the next free index of the tree.
-    ///
-    /// If there are abandoned nodes, this will return the nodes in the reverse order in which they
-    /// were abandoned.
-    fn peek_next_free_node_index(&mut self) -> Result<NextNode, DispatchError>;
+    /// Pops the most recently abandoned node's index from the stack. Returns `None` if there's no
+    /// abandoned node.
+    fn take_last_abandoned_node_index(&mut self) -> Option<u32>;
+
+    /// Returns the index of the next free leaf; `None` if the tree is full.
+    fn peek_next_free_leaf(&self) -> Option<u32>;
 
     /// Mutate a node's descendant stake.
     ///
@@ -517,14 +499,13 @@ where
         Ok(path)
     }
 
-    fn peek_next_free_node_index(&mut self) -> Result<NextNode, DispatchError> {
-        if let Some(index) = self.abandoned_nodes.last() {
-            Ok(NextNode::Abandoned(*index))
-        } else if self.node_count() < Self::max_node_count() {
-            Ok(NextNode::Leaf)
-        } else {
-            Ok(NextNode::None)
-        }
+    fn take_last_abandoned_node_index(&mut self) -> Option<u32> {
+        self.abandoned_nodes.pop()
+    }
+
+    fn peek_next_free_leaf(&self) -> Option<u32> {
+        let node_count = self.node_count();
+        if node_count < Self::max_node_count() { Some(node_count) } else { None }
     }
 
     fn update_descendant_stake(
