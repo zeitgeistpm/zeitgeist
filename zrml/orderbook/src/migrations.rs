@@ -159,7 +159,6 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
         let old_orders: BTreeMap<OrderId, OldOrderOf<T>> = Decode::decode(&mut &previous_state[..])
             .expect("Failed to decode state: Invalid state");
         let mut new_order_count = 0usize;
-        assert_eq!(old_orders.len(), new_order_count);
         for (order_id, new_order) in crate::Orders::<T>::iter() {
             let old_order =
                 old_orders.get(&order_id).expect(&format!("Order {:?} not found", order_id)[..]);
@@ -172,7 +171,8 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
                 new_order.maker_asset,
                 &new_order.maker,
             );
-            assert_eq!(reserved, new_order.maker_amount);
+            // one reserve_id is for all orders for this maker_asset
+            assert!(reserved >= new_order.maker_amount);
 
             if let Ok(market) = T::MarketCommons::market(&new_order.market_id) {
                 let base_asset = market.base_asset;
@@ -197,6 +197,7 @@ impl<T: Config> OnRuntimeUpgrade for TranslateOrderStructure<T> {
 
             new_order_count.saturating_inc();
         }
+        assert_eq!(old_orders.len(), new_order_count);
         log::info!("TranslateOrderStructure: Order Counter post-upgrade is {}!", new_order_count);
         Ok(())
     }
