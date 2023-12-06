@@ -358,9 +358,6 @@ where
     fn propagate_fees(&mut self, index: u32) -> DispatchResult;
 
     /// Return the indices of the children of the node at `index`.
-    ///
-    /// The first (resp. second) component of the array is the left (resp. right) child. If there is
-    /// no node at either of these indices, the result is `None`.
     fn children(&self, index: u32) -> Result<LiquidityTreeChildIndices, DispatchError>;
 
     /// Return the index of a node's parent; `None` if `index` is `0u32`, i.e. the node is root.
