@@ -253,7 +253,7 @@ fn exit_fails_on_insufficient_funds() {
                 liquidity + 1, // One more than Alice has.
                 vec![0, 0]
             ),
-            LiquidityTreeError::InsufficientStake.into_dispatch::<Runtime>(),
+            LiquidityTreeError::InsufficientStake.into_dispatch_error::<Runtime>(),
         );
     });
 }
@@ -305,7 +305,7 @@ fn exit_fails_on_outstanding_fees() {
             .deposit_fees(_10)));
         assert_noop!(
             NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _1, vec![0, 0]),
-            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>(),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<Runtime>(),
         );
     });
 }

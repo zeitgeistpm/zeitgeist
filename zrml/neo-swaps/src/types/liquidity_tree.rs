@@ -111,11 +111,11 @@ where
         let root = Node::new(account.clone(), stake);
         let nodes = vec![root]
             .try_into()
-            .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
+            .map_err(|_| StorageOverflowError::Nodes.into_dispatch_error::<T>())?;
         let mut account_to_index: BoundedBTreeMap<_, _, _> = Default::default();
         account_to_index
             .try_insert(account, 0u32)
-            .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
+            .map_err(|_| StorageOverflowError::AccountToIndex.into_dispatch_error::<T>())?;
         let abandoned_nodes = Default::default();
         Ok(LiquidityTree { nodes, account_to_index, abandoned_nodes })
     }
@@ -222,14 +222,14 @@ where
                 }
                 self.nodes
                     .try_push(Node::new(who.clone(), stake))
-                    .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
+                    .map_err(|_| StorageOverflowError::Nodes.into_dispatch_error::<T>())?;
                 (index, BenchmarkInfo::Leaf)
             } else {
-                return Err(LiquidityTreeError::TreeIsFull.into_dispatch::<T>());
+                return Err(LiquidityTreeError::TreeIsFull.into_dispatch_error::<T>());
             };
             self.account_to_index
                 .try_insert(who.clone(), index)
-                .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
+                .map_err(|_| StorageOverflowError::AccountToIndex.into_dispatch_error::<T>())?;
             (index, benchmark_info)
         };
         if let Some(parent_index) = self.parent_index(index) {
@@ -244,17 +244,17 @@ where
         let node = self.get_node_mut(index)?;
         ensure!(
             node.fees == Zero::zero(),
-            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<T>()
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<T>()
         );
         node.stake = node
             .stake
             .checked_sub(&stake)
-            .ok_or(LiquidityTreeError::InsufficientStake.into_dispatch::<T>())?;
+            .ok_or(LiquidityTreeError::InsufficientStake.into_dispatch_error::<T>())?;
         if node.stake == Zero::zero() {
             node.account = None;
             self.abandoned_nodes
                 .try_push(index)
-                .map_err(|_| LiquidityTreeError::StorageOverflow.into_dispatch::<T>())?;
+                .map_err(|_| StorageOverflowError::AbandonedNodes.into_dispatch_error::<T>())?;
             let _ = self.account_to_index.remove(who);
         }
         if let Some(parent_index) = self.parent_index(index) {
@@ -474,11 +474,7 @@ where
     }
 
     fn parent_index(&self, index: u32) -> Option<u32> {
-        if index == 0 {
-            None
-        } else {
-            index.checked_sub(1)?.checked_div(2)
-        }
+        if index == 0 { None } else { index.checked_sub(1)?.checked_div(2) }
     }
 
     fn path_to_node(&self, mut index: u32) -> Result<Vec<u32>, DispatchError> {
@@ -487,7 +483,7 @@ where
         let max_iterations = Self::max_depth().checked_add_res(&1)?;
         while let Some(parent_index) = self.parent_index(index) {
             if iterations == max_iterations {
-                return Err(LiquidityTreeError::MaxIterationsReached.into_dispatch::<T>());
+                return Err(LiquidityTreeError::MaxIterationsReached.into_dispatch_error::<T>());
             }
             path.push(index);
             index = parent_index;
@@ -543,19 +539,21 @@ where
     }
 
     fn get_node(&self, index: u32) -> Result<&Node<T>, DispatchError> {
-        self.nodes.get(index as usize).ok_or(LiquidityTreeError::NodeNotFound.into_dispatch::<T>())
+        self.nodes
+            .get(index as usize)
+            .ok_or(LiquidityTreeError::NodeNotFound.into_dispatch_error::<T>())
     }
 
     fn get_node_mut(&mut self, index: u32) -> Result<&mut Node<T>, DispatchError> {
         self.nodes
             .get_mut(index as usize)
-            .ok_or(LiquidityTreeError::NodeNotFound.into_dispatch::<T>())
+            .ok_or(LiquidityTreeError::NodeNotFound.into_dispatch_error::<T>())
     }
 
     fn map_account_to_index(&self, who: &T::AccountId) -> Result<u32, DispatchError> {
         self.account_to_index
             .get(who)
-            .ok_or(LiquidityTreeError::AccountNotFound.into_dispatch::<T>())
+            .ok_or(LiquidityTreeError::AccountNotFound.into_dispatch_error::<T>())
             .copied()
     }
 
@@ -591,7 +589,33 @@ pub enum LiquidityTreeError {
     /// A while loop exceeded the expected number of iterations. This is unexpected behavior.
     MaxIterationsReached,
     /// Unexpected storage overflow.
-    StorageOverflow,
+    StorageOverflow(StorageOverflowError),
+}
+
+#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebugNoBound, TypeInfo)]
+pub enum StorageOverflowError {
+    /// Encountered a storage overflow when trying to push onto the `nodes` vector.
+    Nodes,
+    /// Encountered a storage overflow when trying to push onto the `account_to_index` map.
+    AccountToIndex,
+    /// Encountered a storage overflow when trying to push onto the `abandoned_nodes` vector.
+    AbandonedNodes,
+}
+
+impl From<StorageOverflowError> for LiquidityTreeError {
+    fn from(error: StorageOverflowError) -> LiquidityTreeError {
+        LiquidityTreeError::StorageOverflow(error)
+    }
+}
+
+impl StorageOverflowError {
+    pub(crate) fn into_dispatch_error<T>(self) -> DispatchError
+    where
+        T: Config,
+    {
+        let liquidity_tree_error: LiquidityTreeError = self.into();
+        liquidity_tree_error.into_dispatch_error::<T>()
+    }
 }
 
 impl<T> From<LiquidityTreeError> for Error<T> {
@@ -601,7 +625,10 @@ impl<T> From<LiquidityTreeError> for Error<T> {
 }
 
 impl LiquidityTreeError {
-    pub(crate) fn into_dispatch<T: Config>(self) -> DispatchError {
+    pub(crate) fn into_dispatch_error<T>(self) -> DispatchError
+    where
+        T: Config,
+    {
         Error::<T>::LiquidityTreeError(self).into()
     }
 }
@@ -797,7 +824,10 @@ mod tests {
     #[test]
     fn join_new_fails_if_tree_is_full() {
         let mut tree = utility::create_full_tree();
-        assert_err!(tree.join(&99, _1), LiquidityTreeError::TreeIsFull.into_dispatch::<Runtime>());
+        assert_err!(
+            tree.join(&99, _1),
+            LiquidityTreeError::TreeIsFull.into_dispatch_error::<Runtime>()
+        );
     }
 
     #[test_case(false)]
@@ -897,7 +927,7 @@ mod tests {
         }
         assert_err!(
             tree.exit(&account, amount),
-            LiquidityTreeError::InsufficientStake.into_dispatch::<Runtime>(),
+            LiquidityTreeError::InsufficientStake.into_dispatch_error::<Runtime>(),
         );
     }
 
@@ -911,7 +941,7 @@ mod tests {
         tree.nodes[3].lazy_fees = Zero::zero();
         assert_err!(
             tree.exit(&5, 1),
-            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<Runtime>()
         );
     }
 
@@ -923,7 +953,7 @@ mod tests {
         tree.nodes[3].lazy_fees = Zero::zero();
         assert_err!(
             tree.exit(&5, 1),
-            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<Runtime>()
         );
     }
 
@@ -936,7 +966,7 @@ mod tests {
         tree.nodes[3].fees = Zero::zero();
         assert_err!(
             tree.exit(&5, 1),
-            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<Runtime>()
         );
     }
 
@@ -949,7 +979,7 @@ mod tests {
         tree.nodes[3].lazy_fees = Zero::zero();
         assert_err!(
             tree.exit(&5, 1),
-            LiquidityTreeError::UnwithdrawnFees.into_dispatch::<Runtime>()
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<Runtime>()
         );
     }
 

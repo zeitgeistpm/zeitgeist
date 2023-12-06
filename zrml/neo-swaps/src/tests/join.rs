@@ -110,7 +110,7 @@ fn join_fails_on_max_liquidity_providers() {
                 amount,
                 vec![u128::MAX; category_count as usize]
             ),
-            LiquidityTreeError::TreeIsFull.into_dispatch::<Runtime>(),
+            LiquidityTreeError::TreeIsFull.into_dispatch_error::<Runtime>(),
         );
     });
 }
