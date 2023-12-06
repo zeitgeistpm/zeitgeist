@@ -53,11 +53,7 @@ fn routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE,));
 
-        test_helper(
-            CAMPAIGN_ASSET,
-            CAMPAIGN_ASSET_INITIAL_AMOUNT,
-            CAMPAIGN_ASSET_MIN_BALANCE,
-        );
+        test_helper(CAMPAIGN_ASSET, CAMPAIGN_ASSET_INITIAL_AMOUNT, CAMPAIGN_ASSET_MIN_BALANCE);
 
         assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
         assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
@@ -70,11 +66,7 @@ fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE,));
 
-        test_helper(
-            CUSTOM_ASSET,
-            CUSTOM_ASSET_INITIAL_AMOUNT,
-            CUSTOM_ASSET_MIN_BALANCE,
-        );
+        test_helper(CUSTOM_ASSET, CUSTOM_ASSET_INITIAL_AMOUNT, CUSTOM_ASSET_MIN_BALANCE);
 
         assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
         assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
@@ -87,11 +79,7 @@ fn routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
 
-        test_helper(
-            MARKET_ASSET,
-            MARKET_ASSET_INITIAL_AMOUNT,
-            MARKET_ASSET_MIN_BALANCE,
-        );
+        test_helper(MARKET_ASSET, MARKET_ASSET_INITIAL_AMOUNT, MARKET_ASSET_MIN_BALANCE);
 
         assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
         assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);

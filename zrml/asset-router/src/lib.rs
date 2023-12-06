@@ -256,10 +256,11 @@ pub mod pallet {
             let destroy_account_weight = T::DestroyAccountWeight::get();
             let destroy_approval_weight = T::DestroyApprovalWeight::get();
             let destroy_finish_weight = T::DestroyFinishWeight::get();
-            remaining_weight = remaining_weight.saturating_sub(T::DbWeight::get().reads(1));
+            remaining_weight =
+                remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
 
             if destroy_assets.len() == 0 {
-                return remaining_weight;
+                return remaining_weight.saturating_add(T::DbWeight::get().writes(1));
             }
 
             let mut indestructible_asset = None;
@@ -291,6 +292,8 @@ pub mod pallet {
                                 e
                             );
                             indestructible_asset = Some(asset);
+                            remaining_weight =
+                                remaining_weight.saturating_sub(destroy_account_weight);
                             break;
                         }
                     }
@@ -325,6 +328,8 @@ pub mod pallet {
                                 e
                             );
                             indestructible_asset = Some(asset);
+                            remaining_weight =
+                                remaining_weight.saturating_sub(destroy_approval_weight);
                             break;
                         }
                     }
@@ -349,6 +354,7 @@ pub mod pallet {
                     remaining_weight = remaining_weight.saturating_sub(destroy_finish_weight);
                 } else {
                     destroy_assets.force_push(asset);
+                    remaining_weight = remaining_weight.saturating_sub(destroy_finish_weight);
                     break;
                 }
             }
@@ -365,11 +371,12 @@ pub mod pallet {
                     );
                 }
 
-                remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
+                remaining_weight =
+                    remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
             }
 
             DestroyAssets::<T>::put(destroy_assets);
-            remaining_weight.saturating_sub(T::DbWeight::get().writes(1))
+            remaining_weight
         }
     }
 
