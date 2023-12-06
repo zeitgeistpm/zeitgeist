@@ -33,6 +33,7 @@ mod pallet {
     use frame_support::{
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        require_transactional,
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
@@ -144,7 +145,7 @@ mod pallet {
         /// The market is not active.
         MarketIsNotActive,
         /// The specified amount is below the minimum bet size.
-        AmountTooSmall,
+        AmountBelowMinimumBetSize,
         /// The specified asset is not a parimutuel share.
         NotParimutuelOutcome,
         /// The specified asset was not found in the market assets.
@@ -312,9 +313,8 @@ mod pallet {
             Err(Error::<T>::NotParimutuelOutcome.into())
         }
 
+        #[require_transactional]
         fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
-            ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountTooSmall);
-
             let market_id = match asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
@@ -336,6 +336,11 @@ mod pallet {
             let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
             let amount_minus_fees =
                 amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
+            ensure!(
+                amount_minus_fees >= T::MinBetSize::get(),
+                Error::<T>::AmountBelowMinimumBetSize
+            );
+
             let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
@@ -377,6 +382,7 @@ mod pallet {
             Ok(winning_asset)
         }
 
+        #[require_transactional]
         fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_parimutuel_market_resolved(&market)?;
@@ -437,6 +443,7 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
         fn do_claim_refunds(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
             let market_id = match refund_asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
