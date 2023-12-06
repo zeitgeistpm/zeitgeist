@@ -13,6 +13,9 @@ devDependencies:
   '@moonwall/cli':
     specifier: ^4.4.1
     version: 4.4.1(@types/node@20.9.1)(ts-node@10.9.1)(typescript@5.2.2)
+  '@moonwall/util':
+    specifier: ^4.4.1
+    version: 4.4.1(@types/node@20.9.1)(typescript@5.2.2)
   '@polkadot/api':
     specifier: ^10.10.1
     version: 10.10.1
@@ -3091,6 +3094,7 @@ packages:
       chalk: 3.0.0
       diff-match-patch: 1.0.5
     dev: true
+    bundledDependencies: []
 
   /jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}

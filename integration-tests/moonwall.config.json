@@ -41,6 +41,10 @@
       {
          "name": "chopsticks_zeitgeist_upgrade",
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
+         "runScripts": [
+            "build-parachain.sh",
+            "build-zeitgeist-spec.sh"
+         ],
          "foundation": {
              "type": "chopsticks",
              "rtUpgradePath": "../target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
