@@ -272,9 +272,11 @@ pub mod pallet {
                 {
                     match Self::destroy_accounts(asset, destroy_account_cap.saturated_into()) {
                         Ok(destroyed_accounts) => {
-                            // TODO: More precise weights
+                            // TODO(#1202): More precise weights
                             remaining_weight = remaining_weight.saturating_sub(
-                                destroy_account_weight.saturating_mul(destroyed_accounts.into()),
+                                destroy_account_weight
+                                    .saturating_mul(destroyed_accounts.into())
+                                    .max(destroy_account_weight),
                             );
 
                             if destroyed_accounts == destroy_account_cap.saturated_into::<u32>() {
@@ -306,7 +308,9 @@ pub mod pallet {
                         Ok(destroyed_approvals) => {
                             // TODO(#1202): More precise weights
                             remaining_weight = remaining_weight.saturating_sub(
-                                destroy_approval_weight.saturating_mul(destroyed_approvals.into()),
+                                destroy_approval_weight
+                                    .saturating_mul(destroyed_approvals.into())
+                                    .max(destroy_approval_weight),
                             );
 
                             if destroyed_approvals == destroy_approval_cap.saturated_into::<u32>() {

@@ -21,7 +21,7 @@ use super::*;
 use frame_support::traits::tokens::fungibles::Inspect;
 
 #[test]
-fn create_routes_campaign_assets_correctly() {
+fn routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         assert!(AssetRouter::asset_exists(CAMPAIGN_ASSET));
@@ -32,7 +32,7 @@ fn create_routes_campaign_assets_correctly() {
 }
 
 #[test]
-fn create_routes_custom_assets_correctly() {
+fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         assert!(AssetRouter::asset_exists(CUSTOM_ASSET));
@@ -43,7 +43,7 @@ fn create_routes_custom_assets_correctly() {
 }
 
 #[test]
-fn create_routes_market_assets_correctly() {
+fn routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         assert!(AssetRouter::asset_exists(MARKET_ASSET));
@@ -54,7 +54,7 @@ fn create_routes_market_assets_correctly() {
 }
 
 #[test]
-fn create_routes_currencies_correctly() {
+fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));

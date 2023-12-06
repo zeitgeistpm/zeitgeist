@@ -27,13 +27,14 @@ use frame_support::{
             fungibles::{Create, Destroy},
             DepositConsequence, WithdrawConsequence,
         },
-        UnfilteredDispatchable,
+        UnfilteredDispatchable, OnIdle
     },
 };
 use orml_traits::{
     BalanceStatus, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
     NamedMultiReservableCurrency,
 };
+use sp_runtime::traits::Get;
 use zeitgeist_primitives::{traits::ManagedDestroy, types::Assets};
 
 mod create;

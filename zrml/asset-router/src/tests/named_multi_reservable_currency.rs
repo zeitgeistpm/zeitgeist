@@ -20,7 +20,7 @@
 use super::*;
 use orml_traits::MultiCurrency;
 
-fn named_multi_reserveable_currency_unroutable_test_helper(
+fn unroutable_test_helper(
     asset: Assets,
     initial_amount: <Runtime as crate::Config>::Balance,
 ) {
@@ -45,7 +45,7 @@ fn named_multi_reserveable_currency_unroutable_test_helper(
 }
 
 #[test]
-fn named_multi_reserveable_currency_routes_currencies_correctly() {
+fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::deposit(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
         assert_ok!(AssetRouter::reserve_named(
@@ -82,11 +82,11 @@ fn named_multi_reserveable_currency_routes_currencies_correctly() {
 }
 
 #[test]
-fn named_multi_reserveable_currency_routes_campaign_assets_correctly() {
+fn routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE,));
 
-        named_multi_reserveable_currency_unroutable_test_helper(
+        unroutable_test_helper(
             CAMPAIGN_ASSET,
             CAMPAIGN_ASSET_INITIAL_AMOUNT,
         );
@@ -94,11 +94,11 @@ fn named_multi_reserveable_currency_routes_campaign_assets_correctly() {
 }
 
 #[test]
-fn named_multi_reserveable_currency_routes_custom_assets_correctly() {
+fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE,));
 
-        named_multi_reserveable_currency_unroutable_test_helper(
+        unroutable_test_helper(
             CUSTOM_ASSET,
             CUSTOM_ASSET_INITIAL_AMOUNT,
         );
@@ -106,11 +106,11 @@ fn named_multi_reserveable_currency_routes_custom_assets_correctly() {
 }
 
 #[test]
-fn named_multi_reserveable_currency_routes_market_assets_correctly() {
+fn routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
 
-        named_multi_reserveable_currency_unroutable_test_helper(
+        unroutable_test_helper(
             MARKET_ASSET,
             MARKET_ASSET_INITIAL_AMOUNT,
         );
