@@ -37,7 +37,7 @@ use zeitgeist_primitives::math::{
 };
 
 /// Gets the maximum number of nodes allowed in the liquidity tree as a function of its depth.
-/// Saturates at `u32::MAX`.
+/// Saturates at `u32::MAX`, but will warn about this in DEBUG.
 ///
 /// # Generics
 ///
@@ -49,7 +49,7 @@ where
     D: Get<u32>,
 {
     fn get() -> u32 {
-        debug_assert!(D::get() < 16); // Misconfiguration check!
+        debug_assert!(D::get() < 31, "LiquidityTreeMaxNodes::get(): Integer overflow");
         2u32.saturating_pow(D::get() + 1).saturating_sub(1)
     }
 }
