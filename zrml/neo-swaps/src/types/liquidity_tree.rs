@@ -73,7 +73,14 @@ where
 /// - `U`: A getter for the maximum depth of the tree. Using a depth larger than `31` will result in
 ///   undefined behavior.
 #[derive(
-    CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+    CloneNoBound,
+    Decode,
+    Encode,
+    Eq,
+    MaxEncodedLen,
+    PartialEqNoBound,
+    RuntimeDebugNoBound,
+    TypeInfo,
 )]
 #[scale_info(skip_type_params(T, U))]
 pub struct LiquidityTree<T, U>
