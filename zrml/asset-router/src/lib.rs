@@ -28,9 +28,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use alloc::collections::BTreeMap;
+    use alloc::{collections::BTreeMap, vec::Vec};
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
+        log,
         pallet_prelude::{DispatchError, DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
         traits::{
             tokens::{
@@ -164,7 +165,6 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + TypeInfo;
 
-        // TODO: get fn
         type DestroyAccountWeight: Get<Weight>;
         type DestroyApprovalWeight: Get<Weight>;
         type DestroyFinishWeight: Get<Weight>;
@@ -253,57 +253,99 @@ pub mod pallet {
             }
 
             remaining_weight = remaining_weight.saturating_sub(T::DbWeight::get().writes(1));
+            let mut skipped_assets = Vec::new();
 
             while let Some(asset) = destroy_assets.pop() {
-                let abort = |destroy_assets: &mut BoundedVec<_, _>| -> Weight {
-                    destroy_assets.force_push(asset);
-                    DestroyAssets::<T>::put(destroy_assets);
-                    return remaining_weight;
-                };
-
                 // Destroy accounts
+                // Weight is overestimated
                 if let Some(destroy_account_cap) =
                     remaining_weight.checked_div_per_component(&destroy_account_weight)
                 {
-                    let destroyed_accounts =
-                        Self::destroy_accounts(asset, destroy_account_cap.saturated_into())
-                            .unwrap_or_else(|_| 0);
-                    //remaining_weight = remaining_weight
-                    //    .saturating_sub(destroy_account_weight.saturating_mul(destroyed_accounts));
+                    match Self::destroy_accounts(asset, destroy_account_cap.saturated_into()) {
+                        Ok(destroyed_accounts) => {
+                            // TODO: More precise weights
+                            remaining_weight = remaining_weight.saturating_sub(
+                                destroy_account_weight.saturating_mul(destroyed_accounts.into()),
+                            );
 
-                    if destroyed_accounts == destroy_account_cap.saturated_into::<u32>() {
-                        return abort(&mut destroy_assets);
+                            if destroyed_accounts == destroy_account_cap.saturated_into::<u32>() {
+                                destroy_assets.force_push(asset);
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            log::error!(
+                                "Error during managed asset account destruction of {:?}: {:?}",
+                                asset,
+                                e
+                            );
+                            skipped_assets.push(asset);
+                            continue;
+                        }
                     }
                 } else {
-                    return abort(&mut destroy_assets);
+                    destroy_assets.force_push(asset);
+                    break;
                 }
 
                 // Destroy approvals
+                // Weight is overestimated
                 if let Some(destroy_approval_cap) =
                     remaining_weight.checked_div_per_component(&destroy_approval_weight)
                 {
-                    let destroyed_approvals =
-                        Self::destroy_approvals(asset, destroy_approval_cap.saturated_into())
-                            .unwrap_or_else(|_| 0);
-                    //remaining_weight = remaining_weight
-                    //    .saturating_sub(destroy_approval_weight.saturating_mul(destroyed_approvals));
+                    match Self::destroy_approvals(asset, destroy_approval_cap.saturated_into()) {
+                        Ok(destroyed_approvals) => {
+                            // TODO: More precise weights
+                            remaining_weight = remaining_weight.saturating_sub(
+                                destroy_approval_weight.saturating_mul(destroyed_approvals.into()),
+                            );
 
-                    if destroyed_approvals == destroy_approval_cap.saturated_into::<u32>() {
-                        return abort(&mut destroy_assets);
+                            if destroyed_approvals == destroy_approval_cap.saturated_into::<u32>() {
+                                destroy_assets.force_push(asset);
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            log::error!(
+                                "Error during managed asset approval destruction of {:?}: {:?}",
+                                asset,
+                                e
+                            );
+                            skipped_assets.push(asset);
+                            continue;
+                        }
                     }
                 } else {
-                    return abort(&mut destroy_assets);
+                    destroy_assets.force_push(asset);
+                    break;
                 }
 
                 // Finalize asset destruction
                 if remaining_weight.all_gte(destroy_finish_weight) {
-                    let _ = Self::finish_destroy(asset);
-                    remaining_weight.saturating_sub(destroy_finish_weight);
+                    // TODO: Skip asset on error and log error
+                    if let Err(e) = Self::finish_destroy(asset) {
+                        log::error!(
+                            "Error during managed asset destruction finalization of {:?}: {:?}",
+                            asset,
+                            e
+                        );
+                        skipped_assets.push(asset);
+                        continue;
+                    }
+
+                    remaining_weight = remaining_weight.saturating_sub(destroy_finish_weight);
                 } else {
-                    return abort(&mut destroy_assets);
+                    destroy_assets.force_push(asset);
+                    break;
                 }
             }
 
+            // Add assets that caused an error back to the storage.
+            while let Some(asset) = skipped_assets.pop() {
+                destroy_assets.force_push(asset);
+            }
+
+            DestroyAssets::<T>::put(destroy_assets);
             remaining_weight
         }
     }

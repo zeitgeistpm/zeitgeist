@@ -37,7 +37,5 @@ pub trait ManagedDestroy<AccountId>: Destroy<AccountId> {
     ///
     /// - `assets`: Mapping from asset id's to an `Option<AccountId>` that determines
     ///     whether the `AccountId` must match the owner of that asset
-    fn managed_destroy_multi(
-        assets: BTreeMap<Self::AssetId, Option<AccountId>>,
-    ) -> DispatchResult;
+    fn managed_destroy_multi(assets: BTreeMap<Self::AssetId, Option<AccountId>>) -> DispatchResult;
 }

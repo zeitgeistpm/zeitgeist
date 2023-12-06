@@ -19,7 +19,6 @@
 /// Provides `checked_div_per_component` implementation to determine the
 /// smallest division result between two `ref_time` and `proof_size`.
 /// To be removed once sp-weights is upgraded to polkadot-v0.9.39
-
 use frame_support::pallet_prelude::Weight;
 
 pub trait CheckedDivPerComponent {
@@ -42,14 +41,14 @@ impl CheckedDivPerComponent for Weight {
             Some(ref_time) => {
                 all_zero = false;
                 ref_time
-            },
+            }
             None => u64::MAX,
         };
         let proof_size = match self.proof_size().checked_div(other.proof_size()) {
             Some(proof_size) => {
                 all_zero = false;
                 proof_size
-            },
+            }
             None => u64::MAX,
         };
         if all_zero {
