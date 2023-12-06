@@ -890,9 +890,9 @@ pub mod pallet {
             let idx = match destroy_assets.binary_search(&asset) {
                 Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
                 Err(idx) => {
-                    IndestructibleAssets::<T>::get()
-                        .binary_search(&asset)
-                        .map_err(|_| Error::<T>::DestructionInProgress)?;
+                    if IndestructibleAssets::<T>::get().binary_search(&asset).is_ok() {
+                        return Err(Error::<T>::DestructionInProgress.into());
+                    }
 
                     idx
                 }
@@ -925,9 +925,9 @@ pub mod pallet {
                 let idx = match destroy_assets.binary_search(&asset) {
                     Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
                     Err(idx) => {
-                        IndestructibleAssets::<T>::get()
-                            .binary_search(&asset)
-                            .map_err(|_| Error::<T>::DestructionInProgress)?;
+                        if IndestructibleAssets::<T>::get().binary_search(&asset).is_ok() {
+                            return Err(Error::<T>::DestructionInProgress.into());
+                        }
 
                         idx
                     }
