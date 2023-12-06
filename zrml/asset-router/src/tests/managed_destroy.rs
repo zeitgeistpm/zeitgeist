@@ -30,15 +30,69 @@ use frame_support::traits::tokens::fungibles::Inspect;
 #[test]
 fn managed_destroy_adds_assets_properly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_err!(AssetRouter::managed_destroy(CAMPAIGN_ASSET, None), Error::<Runtime>::UnknownAsset);
+        assert_err!(
+            AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
+            Error::<Runtime>::UnknownAsset
+        );
 
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         assert_ok!(AssetRouter::managed_destroy(CAMPAIGN_ASSET, None));
-        assert_err!(AssetRouter::managed_destroy(CAMPAIGN_ASSET, None), Error::<Runtime>::DestructionInProgress);
+        assert_err!(
+            AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
+            Error::<Runtime>::DestructionInProgress
+        );
         assert_eq!(crate::DestroyAssets::<Runtime>::get(), vec![CAMPAIGN_ASSET]);
 
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
         assert_ok!(AssetRouter::managed_destroy(CUSTOM_ASSET, None));
         assert_eq!(crate::DestroyAssets::<Runtime>::get(), vec![CAMPAIGN_ASSET, CUSTOM_ASSET]);
+
+        crate::IndestructibleAssets::<Runtime>::put(crate::DestroyAssets::<Runtime>::get());
+        crate::DestroyAssets::<Runtime>::kill();
+        assert_err!(
+            AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
+            Error::<Runtime>::DestructionInProgress
+        );
+        assert_err!(
+            AssetRouter::managed_destroy(CUSTOM_ASSET, None),
+            Error::<Runtime>::DestructionInProgress
+        );
+    });
+}
+
+#[test]
+fn managed_destroy_adds_multi_assets_properly() {
+    ExtBuilder::default().build().execute_with(|| {
+        let assets = BTreeMap::from([(CAMPAIGN_ASSET, None), (CUSTOM_ASSET, None)]);
+        assert_err!(
+            AssetRouter::managed_destroy_multi(assets.clone()),
+            Error::<Runtime>::UnknownAsset
+        );
+
+        for (asset, _) in assets.clone() {
+            assert_ok!(AssetRouter::create(asset.clone(), ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+        }
+
+        assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
+
+        for (asset, _) in assets.clone() {
+            assert_err!(
+                AssetRouter::managed_destroy(asset, None),
+                Error::<Runtime>::DestructionInProgress
+            );
+        }
+
+        assert_err!(
+            AssetRouter::managed_destroy_multi(assets.clone()),
+            Error::<Runtime>::DestructionInProgress
+        );
+        assert_eq!(crate::DestroyAssets::<Runtime>::get(), vec![CAMPAIGN_ASSET, CUSTOM_ASSET]);
+
+        crate::IndestructibleAssets::<Runtime>::put(crate::DestroyAssets::<Runtime>::get());
+        crate::DestroyAssets::<Runtime>::kill();
+        assert_err!(
+            AssetRouter::managed_destroy_multi(assets),
+            Error::<Runtime>::DestructionInProgress
+        );
     });
 }

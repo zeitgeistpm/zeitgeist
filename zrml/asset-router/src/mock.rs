@@ -23,15 +23,15 @@ use crate::{self as zrml_asset_router};
 use alloc::{vec, vec::Vec};
 use frame_support::{
     construct_runtime,
+    pallet_prelude::Weight,
     traits::{AsEnsureOriginWithArg, Everything},
-    pallet_prelude::Weight
 };
 use frame_system::EnsureSigned;
 use orml_traits::parameter_type_with_key;
 use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, parameter_types, ConstU128, ConstU32, IdentityLookup},
+    traits::{parameter_types, BlakeTwo256, ConstU128, ConstU32, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
