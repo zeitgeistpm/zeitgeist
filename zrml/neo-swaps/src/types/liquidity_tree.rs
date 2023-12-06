@@ -299,6 +299,37 @@ where
     }
 }
 
+/// Structure for managing children in a liquidity tree.
+pub(crate) struct LiquidityTreeChildIndices {
+    /// Left-hand side child; `None` if there's no left-hand side child.
+    lhs: Option<u32>,
+    /// Right-hand side child; `None` if there's no right-hand side child.
+    rhs: Option<u32>,
+}
+
+impl LiquidityTreeChildIndices {
+    /// Applies a `mutator` function to each child if it exists.
+    pub fn apply<F>(&self, mut mutator: F) -> Result<(), DispatchError>
+    where
+        F: FnMut(u32) -> Result<(), DispatchError>,
+    {
+        if let Some(lhs) = self.lhs {
+            mutator(lhs)?;
+        }
+        if let Some(rhs) = self.rhs {
+            mutator(rhs)?;
+        }
+        Ok(())
+    }
+}
+
+// Implement `From` for destructuring
+impl From<LiquidityTreeChildIndices> for (Option<u32>, Option<u32>) {
+    fn from(child_indices: LiquidityTreeChildIndices) -> (Option<u32>, Option<u32>) {
+        (child_indices.lhs, child_indices.rhs)
+    }
+}
+
 /// Type for specifying a sign for `update_descendant_stake`.
 pub(crate) enum UpdateDescendantStakeOperation {
     Add,
@@ -330,7 +361,7 @@ where
     ///
     /// The first (resp. second) component of the array is the left (resp. right) child. If there is
     /// no node at either of these indices, the result is `None`.
-    fn children(&self, index: u32) -> Result<[Option<u32>; 2], DispatchError>;
+    fn children(&self, index: u32) -> Result<LiquidityTreeChildIndices, DispatchError>;
 
     /// Return the index of a node's parent; `None` if `index` is `0u32`, i.e. the node is root.
     fn parent_index(&self, index: u32) -> Option<u32>;
@@ -426,34 +457,24 @@ where
                 node.fees = node.fees.checked_add_res(&fees)?;
                 Ok(())
             })?;
-            let child_indices = self.children(index)?;
-            // Unwrap below can't fail since we're unwrapping from an array of length 2.
-            match child_indices.get(0).unwrap_or(&None) {
-                Some(lhs_index) => {
-                    self.mutate_node(*lhs_index, |lhs_node| {
-                        // The descendant's share of the stake:
-                        let child_lazy_fees = lhs_node
-                            .total_stake()?
-                            .bmul_bdiv(remaining_lazy_fees, node_descendant_stake)?;
-                        lhs_node.lazy_fees =
-                            lhs_node.lazy_fees.checked_add_res(&child_lazy_fees)?;
-                        remaining_lazy_fees =
-                            remaining_lazy_fees.checked_sub_res(&child_lazy_fees)?;
-                        Ok(())
-                    })?;
-                }
-                None => (),
+            let (opt_lhs_index, opt_rhs_index) = self.children(index)?.into();
+            if let Some(lhs_index) = opt_lhs_index {
+                self.mutate_node(lhs_index, |lhs_node| {
+                    // The descendant's share of the stake:
+                    let child_lazy_fees = lhs_node
+                        .total_stake()?
+                        .bmul_bdiv(remaining_lazy_fees, node_descendant_stake)?;
+                    lhs_node.lazy_fees = lhs_node.lazy_fees.checked_add_res(&child_lazy_fees)?;
+                    remaining_lazy_fees = remaining_lazy_fees.checked_sub_res(&child_lazy_fees)?;
+                    Ok(())
+                })?;
             }
-            // Unwrap below can't fail since we're unwrapping from an array of length 2.
-            match child_indices.get(1).unwrap_or(&None) {
-                Some(rhs_index) => {
-                    self.mutate_node(*rhs_index, |rhs_node| {
-                        rhs_node.lazy_fees =
-                            rhs_node.lazy_fees.checked_add_res(&remaining_lazy_fees)?;
-                        Ok(())
-                    })?;
-                }
-                None => (),
+            if let Some(rhs_index) = opt_rhs_index {
+                self.mutate_node(rhs_index, |rhs_node| {
+                    rhs_node.lazy_fees =
+                        rhs_node.lazy_fees.checked_add_res(&remaining_lazy_fees)?;
+                    Ok(())
+                })?;
             }
         }
         self.mutate_node(index, |node| {
@@ -463,14 +484,14 @@ where
         Ok(())
     }
 
-    fn children(&self, index: u32) -> Result<[Option<u32>; 2], DispatchError> {
+    fn children(&self, index: u32) -> Result<LiquidityTreeChildIndices, DispatchError> {
         let calculate_child =
             |child_index: u32| Some(child_index).filter(|&i| i < self.node_count());
         let left_child_index = index.checked_mul_res(&2)?.checked_add_res(&1)?;
-        let left_child = calculate_child(left_child_index);
+        let lhs = calculate_child(left_child_index);
         let right_child_index = left_child_index.checked_add_res(&1)?;
-        let right_child = calculate_child(right_child_index);
-        Ok([left_child, right_child])
+        let rhs = calculate_child(right_child_index);
+        Ok(LiquidityTreeChildIndices { lhs, rhs })
     }
 
     fn parent_index(&self, index: u32) -> Option<u32> {
@@ -528,9 +549,10 @@ where
         F: FnMut(&mut Node<T>) -> DispatchResult,
     {
         let child_indices = self.children(index)?;
-        for child_index in child_indices.into_iter().flatten() {
-            self.mutate_node(child_index, |node| mutator(node))?;
-        }
+        child_indices.apply(|index| {
+            self.mutate_node(index, |node| mutator(node))?;
+            Ok(())
+        })?;
         Ok(())
     }
 
