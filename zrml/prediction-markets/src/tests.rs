@@ -1673,7 +1673,7 @@ fn manually_open_market_fails_if_market_period_not_started_yet() {
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
 
-        set_timestamp_for_on_initialize(start - 1 * MILLISECS_PER_BLOCK as u64);
+        set_timestamp_for_on_initialize(start - MILLISECS_PER_BLOCK as u64);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
 
         assert_noop!(
@@ -1710,7 +1710,7 @@ fn manually_open_market_fails_if_market_not_in_open_time_frame_list() {
         // remove market from open time frame list
         let range_start_time_frame =
             crate::Pallet::<Runtime>::calculate_time_frame_of_moment(start);
-        crate::MarketIdsPerOpenTimeFrame::<Runtime>::remove(&range_start_time_frame);
+        crate::MarketIdsPerOpenTimeFrame::<Runtime>::remove(range_start_time_frame);
 
         set_timestamp_for_on_initialize(
             start + (crate::MAX_RECOVERY_TIME_FRAMES + 1) * MILLISECS_PER_BLOCK as u64,
@@ -1821,7 +1821,7 @@ fn manually_close_market_fails_if_market_not_in_close_time_frame_list() {
 
         // remove market from open time frame list
         let range_end_time_frame = crate::Pallet::<Runtime>::calculate_time_frame_of_moment(end);
-        crate::MarketIdsPerCloseTimeFrame::<Runtime>::remove(&range_end_time_frame);
+        crate::MarketIdsPerCloseTimeFrame::<Runtime>::remove(range_end_time_frame);
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
         set_timestamp_for_on_initialize(

@@ -1505,6 +1505,7 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
+            Some(MarketDisputeMechanism::Court),
         )?;
 
         let now = 500_000u32;
@@ -1531,6 +1532,7 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
+            Some(MarketDisputeMechanism::Court),
         )?;
 
         let now = 1_500_000u32;
