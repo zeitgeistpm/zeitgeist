@@ -28,7 +28,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use alloc::{collections::BTreeMap, vec::Vec};
+    use alloc::collections::BTreeMap;
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
         log,
@@ -187,6 +187,11 @@ pub mod pallet {
     pub type DestroyAssets<T: Config> =
         StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
 
+    /// Keeps track of assets that can't be destroyed.
+    #[pallet::storage]
+    pub type IndestructibleAssets<T: Config> =
+        StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
+
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
@@ -252,8 +257,7 @@ pub mod pallet {
                 return remaining_weight;
             }
 
-            remaining_weight = remaining_weight.saturating_sub(T::DbWeight::get().writes(1));
-            let mut skipped_assets = Vec::new();
+            let mut indestructible_asset = None;
 
             while let Some(asset) = destroy_assets.pop() {
                 // Destroy accounts
@@ -279,8 +283,8 @@ pub mod pallet {
                                 asset,
                                 e
                             );
-                            skipped_assets.push(asset);
-                            continue;
+                            indestructible_asset = Some(asset);
+                            break;
                         }
                     }
                 } else {
@@ -295,7 +299,7 @@ pub mod pallet {
                 {
                     match Self::destroy_approvals(asset, destroy_approval_cap.saturated_into()) {
                         Ok(destroyed_approvals) => {
-                            // TODO: More precise weights
+                            // TODO(#1202): More precise weights
                             remaining_weight = remaining_weight.saturating_sub(
                                 destroy_approval_weight.saturating_mul(destroyed_approvals.into()),
                             );
@@ -311,8 +315,8 @@ pub mod pallet {
                                 asset,
                                 e
                             );
-                            skipped_assets.push(asset);
-                            continue;
+                            indestructible_asset = Some(asset);
+                            break;
                         }
                     }
                 } else {
@@ -322,15 +326,15 @@ pub mod pallet {
 
                 // Finalize asset destruction
                 if remaining_weight.all_gte(destroy_finish_weight) {
-                    // TODO: Skip asset on error and log error
+                    // TODO(#1202): More precise weights
                     if let Err(e) = Self::finish_destroy(asset) {
                         log::error!(
                             "Error during managed asset destruction finalization of {:?}: {:?}",
                             asset,
                             e
                         );
-                        skipped_assets.push(asset);
-                        continue;
+                        indestructible_asset = Some(asset);
+                        break;
                     }
 
                     remaining_weight = remaining_weight.saturating_sub(destroy_finish_weight);
@@ -340,13 +344,22 @@ pub mod pallet {
                 }
             }
 
-            // Add assets that caused an error back to the storage.
-            while let Some(asset) = skipped_assets.pop() {
-                destroy_assets.force_push(asset);
+            if let Some(asset) = indestructible_asset {
+                if let Err(e) =
+                    IndestructibleAssets::<T>::try_mutate(|assets| assets.try_push(asset))
+                {
+                    log::error!(
+                        "Error during storage of indestructible asset {:?}, dropping asset: {:?}",
+                        asset,
+                        e
+                    );
+                }
+
+                remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
             }
 
             DestroyAssets::<T>::put(destroy_assets);
-            remaining_weight
+            remaining_weight.saturating_sub(T::DbWeight::get().writes(1))
         }
     }
 
