@@ -24,13 +24,14 @@ use alloc::{vec, vec::Vec};
 use frame_support::{
     construct_runtime,
     traits::{AsEnsureOriginWithArg, Everything},
+    pallet_prelude::Weight
 };
 use frame_system::EnsureSigned;
 use orml_traits::parameter_type_with_key;
 use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, ConstU128, ConstU32, IdentityLookup},
+    traits::{BlakeTwo256, parameter_types, ConstU128, ConstU32, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
@@ -63,10 +64,16 @@ pub(super) const CUSTOM_ASSET_INITIAL_AMOUNT: Balance = 20;
 pub(super) const MARKET_ASSET_INITIAL_AMOUNT: Balance = 30;
 pub(super) const CURRENCY_INITIAL_AMOUNT: Balance = 40;
 
+pub(super) const DESTROY_WEIGHT: Weight = Weight::from_all(1000);
+
 pub(super) type AccountId = <Runtime as frame_system::Config>::AccountId;
 pub(super) type CustomAssetsInstance = pallet_assets::Instance1;
 pub(super) type CampaignAssetsInstance = pallet_assets::Instance2;
 pub(super) type MarketAssetsInstance = pallet_assets::Instance3;
+
+parameter_types! {
+    pub const DestroyWeight: Weight = DESTROY_WEIGHT;
+}
 
 construct_runtime!(
     pub enum Runtime
@@ -94,6 +101,9 @@ impl crate::Config for Runtime {
     type CampaignAssets = CampaignAssets;
     type CustomAssetType = CustomAsset;
     type CustomAssets = CustomAssets;
+    type DestroyAccountWeight = DestroyWeight;
+    type DestroyApprovalWeight = DestroyWeight;
+    type DestroyFinishWeight = DestroyWeight;
     type MarketAssetType = MarketAsset;
     type MarketAssets = MarketAssets;
 }

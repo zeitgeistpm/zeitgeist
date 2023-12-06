@@ -152,6 +152,13 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + TypeInfo;
 
+        /// Weight required for destroying one account.
+        type DestroyAccountWeight: Get<Weight>;
+        /// Weight required for destroying one approval.
+        type DestroyApprovalWeight: Get<Weight>;
+        /// Weight required for finishing the asset destruction process.
+        type DestroyFinishWeight: Get<Weight>;
+
         /// Logic that handles market assets by providing multiple fungible
         /// trait implementations.
         type MarketAssets: AssetTraits<Self, Self::MarketAssetType>;
@@ -164,10 +171,6 @@ pub mod pallet {
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + TypeInfo;
-
-        type DestroyAccountWeight: Get<Weight>;
-        type DestroyApprovalWeight: Get<Weight>;
-        type DestroyFinishWeight: Get<Weight>;
     }
 
     #[pallet::error]

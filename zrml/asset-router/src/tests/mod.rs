@@ -33,7 +33,7 @@ use orml_traits::{
     BalanceStatus, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
     NamedMultiReservableCurrency,
 };
-use zeitgeist_primitives::types::Assets;
+use zeitgeist_primitives::{traits::ManagedDestroy, types::Assets};
 
 mod create;
 mod destroy;
