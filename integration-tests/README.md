@@ -31,9 +31,10 @@ import { ALITH_ADDRESS } from "@moonwall/util";
 
 ### Usage Examples (non-exhaustive)
 
-Most commons commands:
+Most common commands:
 
 - `pnpm exec moonwall test zombienet_zeitgeist_upgrade`
+- `pnpm exec moonwall test chopsticks_zeitgeist_upgrade`
 
 Other moonwall commands:
 
