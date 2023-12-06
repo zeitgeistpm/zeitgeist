@@ -22,7 +22,7 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{Runtime, VERSION};
+use super::{CampaignAssetsInstance, Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
@@ -35,6 +35,7 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
+use pallet_assets::WeightInfo;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{
     traits::{AccountIdConversion, Bounded},
@@ -63,6 +64,14 @@ parameter_types! {
 }
 
 parameter_types! {
+    // Asset-Router
+    pub DestroyAccountWeight: Weight =
+        <Runtime as pallet_assets::Config<CampaignAssetsInstance>>::WeightInfo::destroy_accounts(1);
+    pub DestroyApprovalWeight: Weight =
+        <Runtime as pallet_assets::Config<CampaignAssetsInstance>>::WeightInfo::destroy_approvals(1);
+    pub DestroyFinishWeight: Weight =
+        <Runtime as pallet_assets::Config<CampaignAssetsInstance>>::WeightInfo::finish_destroy();
+
     // Assets (Campaign)
     pub const CampaignAssetsAccountDeposit: Balance = deposit(1, 16);
     pub const CampaignAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
