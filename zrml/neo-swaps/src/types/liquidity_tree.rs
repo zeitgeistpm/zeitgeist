@@ -121,25 +121,25 @@ where
     }
 }
 
-// Type for nodes of a liquidity tree.
-//
-// # Notes
-//
-// - `descendant_stake` does not contain the stake of `self`.
-// - `lazy_fees`, when propagated, is distributed not only to the descendants of `self`, but also to
-//   `self`.
+/// Type for nodes of a liquidity tree.
+///
+/// # Notes
+///
+/// - `descendant_stake` does not contain the stake of `self`.
+/// - `lazy_fees`, when propagated, is distributed not only to the descendants of `self`, but also to
+///   `self`.
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebugNoBound, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub(crate) struct Node<T: Config> {
-    // The account that the node belongs to. `None` signifies an abandoned node.
+    /// The account that the node belongs to. `None` signifies an abandoned node.
     pub account: Option<T::AccountId>,
-    // The stake belonging to the owner.
+    /// The stake belonging to the owner.
     pub stake: BalanceOf<T>,
-    // The fees owed to the owner.
+    /// The fees owed to the owner.
     pub fees: BalanceOf<T>,
-    // The sum of the stake of all descendants of this node.
+    /// The sum of the stake of all descendants of this node.
     pub descendant_stake: BalanceOf<T>,
-    // The amount of fees to be lazily propagated down the tree.
+    /// The amount of fees to be lazily propagated down the tree.
     pub lazy_fees: BalanceOf<T>,
 }
 
@@ -477,7 +477,6 @@ where
         if index == 0 {
             None
         } else {
-            // Won't ever fail, always returns `Some(...)`.
             index.checked_sub(1)?.checked_div(2)
         }
     }
@@ -568,12 +567,10 @@ where
         mutator(node)
     }
 
-    /// Return the maximum allowed depth of the tree.
     fn max_depth() -> u32 {
         U::get()
     }
 
-    /// Return the maximum allowed amount of nodes in the tree.
     fn max_node_count() -> u32 {
         LiquidityTreeMaxNodes::<U>::get()
     }
