@@ -106,7 +106,8 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
       
-      - run: |
+      - name: Check benchmarks
+        run: |
           source $HOME/.cargo/env 
           ./scripts/benchmarks/quick_check.sh
 
