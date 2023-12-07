@@ -7,7 +7,7 @@ import { ApiPromise, Keyring } from "@polkadot/api";
 const MAX_BALANCE_TRANSFER_TRIES = 5;
 describeSuite({
     id: "CAN",
-    title: "Chopsticks Zeitgeist Upgrade Test",
+    title: "Chopsticks Zeitgeist or Battery Station Upgrade Test",
     foundationMethods: "chopsticks",
     testCases: function ({ it, context, log }) {
         let api: ApiPromise;
@@ -26,7 +26,7 @@ describeSuite({
 
             const specName = api.consts.system.version.specName.toString();
             log(`Currently connected to chain: ${specName}`);
-        });
+        }, 120000);
 
         it({
             id: "T1",

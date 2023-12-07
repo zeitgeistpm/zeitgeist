@@ -63,6 +63,32 @@
                  "endpoints": ["ws://127.0.0.1:8000"]
              }
          ]
+      },
+      {
+         "name": "chopsticks_battery_station_upgrade",
+         "testFileDir": ["tests/rt-upgrade-chopsticks"],
+         "runScripts": [
+            "build-parachain.sh",
+            "build-zeitgeist-spec.sh"
+         ],
+         "foundation": {
+             "type": "chopsticks",
+             "rtUpgradePath": "../target/debug/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
+             "launchSpec": [
+                 {
+                     "name": "db",
+                     "type": "parachain",
+                     "configPath": "./configs/battery-station.yml"
+                 }
+             ]
+         },
+         "connections": [
+             {
+                 "name": "DB",
+                 "type": "polkadotJs",
+                 "endpoints": ["ws://127.0.0.1:8000"]
+             }
+         ]
       }
    ]
 }
