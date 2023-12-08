@@ -24,7 +24,7 @@ extern crate alloc;
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
     MarketIdsPerCloseTimeFrame, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
-    MarketIdsPerReportBlock, TimeFrame,
+    MarketIdsPerOpenTimeFrame, MarketIdsPerReportBlock, TimeFrame,
 };
 use alloc::collections::BTreeMap;
 use core::ops::{Range, RangeInclusive};
@@ -1635,17 +1635,22 @@ fn manually_open_market_after_long_stall() {
         assert_eq!(Swaps::pool(0).unwrap().pool_status, PoolStatus::Initialized);
         assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Initialized);
 
+        let range_start_time_frame =
+            crate::Pallet::<Runtime>::calculate_time_frame_of_moment(start);
+        assert_eq!(MarketIdsPerOpenTimeFrame::<Runtime>::get(range_start_time_frame), vec![0, 1]);
         assert_ok!(PredictionMarkets::manually_open_or_close_market(
             RuntimeOrigin::signed(ALICE),
             0
         ));
         assert_eq!(Swaps::pool(0).unwrap().pool_status, PoolStatus::Active);
+        assert_eq!(MarketIdsPerOpenTimeFrame::<Runtime>::get(range_start_time_frame), vec![1]);
 
         assert_ok!(PredictionMarkets::manually_open_or_close_market(
             RuntimeOrigin::signed(ALICE),
             1
         ));
         assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Active);
+        assert_eq!(MarketIdsPerOpenTimeFrame::<Runtime>::get(range_start_time_frame), vec![]);
     });
 }
 
@@ -1780,17 +1785,26 @@ fn manually_close_market_after_long_stall() {
         let pool_after_close = Swaps::pool(1).unwrap();
         assert_eq!(pool_after_close.pool_status, PoolStatus::Active);
 
+        let range_end_time_frame = crate::Pallet::<Runtime>::calculate_time_frame_of_moment(end);
+        assert_eq!(MarketIdsPerCloseTimeFrame::<Runtime>::get(range_end_time_frame), vec![0, 1]);
+
         assert_ok!(PredictionMarkets::manually_open_or_close_market(
             RuntimeOrigin::signed(ALICE),
             0
         ));
         assert_eq!(Swaps::pool(0).unwrap().pool_status, PoolStatus::Closed);
+        assert_eq!(MarketIdsPerCloseTimeFrame::<Runtime>::get(range_end_time_frame), vec![1]);
+        let market_after_manual_close = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after_manual_close.status, MarketStatus::Closed);
 
         assert_ok!(PredictionMarkets::manually_open_or_close_market(
             RuntimeOrigin::signed(ALICE),
             1
         ));
         assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Closed);
+        assert_eq!(MarketIdsPerCloseTimeFrame::<Runtime>::get(range_end_time_frame), vec![]);
+        let market_after_manual_close = MarketCommons::market(&1).unwrap();
+        assert_eq!(market_after_manual_close.status, MarketStatus::Closed);
     });
 }
 

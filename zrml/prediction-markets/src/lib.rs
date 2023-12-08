@@ -1745,8 +1745,8 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let now = <zrml_market_commons::Pallet<T>>::now();
+            let market = zrml_market_commons::Pallet::<T>::market(&market_id)?;
+            let now = zrml_market_commons::Pallet::<T>::now();
             let range = match &market.period {
                 MarketPeriod::Block(_) => {
                     return Err(Error::<T>::NotAllowedForBlockBasedMarkets.into());
