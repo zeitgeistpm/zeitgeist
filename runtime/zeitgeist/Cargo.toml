@@ -403,7 +403,7 @@ try-runtime = [
     "parachain-info?/try-runtime",
 ]
 # Allow to print logs details (no wasm:stripped)
-force-debug = [ "sp-debug-derive/force-debug" ]
+force-debug = ["sp-debug-derive/force-debug"]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

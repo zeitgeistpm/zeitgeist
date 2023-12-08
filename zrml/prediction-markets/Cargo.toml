@@ -18,6 +18,7 @@ zrml-simple-disputes = { workspace = true }
 
 # Mock
 
+env_logger = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
@@ -32,7 +33,6 @@ xcm = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 zrml-rikiddo = { workspace = true, optional = true }
 zrml-swaps = { workspace = true, optional = true }
-env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 more-asserts = { workspace = true }

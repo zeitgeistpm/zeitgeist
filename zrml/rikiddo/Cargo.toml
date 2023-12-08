@@ -1,6 +1,7 @@
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 cfg-if = { workspace = true }
+env_logger = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 hashbrown = { workspace = true }
@@ -13,7 +14,6 @@ sp-io = { workspace = true, optional = true }
 sp-runtime = { workspace = true }
 substrate-fixed = { workspace = true, features = ["serde"] }
 zeitgeist-primitives = { workspace = true }
-env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 zrml-rikiddo = { workspace = true, features = ["mock", "default"] }

@@ -13,13 +13,13 @@ zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
 [dev-dependencies]
+env_logger = { workspace = true }
 pallet-balances = { workspace = true, features = ["default"] }
 pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 pallet-treasury = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
-env_logger = { workspace = true }
 
 test-case = { workspace = true }
 
