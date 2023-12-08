@@ -1,6 +1,8 @@
 {
   "author": "Zeitgeist PM <contact@zeitgeist.pm>",
   "dependencies": {
+    "@acala-network/chopsticks": "^0.9.3",
+    "sqlite3": "^5.1.6",
     "typescript": "^5.2.2"
   },
   "devDependencies": {

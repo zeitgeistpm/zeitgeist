@@ -1,6 +1,5 @@
 endpoint: wss://main.rpc.zeitgeist.pm
 mock-signature-host: true
-block: ${env.ZEITGEIST_BLOCK_NUMBER}
 db: ./tmp/db_mba.sqlite
 # wasm-override: zeitgeist-runtime.compact.compressed.wasm
 
