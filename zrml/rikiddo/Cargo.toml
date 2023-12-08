@@ -13,6 +13,7 @@ sp-io = { workspace = true, optional = true }
 sp-runtime = { workspace = true }
 substrate-fixed = { workspace = true, features = ["serde"] }
 zeitgeist-primitives = { workspace = true }
+env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 zrml-rikiddo = { workspace = true, features = ["mock", "default"] }
@@ -24,6 +25,7 @@ mock = [
     "pallet-timestamp/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
+    "env_logger/default",
 ]
 std = [
     "frame-support/std",

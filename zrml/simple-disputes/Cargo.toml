@@ -16,6 +16,7 @@ pallet-balances = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
+env_logger = { workspace = true }
 
 [features]
 default = ["std"]

@@ -37,7 +37,7 @@ zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 zrml-rikiddo = { workspace = true, optional = true }
 zrml-simple-disputes = { workspace = true, optional = true }
 zrml-swaps = { workspace = true, optional = true }
-
+env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 more-asserts = { workspace = true }
@@ -77,6 +77,7 @@ mock = [
     "zrml-prediction-markets/mock",
     "zrml-prediction-markets/default",
     "serde/default",
+    "env_logger/default",
 ]
 parachain = ["zrml-prediction-markets/parachain"]
 runtime-benchmarks = [

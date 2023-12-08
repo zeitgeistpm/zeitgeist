@@ -32,6 +32,7 @@ xcm = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 zrml-rikiddo = { workspace = true, optional = true }
 zrml-swaps = { workspace = true, optional = true }
+env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 more-asserts = { workspace = true }
@@ -57,6 +58,7 @@ mock = [
     "zrml-swaps/default",
     "xcm/default",
     "orml-asset-registry/default",
+    "env_logger/default",
 ]
 parachain = []
 runtime-benchmarks = [

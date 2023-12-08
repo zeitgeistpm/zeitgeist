@@ -16,6 +16,7 @@ pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 zrml-market-commons = { workspace = true, optional = true }
+env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 test-case = { workspace = true }
@@ -31,6 +32,7 @@ mock = [
     "orml-currencies/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
+    "env_logger/default",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
