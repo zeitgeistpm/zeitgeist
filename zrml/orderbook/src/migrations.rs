@@ -212,8 +212,10 @@ mod tests {
     };
     use alloc::vec::Vec;
     use frame_support::{
-        dispatch::fmt::Debug, migration::put_storage_value, StorageHasher, Twox64Concat,
+        dispatch::fmt::Debug, migration::put_storage_value, storage_root, StorageHasher,
+        Twox64Concat,
     };
+    use sp_runtime::StateVersion;
     use zeitgeist_primitives::types::ScalarPosition;
 
     #[test]
@@ -251,20 +253,14 @@ mod tests {
     #[test]
     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
-            // Don't set up chain to signal that storage is already up to date.
-            let (_, new_orders) = construct_old_new_tuple();
-            populate_test_data::<Twox64Concat, OrderId, OrderOf<Runtime>>(
-                ORDER_BOOK,
-                ORDERS,
-                new_orders.clone(),
-            );
+            // ensure we migrated already
+            StorageVersion::new(ORDER_BOOK_NEXT_STORAGE_VERSION).put::<OrderbookPallet<Runtime>>();
+
+            // save current storage root
+            let tmp = storage_root(StateVersion::V1);
             TranslateOrderStructure::<Runtime>::on_runtime_upgrade();
-
-            let actual = crate::Orders::<Runtime>::get(0).unwrap();
-            assert_eq!(actual, new_orders[0]);
-
-            let actual = crate::Orders::<Runtime>::get(1).unwrap();
-            assert_eq!(actual, new_orders[1]);
+            // ensure we did not change any storage with the migration
+            assert_eq!(tmp, storage_root(StateVersion::V1));
         });
     }
 
