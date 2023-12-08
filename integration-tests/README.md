@@ -31,6 +31,8 @@ import { ALITH_ADDRESS } from "@moonwall/util";
 
 ### Usage Examples (non-exhaustive)
 
+You should have installed `python` for using `sqlite3` and then used `pnpm rebuild && pnpm rebuild sqlite3`.
+
 Most common commands:
 
 - `pnpm exec moonwall test zombienet_zeitgeist_upgrade`

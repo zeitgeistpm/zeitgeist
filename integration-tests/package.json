@@ -1,11 +1,11 @@
 {
   "author": "Zeitgeist PM <contact@zeitgeist.pm>",
   "dependencies": {
-    "@acala-network/chopsticks": "^0.9.3",
     "sqlite3": "^5.1.6",
     "typescript": "^5.2.2"
   },
   "devDependencies": {
+    "@acala-network/chopsticks": "^0.9.3",
     "@moonwall/cli": "^4.4.1",
     "@moonwall/util": "^4.4.1",
     "@polkadot/api": "^10.10.1",
