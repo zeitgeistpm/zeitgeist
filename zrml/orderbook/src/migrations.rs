@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn on_runtime_upgrade_works_as_expected() {
         ExtBuilder::default().build().execute_with(|| {
-            // Don't set up chain to signal that storage is already up to date.
+            set_up_version();
             let (old_orders, new_orders) = construct_old_new_tuple();
             populate_test_data::<Twox64Concat, OrderId, OldOrderOf<Runtime>>(
                 ORDER_BOOK,
