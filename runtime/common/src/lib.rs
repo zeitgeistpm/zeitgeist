@@ -1226,7 +1226,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_swaps::Config for Runtime {
-            type MarketId = MarketId;
+            type Asset = Asset<MarketId>;
             type RuntimeEvent = RuntimeEvent;
             type ExitFee = ExitFee;
             type MinAssets = MinAssets;

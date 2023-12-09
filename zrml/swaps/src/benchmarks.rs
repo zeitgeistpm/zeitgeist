@@ -38,8 +38,7 @@ use sp_runtime::traits::{SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
     math::fixed::FixedMul,
-    traits::Swaps as SwapsApi,
-    types::Asset,
+    traits::{Swaps as SwapsApi, ZeitgeistAssetEnumerator},
 };
 
 const LIQUIDITY: u128 = 100 * BASE;
@@ -48,15 +47,19 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
-fn generate_assets<T: Config>(
+fn generate_assets<T>(
     owner: &T::AccountId,
     asset_count: usize,
     opt_asset_amount: Option<BalanceOf<T>>,
-) -> (Vec<AssetOf<T>>, BalanceOf<T>) {
+) -> (Vec<AssetOf<T>>, BalanceOf<T>)
+where
+    T: Config,
+    T::Asset: ZeitgeistAssetEnumerator<u128>,
+{
     let mut assets: Vec<AssetOf<T>> = Vec::new();
     let asset_amount = opt_asset_amount.unwrap_or_else(|| LIQUIDITY.saturated_into());
     for i in 0..asset_count {
-        let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
+        let asset = T::Asset::create_asset_id(i as u128);
         assets.push(asset);
         T::AssetManager::deposit(asset, owner, asset_amount).unwrap()
     }
@@ -65,13 +68,17 @@ fn generate_assets<T: Config>(
 
 // Creates a pool containing `asset_count` (default: max assets) assets.
 // Returns `PoolId`, `Vec<Asset<...>>`, ``MarketId`
-fn bench_create_pool<T: Config>(
+fn bench_create_pool<T>(
     caller: T::AccountId,
     asset_count: usize,
     opt_asset_amount: Option<BalanceOf<T>>,
     opt_weights: Option<Vec<u128>>,
     open: bool,
-) -> (u128, Vec<AssetOf<T>>, BalanceOf<T>) {
+) -> (u128, Vec<AssetOf<T>>, BalanceOf<T>)
+where
+    T: Config,
+    T::Asset: ZeitgeistAssetEnumerator<u128>,
+{
     let (assets, asset_amount) = generate_assets::<T>(&caller, asset_count, opt_asset_amount);
     let weights = opt_weights.unwrap_or_else(|| vec![T::MinWeight::get(); asset_count]);
     let pool_id = Pallet::<T>::create_pool(
@@ -89,6 +96,11 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
+    where_clause {
+        where
+            T::Asset: ZeitgeistAssetEnumerator<u128>,
+    }
+
     pool_exit {
         let a in 2 .. T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();

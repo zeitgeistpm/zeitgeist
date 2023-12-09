@@ -95,7 +95,7 @@ construct_runtime!(
 pub type AssetManager = Currencies;
 
 impl crate::Config for Runtime {
-    type MarketId = MarketId;
+    type Asset = Asset<MarketId>;
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
     type MaxAssets = MaxAssets;

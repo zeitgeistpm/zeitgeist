@@ -38,7 +38,7 @@ use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion, Saturating};
 use zeitgeist_primitives::{
     constants::MAX_ASSETS,
-    types::{Asset, PoolId, ScoringRule},
+    types::{Asset, MarketId, PoolId, ScoringRule},
 };
 
 cfg_if::cfg_if! {
@@ -128,7 +128,7 @@ pub enum OldPoolStatus {
     Initialized,
 }
 
-pub(crate) type OldPoolOf<T> = OldPool<BalanceOf<T>, <T as Config>::MarketId>;
+pub(crate) type OldPoolOf<T> = OldPool<BalanceOf<T>, MarketId>;
 
 #[frame_support::storage_alias]
 pub(crate) type Pools<T: Config> =
@@ -142,10 +142,15 @@ pub(crate) type Markets<T: Config> = StorageMap<Swaps<T>, Blake2_128Concat, Pool
 
 pub struct MigratePools<T>(PhantomData<T>);
 
-/// Deletes all Rikiddo markets from storage and
+// TODO Add Weight type!
+
+/// Deletes all Rikiddo markets from storage, migrates CPMM markets to their new storage layout and
+/// closes them. Due to us abstracting `MarketId` away from the `Asset` type of the `Config` object,
+/// we require that the old asset type `Asset<MarketId>` can be converted to the generic `T::Asset`.
 impl<T> OnRuntimeUpgrade for MigratePools<T>
 where
     T: Config,
+    <T as Config>::Asset: From<Asset<MarketId>>,
 {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
@@ -169,8 +174,10 @@ where
             if old_pool.scoring_rule != OldScoringRule::CPMM {
                 return None;
             }
-            // These should all be infallible.
-            let assets = old_pool.assets.try_into().ok()?;
+            // These conversions should all be infallible.
+            let assets_unbounded =
+                old_pool.assets.into_iter().map(Into::into).collect::<Vec<T::Asset>>();
+            let assets = assets_unbounded.try_into().ok()?;
             let status = match old_pool.pool_status {
                 OldPoolStatus::Active => PoolStatus::Closed,
                 OldPoolStatus::CollectingSubsidy => return None,
@@ -179,7 +186,12 @@ where
                 OldPoolStatus::Initialized => PoolStatus::Closed,
             };
             let swap_fee = old_pool.swap_fee?;
-            let weights = old_pool.weights?.try_into().ok()?;
+            let weights_unbounded = old_pool
+                .weights?
+                .into_iter()
+                .map(|(k, v)| (k.into(), v))
+                .collect::<BTreeMap<T::Asset, u128>>();
+            let weights = weights_unbounded.try_into().ok()?;
             let total_weight = old_pool.total_weight?;
             let new_pool: PoolOf<T> = Pool { assets, status, swap_fee, total_weight, weights };
             Some(new_pool)

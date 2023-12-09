@@ -62,15 +62,15 @@ mod pallet {
         ensure,
         pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
+        transactional, Blake2_128Concat, PalletError, PalletId,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
-    use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+    use parity_scale_codec::{Decode, Encode};
     use scale_info::TypeInfo;
     use sp_arithmetic::traits::{Saturating, Zero};
     use sp_runtime::{
-        traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member},
+        traits::{AccountIdConversion, },
         DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -79,17 +79,16 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedMulRes},
             fixed::FixedMul,
         },
-        traits::{Swaps, ZeitgeistAssetManager},
-        types::{Asset, PoolId, SerdeWrapper},
+        traits::{PoolSharesId, Swaps, ZeitgeistAsset, ZeitgeistAssetManager},
+        types::{PoolId, SerdeWrapper},
     };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type AssetOf<T> = Asset<<T as Config>::MarketId>;
-    // pub(crate) type AssetOf<T> =
-    //     <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
+    pub(crate) type AssetOf<T> =
+        <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type PoolOf<T> = Pool<AssetOf<T>, BalanceOf<T>>;
@@ -518,16 +517,9 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Asset<Self::MarketId>>;
+        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Self::Asset>;
 
-        // FIXME Remove this thing in the new asset system.
-        type MarketId: AtLeast32Bit
-            + Copy
-            + Default
-            + MaxEncodedLen
-            + MaybeSerializeDeserialize
-            + Member
-            + Parameter;
+        type Asset: ZeitgeistAsset + PoolSharesId<SerdeWrapper<PoolId>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -880,7 +872,7 @@ mod pallet {
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> AssetOf<T> {
-            Asset::PoolShare(SerdeWrapper(pool_id))
+            T::Asset::pool_shares_id(SerdeWrapper(pool_id))
         }
 
         pub fn pool_by_id(pool_id: PoolId) -> Result<PoolOf<T>, DispatchError>
