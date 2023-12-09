@@ -70,8 +70,8 @@ mod pallet {
     use scale_info::TypeInfo;
     use sp_arithmetic::traits::{Saturating, Zero};
     use sp_runtime::{
-        traits::{AccountIdConversion, },
-        DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
+        traits::AccountIdConversion, DispatchError, DispatchResult, RuntimeDebug,
+        SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::CENT,
