@@ -29,11 +29,13 @@ use crate::{
     AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
     CourtParticipantInfoOf, CourtPool, CourtPoolItem, CourtPoolOf, Courts, Error, Event,
     MarketIdToCourtId, MarketOf, NegativeImbalanceOf, Participants, RequestBlock, SelectedDraws,
+    YearlyInflation,
 };
 use alloc::collections::BTreeMap;
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_noop, assert_ok, storage_root,
     traits::{fungible::Balanced, tokens::imbalance::Imbalance, Currency, NamedReservableCurrency},
+    StateVersion,
 };
 use pallet_balances::{BalanceLock, NegativeImbalance};
 use rand::seq::SliceRandom;
@@ -46,7 +48,7 @@ use zeitgeist_primitives::{
     constants::{
         mock::{
             AggregationPeriod, AppealBond, AppealPeriod, InflationPeriod, LockId, MaxAppeals,
-            MaxCourtParticipants, MinJurorStake, RequestInterval, VotePeriod,
+            MaxCourtParticipants, MaxYearlyInflation, MinJurorStake, RequestInterval, VotePeriod,
         },
         BASE,
     },
@@ -3054,6 +3056,19 @@ fn random_jurors_returns_a_subset_of_jurors() {
 }
 
 #[test]
+fn set_inflation_fails_if_inflation_exceeds_max_yearly_inflation() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Court::set_inflation(
+                RuntimeOrigin::root(),
+                MaxYearlyInflation::get() + Perbill::from_percent(1)
+            ),
+            Error::<Runtime>::InflationExceedsMaxYearlyInflation
+        );
+    });
+}
+
+#[test]
 fn handle_inflation_works() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(Court::set_inflation(RuntimeOrigin::root(), Perbill::from_percent(2u32)));
@@ -3098,6 +3113,23 @@ fn handle_inflation_works() {
 
         let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
         assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 4_320_130_393);
+    });
+}
+
+#[test]
+fn handle_inflationis_noop_if_yearly_inflation_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        <YearlyInflation<Runtime>>::kill();
+
+        let inflation_period = InflationPeriod::get();
+        run_blocks(inflation_period);
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+
+        // save current storage root
+        let tmp = storage_root(StateVersion::V1);
+        // handle_inflation is a noop for the storage
+        Court::handle_inflation(now);
+        assert_eq!(tmp, storage_root(StateVersion::V1));
     });
 }
 
