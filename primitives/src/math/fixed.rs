@@ -73,7 +73,7 @@ where
     fn bmul_ceil(&self, other: Self) -> Result<Self, DispatchError>;
 }
 
-/// Performs fixed point multiplication and errors with `DispatchError` in case of over- or
+/// Performs fixed point division and errors with `DispatchError` in case of over- or
 /// underflows and division by zero.
 pub trait FixedDiv
 where
