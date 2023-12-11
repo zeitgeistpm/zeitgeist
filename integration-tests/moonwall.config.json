@@ -42,8 +42,7 @@
          "name": "chopsticks_zeitgeist_upgrade",
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
          "runScripts": [
-            "build-parachain.sh",
-            "build-zeitgeist-spec.sh"
+            "build-parachain.sh"
          ],
          "foundation": {
              "type": "chopsticks",
@@ -68,8 +67,7 @@
          "name": "chopsticks_battery_station_upgrade",
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
          "runScripts": [
-            "build-parachain.sh",
-            "build-zeitgeist-spec.sh"
+            "build-parachain.sh"
          ],
          "foundation": {
              "type": "chopsticks",

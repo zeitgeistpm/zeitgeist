@@ -26,7 +26,7 @@ describeSuite({
 
             const specName = api.consts.system.version.specName.toString();
             log(`Currently connected to chain: ${specName}`);
-        }, 120000);
+        });
 
         it({
             id: "T1",

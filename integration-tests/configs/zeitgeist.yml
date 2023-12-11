@@ -1,11 +1,13 @@
-endpoint: wss://main.rpc.zeitgeist.pm
+endpoint: wss://main.rpc.zeitgeist.pm/ws
+# endpoint: wss://zeitgeist-rpc.dwellir.com
+# endpoint: wss://zeitgeist.api.onfinality.io/public-ws
 mock-signature-host: true
 db: ./tmp/db_mba.sqlite
 # wasm-override: zeitgeist-runtime.compact.compressed.wasm
 
 import-storage:
-    Sudo:
-        Key: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" # Alice
+    # Sudo:
+        # Key: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" # Alice
     System:
         Account:
             - - - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
