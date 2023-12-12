@@ -3119,7 +3119,7 @@ fn handle_inflation_works() {
 #[test]
 fn handle_inflationis_noop_if_yearly_inflation_is_zero() {
     ExtBuilder::default().build().execute_with(|| {
-        <YearlyInflation<Runtime>>::kill();
+        YearlyInflation::<Runtime>::kill();
 
         let inflation_period = InflationPeriod::get();
         run_blocks(inflation_period);
