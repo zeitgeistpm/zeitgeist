@@ -59,4 +59,3 @@ pub(crate) const _1_10: u128 = _1 / 10;
 pub(crate) const _2_10: u128 = _2 / 10;
 pub(crate) const _3_10: u128 = _3 / 10;
 pub(crate) const _4_10: u128 = _4 / 10;
-
