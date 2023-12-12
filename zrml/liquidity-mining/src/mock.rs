@@ -138,6 +138,9 @@ impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
+
         crate::GenesisConfig::<Runtime> {
             initial_balance: self.initial_balance,
             per_block_distribution: self.per_block_incentives,

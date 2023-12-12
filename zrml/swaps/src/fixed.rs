@@ -1,3 +1,4 @@
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -21,53 +22,50 @@
 // balancer-core repository
 // <https://github.com/balancer-labs/balancer-core>.
 
-use crate::{
-    check_arithm_rslt::CheckArithmRslt,
-    consts::{
-        BPOW_APPROX_BASE_MAX, BPOW_APPROX_BASE_MIN, BPOW_APPROX_MAX_ITERATIONS, BPOW_PRECISION,
+use frame_support::dispatch::DispatchError;
+use zeitgeist_primitives::{
+    constants::BASE,
+    math::{
+        checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedSubRes},
+        fixed::{FixedDiv, FixedMul},
     },
 };
-use frame_support::dispatch::DispatchError;
-use zeitgeist_primitives::constants::BASE;
+
+/// The amount of precision to use in exponentiation.
+pub const BPOW_PRECISION: u128 = 10;
+/// The minimum value of the base parameter in bpow_approx.
+pub const BPOW_APPROX_BASE_MIN: u128 = BASE / 4;
+/// The maximum value of the base parameter in bpow_approx.
+pub const BPOW_APPROX_BASE_MAX: u128 = 7 * BASE / 4;
+/// The maximum number of terms from the binomial series used to calculate bpow_approx.
+pub const BPOW_APPROX_MAX_ITERATIONS: u128 = 100;
 
 pub fn btoi(a: u128) -> Result<u128, DispatchError> {
-    a.check_div_rslt(&BASE)
+    a.checked_div_res(&BASE)
 }
 
 pub fn bfloor(a: u128) -> Result<u128, DispatchError> {
-    btoi(a)?.check_mul_rslt(&BASE)
+    btoi(a)?.checked_mul_res(&BASE)
 }
 
 pub fn bsub_sign(a: u128, b: u128) -> Result<(u128, bool), DispatchError> {
-    Ok(if a >= b { (a.check_sub_rslt(&b)?, false) } else { (b.check_sub_rslt(&a)?, true) })
-}
-
-pub fn bmul(a: u128, b: u128) -> Result<u128, DispatchError> {
-    let c0 = a.check_mul_rslt(&b)?;
-    let c1 = c0.check_add_rslt(&BASE.check_div_rslt(&2)?)?;
-    c1.check_div_rslt(&BASE)
-}
-
-pub fn bdiv(a: u128, b: u128) -> Result<u128, DispatchError> {
-    let c0 = a.check_mul_rslt(&BASE)?;
-    let c1 = c0.check_add_rslt(&b.check_div_rslt(&2)?)?;
-    c1.check_div_rslt(&b)
+    Ok(if a >= b { (a.checked_sub_res(&b)?, false) } else { (b.checked_sub_res(&a)?, true) })
 }
 
 pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
     let mut z = if n % 2 != 0 { a } else { BASE };
 
     let mut b = a;
-    let mut m = n.check_div_rslt(&2)?;
+    let mut m = n.checked_div_res(&2)?;
 
     while m != 0 {
-        b = bmul(b, b)?;
+        b = b.bmul(b)?;
 
         if m % 2 != 0 {
-            z = bmul(z, b)?;
+            z = z.bmul(b)?;
         }
 
-        m = m.check_div_rslt(&2)?;
+        m = m.checked_div_res(&2)?;
     }
 
     Ok(z)
@@ -86,7 +84,7 @@ pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
 /// for `base` (specified above) are violated, a `DispatchError::Other` is returned.
 pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
     let whole = bfloor(exp)?;
-    let remain = exp.check_sub_rslt(&whole)?;
+    let remain = exp.checked_sub_res(&whole)?;
 
     let whole_pow = bpowi(base, btoi(whole)?)?;
 
@@ -95,7 +93,7 @@ pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
     }
 
     let partial_result = bpow_approx(base, remain)?;
-    bmul(whole_pow, partial_result)
+    whole_pow.bmul(partial_result)
 }
 
 /// Compute an estimate of the power `base ** exp`.
@@ -140,10 +138,10 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
             break;
         }
 
-        let big_k = i.check_mul_rslt(&BASE)?;
-        let (c, cneg) = bsub_sign(a, big_k.check_sub_rslt(&BASE)?)?;
-        term = bmul(term, bmul(c, x)?)?;
-        term = bdiv(term, big_k)?;
+        let big_k = i.checked_mul_res(&BASE)?;
+        let (c, cneg) = bsub_sign(a, big_k.checked_sub_res(&BASE)?)?;
+        term = term.bmul(c.bmul(x)?)?;
+        term = term.bdiv(big_k)?;
         if term == 0 {
             break;
         }
@@ -157,9 +155,9 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
         if negative {
             // Never underflows. In fact, the absolute value of the terms is strictly
             // decreasing thanks to the numerical limits.
-            sum = sum.check_sub_rslt(&term)?;
+            sum = sum.checked_sub_res(&term)?;
         } else {
-            sum = sum.check_add_rslt(&term)?;
+            sum = sum.checked_add_res(&term)?;
         }
     }
 
@@ -174,84 +172,9 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        consts::{ARITHM_OF, BPOW_PRECISION},
-        fixed::{bdiv, bmul, bpow, bpow_approx},
-    };
+    use super::*;
     use frame_support::{assert_err, dispatch::DispatchError};
     use more_asserts::assert_le;
-    use zeitgeist_primitives::constants::BASE;
-
-    pub const ERR: Result<u128, DispatchError> = Err(ARITHM_OF);
-
-    macro_rules! create_tests {
-        (
-            $op:ident;
-
-            0 => $_0_0:expr, $_0_1:expr, $_0_2:expr, $_0_3:expr;
-            1 => $_1_0:expr, $_1_1:expr, $_1_2:expr, $_1_3:expr;
-            2 => $_2_0:expr, $_2_1:expr, $_2_2:expr, $_2_3:expr;
-            3 => $_3_0:expr, $_3_1:expr, $_3_2:expr, $_3_3:expr;
-            max_n => $max_n_0:expr, $max_n_1:expr, $max_n_2:expr, $max_n_3:expr;
-            n_max => $n_max_0:expr, $n_max_1:expr, $n_max_2:expr, $n_max_3:expr;
-        ) => {
-            assert_eq!($op(0, 0 * BASE), $_0_0);
-            assert_eq!($op(0, 1 * BASE), $_0_1);
-            assert_eq!($op(0, 2 * BASE), $_0_2);
-            assert_eq!($op(0, 3 * BASE), $_0_3);
-
-            assert_eq!($op(1 * BASE, 0 * BASE), $_1_0);
-            assert_eq!($op(1 * BASE, 1 * BASE), $_1_1);
-            assert_eq!($op(1 * BASE, 2 * BASE), $_1_2);
-            assert_eq!($op(1 * BASE, 3 * BASE), $_1_3);
-
-            assert_eq!($op(2 * BASE, 0 * BASE), $_2_0);
-            assert_eq!($op(2 * BASE, 1 * BASE), $_2_1);
-            assert_eq!($op(2 * BASE, 2 * BASE), $_2_2);
-            assert_eq!($op(2 * BASE, 3 * BASE), $_2_3);
-
-            assert_eq!($op(3 * BASE, 0 * BASE), $_3_0);
-            assert_eq!($op(3 * BASE, 1 * BASE), $_3_1);
-            assert_eq!($op(3 * BASE, 2 * BASE), $_3_2);
-            assert_eq!($op(3 * BASE, 3 * BASE), $_3_3);
-
-            assert_eq!($op(u128::MAX, 0 * BASE), $max_n_0);
-            assert_eq!($op(u128::MAX, 1 * BASE), $max_n_1);
-            assert_eq!($op(u128::MAX, 2 * BASE), $max_n_2);
-            assert_eq!($op(u128::MAX, 3 * BASE), $max_n_3);
-
-            assert_eq!($op(0, u128::MAX), $n_max_0);
-            assert_eq!($op(1, u128::MAX), $n_max_1);
-            assert_eq!($op(2, u128::MAX), $n_max_2);
-            assert_eq!($op(3, u128::MAX), $n_max_3);
-        };
-    }
-
-    #[test]
-    fn bdiv_has_minimum_set_of_correct_values() {
-        create_tests!(
-            bdiv;
-            0 => ERR, Ok(0), Ok(0), Ok(0);
-            1 => ERR, Ok(BASE), Ok(BASE / 2), Ok(BASE / 3);
-            2 => ERR, Ok(2 * BASE), Ok(BASE), Ok(6666666667);
-            3 => ERR, Ok(3 * BASE), Ok(3 * BASE / 2), Ok(BASE);
-            max_n => ERR, ERR, ERR, ERR;
-            n_max => Ok(0), Ok(1 / BASE), Ok(2 / BASE), Ok(3 / BASE);
-        );
-    }
-
-    #[test]
-    fn bmul_has_minimum_set_of_correct_values() {
-        create_tests!(
-            bmul;
-            0 => Ok(0), Ok(0), Ok(0), Ok(0);
-            1 => Ok(0), Ok(BASE), Ok(2 * BASE), Ok(3 * BASE);
-            2 => Ok(0), Ok(2 * BASE), Ok(4 * BASE), Ok(6 * BASE);
-            3 => Ok(0), Ok(3 * BASE), Ok(6 * BASE), Ok(9 * BASE);
-            max_n => Ok(0), ERR, ERR, ERR;
-            n_max => Ok(0), ERR, ERR, ERR;
-        );
-    }
 
     #[test]
     fn bpow_has_minimum_set_of_correct_values() {

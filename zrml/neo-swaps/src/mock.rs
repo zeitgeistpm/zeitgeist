@@ -61,6 +61,7 @@ use zeitgeist_primitives::{
         RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId,
         VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
+    math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
@@ -140,9 +141,7 @@ where
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = zeitgeist_primitives::math::fixed::bmul(amount.saturated_into(), EXTERNAL_FEES)
-            .unwrap()
-            .saturated_into();
+        let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
         match T::MultiCurrency::transfer(asset, account, &F::get(), fees) {
             Ok(_) => fees,
             Err(_) => Zero::zero(),
@@ -483,6 +482,8 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();

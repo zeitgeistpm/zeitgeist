@@ -35,11 +35,12 @@ use frame_support::{
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
-use sp_runtime::{
-    traits::{CheckedSub, Get, Zero},
-    ArithmeticError, Perquintill, SaturatedConversion,
-};
+use sp_runtime::traits::{Get, Zero};
 use zeitgeist_primitives::{
+    math::{
+        checked_ops_res::{CheckedAddRes, CheckedSubRes},
+        fixed::{FixedDiv, FixedMul},
+    },
     traits::{DistributeFees, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
@@ -276,37 +277,28 @@ mod pallet {
             maker_fill: BalanceOf<T>,
             taker_fill: BalanceOf<T>,
         ) -> DispatchResult {
-            order_data.maker_amount = order_data
-                .maker_amount
-                .checked_sub(&taker_fill)
-                .ok_or(ArithmeticError::Underflow)?;
-            order_data.taker_amount = order_data
-                .taker_amount
-                .checked_sub(&maker_fill)
-                .ok_or(ArithmeticError::Underflow)?;
+            order_data.maker_amount = order_data.maker_amount.checked_sub_res(&taker_fill)?;
+            order_data.taker_amount = order_data.taker_amount.checked_sub_res(&maker_fill)?;
             Ok(())
         }
 
         /// Calculates the amount that the taker is going to get from the maker's amount.
-        fn get_taker_fill(order_data: &OrderOf<T>, maker_fill: BalanceOf<T>) -> BalanceOf<T> {
+        fn get_taker_fill(
+            order_data: &OrderOf<T>,
+            maker_fill: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
             // the maker_full_fill is the maximum amount of what the maker wants to have
             let maker_full_fill = order_data.taker_amount;
             // the taker_full_fill is the maximum amount of what the taker wants to have
             let taker_full_fill = order_data.maker_amount;
-            // Note that this always rounds down,
-            // i.e. the taker will always get a little bit less than what they asked for.
+            // rounding down: the taker will always get a little bit less than what they asked for.
             // This ensures that the reserve of the maker
             // is always enough to repatriate successfully!
-            let ratio = Perquintill::from_rational(
-                maker_fill.saturated_into::<u128>(),
-                // this is ensured to be never zero in `ensure_ratio_quotient_valid`
-                maker_full_fill.saturated_into::<u128>(),
-            );
+            // `maker_full_fill` is ensured to be never zero in `ensure_ratio_quotient_valid`
+            let ratio = maker_fill.bdiv_floor(maker_full_fill)?;
             // returns the (partial) amount of what the taker gets from the maker's amount
             // respected the partial fill from the taker of what the maker wants to get filled
-            ratio
-                .mul_floor(taker_full_fill.saturated_into::<u128>())
-                .saturated_into::<BalanceOf<T>>()
+            ratio.bmul_floor(taker_full_fill)
         }
 
         fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
@@ -386,7 +378,7 @@ mod pallet {
             } else {
                 // accounting fees from the taker,
                 // who is responsible to pay the base asset minus fees to the maker.
-                Ok(maker_fill.checked_sub(&fee_amount).ok_or(ArithmeticError::Underflow)?)
+                Ok(maker_fill.checked_sub_res(&fee_amount)?)
             }
         }
 
@@ -419,7 +411,7 @@ mod pallet {
             // the reserve of the maker should always be enough
             // to repatriate successfully, e.g. taker gets a little bit less
             // it should always ensure that the maker's request (maker_fill) is fully filled
-            let taker_fill = Self::get_taker_fill(&order_data, maker_fill);
+            let taker_fill = Self::get_taker_fill(&order_data, maker_fill)?;
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
             T::AssetManager::repatriate_reserved_named(
@@ -505,7 +497,7 @@ mod pallet {
             );
 
             let order_id = <NextOrderId<T>>::get();
-            let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+            let next_order_id = order_id.checked_add_res(&1)?;
 
             // fees are always only charged in the base asset in fill_order
             T::AssetManager::reserve_named(&Self::reserve_id(), maker_asset, &who, maker_amount)?;

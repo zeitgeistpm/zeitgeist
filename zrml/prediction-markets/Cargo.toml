@@ -18,6 +18,7 @@ zrml-simple-disputes = { workspace = true }
 
 # Mock
 
+env_logger = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
@@ -57,6 +58,7 @@ mock = [
     "zrml-swaps/default",
     "xcm/default",
     "orml-asset-registry/default",
+    "env_logger/default",
 ]
 parachain = []
 runtime-benchmarks = [
