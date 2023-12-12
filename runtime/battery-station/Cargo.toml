@@ -37,6 +37,7 @@ scale-info = { workspace = true, features = ["derive"] }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-core = { workspace = true }
+sp-debug-derive = { workspace = true }
 sp-inherents = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
@@ -412,6 +413,8 @@ try-runtime = [
     "cumulus-pallet-xcmp-queue?/try-runtime",
     "parachain-info?/try-runtime",
 ]
+# Allow to print logs details (no wasm:stripped)
+force-debug = ["sp-debug-derive/force-debug"]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

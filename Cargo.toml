@@ -190,6 +190,7 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-debug-derive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -246,6 +247,7 @@ zrml-swaps-runtime-api = { path = "zrml/swaps/runtime-api", default-features = f
 
 # Other (client)
 clap = "4.0.32"
+env_logger = "0.10.1"
 jsonrpsee = "0.16.2"
 libfuzzer-sys = "0.4.7"
 more-asserts = "0.3.1"

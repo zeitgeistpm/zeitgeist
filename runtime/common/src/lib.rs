@@ -1077,6 +1077,7 @@ macro_rules! impl_config_traits {
             type MaxDelegations = MaxDelegations;
             type MaxSelectedDraws = MaxSelectedDraws;
             type MaxCourtParticipants = MaxCourtParticipants;
+            type MaxYearlyInflation = MaxYearlyInflation;
             type MinJurorStake = MinJurorStake;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type Random = RandomnessCollectiveFlip;

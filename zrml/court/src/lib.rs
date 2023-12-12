@@ -167,6 +167,10 @@ mod pallet {
         #[pallet::constant]
         type MaxCourtParticipants: Get<u32>;
 
+        /// The maximum yearly inflation rate.
+        #[pallet::constant]
+        type MaxYearlyInflation: Get<Perbill>;
+
         /// The minimum stake a user needs to lock to become a juror.
         #[pallet::constant]
         type MinJurorStake: Get<BalanceOf<Self>>;
@@ -290,7 +294,7 @@ mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultYearlyInflation<T: Config>() -> Perbill {
-        Perbill::from_perthousand(20u32)
+        Perbill::from_perthousand(0u32)
     }
 
     /// The current inflation rate.
@@ -465,6 +469,8 @@ mod pallet {
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
         Unexpected(UnexpectedError),
+        /// The inflation rate is too high.
+        InflationExceedsMaxYearlyInflation,
     }
 
     // NOTE: these errors should never happen.
@@ -1161,6 +1167,11 @@ mod pallet {
         pub fn set_inflation(origin: OriginFor<T>, inflation: Perbill) -> DispatchResult {
             T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
 
+            ensure!(
+                inflation <= T::MaxYearlyInflation::get(),
+                Error::<T>::InflationExceedsMaxYearlyInflation
+            );
+
             <YearlyInflation<T>>::put(inflation);
 
             Self::deposit_event(Event::InflationSet { inflation });
@@ -1293,6 +1304,9 @@ mod pallet {
             }
 
             let yearly_inflation_rate = <YearlyInflation<T>>::get();
+            if yearly_inflation_rate.is_zero() {
+                return T::WeightInfo::handle_inflation(0u32);
+            }
             // example: 1049272791644671442
             let total_supply = T::Currency::total_issuance();
             // example: 0.02 * 1049272791644671442 = 20985455832893428
