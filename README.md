@@ -33,9 +33,7 @@ _anything_.
 - [neo-swaps](./zrml/neo-swaps) - An implementation of the Logarithmic Market
   Scoring Rule as constant function market maker, tailor-made for decentralized
   combinatorial markets and Futarchy.
-- [orderbook](./zrml/orderbook) - A naive orderbook implementation that's
-  only part of Zeitgeist's PoC. Will be replaced by a v2 orderbook that uses
-  0x-style hybrid on-chain and off-chain trading.
+- [orderbook](./zrml/orderbook) - An order book implementation.
 - [parimutuel](./zrml/parimutuel) - A straightforward parimutuel market maker
   for categorical markets.
 - [prediction-markets](./zrml/prediction-markets) - The core implementation of
