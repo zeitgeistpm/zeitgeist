@@ -372,7 +372,7 @@ mod pallet {
                 base_asset_fill,
             );
             if maker_asset_is_base {
-                // maker_fill is the amount what the maker wants to have (outcome asset from taker)
+                // maker_fill is the amount that the maker wants to have (outcome asset from taker)
                 // do not charge fees from outcome assets, but rather from the base asset
                 Ok(maker_fill)
             } else {
