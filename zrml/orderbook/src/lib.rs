@@ -314,14 +314,7 @@ mod pallet {
 
         fn do_remove_order(order_id: OrderId, who: AccountIdOf<T>) -> DispatchResult {
             let order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
-            debug_assert!(
-                {
-                    let market = T::MarketCommons::market(&order_data.market_id)?;
-                    market.scoring_rule == ScoringRule::Orderbook
-                },
-                "The call to place_order already ensured the scoring rule order book."
-            );
-
+            
             let maker = &order_data.maker;
             ensure!(who == *maker, Error::<T>::NotOrderCreator);
 
