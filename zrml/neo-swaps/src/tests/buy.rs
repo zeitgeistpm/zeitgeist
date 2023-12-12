@@ -38,7 +38,7 @@ fn buy_works() {
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let total_fee_percentage = swap_fee + EXTERNAL_FEES;
         let amount_in_minus_fees = _10;
-        let amount_in = bdiv(amount_in_minus_fees, _1 - total_fee_percentage).unwrap(); // This is exactly _10 after deducting fees.
+        let amount_in = amount_in_minus_fees.bdiv(_1 - total_fee_percentage).unwrap(); // This is exactly _10 after deducting fees.
         let expected_fees = amount_in - amount_in_minus_fees;
         let expected_swap_fee_amount = expected_fees / 2;
         let expected_external_fee_amount = expected_fees / 2;

@@ -35,10 +35,14 @@ use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
 use sp_runtime::{
-    traits::{CheckedSub, Get, Zero},
-    ArithmeticError, Perquintill, SaturatedConversion, Saturating,
+    traits::{Get, Zero},
+    SaturatedConversion, Saturating,
 };
 use zeitgeist_primitives::{
+    math::{
+        checked_ops_res::{CheckedAddRes, CheckedSubRes},
+        fixed::{FixedDiv, FixedMul},
+    },
     traits::MarketCommonsPalletApi,
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
@@ -269,13 +273,8 @@ mod pallet {
 
                     // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
                     // This ensures that the reserve of the maker is always enough to repatriate successfully!
-                    let ratio = Perquintill::from_rational(
-                        maker_fill.saturated_into::<u128>(),
-                        order_data.outcome_asset_amount.saturated_into::<u128>(),
-                    );
-                    let taker_fill = ratio
-                        .mul_floor(order_data.base_asset_amount.saturated_into::<u128>())
-                        .saturated_into::<BalanceOf<T>>();
+                    let ratio = maker_fill.bdiv_floor(order_data.outcome_asset_amount)?;
+                    let taker_fill = ratio.bmul_floor(order_data.base_asset_amount)?;
 
                     T::AssetManager::repatriate_reserved_named(
                         &Self::reserve_id(),
@@ -293,14 +292,10 @@ mod pallet {
                         maker_fill,
                     )?;
 
-                    order_data.base_asset_amount = order_data
-                        .base_asset_amount
-                        .checked_sub(&taker_fill)
-                        .ok_or(ArithmeticError::Underflow)?;
-                    order_data.outcome_asset_amount = order_data
-                        .outcome_asset_amount
-                        .checked_sub(&maker_fill)
-                        .ok_or(ArithmeticError::Underflow)?;
+                    order_data.base_asset_amount =
+                        order_data.base_asset_amount.checked_sub_res(&taker_fill)?;
+                    order_data.outcome_asset_amount =
+                        order_data.outcome_asset_amount.checked_sub_res(&maker_fill)?;
                     // this ensures that partial fills, which fill nearly the whole order, are not executed
                     // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
                     let is_ratio_quotient_valid = order_data.outcome_asset_amount.is_zero()
@@ -312,13 +307,8 @@ mod pallet {
 
                     // Note that this always rounds down, i.e. the taker will always get a little bit less than what they asked for.
                     // This ensures that the reserve of the maker is always enough to repatriate successfully!
-                    let ratio = Perquintill::from_rational(
-                        maker_fill.saturated_into::<u128>(),
-                        order_data.base_asset_amount.saturated_into::<u128>(),
-                    );
-                    let taker_fill = ratio
-                        .mul_floor(order_data.outcome_asset_amount.saturated_into::<u128>())
-                        .saturated_into::<BalanceOf<T>>();
+                    let ratio = maker_fill.bdiv_floor(order_data.base_asset_amount)?;
+                    let taker_fill = ratio.bmul_floor(order_data.outcome_asset_amount)?;
 
                     T::AssetManager::repatriate_reserved_named(
                         &Self::reserve_id(),
@@ -331,14 +321,10 @@ mod pallet {
 
                     T::AssetManager::transfer(base_asset, &taker, &maker, maker_fill)?;
 
-                    order_data.outcome_asset_amount = order_data
-                        .outcome_asset_amount
-                        .checked_sub(&taker_fill)
-                        .ok_or(ArithmeticError::Underflow)?;
-                    order_data.base_asset_amount = order_data
-                        .base_asset_amount
-                        .checked_sub(&maker_fill)
-                        .ok_or(ArithmeticError::Underflow)?;
+                    order_data.outcome_asset_amount =
+                        order_data.outcome_asset_amount.checked_sub_res(&taker_fill)?;
+                    order_data.base_asset_amount =
+                        order_data.base_asset_amount.checked_sub_res(&maker_fill)?;
                     // this ensures that partial fills, which fill nearly the whole order, are not executed
                     // this protects the last fill happening without a division by zero for `Perquintill::from_rational`
                     let is_ratio_quotient_valid = order_data.base_asset_amount.is_zero()
@@ -404,7 +390,7 @@ mod pallet {
             let base_asset = market.base_asset;
 
             let order_id = <NextOrderId<T>>::get();
-            let next_order_id = order_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+            let next_order_id = order_id.checked_add_res(&1)?;
 
             let order = Order {
                 market_id,

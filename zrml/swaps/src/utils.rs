@@ -23,9 +23,7 @@
 // <https://github.com/balancer-labs/balancer-core>.
 
 use crate::{
-    check_arithm_rslt::CheckArithmRslt,
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
-    fixed::{bdiv, bmul},
     BalanceOf, Config, Error, MarketIdOf, Pallet,
 };
 use alloc::vec::Vec;
@@ -33,9 +31,15 @@ use frame_support::{dispatch::DispatchResult, ensure};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     traits::{Saturating, Zero},
-    DispatchError, SaturatedConversion,
+    DispatchError,
 };
-use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
+use zeitgeist_primitives::{
+    math::{
+        checked_ops_res::CheckedSubRes,
+        fixed::{FixedDiv, FixedMul},
+    },
+    types::{Asset, Pool, PoolId, ScoringRule},
+};
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
@@ -130,17 +134,17 @@ where
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
-    let ratio = bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?;
+    let ratio = p.pool_amount.bdiv(total_issuance)?;
     Pallet::<T>::check_provided_values_len_must_equal_assets_len(&p.pool.assets, &p.asset_bounds)?;
-    ensure!(ratio != 0, Error::<T>::MathApproximation);
+    ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
 
     let mut transferred = Vec::with_capacity(p.asset_bounds.len());
 
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
         let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
-        let amount = bmul(ratio, balance.saturated_into())?.saturated_into();
+        let amount = ratio.bmul(balance)?;
         let fee = (p.fee)(amount)?;
-        let amount_minus_fee = amount.check_sub_rslt(&fee)?;
+        let amount_minus_fee = amount.checked_sub_res(&fee)?;
         transferred.push(amount_minus_fee);
         ensure!(amount_minus_fee != Zero::zero(), Error::<T>::MathApproximation);
         (p.transfer_asset)(amount_minus_fee, amount_bound, asset)?;
@@ -244,9 +248,7 @@ where
 
     match p.pool.scoring_rule {
         ScoringRule::CPMM => ensure!(
-            spot_price_before_without_fees
-                <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
-                    .saturated_into(),
+            spot_price_before_without_fees <= asset_amount_in.bdiv(asset_amount_out)?,
             Error::<T>::MathApproximation
         ),
         ScoringRule::RikiddoSigmoidFeeMarketEma => {
