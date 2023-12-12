@@ -1,0 +1,25 @@
+name: Integration test
+
+on:
+  push:
+    branches: [ main, chralt98-add-it-tests ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  zombienet_zndsl:
+    name: Zombienet ZNDSL Block Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run ZNDSL integration tests
+        run: ./integration-tests/scripts/deploy-zombienet.sh --test
