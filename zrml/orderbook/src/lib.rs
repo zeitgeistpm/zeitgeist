@@ -403,7 +403,6 @@ mod pallet {
             );
             ensure!(maker_fill <= order_data.taker_amount, Error::<T>::AmountTooHighForOrder);
 
-            // clone required because of mutable borrow of order_data below
             let maker = order_data.maker.clone();
             let maker_asset = order_data.maker_asset;
             let taker_asset = order_data.taker_asset;
