@@ -51,11 +51,11 @@ use zeitgeist_primitives::{
         MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio,
         MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
         MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
-        BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxYearlyInflation, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit,
+        RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod,
+        VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -343,6 +343,7 @@ impl zrml_court::Config for Runtime {
     type MaxDelegations = MaxDelegations;
     type MaxSelectedDraws = MaxSelectedDraws;
     type MaxCourtParticipants = MaxCourtParticipants;
+    type MaxYearlyInflation = MaxYearlyInflation;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type PalletId = CourtPalletId;
