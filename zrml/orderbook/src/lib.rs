@@ -377,7 +377,7 @@ mod pallet {
                 Ok(maker_fill)
             } else {
                 // accounting fees from the taker,
-                // who is responsible to pay the base asset minus fees to the maker.
+                // who is responsible to pay the base asset minus fees to the maker
                 Ok(maker_fill.checked_sub_res(&fee_amount)?)
             }
         }
