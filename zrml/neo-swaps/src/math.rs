@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config, Error};
-use alloc::{str::FromStr, vec::Vec};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
 use hydra_dx_math::transcendental::{exp, ln};
@@ -24,10 +24,10 @@ use sp_runtime::{DispatchError, SaturatedConversion};
 use typenum::U80;
 
 type Fractional = U80;
-type Fixed = FixedU128<Fractional>;
+type FixedType = FixedU128<Fractional>;
 
 // 32.44892769177272
-const EXP_OVERFLOW_THRESHOLD: Fixed = Fixed::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
+const EXP_OVERFLOW_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) trait MathOps<T: Config> {
     fn calculate_swap_amount_out_for_buy(
@@ -195,14 +195,14 @@ mod detail {
         from_fixed(result_fixed)
     }
 
-    fn to_fixed<B>(value: B) -> Option<Fixed>
+    fn to_fixed<B>(value: B) -> Option<FixedType>
     where
         B: Into<u128> + From<u128>,
     {
         value.to_fixed_from_fixed_decimal(DECIMALS).ok()
     }
 
-    fn from_fixed<B>(value: Fixed) -> Option<B>
+    fn from_fixed<B>(value: FixedType) -> Option<B>
     where
         B: Into<u128> + From<u128>,
     {
@@ -210,10 +210,10 @@ mod detail {
     }
 
     fn calculate_swap_amount_out_for_buy_fixed(
-        reserve: Fixed,
-        amount_in: Fixed,
-        liquidity: Fixed,
-    ) -> Option<Fixed> {
+        reserve: FixedType,
+        amount_in: FixedType,
+        liquidity: FixedType,
+    ) -> Option<FixedType> {
         let inside_ln = calculate_buy_ln_argument_fixed(reserve, amount_in, liquidity)?;
         let (ln_result, ln_neg) = ln(inside_ln).ok()?;
         let blob = liquidity.checked_mul(ln_result)?;
@@ -223,27 +223,31 @@ mod detail {
     }
 
     fn calculate_swap_amount_out_for_sell_fixed(
-        reserve: Fixed,
-        amount_in: Fixed,
-        liquidity: Fixed,
-    ) -> Option<Fixed> {
-        let exp_neg_x_over_b: Fixed = exp(amount_in.checked_div(liquidity)?, true).ok()?;
+        reserve: FixedType,
+        amount_in: FixedType,
+        liquidity: FixedType,
+    ) -> Option<FixedType> {
+        let exp_neg_x_over_b: FixedType = exp(amount_in.checked_div(liquidity)?, true).ok()?;
         let exp_r_over_b = exp(reserve.checked_div(liquidity)?, false).ok()?;
-        let inside_ln =
-            exp_neg_x_over_b.checked_add(exp_r_over_b)?.checked_sub(Fixed::checked_from_num(1)?)?;
+        let inside_ln = exp_neg_x_over_b
+            .checked_add(exp_r_over_b)?
+            .checked_sub(FixedType::checked_from_num(1)?)?;
         let (ln_result, ln_neg) = ln(inside_ln).ok()?;
         let blob = liquidity.checked_mul(ln_result)?;
         if ln_neg { reserve.checked_add(blob) } else { reserve.checked_sub(blob) }
     }
 
-    pub(crate) fn calculate_spot_price_fixed(reserve: Fixed, liquidity: Fixed) -> Option<Fixed> {
+    pub(crate) fn calculate_spot_price_fixed(
+        reserve: FixedType,
+        liquidity: FixedType,
+    ) -> Option<FixedType> {
         exp(reserve.checked_div(liquidity)?, true).ok()
     }
 
     fn calculate_reserve_from_spot_prices_fixed(
-        amount: Fixed,
-        spot_prices: Vec<Fixed>,
-    ) -> Option<(Fixed, Vec<Fixed>)> {
+        amount: FixedType,
+        spot_prices: Vec<FixedType>,
+    ) -> Option<(FixedType, Vec<FixedType>)> {
         let tmp_reserves = spot_prices
             .iter()
             // Drop the bool (second tuple component) as ln(p) is always negative.
@@ -252,31 +256,32 @@ mod detail {
             .ok()?;
         let max_value = *tmp_reserves.iter().max()?;
         let liquidity = amount.checked_div(max_value)?;
-        let reserves: Vec<Fixed> =
+        let reserves: Vec<FixedType> =
             tmp_reserves.iter().map(|&r| r.checked_mul(liquidity)).collect::<Option<Vec<_>>>()?;
         Some((liquidity, reserves))
     }
 
     /// Calculate e^(x/b) − 1 + e^(−r_i/b).
     pub(super) fn calculate_buy_ln_argument_fixed(
-        reserve: Fixed,
-        amount_in: Fixed,
-        liquidity: Fixed,
-    ) -> Option<Fixed> {
-        let exp_x_over_b: Fixed = exp(amount_in.checked_div(liquidity)?, false).ok()?;
+        reserve: FixedType,
+        amount_in: FixedType,
+        liquidity: FixedType,
+    ) -> Option<FixedType> {
+        let exp_x_over_b: FixedType = exp(amount_in.checked_div(liquidity)?, false).ok()?;
         let r_over_b = reserve.checked_div(liquidity)?;
         let exp_neg_r_over_b = if r_over_b < EXP_OVERFLOW_THRESHOLD {
             exp(reserve.checked_div(liquidity)?, true).ok()?
         } else {
-            Fixed::checked_from_num(0)? // Underflow to zero.
+            FixedType::checked_from_num(0)? // Underflow to zero.
         };
-        exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(Fixed::checked_from_num(1)?)
+        exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
 
     #[cfg(test)]
     mod tests {
         use super::*;
         use crate::{assert_approx, consts::*};
+        use alloc::str::FromStr;
         use test_case::test_case;
         use zeitgeist_primitives::constants::BASE;
 
@@ -318,11 +323,11 @@ mod detail {
         }
 
         // This test ensures that we don't mess anything up when we change precision.
-        #[test_case(false, Fixed::from_str("10686474581524.462146990468650739308072").unwrap())]
-        #[test_case(true, Fixed::from_str("0.000000000000093576229688").unwrap())]
-        fn exp_does_not_overflow_or_underflow(neg: bool, expected: Fixed) {
+        #[test_case(false, FixedType::from_str("10686474581524.462146990468650739308072").unwrap())]
+        #[test_case(true, FixedType::from_str("0.000000000000093576229688").unwrap())]
+        fn exp_does_not_overflow_or_underflow(neg: bool, expected: FixedType) {
             let value = 30;
-            let result: Fixed = exp(Fixed::checked_from_num(value).unwrap(), neg).unwrap();
+            let result: FixedType = exp(FixedType::checked_from_num(value).unwrap(), neg).unwrap();
             assert_eq!(result, expected);
         }
 

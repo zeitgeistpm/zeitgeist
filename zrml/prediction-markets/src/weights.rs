@@ -770,7 +770,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// The range of component `m` is `[0, 63]`.
     /// The range of component `n` is `[2, 64]`.
-    fn create_market_and_deploy_pool(m: u32, n: u32, ) -> Weight {
+    fn create_market_and_deploy_pool(m: u32, n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `410 + m * (16 ±0)`
         //  Estimated: `20604 + n * (7714 ±0)`
@@ -784,7 +784,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((3_u64).saturating_mul(n.into())))
             .saturating_add(T::DbWeight::get().writes(7))
             .saturating_add(T::DbWeight::get().writes((3_u64).saturating_mul(n.into())))
-           .saturating_add(Weight::from_parts(0, 7714).saturating_mul(n.into()))
+            .saturating_add(Weight::from_parts(0, 7714).saturating_mul(n.into()))
     }
     /// Storage: MarketCommons Markets (r:1 w:1)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
