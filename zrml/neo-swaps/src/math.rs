@@ -26,7 +26,8 @@ use typenum::U80;
 type Fractional = U80;
 type Fixed = FixedU128<Fractional>;
 
-const EXP_OVERFLOW_THRESHOLD: &str = "32.44892769177272";
+// 32.44892769177272
+const EXP_OVERFLOW_THRESHOLD: Fixed = Fixed::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) trait MathOps<T: Config> {
     fn calculate_swap_amount_out_for_buy(
@@ -264,7 +265,7 @@ mod detail {
     ) -> Option<Fixed> {
         let exp_x_over_b: Fixed = exp(amount_in.checked_div(liquidity)?, false).ok()?;
         let r_over_b = reserve.checked_div(liquidity)?;
-        let exp_neg_r_over_b = if r_over_b < Fixed::from_str(EXP_OVERFLOW_THRESHOLD).ok()? {
+        let exp_neg_r_over_b = if r_over_b < EXP_OVERFLOW_THRESHOLD {
             exp(reserve.checked_div(liquidity)?, true).ok()?
         } else {
             Fixed::checked_from_num(0)? // Underflow to zero.
