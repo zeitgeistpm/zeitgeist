@@ -34,8 +34,8 @@
 //
 //     Original source: https://github.com/encointer/substrate-fixed
 //
-// The work used is: 1) Used same design for definition of `exp` as in
-// the source. 2) Re-used and extended tests for `exp` and other
+// The changes applied are: 1) Used same design for definition of `exp`
+// as in the source. 2) Re-used and extended tests for `exp` and other
 // functions.
 
 use crate::{
@@ -252,6 +252,10 @@ mod detail {
         amount_in: FixedType,
         liquidity: FixedType,
     ) -> Option<FixedType> {
+        if reserve.is_zero() {
+            // Ensure that if the reserve is zero, we don't accidentally return a non-zero value.
+            return None;
+        }
         let exp_neg_x_over_b: FixedType = exp(amount_in.checked_div(liquidity)?, true).ok()?;
         let exp_r_over_b = exp(reserve.checked_div(liquidity)?, false).ok()?;
         let inside_ln = exp_neg_x_over_b
@@ -399,6 +403,18 @@ mod tests {
     // Example taken from
     // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
     #[test_case(_10, _10, 144_269_504_088, 58_496_250_072)]
+    #[test_case(_1, _1, _1, 7_353_256_641)]
+    #[test_case(_2, _2, _2, 14_706_513_281; "positive ln")]
+    #[test_case(_1, _1_10, _3, 386_589_943; "negative ln")]
+    #[test_case(_100, _10, _3, 998_910_224_189; "underflow to zero, positive ln")]
+    #[test_case(_100, _1_10, _3, 897_465_467_426; "underflow to zero, negative ln")]
+    // Limit value tests; functions shouldn't be called with these values, but these tests
+    // demonstrate they can be called without risk.
+    #[test_case(0, _1, _1, 0)]
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_30, _30, _1 - 100_000, _30)]
+    #[test_case(_1_10, _30, _1 - 100_000, _1_10)]
+    #[test_case(_30, _1_10, _1 - 100_000, 276_478_645_689)]
     fn calculate_swap_amount_out_for_buy_works(
         reserve: MockBalance,
         amount_in: MockBalance,
@@ -412,6 +428,16 @@ mod tests {
     }
 
     #[test_case(_10, _10, 144_269_504_088, 41_503_749_928)]
+    #[test_case(_1, _1, _1, 2_646_743_359)]
+    #[test_case(_2, _2, _2, 5_293_486_719)]
+    #[test_case(_17, _8, _7, 4_334_780_553; "positive ln")]
+    #[test_case(_1, _11, 33_000_000_000, 41_104_447_891; "negative ln")]
+    // Limit value tests; functions shouldn't be called with these values, but these tests
+    // demonstrate they can be called without risk.
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_30, _30, _1 - 100_000, 0)]
+    #[test_case(_1_10, _30, _1 - 100_000, 23_521_354_311)]
+    #[test_case(_30, _1_10, _1 - 100_000, 0)]
     fn calculate_swap_amount_out_for_sell_works(
         reserve: MockBalance,
         amount_in: MockBalance,
@@ -422,6 +448,11 @@ mod tests {
             MockMath::calculate_swap_amount_out_for_sell(reserve, amount_in, liquidity).unwrap(),
             expected
         );
+    }
+
+    #[test]
+    fn calculate_swap_amount_out_for_sell_fails_if_reserve_is_zero() {
+        assert!(MockMath::calculate_swap_amount_out_for_sell(0, _1, _1).is_err());
     }
 
     #[test_case(_10, 144_269_504_088, _1_2)]
@@ -436,6 +467,19 @@ mod tests {
     }
 
     #[test_case(_10, vec![_1_2, _1_2], vec![_10, _10], 144_269_504_089)]
+    #[test_case(_20, vec![_3_4, _1_4], vec![_10 - 58_496_250_072, _20], 144_269_504_089)]
+    #[test_case(
+        _444,
+        vec![_1_10, _2_10, _3_10, _4_10],
+        vec![_444, 3_103_426_819_252, 2_321_581_629_045, 1_766_853_638_504],
+        1_928_267_499_650
+    )]
+    #[test_case(
+        _100,
+        vec![50_000_000, 50_000_000, 50_000_000, 8_500_000_000],
+        vec![_100, _100, _100, 30_673_687_183],
+        188_739_165_818
+    )]
     fn calculate_reserves_from_spot_prices_works(
         amount: MockBalance,
         spot_prices: Vec<MockBalance>,
@@ -471,47 +515,5 @@ mod tests {
         let result: FixedType =
             exp(FixedType::checked_from_num(EXP_OVERFLOW_THRESHOLD).unwrap(), neg).unwrap();
         assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn overflow() {
-        let reserve = 10_000 * BASE;
-        let liquidity = 3_333_333_333_333;
-        let amount_in = 5 * liquidity;
-        let amount_out =
-            MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
-        assert_eq!(amount_out, 99_977_464_168_502);
-        let sum_of_prices = MockMath::calculate_spot_price(18_977_157_268_533, liquidity).unwrap()
-            + MockMath::calculate_spot_price(18_977_157_268_533, liquidity).unwrap()
-            + MockMath::calculate_spot_price(22_535_831_498, liquidity).unwrap();
-        assert_eq!(sum_of_prices, BASE);
-    }
-
-    #[test]
-    fn overflow2() {
-        let reserve = 10_000 * BASE;
-        let liquidity = 4_342_944_819_032;
-        let amount_in = 10 * liquidity;
-        let amount_out =
-            MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
-        assert_eq!(amount_out, 99_999_802_826_134);
-        let sum_of_prices = MockMath::calculate_spot_price(46_439_748_147_833, liquidity).unwrap()
-            + MockMath::calculate_spot_price(46_439_748_146_964, liquidity).unwrap()
-            + MockMath::calculate_spot_price(197_173_865, liquidity).unwrap();
-        assert_approx!(sum_of_prices, BASE, 1);
-    }
-
-    #[test]
-    fn overflow3() {
-        let reserve = 10_000 * BASE;
-        let liquidity = 4_342_944_819_032;
-        let amount_in = BASE / 100;
-        let amount_out =
-            MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap();
-        assert_eq!(amount_out, 53_622_125_748_008); // Actual result: 53622125747983
-        let sum_of_prices = MockMath::calculate_spot_price(3_010_399_957_508, liquidity).unwrap()
-            + MockMath::calculate_spot_price(3_010_399_956_639, liquidity).unwrap()
-            + MockMath::calculate_spot_price(46_377_874_251_992, liquidity).unwrap();
-        assert_approx!(sum_of_prices, BASE, 1);
     }
 }
