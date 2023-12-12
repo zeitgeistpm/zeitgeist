@@ -55,6 +55,7 @@
                  }
              ]
          },
+         "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
          "connections": [
              {
                  "name": "DB",
@@ -80,6 +81,7 @@
                  }
              ]
          },
+         "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
          "connections": [
              {
                  "name": "DB",
