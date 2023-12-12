@@ -3117,7 +3117,7 @@ fn handle_inflation_works() {
 }
 
 #[test]
-fn handle_inflationis_noop_if_yearly_inflation_is_zero() {
+fn handle_inflation_is_noop_if_yearly_inflation_is_zero() {
     ExtBuilder::default().build().execute_with(|| {
         YearlyInflation::<Runtime>::kill();
 
