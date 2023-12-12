@@ -283,6 +283,9 @@ impl ExtBuilder {
         let mut storage =
             frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
+
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut storage)
             .unwrap();

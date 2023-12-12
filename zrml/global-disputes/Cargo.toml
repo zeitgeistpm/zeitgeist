@@ -14,6 +14,7 @@ num-traits = { workspace = true, optional = true }
 
 
 [dev-dependencies]
+env_logger = { workspace = true }
 pallet-balances = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
