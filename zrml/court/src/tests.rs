@@ -3121,14 +3121,11 @@ fn handle_inflationis_noop_if_yearly_inflation_is_zero() {
     ExtBuilder::default().build().execute_with(|| {
         YearlyInflation::<Runtime>::kill();
 
-        let inflation_period = InflationPeriod::get();
-        run_blocks(inflation_period);
-        let now = <frame_system::Pallet<Runtime>>::block_number();
-
+        let inflation_period_block = InflationPeriod::get();
         // save current storage root
         let tmp = storage_root(StateVersion::V1);
         // handle_inflation is a noop for the storage
-        Court::handle_inflation(now);
+        Court::handle_inflation(inflation_period_block);
         assert_eq!(tmp, storage_root(StateVersion::V1));
     });
 }
