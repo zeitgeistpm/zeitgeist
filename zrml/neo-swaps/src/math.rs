@@ -392,10 +392,9 @@ mod transcendental {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_approx, consts::*, mock::Runtime as MockRuntime};
+    use crate::{consts::*, mock::Runtime as MockRuntime};
     use alloc::str::FromStr;
     use test_case::test_case;
-    use zeitgeist_primitives::constants::BASE;
 
     type MockBalance = BalanceOf<MockRuntime>;
     type MockMath = Math<MockRuntime>;
