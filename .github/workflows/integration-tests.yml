@@ -1,0 +1,170 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, chralt98-add-it-tests ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_parachain:
+    name: Build Parachain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - name: Build Parachain
+        run: cargo build --features parachain
+      
+      - name: Save runtime wasm
+        run: |
+            mkdir -p runtimes
+            cp target/debug/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm runtimes/;
+            cp target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
+
+      - name: Upload runtimes
+        uses: actions/upload-artifact@v3.1.2
+        with:
+            name: runtimes
+            path: runtimes
+
+      - name: Save zeitgeist binary
+        run: |
+            mkdir -p binaries
+            cp target/debug/zeitgeist binaries/zeitgeist;
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3.1.2
+        with:
+            name: binaries
+            path: binaries
+
+  zombienet_zndsl:
+    name: ZNDSL Tests
+    runs-on: ubuntu-latest
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+      
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: "Download binaries"
+        uses: actions/download-artifact@v3.0.2
+        with:
+            name: binaries
+            path: binaries/zeitgeist
+
+      - name: Run ZNDSL integration tests
+        run: ./integration-tests/scripts/deploy-zombienet.sh --test
+
+  chopsticks_battery_station_upgrade:
+    name: Runtime Upgrade Battery Station
+    runs-on: ubuntu-latest
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+        
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Create local folders
+        run: |
+          mkdir -p target/debug/wbuild/battery-station-runtime/
+          mkdir -p integration-tests/tmp
+
+      - name: "Download runtime"
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/debug/wbuild/battery-station-runtime/
+
+      - name: Test battery station runtime upgrade using Chopsticks
+        run: |
+          cd integration-tests
+          pnpm exec moonwall test chopsticks_battery_station_upgrade
+
+  chopsticks_zeitgeist_upgrade:
+    name: Runtime Upgrade Zeitgeist
+    runs-on: ubuntu-latest
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Create local folders
+        run: |
+          mkdir -p target/debug/wbuild/zeitgeist-runtime/
+          mkdir -p integration-tests/tmp
+
+      - name: "Download runtime"
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/debug/wbuild/zeitgeist-runtime/
+
+      - name: Test zeitgeist runtime upgrade using Chopsticks
+        run: |
+          cd integration-tests
+          pnpm exec moonwall test chopsticks_zeitgeist_upgrade

@@ -9,7 +9,6 @@
             "tests/rt-upgrade-zombienet"
          ],
          "runScripts": [
-            "build-parachain.sh",
             "build-zeitgeist-spec.sh",
             "download-polkadot.sh"
          ],
@@ -41,9 +40,6 @@
       {
          "name": "chopsticks_zeitgeist_upgrade",
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
-         "runScripts": [
-            "build-parachain.sh"
-         ],
          "foundation": {
              "type": "chopsticks",
              "rtUpgradePath": "../target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
@@ -67,9 +63,6 @@
       {
          "name": "chopsticks_battery_station_upgrade",
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
-         "runScripts": [
-            "build-parachain.sh"
-         ],
          "foundation": {
              "type": "chopsticks",
              "rtUpgradePath": "../target/debug/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
