@@ -33,13 +33,13 @@ jobs:
           pnpm install
 
       - name: Download polkadot binary
-        run: ./scripts/download-polkadot.sh
+        run: ./integration-tests/scripts/download-polkadot.sh
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
       - name: Run ZNDSL integration tests
-        run: ./scripts/deploy-zombienet.sh --test
+        run: ./integration-tests/scripts/deploy-zombienet.sh --test
 
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Runtime Upgrade
@@ -69,7 +69,9 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Test zeitgeist runtime upgrade using Chopsticks
-        run: pnpm exec moonwall test chopsticks_zeitgeist_upgrade
+        run: |
+          cd integration-tests
+          pnpm exec moonwall test chopsticks_zeitgeist_upgrade
 
   chopsticks_battery_station_upgrade:
     name: Battery Station Chopsticks Runtime Upgrade
@@ -99,4 +101,6 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Test battery station runtime upgrade using Chopsticks
-        run: pnpm exec moonwall test chopsticks_battery_station_upgrade
+        run: |
+          cd integration-tests
+          pnpm exec moonwall test chopsticks_battery_station_upgrade
