@@ -18,6 +18,9 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - name: Move to integration-tests
+        run: cd integration-tests
+
       - uses: pnpm/action-setup@v2
         with:
           version: 8
@@ -27,9 +30,7 @@ jobs:
           cache: "pnpm"
       
       - name: Install pnpm packages
-        run: |
-          cd integration-tests
-          pnpm install
+        run: pnpm install
 
       - name: Download polkadot binary
         run: ./scripts/download-polkadot.sh
@@ -50,6 +51,9 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - name: Move to integration-tests
+        run: cd integration-tests
+
       - uses: pnpm/action-setup@v2
         with:
           version: 8
@@ -59,9 +63,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install pnpm packages
-        run: |
-          cd integration-tests
-          pnpm install
+        run: pnpm install
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
@@ -79,6 +81,9 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - name: Move to integration-tests
+        run: cd integration-tests
+
       - uses: pnpm/action-setup@v2
         with:
           version: 8
@@ -88,9 +93,7 @@ jobs:
           cache: "pnpm"
         
       - name: Install pnpm packages
-        run: |
-          cd integration-tests
-          pnpm install
+        run: pnpm install
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
