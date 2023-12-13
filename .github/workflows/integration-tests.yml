@@ -18,8 +18,62 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests &&
+          npm install -g pnpm &&
+          pnpm install
+
+      - name: Download polkadot binary
+        run: |
+          ./scripts/download-polkadot.sh
+
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
       - name: Run ZNDSL integration tests
         run: ./integration-tests/scripts/deploy-zombienet.sh --test
+
+  chopsticks_zeitgeist_upgrade:
+    name: Zeitgeist Chopsticks Runtime Upgrade
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests &&
+          npm install -g pnpm &&
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Test zeitgeist runtime upgrade using Chopsticks
+        run: pnpm exec moonwall test chopsticks_zeitgeist_upgrade
+
+  chopsticks_battery_station_upgrade:
+    name: Battery Station Chopsticks Runtime Upgrade
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests &&
+          npm install -g pnpm &&
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Test battery station runtime upgrade using Chopsticks
+        run: pnpm exec moonwall test chopsticks_battery_station_upgrade
