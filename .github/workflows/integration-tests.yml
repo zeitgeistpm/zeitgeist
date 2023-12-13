@@ -18,21 +18,27 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+      
       - name: Install pnpm packages
         run: |
-          cd integration-tests &&
-          npm install -g pnpm &&
+          cd integration-tests
           pnpm install
 
       - name: Download polkadot binary
-        run: |
-          ./integration-tests/scripts/download-polkadot.sh
+        run: ./scripts/download-polkadot.sh
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
       - name: Run ZNDSL integration tests
-        run: ./integration-tests/scripts/deploy-zombienet.sh --test
+        run: ./scripts/deploy-zombienet.sh --test
 
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Runtime Upgrade
@@ -44,10 +50,17 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+
       - name: Install pnpm packages
         run: |
-          cd integration-tests &&
-          npm install -g pnpm &&
+          cd integration-tests
           pnpm install
 
       - name: Cache Dependencies
@@ -66,10 +79,17 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+        
       - name: Install pnpm packages
         run: |
-          cd integration-tests &&
-          npm install -g pnpm &&
+          cd integration-tests
           pnpm install
 
       - name: Cache Dependencies
