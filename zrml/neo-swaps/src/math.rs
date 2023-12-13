@@ -14,12 +14,37 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//     Copyright (c) 2019 Alain Brenzikofer, modified by GalacticCouncil(2021)
+//
+//     Licensed under the Apache License, Version 2.0 (the "License");
+//     you may not use this file except in compliance with the License.
+//     You may obtain a copy of the License at
+//
+//          http://www.apache.org/licenses/LICENSE-2.0
+//
+//     Unless required by applicable law or agreed to in writing, software
+//     distributed under the License is distributed on an "AS IS" BASIS,
+//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//     See the License for the specific language governing permissions and
+//     limitations under the License.
+//
+//     Original source: https://github.com/encointer/substrate-fixed
+//
+// The changes applied are: 1) Used same design for definition of `exp`
+// as in the source. 2) Re-used and extended tests for `exp` and other
+// functions.
 
-use crate::{BalanceOf, Config, Error};
+use crate::{
+    math::transcendental::{exp, ln},
+    BalanceOf, Config, Error,
+};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
-use hydra_dx_math::transcendental::{exp, ln};
 use sp_runtime::{DispatchError, SaturatedConversion};
 use typenum::U80;
 
@@ -99,6 +124,88 @@ impl<T: Config> MathOps<T> for Math<T> {
         let liquidity = liquidity.saturated_into();
         let spot_prices = spot_prices.into_iter().map(|p| p.saturated_into()).collect();
         Ok((liquidity, spot_prices))
+    }
+}
+
+mod transcendental {
+    use fixed::traits::FixedUnsigned;
+    pub(crate) use hydra_dx_math::transcendental::{exp as inner_exp, ln};
+    use sp_runtime::traits::One;
+
+    pub(crate) fn exp<S, D>(operand: S, neg: bool) -> Result<D, ()>
+    where
+        S: FixedUnsigned + PartialOrd<D> + One,
+        D: FixedUnsigned + PartialOrd<S> + From<S> + One,
+    {
+        if operand == S::one() && neg {
+            let e_inverse =
+                S::from_str("0.367879441171442321595523770161460867445").map_err(|_| ())?;
+            return Ok(D::from(e_inverse));
+        }
+        inner_exp(operand, neg)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use alloc::str::FromStr;
+        use fixed::types::U64F64;
+        use test_case::test_case;
+
+        type S = U64F64;
+        type D = U64F64;
+
+        #[test_case("0", false, "1")]
+        #[test_case("0", true, "1")]
+        #[test_case("1", false, "2.718281828459045235360287471352662497757")]
+        #[test_case("1", true, "0.367879441171442321595523770161460867445")]
+        #[test_case("2", false, "7.3890560989306502265")]
+        #[test_case("2", true, "0.13533528323661269186")]
+        #[test_case("0.1", false, "1.1051709180756476246")]
+        #[test_case("0.1", true, "0.9048374180359595733")]
+        #[test_case("0.9", false, "2.4596031111569496633")]
+        #[test_case("0.9", true, "0.40656965974059911195")]
+        #[test_case("1.5", false, "4.481689070338064822")]
+        #[test_case("1.5", true, "0.22313016014842982894")]
+        #[test_case("3.3", false, "27.1126389206578874259")]
+        #[test_case("3.3", true, "0.03688316740124000543")]
+        #[test_case("7.3456", false, "1549.3643050275008503592")]
+        #[test_case("7.3456", true, "0.00064542599616831253")]
+        #[test_case("12.3456789", false, "229964.194569082134542849")]
+        #[test_case("12.3456789", true, "0.00000434850304358833")]
+        #[test_case("13", false, "442413.39200892050332603603")]
+        #[test_case("13", true, "0.0000022603294069810542")]
+        fn exp_works(operand: &str, neg: bool, expected: &str) {
+            let o = U64F64::from_str(operand).unwrap();
+            let e = U64F64::from_str(expected).unwrap();
+            assert_eq!(exp::<S, D>(o, neg).unwrap(), e);
+        }
+
+        #[test_case("1", "0", false)]
+        #[test_case("2", "0.69314718055994530943", false)]
+        #[test_case("3", "1.09861228866810969136", false)]
+        #[test_case("2.718281828459045235360287471352662497757", "1", false)]
+        #[test_case("1.1051709180756476246", "0.09999999999999999975", false)]
+        #[test_case("2.4596031111569496633", "0.89999999999999999976", false)]
+        #[test_case("4.481689070338064822", "1.49999999999999999984", false)]
+        #[test_case("27.1126389206578874261", "3.3", false)]
+        #[test_case("1549.3643050275008503592", "7.34560000000000000003", false)]
+        #[test_case("229964.194569082134542849", "12.3456789000000000002", false)]
+        #[test_case("442413.39200892050332603603", "13.0000000000000000002", false)]
+        #[test_case("0.9048374180359595733", "0.09999999999999999975", true)]
+        #[test_case("0.40656965974059911195", "0.8999999999999999998", true)]
+        #[test_case("0.22313016014842982894", "1.4999999999999999999", true)]
+        #[test_case("0.03688316740124000543", "3.3000000000000000005", true)]
+        #[test_case("0.00064542599616831253", "7.34560000000000002453", true)]
+        #[test_case("0.00000434850304358833", "12.34567890000000711117", true)]
+        #[test_case("0.0000022603294069810542", "13.0000000000000045352", true)]
+        fn ln_works(operand: &str, expected_abs: &str, expected_neg: bool) {
+            let o = U64F64::from_str(operand).unwrap();
+            let e = U64F64::from_str(expected_abs).unwrap();
+            let (a, n) = ln::<S, D>(o).unwrap();
+            assert_eq!(a, e);
+            assert_eq!(n, expected_neg);
+        }
     }
 }
 
@@ -225,58 +332,112 @@ mod detail {
             tmp_reserves.iter().map(|&r| r.checked_mul(liquidity)).collect::<Option<Vec<_>>>()?;
         Some((liquidity, reserves))
     }
+}
 
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use crate::{assert_approx, consts::*};
-        use std::str::FromStr;
-        use test_case::test_case;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{consts::*, mock::Runtime as MockRuntime};
+    use alloc::str::FromStr;
+    use test_case::test_case;
 
-        // Example taken from
-        // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
-        #[test]
-        fn calculate_swap_amount_out_for_buy_works() {
-            let liquidity = 144269504088;
-            assert_eq!(
-                calculate_swap_amount_out_for_buy(_10, _10, liquidity).unwrap(),
-                58496250072
-            );
-        }
+    type MockBalance = BalanceOf<MockRuntime>;
+    type MockMath = Math<MockRuntime>;
 
-        #[test]
-        fn calculate_swap_amount_out_for_sell_works() {
-            let liquidity = 144269504088;
-            assert_eq!(
-                calculate_swap_amount_out_for_sell(_10, _10, liquidity).unwrap(),
-                41503749928
-            );
-        }
+    // 32.44892769177272
+    const EXP_OVERFLOW_THRESHOLD: Fixed = Fixed::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
-        #[test]
-        fn calcuate_spot_price_works() {
-            let liquidity = 144269504088;
-            assert_eq!(calculate_spot_price(_10, liquidity).unwrap(), _1_2);
-            assert_eq!(calculate_spot_price(_10 - 58496250072, liquidity).unwrap(), _3_4);
-            assert_eq!(calculate_spot_price(_20, liquidity).unwrap(), _1_4);
-        }
+    // Example taken from
+    // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
+    #[test_case(_10, _10, 144_269_504_088, 58_496_250_072)]
+    #[test_case(_1, _1, _1, 7_353_256_641)]
+    #[test_case(_2, _2, _2, 14_706_513_281; "positive ln")]
+    #[test_case(_1, _1_10, _3, 386_589_943; "negative ln")]
+    // Limit value tests; functions shouldn't be called with these values, but these tests
+    // demonstrate they can be called without risk.
+    #[test_case(0, _1, _1, 0)]
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_30, _30, _1 - 100_000, _30)]
+    #[test_case(_1_10, _30, _1 - 100_000, _1_10)]
+    #[test_case(_30, _1_10, _1 - 100_000, 276_478_645_689)]
+    fn calculate_swap_amount_out_for_buy_works(
+        reserve: MockBalance,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap(),
+            expected
+        );
+    }
 
-        #[test]
-        fn calculate_reserves_from_spot_prices_works() {
-            let expected_liquidity = 144269504088;
-            let (liquidity, reserves) =
-                calculate_reserves_from_spot_prices(_10, vec![_1_2, _1_2]).unwrap();
-            assert_approx!(liquidity, expected_liquidity, 1);
-            assert_eq!(reserves, vec![_10, _10]);
-        }
+    #[test_case(_10, _10, 144_269_504_088, 41_503_749_928)]
+    #[test_case(_1, _1, _1, 2_646_743_359)]
+    #[test_case(_2, _2, _2, 5_293_486_719)]
+    #[test_case(_17, _8, _7, 4_334_780_553; "positive ln")]
+    #[test_case(_1, _11, 33_000_000_000, 41_104_447_891; "negative ln")]
+    // Limit value tests; functions shouldn't be called with these values, but these tests
+    // demonstrate they can be called without risk.
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_30, _30, _1 - 100_000, 0)]
+    #[test_case(_1_10, _30, _1 - 100_000, 23_521_354_311)]
+    #[test_case(_30, _1_10, _1 - 100_000, 0)]
+    fn calculate_swap_amount_out_for_sell_works(
+        reserve: MockBalance,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_swap_amount_out_for_sell(reserve, amount_in, liquidity).unwrap(),
+            expected
+        );
+    }
 
-        // This test ensures that we don't mess anything up when we change precision.
-        #[test_case(false, Fixed::from_str("10686474581524.462146990468650739308072").unwrap())]
-        #[test_case(true, Fixed::from_str("0.000000000000093576229688").unwrap())]
-        fn exp_does_not_overflow_or_underflow(neg: bool, expected: Fixed) {
-            let value = 30;
-            let result: Fixed = exp(Fixed::checked_from_num(value).unwrap(), neg).unwrap();
-            assert_eq!(result, expected);
-        }
+    #[test_case(_10, 144_269_504_088, _1_2)]
+    #[test_case(_10 - 58_496_250_072, 144_269_504_088, _3_4)]
+    #[test_case(_20, 144_269_504_088, _1_4)]
+    fn calcuate_spot_price_works(
+        reserve: MockBalance,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(MockMath::calculate_spot_price(reserve, liquidity).unwrap(), expected);
+    }
+
+    #[test_case(_10, vec![_1_2, _1_2], vec![_10, _10], 144_269_504_089)]
+    #[test_case(_20, vec![_3_4, _1_4], vec![_10 - 58_496_250_072, _20], 144_269_504_089)]
+    #[test_case(
+        _444,
+        vec![_1_10, _2_10, _3_10, _4_10],
+        vec![_444, 3_103_426_819_252, 2_321_581_629_045, 1_766_853_638_504],
+        1_928_267_499_650
+    )]
+    #[test_case(
+        _100,
+        vec![50_000_000, 50_000_000, 50_000_000, 8_500_000_000],
+        vec![_100, _100, _100, 30_673_687_183],
+        188_739_165_818
+    )]
+    fn calculate_reserves_from_spot_prices_works(
+        amount: MockBalance,
+        spot_prices: Vec<MockBalance>,
+        expected_reserves: Vec<MockBalance>,
+        expected_liquidity: MockBalance,
+    ) {
+        let (liquidity, reserves) =
+            MockMath::calculate_reserves_from_spot_prices(amount, spot_prices).unwrap();
+        assert_eq!(liquidity, expected_liquidity);
+        assert_eq!(reserves, expected_reserves);
+    }
+
+    // This test ensures that we don't mess anything up when we change precision.
+    #[test_case(false, Fixed::from_str("123705850708694.521074740553659523785099").unwrap())]
+    #[test_case(true, Fixed::from_str("0.000000000000008083692034").unwrap())]
+    fn exp_does_not_overflow_or_underflow(neg: bool, expected: Fixed) {
+        let result: Fixed =
+            exp(Fixed::checked_from_num(EXP_OVERFLOW_THRESHOLD).unwrap(), neg).unwrap();
+        assert_eq!(result, expected);
     }
 }
