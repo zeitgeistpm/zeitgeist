@@ -379,6 +379,23 @@ mod transcendental {
         #[test_case("0.00064542599616831253", "7.34560000000000002453", true)]
         #[test_case("0.00000434850304358833", "12.34567890000000711117", true)]
         #[test_case("0.0000022603294069810542", "13.0000000000000045352", true)]
+        #[test_case("1.0001", "0.00009999500033330827", false)]
+        #[test_case("1.00000001", "0.0000000099999999499", false)]
+        #[test_case("0.9999", "0.00010000500033335825", true)]
+        #[test_case("0.99999999", "0.00000001000000004987", true)]
+        // Powers of 2 (since we're using squares when calculating the fractional part of log2.
+        #[test_case("3.999999999", "1.38629436086989061877", false)]
+        #[test_case("4", "1.38629436111989061886", false)]
+        #[test_case("4.000000001", "1.3862943613698906188", false)]
+        #[test_case("7.999999999", "2.07944154155483592824", false)]
+        #[test_case("8", "2.0794415416798359283", false)]
+        #[test_case("8.000000001", "2.0794415418048359282", false)]
+        #[test_case("0.499999999", "0.69314718255994531136", true)]
+        #[test_case("0.5", "0.69314718055994530943", true)]
+        #[test_case("0.500000001", "0.69314717855994531135", true)]
+        #[test_case("0.249999999", "1.38629436511989062684", true)]
+        #[test_case("0.25", "1.38629436111989061886", true)]
+        #[test_case("0.250000001", "1.38629435711989062676", true)]
         fn ln_works(operand: &str, expected_abs: &str, expected_neg: bool) {
             let o = U64F64::from_str(operand).unwrap();
             let e = U64F64::from_str(expected_abs).unwrap();
