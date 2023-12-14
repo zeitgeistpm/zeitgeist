@@ -10,7 +10,7 @@ env:
 jobs:
   build_parachain:
     name: Build Parachain
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -46,7 +46,7 @@ jobs:
 
   zombienet_zndsl:
     name: ZNDSL Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -72,18 +72,33 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: "Download binaries"
+      - name: Create local folders
+        run: |
+          mkdir -p target/release/wbuild/zeitgeist-runtime/
+          mkdir -p integration-tests/tmp
+
+      - name: Download runtime
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/release/wbuild/zeitgeist-runtime/
+
+      - name: Download binary
         uses: actions/download-artifact@v3.0.2
         with:
             name: binaries
-            path: binaries/zeitgeist
+            path: target/release/zeitgeist
+          
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
 
       - name: Run ZNDSL integration tests
         run: ./integration-tests/scripts/deploy-zombienet.sh --test
 
   chopsticks_battery_station_upgrade:
     name: Runtime Upgrade Battery Station
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -114,11 +129,15 @@ jobs:
           mkdir -p target/release/wbuild/battery-station-runtime/
           mkdir -p integration-tests/tmp
 
-      - name: "Download runtime"
+      - name: Download runtime
         uses: actions/download-artifact@v3.0.2
         with:
           name: runtimes
           path: target/release/wbuild/battery-station-runtime/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
 
       - name: Test battery station runtime upgrade using Chopsticks
         run: |
@@ -127,7 +146,7 @@ jobs:
 
   chopsticks_zeitgeist_upgrade:
     name: Runtime Upgrade Zeitgeist
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, zeitgeist-runner]
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -163,6 +182,10 @@ jobs:
         with:
           name: runtimes
           path: target/release/wbuild/zeitgeist-runtime/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
 
       - name: Test zeitgeist runtime upgrade using Chopsticks
         run: |

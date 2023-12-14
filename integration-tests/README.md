@@ -33,12 +33,15 @@ import { ALITH_ADDRESS } from "@moonwall/util";
 
 You should have installed `python` for using `sqlite3` and then used `pnpm rebuild && pnpm rebuild sqlite3`.
 
-Most common commands:
+Useful for integration testing:
 
-- `pnpm exec moonwall test zombienet_zeitgeist_upgrade`
-- `pnpm exec moonwall test chopsticks_zeitgeist_upgrade`
+- `./integration-tests/scripts/deploy_zombienet.sh` - Deploy a local relay-parachain network for zombienet.
+- `./integration-tests/scripts/deploy_zombienet.sh --test` - Run ZNDSL zombienet tests on a local relay-parachain network.
+- `pnpm exec moonwall test zombienet_zeitgeist_upgrade` - Test Zeitgeist runtime upgrade on zombienet for the local network.
+- `pnpm exec moonwall test chopsticks_zeitgeist_upgrade` - Test Zeitgeist runtime upgrade on chopsticks for the live network.
+- `pnpm exec moonwall test chopsticks_battery_station_upgrade` - Test Battery Station runtime upgrade on chopsticks for the test network.
 
-Other moonwall commands:
+Possible moonwall commands:
 
 - `moonwall` : If you have globally installed moonwall, here is the most minimal entrypoint
 
