@@ -97,10 +97,11 @@ jobs:
         run: |
           cd integration-tests
           ./scripts/download-polkadot.sh
-          ./scripts/deploy-zombienet.sh --test
+          cd ../
+          ./integration-tests/scripts/deploy-zombienet.sh --test
 
   zombienet_zeitgeist_upgrade:
-    name: Zombienet Zeitgeist Runtime Upgrade
+    name: Zombienet Runtime Upgrade Zeitgeist
     runs-on: ubuntu-20.04
     needs: ["build_parachain"]
     steps:
@@ -154,7 +155,7 @@ jobs:
           pnpm exec moonwall test zombienet_zeitgeist_upgrade
 
   chopsticks_battery_station_upgrade:
-    name: Runtime Upgrade Battery Station
+    name: Chopsticks Runtime Upgrade Battery Station
     runs-on: ubuntu-20.04
     needs: ["build_parachain"]
     steps:
@@ -202,7 +203,7 @@ jobs:
           pnpm exec moonwall test chopsticks_battery_station_upgrade
 
   chopsticks_zeitgeist_upgrade:
-    name: Runtime Upgrade Zeitgeist
+    name: Chopsticks Runtime Upgrade Zeitgeist
     runs-on: ubuntu-20.04
     needs: ["build_parachain"]
     steps:

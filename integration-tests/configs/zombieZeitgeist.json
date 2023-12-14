@@ -26,7 +26,7 @@
             "collators": [
                 {
                     "name": "alice",
-                    "command": "../target/debug/zeitgeist",
+                    "command": "../target/release/zeitgeist",
                     "ws_port": 9944,
                     "p2p_port": 33049,
                     "args": ["-lparachain=debug", "--force-authoring"]
