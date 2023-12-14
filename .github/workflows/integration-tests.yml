@@ -19,13 +19,13 @@ jobs:
         run: ./scripts/init.sh
 
       - name: Build Parachain
-        run: cargo build --features parachain
+        run: cargo build --release --features parachain
       
       - name: Save runtime wasm
         run: |
             mkdir -p runtimes
-            cp target/debug/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm runtimes/;
-            cp target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
+            cp target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm runtimes/;
+            cp target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
 
       - name: Upload runtimes
         uses: actions/upload-artifact@v3.1.2
@@ -36,7 +36,7 @@ jobs:
       - name: Save zeitgeist binary
         run: |
             mkdir -p binaries
-            cp target/debug/zeitgeist binaries/zeitgeist;
+            cp target/release/zeitgeist binaries/zeitgeist;
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
@@ -111,14 +111,14 @@ jobs:
 
       - name: Create local folders
         run: |
-          mkdir -p target/debug/wbuild/battery-station-runtime/
+          mkdir -p target/release/wbuild/battery-station-runtime/
           mkdir -p integration-tests/tmp
 
       - name: "Download runtime"
         uses: actions/download-artifact@v3.0.2
         with:
           name: runtimes
-          path: target/debug/wbuild/battery-station-runtime/
+          path: target/release/wbuild/battery-station-runtime/
 
       - name: Test battery station runtime upgrade using Chopsticks
         run: |
@@ -155,14 +155,14 @@ jobs:
 
       - name: Create local folders
         run: |
-          mkdir -p target/debug/wbuild/zeitgeist-runtime/
+          mkdir -p target/release/wbuild/zeitgeist-runtime/
           mkdir -p integration-tests/tmp
 
       - name: "Download runtime"
         uses: actions/download-artifact@v3.0.2
         with:
           name: runtimes
-          path: target/debug/wbuild/zeitgeist-runtime/
+          path: target/release/wbuild/zeitgeist-runtime/
 
       - name: Test zeitgeist runtime upgrade using Chopsticks
         run: |

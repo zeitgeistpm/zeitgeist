@@ -5,7 +5,7 @@ if [ ! -d "./integration-tests/scripts" ]; then
     exit 1
 fi;
 
-echo "Please make sure you executed 'cargo build --features parachain'."
+echo "Please make sure you executed 'cargo build --release --features parachain'."
 
 export ADDITIONAL_ZOMBIECONFIG="${ADDITIONAL_ZOMBIECONFIG:-}"
 export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./integration-tests/zombienet/produce-blocks.toml"}"

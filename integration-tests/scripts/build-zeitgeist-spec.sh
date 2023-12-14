@@ -7,4 +7,4 @@ set -e
 cd $(dirname $0)/..
 
 mkdir -p specs
-../target/debug/zeitgeist build-spec --chain=zeitgeist --raw > specs/zeitgeist-parachain-2092.json
+../target/release/zeitgeist build-spec --chain=zeitgeist --raw > specs/zeitgeist-parachain-2092.json

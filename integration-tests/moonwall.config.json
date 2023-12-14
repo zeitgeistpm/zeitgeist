@@ -15,10 +15,10 @@
          "foundation": {
             "launchSpec": [
                {
-                  "binPath": "../target/debug/zeitgeist"
+                  "binPath": "../target/release/zeitgeist"
                }
             ],
-            "rtUpgradePath": "../target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+            "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
             "type": "zombie",
             "zombieSpec": {
                "configPath": "./configs/zombieZeitgeist.json"
@@ -42,7 +42,7 @@
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
          "foundation": {
              "type": "chopsticks",
-             "rtUpgradePath": "../target/debug/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+             "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
              "launchSpec": [
                  {
                      "name": "db",
@@ -65,7 +65,7 @@
          "testFileDir": ["tests/rt-upgrade-chopsticks"],
          "foundation": {
              "type": "chopsticks",
-             "rtUpgradePath": "../target/debug/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
+             "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
              "launchSpec": [
                  {
                      "name": "db",
