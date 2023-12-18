@@ -378,8 +378,14 @@ where
     /// Return a path from the tree's root to the node at `index`.
     ///
     /// The return value is a vector of the indices of the nodes of the path, starting with the
-    /// root and including `index`.
-    fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError>;
+    /// root and including `index`. The parameter `opt_iterations` specifies how many iterations the
+    /// operation is allowed to take and can be used to terminate if the number of iterations
+    /// exceeds the expected amount by setting it to `None`.
+    fn path_to_node(
+        &self,
+        index: u32,
+        opt_iterations: Option<usize>,
+    ) -> Result<Vec<u32>, DispatchError>;
 
     /// Pops the most recently abandoned node's index from the stack. Returns `None` if there's no
     /// abandoned node.
@@ -439,7 +445,7 @@ where
     type Node = Node<T>;
 
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult {
-        let path = self.path_to_node(index)?;
+        let path = self.path_to_node(index, None)?;
         for i in path {
             self.propagate_fees(i)?;
         }
@@ -509,9 +515,18 @@ where
         if index == 0 { None } else { index.checked_sub(1)?.checked_div(2) }
     }
 
-    fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError> {
+    fn path_to_node(
+        &self,
+        index: u32,
+        opt_iterations: Option<usize>,
+    ) -> Result<Vec<u32>, DispatchError> {
+        let remaining_iterations =
+            opt_iterations.unwrap_or(Self::max_depth().checked_add_res(&1)? as usize);
+        let remaining_iterations = remaining_iterations
+            .checked_sub(1)
+            .ok_or(LiquidityTreeError::MaxIterationsReached.into_dispatch_error::<T>())?;
         if let Some(parent_index) = self.parent_index(index) {
-            let mut path = self.path_to_node(parent_index)?;
+            let mut path = self.path_to_node(parent_index, Some(remaining_iterations))?;
             path.push(index);
             Ok(path)
         } else {
@@ -534,7 +549,7 @@ where
         delta: BalanceOf<T>,
         op: UpdateDescendantStakeOperation,
     ) -> DispatchResult {
-        for &i in self.path_to_node(index)?.iter() {
+        for &i in self.path_to_node(index, None)?.iter() {
             let node = self.get_node_mut(i)?;
             match op {
                 UpdateDescendantStakeOperation::Add => {
