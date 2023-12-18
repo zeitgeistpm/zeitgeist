@@ -79,8 +79,8 @@ mod pallet {
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
     /// The minimum percentage each new LP position must increase the liquidity by, represented as
-    /// fractional (0.03 represents 3%).
-    pub(crate) const MIN_RELATIVE_LP_POSITION_VALUE: u128 = 3 * CENT; // 3%
+    /// fractional (0.0139098411 represents 1.39098411%).
+    pub(crate) const MIN_RELATIVE_LP_POSITION_VALUE: u128 = 139098411; // 0.0139098411%
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
