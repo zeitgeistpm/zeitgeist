@@ -7,9 +7,9 @@
     "typescript": "^5.2.2"
   },
   "devDependencies": {
-    "@acala-network/chopsticks": "^0.9.4",
-    "@moonwall/cli": "^4.4.1",
-    "@moonwall/util": "^4.4.1",
+    "@acala-network/chopsticks": "0.9.3",
+    "@moonwall/cli": "^4.4.4",
+    "@moonwall/util": "^4.4.4",
     "@polkadot/api": "^10.10.1",
     "@polkadot/types": "^10.10.1",
     "@types/node": "^20.9.0",
@@ -20,8 +20,6 @@
   "repository": "https://github.com/zeitgeistpm/zeitgeist",
   "main": "index.js",
   "name": "integration-tests",
-  "scripts": {
-    "test": "./node_modules/mocha/bin/mocha --parallel -r ts-node/register 'tests/*.ts'"
-  },
+  "scripts": {},
   "version": "0.0.0"
 }

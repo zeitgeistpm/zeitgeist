@@ -82,6 +82,48 @@
                  "endpoints": ["ws://127.0.0.1:8000"]
              }
          ]
+      },
+      {
+         "name": "chopsticks_zeitgeist_hydra_xcm_transfer",
+         "testFileDir": ["tests/chopsticks-xcm"],
+         "foundation": {
+             "type": "chopsticks",
+             "launchSpec": [
+                 {
+                     "name": "PolkadotDB",
+                     "type": "relaychain",
+                     "configPath": "polkadot"
+                 },
+                 {
+                     "name": "HydraDXDB",
+                     "type": "parachain",
+                     "configPath": "hydradx"
+                 },
+                 {
+                     "name": "ZeitgeistDB",
+                     "type": "parachain",
+                     "configPath": "./configs/zeitgeist.yml"
+                 }
+             ]
+         },
+         "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+         "connections": [
+             {
+                 "name": "HydraDXPara",
+                 "type": "polkadotJs",
+                 "endpoints": ["ws://127.0.0.1:8000"]
+             },
+             {
+                 "name": "ZeitgeistPara",
+                 "type": "polkadotJs",
+                 "endpoints": ["ws://127.0.0.1:8001"]
+             },
+             {
+                 "name": "PolkadotRelay",
+                 "type": "polkadotJs",
+                 "endpoints": ["ws://127.0.0.1:8002"]
+             }
+         ]
       }
    ]
 }
