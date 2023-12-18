@@ -352,6 +352,8 @@ pub(crate) trait LiquidityTreeHelper<T>
 where
     T: Config,
 {
+    type Node;
+
     /// Propagate lazy fees from the tree's root to the node at `index`.
     ///
     /// Propagation includes moving the part of the lazy fees of each node on the path to the node
@@ -403,16 +405,16 @@ where
     /// Mutate each child of the node at `index` using `mutator`.
     fn mutate_each_child<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
-        F: FnMut(&mut Node<T>) -> DispatchResult;
+        F: FnMut(&mut Self::Node) -> DispatchResult;
 
     /// Return the number of nodes in the tree. Note that abandoned nodes are counted.
     fn node_count(&self) -> u32;
 
     /// Get a reference to the node at `index`.
-    fn get_node(&self, index: u32) -> Result<&Node<T>, DispatchError>;
+    fn get_node(&self, index: u32) -> Result<&Self::Node, DispatchError>;
 
     /// Get a mutable reference to the node at `index`.
-    fn get_node_mut(&mut self, index: u32) -> Result<&mut Node<T>, DispatchError>;
+    fn get_node_mut(&mut self, index: u32) -> Result<&mut Self::Node, DispatchError>;
 
     /// Get the node which belongs to `account`.
     fn map_account_to_index(&self, account: &T::AccountId) -> Result<u32, DispatchError>;
@@ -420,7 +422,7 @@ where
     /// Mutate the node at `index` using `mutator`.
     fn mutate_node<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
-        F: FnOnce(&mut Node<T>) -> DispatchResult;
+        F: FnOnce(&mut Self::Node) -> DispatchResult;
 
     /// Return the maximum allowed depth of the tree.
     fn max_depth() -> u32;
@@ -434,6 +436,8 @@ where
     T: Config,
     U: Get<u32>,
 {
+    type Node = Node<T>;
+
     fn propagate_fees_to_node(&mut self, index: u32) -> DispatchResult {
         let path = self.path_to_node(index)?;
         for i in path {
@@ -553,7 +557,7 @@ where
 
     fn mutate_each_child<F>(&mut self, index: u32, mut mutator: F) -> DispatchResult
     where
-        F: FnMut(&mut Node<T>) -> DispatchResult,
+        F: FnMut(&mut Self::Node) -> DispatchResult,
     {
         let child_indices = self.children(index)?;
         child_indices.apply(|index| {
@@ -567,13 +571,13 @@ where
         self.nodes.len() as u32
     }
 
-    fn get_node(&self, index: u32) -> Result<&Node<T>, DispatchError> {
+    fn get_node(&self, index: u32) -> Result<&Self::Node, DispatchError> {
         self.nodes
             .get(index as usize)
             .ok_or(LiquidityTreeError::NodeNotFound.into_dispatch_error::<T>())
     }
 
-    fn get_node_mut(&mut self, index: u32) -> Result<&mut Node<T>, DispatchError> {
+    fn get_node_mut(&mut self, index: u32) -> Result<&mut Self::Node, DispatchError> {
         self.nodes
             .get_mut(index as usize)
             .ok_or(LiquidityTreeError::NodeNotFound.into_dispatch_error::<T>())
@@ -588,7 +592,7 @@ where
 
     fn mutate_node<F>(&mut self, index: u32, mutator: F) -> DispatchResult
     where
-        F: FnOnce(&mut Node<T>) -> DispatchResult,
+        F: FnOnce(&mut Self::Node) -> DispatchResult,
     {
         let node = self.get_node_mut(index)?;
         mutator(node)
