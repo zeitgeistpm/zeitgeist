@@ -95,6 +95,8 @@ jobs:
 
       - name: Run ZNDSL integration tests
         run: |
+          chmod uog+x target/release/zeitgeist
+
           cd integration-tests
           ./scripts/download-polkadot.sh
           cd ../
@@ -151,6 +153,8 @@ jobs:
 
       - name: Test zeitgeist runtime upgrade using Zombienet
         run: |
+          chmod uog+x target/release/zeitgeist
+          
           cd integration-tests
           pnpm exec moonwall test zombienet_zeitgeist_upgrade
 
