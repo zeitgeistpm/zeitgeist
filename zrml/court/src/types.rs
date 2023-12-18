@@ -357,4 +357,5 @@ impl<AccountId, Balance> Default for JurorVoteWithStakes<AccountId, Balance> {
 /// An internal error type to determine how the selection of draws fails.
 pub(crate) enum SelectionError {
     NoValidDelegatedJuror,
+    BinarySearchByKeyFailed,
 }

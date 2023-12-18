@@ -700,6 +700,7 @@ mod pallet {
                     }
                     ratio
                 };
+                // TODO outstanding fee check!
                 let mut amounts_out = vec![];
                 for (&asset, &min_amount_out) in pool.assets().iter().zip(min_amounts_out.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;

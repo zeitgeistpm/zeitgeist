@@ -601,6 +601,7 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
+ "sp-debug-derive",
  "sp-finality-grandpa",
  "sp-inherents",
  "sp-io",
@@ -2550,9 +2551,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
+checksum = "95b3f3e67048839cb0d0781f445682a35113da7121f7c949db0e2be96a4fbece"
 dependencies = [
  "humantime",
  "is-terminal",
@@ -2728,7 +2729,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84f2e425d9790201ba4af4630191feac6dcc98765b118d4d18e91d23c2353866"
 dependencies = [
- "env_logger 0.10.0",
+ "env_logger 0.10.1",
  "log",
 ]
 
@@ -14461,6 +14462,7 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
+ "sp-debug-derive",
  "sp-finality-grandpa",
  "sp-inherents",
  "sp-io",
@@ -14518,6 +14520,7 @@ dependencies = [
 name = "zrml-authorized"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14536,6 +14539,7 @@ name = "zrml-court"
 version = "0.4.2"
 dependencies = [
  "arrayvec 0.7.4",
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14559,6 +14563,7 @@ dependencies = [
 name = "zrml-global-disputes"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14579,6 +14584,7 @@ dependencies = [
 name = "zrml-liquidity-mining"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14597,6 +14603,7 @@ dependencies = [
 name = "zrml-market-commons"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -14614,6 +14621,7 @@ name = "zrml-neo-swaps"
 version = "0.4.2"
 dependencies = [
  "cfg-if",
+ "env_logger 0.10.1",
  "fixed",
  "frame-benchmarking",
  "frame-support",
@@ -14658,9 +14666,11 @@ dependencies = [
 name = "zrml-orderbook"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -14691,6 +14701,7 @@ dependencies = [
 name = "zrml-parimutuel"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14712,6 +14723,7 @@ dependencies = [
 name = "zrml-prediction-markets"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14775,6 +14787,7 @@ version = "0.4.2"
 dependencies = [
  "arbitrary",
  "cfg-if",
+ "env_logger 0.10.1",
  "frame-support",
  "frame-system",
  "hashbrown 0.12.3",
@@ -14806,6 +14819,7 @@ dependencies = [
 name = "zrml-simple-disputes"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14826,6 +14840,7 @@ dependencies = [
 name = "zrml-styx"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14842,6 +14857,7 @@ dependencies = [
 name = "zrml-swaps"
 version = "0.4.2"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

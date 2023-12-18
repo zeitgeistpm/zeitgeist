@@ -36,7 +36,7 @@ use orml_asset_registry::AssetMetadata;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, Get, IdentityLookup},
+    traits::{BlakeTwo256, Get, IdentityLookup, Zero},
     DispatchResult, Percent, SaturatedConversion,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -55,11 +55,11 @@ use zeitgeist_primitives::{
         MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxLiquidityTreeDepth,
         MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
         MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
-        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId,
-        VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MaxYearlyInflation, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -142,8 +142,10 @@ where
         amount: Self::Balance,
     ) -> Self::Balance {
         let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
-        let _ = T::MultiCurrency::transfer(asset, account, &F::get(), fees);
-        fees
+        match T::MultiCurrency::transfer(asset, account, &F::get(), fees) {
+            Ok(_) => fees,
+            Err(_) => Zero::zero(),
+        }
     }
 }
 
@@ -292,6 +294,7 @@ impl zrml_court::Config for Runtime {
     type MaxDelegations = MaxDelegations;
     type MaxSelectedDraws = MaxSelectedDraws;
     type MaxCourtParticipants = MaxCourtParticipants;
+    type MaxYearlyInflation = MaxYearlyInflation;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type PalletId = CourtPalletId;
@@ -481,6 +484,8 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();

@@ -20,10 +20,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
-use zrml_orderbook::{
-    mock::{ExtBuilder, Orderbook, RuntimeOrigin},
-    types::OrderSide,
-};
+use zrml_orderbook::mock::{ExtBuilder, Orderbook, RuntimeOrigin};
 
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
@@ -32,35 +29,36 @@ fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // Make arbitrary order and attempt to fill
-        let outcome_asset = asset(data.fill_order_outcome_asset);
+        let maker_asset = asset(data.maker_asset);
+        let taker_asset = asset(data.taker_asset);
 
         let _ = Orderbook::place_order(
             RuntimeOrigin::signed(data.fill_order_origin.into()),
             data.market_id,
-            outcome_asset,
-            orderside(data.fill_order_side),
-            data.fill_order_amount,
-            data.fill_order_price,
+            maker_asset,
+            data.maker_amount,
+            taker_asset,
+            data.taker_amount,
         );
 
         let _ = Orderbook::fill_order(
             RuntimeOrigin::signed(data.fill_order_origin.into()),
             data.order_id,
-            None,
+            maker_partial_fill(data.maker_partial_fill),
         );
 
-        // Make arbitrary order and attempt to cancel
+        // Make arbitrary order and attempt to remove
         let _ = Orderbook::place_order(
-            RuntimeOrigin::signed(data.cancel_order_origin.into()),
+            RuntimeOrigin::signed(data.place_order_origin.into()),
             data.market_id,
-            outcome_asset,
-            orderside(data.cancel_order_side),
-            data.cancel_order_amount,
-            data.cancel_order_price,
+            maker_asset,
+            data.maker_amount,
+            taker_asset,
+            data.taker_amount,
         );
 
         let _ = Orderbook::remove_order(
-            RuntimeOrigin::signed(data.cancel_order_origin.into()),
+            RuntimeOrigin::signed(data.remove_order_origin.into()),
             data.order_id,
         );
     });
@@ -72,16 +70,16 @@ struct Data {
     market_id: u128,
     order_id: u128,
 
-    fill_order_amount: u128,
-    fill_order_outcome_asset: (u128, u16),
-    fill_order_price: u128,
-    fill_order_origin: u8,
-    fill_order_side: u8,
+    place_order_origin: u8,
+    maker_asset: (u128, u16),
+    maker_amount: u128,
+    taker_asset: (u128, u16),
+    taker_amount: u128,
 
-    cancel_order_amount: u128,
-    cancel_order_price: u128,
-    cancel_order_origin: u8,
-    cancel_order_side: u8,
+    fill_order_origin: u8,
+    maker_partial_fill: u128,
+
+    remove_order_origin: u8,
 }
 
 fn asset(seed: (u128, u16)) -> Asset<u128> {
@@ -99,10 +97,6 @@ fn asset(seed: (u128, u16)) -> Asset<u128> {
     }
 }
 
-fn orderside(seed: u8) -> OrderSide {
-    let module = seed % 2;
-    match module {
-        0 => OrderSide::Bid,
-        _ => OrderSide::Ask,
-    }
+fn maker_partial_fill(s: u128) -> Option<u128> {
+    if s % 2 == 0 { Some(s) } else { None }
 }

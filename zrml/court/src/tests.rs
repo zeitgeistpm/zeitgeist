@@ -29,24 +29,26 @@ use crate::{
     AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
     CourtParticipantInfoOf, CourtPool, CourtPoolItem, CourtPoolOf, Courts, Error, Event,
     MarketIdToCourtId, MarketOf, NegativeImbalanceOf, Participants, RequestBlock, SelectedDraws,
+    YearlyInflation,
 };
 use alloc::collections::BTreeMap;
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_noop, assert_ok, storage_root,
     traits::{fungible::Balanced, tokens::imbalance::Imbalance, Currency, NamedReservableCurrency},
+    StateVersion,
 };
 use pallet_balances::{BalanceLock, NegativeImbalance};
 use rand::seq::SliceRandom;
 use sp_runtime::{
     traits::{BlakeTwo256, Hash, Zero},
-    Perquintill,
+    Perbill, Perquintill,
 };
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::{
         mock::{
             AggregationPeriod, AppealBond, AppealPeriod, InflationPeriod, LockId, MaxAppeals,
-            MaxCourtParticipants, MinJurorStake, RequestInterval, VotePeriod,
+            MaxCourtParticipants, MaxYearlyInflation, MinJurorStake, RequestInterval, VotePeriod,
         },
         BASE,
     },
@@ -1002,8 +1004,15 @@ fn reveal_vote_works() {
             salt,
         ));
         System::assert_last_event(
-            Event::JurorRevealedVote { juror: ALICE, court_id, vote_item: vote_item.clone(), salt }
-                .into(),
+            Event::JurorRevealedVote {
+                juror: ALICE,
+                court_id,
+                vote_item: vote_item.clone(),
+                salt,
+                slashable_amount: MinJurorStake::get(),
+                draw_weight: 1u32,
+            }
+            .into(),
         );
 
         let new_draws = <SelectedDraws<Runtime>>::get(court_id);
@@ -1504,7 +1513,13 @@ fn appeal_emits_event() {
 
         assert_ok!(Court::appeal(RuntimeOrigin::signed(CHARLIE), court_id));
 
-        System::assert_last_event(Event::CourtAppealed { court_id, appeal_number: 1u32 }.into());
+        let court = Courts::<Runtime>::get(court_id).unwrap();
+        let new_round_ends = Some(court.round_ends);
+        let appeal_info = court.appeals.get(0).unwrap().clone();
+
+        System::assert_last_event(
+            Event::CourtAppealed { court_id, appeal_info, new_round_ends }.into(),
+        );
     });
 }
 
@@ -3041,8 +3056,23 @@ fn random_jurors_returns_a_subset_of_jurors() {
 }
 
 #[test]
+fn set_inflation_fails_if_inflation_exceeds_max_yearly_inflation() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Court::set_inflation(
+                RuntimeOrigin::root(),
+                MaxYearlyInflation::get() + Perbill::from_percent(1)
+            ),
+            Error::<Runtime>::InflationExceedsMaxYearlyInflation
+        );
+    });
+}
+
+#[test]
 fn handle_inflation_works() {
     ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Court::set_inflation(RuntimeOrigin::root(), Perbill::from_percent(2u32)));
+
         let mut jurors = <CourtPool<Runtime>>::get();
         let mut free_balances_before = BTreeMap::new();
         let jurors_list = [1000, 10_000, 100_000, 1_000_000, 10_000_000];
@@ -3083,6 +3113,20 @@ fn handle_inflation_works() {
 
         let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
         assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 4_320_130_393);
+    });
+}
+
+#[test]
+fn handle_inflation_is_noop_if_yearly_inflation_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        YearlyInflation::<Runtime>::kill();
+
+        let inflation_period_block = InflationPeriod::get();
+        // save current storage root
+        let tmp = storage_root(StateVersion::V1);
+        // handle_inflation is a noop for the storage
+        Court::handle_inflation(inflation_period_block);
+        assert_eq!(tmp, storage_root(StateVersion::V1));
     });
 }
 

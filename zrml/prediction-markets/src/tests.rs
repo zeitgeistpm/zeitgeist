@@ -6342,6 +6342,149 @@ fn trusted_market_complete_lifecycle() {
     });
 }
 
+#[test]
+fn close_trusted_market_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 10;
+        let market_creator = ALICE;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(market_creator),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::CPMM,
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.dispute_mechanism, None);
+
+        let new_end = end / 2;
+        assert_ne!(new_end, end);
+        run_to_block(new_end);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+
+        let auto_closes = MarketIdsPerCloseBlock::<Runtime>::get(end);
+        assert_eq!(auto_closes.first().cloned().unwrap(), market_id);
+
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(BOB), market_id),
+            Error::<Runtime>::CallerNotMarketCreator
+        );
+
+        assert_ok!(PredictionMarkets::close_trusted_market(
+            RuntimeOrigin::signed(market_creator),
+            market_id
+        ));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.period, MarketPeriod::Block(0..new_end));
+        assert_eq!(market.status, MarketStatus::Closed);
+
+        let auto_closes = MarketIdsPerCloseBlock::<Runtime>::get(end);
+        assert_eq!(auto_closes.len(), 0);
+    });
+}
+
+#[test]
+fn close_trusted_market_fails_if_not_trusted() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 10;
+        let market_creator = ALICE;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(market_creator),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::CPMM,
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.dispute_mechanism, Some(MarketDisputeMechanism::Court));
+
+        run_to_block(end / 2);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(
+                RuntimeOrigin::signed(market_creator),
+                market_id
+            ),
+            Error::<Runtime>::MarketIsNotTrusted
+        );
+    });
+}
+
+#[test_case(MarketStatus::CollectingSubsidy; "collecting_subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient_subsidy")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+#[test_case(MarketStatus::Reported; "report")]
+#[test_case(MarketStatus::Suspended; "suspended")]
+fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 10;
+        let market_creator = ALICE;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(market_creator),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::CPMM,
+        ));
+
+        let market_id = 0;
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = status;
+            Ok(())
+        }));
+
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(
+                RuntimeOrigin::signed(market_creator),
+                market_id
+            ),
+            Error::<Runtime>::MarketIsNotActive
+        );
+    });
+}
+
 fn deploy_swap_pool(
     market: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<u128>>,
     market_id: u128,
