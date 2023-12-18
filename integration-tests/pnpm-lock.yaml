@@ -20,8 +20,8 @@ dependencies:
 
 devDependencies:
   '@acala-network/chopsticks':
-    specifier: ^0.9.3
-    version: 0.9.3(debug@4.3.4)(ts-node@10.9.2)
+    specifier: ^0.9.4
+    version: 0.9.4(ts-node@10.9.2)
   '@moonwall/cli':
     specifier: ^4.4.1
     version: 4.4.4(@types/node@20.10.4)(ts-node@10.9.2)(typescript@5.3.3)
@@ -67,10 +67,66 @@ packages:
       - utf-8-validate
     dev: true
 
+  /@acala-network/chopsticks-core@0.9.4:
+    resolution: {integrity: sha512-t2YNcXyvu0cHoWLFPQuYk0oM5bPCw6WHqr7tLaQmi1mtwe7rt2SjedMUGDBbZm4YtQZCcZQ1mw53K/krSxeU3A==}
+    dependencies:
+      '@acala-network/chopsticks-executor': 0.9.4
+      '@polkadot/rpc-provider': 10.11.1
+      '@polkadot/types': 10.11.1
+      '@polkadot/types-codec': 10.11.1
+      '@polkadot/types-known': 10.11.1
+      '@polkadot/util': 12.6.1
+      '@polkadot/util-crypto': 12.6.1(@polkadot/util@12.6.1)
+      comlink: 4.4.1
+      eventemitter3: 5.0.1
+      lodash: 4.17.21
+      lru-cache: 10.1.0
+      pino: 8.17.1
+      pino-pretty: 10.3.0
+      rxjs: 7.8.1
+      zod: 3.22.4
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: true
+
   /@acala-network/chopsticks-db@0.9.3(ts-node@10.9.2):
     resolution: {integrity: sha512-DoRqI0GClUkoaxjwHHsgup8/yZ5ObeOWrK1XghsKBq8Ct1THkQghol/Gneu2iyuLTn0F4ldpxjFOpG6IpkCblA==}
     dependencies:
       '@acala-network/chopsticks-core': 0.9.3
+      '@polkadot/util': 12.6.1
+      idb: 7.1.1
+      sqlite3: 5.1.6
+      typeorm: 0.3.17(sqlite3@5.1.6)(ts-node@10.9.2)
+    transitivePeerDependencies:
+      - '@google-cloud/spanner'
+      - '@sap/hana-client'
+      - better-sqlite3
+      - bluebird
+      - bufferutil
+      - encoding
+      - hdb-pool
+      - ioredis
+      - mongodb
+      - mssql
+      - mysql2
+      - oracledb
+      - pg
+      - pg-native
+      - pg-query-stream
+      - redis
+      - sql.js
+      - supports-color
+      - ts-node
+      - typeorm-aurora-data-api-driver
+      - utf-8-validate
+    dev: true
+
+  /@acala-network/chopsticks-db@0.9.4(ts-node@10.9.2):
+    resolution: {integrity: sha512-zOXcJ4shlUCkLsvamMRp6GeYEz9jm5YuYfsDtHUjALSyUMf/gP9MqOJcMW+/1GNrlxgOR0S5YEqfJ7UewxCO8w==}
+    dependencies:
+      '@acala-network/chopsticks-core': 0.9.4
       '@polkadot/util': 12.6.1
       idb: 7.1.1
       sqlite3: 5.1.6
@@ -106,12 +162,64 @@ packages:
       '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.1)
     dev: true
 
+  /@acala-network/chopsticks-executor@0.9.4:
+    resolution: {integrity: sha512-KWX9FmC2OMI6Ek00luZabzr46xFobnuenzB/MP8SsyAMCCL5eZDO6EPU2nOLCI3Gyq9QLuP2StBSwbIK2M0mBw==}
+    dependencies:
+      '@polkadot/util': 12.6.1
+      '@polkadot/wasm-util': 7.3.2(@polkadot/util@12.6.1)
+    dev: true
+
   /@acala-network/chopsticks@0.9.3(debug@4.3.4)(ts-node@10.9.2):
     resolution: {integrity: sha512-O15PB3G1rYAlGYPEilDvDKJD91DUhBlcl3kiDrtCm22u1ECr8jXv2EETwTmDhPiCiP2QADmsjRuxZKbzs/tQxQ==}
     hasBin: true
     dependencies:
       '@acala-network/chopsticks-core': 0.9.3
       '@acala-network/chopsticks-db': 0.9.3(ts-node@10.9.2)
+      '@pnpm/npm-conf': 2.2.2
+      '@polkadot/api-augment': 10.11.1
+      '@polkadot/types': 10.11.1
+      '@polkadot/util': 12.6.1
+      '@polkadot/util-crypto': 12.6.1(@polkadot/util@12.6.1)
+      axios: 1.6.2(debug@4.3.4)
+      dotenv: 16.3.1
+      global-agent: 3.0.0
+      js-yaml: 4.1.0
+      jsondiffpatch: 0.5.0
+      lodash: 4.17.21
+      ws: 8.14.2
+      yargs: 17.7.2
+      zod: 3.22.4
+    transitivePeerDependencies:
+      - '@google-cloud/spanner'
+      - '@sap/hana-client'
+      - better-sqlite3
+      - bluebird
+      - bufferutil
+      - debug
+      - encoding
+      - hdb-pool
+      - ioredis
+      - mongodb
+      - mssql
+      - mysql2
+      - oracledb
+      - pg
+      - pg-native
+      - pg-query-stream
+      - redis
+      - sql.js
+      - supports-color
+      - ts-node
+      - typeorm-aurora-data-api-driver
+      - utf-8-validate
+    dev: true
+
+  /@acala-network/chopsticks@0.9.4(ts-node@10.9.2):
+    resolution: {integrity: sha512-w9+YXHtHeDu7rRVpaRSGuyFOj/grgHkOZO9YLuGPAcz6/KGBu3pprCa9D9LyLIOijMyq1mnqni4WTRgjfyWMwQ==}
+    hasBin: true
+    dependencies:
+      '@acala-network/chopsticks-core': 0.9.4
+      '@acala-network/chopsticks-db': 0.9.4(ts-node@10.9.2)
       '@pnpm/npm-conf': 2.2.2
       '@polkadot/api-augment': 10.11.1
       '@polkadot/types': 10.11.1
@@ -2716,6 +2824,10 @@ packages:
       readable-stream: 3.6.2
     dev: true
 
+  /help-me@5.0.0:
+    resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
+    dev: true
+
   /highlight.js@10.7.3:
     resolution: {integrity: sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A==}
     dev: true
@@ -3922,12 +4034,49 @@ packages:
       strip-json-comments: 3.1.1
     dev: true
 
+  /pino-pretty@10.3.0:
+    resolution: {integrity: sha512-JthvQW289q3454mhM3/38wFYGWPiBMR28T3CpDNABzoTQOje9UKS7XCJQSnjWF9LQGQkGd8D7h0oq+qwiM3jFA==}
+    hasBin: true
+    dependencies:
+      colorette: 2.0.20
+      dateformat: 4.6.3
+      fast-copy: 3.0.1
+      fast-safe-stringify: 2.1.1
+      help-me: 5.0.0
+      joycon: 3.1.1
+      minimist: 1.2.8
+      on-exit-leak-free: 2.1.2
+      pino-abstract-transport: 1.1.0
+      pump: 3.0.0
+      readable-stream: 4.4.2
+      secure-json-parse: 2.7.0
+      sonic-boom: 3.7.0
+      strip-json-comments: 3.1.1
+    dev: true
+
   /pino-std-serializers@6.2.2:
     resolution: {integrity: sha512-cHjPPsE+vhj/tnhCy/wiMh3M3z3h/j15zHQX+S9GkTBgqJuTuJzYJ4gUyACLhDaJ7kk9ba9iRDmbH2tJU03OiA==}
     dev: true
 
   /pino@8.16.2:
     resolution: {integrity: sha512-2advCDGVEvkKu9TTVSa/kWW7Z3htI/sBKEZpqiHk6ive0i/7f5b1rsU8jn0aimxqfnSz5bj/nOYkwhBUn5xxvg==}
+    hasBin: true
+    dependencies:
+      atomic-sleep: 1.0.0
+      fast-redact: 3.3.0
+      on-exit-leak-free: 2.1.2
+      pino-abstract-transport: 1.1.0
+      pino-std-serializers: 6.2.2
+      process-warning: 2.3.2
+      quick-format-unescaped: 4.0.4
+      real-require: 0.2.0
+      safe-stable-stringify: 2.4.3
+      sonic-boom: 3.7.0
+      thread-stream: 2.4.1
+    dev: true
+
+  /pino@8.17.1:
+    resolution: {integrity: sha512-YoN7/NJgnsJ+fkADZqjhRt96iepWBndQHeClmSBH0sQWCb8zGD74t00SK4eOtKFi/f8TUmQnfmgglEhd2kI1RQ==}
     hasBin: true
     dependencies:
       atomic-sleep: 1.0.0
