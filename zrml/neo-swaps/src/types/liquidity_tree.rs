@@ -510,12 +510,12 @@ where
     }
 
     fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError> {
-        if index == 0 {
-            Ok(vec![0u32])
-        } else {
-            let mut path = self.path_to_node(self.parent_index(index).unwrap_or(0u32))?;
+        if let Some(parent_index) = self.parent_index(index) {
+            let mut path = self.path_to_node(parent_index)?;
             path.push(index);
             Ok(path)
+        } else {
+            Ok(vec![0])
         }
     }
 
