@@ -19,16 +19,21 @@
 #![cfg(feature = "mock")]
 
 use crate as orderbook_v1;
-use frame_support::{construct_runtime, traits::Everything};
+use crate::{AssetOf, BalanceOf, MarketIdOf};
+use core::marker::PhantomData;
+use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
+use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup, Zero},
+    Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
         MaxReserves, MinimumPeriod, OrderbookPalletId, PmPalletId, BASE,
     },
+    traits::DistributeFees,
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
         Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
@@ -37,6 +42,43 @@ use zeitgeist_primitives::{
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
+
+pub const MARKET_CREATOR: AccountIdTest = 42;
+
+pub const INITIAL_BALANCE: Balance = 100 * BASE;
+
+parameter_types! {
+    pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
+}
+
+pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
+    Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>())
+}
+
+pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
+
+impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
+where
+    F: Get<T::AccountId>,
+{
+    type Asset = AssetOf<T>;
+    type AccountId = T::AccountId;
+    type Balance = BalanceOf<T>;
+    type MarketId = MarketIdOf<T>;
+
+    fn distribute(
+        _market_id: Self::MarketId,
+        asset: Self::Asset,
+        account: &Self::AccountId,
+        amount: Self::Balance,
+    ) -> Self::Balance {
+        let fees = calculate_fee::<T>(amount);
+        match T::AssetManager::transfer(asset, account, &F::get(), fees) {
+            Ok(_) => fees,
+            Err(_) => Zero::zero(),
+        }
+    }
+}
 
 construct_runtime!(
     pub enum Runtime
@@ -57,6 +99,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type AssetManager = AssetManager;
+    type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type PalletId = OrderbookPalletId;
@@ -143,7 +186,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, BASE), (BOB, BASE)] }
+        Self { balances: vec![(ALICE, INITIAL_BALANCE), (BOB, INITIAL_BALANCE)] }
     }
 }
 impl ExtBuilder {

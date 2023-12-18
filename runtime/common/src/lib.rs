@@ -61,10 +61,10 @@ macro_rules! decl_common_types {
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         #[cfg(feature = "parachain")]
-        type Migrations = ();
+        type Migrations = zrml_orderbook::migrations::TranslateOrderStructure<Runtime>;
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type Migrations = zrml_orderbook::migrations::TranslateOrderStructure<Runtime>;
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -1270,6 +1270,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_orderbook::Config for Runtime {
             type AssetManager = AssetManager;
+            type ExternalFees = MarketCreatorFee;
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = OrderbookPalletId;
