@@ -509,21 +509,14 @@ where
         if index == 0 { None } else { index.checked_sub(1)?.checked_div(2) }
     }
 
-    fn path_to_node(&self, mut index: u32) -> Result<Vec<u32>, DispatchError> {
-        let mut path = Vec::new();
-        let mut iterations = 0;
-        let max_iterations = Self::max_depth().checked_add_res(&1)?;
-        while let Some(parent_index) = self.parent_index(index) {
-            if iterations == max_iterations {
-                return Err(LiquidityTreeError::MaxIterationsReached.into_dispatch_error::<T>());
-            }
+    fn path_to_node(&self, index: u32) -> Result<Vec<u32>, DispatchError> {
+        if index == 0 {
+            Ok(vec![0u32])
+        } else {
+            let mut path = self.path_to_node(self.parent_index(index).unwrap_or(0u32))?;
             path.push(index);
-            index = parent_index;
-            iterations = iterations.checked_add_res(&1)?;
+            Ok(path)
         }
-        path.push(0u32); // The tree's root is not considered in the loop above.
-        path.reverse(); // The path should be from root to the node
-        Ok(path)
     }
 
     fn take_last_abandoned_node_index(&mut self) -> Option<u32> {
