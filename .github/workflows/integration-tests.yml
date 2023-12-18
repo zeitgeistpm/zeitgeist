@@ -208,7 +208,7 @@ jobs:
 
       - name: Display Chopsticks logs
         run: |
-            cat integration-tests/tmp/*.log
+            cat integration-tests/tmp/node_logs/*.log
 
   chopsticks_zeitgeist_upgrade:
     name: Chopsticks Runtime Upgrade Zeitgeist
@@ -260,4 +260,4 @@ jobs:
 
       - name: Display Chopsticks logs
         run: |
-            cat integration-tests/tmp/*.log
+            cat integration-tests/tmp/node_logs/*.log
