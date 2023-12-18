@@ -261,8 +261,8 @@ fn join_pool_fails_on_relative_liquidity_threshold_violated() {
             vec![_1_2, _1_2],
             CENT,
         );
-        // Bob contributes less than 3% of liquidity; this should fail.
-        let amount = _3 - 100;
+        // Bob contributes slightly less than 1.39098411% additional liquidity; this should fail.
+        let amount = 139098411 - 100;
         deposit_complete_set(market_id, BOB, amount + CENT);
         assert_noop!(
             NeoSwaps::join(

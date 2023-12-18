@@ -340,9 +340,9 @@ fn exit_pool_fails_on_relative_liquidity_threshold_violated() {
             vec![_1_2, _1_2],
             CENT,
         );
-        // Bob contributes 3% of liquidity. Any removal (no matter how small the amount) should
-        // fail.
-        let amount = _3;
+        // Bob contributes only 1.390...% of liquidity. Any removal (no matter how small the amount)
+        // should fail.
+        let amount = 13_910_041_100;
         deposit_complete_set(market_id, BOB, amount);
         assert_ok!(NeoSwaps::join(
             RuntimeOrigin::signed(BOB),
