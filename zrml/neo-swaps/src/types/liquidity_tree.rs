@@ -134,15 +134,15 @@ where
 #[scale_info(skip_type_params(T))]
 pub(crate) struct Node<T: Config> {
     /// The account that the node belongs to. `None` signifies an abandoned node.
-    pub account: Option<T::AccountId>,
+    pub(crate) account: Option<T::AccountId>,
     /// The stake belonging to the owner.
-    pub stake: BalanceOf<T>,
+    pub(crate) stake: BalanceOf<T>,
     /// The fees owed to the owner.
-    pub fees: BalanceOf<T>,
+    pub(crate) fees: BalanceOf<T>,
     /// The sum of the stake of all descendants of this node.
-    pub descendant_stake: BalanceOf<T>,
+    pub(crate) descendant_stake: BalanceOf<T>,
     /// The amount of fees to be lazily propagated down the tree.
-    pub lazy_fees: BalanceOf<T>,
+    pub(crate) lazy_fees: BalanceOf<T>,
 }
 
 impl<T> Node<T>
