@@ -36,7 +36,7 @@ jobs:
       - name: Save zeitgeist binary
         run: |
             mkdir -p binaries
-            cp target/release/zeitgeist binaries/zeitgeist;
+            cp target/release/zeitgeist binaries/;
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
