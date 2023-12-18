@@ -42,7 +42,7 @@ use zeitgeist_primitives::math::{
 /// # Generics
 ///
 /// - `D`: A getter for the depth of the tree.
-pub struct LiquidityTreeMaxNodes<D>(PhantomData<D>);
+pub(crate) struct LiquidityTreeMaxNodes<D>(PhantomData<D>);
 
 impl<D> Get<u32> for LiquidityTreeMaxNodes<D>
 where
@@ -76,7 +76,7 @@ where
     CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
 #[scale_info(skip_type_params(T, U))]
-pub struct LiquidityTree<T, U>
+pub(crate) struct LiquidityTree<T, U>
 where
     T: Config,
     U: Get<u32>,
@@ -174,7 +174,7 @@ where
 
 /// Execution path info for `join` calls.
 #[derive(Debug, PartialEq)]
-pub enum BenchmarkInfo {
+pub(crate) enum BenchmarkInfo {
     /// The LP already owns a node in the tree.
     InPlace,
     /// The LP is reassigned an abandoned node.
