@@ -112,11 +112,13 @@ where
         let nodes = vec![root]
             .try_into()
             .map_err(|_| StorageOverflowError::Nodes.into_dispatch_error::<T>())?;
-        let mut account_to_index: BoundedBTreeMap<_, _, _> = Default::default();
+        let mut account_to_index = BoundedBTreeMap::<_, _, _>::new();
         account_to_index
             .try_insert(account, 0u32)
             .map_err(|_| StorageOverflowError::AccountToIndex.into_dispatch_error::<T>())?;
-        let abandoned_nodes = Default::default();
+        let abandoned_nodes = vec![]
+            .try_into()
+            .map_err(|_| StorageOverflowError::AbandonedNodes.into_dispatch_error::<T>())?;
         Ok(LiquidityTree { nodes, account_to_index, abandoned_nodes })
     }
 }
