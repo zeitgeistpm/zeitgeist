@@ -233,7 +233,11 @@ where
             (index, benchmark_info)
         };
         if let Some(parent_index) = self.parent_index(index) {
-            self.update_descendant_stake(parent_index, stake, UpdateDescendantStakeOperation::Add)?;
+            self.update_descendant_stake_of_ancestors(
+                parent_index,
+                stake,
+                UpdateDescendantStakeOperation::Add,
+            )?;
         }
         Ok(benchmark_info)
     }
@@ -258,7 +262,11 @@ where
             let _ = self.account_to_index.remove(who);
         }
         if let Some(parent_index) = self.parent_index(index) {
-            self.update_descendant_stake(parent_index, stake, UpdateDescendantStakeOperation::Sub)?;
+            self.update_descendant_stake_of_ancestors(
+                parent_index,
+                stake,
+                UpdateDescendantStakeOperation::Sub,
+            )?;
         }
         Ok(())
     }
@@ -330,7 +338,7 @@ impl From<LiquidityTreeChildIndices> for (Option<u32>, Option<u32>) {
     }
 }
 
-/// Type for specifying a sign for `update_descendant_stake`.
+/// Type for specifying a sign for `update_descendant_stake_of_ancestors`.
 pub(crate) enum UpdateDescendantStakeOperation {
     Add,
     Sub,
@@ -376,14 +384,14 @@ where
     /// Returns the index of the next free leaf; `None` if the tree is full.
     fn peek_next_free_leaf(&self) -> Option<u32>;
 
-    /// Mutate a node's descendant stake.
+    /// Mutate a node's ancestor's `descendant_stake` field.
     ///
     /// # Parameters
     ///
-    /// - `index`: The index of the node to modify.
+    /// - `index`: The index of the node.
     /// - `delta`: The (absolute) amount by which to modfiy the descendant stake.
-    /// - `neg`: The sign of the delta; `true` if the delta is negative.
-    fn update_descendant_stake(
+    /// - `op`: The sign of the delta.
+    fn update_descendant_stake_of_ancestors(
         &mut self,
         index: u32,
         delta: BalanceOf<T>,
@@ -521,7 +529,7 @@ where
         if node_count < Self::max_node_count() { Some(node_count) } else { None }
     }
 
-    fn update_descendant_stake(
+    fn update_descendant_stake_of_ancestors(
         &mut self,
         index: u32,
         delta: BalanceOf<T>,
