@@ -1,6 +1,6 @@
 {
    "label": "moonwall_config",
-   "defaultTestTimeout": 240000,
+   "defaultTestTimeout": 120000,
    "scriptsDir": "scripts/",
    "environments": [
       {
@@ -99,7 +99,7 @@
                  {
                      "name": "HydraDXDB",
                      "type": "parachain",
-                     "configPath": "hydradx"
+                     "configPath": "./configs/hydradx.yml"
                  },
                  {
                      "name": "ZeitgeistDB",
@@ -109,23 +109,23 @@
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
-         "buildBlockMode": "manual",
          "connections": [
-             {
-                 "name": "HydraDXPara",
-                 "type": "polkadotJs",
-                 "endpoints": ["ws://127.0.0.1:8000"]
-             },
-             {
+            {
+                "name": "PolkadotRelay",
+                "type": "polkadotJs",
+                "endpoints": ["ws://127.0.0.1:8002"]
+            },
+            {
+                "name": "HydraDXPara",
+                "type": "polkadotJs",
+                "endpoints": ["ws://127.0.0.1:8000"]
+            },
+            {
                  "name": "ZeitgeistPara",
                  "type": "polkadotJs",
                  "endpoints": ["ws://127.0.0.1:8001"]
-             },
-             {
-                 "name": "PolkadotRelay",
-                 "type": "polkadotJs",
-                 "endpoints": ["ws://127.0.0.1:8002"]
-             }
+            }
+
          ]
       }
    ]

@@ -1,6 +1,6 @@
 endpoint: wss://bsr.zeitgeist.pm
 mock-signature-host: true
-db: ./tmp/db_mba.sqlite
+db: ./tmp/bs_db_mba.sqlite
 # wasm-override: battery-station-runtime.compact.compressed.wasm
 
 import-storage:
