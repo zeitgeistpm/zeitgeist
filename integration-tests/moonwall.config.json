@@ -109,6 +109,7 @@
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+         "buildBlockMode": "manual",
          "connections": [
             {
                 "name": "PolkadotRelay",
@@ -125,7 +126,6 @@
                  "type": "polkadotJs",
                  "endpoints": ["ws://127.0.0.1:8001"]
             }
-
          ]
       }
    ]

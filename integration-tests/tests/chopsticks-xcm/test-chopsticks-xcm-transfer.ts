@@ -1,4 +1,4 @@
-import { MoonwallContext, beforeAll, describeSuite, expect } from "@moonwall/cli";
+import { beforeAll, describeSuite, expect } from "@moonwall/cli";
 import { KeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
 
@@ -39,14 +39,15 @@ describeSuite({
                 const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
                 const zeitgeistBalanceBefore = (await zeitgeistParaApi.query.system.account(alice.address)).data.free.toBigInt();
+                const hydradxBalanceBefore = (await hydradxParaApi.query.tokens.accounts(bob.address, 12)).free.toBigInt();
 
                 const ztg = { 'Ztg': null };
                 const amount = "192913122185847181";
-                const accountId = zeitgeistParaApi.createType("AccountId32", bob.address).toHex();
+                const bobAccountId = zeitgeistParaApi.createType("AccountId32", bob.address).toHex();
                 const destination = {
                     V3: {
                         parents: 1,
-                        interior: { X2: [{ Parachain: 2034 }, { AccountId32: { id: accountId, network: null } }] },
+                        interior: { X2: [{ Parachain: 2034 }, { AccountId32: { id: bobAccountId, network: null } }] },
                     }
                 };
                 const destWeightLimit = { Unlimited: null };
@@ -54,7 +55,7 @@ describeSuite({
                 const finalizedPromise = new Promise((resolve, reject) => {
                     zeitgeistParaApi.tx.xTokens.transfer(ztg, amount, destination, destWeightLimit).signAndSend(alice, ({ status }) => {
                         if (status.isFinalized) {
-                            console.log(`Transaction finalized at blockHash ${status.asFinalized}`);
+                            log(`Transaction finalized at blockHash ${status.asFinalized}`);
                             resolve();
                         } else if (status.isError) {
                             reject(new Error(`Transaction failed with status ${status}`));
@@ -67,6 +68,10 @@ describeSuite({
 
                 const zeitgeistBalanceAfter = (await zeitgeistParaApi.query.system.account(alice.address)).data.free.toBigInt();
                 expect(zeitgeistBalanceBefore > zeitgeistBalanceAfter).to.be.true;
+
+                await context.createBlock({ providerName: "HydraDXPara", count: 1, logger: log });
+                const hydradxBalanceAfter = (await hydradxParaApi.query.tokens.accounts(bob.address, 12)).free.toBigInt();
+                expect(hydradxBalanceBefore < hydradxBalanceAfter).to.be.true;
             },
         });
     },

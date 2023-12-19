@@ -9,7 +9,9 @@ if [[ $(uname) == "Darwin" ]]; then
     exit 1
 fi
 
-polkadot_release="1.4.0"
+# Version 1.4.0 of relaychain didn't allow the parachain to produce blocks
+# that's why we use 1.1.0
+polkadot_release="1.1.0"
 
 # Always run the commands from the "test" dir
 cd $(dirname $0)/..
