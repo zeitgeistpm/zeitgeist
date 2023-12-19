@@ -56,6 +56,7 @@ macro_rules! decl_common_types {
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_market_commons::migrations::MigrateScoringRuleAndMarketStatus;
+        use zrml_orderbook::migrations::TranslateOrderStructure;
         use zrml_prediction_markets::migrations::DrainDeprecatedStorage;
         use zrml_swaps::migrations::MigratePools;
 
@@ -67,6 +68,7 @@ macro_rules! decl_common_types {
             MigratePools<Runtime>,
             DrainDeprecatedStorage<Runtime>,
             MigrateScoringRuleAndMarketStatus<Runtime>,
+            TranslateOrderStructure<Runtime>,
         );
 
         pub type Executive = frame_executive::Executive<
@@ -1085,6 +1087,7 @@ macro_rules! impl_config_traits {
             type MaxDelegations = MaxDelegations;
             type MaxSelectedDraws = MaxSelectedDraws;
             type MaxCourtParticipants = MaxCourtParticipants;
+            type MaxYearlyInflation = MaxYearlyInflation;
             type MinJurorStake = MinJurorStake;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type Random = RandomnessCollectiveFlip;
@@ -1264,6 +1267,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_orderbook::Config for Runtime {
             type AssetManager = AssetManager;
+            type ExternalFees = MarketCreatorFee;
             type RuntimeEvent = RuntimeEvent;
             type MarketCommons = MarketCommons;
             type PalletId = OrderbookPalletId;

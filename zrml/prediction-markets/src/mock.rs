@@ -48,10 +48,11 @@ use zeitgeist_primitives::{
         LockId, MaxAppeals, MaxApprovals, MaxCategories, MaxCourtParticipants, MaxCreatorFee,
         MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
         MaxGracePeriod, MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen,
-        MaxReserves, MaxSelectedDraws, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, OutcomeBond, OutcomeFactor,
-        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration,
+        MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -332,6 +333,7 @@ impl zrml_court::Config for Runtime {
     type MaxDelegations = MaxDelegations;
     type MaxSelectedDraws = MaxSelectedDraws;
     type MaxCourtParticipants = MaxCourtParticipants;
+    type MaxYearlyInflation = MaxYearlyInflation;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type PalletId = CourtPalletId;
@@ -429,6 +431,9 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
 
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)

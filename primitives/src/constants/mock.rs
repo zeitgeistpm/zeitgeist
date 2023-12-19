@@ -48,6 +48,7 @@ parameter_types! {
     pub const MaxDelegations: u32 = 5;
     pub const MaxSelectedDraws: u32 = 510;
     pub const MaxCourtParticipants: u32 = 1_000;
+    pub const MaxYearlyInflation: Perbill = Perbill::from_percent(10u32);
     pub const MinJurorStake: Balance = 50 * CENT;
     pub const InflationPeriod: BlockNumber = 20;
 }
