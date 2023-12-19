@@ -86,7 +86,7 @@
          ]
       },
       {
-         "name": "chopsticks_zeitgeist_hydra_xcm_transfer",
+         "name": "chopsticks_zeitgeist_hydra_xcm_tests",
          "testFileDir": ["tests/chopsticks-xcm"],
          "foundation": {
              "type": "chopsticks",

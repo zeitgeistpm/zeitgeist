@@ -2,7 +2,6 @@ import { MoonwallContext, beforeAll, describeSuite, expect } from "@moonwall/cli
 import { KeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
 
-const MAX_BALANCE_TRANSFER_TRIES = 5;
 describeSuite({
     id: "CZXCM",
     title: "Chopsticks Zeitgeist XCM Tests",
@@ -39,7 +38,6 @@ describeSuite({
                 const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
                 const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
-                let tries = 0;
                 const zeitgeistBalanceBefore = (await zeitgeistParaApi.query.system.account(alice.address)).data.free.toBigInt();
 
                 const ztg = { 'Ztg': null };

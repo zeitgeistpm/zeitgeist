@@ -206,8 +206,8 @@ jobs:
         run: |
           cd integration-tests
           pnpm exec moonwall test chopsticks_battery_station_upgrade
-          ls -R integration-tests/tmp/node_logs/
-          cat integration-tests/tmp/node_logs/*.log
+          ls -R tmp/node_logs/
+          cat tmp/node_logs/*.log
 
   chopsticks_zeitgeist_upgrade:
     name: Chopsticks Runtime Upgrade Zeitgeist
@@ -257,8 +257,8 @@ jobs:
         run: |
           cd integration-tests
           pnpm exec moonwall test chopsticks_zeitgeist_upgrade
-          ls -R integration-tests/tmp/node_logs/
-          cat integration-tests/tmp/node_logs/*.log
+          ls -R tmp/node_logs/
+          cat tmp/node_logs/*.log
 
   chopsticks_zeitgeist_hydradx_xcm_tests:
     name: Chopsticks Zeitgeist HydraDX XCM Tests
@@ -296,7 +296,7 @@ jobs:
       - name: Test zeitgeist xcm tests using Chopsticks
         run: |
           cd integration-tests
-          pnpm exec moonwall test chopsticks_zeitgeist_hydra_xcm_transfer
-          ls -R integration-tests/tmp/node_logs/
-          cat integration-tests/tmp/node_logs/*.log
+          pnpm exec moonwall test chopsticks_zeitgeist_hydra_xcm_tests
+          ls -R tmp/node_logs/
+          cat tmp/node_logs/*.log
             
