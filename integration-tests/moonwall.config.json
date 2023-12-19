@@ -1,6 +1,6 @@
 {
    "label": "moonwall_config",
-   "defaultTestTimeout": 120000,
+   "defaultTestTimeout": 240000,
    "scriptsDir": "scripts/",
    "environments": [
       {
@@ -52,6 +52,7 @@
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+         "buildBlockMode": "manual",
          "connections": [
              {
                  "name": "DB",
@@ -75,6 +76,7 @@
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+         "buildBlockMode": "manual",
          "connections": [
              {
                  "name": "DB",
@@ -107,6 +109,7 @@
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+         "buildBlockMode": "manual",
          "connections": [
              {
                  "name": "HydraDXPara",

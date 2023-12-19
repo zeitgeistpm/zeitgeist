@@ -205,10 +205,8 @@ jobs:
         run: |
           cd integration-tests
           pnpm exec moonwall test chopsticks_battery_station_upgrade
-
-      - name: Display Chopsticks logs
-        run: |
-            cat integration-tests/tmp/node_logs/*.log
+          ls -R integration-tests/tmp/node_logs/
+          cat integration-tests/tmp/node_logs/*.log
 
   chopsticks_zeitgeist_upgrade:
     name: Chopsticks Runtime Upgrade Zeitgeist
@@ -257,7 +255,6 @@ jobs:
         run: |
           cd integration-tests
           pnpm exec moonwall test chopsticks_zeitgeist_upgrade
-
-      - name: Display Chopsticks logs
-        run: |
-            cat integration-tests/tmp/node_logs/*.log
+          ls -R integration-tests/tmp/node_logs/
+          cat integration-tests/tmp/node_logs/*.log
+            
