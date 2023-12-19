@@ -21,6 +21,7 @@ mod buy;
 mod deploy_pool;
 mod exit;
 mod join;
+mod liquidity_tree_interactions;
 mod sell;
 mod withdraw_fees;
 
