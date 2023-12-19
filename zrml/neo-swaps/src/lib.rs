@@ -23,6 +23,7 @@ extern crate alloc;
 mod benchmarking;
 mod consts;
 mod helpers;
+mod liquidity_tree;
 mod macros;
 mod math;
 pub mod migration;
@@ -38,9 +39,10 @@ pub use pallet::*;
 mod pallet {
     use crate::{
         consts::MAX_ASSETS,
+        liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{BenchmarkInfo, FeeDistribution, LiquidityTree, LiquidityTreeError, Pool},
+        types::{FeeDistribution, Pool},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};

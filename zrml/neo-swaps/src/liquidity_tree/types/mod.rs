@@ -15,10 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod fee_distribution;
-mod pool;
-mod solo_lp;
+pub(crate) mod liquidity_tree;
+pub(crate) mod liquidity_tree_child_indices;
+pub(crate) mod liquidity_tree_error;
+pub(crate) mod liquidity_tree_max_nodes;
+pub(crate) mod node;
+pub(crate) mod update_descendant_stake_operation;
 
-pub(crate) use fee_distribution::*;
-pub(crate) use pool::*;
-pub(crate) use solo_lp::*;
+pub(crate) use liquidity_tree::*;
+pub(crate) use liquidity_tree_child_indices::*;
+pub(crate) use liquidity_tree_error::*;
+pub(crate) use liquidity_tree_max_nodes::*;
+pub(crate) use node::*;
+pub(crate) use update_descendant_stake_operation::*;

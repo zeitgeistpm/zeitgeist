@@ -15,10 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod fee_distribution;
-mod pool;
-mod solo_lp;
-
-pub(crate) use fee_distribution::*;
-pub(crate) use pool::*;
-pub(crate) use solo_lp::*;
+/// Type for specifying a sign for `update_descendant_stake_of_ancestors`.
+pub(crate) enum UpdateDescendantStakeOperation {
+    Add,
+    Sub,
+}

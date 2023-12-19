@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::types::Node;
+use crate::liquidity_tree::types::Node;
 use alloc::collections::BTreeMap;
 use test_case::test_case;
 

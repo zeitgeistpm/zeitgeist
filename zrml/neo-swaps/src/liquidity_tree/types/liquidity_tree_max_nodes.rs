@@ -15,10 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod fee_distribution;
-mod pool;
-mod solo_lp;
+use core::marker::PhantomData;
+use sp_runtime::traits::Get;
 
-pub(crate) use fee_distribution::*;
-pub(crate) use pool::*;
-pub(crate) use solo_lp::*;
+/// Gets the maximum number of nodes allowed in the liquidity tree as a function of its depth.
+/// Saturates at `u32::MAX`, but will warn about this in DEBUG.
+///
+/// # Generics
+///
+/// - `D`: A getter for the depth of the tree.
+pub(crate) struct LiquidityTreeMaxNodes<D>(PhantomData<D>);
+
+impl<D> Get<u32> for LiquidityTreeMaxNodes<D>
+where
+    D: Get<u32>,
+{
+    fn get() -> u32 {
+        debug_assert!(D::get() < 31, "LiquidityTreeMaxNodes::get(): Integer overflow");
+        2u32.saturating_pow(D::get() + 1).saturating_sub(1)
+    }
+}

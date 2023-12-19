@@ -16,7 +16,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    types::{LiquidityTree, Pool, SoloLp},
+    liquidity_tree::types::LiquidityTree,
+    types::{Pool, SoloLp},
     Config, Pallet,
 };
 use frame_support::{

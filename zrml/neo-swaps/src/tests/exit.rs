@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::types::LiquidityTreeError;
+use crate::liquidity_tree::types::LiquidityTreeError;
 use test_case::test_case;
 
 #[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_704], 33_508_962_010)]

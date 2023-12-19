@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod fee_distribution;
-mod pool;
-mod solo_lp;
+use super::*;
 
-pub(crate) use fee_distribution::*;
-pub(crate) use pool::*;
-pub(crate) use solo_lp::*;
+#[test]
+fn total_shares_works() {
+    let tree = utility::create_test_tree();
+    assert_eq!(tree.total_shares().unwrap(), _24);
+}

@@ -20,8 +20,8 @@
 use super::*;
 use crate::{
     consts::*,
+    liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
-    types::{LiquidityTree, LiquidityTreeHelper},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools,
 };
 use core::{cell::Cell, iter, marker::PhantomData};
