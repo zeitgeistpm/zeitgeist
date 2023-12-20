@@ -44,68 +44,21 @@
              "type": "chopsticks",
              "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
              "launchSpec": [
-                 {
-                     "name": "db",
-                     "type": "parachain",
-                     "configPath": "./configs/zeitgeist.yml"
-                 }
-             ]
-         },
-         "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
-         "buildBlockMode": "manual",
-         "connections": [
-             {
-                 "name": "DB",
-                 "type": "polkadotJs",
-                 "endpoints": ["ws://127.0.0.1:8000"]
-             }
-         ]
-      },
-      {
-         "name": "chopsticks_battery_station_upgrade",
-         "testFileDir": ["tests/rt-upgrade-chopsticks"],
-         "foundation": {
-             "type": "chopsticks",
-             "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
-             "launchSpec": [
-                 {
-                     "name": "db",
-                     "type": "parachain",
-                     "configPath": "./configs/battery-station.yml"
-                 }
-             ]
-         },
-         "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
-         "buildBlockMode": "manual",
-         "connections": [
-             {
-                 "name": "DB",
-                 "type": "polkadotJs",
-                 "endpoints": ["ws://127.0.0.1:8000"]
-             }
-         ]
-      },
-      {
-         "name": "chopsticks_zeitgeist_hydra_xcm_tests",
-         "testFileDir": ["tests/chopsticks-xcm"],
-         "foundation": {
-             "type": "chopsticks",
-             "launchSpec": [
-                 {
-                     "name": "PolkadotDB",
-                     "type": "relaychain",
-                     "configPath": "polkadot"
-                 },
-                 {
-                     "name": "HydraDXDB",
-                     "type": "parachain",
-                     "configPath": "./configs/hydradx.yml"
-                 },
-                 {
-                     "name": "ZeitgeistDB",
-                     "type": "parachain",
-                     "configPath": "./configs/zeitgeist.yml"
-                 }
+                {
+                    "name": "PolkadotDB",
+                    "type": "relaychain",
+                    "configPath": "polkadot"
+                },
+                {
+                    "name": "HydraDXDB",
+                    "type": "parachain",
+                    "configPath": "./configs/hydradx.yml"
+                },
+                {
+                    "name": "ZeitgeistDB",
+                    "type": "parachain",
+                    "configPath": "./configs/zeitgeist.yml"
+                }
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
@@ -125,6 +78,50 @@
                  "name": "ZeitgeistPara",
                  "type": "polkadotJs",
                  "endpoints": ["ws://127.0.0.1:8001"]
+            }
+         ]
+      },
+      {
+         "name": "chopsticks_battery_station_upgrade",
+         "testFileDir": ["tests/rt-upgrade-chopsticks"],
+         "foundation": {
+             "type": "chopsticks",
+             "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
+             "launchSpec": [
+                {
+                    "name": "ZeitgeistDB",
+                    "type": "parachain",
+                    "configPath": "./configs/battery-station.yml"
+                },
+                {
+                    "name": "HydraDXDB",
+                    "type": "parachain",
+                    "configPath": "./configs/hydradx.yml"
+                },
+                {
+                    "name": "PolkadotDB",
+                    "type": "relaychain",
+                    "configPath": "polkadot"
+                }
+             ]
+         },
+         "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+         "buildBlockMode": "manual",
+         "connections": [
+            {
+                "name": "ZeitgeistPara",
+                "type": "polkadotJs",
+                "endpoints": ["ws://127.0.0.1:8000"]
+            },
+            {
+                "name": "HydraDXPara",
+                "type": "polkadotJs",
+                "endpoints": ["ws://127.0.0.1:8001"]
+            },
+            {
+                "name": "PolkadotRelay",
+                "type": "polkadotJs",
+                "endpoints": ["ws://127.0.0.1:8002"]
             }
          ]
       }
