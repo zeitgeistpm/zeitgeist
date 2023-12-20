@@ -22,7 +22,7 @@ use crate::{
     consts::*,
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
-    AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools,
+    AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
 use core::{cell::Cell, iter, marker::PhantomData};
 use frame_benchmarking::v2::*;
@@ -35,7 +35,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Get, Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
     constants::CENT,
-    math::fixed::{FixedDiv, FixedMul},
+    math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
     traits::CompleteSetOperationsApi,
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
@@ -202,7 +202,16 @@ where
     maybe_market_id.unwrap()
 }
 
-fn create_market_and_deploy_pool<T>(
+fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
+    let mut result = vec![MIN_SPOT_PRICE.saturated_into(); (asset_count - 1) as usize];
+    // Price distribution has no bearing on the benchmarks.
+    let remaining_u128 =
+        ZeitgeistBase::<u128>::get().unwrap() - (asset_count - 1) as u128 * MIN_SPOT_PRICE;
+    result.push(remaining_u128.saturated_into());
+    result
+}
+
+fn create_market_and_deploy_pool<T: Config>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
@@ -223,7 +232,7 @@ where
         RawOrigin::Signed(caller).into(),
         market_id,
         amount,
-        vec![_1_2.saturated_into(), _1_2.saturated_into()],
+        create_spot_prices::<T>(asset_count),
         CENT.saturated_into(),
     ));
     market_id
@@ -270,11 +279,12 @@ where
 mod benchmarks {
     use super::*;
 
+    /// FIXME Replace hardcoded variant with `{ MAX_ASSETS as u32 }` as soon as possible.
     #[benchmark]
-    fn buy() {
+    fn buy(n: Linear<2, 128>) {
         let alice = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let asset_count = 2u16;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice,
             base_asset,
@@ -294,11 +304,17 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn sell() {
+    fn sell(n: Linear<2, 128>) {
         let alice = whitelisted_caller();
-        let market_id =
-            create_market_and_deploy_pool::<T>(alice, Asset::Ztg, 2u16, _10.saturated_into());
-        let asset_in = Asset::CategoricalOutcome(market_id, 0);
+        let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            _10.saturated_into(),
+        );
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
@@ -307,28 +323,30 @@ mod benchmarks {
         assert_ok!(T::MultiCurrency::deposit(asset_in, &bob, amount_in));
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(bob), market_id, 2, asset_in, amount_in, min_amount_out);
+        _(RawOrigin::Signed(bob), market_id, asset_count, asset_in, amount_in, min_amount_out);
     }
 
     // Bob already owns a leaf at maximum depth in the tree but decides to increase his stake.
     // Maximum propagation steps thanks to maximum depth.
     #[benchmark]
-    fn join_in_place() {
+    fn join_in_place(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
-            Asset::Ztg,
-            2u16,
+            base_asset,
+            asset_count,
             _10.saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
         let bob = helper.accounts().next().unwrap();
         helper.populate_liquidity_tree_until_full(market_id, bob.clone());
         let pool_shares_amount = _1.saturated_into();
-        let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
         // Due to rounding, we need to buy a little more than the pool share amount.
         let complete_set_amount = _100.saturated_into();
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), Some(complete_set_amount));
+        let max_amounts_in = vec![u128::MAX.saturated_into(); asset_count as usize];
 
         // Double check that there's no abandoned node or free leaf.
         let pool = Pools::<T>::get(market_id).unwrap();
@@ -340,15 +358,17 @@ mod benchmarks {
         join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
 
-    // Bob joins the pool and is assigned an abandoned node  at maximum depth in the tree. Maximum
+        // Bob joins the pool and is assigned an abandoned node at maximum depth in the tree. Maximum
     // propagation steps thanks to maximum depth.
     #[benchmark]
-    fn join_reassigned() {
+    fn join_reassigned(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
-            Asset::Ztg,
-            2u16,
+            base_asset,
+            asset_count,
             _10.saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
@@ -358,7 +378,7 @@ mod benchmarks {
         // Due to rounding, we need to buy a little more than the pool share amount.
         let bob = helper.accounts().next().unwrap();
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), None);
-        let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
+        let max_amounts_in = vec![u128::MAX.saturated_into(); asset_count as usize];
 
         // Double check that there's an abandoned node.
         assert_eq!(pool.liquidity_shares_manager.abandoned_nodes.len(), 1);
@@ -373,12 +393,14 @@ mod benchmarks {
     // Bob joins the pool and is assigned a leaf at maximum depth in the tree. Maximum propagation
     // steps thanks to maximum depth.
     #[benchmark]
-    fn join_leaf() {
+    fn join_leaf(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
-            Asset::Ztg,
-            2u16,
+            base_asset,
+            asset_count,
             _10.saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
@@ -388,7 +410,7 @@ mod benchmarks {
         // Due to rounding, we need to buy a little more than the pool share amount.
         let bob = helper.accounts().next().unwrap();
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), None);
-        let max_amounts_in = vec![u128::MAX.saturated_into(); 2];
+        let max_amounts_in = vec![u128::MAX.saturated_into(); asset_count as usize];
 
         // Double-check that there's a free leaf.
         let max_node_count = LiquidityTreeOf::<T>::max_node_count();
@@ -409,15 +431,17 @@ mod benchmarks {
     // - The caller owns a leaf of maximum depth (equivalent to the second condition unless the tree
     //   has max depth zero).
     #[benchmark]
-    fn exit() {
+    fn exit(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
-            Asset::Ztg,
-            2u16,
+            base_asset,
+            asset_count,
             _10.saturated_into(),
         );
-        let min_amounts_out = vec![0u8.into(); 2];
+        let min_amounts_out = vec![0u8.into(); asset_count as usize];
 
         let helper = BenchmarkHelper::<T>::new();
         let bob = helper.accounts().next().unwrap();
@@ -459,10 +483,11 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn deploy_pool() {
+    fn deploy_pool(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+        let asset_count = n.try_into().unwrap();
+        let market_id = create_market::<T>(alice.clone(), base_asset, asset_count);
         let amount = _10.saturated_into();
         let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
 
@@ -478,7 +503,7 @@ mod benchmarks {
             RawOrigin::Signed(alice),
             market_id,
             amount,
-            vec![_1_2.saturated_into(), _1_2.saturated_into()],
+            create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
         );
     }

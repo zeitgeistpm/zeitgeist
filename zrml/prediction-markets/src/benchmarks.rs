@@ -41,8 +41,9 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         CloseEarlyProtectionTimeFramePeriod, CloseEarlyTimeFramePeriod, MaxSwapFee, MinWeight,
-        BASE, MILLISECS_PER_BLOCK,
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
+    math::fixed::{BaseProvider, ZeitgeistBase},
     traits::{DisputeApi, Swaps},
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -230,6 +231,13 @@ fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Con
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
     Ok((caller, market_id))
+}
+
+fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
+    let mut result = vec![CENT.saturated_into(); (asset_count - 1) as usize];
+    let remaining_u128 = ZeitgeistBase::<u128>::get().unwrap() - (asset_count - 1) as u128 * CENT;
+    result.push(remaining_u128.saturated_into());
+    result
 }
 
 benchmarks! {
@@ -1457,15 +1465,18 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())? }
 
     create_market_and_deploy_pool {
+        // Beware! This benchmark expects the `DeployPool` implementation to accept spot prices as
+        // low as `BASE / MaxCategories::get()`!
         let m in 0..63; // Number of markets closing on the same block.
+        let n in 2..T::MaxCategories::get() as u32; // Number of assets in the market.
 
         let base_asset = Asset::Ztg;
         let range_start = (5 * MILLISECS_PER_BLOCK) as u64;
         let range_end = (100 * MILLISECS_PER_BLOCK) as u64;
         let period = MarketPeriod::Timestamp(range_start..range_end);
-        let market_type = MarketType::Categorical(2);
+        let asset_count = n.try_into().unwrap();
+        let market_type = MarketType::Categorical(asset_count);
         let (caller, oracle, deadlines, metadata) = create_market_common_parameters::<T>(true)?;
-        let price = (BASE / 2).saturated_into();
         let amount = (10u128 * BASE).saturated_into();
 
         <T as pallet::Config>::AssetManager::deposit(
@@ -1487,11 +1498,11 @@ benchmarks! {
             period,
             deadlines,
             metadata,
-            MarketType::Categorical(2),
+            MarketType::Categorical(asset_count),
             Some(MarketDisputeMechanism::Court),
             amount,
-            vec![price, price],
-            (BASE / 100).saturated_into()
+            create_spot_prices::<T>(asset_count),
+            CENT.saturated_into()
     )
 
     impl_benchmark_test_suite!(

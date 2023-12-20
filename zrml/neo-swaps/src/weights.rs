@@ -49,14 +49,14 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_neo_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn buy() -> Weight;
-    fn sell() -> Weight;
-    fn join_in_place() -> Weight;
-    fn join_reassigned() -> Weight;
-    fn join_leaf() -> Weight;
-    fn exit() -> Weight;
+    fn buy(n: u32) -> Weight;
+    fn sell(n: u32) -> Weight;
+    fn join_in_place(n: u32) -> Weight;
+    fn join_reassigned(n: u32) -> Weight;
+    fn join_leaf(n: u32) -> Weight;
+    fn exit(n: u32) -> Weight;
     fn withdraw_fees() -> Weight;
-    fn deploy_pool() -> Weight;
+    fn deploy_pool(n: u32) -> Weight;
 }
 
 /// Weight functions for zrml_neo_swaps (automatically generated)
@@ -72,7 +72,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:2 w:2)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    fn buy() -> Weight {
+    fn buy(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2905`
         //  Estimated: `28324`
@@ -91,7 +91,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:2 w:2)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    fn sell() -> Weight {
+    fn sell(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `3071`
         //  Estimated: `28324`
@@ -108,7 +108,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn join_in_place() -> Weight {
+    fn join_in_place(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `277966`
         //  Estimated: `303660`
@@ -125,7 +125,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn join_reassigned() -> Weight {
+    fn join_reassigned(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `277902`
         //  Estimated: `303660`
@@ -142,7 +142,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn join_leaf() -> Weight {
+    fn join_leaf(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `277833`
         //  Estimated: `303660`
@@ -159,7 +159,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn exit() -> Weight {
+    fn exit(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2561`
         //  Estimated: `23279`
@@ -189,7 +189,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn deploy_pool() -> Weight {
+    fn deploy_pool(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2278`
         //  Estimated: `23279`

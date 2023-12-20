@@ -18,6 +18,7 @@
 #![cfg(all(feature = "mock", test))]
 
 mod buy;
+mod buy_and_sell;
 mod deploy_pool;
 mod exit;
 mod join;
