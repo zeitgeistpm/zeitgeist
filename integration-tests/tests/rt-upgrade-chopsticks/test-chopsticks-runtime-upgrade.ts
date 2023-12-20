@@ -4,6 +4,7 @@ import { MoonwallContext, beforeAll, describeSuite, expect } from "@moonwall/cli
 import { generateKeyringPair } from "@moonwall/util";
 import { KeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
+import WebSocket from 'ws';
 
 const MAX_BALANCE_TRANSFER_TRIES = 5;
 const ZEITGEIST_TOKENS_INDEX = 12;
@@ -134,10 +135,41 @@ describeSuite({
                 // Reported Bug here https://github.com/Moonsong-Labs/moonwall/issues/343
 
                 // use a workaround for creating a block
-                // TODO create block somehow manually using chopsticks
+                const blocksToRun = 2;
+                const currentHeight = (await hydradxParaApi.rpc.chain.getBlock()).block.header.number.toNumber();
+                const newBlockPromise = new Promise((resolve, reject) => {
+                    // ws://127.0.0.1:8001 represents the HydraDXPara endpoint
+                    const ws = new WebSocket('ws://127.0.0.1:8001');
+
+                    ws.on('open', function open() {
+                        const message = {
+                            jsonrpc: "2.0",
+                            id: 1,
+                            method: "dev_newBlock",
+                            params: [{ to: currentHeight + blocksToRun }]
+                        };
+
+                        ws.send(JSON.stringify(message));
+                    });
+
+                    ws.on('message', async function message(data) {
+                        const dataObj = JSON.parse(data.toString());
+                        log('Received message:', dataObj);
+                        resolve(dataObj.result);
+                    });
+
+                    ws.on('error', function error(error) {
+                        log('Error:', error.toString());
+                        reject(error);
+                    });
+                });
+
+                const blockHash = await newBlockPromise;
+                const newHeight = (await hydradxParaApi.rpc.chain.getBlock()).block.header.number.toNumber();
+                expect(newHeight - currentHeight).to.be.equal(blocksToRun + 1);
 
                 const hydradxBalanceAfter = (await hydradxParaApi.query.tokens.accounts(bob.address, ZEITGEIST_TOKENS_INDEX)).free.toBigInt();
-                // expect(hydradxBalanceBefore < hydradxBalanceAfter).to.be.true;
+                expect(hydradxBalanceBefore < hydradxBalanceAfter).to.be.true;
             },
         });
     },
