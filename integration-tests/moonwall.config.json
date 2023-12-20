@@ -44,40 +44,40 @@
              "type": "chopsticks",
              "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
              "launchSpec": [
-                {
-                    "name": "PolkadotDB",
-                    "type": "relaychain",
-                    "configPath": "polkadot"
-                },
-                {
-                    "name": "HydraDXDB",
-                    "type": "parachain",
-                    "configPath": "./configs/hydradx.yml"
-                },
-                {
-                    "name": "ZeitgeistDB",
-                    "type": "parachain",
-                    "configPath": "./configs/zeitgeist.yml"
-                }
+               {
+                  "name": "ZeitgeistDB",
+                  "type": "parachain",
+                  "configPath": "./configs/zeitgeist.yml"
+               },
+               {
+                  "name": "HydraDXDB",
+                  "type": "parachain",
+                  "configPath": "./configs/hydradx.yml"
+               },
+               {
+                  "name": "PolkadotDB",
+                  "type": "relaychain",
+                  "configPath": "polkadot"
+               }
              ]
          },
          "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
          "buildBlockMode": "manual",
          "connections": [
             {
-                "name": "PolkadotRelay",
-                "type": "polkadotJs",
-                "endpoints": ["ws://127.0.0.1:8002"]
+               "name": "ZeitgeistPara",
+               "type": "polkadotJs",
+               "endpoints": ["ws://127.0.0.1:8000"]
             },
             {
-                "name": "HydraDXPara",
-                "type": "polkadotJs",
-                "endpoints": ["ws://127.0.0.1:8000"]
+               "name": "HydraDXPara",
+               "type": "polkadotJs",
+               "endpoints": ["ws://127.0.0.1:8001"]
             },
             {
-                 "name": "ZeitgeistPara",
-                 "type": "polkadotJs",
-                 "endpoints": ["ws://127.0.0.1:8001"]
+               "name": "PolkadotRelay",
+               "type": "polkadotJs",
+               "endpoints": ["ws://127.0.0.1:8002"]
             }
          ]
       },
