@@ -358,7 +358,7 @@ mod benchmarks {
         join(RawOrigin::Signed(bob), market_id, pool_shares_amount, max_amounts_in);
     }
 
-        // Bob joins the pool and is assigned an abandoned node at maximum depth in the tree. Maximum
+    // Bob joins the pool and is assigned an abandoned node at maximum depth in the tree. Maximum
     // propagation steps thanks to maximum depth.
     #[benchmark]
     fn join_reassigned(n: Linear<2, 128>) {
