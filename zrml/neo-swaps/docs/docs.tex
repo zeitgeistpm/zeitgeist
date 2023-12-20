@@ -206,7 +206,7 @@ Special care must be taken to avoid over- and underflows when calculating expres
 \end{align*}
 The magnitude of $y(x)$ is the same as $x$, but the exponentials $e^{x/b}$ and $e^{-r_i/b}$ over- or underflow easily.
 
-What makes matters more is that the logarithm's derivative approaches infinity near zero, so any rounding errors when calculating the argument of $\ln$ in that area will amplify.
+What makes matters worse is that the logarithm's derivative approaches infinity near zero, so any rounding errors when calculating the argument of $\ln$ in that area will amplify.
 
 Let $A = 10$. Python calculates $e^A = 22026.465794806718$ and $e^{-A} = 4.5399929762484854 \cdot 10^{-5}$. The fixed crate (see \url{https://crates.io/crates/fixed}) can represent these using \texttt{FixedU128<U80>} without considerable loss of precision or risk of over- or underflow. Let $M = Ab$, $\varepsilon = e^{-A}$ and $c = \frac{1}{10}$. The following restrictions will prevent numerical issues.
 
