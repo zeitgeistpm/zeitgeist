@@ -263,33 +263,6 @@ fn deploy_pool_fails_on_invalid_trading_mechanism() {
 }
 
 #[test]
-fn deploy_pool_fails_on_market_is_not_binary_or_scalar() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(3), ScoringRule::Lmsr);
-        let liquidity = _10;
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            liquidity,
-        ));
-        assert_noop!(
-            NeoSwaps::deploy_pool(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                liquidity,
-                vec![_1_3, _1_3, _1_3],
-                CENT
-            ),
-            Error::<Runtime>::MarketNotBinaryOrScalar
-        );
-    });
-}
-
-// FIXME This test currently fails because the `ensure!` throwing `AssetCountAboveMax` is
-// currently unreachable if the market is not binary/scalar.
-#[test]
-#[should_panic]
 fn deploy_pool_fails_on_asset_count_above_max() {
     ExtBuilder::default().build().execute_with(|| {
         let category_count = MAX_ASSETS + 1;
@@ -305,8 +278,8 @@ fn deploy_pool_fails_on_asset_count_above_max() {
             market_id,
             liquidity,
         ));
-        // Depending on the value of MAX_ASSETS and PRICE_BARRIER_*, this `spot_prices` vector
-        // might violate some other rules for deploying pools.
+        // Beware! Depending on the value of MAX_ASSETS and price barriers, this `spot_prices`
+        // vector might violate some other rules for deploying pools.
         let mut spot_prices = vec![_1 / category_count as u128; category_count as usize - 1];
         spot_prices.push(_1 - spot_prices.iter().sum::<u128>());
         assert_noop!(

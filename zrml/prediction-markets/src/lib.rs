@@ -1348,7 +1348,10 @@ mod pallet {
         /// `O(n)` where `n` is the number of markets which close on the same block, plus the
         /// resources consumed by `DeployPool::create_pool`. In the standard implementation using
         /// neo-swaps, this is `O(m)` where `m` is the number of assets in the market.
-        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(CacheSize::get()))]
+        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(
+            CacheSize::get(),
+            spot_prices.len() as u32,
+        ))]
         #[transactional]
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
@@ -1380,8 +1383,9 @@ mod pallet {
                 ScoringRule::Lmsr,
             )?;
             Self::do_buy_complete_set(who.clone(), market_id, amount)?;
+            let spot_prices_len = spot_prices.len() as u32;
             T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
+            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len, spot_prices_len)).into())
         }
 
         /// Allows the `CloseMarketsEarlyOrigin` or the market creator to schedule an early close.

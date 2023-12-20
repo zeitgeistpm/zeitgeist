@@ -314,7 +314,7 @@ mod pallet {
 
         fn do_remove_order(order_id: OrderId, who: AccountIdOf<T>) -> DispatchResult {
             let order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
-            
+
             let maker = &order_data.maker;
             ensure!(who == *maker, Error::<T>::NotOrderCreator);
 

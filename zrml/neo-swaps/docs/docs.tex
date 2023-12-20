@@ -28,7 +28,7 @@
 }
 
 \title{zrml-neo-swaps Documentation}
-\date{0.4.1 (\today)}
+\date{0.4.3 (\today)}
 
 \begin{document}
 
@@ -39,8 +39,6 @@
 This document provides the mathematical and technical details for zrml-neo-swaps. The automatic market maker (AMM) implemented by zrml-neo-swaps is a variant of the Logarithmic Market Scoring Rule (LMSR; \cite{hanson_2003}) which was first developed by Gnosis (see \url{https://docs.gnosis.io/conditionaltokens/docs/introduction3/}). We often refer to it as AMM 2.0.
 
 Unlike the typical implementation using a cost function (see \cite{chen_vaughan_2010}), this implementation of LMSR is a \emph{constant-function market maker} (CFMM), similar to the classical constant product market maker, which allows us to implement \emph{dynamic liquidity}. In other words, liquidity providers (LPs) can come and go as they please, allowing the market to self-regulate how much price resistance the AMM should provide.
-
-As of v0.4.1, the AMM is only available for markets with two outcomes. This will be mitigated in a future publication.
 
 \section{The Trading Function}
 
@@ -96,7 +94,7 @@ In particular, $(p_1, \ldots, p_n)$ always maps to a probability distribution.
 
 Trading fees are specified as fractional (a fee of $f = .01$ means that $1\%$ are charged) and deducted from the amount of collateral before the complete set operations are executed. In other words, the liquidity providers receive $fx$ dollars (fees are distributed pro rata amongst the liquidity providers) and Alice goes through the entire process described above with $\tilde x = (1-f)x$ in place of $x$. The spot price taking the fees into account is (as expected)
 \[
-    \psi(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
+    p_i(b, r, f) = (1 - f)^{-1}e^{-r_i/b}.
 \]
 
 \subsection{Selling}
@@ -136,7 +134,7 @@ Alice wants to add liquidity to the pool. She's willing to pay $x$ dollars. To i
 
 Now let $i$ be so that $r_i = \max_k r_k$. Let $\lambda = x / r_i$ and $\mu = 1 + \lambda$. For each $k$, Alice moves $\lambda r_k$ units of $k$ into the pool and receives $\lambda q$ pool shares. The liquidity parameter changes from $b$ to $b' = \mu b$. Alice's transfers change the reserve from $r$ to $r' = \mu r$.
 
-The new total issuance of pool shares is $\mu q$ and Alice's share of the pool now is $\lambda / \mu$. Note that Alice retains the balance $(x)^n - \lambda r$ of "left-over tokens".
+The new total issuance of pool shares is $\mu q$ and Alice's share of the pool now is $\lambda / \mu$. Note that Alice retains the balance $(x)^n - \lambda r$ of ``left-over tokens".
 
 \subsection{Withdrawing Liquidity}
 
@@ -152,7 +150,7 @@ Fees are distributed pro rata amongst the liquidity providers. These funds are c
 
 \section{Creating Pools}
 
-Creating a pool is straightforward. The initial odds are defined by adding different amounts of each outcome to the pool. If Alice wants to deposit liquidity worth $x$ units of collateral with initial probability $p$, then she starts off by buying $x$ complete sets. The following algorithm is used to calculate how many units of each outcome go into the pool. Alice retains the other tokens as "left-overs".
+Creating a pool is straightforward. The initial odds are defined by adding different amounts of each outcome to the pool. If Alice wants to deposit liquidity worth $x$ units of collateral with initial probability $p$, then she starts off by buying $x$ complete sets. The following algorithm is used to calculate how many units of each outcome go into the pool. Alice retains the other tokens as ``left-overs".
 
 Let $b = 1$, and let $r_i = - b \ln p_i$ for all $i$. Now let $y = x / \max_i r_i$. Then $y r_i \leq x$ for all $i$ and there exists $i_0$ so that $y r_{i_0} = x$. Set $\tilde r_i = y r_i$ and $\tilde b = yb$. Then
 \[
@@ -208,36 +206,46 @@ Special care must be taken to avoid over- and underflows when calculating expres
 \end{align*}
 The magnitude of $y(x)$ is the same as $x$, but the exponentials $e^{x/b}$ and $e^{-r_i/b}$ over- or underflow easily.
 
-Let $A = 20$. Python calculates $e^A = 485165195.4097903$ and $e^{-A} = 2.061153622438558 \cdot 10^{-9}$. The fixed crate (see \url{https://crates.io/crates/fixed}) can represent these using \texttt{FixedU128<U80>} without considerable loss of precision or risk of over- or underflow. Let $M = e^A$.
+What makes matters worse is that the logarithm's derivative approaches infinity near zero, so any rounding errors when calculating the argument of $\ln$ in that area will amplify.
 
-Note that for any number $a$, the following are equivalent: 1) $M^{-1} \leq e^a \leq M$, 2) $M^{-1} \leq e^{-a} \leq M$. Thus, the following restrictions prevent over- and underflows when calculating the exponential expressions:
+Let $A = 10$. Python calculates $e^A = 22026.465794806718$ and $e^{-A} = 4.5399929762484854 \cdot 10^{-5}$. The fixed crate (see \url{https://crates.io/crates/fixed}) can represent these using \texttt{FixedU128<U80>} without considerable loss of precision or risk of over- or underflow. Let $M = Ab$, $\varepsilon = e^{-A}$ and $c = \frac{1}{10}$. The following restrictions will prevent numerical issues.
 
 \begin{itemize}
-    \item The amount $x$ must satisfy $x \leq Ab$.
-    \item The price of $i$ must satisfy $p_i(b, r) = e^{-r_i/b} \geq e^{-A}$.
+    \item If $p_i(b, r) < \varepsilon$ (or, equivalently, $r_i > M$), then selling is not allowed.
+    \item If $p_i(b, r) \geq \varepsilon$ (or, equivalently, $r_i \leq M$), then the amount $x$ must satisfy $x \leq M$ when calculating $v(x)$ (to avoid overflows).
+    \item Sells that push the price below $\varepsilon$ are not allowed.
+    \item When buying, then the $\ln$ argument must satisfy $e^{x/b} - 1 + e^{-r_i/b} \geq c$ and $x \leq M$ (to avoid overflows).
 \end{itemize}
 
-How "bad" are these restrictions? The first restriction is completely irrelevant: Suppose Alice executes a trade of $y(x)$ units of outcome $i$ for $x = Ab$ dollars, the maximum allowed value. Let $q = 1 - e^{-r_i/b} \in (0, 1)$. Then
+The last restriction may need some elaboration. We actually allow $e^{-r_i/b}$ to underflow to zero during calculation, but only provided that the remaining term $e^{x/b} - 1$ is large enough to avoid this to cause any damage. In fact, on the interval $[c, \infty)$, the logarithm has a derivative of $\leq c^{-1} = 10$, so all rounding errors in the argument of $\ln$ cause (only) ten times the error in the calculation of $\ln$. 
+
+How \emph{bad} are these restrictions? The restriction $x \leq M$ is completely irrelevant: Suppose Alice executes a trade of $y(x)$ units of outcome $i$ for $x = M$ dollars, the maximum allowed value. Let $q = 1 - e^{-r_i/b} \in (0, 1)$. Then
 \begin{align*}
-    \ln(e^A) - \ln(e^A - q) &= \ln\left(\frac{e^A}{e^A - q}\right) \\
-    &\leq \ln\left(\frac{e^A}{e^A - 1}\right) \\
-    &\approx 2.0611536900435727 \cdot 10^{-9} \\
-    &\leq 10^{-10}.
+    \ln(M) - \ln(M - q) &= \ln\left(\frac{M}{M - q}\right) \\
+    &\leq \ln\left(\frac{M}{M - 1}\right) \\
+    &\approx 4.540096037046513 \cdot 10^{-5} \\
+    &\leq 10^{-4} = \varepsilon.
 \end{align*}
-Let $\varepsilon = 10^{-10}$. Then we have
+Then we have
 \begin{align*}
-    y(x) &= b\ln(e^A - 1 + e^{-r_i/b}) + r_i - x \\
-    &\geq b(\ln(e^A) - \varepsilon) + r_i - x \\
-    &= bA - b\varepsilon + r_i - x \\
+    y(x) &= b\ln(M - q) + r_i - x \\
+    &\geq b(\ln(M) - \varepsilon) + r_i - x \\
+    &= M - b\varepsilon + r_i - x \\
     &= r_i - b\varepsilon.
 \end{align*}
 Thus, Alice receives all funds from the pool except $b \varepsilon$, which is very small unless the pool contains an inordinate amount of liquidity.
 
-The second restriction means that no trades of outcome $i$ can be executed if the price of $i$ drops below the threshold $\varepsilon = e^{-A}$. On markets with two outcomes (binary or scalar), this is equivalent to the price of the other outcome rising above $1 - \varepsilon$. Due to risk considerations, these are generally scenarios that won't occur.
+The restriction that sells can't push prices below $\varepsilon$ is liable to cause some confusion for the users. Nevertheless, it's unclear if this causes them any real inconvenience.
 
-For markets with two outcomes (binary or scalar), we therefore make the following restriction: \emph{Any trade that moves the price of an outcome below $\varepsilon = .005$ (or equivalently, moves the price of an outcome above $1 - \varepsilon$) is not allowed.} This will ensure that the pool is always in a valid state where it can execute trades. Note that in the presence of a swap fee of 1\%, this isn't even a restriction.
+Despite the rule that sells can't push prices below $\varepsilon$, prices can be moved below $\varepsilon$. The issue in a market with three or more outcomes $A, B, C, \ldots$ is that if $C$ is a clear underdog and most of the trading happens between the favorites $A$ and $B$, then the price of $C$ might drop below the allowed threshold. This is what the last rule handles.
 
-Markets with more than two outcomes are currently not allowed to use AMM 2.0 pools. The issue in a market with three or more outcomes $A, B, C, \ldots$ is that if $C$ is a clear underdog and most of the trading happens between the favorites $A$ and $B$, then the price of $C$ might drop below the allowed threshold and \emph{brick} the market of $C$ (all trades involving $C$ must be rejected due to numerical issues). While this is most likely to happen if the market is $C$-weakly trivialized (it is common knowledge that $C$ will almost certainly not materialize), which should never happen on a live market, this is unfortunate. A solution for this issue is provided in the near future.
+The last rule is made to ensure that even if the price is very small (below $\varepsilon$) or even underflows (both of which \emph{shouldn't} ever happen thanks to trading fees), buying the outcome is still possible, allowing users to push the price back up again. The restriction is that there's essentially a minimum amount. In fact, in the pessimistic case (price underflows to zero), the restriction becomes
+
+$$
+x \geq b \ln(c + 1) \approx bc = \frac{b}{10}.
+$$
+
+That's certainly a tall order if the market is very liquid. If this continues to be a problem, we can test how much smaller $c$ can be made without causing trouble.
 
 \newpage
 

@@ -20,7 +20,7 @@
 use super::*;
 use crate::{
     consts::*, traits::liquidity_shares_manager::LiquiditySharesManager, AssetOf, BalanceOf,
-    MarketIdOf, Pallet as NeoSwaps, Pools,
+    MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
 use frame_benchmarking::v2::*;
 use frame_support::{
@@ -32,6 +32,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
     constants::CENT,
+    math::fixed::{BaseProvider, ZeitgeistBase},
     traits::CompleteSetOperationsApi,
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
@@ -73,6 +74,15 @@ fn create_market<T: Config>(
     maybe_market_id.unwrap()
 }
 
+fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
+    let mut result = vec![MIN_SPOT_PRICE.saturated_into(); (asset_count - 1) as usize];
+    // Price distribution has no bearing on the benchmarks.
+    let remaining_u128 =
+        ZeitgeistBase::<u128>::get().unwrap() - (asset_count - 1) as u128 * MIN_SPOT_PRICE;
+    result.push(remaining_u128.saturated_into());
+    result
+}
+
 fn create_market_and_deploy_pool<T: Config>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
@@ -91,7 +101,7 @@ fn create_market_and_deploy_pool<T: Config>(
         RawOrigin::Signed(caller).into(),
         market_id,
         amount,
-        vec![_1_2.saturated_into(), _1_2.saturated_into()],
+        create_spot_prices::<T>(asset_count),
         CENT.saturated_into(),
     ));
     market_id
@@ -101,11 +111,12 @@ fn create_market_and_deploy_pool<T: Config>(
 mod benchmarks {
     use super::*;
 
+    /// FIXME Replace hardcoded variant with `{ MAX_ASSETS as u32 }` as soon as possible.
     #[benchmark]
-    fn buy() {
+    fn buy(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let asset_count = 2u16;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice,
             base_asset,
@@ -124,12 +135,17 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn sell() {
+    fn sell(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let market_id =
-            create_market_and_deploy_pool::<T>(alice, base_asset, 2u16, _10.saturated_into());
-        let asset_in = Asset::CategoricalOutcome(market_id, 0);
+        let asset_count = n.try_into().unwrap();
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            _10.saturated_into(),
+        );
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
         let amount_in = _1.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
@@ -137,21 +153,22 @@ mod benchmarks {
         assert_ok!(T::MultiCurrency::deposit(asset_in, &bob, amount_in));
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(bob), market_id, 2, asset_in, amount_in, min_amount_out);
+        _(RawOrigin::Signed(bob), market_id, asset_count, asset_in, amount_in, min_amount_out);
     }
 
     #[benchmark]
-    fn join() {
+    fn join(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
             base_asset,
-            2u16,
+            asset_count,
             _10.saturated_into(),
         );
         let pool_shares_amount = _1.saturated_into();
-        let max_amounts_in = vec![u128::MAX.saturated_into(), u128::MAX.saturated_into()];
+        let max_amounts_in = vec![u128::MAX.saturated_into(); asset_count as usize];
 
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, pool_shares_amount));
         assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
@@ -167,17 +184,18 @@ mod benchmarks {
     // There are two execution paths in `exit`: 1) Keep pool alive or 2) destroy it. Clearly 1) is
     // heavier.
     #[benchmark]
-    fn exit() {
+    fn exit(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             alice.clone(),
             base_asset,
-            2u16,
+            asset_count,
             _10.saturated_into(),
         );
         let pool_shares_amount = _1.saturated_into();
-        let min_amounts_out = vec![0u8.saturated_into(), 0u8.saturated_into()];
+        let min_amounts_out = vec![0u8.saturated_into(); asset_count as usize];
 
         #[extrinsic_call]
         _(RawOrigin::Signed(alice), market_id, pool_shares_amount, min_amounts_out);
@@ -208,10 +226,11 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn deploy_pool() {
+    fn deploy_pool(n: Linear<2, 128>) {
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
-        let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+        let asset_count = n.try_into().unwrap();
+        let market_id = create_market::<T>(alice.clone(), base_asset, asset_count);
         let amount = _10.saturated_into();
         let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
 
@@ -227,7 +246,7 @@ mod benchmarks {
             RawOrigin::Signed(alice),
             market_id,
             amount,
-            vec![_1_2.saturated_into(), _1_2.saturated_into()],
+            create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
         );
     }

@@ -243,23 +243,110 @@ fn sell_fails_on_asset_not_found(market_type: MarketType) {
 }
 
 #[test]
-fn sell_fails_on_numerical_limits() {
+fn sell_fails_if_amount_in_is_greater_than_numerical_threshold() {
     ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            MarketType::Categorical(asset_count),
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
-        let amount_in = 100 * pool.liquidity_parameter;
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
+        let amount_in = pool.calculate_numerical_threshold() + 1;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
-            NeoSwaps::buy(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, 0),
-            Error::<Runtime>::NumericalLimits,
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
+        );
+    });
+}
+
+#[test]
+fn sell_fails_if_price_is_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            _10,
+            vec![_1_4, _1_4, _1_4, _1_4],
+            CENT,
+        );
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
+        // Force the price below the threshold by changing the reserve of the pool. Strictly
+        // speaking this leaves the pool in an inconsistent state (reserve recorded in the `Pool`
+        // struct is smaller than actual reserve), but this doesn't matter in this test.
+        NeoSwaps::try_mutate_pool(&market_id, |pool| {
+            pool.reserves.insert(asset_in, 11 * pool.liquidity_parameter);
+            Ok(())
+        })
+        .unwrap();
+        let amount_in = _1;
+        assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
+        assert_noop!(
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow),
+        );
+    });
+}
+
+#[test]
+fn sell_fails_if_price_is_pushed_below_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            _10,
+            vec![_1_4, _1_4, _1_4, _1_4],
+            CENT,
+        );
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
+        // Force the price below the threshold by changing the reserve of the pool. Strictly
+        // speaking this leaves the pool in an inconsistent state (reserve recorded in the `Pool`
+        // struct is smaller than actual reserve), but this doesn't matter in this test.
+        NeoSwaps::try_mutate_pool(&market_id, |pool| {
+            // The price is right at the brink here. Any further shift and sells won't be accepted
+            // anymore.
+            pool.reserves.insert(asset_in, 10 * pool.liquidity_parameter);
+            Ok(())
+        })
+        .unwrap();
+        let amount_in = _10;
+        assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
+        // The received amount is so small that it triggers an ED error if we don't "pad out" Bob's
+        // account with some funds.
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, _1));
+        assert_noop!(
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
         );
     });
 }
@@ -310,27 +397,6 @@ fn sell_fails_on_amount_out_below_min() {
         assert_noop!(
             NeoSwaps::sell(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, _10),
             Error::<Runtime>::AmountOutBelowMin,
-        );
-    });
-}
-
-#[test]
-fn sell_fails_on_spot_price_below_min() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Categorical(2),
-            _10,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        let asset_in = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = _80;
-        assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
-        assert_noop!(
-            NeoSwaps::sell(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, 0),
-            Error::<Runtime>::SpotPriceBelowMin
         );
     });
 }

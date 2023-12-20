@@ -103,9 +103,18 @@ where
         Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)
     }
 
-    fn calculate_max_amount_in(&self) -> BalanceOf<T> {
+    fn calculate_numerical_threshold(&self) -> BalanceOf<T> {
         // Saturation is OK. If this saturates, the maximum amount in is just the numerical limit.
         self.liquidity_parameter.saturating_mul(EXP_NUMERICAL_LIMIT.saturated_into())
+    }
+
+    fn calculate_buy_ln_argument(
+        &self,
+        asset: AssetOf<T>,
+        amount_in: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = self.reserve_of(&asset)?;
+        Math::<T>::calculate_buy_ln_argument(reserve, amount_in, self.liquidity_parameter)
     }
 }
 

@@ -243,29 +243,61 @@ fn buy_fails_on_asset_not_found(market_type: MarketType) {
 }
 
 #[test]
-fn buy_fails_on_numerical_limits() {
+fn buy_fails_if_amount_in_is_greater_than_numerical_threshold() {
     ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            MarketType::Categorical(asset_count),
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let amount_in = 100 * pool.liquidity_parameter;
+        // Using twice the threshold here to account for the removal of swap fees.
+        let amount_in = 2 * pool.calculate_numerical_threshold();
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
         assert_noop!(
             NeoSwaps::buy(
                 RuntimeOrigin::signed(BOB),
                 market_id,
-                2,
-                Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                asset_count,
+                Asset::CategoricalOutcome(market_id, asset_count - 1),
                 amount_in,
                 0,
             ),
-            Error::<Runtime>::NumericalLimits,
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
+        );
+    });
+}
+
+#[test]
+fn buy_fails_if_ln_arg_is_less_than_numerical_limit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
+        let price = CENT;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            _10,
+            vec![_1_4, _1_4, _1_2 - price, price],
+            CENT,
+        );
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let amount_in = 5 * CENT.bmul(pool.liquidity_parameter).unwrap();
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+        assert_noop!(
+            NeoSwaps::buy(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                Asset::CategoricalOutcome(market_id, asset_count - 1),
+                amount_in,
+                0,
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
         );
     });
 }
@@ -325,31 +357,6 @@ fn buy_fails_on_amount_out_below_min() {
                 _2,
             ),
             Error::<Runtime>::AmountOutBelowMin,
-        );
-    });
-}
-
-#[test]
-fn buy_fails_on_spot_price_above_max() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Categorical(2),
-            _10,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        assert_noop!(
-            NeoSwaps::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                2,
-                Asset::CategoricalOutcome(market_id, 0),
-                _70,
-                0,
-            ),
-            Error::<Runtime>::SpotPriceAboveMax
         );
     });
 }
