@@ -39,7 +39,7 @@
       },
       {
          "name": "chopsticks_zeitgeist_upgrade",
-         "testFileDir": ["tests/rt-upgrade-chopsticks"],
+         "testFileDir": ["tests/rt-upgrade-zeitgeist-chopsticks"],
          "foundation": {
              "type": "chopsticks",
              "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
@@ -83,25 +83,25 @@
       },
       {
          "name": "chopsticks_battery_station_upgrade",
-         "testFileDir": ["tests/rt-upgrade-chopsticks"],
+         "testFileDir": ["tests/rt-upgrade-battery-station-chopsticks"],
          "foundation": {
              "type": "chopsticks",
              "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
              "launchSpec": [
                 {
-                    "name": "ZeitgeistDB",
+                    "name": "BatteryStationDB",
                     "type": "parachain",
                     "configPath": "./configs/battery-station.yml"
                 },
                 {
-                    "name": "HydraDXDB",
+                    "name": "BasiliskDB",
                     "type": "parachain",
-                    "configPath": "./configs/hydradx.yml"
+                    "configPath": "./configs/basilisk.yml"
                 },
                 {
-                    "name": "PolkadotDB",
+                    "name": "RococoDB",
                     "type": "relaychain",
-                    "configPath": "polkadot"
+                    "configPath": "rococo"
                 }
              ]
          },
@@ -109,17 +109,17 @@
          "buildBlockMode": "manual",
          "connections": [
             {
-                "name": "ZeitgeistPara",
+                "name": "BatteryStationPara",
                 "type": "polkadotJs",
                 "endpoints": ["ws://127.0.0.1:8000"]
             },
             {
-                "name": "HydraDXPara",
+                "name": "BasiliskPara",
                 "type": "polkadotJs",
                 "endpoints": ["ws://127.0.0.1:8001"]
             },
             {
-                "name": "PolkadotRelay",
+                "name": "RococoRelay",
                 "type": "polkadotJs",
                 "endpoints": ["ws://127.0.0.1:8002"]
             }
