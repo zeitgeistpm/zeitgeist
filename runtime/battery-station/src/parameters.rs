@@ -195,6 +195,7 @@ parameter_types! {
     // NeoSwaps
     pub const NeoSwapsMaxSwapFee: Balance = 10 * CENT;
     pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
+    pub const MaxLiquidityTreeDepth: u32 = 9u32;
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;

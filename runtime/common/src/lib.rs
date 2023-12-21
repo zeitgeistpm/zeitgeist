@@ -56,6 +56,7 @@ macro_rules! decl_common_types {
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_market_commons::migrations::MigrateScoringRuleAndMarketStatus;
+        use zrml_neo_swaps::migration::MigrateToLiquidityTree;
         use zrml_orderbook::migrations::TranslateOrderStructure;
         use zrml_prediction_markets::migrations::DrainDeprecatedStorage;
         use zrml_swaps::migrations::MigratePools;
@@ -69,6 +70,7 @@ macro_rules! decl_common_types {
             DrainDeprecatedStorage<Runtime>,
             MigrateScoringRuleAndMarketStatus<Runtime>,
             TranslateOrderStructure<Runtime>,
+            MigrateToLiquidityTree<Runtime>,
         );
 
         pub type Executive = frame_executive::Executive<
@@ -1261,6 +1263,7 @@ macro_rules! impl_config_traits {
             type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
+            type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
             type MaxSwapFee = NeoSwapsMaxSwapFee;
             type PalletId = NeoSwapsPalletId;
         }

@@ -154,11 +154,11 @@ where
 {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
-        let market_commons_version = StorageVersion::get::<Swaps<T>>();
-        if market_commons_version != SWAPS_REQUIRED_STORAGE_VERSION {
+        let swaps_version = StorageVersion::get::<Swaps<T>>();
+        if swaps_version != SWAPS_REQUIRED_STORAGE_VERSION {
             log::info!(
                 "MigratePools: swaps version is {:?}, but {:?} is required",
-                market_commons_version,
+                swaps_version,
                 SWAPS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
@@ -196,7 +196,7 @@ where
             let new_pool: PoolOf<T> = Pool { assets, status, swap_fee, total_weight, weights };
             Some(new_pool)
         });
-        log::info!("MigratePools: Upgraded {} markets.", translated);
+        log::info!("MigratePools: Upgraded {} pools.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 

@@ -51,11 +51,12 @@ use zeitgeist_primitives::{
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
         LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
         MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-        MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves,
-        MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId,
-        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT,
+        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
+        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
+        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
+        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
+        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, TreasuryPalletId, VotePeriod,
+        VotingOutcomeFee, CENT,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -184,6 +185,7 @@ impl crate::Config for Runtime {
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
     type RuntimeEvent = RuntimeEvent;
+    type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
     type MaxSwapFee = NeoMaxSwapFee;
     type PalletId = NeoSwapsPalletId;
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
@@ -425,7 +427,7 @@ pub struct ExtBuilder {
 #[allow(unused)]
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, _101), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
+        Self { balances: vec![(ALICE, 100_000_000_001 * _1), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
     }
 }
 
@@ -439,32 +441,35 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
         #[cfg(feature = "parachain")]
-        use frame_support::traits::GenesisBuild;
-        #[cfg(feature = "parachain")]
-        orml_tokens::GenesisConfig::<Runtime> { balances: vec![(ALICE, FOREIGN_ASSET, _101)] }
+        {
+            use frame_support::traits::GenesisBuild;
+            orml_tokens::GenesisConfig::<Runtime> {
+                balances: vec![(ALICE, FOREIGN_ASSET, 100_000_000_001 * _1)],
+            }
             .assimilate_storage(&mut t)
             .unwrap();
-        #[cfg(feature = "parachain")]
-        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
-            allow_as_base_asset: true,
-            ..Default::default()
-        };
-        #[cfg(feature = "parachain")]
-        orml_asset_registry_mock::GenesisConfig {
-            metadata: vec![(
-                FOREIGN_ASSET,
-                AssetMetadata {
-                    decimals: 18,
-                    name: "MKL".as_bytes().to_vec(),
-                    symbol: "MKL".as_bytes().to_vec(),
-                    existential_deposit: 0,
-                    location: None,
-                    additional: custom_metadata,
-                },
-            )],
+            let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+                allow_as_base_asset: true,
+                ..Default::default()
+            };
+            orml_asset_registry_mock::GenesisConfig {
+                metadata: vec![(
+                    FOREIGN_ASSET,
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "MKL".as_bytes().to_vec(),
+                        symbol: "MKL".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: custom_metadata,
+                    },
+                )],
+            }
+            .assimilate_storage(&mut t)
+            .unwrap();
         }
-        .assimilate_storage(&mut t)
-        .unwrap();
-        t.into()
+        let mut test_ext: sp_io::TestExternalities = t.into();
+        test_ext.execute_with(|| System::set_block_number(1));
+        test_ext
     }
 }

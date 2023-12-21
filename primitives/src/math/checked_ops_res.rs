@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::dispatch::DispatchError;
+use num_traits::{checked_pow, One};
 use sp_arithmetic::{
     traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub},
     ArithmeticError,
@@ -47,6 +48,13 @@ where
     Self: Sized,
 {
     fn checked_div_res(&self, other: &Self) -> Result<Self, DispatchError>;
+}
+
+pub trait CheckedPowRes
+where
+    Self: Sized,
+{
+    fn checked_pow_res(&self, exp: usize) -> Result<Self, DispatchError>;
 }
 
 impl<T> CheckedAddRes for T
@@ -86,5 +94,15 @@ where
     #[inline]
     fn checked_div_res(&self, other: &Self) -> Result<Self, DispatchError> {
         self.checked_div(other).ok_or(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
+    }
+}
+
+impl<T> CheckedPowRes for T
+where
+    T: Copy + One + CheckedMul,
+{
+    #[inline]
+    fn checked_pow_res(&self, exp: usize) -> Result<Self, DispatchError> {
+        checked_pow(*self, exp).ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))
     }
 }
