@@ -65,7 +65,6 @@ fn refund_fails_if_market_not_resolved(status: MarketStatus) {
     });
 }
 
-#[test_case(ScoringRule::CPMM; "cpmm")]
 #[test_case(ScoringRule::Orderbook; "orderbook")]
 #[test_case(ScoringRule::Lmsr; "lmsr")]
 fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {

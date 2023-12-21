@@ -191,7 +191,6 @@ fn claim_rewards_fails_if_not_resolved(status: MarketStatus) {
     });
 }
 
-#[test_case(ScoringRule::CPMM; "cpmm")]
 #[test_case(ScoringRule::Orderbook; "orderbook")]
 #[test_case(ScoringRule::Lmsr; "lmsr")]
 fn claim_rewards_fails_if_scoring_rule_not_parimutuel(scoring_rule: ScoringRule) {

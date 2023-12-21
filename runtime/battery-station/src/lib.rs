@@ -124,19 +124,17 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                 match inner_call {
                     buy_complete_set { .. } => true,
                     dispute { .. } => true,
-                    // Only allow CPMM markets using Authorized or Court dispute mechanism
+                    // Only allow markets using Authorized or Court dispute mechanism
                     create_market {
                         dispute_mechanism:
                             Some(MarketDisputeMechanism::Authorized)
                             | Some(MarketDisputeMechanism::Court),
-                        scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
                     edit_market {
                         dispute_mechanism:
                             Some(MarketDisputeMechanism::Authorized)
                             | Some(MarketDisputeMechanism::Court),
-                        scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
                     redeem_shares { .. } => true,

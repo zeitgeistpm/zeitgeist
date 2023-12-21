@@ -2247,13 +2247,7 @@ mod pallet {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            ensure!(
-                matches!(
-                    market.scoring_rule,
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook
-                ),
-                Error::<T>::InvalidScoringRule
-            );
+            ensure!(market.is_redeemable(), Error::<T>::InvalidScoringRule);
 
             let market_account = Self::market_account(market_id);
             ensure!(
@@ -2304,13 +2298,7 @@ mod pallet {
                 T::AssetManager::free_balance(market.base_asset, &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
-            ensure!(
-                matches!(
-                    market.scoring_rule,
-                    ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook
-                ),
-                Error::<T>::InvalidScoringRule
-            );
+            ensure!(market.is_redeemable(), Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
             let market_account = Self::market_account(market_id);

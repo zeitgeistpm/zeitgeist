@@ -237,11 +237,11 @@ fn deploy_pool_fails_on_duplicate_pool() {
     });
 }
 
-#[test]
-fn deploy_pool_fails_on_invalid_trading_mechanism() {
+#[test_case(ScoringRule::Orderbook)]
+#[test_case(ScoringRule::Parimutuel)]
+fn deploy_pool_fails_on_invalid_trading_mechanism(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::CPMM);
+        let market_id = create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), scoring_rule);
         assert_noop!(
             NeoSwaps::deploy_pool(
                 RuntimeOrigin::signed(ALICE),

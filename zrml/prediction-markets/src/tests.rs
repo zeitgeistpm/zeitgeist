@@ -152,7 +152,7 @@ fn buy_complete_set_fails_if_market_is_not_active(status: MarketStatus) {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
@@ -193,7 +193,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
             Asset::Ztg,
             MarketCreation::Permissionless,
             now..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         run_blocks(3);
         let market_id = 0;
@@ -230,7 +230,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
@@ -276,7 +276,7 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: Mark
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
@@ -343,7 +343,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
                 MarketCreation::Permissionless,
                 MarketType::Scalar(range),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::InvalidOutcomeRange
         );
@@ -370,7 +370,7 @@ fn create_market_fails_on_min_dispute_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
         );
@@ -397,7 +397,7 @@ fn create_market_fails_on_min_oracle_duration() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
         );
@@ -424,7 +424,7 @@ fn create_market_fails_on_max_dispute_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::DisputeDurationGreaterThanMaxDisputeDuration
         );
@@ -451,7 +451,7 @@ fn create_market_fails_on_max_grace_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::GracePeriodGreaterThanMaxGracePeriod
         );
@@ -478,7 +478,7 @@ fn create_market_fails_on_max_oracle_duration() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::OracleDurationGreaterThanMaxOracleDuration
         );
@@ -509,7 +509,7 @@ fn create_market_with_foreign_assets() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::InvalidBaseAsset,
         );
@@ -526,7 +526,7 @@ fn create_market_with_foreign_assets() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::UnregisteredForeignAsset,
         );
@@ -542,7 +542,7 @@ fn create_market_with_foreign_assets() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.base_asset, Asset::ForeignAsset(100));
@@ -558,7 +558,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
 
@@ -630,7 +630,7 @@ fn admin_move_market_to_resolved_fails_if_market_is_not_reported_or_disputed(
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..33,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
@@ -654,7 +654,7 @@ fn it_creates_binary_markets() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // check the correct amount was reserved
@@ -666,7 +666,7 @@ fn it_creates_binary_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         let new_alice_reserved = Balances::reserved_balance(ALICE);
@@ -686,7 +686,7 @@ fn create_categorical_market_deposits_the_correct_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             1..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
@@ -703,7 +703,7 @@ fn create_scalar_market_deposits_the_correct_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             1..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
@@ -727,7 +727,7 @@ fn it_does_not_create_market_with_too_few_categories() {
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get() - 1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM
+                ScoringRule::Lmsr
             ),
             Error::<Runtime>::NotEnoughCategories
         );
@@ -749,7 +749,7 @@ fn it_does_not_create_market_with_too_many_categories() {
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MaxCategories::get() + 1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM
+                ScoringRule::Lmsr
             ),
             Error::<Runtime>::TooManyCategories
         );
@@ -764,7 +764,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -794,7 +794,7 @@ fn it_allows_request_edit_origin_to_request_edits_for_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             2..4,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -835,7 +835,7 @@ fn request_edit_fails_on_bad_origin() {
             Asset::Ztg,
             MarketCreation::Advised,
             2..4,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -859,7 +859,7 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -883,7 +883,7 @@ fn market_with_edit_request_cannot_be_approved() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -911,7 +911,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             4..6,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -944,7 +944,7 @@ fn reject_errors_if_reject_reason_is_too_long() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -968,7 +968,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -998,7 +998,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             base_asset,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
@@ -1063,19 +1063,19 @@ fn reject_market_clears_auto_close_blocks() {
             Asset::Ztg,
             MarketCreation::Advised,
             33..66,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
             22..66,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
             22..33,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
@@ -1108,7 +1108,7 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             base_asset,
             MarketCreation::Advised,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
 
@@ -1154,7 +1154,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             base_asset,
             MarketCreation::Advised,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         run_to_block(2);
         let market_id = 0;
@@ -1358,7 +1358,7 @@ fn it_allows_to_buy_a_complete_set() {
             base_asset,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // Allows someone to generate a complete set
@@ -1398,7 +1398,7 @@ fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         assert_noop!(
             PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT),
@@ -1422,7 +1422,7 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -1453,7 +1453,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -1477,7 +1477,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -1495,7 +1495,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -1509,7 +1509,7 @@ fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         assert_noop!(
             PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 0),
@@ -1525,7 +1525,7 @@ fn it_does_not_allow_buying_complete_sets_with_insufficient_balance() {
             base_asset,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         assert_noop!(
             PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 10000 * BASE),
@@ -1550,7 +1550,7 @@ fn it_allows_to_sell_a_complete_set() {
             base_asset,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT));
@@ -1588,7 +1588,7 @@ fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         assert_noop!(
             PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 0),
@@ -1604,7 +1604,7 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
             base_asset,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT));
         assert_eq!(AssetManager::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
@@ -1653,7 +1653,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         let market = MarketCommons::market(&0).unwrap();
@@ -1699,7 +1699,7 @@ fn report_fails_before_grace_period_is_over() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         run_to_block(end);
@@ -1723,7 +1723,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         let market = MarketCommons::market(&0).unwrap();
@@ -1771,7 +1771,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT));
@@ -1805,7 +1805,7 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -1828,7 +1828,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -1851,7 +1851,7 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -1874,7 +1874,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // Run to the end of the trading phase.
@@ -1930,7 +1930,7 @@ fn dispute_fails_disputed_already() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -1971,7 +1971,7 @@ fn dispute_fails_if_market_not_reported() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -2006,7 +2006,7 @@ fn dispute_reserves_dispute_bond() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -2045,7 +2045,7 @@ fn schedule_early_close_emits_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // just to ensure events are emitted
@@ -2079,7 +2079,7 @@ fn dispute_early_close_emits_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // just to ensure events are emitted
@@ -2106,7 +2106,7 @@ fn reject_early_close_emits_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // just to ensure events are emitted
@@ -2135,7 +2135,7 @@ fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // just to ensure events are emitted
@@ -2163,7 +2163,7 @@ fn reject_early_close_fails_if_state_is_rejected() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // just to ensure events are emitted
@@ -2199,7 +2199,7 @@ fn sudo_schedule_early_close_at_block_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2270,7 +2270,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2339,7 +2339,7 @@ fn schedule_early_close_block_fails_if_early_close_request_too_late() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         run_to_block(end - 1);
@@ -2371,7 +2371,7 @@ fn schedule_early_close_timestamp_fails_if_early_close_request_too_late() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         run_to_block(end.saturating_div(MILLISECS_PER_BLOCK.into()) - 1);
@@ -2400,7 +2400,7 @@ fn schedule_early_close_as_market_creator_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2475,7 +2475,7 @@ fn dispute_early_close_from_market_creator_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2543,7 +2543,7 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2597,7 +2597,7 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2638,7 +2638,7 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2670,7 +2670,7 @@ fn dispute_early_close_fails_if_already_disputed() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2708,7 +2708,7 @@ fn reject_early_close_resets_to_old_market_period() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2748,7 +2748,7 @@ fn reject_early_close_settles_bonds() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2802,7 +2802,7 @@ fn dispute_early_close_fails_if_already_rejected() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2843,7 +2843,7 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -2912,7 +2912,7 @@ fn dispute_updates_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -2959,7 +2959,7 @@ fn dispute_emits_event() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -2992,7 +2992,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         let market = MarketCommons::market(&0).unwrap();
@@ -3029,7 +3029,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -3088,7 +3088,7 @@ fn it_resolves_a_disputed_market() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -3260,7 +3260,7 @@ fn it_resolves_a_disputed_court_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -3528,7 +3528,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -3616,7 +3616,7 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
@@ -3646,7 +3646,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let market_id = MarketCommons::latest_market_id().unwrap();
 
@@ -3682,7 +3682,7 @@ fn it_allows_to_redeem_shares() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -3753,7 +3753,7 @@ fn only_creator_can_edit_market() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -3779,7 +3779,7 @@ fn only_creator_can_edit_market() {
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM
+                ScoringRule::Lmsr
             ),
             Error::<Runtime>::EditorNotCreator
         );
@@ -3795,7 +3795,7 @@ fn edit_cycle_for_proposed_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             2..4,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -3821,7 +3821,7 @@ fn edit_cycle_for_proposed_markets() {
             gen_metadata(2),
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         let edited_market = MarketCommons::market(&0).expect("Market not found");
         System::assert_last_event(Event::MarketEdited(0, edited_market).into());
@@ -3841,7 +3841,7 @@ fn edit_market_with_foreign_asset() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -3868,7 +3868,7 @@ fn edit_market_with_foreign_asset() {
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM
+                ScoringRule::Lmsr
             ),
             Error::<Runtime>::UnregisteredForeignAsset
         );
@@ -3884,7 +3884,7 @@ fn edit_market_with_foreign_asset() {
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::CPMM
+                ScoringRule::Lmsr
             ),
             Error::<Runtime>::InvalidBaseAsset,
         );
@@ -3899,7 +3899,7 @@ fn edit_market_with_foreign_asset() {
             gen_metadata(2),
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.base_asset, Asset::ForeignAsset(100));
@@ -3921,7 +3921,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         // is ok
@@ -3961,7 +3961,7 @@ fn full_scalar_market_lifecycle() {
             MarketCreation::Permissionless,
             MarketType::Scalar(10..=30),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
 
         assert_ok!(PredictionMarkets::buy_complete_set(
@@ -4124,7 +4124,7 @@ fn reject_market_fails_on_permissionless_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
@@ -4143,7 +4143,7 @@ fn reject_market_fails_on_approved_market() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..1,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let reject_reason: Vec<u8> =
@@ -4171,7 +4171,7 @@ fn authorized_correctly_resolves_disputed_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
 
@@ -4317,7 +4317,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let market_id = 0;
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4355,7 +4355,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -4401,7 +4401,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -4467,7 +4467,7 @@ fn outsider_reports_wrong_outcome() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let outsider = CHARLIE;
@@ -4546,7 +4546,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4592,7 +4592,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4639,7 +4639,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -4690,7 +4690,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4742,7 +4742,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -4802,7 +4802,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4860,7 +4860,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -4932,7 +4932,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let outsider = CHARLIE;
@@ -4999,7 +4999,7 @@ fn report_fails_on_market_state_proposed() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         assert_noop!(
             PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
@@ -5022,7 +5022,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         assert_noop!(
             PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
@@ -5045,7 +5045,7 @@ fn report_fails_on_market_state_active() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         assert_noop!(
             PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
@@ -5068,7 +5068,7 @@ fn report_fails_on_market_state_resolved() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         let _ = MarketCommons::mutate_market(&0, |market| {
             market.status = MarketStatus::Resolved;
@@ -5095,7 +5095,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::CPMM
+            ScoringRule::Lmsr
         ));
         let market = MarketCommons::market(&0).unwrap();
         set_timestamp_for_on_initialize(100_000_000);
@@ -5136,7 +5136,7 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
     });
 }
@@ -5164,7 +5164,7 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
     });
 }
@@ -5192,7 +5192,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             crate::Error::<Runtime>::MarketDurationTooLong,
         );
@@ -5223,7 +5223,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             crate::Error::<Runtime>::MarketDurationTooLong,
         );
@@ -5232,7 +5232,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
 
 #[test_case(
     MarketCreation::Advised,
-    ScoringRule::CPMM,
+    ScoringRule::Lmsr,
     MarketStatus::Proposed,
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
@@ -5245,7 +5245,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
 )]
 #[test_case(
     MarketCreation::Permissionless,
-    ScoringRule::CPMM,
+    ScoringRule::Lmsr,
     MarketStatus::Active,
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
@@ -5398,7 +5398,7 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 None,
-                ScoringRule::CPMM,
+                ScoringRule::Lmsr,
             ),
             Error::<Runtime>::NonZeroDisputePeriodOnTrustedMarket
         );
@@ -5424,7 +5424,7 @@ fn trusted_market_complete_lifecycle() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
         let market_id = 0;
         assert_ok!(PredictionMarkets::buy_complete_set(
@@ -5474,7 +5474,7 @@ fn close_trusted_market_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -5529,7 +5529,7 @@ fn close_trusted_market_fails_if_not_trusted() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -5575,7 +5575,7 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -5601,7 +5601,7 @@ fn scalar_market_correctly_resolves_common(base_asset: Asset<MarketId>, reported
         base_asset,
         MarketCreation::Permissionless,
         0..end,
-        ScoringRule::CPMM,
+        ScoringRule::Lmsr,
     );
     assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, 100 * BASE));
     assert_ok!(Tokens::transfer(

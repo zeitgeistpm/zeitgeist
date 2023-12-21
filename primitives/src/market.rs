@@ -71,9 +71,7 @@ pub struct Market<AI, BA, BN, M, A> {
 impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
-            ScoringRule::CPMM | ScoringRule::Lmsr | ScoringRule::Orderbook => {
-                ResolutionMechanism::RedeemTokens
-            }
+            ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
             ScoringRule::Parimutuel => ResolutionMechanism::Noop,
         }
     }
@@ -287,7 +285,6 @@ pub struct Deadlines<BN> {
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum ScoringRule {
-    CPMM,
     Lmsr,
     Orderbook,
     Parimutuel,
@@ -432,7 +429,7 @@ mod tests {
                 oracle_duration: 1_u32,
                 dispute_duration: 1_u32,
             },
-            scoring_rule: ScoringRule::CPMM,
+            scoring_rule: ScoringRule::Lmsr,
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,
