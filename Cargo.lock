@@ -14378,6 +14378,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "more-asserts",
+ "num-traits",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -14619,6 +14620,7 @@ dependencies = [
 name = "zrml-neo-swaps"
 version = "0.4.2"
 dependencies = [
+ "cfg-if",
  "env_logger 0.10.1",
  "fixed",
  "frame-benchmarking",

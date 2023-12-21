@@ -75,6 +75,7 @@ parameter_types! {
 parameter_types! {
     pub storage NeoExitFee: Balance = CENT;
     pub const NeoMaxSwapFee: Balance = 10 * CENT;
+    pub const MaxLiquidityTreeDepth: u32 = 3u32;
     pub const NeoSwapsPalletId: PalletId = PalletId(*b"zge/neos");
 }
 

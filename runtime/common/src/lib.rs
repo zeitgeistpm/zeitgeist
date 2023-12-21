@@ -55,16 +55,14 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_neo_swaps::migration::MigrateToLiquidityTree;
+        use zrml_orderbook::migrations::TranslateOrderStructure;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        #[cfg(feature = "parachain")]
-        type Migrations = zrml_orderbook::migrations::TranslateOrderStructure<Runtime>;
-
-        #[cfg(not(feature = "parachain"))]
-        type Migrations = zrml_orderbook::migrations::TranslateOrderStructure<Runtime>;
+        type Migrations = (MigrateToLiquidityTree<Runtime>, TranslateOrderStructure<Runtime>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -1264,6 +1262,7 @@ macro_rules! impl_config_traits {
             type MultiCurrency = AssetManager;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
+            type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
             type MaxSwapFee = NeoSwapsMaxSwapFee;
             type PalletId = NeoSwapsPalletId;
         }

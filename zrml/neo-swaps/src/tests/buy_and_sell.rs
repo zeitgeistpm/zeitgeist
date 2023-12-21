@@ -18,23 +18,6 @@
 use super::*;
 use zeitgeist_primitives::constants::BASE;
 
-macro_rules! assert_pool_status {
-    ($market_id:expr, $reserves:expr, $spot_prices:expr, $fees:expr $(,)?) => {
-        let pool = Pools::<Runtime>::get($market_id).unwrap();
-        assert_eq!(pool.reserves.values().cloned().collect::<Vec<u128>>(), $reserves);
-        assert_eq!(
-            pool.assets()
-                .iter()
-                .map(|&a| pool.calculate_spot_price(a).unwrap())
-                .collect::<Vec<u128>>(),
-            $spot_prices,
-        );
-        let invariant = $spot_prices.iter().sum::<u128>();
-        assert_approx!(invariant, _1, 1);
-        assert_eq!(pool.liquidity_shares_manager.fees, $fees);
-    };
-}
-
 #[test]
 fn buy_and_sell() {
     ExtBuilder::default().build().execute_with(|| {
@@ -59,10 +42,12 @@ fn buy_and_sell() {
             _10,
             0,
         ));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             vec![598_000_000_000, 1_098_000_000_000, 767_092_556_931],
             [4_364_837_956, 2_182_418_978, 3_452_743_066],
+            721_347_520_444,
+            create_b_tree_map!({ ALICE => _100 }),
             1_000_000_000,
         );
 
@@ -74,10 +59,12 @@ fn buy_and_sell() {
             1_234_567_898_765,
             0,
         ));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             vec![1_807_876_540_789, 113_931_597_104, 1_976_969_097_720],
             [815_736_444, 8_538_986_828, 645_276_728],
+            721_347_520_444,
+            create_b_tree_map!({ ALICE => _100 }),
             13_345_678_988,
         );
 
@@ -89,10 +76,12 @@ fn buy_and_sell() {
             667 * BASE,
             0,
         ));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             vec![76_875_275, 6_650_531_597_104, 8_513_569_097_720],
             [9_998_934_339, 990_789, 74_872],
+            721_347_520_444,
+            create_b_tree_map!({ ALICE => _100 }),
             80_045_678_988,
         );
 
@@ -117,10 +106,12 @@ fn buy_and_sell() {
             _1,
             0,
         ));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             vec![77_948_356, 6_640_532_670_185, 8_503_570_170_801],
             [9_998_919_465, 1_004_618, 75_917],
+            721_347_520_444,
+            create_b_tree_map!({ ALICE => _100 }),
             80_145_668_257,
         );
 
@@ -172,10 +163,12 @@ fn buy_and_sell() {
             _100,
             0,
         ));
-        assert_pool_status!(
+        assert_pool_state!(
             market_id,
             vec![980_077_948_356, 7_620_532_670_185, 214_308_675_476],
             [2_570_006_838, 258_215, 7_429_734_946],
+            721_347_520_444,
+            create_b_tree_map!({ ALICE => _100 }),
             90_145_668_257,
         );
     });

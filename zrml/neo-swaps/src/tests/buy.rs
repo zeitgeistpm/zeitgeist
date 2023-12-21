@@ -23,7 +23,6 @@ use test_case::test_case;
 #[test]
 fn buy_works() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
         let swap_fee = CENT;
@@ -44,7 +43,7 @@ fn buy_works() {
         let expected_external_fee_amount = expected_fees / 2;
         let pool_outcomes_before: Vec<_> =
             pool.assets().iter().map(|a| pool.reserve_of(a).unwrap()).collect();
-        let pool_liquidity_before = pool.liquidity_parameter;
+        let liquidity_parameter_before = pool.liquidity_parameter;
         let asset_out = pool.assets()[0];
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
         // Deposit some stuff in the pool account to check that the pools `reserves` fields tracks
@@ -59,41 +58,29 @@ fn buy_works() {
             0,
         ));
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        assert_eq!(pool.liquidity_parameter, pool_liquidity_before);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, liquidity);
-        assert_eq!(pool.liquidity_shares_manager.fees, expected_swap_fee_amount);
-        let pool_outcomes_after: Vec<_> = pool
-            .assets()
-            .iter()
-            .map(|a| pool.reserve_of(a).unwrap())
-            .collect();
         let expected_swap_amount_out = 58496250072;
-        let expected_amount_in_minus_fees = _10 + 1; // Note: This is 1 Pennock of the correct result.
-        let expected_amount_out = expected_swap_amount_out + expected_amount_in_minus_fees;
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &BOB), 0);
-        assert_eq!(AssetManager::free_balance(asset_out, &BOB), expected_amount_out);
-        assert_eq!(pool_outcomes_after[0], pool_outcomes_before[0] - expected_swap_amount_out);
-        assert_eq!(
-            pool_outcomes_after[1],
+        let expected_amount_in_minus_fees = _10 + 1; // Note: This is 1 Pennock off of the correct result.
+        let expected_reserves = vec![
+            pool_outcomes_before[0] - expected_swap_amount_out,
             pool_outcomes_before[0] + expected_amount_in_minus_fees,
+        ];
+        assert_pool_state!(
+            market_id,
+            expected_reserves,
+            vec![_3_4, _1_4],
+            liquidity_parameter_before,
+            create_b_tree_map!({ ALICE => liquidity }),
+            expected_swap_fee_amount,
         );
-        let expected_pool_account_balance =
-            expected_swap_fee_amount + AssetManager::minimum_balance(pool.collateral);
-        assert_eq!(
-            AssetManager::free_balance(BASE_ASSET, &pool.account_id),
-            expected_pool_account_balance
+        let expected_amount_out = expected_swap_amount_out + expected_amount_in_minus_fees;
+        assert_balance!(BOB, BASE_ASSET, 0);
+        assert_balance!(BOB, asset_out, expected_amount_out);
+        assert_balance!(
+            pool.account_id,
+            BASE_ASSET,
+            expected_swap_fee_amount + AssetManager::minimum_balance(pool.collateral)
         );
-        assert_eq!(
-            AssetManager::free_balance(BASE_ASSET, &FEE_ACCOUNT),
-            expected_external_fee_amount
-        );
-        let price_sum = pool
-            .assets()
-            .iter()
-            .map(|&a| pool.calculate_spot_price(a).unwrap())
-            .sum::<u128>();
-        assert_eq!(price_sum, _1);
+        assert_balance!(FEE_ACCOUNT, BASE_ASSET, expected_external_fee_amount);
         System::assert_last_event(
             Event::BuyExecuted {
                 who: BOB,

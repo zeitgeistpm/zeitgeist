@@ -16,12 +16,18 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::liquidity_tree::types::LiquidityTreeError;
+use test_case::test_case;
 
-#[test]
-fn exit_works() {
+#[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_704], 33_508_962_010)]
+#[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_928], 33_486_637_585)]
+fn exit_works(
+    market_status: MarketStatus,
+    amounts_out: Vec<BalanceOf<Runtime>>,
+    new_liquidity_parameter: BalanceOf<Runtime>,
+) {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        let liquidity = _10;
+        let liquidity = _5;
         let spot_prices = vec![_1_6, _5_6 + 1];
         let swap_fee = CENT;
         let market_id = create_market_and_deploy_pool(
@@ -32,94 +38,149 @@ fn exit_works() {
             spot_prices.clone(),
             swap_fee,
         );
+        // Add a second LP to create a more generic situation, bringing the total of shares to _10.
+        deposit_complete_set(market_id, BOB, liquidity);
+        assert_ok!(NeoSwaps::join(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            liquidity,
+            vec![u128::MAX, u128::MAX],
+        ));
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        })
+        .unwrap();
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let outcomes = pool.assets();
+        let alice_balances = [0, 44_912_220_089];
+        assert_balances!(ALICE, outcomes, alice_balances);
+        let pool_balances = vec![100_000_000_000, 10_175_559_822];
+        assert_pool_state!(
+            market_id,
+            pool_balances,
+            spot_prices,
+            55_811_062_642,
+            create_b_tree_map!({ ALICE => _5, BOB => _5 }),
+            0,
+        );
         let pool_shares_amount = _4; // Remove 40% to the pool.
-        let pool_before = Pools::<Runtime>::get(market_id).unwrap();
-        let alice_outcomes_before = [
-            AssetManager::free_balance(pool_before.assets()[0], &ALICE),
-            AssetManager::free_balance(pool_before.assets()[1], &ALICE),
-        ];
-        let pool_outcomes_before: Vec<_> =
-            pool_before.assets().iter().map(|a| pool_before.reserve_of(a).unwrap()).collect();
         assert_ok!(NeoSwaps::exit(
             RuntimeOrigin::signed(ALICE),
             market_id,
             pool_shares_amount,
             vec![0, 0],
         ));
-        let pool_after = Pools::<Runtime>::get(market_id).unwrap();
-        let ratio = pool_shares_amount.bdiv(liquidity).unwrap();
-        let pool_outcomes_after: Vec<_> =
-            pool_after.assets().iter().map(|a| pool_after.reserve_of(a).unwrap()).collect();
-        let expected_pool_diff = vec![
-            ratio.bmul(pool_outcomes_before[0]).unwrap(),
-            ratio.bmul(pool_outcomes_before[1]).unwrap(),
-        ];
-        let alice_outcomes_after = [
-            AssetManager::free_balance(pool_after.assets()[0], &ALICE),
-            AssetManager::free_balance(pool_after.assets()[1], &ALICE),
-        ];
-        assert_eq!(pool_outcomes_after[0], pool_outcomes_before[0] - expected_pool_diff[0]);
-        assert_eq!(pool_outcomes_after[1], pool_outcomes_before[1] - expected_pool_diff[1]);
-        assert_eq!(alice_outcomes_after[0], alice_outcomes_before[0] + expected_pool_diff[0]);
-        assert_eq!(alice_outcomes_after[1], alice_outcomes_before[1] + expected_pool_diff[1]);
-        assert_eq!(
-            pool_after.liquidity_parameter,
-            (_1 - ratio).bmul(pool_before.liquidity_parameter).unwrap()
-        );
-        assert_eq!(
-            pool_after.liquidity_shares_manager.shares_of(&ALICE).unwrap(),
-            liquidity - pool_shares_amount
+        let new_pool_balances =
+            pool_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b - a).collect::<Vec<_>>();
+        let new_alice_balances =
+            alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
+        assert_balances!(ALICE, outcomes, new_alice_balances);
+        assert_pool_state!(
+            market_id,
+            new_pool_balances,
+            spot_prices,
+            new_liquidity_parameter,
+            create_b_tree_map!({ ALICE => _1, BOB => _5 }),
+            0,
         );
         System::assert_last_event(
             Event::ExitExecuted {
                 who: ALICE,
                 market_id,
                 pool_shares_amount,
-                amounts_out: expected_pool_diff,
-                new_liquidity_parameter: pool_after.liquidity_parameter,
+                amounts_out,
+                new_liquidity_parameter,
             }
             .into(),
         );
     });
 }
 
-#[test]
-fn exit_destroys_pool() {
+#[test_case(MarketStatus::Active, vec![39_960_000_000, 4_066_153_705])]
+#[test_case(MarketStatus::Resolved, vec![40_000_000_000, 4_070_223_929])]
+fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<BalanceOf<Runtime>>) {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        let liquidity = _10;
+        let liquidity = _4;
+        let spot_prices = vec![_1_6, _5_6 + 1];
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
             MarketType::Scalar(0..=1),
             liquidity,
-            vec![_1_6, _5_6 + 1],
+            spot_prices.clone(),
             CENT,
         );
+        MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        })
+        .unwrap();
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let amounts_out = vec![
-            pool.reserve_of(&pool.assets()[0]).unwrap(),
-            pool.reserve_of(&pool.assets()[1]).unwrap(),
-        ];
-        let alice_before = [
-            AssetManager::free_balance(pool.assets()[0], &ALICE),
-            AssetManager::free_balance(pool.assets()[1], &ALICE),
-        ];
+        let pool_account = pool.account_id;
+        let outcomes = pool.assets();
+        let alice_balances = [0, 35_929_776_071];
+        assert_balances!(ALICE, outcomes, alice_balances);
+        let pool_balances = vec![40_000_000_000, 4_070_223_929];
+        assert_pool_state!(
+            market_id,
+            pool_balances,
+            spot_prices,
+            22_324_425_057,
+            create_b_tree_map!({ ALICE => _4 }),
+            0,
+        );
         assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, liquidity, vec![0, 0]));
+        let new_alice_balances =
+            alice_balances.iter().zip(amounts_out.iter()).map(|(b, a)| b + a).collect::<Vec<_>>();
+        assert_balances!(ALICE, outcomes, new_alice_balances);
+        // Pool doesn't exist anymore and exit fees are cleared.
         assert!(!Pools::<Runtime>::contains_key(market_id));
-        assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), 0);
-        assert_eq!(AssetManager::free_balance(pool.assets()[0], &pool.account_id), 0);
-        assert_eq!(AssetManager::free_balance(pool.assets()[1], &pool.account_id), 0);
-        assert_eq!(
-            AssetManager::free_balance(pool.assets()[0], &ALICE),
-            alice_before[0] + amounts_out[0]
-        );
-        assert_eq!(
-            AssetManager::free_balance(pool.assets()[1], &ALICE),
-            alice_before[1] + amounts_out[1]
-        );
+        assert_balances!(pool_account, outcomes, [0, 0]);
         System::assert_last_event(
             Event::PoolDestroyed { who: ALICE, market_id, amounts_out }.into(),
+        );
+    });
+}
+
+#[test]
+fn removing_second_to_last_lp_does_not_destroy_pool_and_removes_node_from_liquidity_tree() {
+    ExtBuilder::default().build().execute_with(|| {
+        let liquidity = _5;
+        let spot_prices = vec![_1_6, _5_6 + 1];
+        let swap_fee = CENT;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Scalar(0..=1),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+        // Add a second LP, bringing the total of shares to _10.
+        deposit_complete_set(market_id, BOB, liquidity);
+        assert_ok!(NeoSwaps::join(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            liquidity,
+            vec![u128::MAX, u128::MAX],
+        ));
+        assert_pool_state!(
+            market_id,
+            [100_000_000_000, 10_175_559_822],
+            spot_prices,
+            55_811_062_642,
+            create_b_tree_map!({ ALICE => _5, BOB => _5 }),
+            0,
+        );
+        assert_ok!(NeoSwaps::exit(RuntimeOrigin::signed(BOB), market_id, liquidity, vec![0, 0]));
+        assert_pool_state!(
+            market_id,
+            [50_050_000_000, 5_092_867_691],
+            spot_prices,
+            27_933_436_852,
+            create_b_tree_map!({ ALICE => _5 }),
+            0,
         );
     });
 }
@@ -192,7 +253,7 @@ fn exit_fails_on_insufficient_funds() {
                 liquidity + 1, // One more than Alice has.
                 vec![0, 0]
             ),
-            Error::<Runtime>::InsufficientPoolShares,
+            LiquidityTreeError::InsufficientStake.into_dispatch_error::<Runtime>(),
         );
     });
 }
@@ -227,36 +288,6 @@ fn exit_fails_on_amount_out_below_min() {
 }
 
 #[test]
-fn exit_fails_if_not_allowed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Scalar(0..=1),
-            _20,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        let pool_shares_amount = _5;
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, pool_shares_amount));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            pool_shares_amount,
-        ));
-        assert_noop!(
-            NeoSwaps::exit(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                pool_shares_amount,
-                vec![pool_shares_amount, pool_shares_amount]
-            ),
-            Error::<Runtime>::NotAllowed
-        );
-    });
-}
-
-#[test]
 fn exit_fails_on_outstanding_fees() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = create_market_and_deploy_pool(
@@ -267,26 +298,14 @@ fn exit_fails_on_outstanding_fees() {
             vec![_1_2, _1_2],
             CENT,
         );
-        let pool_shares_amount = _20;
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, pool_shares_amount));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            pool_shares_amount,
-        ));
         assert_ok!(Pools::<Runtime>::try_mutate(market_id, |pool| pool
             .as_mut()
             .unwrap()
             .liquidity_shares_manager
-            .deposit_fees(1)));
+            .deposit_fees(_10)));
         assert_noop!(
-            NeoSwaps::exit(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                pool_shares_amount,
-                vec![pool_shares_amount, pool_shares_amount]
-            ),
-            Error::<Runtime>::OutstandingFees
+            NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _1, vec![0, 0]),
+            LiquidityTreeError::UnwithdrawnFees.into_dispatch_error::<Runtime>(),
         );
     });
 }
@@ -306,6 +325,34 @@ fn exit_pool_fails_on_liquidity_too_low() {
         assert_noop!(
             NeoSwaps::exit(RuntimeOrigin::signed(ALICE), market_id, _10 - _1_2, vec![0, 0]),
             Error::<Runtime>::LiquidityTooLow
+        );
+    });
+}
+
+#[test]
+fn exit_pool_fails_on_relative_liquidity_threshold_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Scalar(0..=1),
+            _100,
+            vec![_1_2, _1_2],
+            CENT,
+        );
+        // Bob contributes only 1.390...% of liquidity. Any removal (no matter how small the amount)
+        // should fail.
+        let amount = 13_910_041_100;
+        deposit_complete_set(market_id, BOB, amount);
+        assert_ok!(NeoSwaps::join(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            amount,
+            vec![u128::MAX, u128::MAX],
+        ));
+        assert_noop!(
+            NeoSwaps::exit(RuntimeOrigin::signed(BOB), market_id, CENT, vec![0, 0]),
+            Error::<Runtime>::MinRelativeLiquidityThresholdViolated
         );
     });
 }
