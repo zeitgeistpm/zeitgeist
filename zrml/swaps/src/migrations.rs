@@ -41,11 +41,8 @@ use zeitgeist_primitives::{
     types::{Asset, MarketId, PoolId, ScoringRule},
 };
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "try-runtime")] {
-        use frame_support::migration::storage_key_iter;
-    }
-}
+#[cfg(feature = "try-runtime")]
+use frame_support::migration::storage_key_iter;
 
 #[cfg(any(feature = "try-runtime", test))]
 const SWAPS: &[u8] = b"Swaps";
