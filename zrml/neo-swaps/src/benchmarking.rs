@@ -279,7 +279,7 @@ where
 mod benchmarks {
     use super::*;
 
-    /// FIXME Replace hardcoded variant with `{ MAX_ASSETS as u32 }` as soon as possible.
+    /// TODO(#1221): Replace hardcoded variant with `{ MAX_ASSETS as u32 }` as soon as possible.
     #[benchmark]
     fn buy(n: Linear<2, 128>) {
         let alice = whitelisted_caller();

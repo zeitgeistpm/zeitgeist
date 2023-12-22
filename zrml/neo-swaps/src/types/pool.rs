@@ -118,7 +118,8 @@ where
     }
 }
 
-// FIXME Replace BTreeMap with BoundedBTreeMap
+// TODO(#1214): Replace BTreeMap with BoundedBTreeMap and remove the unnecessary `MaxEncodedLen`
+// implementation.
 impl<T: Config, LSM: LiquiditySharesManager<T>> MaxEncodedLen for Pool<T, LSM>
 where
     T::AccountId: MaxEncodedLen,

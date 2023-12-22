@@ -149,7 +149,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, min_pool_amount)
 
     pool_join_with_exact_pool_amount {
-        // FIXME Explicitly state liquidity here!
+        // TODO(#1219): Explicitly state liquidity here!
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, asset_amount) =

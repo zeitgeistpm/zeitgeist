@@ -423,7 +423,7 @@ pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
 
-// FIXME Remove this in favor of adding whatever the account need in the individual tests.
+// TODO(#1222): Remove this in favor of adding whatever the account need in the individual tests.
 #[allow(unused)]
 impl Default for ExtBuilder {
     fn default() -> Self {

@@ -1216,7 +1216,7 @@ mod pallet {
             );
 
             let params = SwapExactAmountParams {
-                // TODO This probably doesn't need to be a closure.
+                // TODO(#1215): This probably doesn't need to be a closure.
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
                     let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);

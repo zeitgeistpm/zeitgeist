@@ -23,7 +23,7 @@ use frame_support::dispatch::{DispatchError, Weight};
 pub trait Swaps<AccountId> {
     type Asset;
     type Balance;
-    // TODO Add weight type which implements `Into<Balance>` and `From<Balance>`
+    // TODO(#1216): Add weight type which implements `Into<Balance>` and `From<Balance>`
 
     /// Creates an initial active pool.
     ///

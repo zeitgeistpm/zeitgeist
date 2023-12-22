@@ -137,8 +137,6 @@ pub(crate) type Markets<T: Config> = StorageMap<Swaps<T>, Blake2_128Concat, Pool
 
 pub struct MigratePools<T>(PhantomData<T>);
 
-// TODO Add Weight type!
-
 /// Deletes all Rikiddo markets from storage, migrates CPMM markets to their new storage layout and
 /// closes them. Due to us abstracting `MarketId` away from the `Asset` type of the `Config` object,
 /// we require that the old asset type `Asset<MarketId>` can be converted to the generic `T::Asset`.

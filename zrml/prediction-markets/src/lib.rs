@@ -1947,7 +1947,7 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    // TODO Remove in v0.5.1
+    // TODO(#1212): Remove in v0.5.1.
     #[pallet::storage]
     pub type MarketIdsPerOpenBlock<T: Config> = StorageMap<
         _,
@@ -1957,7 +1957,7 @@ mod pallet {
         ValueQuery,
     >;
 
-    // TODO Remove in v0.5.1
+    // TODO(#1212): Remove in v0.5.1.
     #[pallet::storage]
     pub type MarketIdsPerOpenTimeFrame<T: Config> = StorageMap<
         _,
@@ -2018,7 +2018,7 @@ mod pallet {
     pub type MarketIdsForEdit<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
-    // TODO Remove in v0.5.1
+    // TODO(#1212): Remove in v0.5.1.
     /// Contains a list of all markets that are currently collecting subsidy and the deadline.
     // All the values are "cached" here. Results in data duplication, but speeds up the iteration
     // over every market significantly (otherwise 25µs per relevant market per block).
@@ -2191,7 +2191,7 @@ mod pallet {
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = <zrml_market_commons::Pallet<T>>::market(market_id)?;
-            // If there's no dispute mechanism, this function is noop. FIXME This is an
+            // If there's no dispute mechanism, this function is noop. TODO(#782) This is an
             // anti-pattern, but it makes benchmarking easier.
             let dispute_mechanism = match market.dispute_mechanism {
                 Some(ref result) => result,
