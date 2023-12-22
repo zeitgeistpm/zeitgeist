@@ -205,9 +205,13 @@ jobs:
         run: |
           cd integration-tests
           pnpm exec moonwall test chopsticks_battery_station_upgrade
+
+      - name: Show chopsticks logs
+        run: |
+          cd integration-tests
           ls -R tmp/node_logs/
           cat tmp/node_logs/*.log
-        timeout-minutes: 20
+          exit 0
 
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Post-Upgrade Tests
@@ -256,6 +260,10 @@ jobs:
         run: |
           cd integration-tests
           pnpm exec moonwall test chopsticks_zeitgeist_upgrade
+
+      - name: Show chopsticks logs
+        run: |
+          cd integration-tests
           ls -R tmp/node_logs/
           cat tmp/node_logs/*.log
-        timeout-minutes: 20
+          exit 0
