@@ -47,12 +47,10 @@ cfg_if::cfg_if! {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(any(feature = "try-runtime", test))] {
-        const SWAPS: &[u8] = b"Swaps";
-        const POOLS: &[u8] = b"Pools";
-    }
-}
+#[cfg(any(feature = "try-runtime", test))]
+const SWAPS: &[u8] = b"Swaps";
+#[cfg(any(feature = "try-runtime", test))]
+const POOLS: &[u8] = b"Pools";
 
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 pub struct OldPool<Balance, MarketId>
