@@ -35,13 +35,12 @@ use zeitgeist_primitives::types::{
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "try-runtime")] {
-        use alloc::collections::BTreeMap;
-        use frame_support::migration::storage_key_iter;
-        use zeitgeist_primitives::types::MarketId;
-    }
-}
+#[cfg(feature = "try-runtime")]
+use {
+    alloc::collections::BTreeMap,
+    frame_support::migration::storage_key_iter,
+    zeitgeist_primitives::types::MarketId,
+};
 
 cfg_if::cfg_if! {
     if #[cfg(any(feature = "try-runtime", test))] {
