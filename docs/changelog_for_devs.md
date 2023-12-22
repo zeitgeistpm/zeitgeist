@@ -12,6 +12,67 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.0
+
+[#1197]: https://github.com/zeitgeistpm/zeitgeist/pull/1197
+
+### Changed
+
+- Closed all CPMM pools. Withdrawals are still allowed. Creating new pools will
+  be impossible until further updates are deployed. ([#1197])
+- Deleted all Rikiddo pools. ([#1197])
+
+### Removed
+
+- ⚠️ Removed the `Disputes` storage element from zrml-prediction-markets.
+  ([#1197])
+- ⚠️ Removed the following extrinsics from zrml-prediction-markets. ([#1197]):
+  - `create_cpmm_market_and_deploy_assets`
+  - `deploy_swap_pool_and_additional_liquidity`
+  - `deploy_swap_pool_for_market`
+- ⚠️ Removed the following config values from zrml-prediction-markets ([#1197]):
+  - `MaxSubsidyPeriod`
+  - `MinSubsidyPeriod`
+  - `Swaps`
+- Remove automatic arbitrage for CPMM pools. ([#1197])
+- ⚠️ Removed the following extrinsics from zrml-swaps ([#1197]):
+  - `admin_clean_up_pool`
+  - `pool_exit_subsidy`
+  - `pool_join_subsidy`
+- ⚠️ Removed the following config values from zrml-swaps ([#1197]):
+  - `FixedTypeU`
+  - `FixedTypeS`
+  - `LiquidityMining`
+  - `MarketCommons`
+  - `MinSubsidy`
+  - `MinSubsidyPerAccount`
+  - `RikiddoSigmoidFeeMarketEma`
+- ⚠️ Removed `CPMM` and `RikiddoSigmoidFeeMarketEma` from `ScoringRule`.
+  ([#1197])
+- ⚠️ Removed `Suspended`, `CollectingSubsidy` and `InsufficientSubsidy` from
+  `MarketStatus`. ([#1197])
+
+### Deprecated
+
+- ⚠️ Deprecated the following storage elements of zrml-prediction-markets (will
+  be removed in v0.5.1; [#1197]):
+  - `MarketIdsPerOpenBlock`
+  - `MarketIdsPerOpenTimeFrame`
+  - `MarketsCollectingSubsidy`
+- ⚠️ Deprecated the following storage elements of zrml-market-commons (will be
+  removed at an unspecified point in time; [#1197]):
+  - `MarketPool`
+- ⚠️ Deprecated the following storage elements of zrml-swaps (will be removed in
+  v0.5.1; [#1197]):
+  - `SubsidyProviders`
+  - `PoolsCachedForArbitrage`
+
+## v0.4.3
+
+### Removed
+
+- Remove old storage migrations
+
 ## v0.4.2
 
 [#1127]: https://github.com/zeitgeistpm/zeitgeist/pull/1127
