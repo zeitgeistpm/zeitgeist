@@ -26,10 +26,10 @@ devDependencies:
     specifier: 0.9.3
     version: 0.9.3(debug@4.3.4)(ts-node@10.9.2)
   '@moonwall/cli':
-    specifier: ^4.4.4
+    specifier: ^4.4.1
     version: 4.4.4(@types/node@20.10.4)(ts-node@10.9.2)(typescript@5.3.3)
   '@moonwall/util':
-    specifier: ^4.4.4
+    specifier: ^4.4.1
     version: 4.4.4(@types/node@20.10.4)(@vitest/ui@1.0.1)(typescript@5.3.3)
   '@polkadot/api':
     specifier: ^10.10.1
@@ -4832,6 +4832,7 @@ packages:
 
   /util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
+    requiresBuild: true
 
   /util@0.12.5:
     resolution: {integrity: sha512-kZf/K6hEIrWHI6XqOFUiiMa+79wE/D8Q+NCNAWclkyg3b4d2k7s0QGepNjiABc+aR3N1PAyHL7p6UcLY6LmrnA==}

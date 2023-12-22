@@ -161,7 +161,7 @@ jobs:
   chopsticks_battery_station_upgrade:
     name: Battery Station Chopsticks Post-Upgrade Tests
     runs-on: ubuntu-20.04
-    needs: ["build_parachain"]
+    needs: ["build_parachain", "zombienet_zeitgeist_upgrade"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -189,7 +189,6 @@ jobs:
       - name: Create local folders
         run: |
           mkdir -p target/release/wbuild/battery-station-runtime/
-          mkdir -p integration-tests/tmp
           mkdir -p integration-tests/tmp/node_logs
 
       - name: Download runtime
@@ -208,12 +207,12 @@ jobs:
           pnpm exec moonwall test chopsticks_battery_station_upgrade
           ls -R tmp/node_logs/
           cat tmp/node_logs/*.log
+        timeout-minutes: 20
 
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Post-Upgrade Tests
     runs-on: ubuntu-20.04
-    # run after "chopsticks_battery_station_upgrade" job, because the moonwall test has port conflicts
-    needs: ["build_parachain", "chopsticks_battery_station_upgrade"]
+    needs: ["build_parachain", "zombienet_zeitgeist_upgrade"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -241,7 +240,6 @@ jobs:
       - name: Create local folders
         run: |
           mkdir -p target/release/wbuild/zeitgeist-runtime/
-          mkdir -p integration-tests/tmp
           mkdir -p integration-tests/tmp/node_logs
 
       - name: "Download runtime"
@@ -260,3 +258,4 @@ jobs:
           pnpm exec moonwall test chopsticks_zeitgeist_upgrade
           ls -R tmp/node_logs/
           cat tmp/node_logs/*.log
+        timeout-minutes: 20

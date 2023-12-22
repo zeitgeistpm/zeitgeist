@@ -9,8 +9,8 @@
   },
   "devDependencies": {
     "@acala-network/chopsticks": "0.9.3",
-    "@moonwall/cli": "^4.4.4",
-    "@moonwall/util": "^4.4.4",
+    "@moonwall/cli": "^4.4.1",
+    "@moonwall/util": "^4.4.1",
     "debug": "4.3.4",
     "@polkadot/api": "^10.10.1",
     "@polkadot/types": "^10.10.1",
