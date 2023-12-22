@@ -14607,7 +14607,6 @@ dependencies = [
 name = "zrml-market-commons"
 version = "0.4.2"
 dependencies = [
- "cfg-if",
  "env_logger 0.10.1",
  "frame-support",
  "frame-system",
@@ -14728,7 +14727,6 @@ dependencies = [
 name = "zrml-prediction-markets"
 version = "0.4.2"
 dependencies = [
- "cfg-if",
  "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
@@ -14862,7 +14860,6 @@ dependencies = [
 name = "zrml-swaps"
 version = "0.4.2"
 dependencies = [
- "cfg-if",
  "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",

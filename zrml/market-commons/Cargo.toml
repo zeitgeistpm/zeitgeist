@@ -1,5 +1,4 @@
 [dependencies]
-cfg-if = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
