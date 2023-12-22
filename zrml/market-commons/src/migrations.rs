@@ -42,12 +42,10 @@ use {
     zeitgeist_primitives::types::MarketId,
 };
 
-cfg_if::cfg_if! {
-    if #[cfg(any(feature = "try-runtime", test))] {
-        const MARKET_COMMONS: &[u8] = b"MarketCommons";
-        const MARKETS: &[u8] = b"Markets";
-    }
-}
+#[cfg(any(feature = "try-runtime", test))]
+const MARKET_COMMONS: &[u8] = b"MarketCommons";
+#[cfg(any(feature = "try-runtime", test))]
+const MARKETS: &[u8] = b"Markets";  
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OldMarket<AI, BA, BN, M, A> {
