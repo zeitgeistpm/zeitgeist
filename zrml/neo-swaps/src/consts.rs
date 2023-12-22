@@ -17,7 +17,11 @@
 
 use zeitgeist_primitives::constants::BASE;
 
-pub(crate) const EXP_NUMERICAL_LIMIT: u128 = 20; // Numerical limit for exp arguments.
+/// Numerical limit for absolute value of exp arguments (not a fixed point number).
+pub(crate) const EXP_NUMERICAL_LIMIT: u128 = 10;
+/// Numerical lower limit for ln arguments (fixed point number).
+pub(crate) const LN_NUMERICAL_LIMIT: u128 = BASE / 10;
+/// The maximum number of assets allowed in a pool.
 pub(crate) const MAX_ASSETS: u16 = 128;
 
 pub(crate) const _1: u128 = BASE;
@@ -25,14 +29,21 @@ pub(crate) const _2: u128 = 2 * _1;
 pub(crate) const _3: u128 = 3 * _1;
 pub(crate) const _4: u128 = 4 * _1;
 pub(crate) const _5: u128 = 5 * _1;
+pub(crate) const _6: u128 = 6 * _1;
 pub(crate) const _7: u128 = 7 * _1;
 pub(crate) const _8: u128 = 8 * _1;
 pub(crate) const _9: u128 = 9 * _1;
 pub(crate) const _10: u128 = 10 * _1;
 pub(crate) const _11: u128 = 11 * _1;
+pub(crate) const _12: u128 = 12 * _1;
+pub(crate) const _14: u128 = 14 * _1;
 pub(crate) const _17: u128 = 17 * _1;
 pub(crate) const _20: u128 = 20 * _1;
+pub(crate) const _23: u128 = 23 * _1;
+pub(crate) const _24: u128 = 24 * _1;
 pub(crate) const _30: u128 = 30 * _1;
+pub(crate) const _36: u128 = 36 * _1;
+pub(crate) const _40: u128 = 40 * _1;
 pub(crate) const _70: u128 = 70 * _1;
 pub(crate) const _80: u128 = 80 * _1;
 pub(crate) const _100: u128 = 100 * _1;

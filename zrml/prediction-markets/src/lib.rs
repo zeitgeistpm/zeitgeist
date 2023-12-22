@@ -122,7 +122,14 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                let missing = T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, value: {:?}.",
+                    &Self::reserve_id(),
+                    &bond.who,
+                    bond.value,
+                );
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
                     Ok(())
@@ -182,7 +189,20 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                 }
                 if unreserve_amount != BalanceOf::<T>::zero() {
-                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, unreserve_amount);
+                    let missing = T::Currency::unreserve_named(
+                        &Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, \
+                         who: {:?}, amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        &bond.who,
+                        unreserve_amount,
+                        missing,
+                    );
                 }
                 <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                     m.bonds.$bond_type = Some(Bond { is_settled: true, ..bond.clone() });
@@ -1063,7 +1083,15 @@ mod pallet {
 
             for (currency_id, payout, balance) in winning_assets {
                 // Destroy the shares.
-                T::AssetManager::slash(currency_id, &sender, balance);
+                let missing = T::AssetManager::slash(currency_id, &sender, balance);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount. currency_id {:?}, sender: {:?}, balance: \
+                     {:?}.",
+                    currency_id,
+                    &sender,
+                    balance,
+                );
 
                 // Pay out the winner.
                 let remaining_bal =
@@ -1320,7 +1348,10 @@ mod pallet {
         /// `O(n)` where `n` is the number of markets which close on the same block, plus the
         /// resources consumed by `DeployPool::create_pool`. In the standard implementation using
         /// neo-swaps, this is `O(m)` where `m` is the number of assets in the market.
-        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(CacheSize::get()))]
+        #[pallet::weight(T::WeightInfo::create_market_and_deploy_pool(
+            CacheSize::get(),
+            spot_prices.len() as u32,
+        ))]
         #[transactional]
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
@@ -1352,8 +1383,9 @@ mod pallet {
                 ScoringRule::Lmsr,
             )?;
             Self::do_buy_complete_set(who.clone(), market_id, amount)?;
+            let spot_prices_len = spot_prices.len() as u32;
             T::DeployPool::deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len)).into())
+            Ok(Some(T::WeightInfo::create_market_and_deploy_pool(ids_len, spot_prices_len)).into())
         }
 
         /// Allows the `CloseMarketsEarlyOrigin` or the market creator to schedule an early close.
@@ -1686,6 +1718,34 @@ mod pallet {
             Self::deposit_event(Event::MarketEarlyCloseRejected { market_id });
 
             Ok(Some(weight).into())
+        }
+
+        /// Allows the market creator of a trusted market
+        /// to immediately move an open market to closed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::call_index(21)]
+        #[pallet::weight(T::WeightInfo::close_trusted_market(CacheSize::get(), CacheSize::get()))]
+        #[transactional]
+        pub fn close_trusted_market(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
+            ensure!(market.creator == who, Error::<T>::CallerNotMarketCreator);
+            ensure!(market.dispute_mechanism.is_none(), Error::<T>::MarketIsNotTrusted);
+            Self::ensure_market_is_active(&market)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
+            Self::close_market(&market_id)?;
+            Self::set_market_end(&market_id)?;
+            Ok(Some(T::WeightInfo::close_trusted_market(open_ids_len, close_ids_len)).into())
         }
     }
 
@@ -2038,6 +2098,10 @@ mod pallet {
         /// After there was an early close already scheduled,
         /// only the `CloseMarketsEarlyOrigin` can schedule another one.
         OnlyAuthorizedCanScheduleEarlyClose,
+        /// The caller is not the market creator.
+        CallerNotMarketCreator,
+        /// The market is not trusted.
+        MarketIsNotTrusted,
     }
 
     #[pallet::event]
@@ -2591,7 +2655,14 @@ mod pallet {
 
             // write last.
             for asset in assets.iter() {
-                T::AssetManager::slash(*asset, &who, amount);
+                let missing = T::AssetManager::slash(*asset, &who, amount);
+                debug_assert!(
+                    missing.is_zero(),
+                    "Could not slash all of the amount. asset {:?}, who: {:?}, amount: {:?}.",
+                    asset,
+                    &who,
+                    amount,
+                );
             }
 
             T::AssetManager::transfer(market.base_asset, &market_account, &who, amount)?;

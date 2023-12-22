@@ -10,6 +10,7 @@ zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
 [dev-dependencies]
+env_logger = { workspace = true }
 orml-currencies = { workspace = true, features = ["default"] }
 orml-tokens = { workspace = true, features = ["default"] }
 pallet-balances = { workspace = true, features = ["default"] }

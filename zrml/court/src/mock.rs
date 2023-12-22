@@ -35,8 +35,8 @@ use zeitgeist_primitives::{
     constants::mock::{
         AggregationPeriod, AppealBond, AppealPeriod, BlockHashCount, BlocksPerYear, CourtPalletId,
         InflationPeriod, LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxDelegations,
-        MaxReserves, MaxSelectedDraws, MinJurorStake, MinimumPeriod, PmPalletId, RequestInterval,
-        VotePeriod, BASE,
+        MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinJurorStake, MinimumPeriod,
+        PmPalletId, RequestInterval, VotePeriod, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -127,8 +127,11 @@ impl DisputeResolutionApi for MockResolution {
 
     fn remove_auto_resolve(market_id: &Self::MarketId, resolve_at: Self::BlockNumber) -> u32 {
         <mock_storage::MarketIdsPerDisputeBlock<Runtime>>::mutate(resolve_at, |ids| -> u32 {
-            ids.retain(|id| id != market_id);
-            ids.len() as u32
+            let ids_len = ids.len() as u32;
+            if let Some(pos) = ids.iter().position(|i| i == market_id) {
+                ids.swap_remove(pos);
+            }
+            ids_len
         })
     }
 }
@@ -149,6 +152,7 @@ impl crate::Config for Runtime {
     type MaxDelegations = MaxDelegations;
     type MaxSelectedDraws = MaxSelectedDraws;
     type MaxCourtParticipants = MaxCourtParticipants;
+    type MaxYearlyInflation = MaxYearlyInflation;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type PalletId = CourtPalletId;
@@ -253,6 +257,9 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
 
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)

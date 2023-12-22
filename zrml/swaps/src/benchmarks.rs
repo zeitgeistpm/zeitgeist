@@ -29,7 +29,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
+use crate::{pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::{
     dispatch::{DispatchResult, UnfilteredDispatchable},
@@ -44,6 +44,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{BASE, CENT},
+    math::fixed::FixedMul,
     traits::{MarketCommonsPalletApi, Swaps as _},
     types::{
         Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
@@ -772,12 +773,7 @@ benchmarks! {
         // amount_in = 1/3 * balance_in, weight_in = 1, weight_out = 2.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_in: BalanceOf<T> = bmul(
-            balance.saturated_into(),
-            T::MaxInRatio::get().saturated_into(),
-        )
-        .unwrap()
-        .saturated_into();
+        let asset_amount_in: BalanceOf<T> = balance.bmul(T::MaxInRatio::get()).unwrap();
         let weight_in = T::MinWeight::get();
         let weight_out = 2 * weight_in;
         let mut weights = vec![weight_in; asset_count as usize];
@@ -839,13 +835,11 @@ benchmarks! {
         // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let mut asset_amount_out: BalanceOf<T> = bmul(
-            balance.saturated_into(),
-            T::MaxOutRatio::get().saturated_into(),
-        )
-        .unwrap()
-        .saturated_into();
-        asset_amount_out = Perbill::one().checked_sub(&DEFAULT_CREATOR_FEE).unwrap().mul_floor(asset_amount_out);
+        let mut asset_amount_out: BalanceOf<T> = balance.bmul(T::MaxOutRatio::get()).unwrap();
+        asset_amount_out = Perbill::one()
+            .checked_sub(&DEFAULT_CREATOR_FEE)
+            .unwrap()
+            .mul_floor(asset_amount_out);
         let weight_out = T::MinWeight::get();
         let weight_in = 4 * weight_out;
         let mut weights = vec![weight_out; asset_count as usize];

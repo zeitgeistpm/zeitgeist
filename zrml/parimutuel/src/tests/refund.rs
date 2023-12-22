@@ -137,7 +137,7 @@ fn refund_fails_if_refund_not_allowed() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -163,7 +163,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 2 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -192,7 +192,7 @@ fn refund_emits_event() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();

@@ -1,6 +1,7 @@
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 cfg-if = { workspace = true }
+env_logger = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 hashbrown = { workspace = true }
@@ -24,6 +25,7 @@ mock = [
     "pallet-timestamp/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
+    "env_logger/default",
 ]
 std = [
     "frame-support/std",

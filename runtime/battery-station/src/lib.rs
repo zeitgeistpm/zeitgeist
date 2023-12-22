@@ -128,18 +128,24 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                     deploy_swap_pool_and_additional_liquidity { .. } => true,
                     deploy_swap_pool_for_market { .. } => true,
                     dispute { .. } => true,
-                    // Only allow CPMM markets using Authorized or SimpleDisputes dispute mechanism
+                    // Only allow CPMM markets using Authorized or Court dispute mechanism
                     create_market {
-                        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
+                        dispute_mechanism:
+                            Some(MarketDisputeMechanism::Authorized)
+                            | Some(MarketDisputeMechanism::Court),
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
                     create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
+                        dispute_mechanism:
+                            Some(MarketDisputeMechanism::Authorized)
+                            | Some(MarketDisputeMechanism::Court),
                         ..
                     } => true,
                     edit_market {
-                        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
+                        dispute_mechanism:
+                            Some(MarketDisputeMechanism::Authorized)
+                            | Some(MarketDisputeMechanism::Court),
                         scoring_rule: ScoringRule::CPMM,
                         ..
                     } => true,
@@ -160,6 +166,8 @@ impl Contains<RuntimeCall> for ContractsCallfilter {
                 swap_exact_amount_out { .. } => true,
                 _ => false,
             },
+            RuntimeCall::Orderbook(_) => true,
+            RuntimeCall::Parimutuel(_) => true,
             _ => false,
         }
     }

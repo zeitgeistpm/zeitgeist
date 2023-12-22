@@ -36,7 +36,7 @@ use orml_asset_registry::AssetMetadata;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, Get, IdentityLookup},
+    traits::{BlakeTwo256, Get, IdentityLookup, Zero},
     DispatchResult, Percent, SaturatedConversion,
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -52,15 +52,16 @@ use zeitgeist_primitives::{
         GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
         InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
         MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
-        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxLocks,
-        MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
+        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxLiquidityTreeDepth,
+        MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
         MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
-        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId,
-        VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MaxYearlyInflation, MinAssets, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, SwapsPalletId,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
     },
+    math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
@@ -140,14 +141,11 @@ where
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = zeitgeist_primitives::math::fixed::bmul(
-            amount.saturated_into(),
-            EXTERNAL_FEES.saturated_into(),
-        )
-        .unwrap()
-        .saturated_into();
-        let _ = T::MultiCurrency::transfer(asset, account, &F::get(), fees);
-        fees
+        let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
+        match T::MultiCurrency::transfer(asset, account, &F::get(), fees) {
+            Ok(_) => fees,
+            Err(_) => Zero::zero(),
+        }
     }
 }
 
@@ -194,6 +192,7 @@ impl crate::Config for Runtime {
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
     type RuntimeEvent = RuntimeEvent;
+    type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
     type MaxSwapFee = NeoMaxSwapFee;
     type PalletId = NeoSwapsPalletId;
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
@@ -295,6 +294,7 @@ impl zrml_court::Config for Runtime {
     type MaxDelegations = MaxDelegations;
     type MaxSelectedDraws = MaxSelectedDraws;
     type MaxCourtParticipants = MaxCourtParticipants;
+    type MaxYearlyInflation = MaxYearlyInflation;
     type MinJurorStake = MinJurorStake;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountIdTest>;
     type PalletId = CourtPalletId;
@@ -476,7 +476,7 @@ pub struct ExtBuilder {
 #[allow(unused)]
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, _101), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
+        Self { balances: vec![(ALICE, 100_000_000_001 * _1), (CHARLIE, _1), (DAVE, _1), (EVE, _1)] }
     }
 }
 
@@ -484,36 +484,41 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
+        let _ = env_logger::builder().is_test(true).try_init();
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
         #[cfg(feature = "parachain")]
-        use frame_support::traits::GenesisBuild;
-        #[cfg(feature = "parachain")]
-        orml_tokens::GenesisConfig::<Runtime> { balances: vec![(ALICE, FOREIGN_ASSET, _101)] }
+        {
+            use frame_support::traits::GenesisBuild;
+            orml_tokens::GenesisConfig::<Runtime> {
+                balances: vec![(ALICE, FOREIGN_ASSET, 100_000_000_001 * _1)],
+            }
             .assimilate_storage(&mut t)
             .unwrap();
-        #[cfg(feature = "parachain")]
-        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
-            allow_as_base_asset: true,
-            ..Default::default()
-        };
-        #[cfg(feature = "parachain")]
-        orml_asset_registry_mock::GenesisConfig {
-            metadata: vec![(
-                FOREIGN_ASSET,
-                AssetMetadata {
-                    decimals: 18,
-                    name: "MKL".as_bytes().to_vec(),
-                    symbol: "MKL".as_bytes().to_vec(),
-                    existential_deposit: 0,
-                    location: None,
-                    additional: custom_metadata,
-                },
-            )],
+            let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+                allow_as_base_asset: true,
+                ..Default::default()
+            };
+            orml_asset_registry_mock::GenesisConfig {
+                metadata: vec![(
+                    FOREIGN_ASSET,
+                    AssetMetadata {
+                        decimals: 18,
+                        name: "MKL".as_bytes().to_vec(),
+                        symbol: "MKL".as_bytes().to_vec(),
+                        existential_deposit: 0,
+                        location: None,
+                        additional: custom_metadata,
+                    },
+                )],
+            }
+            .assimilate_storage(&mut t)
+            .unwrap();
         }
-        .assimilate_storage(&mut t)
-        .unwrap();
-        t.into()
+        let mut test_ext: sp_io::TestExternalities = t.into();
+        test_ext.execute_with(|| System::set_block_number(1));
+        test_ext
     }
 }
