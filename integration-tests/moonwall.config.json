@@ -111,17 +111,17 @@
             {
                 "name": "BatteryStationPara",
                 "type": "polkadotJs",
-                "endpoints": ["ws://127.0.0.1:8000"]
+                "endpoints": ["ws://127.0.0.1:8100"]
             },
             {
                 "name": "BasiliskPara",
                 "type": "polkadotJs",
-                "endpoints": ["ws://127.0.0.1:8001"]
+                "endpoints": ["ws://127.0.0.1:8101"]
             },
             {
                 "name": "RococoRelay",
                 "type": "polkadotJs",
-                "endpoints": ["ws://127.0.0.1:8002"]
+                "endpoints": ["ws://127.0.0.1:8102"]
             }
          ]
       }

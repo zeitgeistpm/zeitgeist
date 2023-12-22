@@ -62,7 +62,7 @@ export async function canSendBalanceTransfer(
     tries++;
   }
 
-  // without this, the xcm transfer test has a timeout
+  // without this, the xcm transfer `canSendXcmTransfer` test below has a timeout
   await context.createBlock({ providerName: providerName, count: 1 });
 
   const balanceAfter = (
