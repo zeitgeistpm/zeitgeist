@@ -24,7 +24,7 @@
 
 use crate::{
     types::{Pool, PoolStatus},
-    BalanceOf, Config, Pallet as Swaps, PoolOf,
+    BalanceOf, Config, Pallet as Swaps, PoolOf, PoolsCachedForArbitrage, SubsidyProviders,
 };
 use alloc::{collections::BTreeMap, vec::Vec};
 use core::marker::PhantomData;
@@ -139,7 +139,8 @@ pub struct MigratePools<T>(PhantomData<T>);
 
 /// Deletes all Rikiddo markets from storage, migrates CPMM markets to their new storage layout and
 /// closes them. Due to us abstracting `MarketId` away from the `Asset` type of the `Config` object,
-/// we require that the old asset type `Asset<MarketId>` can be converted to the generic `T::Asset`.
+/// we require that the old asset type `Asset<MarketId>` be convertible to the generic `T::Asset`.
+/// The migration also clears the `SubsidyProviders` and `PoolsCachedForArbitrage` storage elements.
 impl<T> OnRuntimeUpgrade for MigratePools<T>
 where
     T: Config,
@@ -158,11 +159,11 @@ where
         }
         log::info!("MigratePools: Starting...");
 
-        let mut translated = 0u64;
+        let mut reads_writes = 0u64;
         crate::Pools::<T>::translate::<Option<OldPoolOf<T>>, _>(|_, opt_old_pool| {
             // We proceed by deleting Rikiddo pools; CPMM pools are migrated to the new version
             // _and_ closed (because their respective markets are being switched to LMSR).
-            translated.saturating_inc();
+            reads_writes.saturating_inc();
             let old_pool = opt_old_pool?;
             if old_pool.scoring_rule != OldScoringRule::CPMM {
                 return None;
@@ -189,10 +190,12 @@ where
             let new_pool: PoolOf<T> = Pool { assets, status, swap_fee, total_weight, weights };
             Some(new_pool)
         });
-        log::info!("MigratePools: Upgraded {} pools.", translated);
-        total_weight =
-            total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
-
+        log::info!("MigratePools: Upgraded {} pools.", reads_writes);
+        reads_writes = reads_writes.saturating_add(SubsidyProviders::<T>::drain().count() as u64);
+        reads_writes =
+            reads_writes.saturating_add(PoolsCachedForArbitrage::<T>::drain().count() as u64);
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads_writes(reads_writes, reads_writes));
         StorageVersion::new(SWAPS_NEXT_STORAGE_VERSION).put::<Swaps<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         log::info!("MigratePools: Done!");
@@ -215,7 +218,6 @@ where
                 pools
             );
         }
-
         Ok(old_pools.encode())
     }
 
@@ -227,6 +229,12 @@ where
         let new_pool_count = crate::Pools::<T>::iter().count();
         assert_eq!(old_pool_count, new_pool_count);
         log::info!("MigratePools: Pool counter post-upgrade is {}!", new_pool_count);
+        if PoolsCachedForArbitrage::<T>::iter().count() != 0 {
+            return Err("MigratePools: PoolsCachedForArbitrage is not empty!");
+        }
+        if SubsidyProviders::<T>::iter().count() != 0 {
+            return Err("MigratePools: SubsidyProviders is not empty!");
+        }
         Ok(())
     }
 }
@@ -248,6 +256,18 @@ mod tests {
             set_up_version();
             MigratePools::<Runtime>::on_runtime_upgrade();
             assert_eq!(StorageVersion::get::<Swaps<Runtime>>(), SWAPS_NEXT_STORAGE_VERSION);
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_clears_storage_correctly() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            PoolsCachedForArbitrage::<Runtime>::insert(4, ());
+            SubsidyProviders::<Runtime>::insert(1, 2, 3);
+            MigratePools::<Runtime>::on_runtime_upgrade();
+            assert_eq!(PoolsCachedForArbitrage::<Runtime>::iter().count(), 0);
+            assert_eq!(SubsidyProviders::<Runtime>::iter().count(), 0);
         });
     }
 
@@ -352,16 +372,16 @@ mod tests {
                 Asset::ForeignAsset(1) => 4,
                 Asset::ForeignAsset(2) => 5,
             });
-            crate::Pools::<Runtime>::insert(
-                0,
-                Pool {
-                    assets: assets.try_into().unwrap(),
-                    status: PoolStatus::Open,
-                    swap_fee: 4,
-                    total_weight: 12,
-                    weights: weights.try_into().unwrap(),
-                },
-            );
+            let pool = Pool {
+                assets: assets.try_into().unwrap(),
+                status: PoolStatus::Open,
+                swap_fee: 4,
+                total_weight: 12,
+                weights: weights.try_into().unwrap(),
+            };
+            crate::Pools::<Runtime>::insert(0, pool);
+            PoolsCachedForArbitrage::<Runtime>::insert(4, ());
+            SubsidyProviders::<Runtime>::insert(1, 2, 3);
             let tmp = storage_root(StateVersion::V1);
             MigratePools::<Runtime>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));

@@ -14279,7 +14279,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-macros"
-version = "0.4.2"
+version = "0.4.3"
 
 [[package]]
 name = "zeitgeist-node"
