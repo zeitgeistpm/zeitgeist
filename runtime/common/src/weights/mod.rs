@@ -32,6 +32,7 @@ cfg_if::cfg_if! {
 pub mod frame_system;
 pub mod orml_currencies;
 pub mod orml_tokens;
+pub mod pallet_assets;
 pub mod pallet_balances;
 pub mod pallet_bounties;
 pub mod pallet_collective;

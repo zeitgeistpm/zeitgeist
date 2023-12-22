@@ -562,6 +562,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-assets",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -1214,6 +1215,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "pallet-asset-tx-payment",
+ "pallet-assets",
  "pallet-author-inherent",
  "pallet-author-mapping",
  "pallet-author-slot-filter",
@@ -5853,6 +5855,21 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
  "sp-runtime",
  "sp-std",
 ]
@@ -14422,6 +14439,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-assets",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
