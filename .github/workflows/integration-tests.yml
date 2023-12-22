@@ -212,7 +212,8 @@ jobs:
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Post-Upgrade Tests
     runs-on: ubuntu-20.04
-    needs: ["build_parachain"]
+    # run after "chopsticks_battery_station_upgrade" job, because the moonwall test has port conflicts
+    needs: ["build_parachain", "chopsticks_battery_station_upgrade"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2

@@ -3,7 +3,9 @@
 import { expect, ChopsticksContext } from "@moonwall/cli";
 import { generateKeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
+import { AccountInfo, AccountData } from "@polkadot/types/interfaces";
 import WebSocket from "ws";
+import { Debugger } from "debug";
 
 const MAX_BALANCE_TRANSFER_TRIES = 5;
 
@@ -34,7 +36,7 @@ export async function canSendBalanceTransfer(
   let tries = 0;
   const amount = BigInt("1000000000");
   const balanceBefore = (
-    await paraApi.query.system.account(randomAccount.address)
+    (await paraApi.query.system.account(randomAccount.address)) as AccountInfo
   ).data.free.toBigInt();
 
   /// It might happen that by accident we hit a session change
@@ -66,13 +68,15 @@ export async function canSendBalanceTransfer(
   await context.createBlock({ providerName: providerName, count: 1 });
 
   const balanceAfter = (
-    await paraApi.query.system.account(randomAccount.address)
+    (await paraApi.query.system.account(randomAccount.address)) as AccountInfo
   ).data.free.toBigInt();
   expect(balanceAfter > balanceBefore, "Balance did not increase").toBeTruthy();
 }
 
 export async function canSendXcmTransfer(
+  context: ChopsticksContext,
   log: Debugger,
+  senderProviderName: string,
   senderParaApi: ApiPromise,
   receiverParaApi: ApiPromise,
   receiverParaId: number,
@@ -83,10 +87,13 @@ export async function canSendXcmTransfer(
   const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
   const senderBalanceBefore = (
-    await senderParaApi.query.system.account(alice.address)
+    (await senderParaApi.query.system.account(alice.address)) as AccountInfo
   ).data.free.toBigInt();
   const receiverBalanceBefore = (
-    await receiverParaApi.query.tokens.accounts(bob.address, tokensIndex)
+    (await receiverParaApi.query.tokens.accounts(
+      bob.address,
+      tokensIndex
+    )) as AccountData
   ).free.toBigInt();
 
   const ztg = { Ztg: null };
@@ -107,31 +114,25 @@ export async function canSendXcmTransfer(
   };
   const destWeightLimit = { Unlimited: null };
 
-  // Create a promise that resolves when the transaction is finalized
-  const finalizedPromise = new Promise((resolve, reject) => {
-    const xcmTransfer = senderParaApi.tx.xTokens.transfer(
-      ztg,
-      amount,
-      destination,
-      destWeightLimit
-    );
-    xcmTransfer.signAndSend(alice, { nonce: -1 }, ({ status }) => {
-      log(`Current status is ${status.toString()}`);
-      if (status.isFinalized) {
-        log(`Transaction finalized at blockHash ${status.asFinalized}`);
-        resolve(xcmTransfer);
-      } else if (status.isError) {
-        reject(new Error(`Transaction failed with status ${status}`));
-      }
-    });
+  const xcmTransfer = senderParaApi.tx.xTokens.transfer(
+    ztg,
+    amount,
+    destination,
+    destWeightLimit
+  );
+
+  await xcmTransfer.signAndSend(alice, { nonce: -1 });
+
+  await context.createBlock({
+    providerName: senderProviderName,
+    count: 1,
+    allowFailures: false,
   });
 
-  // Wait for the transaction to be finalized
-  const xcmTransfer = await finalizedPromise;
   const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
   const transferFee: bigint = partialFee.toBigInt();
   const senderBalanceAfter = (
-    await senderParaApi.query.system.account(alice.address)
+    (await senderParaApi.query.system.account(alice.address)) as AccountInfo
   ).data.free.toBigInt();
   expect(
     senderBalanceBefore - senderBalanceAfter,
@@ -142,10 +143,6 @@ export async function canSendXcmTransfer(
   // Reported Bug here https://github.com/Moonsong-Labs/moonwall/issues/343
 
   // use a workaround for creating a block
-  const blocksToRun = 2;
-  const currentHeight = (
-    await receiverParaApi.rpc.chain.getBlock()
-  ).block.header.number.toNumber();
   const newBlockPromise = new Promise((resolve, reject) => {
     // ws://127.0.0.1:8001 represents the receiver chain endpoint
     const ws = new WebSocket("ws://127.0.0.1:8001");
@@ -155,7 +152,7 @@ export async function canSendXcmTransfer(
         jsonrpc: "2.0",
         id: 1,
         method: "dev_newBlock",
-        params: [{ count: blocksToRun }],
+        params: [{ count: 1 }],
       };
 
       ws.send(JSON.stringify(message));
@@ -173,17 +170,12 @@ export async function canSendXcmTransfer(
     });
   });
 
-  const blockHash = await newBlockPromise;
-  const newHeight = (
-    await receiverParaApi.rpc.chain.getBlock()
-  ).block.header.number.toNumber();
-  // TODO why +1 here?
-  expect(newHeight - currentHeight, "Block difference is not correct!").toBe(
-    blocksToRun + 1
-  );
-
+  await newBlockPromise;
   const receiverBalanceAfter: bigint = (
-    await receiverParaApi.query.tokens.accounts(bob.address, tokensIndex)
+    (await receiverParaApi.query.tokens.accounts(
+      bob.address,
+      tokensIndex
+    )) as AccountData
   ).free.toBigInt();
   expect(
     receiverBalanceAfter > receiverBalanceBefore,

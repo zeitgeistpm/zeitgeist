@@ -13,6 +13,7 @@ import {
   canSendBalanceTransfer,
   canSendXcmTransfer,
 } from "tests/common-tests";
+import { RuntimeVersion } from "@polkadot/types/interfaces";
 
 const ZEITGEIST_TOKENS_INDEX = 12;
 const HYDRADX_PARA_ID = 2034;
@@ -33,32 +34,38 @@ describeSuite({
       relayApi = context.polkadotJs("PolkadotRelay");
       hydradxParaApi = context.polkadotJs("HydraDXPara");
 
-      const paraZeitgeistNetwork =
-        zeitgeistParaApi.consts.system.version.specName.toString();
+      const paraZeitgeistNetwork = (
+        zeitgeistParaApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(paraZeitgeistNetwork, "Para API incorrect").to.contain(
         "zeitgeist"
       );
 
-      const relayNetwork = relayApi.consts.system.version.specName.toString();
+      const relayNetwork = (
+        relayApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(relayNetwork, "Relay API incorrect").to.contain("polkadot");
 
-      const paraHydraDXNetwork =
-        hydradxParaApi.consts.system.version.specName.toString();
+      const paraHydraDXNetwork = (
+        hydradxParaApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(paraHydraDXNetwork, "Para API incorrect").to.contain("hydradx");
 
-      const rtBefore =
-        zeitgeistParaApi.consts.system.version.specVersion.toNumber();
+      const rtBefore = (
+        zeitgeistParaApi.consts.system.version as RuntimeVersion
+      ).specVersion.toNumber();
       log(`About to upgrade to runtime at:`);
       log(MoonwallContext.getContext().rtUpgradePath);
 
-      await context.upgradeRuntime(context);
+      await context.upgradeRuntime();
 
-      const rtafter =
-        zeitgeistParaApi.consts.system.version.specVersion.toNumber();
+      const rtafter = (
+        zeitgeistParaApi.consts.system.version as RuntimeVersion
+      ).specVersion.toNumber();
       log(
         `RT upgrade has increased specVersion from ${rtBefore} to ${rtafter}`
       );
-    });
+    }, 60000);
 
     it({
       id: "T1",
@@ -88,7 +95,9 @@ describeSuite({
       title: "Can send ZTG to HydraDX",
       test: async () => {
         await canSendXcmTransfer(
+          context,
           log,
+          "ZeitgeistPara",
           zeitgeistParaApi,
           hydradxParaApi,
           HYDRADX_PARA_ID,

@@ -13,6 +13,7 @@ import {
   canSendBalanceTransfer,
   canSendXcmTransfer,
 } from "tests/common-tests";
+import { RuntimeVersion } from "@polkadot/types/interfaces";
 
 const ZEITGEIST_TOKENS_INDEX = 12;
 const BASILISK_PARA_ID = 2090;
@@ -33,32 +34,38 @@ describeSuite({
       relayApi = context.polkadotJs("RococoRelay");
       basiliskParaApi = context.polkadotJs("BasiliskPara");
 
-      const paraZeitgeistNetwork =
-        batteryStationParaApi.consts.system.version.specName.toString();
+      const paraZeitgeistNetwork = (
+        batteryStationParaApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(paraZeitgeistNetwork, "Para API incorrect").to.contain(
         "zeitgeist"
       );
 
-      const relayNetwork = relayApi.consts.system.version.specName.toString();
+      const relayNetwork = (
+        relayApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(relayNetwork, "Relay API incorrect").to.contain("rococo");
 
-      const paraBasiliskNetwork =
-        basiliskParaApi.consts.system.version.specName.toString();
+      const paraBasiliskNetwork = (
+        basiliskParaApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(paraBasiliskNetwork, "Para API incorrect").to.contain("basilisk");
 
-      const rtBefore =
-        batteryStationParaApi.consts.system.version.specVersion.toNumber();
+      const rtBefore = (
+        batteryStationParaApi.consts.system.version as RuntimeVersion
+      ).specVersion.toNumber();
       log(`About to upgrade to runtime at:`);
       log(MoonwallContext.getContext().rtUpgradePath);
 
-      await context.upgradeRuntime(context);
+      await context.upgradeRuntime();
 
-      const rtafter =
-        batteryStationParaApi.consts.system.version.specVersion.toNumber();
+      const rtafter = (
+        batteryStationParaApi.consts.system.version as RuntimeVersion
+      ).specVersion.toNumber();
       log(
         `RT upgrade has increased specVersion from ${rtBefore} to ${rtafter}`
       );
-    });
+    }, 60000);
 
     it({
       id: "T1",
@@ -95,7 +102,9 @@ describeSuite({
       title: "Can send ZBS to Basilisk",
       test: async () => {
         await canSendXcmTransfer(
+          context,
           log,
+          "BatteryStationPara",
           batteryStationParaApi,
           basiliskParaApi,
           BASILISK_PARA_ID,

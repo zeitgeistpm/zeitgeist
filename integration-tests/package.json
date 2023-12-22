@@ -11,6 +11,7 @@
     "@acala-network/chopsticks": "0.9.3",
     "@moonwall/cli": "^4.4.4",
     "@moonwall/util": "^4.4.4",
+    "debug": "4.3.4",
     "@polkadot/api": "^10.10.1",
     "@polkadot/types": "^10.10.1",
     "@types/node": "^20.9.0",
