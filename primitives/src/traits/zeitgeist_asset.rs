@@ -42,7 +42,7 @@ pub trait PoolSharesId<P> {
     fn pool_shares_id(pool_id: P) -> Self;
 }
 
-/// Helper trait that lets developers to iterate over assets for testing and benchmarking.
+/// Helper trait that lets developers iterate over assets for testing and benchmarking.
 ///
 /// # Generics
 ///
