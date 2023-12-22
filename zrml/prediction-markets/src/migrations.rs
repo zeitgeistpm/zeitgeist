@@ -27,7 +27,7 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade},
 };
 
-#[cfg(feature = "try-runtime")] 
+#[cfg(feature = "try-runtime")]
 use alloc::vec::Vec;
 
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 7;

@@ -37,15 +37,14 @@ use zeitgeist_primitives::types::{
 
 #[cfg(feature = "try-runtime")]
 use {
-    alloc::collections::BTreeMap,
-    frame_support::migration::storage_key_iter,
+    alloc::collections::BTreeMap, frame_support::migration::storage_key_iter,
     zeitgeist_primitives::types::MarketId,
 };
 
 #[cfg(any(feature = "try-runtime", test))]
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 #[cfg(any(feature = "try-runtime", test))]
-const MARKETS: &[u8] = b"Markets";  
+const MARKETS: &[u8] = b"Markets";
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OldMarket<AI, BA, BN, M, A> {
