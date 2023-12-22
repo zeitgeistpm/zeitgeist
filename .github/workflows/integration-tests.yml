@@ -210,8 +210,7 @@ jobs:
         run: |
           cd integration-tests
           ls -R tmp/node_logs/
-          cat tmp/node_logs/*.log
-          exit 0
+          cat tmp/node_logs/*.log | tail -n 1000
 
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Post-Upgrade Tests
@@ -265,5 +264,4 @@ jobs:
         run: |
           cd integration-tests
           ls -R tmp/node_logs/
-          cat tmp/node_logs/*.log
-          exit 0
+          cat tmp/node_logs/*.log | tail -n 1000
