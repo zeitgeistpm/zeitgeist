@@ -181,8 +181,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
 
     Zeitgeist::execute_with(|| {
         register_btc(None);
-        treasury_initial_balance =
-            Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
+        treasury_initial_balance = Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
         assert_eq!(Tokens::free_balance(BTC_ID, &ALICE), zeitgeist_alice_initial_balance,);
     });
 
@@ -305,8 +304,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
 
     Zeitgeist::execute_with(|| {
         register_eth(None);
-        treasury_initial_balance =
-            Tokens::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get());
+        treasury_initial_balance = Tokens::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get());
         assert_eq!(Tokens::free_balance(ETH_ID, &ALICE), zeitgeist_alice_initial_balance,);
     });
 
@@ -362,7 +360,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
             Tokens::free_balance(ETH_ID, &ALICE),
             zeitgeist_alice_initial_balance + expected_adjusted,
         );
-        
+
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
             Tokens::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get()),

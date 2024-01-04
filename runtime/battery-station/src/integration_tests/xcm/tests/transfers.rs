@@ -181,8 +181,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
 
     Zeitgeist::execute_with(|| {
         register_btc(None);
-        treasury_initial_balance =
-            Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
+        treasury_initial_balance = Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
         assert_eq!(Tokens::free_balance(BTC_ID, &ALICE), zeitgeist_alice_initial_balance,);
     });
 
@@ -302,7 +301,8 @@ fn transfer_roc_from_relay_chain() {
 
     Zeitgeist::execute_with(|| {
         register_foreign_parent(None);
-        treasury_initial_balance = Tokens::free_balance(FOREIGN_PARENT_ID, &ZeitgeistTreasuryAccount::get());
+        treasury_initial_balance =
+            Tokens::free_balance(FOREIGN_PARENT_ID, &ZeitgeistTreasuryAccount::get());
     });
 
     RococoNet::execute_with(|| {

@@ -152,17 +152,19 @@ pub type Trader = (
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
     fn take_revenue(revenue: MultiAsset) {
-        use xcm_executor::traits::Convert;
         use orml_traits::MultiCurrency;
+        use xcm_executor::traits::Convert;
 
         if let MultiAsset { id: Concrete(location), fun: Fungible(_amount) } = revenue {
             if let Ok(asset_id) =
                 <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
             {
-                let adj_am = AlignedFractionalMultiAssetTransactor::adjust_fractional_places(&revenue).fun;
+                let adj_am =
+                    AlignedFractionalMultiAssetTransactor::adjust_fractional_places(&revenue).fun;
 
                 if let Fungible(amount) = adj_am {
-                    let _ = AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
+                    let _ =
+                        AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
                 }
             }
         }
