@@ -225,8 +225,8 @@ mod pallet {
         DuplicatePool,
         /// Incorrect asset count.
         IncorrectAssetCount,
-        // Length of `max_amounts_in`, `max_amounts_out` or `spot_prices` must be equal to the
-        // number of outcomes in the market.
+        /// Length of `max_amounts_in`, `max_amounts_out` or `spot_prices` must be equal to the
+        /// number of outcomes in the market.
         IncorrectVecLen,
         /// User doesn't own enough pool shares.
         InsufficientPoolShares,
