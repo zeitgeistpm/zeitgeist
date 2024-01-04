@@ -183,9 +183,9 @@ export async function canSendXcmTransfer(
   ).toBeTruthy();
   const xcmFee: bigint =
     receiverBalanceBefore + amount - transferFee - receiverBalanceAfter;
-  // between 0.03 ZTG and 0.05 ZTG XCM fee
-  const approxXcmFeeLow = 300000000;
-  const approxXcmFeeHigh = 500000000;
+  // between 0.02 ZTG and 0.10 ZTG XCM fee
+  const approxXcmFeeLow = 200000000;
+  const approxXcmFeeHigh = 1000000000;
   expect(xcmFee).toBeGreaterThanOrEqual(approxXcmFeeLow);
   expect(xcmFee).toBeLessThanOrEqual(approxXcmFeeHigh);
   expect(

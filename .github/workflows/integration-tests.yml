@@ -207,6 +207,7 @@ jobs:
           pnpm exec moonwall test chopsticks_battery_station_upgrade
 
       - name: Show chopsticks logs
+        if: ${{ failure() }}
         run: |
           cd integration-tests
           ls -R tmp/node_logs/
@@ -261,6 +262,7 @@ jobs:
           pnpm exec moonwall test chopsticks_zeitgeist_upgrade
 
       - name: Show chopsticks logs
+        if: ${{ failure() }}
         run: |
           cd integration-tests
           ls -R tmp/node_logs/
