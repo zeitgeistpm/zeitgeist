@@ -177,10 +177,12 @@ fn transfer_btc_sibling_to_zeitgeist() {
     let zeitgeist_alice_initial_balance = btc(0);
     let initial_sovereign_balance = btc(100);
     let transfer_amount = btc(100);
+    let mut treasury_initial_balance = 0;
 
     Zeitgeist::execute_with(|| {
         register_btc(None);
-
+        treasury_initial_balance =
+            Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
         assert_eq!(Tokens::free_balance(BTC_ID, &ALICE), zeitgeist_alice_initial_balance,);
     });
 
@@ -230,6 +232,13 @@ fn transfer_btc_sibling_to_zeitgeist() {
             Tokens::free_balance(BTC_ID, &ALICE),
             zeitgeist_alice_initial_balance + expected_adjusted,
         );
+
+        // Verify that fees (of foreign currency) have been put into treasury
+        assert_eq!(
+            Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get()),
+            // Align decimal fractional places
+            treasury_initial_balance + btc_fee() * (ztg(1) / btc(1))
+        )
     });
 }
 
@@ -289,9 +298,11 @@ fn transfer_roc_from_relay_chain() {
     TestNet::reset();
 
     let transfer_amount: Balance = roc(1);
+    let mut treasury_initial_balance = 0;
 
     Zeitgeist::execute_with(|| {
         register_foreign_parent(None);
+        treasury_initial_balance = Tokens::free_balance(FOREIGN_PARENT_ID, &ZeitgeistTreasuryAccount::get());
     });
 
     RococoNet::execute_with(|| {
@@ -311,6 +322,12 @@ fn transfer_roc_from_relay_chain() {
         let expected = transfer_amount - roc_fee();
         let expected_adjusted = adjusted_balance(roc(1), expected);
         assert_eq!(Tokens::free_balance(FOREIGN_PARENT_ID, &BOB), expected_adjusted);
+        // Verify that fees (of foreign currency) have been put into treasury
+        assert_eq!(
+            Tokens::free_balance(FOREIGN_PARENT_ID, &ZeitgeistTreasuryAccount::get()),
+            // Align decimal fractional places
+            treasury_initial_balance + (roc_fee() * ztg(1)) / roc(1)
+        )
     });
 }
 
