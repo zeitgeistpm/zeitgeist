@@ -236,7 +236,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
         assert_eq!(
             Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get()),
             // Align decimal fractional places
-            treasury_initial_balance + btc_fee() * (ztg(1) / btc(1))
+            treasury_initial_balance + adjusted_balance(btc(1), btc_fee())
         )
     });
 }
@@ -365,7 +365,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
         assert_eq!(
             Tokens::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get()),
             // Align decimal fractional places
-            treasury_initial_balance + (eth_fee() * ztg(1)) / eth(1)
+            treasury_initial_balance + adjusted_balance(eth(1), eth_fee())
         )
     });
 }
