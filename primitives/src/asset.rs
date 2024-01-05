@@ -16,8 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "runtime-benchmarks")]
+use crate::traits::ZeitgeistAssetEnumerator;
 use crate::{
-    traits::{PoolSharesId, ZeitgeistAssetEnumerator},
+    traits::PoolSharesId,
     types::{CategoryIndex, PoolId, SerdeWrapper},
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -62,6 +64,7 @@ impl<MI: MaxEncodedLen> PoolSharesId<SerdeWrapper<PoolId>> for Asset<MI> {
     }
 }
 
+#[cfg(feature = "runtime-benchmarks")]
 impl<MI: MaxEncodedLen> ZeitgeistAssetEnumerator<MI> for Asset<MI> {
     fn create_asset_id(t: MI) -> Self {
         Asset::CategoricalOutcome(t, 0)

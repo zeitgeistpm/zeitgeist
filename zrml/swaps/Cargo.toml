@@ -47,6 +47,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "zeitgeist-primitives/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

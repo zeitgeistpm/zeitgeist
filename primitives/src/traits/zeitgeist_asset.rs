@@ -47,6 +47,7 @@ pub trait PoolSharesId<P> {
 /// # Generics
 ///
 /// - `T`: The enumeration type.
+#[cfg(feature = "runtime-benchmarks")]
 pub trait ZeitgeistAssetEnumerator<T> {
     /// Maps `value` to an asset. The returned assets are pairwise distinct.
     fn create_asset_id(t: T) -> Self;
