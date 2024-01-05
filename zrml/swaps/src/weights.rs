@@ -49,17 +49,17 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn pool_exit(a: u32, ) -> Weight;
+    fn pool_exit(a: u32) -> Weight;
     fn pool_exit_with_exact_asset_amount() -> Weight;
     fn pool_exit_with_exact_pool_amount() -> Weight;
-    fn pool_join(a: u32, ) -> Weight;
+    fn pool_join(a: u32) -> Weight;
     fn pool_join_with_exact_asset_amount() -> Weight;
     fn pool_join_with_exact_pool_amount() -> Weight;
     fn swap_exact_amount_in_cpmm() -> Weight;
     fn swap_exact_amount_out_cpmm() -> Weight;
-    fn open_pool(a: u32, ) -> Weight;
-    fn close_pool(a: u32, ) -> Weight;
-    fn destroy_pool(a: u32, ) -> Weight;
+    fn open_pool(a: u32) -> Weight;
+    fn close_pool(a: u32) -> Weight;
+    fn destroy_pool(a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_swaps (automatically generated)
@@ -74,7 +74,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 65]`.
-    fn pool_exit(a: u32, ) -> Weight {
+    fn pool_exit(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `843 + a * (176 ±0)`
         //  Estimated: `13777 + a * (5196 ±0)`
@@ -86,7 +86,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(2))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(a.into())))
-           .saturating_add(Weight::from_parts(0, 5196).saturating_mul(a.into()))
+            .saturating_add(Weight::from_parts(0, 5196).saturating_mul(a.into()))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
@@ -129,7 +129,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Tokens Accounts (r:131 w:131)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 65]`.
-    fn pool_join(a: u32, ) -> Weight {
+    fn pool_join(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `723 + a * (289 ±0)`
         //  Estimated: `11170 + a * (5196 ±0)`
@@ -141,7 +141,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(2))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(a.into())))
-           .saturating_add(Weight::from_parts(0, 5196).saturating_mul(a.into()))
+            .saturating_add(Weight::from_parts(0, 5196).saturating_mul(a.into()))
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
@@ -206,7 +206,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Swaps Pools (r:1 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 65]`.
-    fn open_pool(a: u32, ) -> Weight {
+    fn open_pool(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `168 + a * (54 ±0)`
         //  Estimated: `6054`
@@ -220,7 +220,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Swaps Pools (r:1 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 65]`.
-    fn close_pool(a: u32, ) -> Weight {
+    fn close_pool(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `168 + a * (54 ±0)`
         //  Estimated: `6054`
@@ -240,7 +240,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Tokens TotalIssuance (r:65 w:65)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 65]`.
-    fn destroy_pool(a: u32, ) -> Weight {
+    fn destroy_pool(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `568 + a * (214 ±0)`
         //  Estimated: `8661 + a * (5116 ±0)`
@@ -252,6 +252,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
             .saturating_add(T::DbWeight::get().writes(2))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(a.into())))
-           .saturating_add(Weight::from_parts(0, 5116).saturating_mul(a.into()))
+            .saturating_add(Weight::from_parts(0, 5116).saturating_mul(a.into()))
     }
 }
