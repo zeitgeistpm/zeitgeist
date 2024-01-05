@@ -1725,25 +1725,19 @@ mod pallet {
             Ok(Some(weight).into())
         }
 
-        /// Allows the manual opening and closing for "broken" markets.
+        /// Allows the manual closing for "broken" markets.
         /// A market is "broken", if an unexpected chain stall happened
-        /// and the auto open / close was scheduled during this time.
+        /// and the auto close was scheduled during this time.
         ///
         /// # Weight
         ///
-        /// Complexity: `O(max{n, m})`,
-        /// where `n` is the number of market ids,
-        /// which open at the same time as the specified market,
-        /// and `m` is the number of market ids,
+        /// Complexity: `O(n)`,
+        /// and `n` is the number of market ids,
         /// which close at the same time as the specified market.
         #[pallet::call_index(21)]
-        #[pallet::weight((
-            T::WeightInfo::manually_open_market(CacheSize::get())
-                .max(T::WeightInfo::manually_close_market(CacheSize::get())),
-            Pays::Yes,
-        ))]
+        #[pallet::weight(T::WeightInfo::manually_close_market(CacheSize::get()))]
         #[transactional]
-        pub fn manually_open_or_close_market(
+        pub fn manually_close_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
@@ -1758,27 +1752,7 @@ mod pallet {
                 MarketPeriod::Timestamp(ref range) => range,
             };
 
-            let should_be_opened = range.start < now && now < range.end;
-            let should_be_closed = range.end <= now;
-            debug_assert!(!(should_be_opened && should_be_closed), "Both cases can not happen.");
-
-            let weight = if should_be_opened {
-                let range_start_time_frame = Self::calculate_time_frame_of_moment(range.start);
-                let open_ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                    range_start_time_frame,
-                    |ids| -> Result<u32, DispatchError> {
-                        let ids_len = ids.len() as u32;
-                        let position = ids
-                            .iter()
-                            .position(|i| i == &market_id)
-                            .ok_or(Error::<T>::MarketNotInOpenTimeFrameList)?;
-                        let _ = ids.swap_remove(position);
-                        Ok(ids_len)
-                    },
-                )?;
-                Self::open_market(&market_id)?;
-                T::WeightInfo::manually_open_market(open_ids_len)
-            } else if should_be_closed {
+            let close_ids_len = if range.end <= now {
                 let range_end_time_frame = Self::calculate_time_frame_of_moment(range.end);
                 let close_ids_len = MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                     range_end_time_frame,
@@ -1793,12 +1767,12 @@ mod pallet {
                     },
                 )?;
                 Self::on_market_close(&market_id, market)?;
-                T::WeightInfo::manually_close_market(close_ids_len)
+                close_ids_len
             } else {
                 return Err(Error::<T>::MarketPeriodNotStartedYet.into());
             };
 
-            Ok((Some(weight), Pays::No).into())
+            Ok(Some(T::WeightInfo::manually_close_market(close_ids_len)).into())
         }
 
         /// Allows the market creator of a trusted market

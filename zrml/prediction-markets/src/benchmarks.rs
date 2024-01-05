@@ -1505,33 +1505,6 @@ benchmarks! {
             CENT.saturated_into()
     )
 
-    manually_open_market {
-        let o in 1..63;
-
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
-
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM,
-            Some(MarketPeriod::Timestamp(range_start..range_end)),
-            Some(MarketDisputeMechanism::Court),
-        )?;
-
-        let now = 500_000u32;
-        assert!(range_start < (now as u64) && (now as u64) < range_end);
-
-        let range_start_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_start);
-        for i in 0..o {
-            MarketIdsPerOpenTimeFrame::<T>::try_mutate(range_start_time_frame, |ids| {
-                ids.try_push((i).into())
-            }).unwrap();
-        }
-
-        pallet_timestamp::Pallet::<T>::set_timestamp(now.into());
-    }: manually_open_or_close_market(RawOrigin::Signed(caller), market_id)
-
     manually_close_market {
         let o in 1..63;
 
@@ -1562,7 +1535,7 @@ benchmarks! {
         })?;
 
         pallet_timestamp::Pallet::<T>::set_timestamp(now.into());
-    }: manually_open_or_close_market(RawOrigin::Signed(caller), market_id)
+    }: manually_close_market(RawOrigin::Signed(caller), market_id)
 
     impl_benchmark_test_suite!(
         PredictionMarket,
