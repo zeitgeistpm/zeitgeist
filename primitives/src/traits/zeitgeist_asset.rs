@@ -15,23 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::Parameter;
-use parity_scale_codec::MaxEncodedLen;
-use scale_info::TypeInfo;
-use sp_runtime::traits::{MaybeSerializeDeserialize, Member};
-
-/// A trait implemented by asset ID types on Zeitgeist, based on trait bounds defined in
-/// orml_tokens.
-pub trait ZeitgeistAsset:
-    Parameter + Member + Copy + MaxEncodedLen + MaybeSerializeDeserialize + Ord + TypeInfo
-{
-}
-
-impl<T> ZeitgeistAsset for T where
-    T: Parameter + Member + Copy + MaxEncodedLen + MaybeSerializeDeserialize + Ord + TypeInfo
-{
-}
-
 /// A trait for asset ID providers on Zeitgeist which have an ID for Balancer pool shares.
 ///
 /// # Generics

@@ -62,16 +62,16 @@ mod pallet {
         ensure,
         pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletError, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, PalletError, PalletId, Parameter, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
-    use parity_scale_codec::{Decode, Encode};
+    use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_arithmetic::traits::{Saturating, Zero};
     use sp_runtime::{
-        traits::AccountIdConversion, DispatchError, DispatchResult, RuntimeDebug,
-        SaturatedConversion,
+        traits::{AccountIdConversion, MaybeSerializeDeserialize, Member},
+        DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::CENT,
@@ -79,7 +79,7 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedMulRes},
             fixed::FixedMul,
         },
-        traits::{PoolSharesId, Swaps, ZeitgeistAsset, ZeitgeistAssetManager},
+        traits::{PoolSharesId, Swaps, ZeitgeistAssetManager},
         types::{PoolId, SerdeWrapper},
     };
 
@@ -519,7 +519,14 @@ mod pallet {
         /// Shares of outcome assets and native currency
         type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Self::Asset>;
 
-        type Asset: ZeitgeistAsset + PoolSharesId<SerdeWrapper<PoolId>>;
+        type Asset: Parameter
+            + Member
+            + Copy
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + Ord
+            + TypeInfo
+            + PoolSharesId<SerdeWrapper<PoolId>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
