@@ -31,7 +31,7 @@ APIs/RPC interface.
 
 - Closed all CPMM pools. Withdrawals are still allowed. Creating new pools will
   be impossible until further updates are deployed. ([#1197])
-- Remove all Rikiddo pools from . ([#1197])
+- Remove all Rikiddo storage elements. ([#1197])
 - Migrate neo-swaps `Pools` storage. The market creator's liquidity position is translated into a position in the liquidity tree of the same value ([#1178]).
 
 ### Removed
