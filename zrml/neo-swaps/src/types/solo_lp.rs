@@ -24,6 +24,7 @@ use sp_runtime::{
     DispatchError, DispatchResult, RuntimeDebug,
 };
 
+// Deprecated as of v0.5.0. TODO Remove in 0.5.1!
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
 pub struct SoloLp<T: Config> {
@@ -32,6 +33,7 @@ pub struct SoloLp<T: Config> {
     pub fees: BalanceOf<T>,
 }
 
+#[allow(dead_code)]
 impl<T: Config> SoloLp<T> {
     pub(crate) fn new(owner: T::AccountId, total_shares: BalanceOf<T>) -> SoloLp<T> {
         SoloLp { owner, total_shares, fees: Zero::zero() }
@@ -43,7 +45,9 @@ where
     T::AccountId: PartialEq<T::AccountId>,
     BalanceOf<T>: AtLeast32BitUnsigned + Copy + Zero,
 {
-    fn join(&mut self, who: &T::AccountId, shares: BalanceOf<T>) -> DispatchResult {
+    type JoinBenchmarkInfo = ();
+
+    fn join(&mut self, who: &T::AccountId, shares: BalanceOf<T>) -> Result<(), DispatchError> {
         ensure!(*who == self.owner, Error::<T>::NotAllowed);
         self.total_shares = self.total_shares.checked_add(&shares).ok_or(Error::<T>::MathError)?;
         Ok(())

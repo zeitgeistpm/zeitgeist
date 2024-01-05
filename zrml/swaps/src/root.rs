@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -158,7 +158,7 @@ fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixed::{bmul, bpowi};
+    use crate::fixed::bpowi;
     use test_case::test_case;
     use zeitgeist_primitives::constants::BASE;
 
@@ -207,7 +207,7 @@ mod tests {
     fn calc_preimage_works_with_increasing_polynomial(value: u128, expected: u128) {
         // f(x) = 2x^3 - x^2 - x + 1 is positive and increasing on [1, \infty].
         let f = |x: u128| {
-            let third_order = bmul(_2, bpowi(x, 3)?)?;
+            let third_order = 2 * bpowi(x, 3)?;
             let second_order = bpowi(x, 2)?;
             // Add positive terms first to prevent underflow.
             Ok(third_order + _1 - second_order - x)

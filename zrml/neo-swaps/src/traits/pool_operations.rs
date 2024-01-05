@@ -77,7 +77,21 @@ pub(crate) trait PoolOperations<T: Config> {
     /// Calculate the spot price of `asset`.
     fn calculate_spot_price(&self, asset: AssetOf<T>) -> Result<BalanceOf<T>, DispatchError>;
 
-    /// Calculate the maximum number of units of outcomes anyone is allowed to swap in or out of the
-    /// pool.
-    fn calculate_max_amount_in(&self) -> BalanceOf<T>;
+    /// Calculate a numerical threshold, which determines the maximum number of units of outcomes
+    /// anyone is allowed to swap in or out of the pool, and the minimum prices required for selling
+    /// to the pool.
+    fn calculate_numerical_threshold(&self) -> BalanceOf<T>;
+
+    /// Calculate the ln argument used when calculating amounts out for buys. Underflows do not
+    /// raise an error and are rounded down to zero instead.
+    ///
+    /// # Parameters
+    ///
+    /// - `asset_out`: The outcome being bought.
+    /// - `amount_in`: The amount of collateral paid.
+    fn calculate_buy_ln_argument(
+        &self,
+        asset: AssetOf<T>,
+        amount_in: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
 }

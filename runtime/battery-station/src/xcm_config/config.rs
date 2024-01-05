@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -29,7 +29,7 @@ use frame_support::{
     traits::{ConstU8, Everything, Get, Nothing},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
-use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider, MultiCurrency};
+use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider};
 use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
@@ -150,13 +150,20 @@ pub type Trader = (
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
     fn take_revenue(revenue: MultiAsset) {
+        use orml_traits::MultiCurrency;
         use xcm_executor::traits::Convert;
 
-        if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
+        if let MultiAsset { id: Concrete(location), fun: Fungible(_amount) } = revenue {
             if let Ok(asset_id) =
                 <AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
             {
-                let _ = AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
+                let adj_am =
+                    AlignedFractionalMultiAssetTransactor::adjust_fractional_places(&revenue).fun;
+
+                if let Fungible(amount) = adj_am {
+                    let _ =
+                        AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
+                }
             }
         }
     }

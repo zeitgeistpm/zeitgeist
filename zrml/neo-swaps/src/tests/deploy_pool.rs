@@ -16,13 +16,13 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use crate::liquidity_tree::types::Node;
 use alloc::collections::BTreeMap;
 use test_case::test_case;
 
 #[test]
 fn deploy_pool_works_with_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
         let amount = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -43,20 +43,29 @@ fn deploy_pool_works_with_binary_markets() {
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1);
         assert_eq!(pool.collateral, BASE_ASSET);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, amount);
-        assert_eq!(pool.liquidity_shares_manager.fees, 0);
+        assert_liquidity_tree_state!(
+            pool.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: amount,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: 0u128,
+            }],
+            create_b_tree_map!({ ALICE => 0 }),
+            Vec::<u32>::new(),
+        );
         assert_eq!(pool.swap_fee, swap_fee);
-        assert_eq!(AssetManager::free_balance(pool.collateral, &pool.account_id), buffer);
-        assert_eq!(AssetManager::free_balance(assets[0], &pool.account_id), amount);
-        assert_eq!(AssetManager::free_balance(assets[1], &pool.account_id), amount);
+        assert_balance!(pool.account_id, pool.collateral, buffer);
+        assert_balance!(pool.account_id, assets[0], amount);
+        assert_balance!(pool.account_id, assets[1], amount);
         assert_eq!(pool.reserve_of(&assets[0]).unwrap(), amount);
         assert_eq!(pool.reserve_of(&assets[1]).unwrap(), amount);
         assert_eq!(pool.calculate_spot_price(assets[0]).unwrap(), spot_prices[0]);
         assert_eq!(pool.calculate_spot_price(assets[1]).unwrap(), spot_prices[1]);
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
-        assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(assets[1], &ALICE), 0);
+        assert_balance!(ALICE, BASE_ASSET, alice_before - amount - buffer);
+        assert_balance!(ALICE, assets[0], 0);
+        assert_balance!(ALICE, assets[1], 0);
         let mut reserves = BTreeMap::new();
         reserves.insert(assets[0], amount);
         reserves.insert(assets[1], amount);
@@ -79,7 +88,6 @@ fn deploy_pool_works_with_binary_markets() {
 #[test]
 fn deploy_pool_works_with_scalar_marktes() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
         let amount = _100;
         let spot_prices = vec![_1_6, _5_6 + 1];
@@ -112,22 +120,28 @@ fn deploy_pool_works_with_scalar_marktes() {
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1_000);
         assert_eq!(pool.collateral, BASE_ASSET);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, amount);
-        assert_eq!(pool.liquidity_shares_manager.fees, 0);
-        assert_eq!(pool.swap_fee, swap_fee);
-        assert_eq!(
-            AssetManager::free_balance(assets[0], &pool.account_id),
-            expected_amounts[0] + rogue_funds
+        assert_liquidity_tree_state!(
+            pool.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: amount,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: 0u128,
+            }],
+            create_b_tree_map!({ ALICE => 0 }),
+            Vec::<u32>::new(),
         );
-        assert_eq!(AssetManager::free_balance(assets[1], &pool.account_id), expected_amounts[1]);
+        assert_eq!(pool.swap_fee, swap_fee);
+        assert_balance!(pool.account_id, assets[0], expected_amounts[0] + rogue_funds);
+        assert_balance!(pool.account_id, assets[1], expected_amounts[1]);
         assert_eq!(pool.reserve_of(&assets[0]).unwrap(), expected_amounts[0]);
         assert_eq!(pool.reserve_of(&assets[1]).unwrap(), expected_amounts[1]);
         assert_eq!(pool.calculate_spot_price(assets[0]).unwrap(), spot_prices[0]);
         assert_eq!(pool.calculate_spot_price(assets[1]).unwrap(), spot_prices[1]);
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &ALICE), alice_before - amount - buffer);
-        assert_eq!(AssetManager::free_balance(assets[0], &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(assets[1], &ALICE), amount - expected_amounts[1]);
+        assert_balance!(ALICE, BASE_ASSET, alice_before - amount - buffer);
+        assert_balance!(ALICE, assets[0], 0);
+        assert_balance!(ALICE, assets[1], amount - expected_amounts[1]);
         let price_sum =
             pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
         assert_eq!(price_sum, _1);
@@ -227,24 +241,6 @@ fn deploy_pool_fails_on_duplicate_pool() {
 }
 
 #[test]
-fn deploy_pool_fails_on_not_allowed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
-        assert_noop!(
-            NeoSwaps::deploy_pool(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                _10,
-                vec![_1_4, _3_4],
-                CENT
-            ),
-            Error::<Runtime>::NotAllowed
-        );
-    });
-}
-
-#[test]
 fn deploy_pool_fails_on_invalid_trading_mechanism() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
@@ -263,33 +259,6 @@ fn deploy_pool_fails_on_invalid_trading_mechanism() {
 }
 
 #[test]
-fn deploy_pool_fails_on_market_is_not_binary_or_scalar() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(3), ScoringRule::Lmsr);
-        let liquidity = _10;
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            liquidity,
-        ));
-        assert_noop!(
-            NeoSwaps::deploy_pool(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                liquidity,
-                vec![_1_3, _1_3, _1_3],
-                CENT
-            ),
-            Error::<Runtime>::MarketNotBinaryOrScalar
-        );
-    });
-}
-
-// FIXME This test currently fails because the `ensure!` throwing `AssetCountAboveMax` is
-// currently unreachable if the market is not binary/scalar.
-#[test]
-#[should_panic]
 fn deploy_pool_fails_on_asset_count_above_max() {
     ExtBuilder::default().build().execute_with(|| {
         let category_count = MAX_ASSETS + 1;
@@ -305,8 +274,8 @@ fn deploy_pool_fails_on_asset_count_above_max() {
             market_id,
             liquidity,
         ));
-        // Depending on the value of MAX_ASSETS and PRICE_BARRIER_*, this `spot_prices` vector
-        // might violate some other rules for deploying pools.
+        // Beware! Depending on the value of MAX_ASSETS and price barriers, this `spot_prices`
+        // vector might violate some other rules for deploying pools.
         let mut spot_prices = vec![_1 / category_count as u128; category_count as usize - 1];
         spot_prices.push(_1 - spot_prices.iter().sum::<u128>());
         assert_noop!(

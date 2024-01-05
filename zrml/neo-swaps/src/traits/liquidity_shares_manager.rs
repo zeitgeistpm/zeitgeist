@@ -21,8 +21,14 @@ use sp_runtime::{DispatchError, DispatchResult};
 /// Trait for managing pool share tokens and distributing fees to LPs according to their share of
 /// the total issuance of pool share tokens.
 pub trait LiquiditySharesManager<T: Config> {
+    type JoinBenchmarkInfo;
+
     /// Add `amount` units of pool shares to the account of `who`.
-    fn join(&mut self, who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult;
+    fn join(
+        &mut self,
+        who: &T::AccountId,
+        amount: BalanceOf<T>,
+    ) -> Result<Self::JoinBenchmarkInfo, DispatchError>;
 
     /// Remove `amount` units of pool shares from the account of `who`.
     fn exit(&mut self, who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult;
