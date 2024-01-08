@@ -102,7 +102,7 @@ pub type ContractsCallfilter = Nothing;
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
+// Currently disables Rikiddo and creation of markets using SimpleDisputes
 // dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
@@ -119,8 +119,7 @@ impl Contains<RuntimeCall> for IsCallable {
             set_code as set_code_contracts,
         };
         use pallet_vesting::Call::force_vested_transfer;
-
-        use zeitgeist_primitives::types::MarketDisputeMechanism::{Court, SimpleDisputes};
+        use zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes;
         use zrml_prediction_markets::Call::{
             admin_move_market_to_closed, admin_move_market_to_resolved, create_market, edit_market,
         };
@@ -157,16 +156,14 @@ impl Contains<RuntimeCall> for IsCallable {
             },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
-            RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
-            RuntimeCall::GlobalDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
-                    edit_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
+                    // Disable SimpleDisputes dispute resolution mechanism
+                    create_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
+                    edit_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
                     admin_move_market_to_closed { .. } => false,
                     admin_move_market_to_resolved { .. } => false,
                     _ => true,

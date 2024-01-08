@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -177,10 +177,11 @@ fn transfer_btc_sibling_to_zeitgeist() {
     let zeitgeist_alice_initial_balance = btc(0);
     let initial_sovereign_balance = btc(100);
     let transfer_amount = btc(100);
+    let mut treasury_initial_balance = 0;
 
     Zeitgeist::execute_with(|| {
         register_btc(None);
-
+        treasury_initial_balance = Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
         assert_eq!(Tokens::free_balance(BTC_ID, &ALICE), zeitgeist_alice_initial_balance,);
     });
 
@@ -230,6 +231,13 @@ fn transfer_btc_sibling_to_zeitgeist() {
             Tokens::free_balance(BTC_ID, &ALICE),
             zeitgeist_alice_initial_balance + expected_adjusted,
         );
+
+        // Verify that fees (of foreign currency) have been put into treasury
+        assert_eq!(
+            Tokens::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get()),
+            // Align decimal fractional places
+            treasury_initial_balance + adjusted_balance(btc(1), btc_fee())
+        )
     });
 }
 
@@ -292,10 +300,11 @@ fn transfer_eth_sibling_to_zeitgeist() {
     let zeitgeist_alice_initial_balance = eth(0);
     let initial_sovereign_balance = eth(1);
     let transfer_amount = eth(1);
+    let mut treasury_initial_balance = 0;
 
     Zeitgeist::execute_with(|| {
         register_eth(None);
-
+        treasury_initial_balance = Tokens::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get());
         assert_eq!(Tokens::free_balance(ETH_ID, &ALICE), zeitgeist_alice_initial_balance,);
     });
 
@@ -351,6 +360,13 @@ fn transfer_eth_sibling_to_zeitgeist() {
             Tokens::free_balance(ETH_ID, &ALICE),
             zeitgeist_alice_initial_balance + expected_adjusted,
         );
+
+        // Verify that fees (of foreign currency) have been put into treasury
+        assert_eq!(
+            Tokens::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get()),
+            // Align decimal fractional places
+            treasury_initial_balance + adjusted_balance(eth(1), eth_fee())
+        )
     });
 }
 
