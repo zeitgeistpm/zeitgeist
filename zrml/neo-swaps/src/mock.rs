@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -317,13 +317,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
-    type BaseCallFilter = Everything;
-    type BlockHashCount = BlockHashCount;
-    type BlockLength = ();
-    type BlockNumber = BlockNumber;
-    type BlockWeights = ();
-    type RuntimeCall = RuntimeCall;
-    type DbWeight = ();
+    type BaseCallFilter // Copyright 2022-2024 Forecasting Technologies LTD.;
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
