@@ -1734,8 +1734,8 @@ mod pallet {
         /// which open at the same time as the specified market,
         /// and `m` is the number of market ids,
         /// which close at the same time as the specified market.
-        #[pallet::weight(T::WeightInfo::close_trusted_market(CacheSize::get(), CacheSize::get()))]
         #[pallet::call_index(21)]
+        #[pallet::weight(T::WeightInfo::close_trusted_market(CacheSize::get(), CacheSize::get()))]
         #[transactional]
         pub fn close_trusted_market(
             origin: OriginFor<T>,
