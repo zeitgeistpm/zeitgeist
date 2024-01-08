@@ -1,4 +1,20 @@
 // Copyright (C) Moondance Labs Ltd.
+// Copyright 2022-2024 Forecasting Technologies LTD.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 import {
   MoonwallContext,
@@ -9,6 +25,7 @@ import {
 import { KeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
 import fs from "node:fs";
+import { RuntimeVersion } from "@polkadot/types/interfaces";
 
 describeSuite({
   id: "R01",
@@ -25,10 +42,14 @@ describeSuite({
       paraApi = context.polkadotJs("parachain");
       relayApi = context.polkadotJs("Relay");
 
-      const relayNetwork = relayApi.consts.system.version.specName.toString();
+      const relayNetwork = (
+        relayApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(relayNetwork, "Relay API incorrect").to.contain("rococo");
 
-      const paraNetwork = paraApi.consts.system.version.specName.toString();
+      const paraNetwork = (
+        paraApi.consts.system.version as RuntimeVersion
+      ).specName.toString();
       expect(paraNetwork, "Para API incorrect").to.contain("zeitgeist");
 
       const currentBlock = (
