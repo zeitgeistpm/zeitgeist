@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -49,7 +49,7 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_prediction_markets (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_move_market_to_closed(o: u32, c: u32) -> Weight;
+    fn admin_move_market_to_closed(c: u32) -> Weight;
     fn admin_move_market_to_resolved_scalar_reported(r: u32) -> Weight;
     fn admin_move_market_to_resolved_categorical_reported(r: u32) -> Weight;
     fn admin_move_market_to_resolved_scalar_disputed(r: u32) -> Weight;
@@ -59,8 +59,7 @@ pub trait WeightInfoZeitgeist {
     fn buy_complete_set(a: u32) -> Weight;
     fn create_market(m: u32) -> Weight;
     fn edit_market(m: u32) -> Weight;
-    fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32) -> Weight;
-    fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight;
+    fn deploy_swap_pool_for_market(a: u32) -> Weight;
     fn start_global_dispute(m: u32, n: u32) -> Weight;
     fn dispute_authorized() -> Weight;
     fn handle_expired_advised_market() -> Weight;
@@ -72,7 +71,7 @@ pub trait WeightInfoZeitgeist {
     fn process_subsidy_collecting_markets_raw(a: u32) -> Weight;
     fn redeem_shares_categorical() -> Weight;
     fn redeem_shares_scalar() -> Weight;
-    fn reject_market(c: u32, o: u32, r: u32) -> Weight;
+    fn reject_market(c: u32, r: u32) -> Weight;
     fn report_market_with_dispute_mechanism(m: u32) -> Weight;
     fn report_trusted_market() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
@@ -87,7 +86,7 @@ pub trait WeightInfoZeitgeist {
     fn dispute_early_close(o: u32, n: u32) -> Weight;
     fn reject_early_close_after_authority(o: u32, n: u32) -> Weight;
     fn reject_early_close_after_dispute() -> Weight;
-    fn close_trusted_market(o: u32, c: u32) -> Weight;
+    fn close_trusted_market(c: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -105,14 +104,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
     /// The range of component `o` is `[0, 63]`.
     /// The range of component `c` is `[0, 63]`.
-    fn admin_move_market_to_closed(o: u32, c: u32) -> Weight {
+    fn admin_move_market_to_closed(c: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `792 + o * (16 ±0) + c * (16 ±0)`
         //  Estimated: `13229`
         // Minimum execution time: 54_250 nanoseconds.
         Weight::from_parts(59_415_334, 13229)
-            // Standard Error: 2_729
-            .saturating_add(Weight::from_parts(17_380, 0).saturating_mul(o.into()))
             // Standard Error: 2_729
             .saturating_add(Weight::from_parts(62_317, 0).saturating_mul(c.into()))
             .saturating_add(T::DbWeight::get().reads(5))
@@ -318,46 +315,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Timestamp Now (r:1 w:0)
     /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
-    /// Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
-    /// Proof: PredictionMarkets MarketIdsPerOpenTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
     /// Storage: MarketCommons MarketPool (r:1 w:1)
     /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
     /// Storage: Swaps Pools (r:0 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 64]`.
-    /// The range of component `o` is `[0, 63]`.
-    fn deploy_swap_pool_for_market_future_pool(a: u32, _o: u32) -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `1246 + a * (118 ±0) + o * (16 ±0)`
-        //  Estimated: `17938 + a * (5196 ±0)`
-        // Minimum execution time: 182_860 nanoseconds.
-        Weight::from_parts(136_165_903, 17938)
-            // Standard Error: 43_594
-            .saturating_add(Weight::from_parts(34_079_556, 0).saturating_mul(a.into()))
-            .saturating_add(T::DbWeight::get().reads(8))
-            .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(a.into())))
-            .saturating_add(T::DbWeight::get().writes(7))
-            .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(a.into())))
-            .saturating_add(Weight::from_parts(0, 5196).saturating_mul(a.into()))
-    }
-    /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
-    /// Storage: Swaps NextPoolId (r:1 w:1)
-    /// Proof: Swaps NextPoolId (max_values: Some(1), max_size: Some(16), added: 511, mode: MaxEncodedLen)
-    /// Storage: Tokens Accounts (r:129 w:129)
-    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
-    /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:1 w:1)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    /// Storage: Timestamp Now (r:1 w:0)
-    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
-    /// Storage: MarketCommons MarketPool (r:1 w:1)
-    /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
-    /// Storage: Swaps Pools (r:0 w:1)
-    /// Proof: Swaps Pools (max_values: None, max_size: Some(3651), added: 6126, mode: MaxEncodedLen)
-    /// The range of component `a` is `[2, 64]`.
-    fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight {
+    fn deploy_swap_pool_for_market(a: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1112 + a * (119 ±0)`
         //  Estimated: `14413 + a * (5196 ±0)`
@@ -594,7 +557,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `c` is `[0, 63]`.
     /// The range of component `o` is `[0, 63]`.
     /// The range of component `r` is `[0, 1024]`.
-    fn reject_market(c: u32, o: u32, r: u32) -> Weight {
+    fn reject_market(c: u32, r: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `723 + c * (16 ±0) + o * (16 ±0)`
         //  Estimated: `13927`
@@ -602,8 +565,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         Weight::from_parts(102_137_848, 13927)
             // Standard Error: 4_276
             .saturating_add(Weight::from_parts(41_013, 0).saturating_mul(c.into()))
-            // Standard Error: 4_276
-            .saturating_add(Weight::from_parts(18_082, 0).saturating_mul(o.into()))
             // Standard Error: 262
             .saturating_add(Weight::from_parts(2_551, 0).saturating_mul(r.into()))
             .saturating_add(T::DbWeight::get().reads(4))
@@ -904,14 +865,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().writes(2))
     }
-    fn close_trusted_market(o: u32, c: u32) -> Weight {
+    fn close_trusted_market(c: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `792 + o * (16 ±0) + c * (16 ±0)`
         //  Estimated: `13229`
         // Minimum execution time: 54_250 nanoseconds.
         Weight::from_parts(59_415_334, 13229)
-            // Standard Error: 2_729
-            .saturating_add(Weight::from_parts(17_380, 0).saturating_mul(o.into()))
             // Standard Error: 2_729
             .saturating_add(Weight::from_parts(62_317, 0).saturating_mul(c.into()))
             .saturating_add(T::DbWeight::get().reads(5))

@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -54,7 +54,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
+        scoring_rule: ScoringRule::Lmsr,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: Default::default(),
         early_close: None,

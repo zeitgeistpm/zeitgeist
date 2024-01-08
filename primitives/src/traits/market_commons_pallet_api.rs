@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -83,9 +83,6 @@ pub trait MarketCommonsPalletApi {
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;
-
-    /// Return the account id of a market's prize pool.
-    fn market_account(market_id: Self::MarketId) -> Self::AccountId;
 
     // MarketPool
 

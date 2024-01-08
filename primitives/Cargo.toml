@@ -22,6 +22,7 @@ typenum = { workspace = true }
 [features]
 default = ["std"]
 mock = []
+runtime-benchmarks = []
 std = [
     "frame-support/std",
     "frame-system/std",

@@ -1,5 +1,6 @@
 [workspace]
 default-members = [
+    "macros",
     "node",
     "primitives",
     "runtime/common",
@@ -23,6 +24,7 @@ default-members = [
     "zrml/styx",
 ]
 members = [
+    "macros",
     "node",
     "primitives",
     "runtime/common",
@@ -228,6 +230,7 @@ zrml-swaps-rpc = { path = "zrml/swaps/rpc" }
 
 # Zeitgeist (wasm)
 common-runtime = { path = "runtime/common", default-features = false }
+zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }

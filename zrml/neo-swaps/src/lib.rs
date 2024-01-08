@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -758,8 +758,8 @@ mod pallet {
                         T::MultiCurrency::withdraw(asset, &pool.account_id, remaining)?;
                         Ok(())
                     };
-                    // FIXME We will withdraw all remaining funds (the "buffer"). This is an ugly
-                    // hack and frame_system should offer the option to whitelist accounts.
+                    // TODO(#1220): We will withdraw all remaining funds (the "buffer"). This is an
+                    // ugly hack and frame_system should offer the option to whitelist accounts.
                     withdraw_remaining(&pool.collateral)?;
                     // Clear left-over tokens. These naturally occur in the form of exit fees.
                     for asset in pool.assets().iter() {
@@ -875,8 +875,8 @@ mod pallet {
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
             };
-            // FIXME Ensure that the existential deposit doesn't kill fees. This is an ugly hack and
-            // system should offer the option to whitelist accounts.
+            // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
+            // hack and system should offer the option to whitelist accounts.
             T::MultiCurrency::transfer(
                 pool.collateral,
                 &who,
@@ -927,7 +927,7 @@ mod pallet {
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
         }
 
-        // FIXME Carbon copy of a function in prediction-markets. To be removed later.
+        // TODO(#1218): Carbon copy of a function in prediction-markets. To be removed later.
         fn outcomes(market_id: MarketIdOf<T>) -> Result<Vec<AssetOf<T>>, DispatchError> {
             let market = T::MarketCommons::market(&market_id)?;
             Ok(match market.market_type {

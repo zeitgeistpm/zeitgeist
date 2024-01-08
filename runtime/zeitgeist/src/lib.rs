@@ -119,13 +119,9 @@ impl Contains<RuntimeCall> for IsCallable {
             set_code as set_code_contracts,
         };
         use pallet_vesting::Call::force_vested_transfer;
-
-        use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::RikiddoSigmoidFeeMarketEma,
-        };
+        use zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes;
         use zrml_prediction_markets::Call::{
-            admin_move_market_to_closed, admin_move_market_to_resolved,
-            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+            admin_move_market_to_closed, admin_move_market_to_resolved, create_market, edit_market,
         };
 
         #[allow(clippy::match_like_matches_macro)]
@@ -165,16 +161,9 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
-                    // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
                     edit_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Some(SimpleDisputes),
-                        ..
-                    } => false,
                     admin_move_market_to_closed { .. } => false,
                     admin_move_market_to_resolved { .. } => false,
                     _ => true,

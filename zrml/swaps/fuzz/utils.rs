@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -29,9 +29,9 @@ use zeitgeist_primitives::{
         MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
-    types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
+    types::{Asset, PoolId, ScalarPosition, SerdeWrapper},
 };
-use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
+use zrml_swaps::mock::Swaps;
 
 pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
     let (module, seed0, seed1) = seed;
@@ -48,8 +48,8 @@ pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
     }
 }
 
-fn construct_swap_fee(swap_fee: u128) -> Option<u128> {
-    Some(swap_fee % MaxSwapFee::get())
+fn construct_swap_fee(swap_fee: u128) -> u128 {
+    swap_fee % MaxSwapFee::get()
 }
 
 #[derive(Debug)]
@@ -69,12 +69,9 @@ impl ValidPoolData {
         match Swaps::create_pool(
             self.origin,
             self.assets.into_iter().map(construct_asset).collect(),
-            construct_asset(self.base_asset),
-            DEFAULT_MARKET_ID,
-            ScoringRule::CPMM,
             construct_swap_fee(self.swap_fee),
-            Some(self.amount),
-            Some(self.weights),
+            self.amount,
+            self.weights,
         ) {
             Ok(pool_id) => pool_id,
             Err(e) => panic!("Pool creation failed unexpectedly. Error: {:?}", e),
@@ -208,7 +205,7 @@ pub struct PoolCreationData {
     pub origin: u128,
     pub assets: Vec<(u8, u128, u16)>,
     pub base_asset: (u8, u128, u16),
-    pub swap_fee: Option<u128>,
-    pub amount: Option<u128>,
-    pub weights: Option<Vec<u128>>,
+    pub swap_fee: u128,
+    pub amount: u128,
+    pub weights: Vec<u128>,
 }
