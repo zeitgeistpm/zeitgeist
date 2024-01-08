@@ -33,6 +33,8 @@ import { ALITH_ADDRESS } from "@moonwall/util";
 
 You should have installed `python` for using `sqlite3` and then used `pnpm rebuild && pnpm rebuild sqlite3`.
 
+Run `pnpm install` in the `integration-tests` folder before running any of the following commands.
+
 Useful for integration testing:
 
 - `./integration-tests/scripts/deploy_zombienet.sh` - Deploy a local relay-parachain network for zombienet.
