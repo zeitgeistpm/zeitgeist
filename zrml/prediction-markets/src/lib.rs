@@ -2150,13 +2150,13 @@ mod pallet {
         InvalidEarlyCloseState,
         /// There is no early close scheduled.
         NoEarlyCloseScheduled,
+        /// After there was an early close already scheduled,
+        /// only the `CloseMarketsEarlyOrigin` can schedule another one.
+        OnlyAuthorizedCanScheduleEarlyClose,
         /// The caller is not the market creator.
         CallerNotMarketCreator,
         /// The market is not trusted.
         MarketIsNotTrusted,
-        /// After there was an early close already scheduled,
-        /// only the `CloseMarketsEarlyOrigin` can schedule another one.
-        OnlyAuthorizedCanScheduleEarlyClose,
         /// The operation is not allowed for market with a block period.
         NotAllowedForBlockBasedMarkets,
         /// The market is not in the close time frame list.
