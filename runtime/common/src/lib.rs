@@ -685,10 +685,7 @@ macro_rules! impl_config_traits {
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
             type Extra = ();
-            type ForceOrigin = EitherOfDiverse<
-                EnsureRootOrTwoThirdsCouncil,
-                EnsureRootOrAllTechnicalCommittee,
-            >;
+            type ForceOrigin = EnsureRootOrTwoThirdsCouncil;
             type Freezer = ();
             type MetadataDepositBase = CampaignAssetsMetadataDepositBase;
             type MetadataDepositPerByte = CampaignAssetsMetadataDepositPerByte;
@@ -725,7 +722,7 @@ macro_rules! impl_config_traits {
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
             type Extra = ();
-            type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
             type Freezer = ();
             type MetadataDepositBase = MarketAssetsMetadataDepositBase;
             type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;

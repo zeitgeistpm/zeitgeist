@@ -34,6 +34,42 @@ mod market_assets;
 #[cfg(test)]
 mod tests;
 
+/// The `Asset` enum represents all types of assets available in the Zeitgeist
+/// system.
+///
+/// **Deprecated:** Market and Pool assets are "lazy" migrated to pallet-assets
+/// Do not create any new market or pool assets using this enumeration.
+///
+/// # Types
+///
+/// * `MI`: Market Id
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+)]
+pub enum Asset<MI: MaxEncodedLen> {
+    CategoricalOutcome(MI, CategoryIndex),
+    ScalarOutcome(MI, ScalarPosition),
+    CombinatorialOutcome,
+    PoolShare(SerdeWrapper<PoolId>),
+    #[default]
+    Ztg,
+    ForeignAsset(u32),
+    ParimutuelShare(MI, CategoryIndex),
+}
+
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
 /// or a `Short` position meaning that they think the outcome will be closer
