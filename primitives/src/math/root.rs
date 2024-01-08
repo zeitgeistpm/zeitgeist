@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -69,7 +69,7 @@ use sp_runtime::traits::AtLeast32BitUnsigned;
 /// - `max`: The maximum value of the preimage
 /// - `max_iterations`: Break after this many iterations
 /// - `tol`: Break if the interval is smaller than this
-pub(crate) fn calc_preimage<T, F>(
+pub fn calc_preimage<T, F>(
     f: F,
     value: T,
     mut min: T,
@@ -158,9 +158,8 @@ fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixed::bpowi;
+    use crate::{constants::BASE, math::fixed::FixedMul};
     use test_case::test_case;
-    use zeitgeist_primitives::constants::BASE;
 
     const _1: u128 = BASE;
     const _2: u128 = 2 * BASE;
@@ -207,8 +206,8 @@ mod tests {
     fn calc_preimage_works_with_increasing_polynomial(value: u128, expected: u128) {
         // f(x) = 2x^3 - x^2 - x + 1 is positive and increasing on [1, \infty].
         let f = |x: u128| {
-            let third_order = 2 * bpowi(x, 3)?;
-            let second_order = bpowi(x, 2)?;
+            let third_order = 2 * x.bmul(x)?.bmul(x)?;
+            let second_order = x.bmul(x)?;
             // Add positive terms first to prevent underflow.
             Ok(third_order + _1 - second_order - x)
         };
@@ -225,7 +224,7 @@ mod tests {
     #[test_case(56_476_573_221, 15_574_893_554)]
     fn calc_preimage_works_with_decreasing_polynomial(value: u128, expected: u128) {
         // f(x) = -x^3 + x^2 + 7 is positive and decreasing on [1, 2].
-        let f = |x: u128| Ok(_7 + bpowi(x, 2)? - bpowi(x, 3)?);
+        let f = |x: u128| Ok(_7 + x.bmul(x)? - x.bmul(x)?.bmul(x)?);
         let tolerance = _1_1000;
         let (preimage, _) = calc_preimage(f, value, _1, _2, usize::MAX, _1_1000).unwrap();
         assert_approx!(preimage, expected, tolerance);

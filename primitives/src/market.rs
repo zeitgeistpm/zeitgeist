@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pool::ScoringRule, types::OutcomeReport};
+use crate::types::OutcomeReport;
 use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -71,10 +71,7 @@ pub struct Market<AI, BA, BN, M, A> {
 impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
-            ScoringRule::CPMM
-            | ScoringRule::Lmsr
-            | ScoringRule::Orderbook
-            | ScoringRule::RikiddoSigmoidFeeMarketEma => ResolutionMechanism::RedeemTokens,
+            ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
             ScoringRule::Parimutuel => ResolutionMechanism::Noop,
         }
     }
@@ -220,14 +217,6 @@ pub struct GlobalDisputeItem<AccountId, Balance> {
     pub initial_vote_amount: Balance,
 }
 
-// TODO to remove, when Disputes storage item is removed
-#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OldMarketDispute<AccountId, BlockNumber> {
-    pub at: BlockNumber,
-    pub by: AccountId,
-    pub outcome: OutcomeReport,
-}
-
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct MarketDispute<AccountId, BlockNumber, Balance> {
     pub at: BlockNumber,
@@ -294,6 +283,13 @@ pub struct Deadlines<BN> {
     pub dispute_duration: BN,
 }
 
+#[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
+pub enum ScoringRule {
+    Lmsr,
+    Orderbook,
+    Parimutuel,
+}
+
 /// Defines the state of the market.
 #[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketStatus {
@@ -302,14 +298,8 @@ pub enum MarketStatus {
     Proposed,
     /// Trading on the market is active.
     Active,
-    /// Trading on the market is temporarily paused.
-    Suspended,
     /// Trading on the market has concluded.
     Closed,
-    /// The market is collecting subsidy.
-    CollectingSubsidy,
-    /// The market was discarded due to insufficient subsidy.
-    InsufficientSubsidy,
     /// The market has been reported.
     Reported,
     /// The market outcome is being disputed.
@@ -439,7 +429,7 @@ mod tests {
                 oracle_duration: 1_u32,
                 dispute_duration: 1_u32,
             },
-            scoring_rule: ScoringRule::CPMM,
+            scoring_rule: ScoringRule::Lmsr,
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,

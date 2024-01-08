@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -55,14 +55,23 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_market_commons::migrations::MigrateScoringRuleAndMarketStatus;
         use zrml_neo_swaps::migration::MigrateToLiquidityTree;
         use zrml_orderbook::migrations::TranslateOrderStructure;
+        use zrml_prediction_markets::migrations::DrainDeprecatedStorage;
+        use zrml_swaps::migrations::MigratePools;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigrateToLiquidityTree<Runtime>, TranslateOrderStructure<Runtime>);
+        type Migrations = (
+            MigratePools<Runtime>,
+            DrainDeprecatedStorage<Runtime>,
+            MigrateScoringRuleAndMarketStatus<Runtime>,
+            TranslateOrderStructure<Runtime>,
+            MigrateToLiquidityTree<Runtime>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -365,7 +374,7 @@ macro_rules! create_runtime_with_additional_pallets {
 
 #[macro_export]
 macro_rules! impl_config_traits {
-    {} => {
+    () => {
         use common_runtime::weights;
         #[cfg(feature = "parachain")]
         use xcm_config::config::*;
@@ -380,7 +389,8 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
-            type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+            type CheckAssociatedRelayNumber =
+                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type DmpMessageHandler = DmpQueue;
             type RuntimeEvent = RuntimeEvent;
             type OnSystemEvent = ();
@@ -575,7 +585,10 @@ macro_rules! impl_config_traits {
         }
 
         pub struct CurrencyHooks<R>(sp_std::marker::PhantomData<R>);
-        impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, CurrencyId, Balance> for CurrencyHooks<C> {
+        impl<C: orml_tokens::Config>
+            orml_traits::currency::MutationHooks<AccountId, CurrencyId, Balance>
+            for CurrencyHooks<C>
+        {
             type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
             type OnKilledTokenAccount = ();
             type OnNewTokenAccount = ();
@@ -671,7 +684,7 @@ macro_rules! impl_config_traits {
         impl pallet_contracts::Config for Runtime {
             type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
             type CallFilter = ContractsCallfilter;
-            type CallStack = [pallet_contracts::Frame::<Runtime>; 5];
+            type CallStack = [pallet_contracts::Frame<Runtime>; 5];
             type ChainExtension = ();
             type Currency = Balances;
             type DeletionQueueDepth = ContractsDeletionQueueDepth;
@@ -721,7 +734,8 @@ macro_rules! impl_config_traits {
             /// Origin from which a proposal may be cancelled and its backers slashed.
             type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
             /// Origin for anyone able to veto proposals.
-            type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
+            type VetoOrigin =
+                pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
             type CooloffPeriod = CooloffPeriod;
             type Slash = Treasury;
             type Scheduler = Scheduler;
@@ -812,7 +826,10 @@ macro_rules! impl_config_traits {
                 match self {
                     ProxyType::Any => true,
                     ProxyType::CancelProxy => {
-                        matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+                        matches!(
+                            c,
+                            RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. })
+                        )
                     }
                     ProxyType::Governance => matches!(
                         c,
@@ -828,26 +845,28 @@ macro_rules! impl_config_traits {
                     ProxyType::Staking => false,
                     ProxyType::CreateEditMarket => matches!(
                         c,
-                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::create_market { .. })
-                            | RuntimeCall::PredictionMarkets(
-                                zrml_prediction_markets::Call::edit_market { .. }
-                            )
+                        RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::create_market { .. }
+                        ) | RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::edit_market { .. }
+                        )
                     ),
                     ProxyType::ReportOutcome => matches!(
                         c,
-                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::report { .. })
+                        RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::report { .. }
+                        )
                     ),
                     ProxyType::Dispute => matches!(
                         c,
-                        RuntimeCall::PredictionMarkets(zrml_prediction_markets::Call::dispute { .. })
+                        RuntimeCall::PredictionMarkets(
+                            zrml_prediction_markets::Call::dispute { .. }
+                        )
                     ),
                     ProxyType::ProvideLiquidity => matches!(
                         c,
                         RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
                             | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
-                            | RuntimeCall::PredictionMarkets(
-                                zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
-                            )
                     ),
                     ProxyType::BuySellCompleteSets => matches!(
                         c,
@@ -876,12 +895,6 @@ macro_rules! impl_config_traits {
                             )
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::sell_complete_set { .. }
-                            )
-                            | RuntimeCall::PredictionMarkets(
-                                zrml_prediction_markets::Call::deploy_swap_pool_for_market { .. }
-                            )
-                            | RuntimeCall::PredictionMarkets(
-                                zrml_prediction_markets::Call::deploy_swap_pool_and_additional_liquidity { .. }
                             )
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
@@ -1004,7 +1017,8 @@ macro_rules! impl_config_traits {
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
-            type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
+            type SpendOrigin =
+                EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
         }
@@ -1097,7 +1111,6 @@ macro_rules! impl_config_traits {
         impl zrml_market_commons::Config for Runtime {
             type Balance = Balance;
             type MarketId = MarketId;
-            type PredictionMarketsPalletId = PmPalletId;
             type Timestamp = Timestamp;
         }
 
@@ -1153,9 +1166,7 @@ macro_rules! impl_config_traits {
             type MaxGracePeriod = MaxGracePeriod;
             type MaxOracleDuration = MaxOracleDuration;
             type MinOracleDuration = MinOracleDuration;
-            type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MinCategories = MinCategories;
-            type MinSubsidyPeriod = MinSubsidyPeriod;
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
@@ -1171,7 +1182,6 @@ macro_rules! impl_config_traits {
             type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
-            type Swaps = Swaps;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
         }
@@ -1221,15 +1231,9 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_swaps::Config for Runtime {
+            type Asset = Asset<MarketId>;
             type RuntimeEvent = RuntimeEvent;
             type ExitFee = ExitFee;
-            type FixedTypeU = FixedU128<U33>;
-            type FixedTypeS = FixedI128<U33>;
-            // LiquidityMining is currently unstable.
-            // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
-            type LiquidityMining = NoopLiquidityMining;
-            // type LiquidityMining = LiquidityMining;
-            type MarketCommons = MarketCommons;
             type MinAssets = MinAssets;
             type MaxAssets = MaxAssets;
             type MaxInRatio = MaxInRatio;
@@ -1237,11 +1241,8 @@ macro_rules! impl_config_traits {
             type MaxSwapFee = MaxSwapFee;
             type MaxTotalWeight = MaxTotalWeight;
             type MaxWeight = MaxWeight;
-            type MinSubsidy = MinSubsidy;
-            type MinSubsidyPerAccount = MinSubsidyPerAccount;
             type MinWeight = MinWeight;
             type PalletId = SwapsPalletId;
-            type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
             type AssetManager = AssetManager;
             type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
         }
@@ -1285,7 +1286,7 @@ macro_rules! impl_config_traits {
             type PalletId = ParimutuelPalletId;
             type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
         }
-    }
+    };
 }
 
 // Implement runtime apis
@@ -1795,13 +1796,6 @@ macro_rules! create_runtime_api {
 
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
-                }
-
-                fn get_all_spot_prices(
-                    pool_id: &PoolId,
-                    with_fees: bool,
-                ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
-                    Swaps::get_all_spot_prices(pool_id, with_fees)
                 }
             }
 

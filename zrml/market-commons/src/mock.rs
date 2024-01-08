@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -25,7 +25,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::mock::{BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId},
+    constants::mock::{BlockHashCount, MaxReserves, MinimumPeriod},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -49,7 +49,6 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

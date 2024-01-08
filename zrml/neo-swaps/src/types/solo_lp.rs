@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+// TODO(#1212): Remove in v0.5.1.
+
 use crate::{traits::LiquiditySharesManager, BalanceOf, Config, Error};
 use frame_support::ensure;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -24,7 +26,6 @@ use sp_runtime::{
     DispatchError, DispatchResult, RuntimeDebug,
 };
 
-// Deprecated as of v0.5.0. TODO Remove in 0.5.1!
 #[derive(TypeInfo, MaxEncodedLen, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
 #[scale_info(skip_type_params(T))]
 pub struct SoloLp<T: Config> {

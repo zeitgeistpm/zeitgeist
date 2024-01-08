@@ -5,12 +5,11 @@ frame-system = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 sp-arithmetic = { workspace = true }
 sp-runtime = { workspace = true }
-substrate-fixed = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-liquidity-mining = { workspace = true }
-zrml-rikiddo = { workspace = true }
 
 # Mock
 
@@ -27,6 +26,7 @@ zrml-swaps-runtime-api = { workspace = true, optional = true }
 [dev-dependencies]
 more-asserts = { workspace = true }
 test-case = { workspace = true }
+zeitgeist-macros = { workspace = true }
 zrml-swaps = { workspace = true, features = ["mock"] }
 
 [features]
@@ -47,6 +47,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "zeitgeist-primitives/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",
@@ -55,10 +56,8 @@ std = [
     "orml-traits/std",
     "parity-scale-codec/std",
     "sp-runtime/std",
-    "substrate-fixed/std",
     "zeitgeist-primitives/std",
     "zrml-liquidity-mining/std",
-    "zrml-rikiddo/std",
 ]
 try-runtime = [
     "frame-support/try-runtime",

@@ -217,7 +217,7 @@ Let $A = 10$. Python calculates $e^A = 22026.465794806718$ and $e^{-A} = 4.53999
     \item When buying, then the $\ln$ argument must satisfy $e^{x/b} - 1 + e^{-r_i/b} \geq c$ and $x \leq M$ (to avoid overflows).
 \end{itemize}
 
-The last restriction may need some elaboration. We actually allow $e^{-r_i/b}$ to underflow to zero during calculation, but only provided that the remaining term $e^{x/b} - 1$ is large enough to avoid this to cause any damage. In fact, on the interval $[c, \infty)$, the logarithm has a derivative of $\leq c^{-1} = 10$, so all rounding errors in the argument of $\ln$ cause (only) ten times the error in the calculation of $\ln$. 
+The last restriction may need some elaboration. We actually allow $e^{-r_i/b}$ to underflow to zero during calculation, but only provided that the remaining term $e^{x/b} - 1$ is large enough to avoid this to cause any damage. In fact, on the interval $[c, \infty)$, the logarithm has derivative $\leq c^{-1} = 10$, so all rounding errors in the argument of $\ln$ cause (only) ten times the error in the calculation of $\ln$. 
 
 How \emph{bad} are these restrictions? The restriction $x \leq M$ is completely irrelevant: Suppose Alice executes a trade of $y(x)$ units of outcome $i$ for $x = M$ dollars, the maximum allowed value. Let $q = 1 - e^{-r_i/b} \in (0, 1)$. Then
 \begin{align*}

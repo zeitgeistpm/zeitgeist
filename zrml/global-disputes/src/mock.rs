@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -31,8 +31,8 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, BlockHashCount, GdVotingPeriod, GlobalDisputeLockId,
-        GlobalDisputesPalletId, MaxReserves, MinOutcomeVoteAmount, MinimumPeriod, PmPalletId,
-        RemoveKeysLimit, VotingOutcomeFee, BASE,
+        GlobalDisputesPalletId, MaxReserves, MinOutcomeVoteAmount, MinimumPeriod, RemoveKeysLimit,
+        VotingOutcomeFee, BASE,
     },
     traits::DisputeResolutionApi,
     types::{
@@ -173,7 +173,6 @@ impl pallet_timestamp::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

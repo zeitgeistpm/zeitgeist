@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -33,7 +33,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
-        MinimumPeriod, ParimutuelPalletId, PmPalletId, BASE,
+        MinimumPeriod, ParimutuelPalletId, BASE,
     },
     traits::DistributeFees,
     types::{
@@ -147,7 +147,6 @@ impl pallet_balances::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

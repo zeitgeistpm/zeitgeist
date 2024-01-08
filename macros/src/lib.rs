@@ -15,6 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod checked_ops_res;
-pub mod fixed;
-pub mod root;
+/// Creates an `alloc::collections::BTreeMap` from the pattern `{ key => value, ... }`.
+///
+/// ```ignore
+/// // Example:
+/// let m = create_b_tree_map!({ 0 => 1, 2 => 3 });
+/// assert_eq!(m[2], 3);
+///
+/// // Overwriting a key:)
+/// let m = create_b_tree_map!({ 0 => "foo", 0 => "bar" });
+/// assert_eq!(m[0], "bar");
+/// ```
+#[macro_export]
+macro_rules! create_b_tree_map {
+    ({ $($key:expr => $value:expr),* $(,)? } $(,)?) => {
+        [$(($key, $value),)*].iter().cloned().collect::<alloc::collections::BTreeMap<_, _>>()
+    }
+}

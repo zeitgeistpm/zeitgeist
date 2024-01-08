@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -55,11 +55,11 @@ pub struct MigrateToLiquidityTree<T>(PhantomData<T>);
 impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for MigrateToLiquidityTree<T> {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
-        let market_commons_version = StorageVersion::get::<Pallet<T>>();
-        if market_commons_version != NEO_SWAPS_REQUIRED_STORAGE_VERSION {
+        let neo_swaps_version = StorageVersion::get::<Pallet<T>>();
+        if neo_swaps_version != NEO_SWAPS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "MigrateToLiquidityTree: market-commons version is {:?}, but {:?} is required",
-                market_commons_version,
+                "MigrateToLiquidityTree: neo-swaps version is {:?}, but {:?} is required",
+                neo_swaps_version,
                 NEO_SWAPS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;

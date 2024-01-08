@@ -14278,6 +14278,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeitgeist-macros"
+version = "0.4.3"
+
+[[package]]
 name = "zeitgeist-node"
 version = "0.4.2"
 dependencies = [
@@ -14613,6 +14617,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
+ "test-case",
  "zeitgeist-primitives",
 ]
 
@@ -14643,7 +14648,6 @@ dependencies = [
  "sp-api",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
  "test-case",
  "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xcm",
@@ -14743,7 +14747,6 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
  "test-case",
  "xcm",
  "zeitgeist-primitives",
@@ -14869,16 +14872,16 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-api",
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
- "zrml-rikiddo",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
