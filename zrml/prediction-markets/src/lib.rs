@@ -1797,7 +1797,7 @@ mod pallet {
                 Self::on_market_close(&market_id, market)?;
                 close_ids_len
             } else {
-                return Err(Error::<T>::MarketPeriodNotStartedYet.into());
+                return Err(Error::<T>::MarketPeriodEndNotAlreadyReachedYet.into());
             };
 
             Ok(Some(T::WeightInfo::manually_close_market(close_ids_len)).into())
@@ -2161,8 +2161,8 @@ mod pallet {
         NotAllowedForBlockBasedMarkets,
         /// The market is not in the close time frame list.
         MarketNotInCloseTimeFrameList,
-        /// The market period has not started yet.
-        MarketPeriodNotStartedYet,
+        /// The market period end was not already reached yet.
+        MarketPeriodEndNotAlreadyReachedYet,
     }
 
     #[pallet::event]
