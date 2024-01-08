@@ -1332,7 +1332,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
