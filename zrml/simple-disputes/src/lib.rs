@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -576,7 +576,7 @@ where
             by: T::PalletId::get().into_account_truncating(),
         }),
         resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
+        scoring_rule: ScoringRule::Lmsr,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: MarketBonds::default(),
         early_close: None,

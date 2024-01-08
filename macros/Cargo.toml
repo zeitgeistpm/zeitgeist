@@ -1,0 +1,5 @@
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021"
+name = "zeitgeist-macros"
+version = "0.4.3"

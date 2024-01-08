@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -31,8 +31,6 @@ use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
 #[test_case(ScoringRule::Parimutuel; "Parimutuel")]
 #[test_case(ScoringRule::Lmsr; "LMSR")]
-#[test_case(ScoringRule::CPMM; "CPMM")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "Rikiddo")]
 fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
@@ -58,10 +56,7 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
 }
 
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 #[test_case(MarketStatus::Resolved; "resolved")]
@@ -90,10 +85,7 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
 }
 
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 #[test_case(MarketStatus::Resolved; "resolved")]

@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -34,29 +34,21 @@ use frame_support::{
     traits::{Contains, Everything},
 };
 use orml_traits::parameter_type_with_key;
-use sp_arithmetic::Perbill;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    DispatchError,
 };
-use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, GetNativeCurrencyId,
-        LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinSubsidy, MinWeight, MinimumPeriod,
-        PmPalletId, SwapsPalletId, BASE,
+        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId, MaxAssets, MaxInRatio, MaxLocks,
+        MaxOutRatio, MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight,
+        MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
-        ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
-use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -77,16 +69,11 @@ pub const BASE_ASSET: Asset<MarketId> = if let Some(asset) = ASSETS.last() {
     panic!("Invalid asset vector");
 };
 
-pub const DEFAULT_MARKET_ID: MarketId = 0;
-pub const DEFAULT_MARKET_ORACLE: AccountIdTest = DAVE;
-pub const DEFAULT_MARKET_CREATOR: AccountIdTest = DAVE;
-
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 // Mocked exit fee for easier calculations
 parameter_types! {
     pub storage ExitFeeMock: Balance = BASE / 10;
-    pub const MinSubsidyPerAccount: Balance = BASE;
 }
 
 construct_runtime!(
@@ -98,9 +85,6 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currencies: orml_currencies::{Pallet},
-        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -111,12 +95,9 @@ construct_runtime!(
 pub type AssetManager = Currencies;
 
 impl crate::Config for Runtime {
+    type Asset = Asset<MarketId>;
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
-    type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
-    type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
-    type LiquidityMining = LiquidityMining;
-    type MarketCommons = MarketCommons;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
@@ -124,11 +105,8 @@ impl crate::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
-    type MinSubsidy = MinSubsidy;
-    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
@@ -184,7 +162,7 @@ where
     frame_support::PalletId: AccountIdConversion<AccountIdTest>,
 {
     fn contains(ai: &AccountIdTest) -> bool {
-        let pallets = vec![LiquidityMiningPalletId::get(), PmPalletId::get(), SwapsPalletId::get()];
+        let pallets = vec![SwapsPalletId::get()];
 
         if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {
             return pallets.contains(&pallet_id.0);
@@ -228,35 +206,10 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl zrml_liquidity_mining::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type Currency = Balances;
-    type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
-    type PalletId = LiquidityMiningPalletId;
-    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
-}
-
 impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
-    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
-}
-
-impl zrml_rikiddo::Config for Runtime {
-    type Timestamp = Timestamp;
-    type Balance = Balance;
-    type FixedTypeU = FixedU128<U33>;
-    type FixedTypeS = FixedI128<U33>;
-    type BalanceFractionalDecimals = BalanceFractionalDecimals;
-    type PoolId = PoolId;
-    type Rikiddo = RikiddoSigmoidMV<
-        Self::FixedTypeU,
-        Self::FixedTypeS,
-        FeeSigmoid<Self::FixedTypeS>,
-        EmaMarketVolume<Self::FixedTypeU>,
-    >;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -290,13 +243,7 @@ impl ExtBuilder {
             .assimilate_storage(&mut storage)
             .unwrap();
 
-        let mut ext = sp_io::TestExternalities::from(storage);
-
-        ext.execute_with(|| {
-            MarketCommons::push_market(mock_market(4)).unwrap();
-        });
-
-        ext
+        sp_io::TestExternalities::from(storage)
     }
 }
 
@@ -320,35 +267,5 @@ sp_api::mock_impl_runtime_apis! {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
-
-        fn get_all_spot_prices(
-            pool_id: &PoolId,
-            with_fees: bool
-        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError> {
-            Swaps::get_all_spot_prices(pool_id, with_fees)
-        }
-    }
-}
-
-pub(super) fn mock_market(
-    categories: u16,
-) -> Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> {
-    Market {
-        base_asset: BASE_ASSET,
-        creation: MarketCreation::Permissionless,
-        creator_fee: Perbill::from_parts(0),
-        creator: DEFAULT_MARKET_CREATOR,
-        market_type: MarketType::Categorical(categories),
-        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
-        metadata: vec![0; 50],
-        oracle: DEFAULT_MARKET_ORACLE,
-        period: MarketPeriod::Block(0..1),
-        deadlines: Deadlines::default(),
-        report: None,
-        resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
-        status: MarketStatus::Active,
-        bonds: MarketBonds::default(),
-        early_close: None,
     }
 }

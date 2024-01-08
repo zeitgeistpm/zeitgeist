@@ -28,7 +28,6 @@ pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
-substrate-fixed = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 zrml-rikiddo = { workspace = true, optional = true }
@@ -51,7 +50,6 @@ mock = [
     "serde/default",
     "sp-api/default",
     "sp-io/default",
-    "substrate-fixed",
     "zeitgeist-primitives/mock",
     "zrml-prediction-markets-runtime-api/default",
     "zrml-rikiddo/default",

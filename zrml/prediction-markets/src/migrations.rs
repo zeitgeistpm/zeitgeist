@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,11 +16,138 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{
+    Config, MarketIdsPerOpenBlock, MarketIdsPerOpenTimeFrame, MarketsCollectingSubsidy,
+    Pallet as PredictionMarkets,
+};
+use core::marker::PhantomData;
+use frame_support::{
+    log,
+    pallet_prelude::{StorageVersion, Weight},
+    traits::{Get, OnRuntimeUpgrade},
+};
+
+#[cfg(feature = "try-runtime")]
+use alloc::vec::Vec;
+
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 7;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 8;
+
+pub struct DrainDeprecatedStorage<T>(PhantomData<T>);
+
+impl<T> OnRuntimeUpgrade for DrainDeprecatedStorage<T>
+where
+    T: Config,
+{
+    fn on_runtime_upgrade() -> Weight {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let prediction_markets_version = StorageVersion::get::<PredictionMarkets<T>>();
+        if prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "DrainDeprecatedStorage: prediction-markets version is {:?}, but {:?} is required",
+                prediction_markets_version,
+                PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("DrainDeprecatedStorage: Starting...");
+        let mut reads_writes = 1u64; // For killing MarketsCollectingSubsidy
+        reads_writes =
+            reads_writes.saturating_add(MarketIdsPerOpenBlock::<T>::drain().count() as u64);
+        reads_writes =
+            reads_writes.saturating_add(MarketIdsPerOpenTimeFrame::<T>::drain().count() as u64);
+        MarketsCollectingSubsidy::<T>::kill();
+        log::info!("DrainDeprecatedStorage: Drained {} keys.", reads_writes);
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads_writes(reads_writes, reads_writes));
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<PredictionMarkets<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("DrainDeprecatedStorage: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+        if MarketIdsPerOpenBlock::<T>::iter().count() != 0 {
+            return Err("DrainDeprecatedStorage: MarketIdsPerOpenBlock is not empty!");
+        }
+        if MarketIdsPerOpenTimeFrame::<T>::iter().count() != 0 {
+            return Err("DrainDeprecatedStorage: MarketIdsPerOpenTimeFrame is not empty!");
+        }
+        if MarketsCollectingSubsidy::<T>::exists() {
+            return Err("DrainDeprecatedStorage: MarketsCollectingSubsidy still exists!");
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use frame_support::{dispatch::fmt::Debug, migration::put_storage_value, StorageHasher};
+    use crate::{
+        mock::{ExtBuilder, Runtime},
+        CacheSize,
+    };
+    use frame_support::{
+        dispatch::fmt::Debug, migration::put_storage_value, storage_root, StorageHasher,
+    };
     use parity_scale_codec::Encode;
+    use sp_runtime::{traits::ConstU32, BoundedVec, StateVersion};
+    use zeitgeist_primitives::types::{MarketPeriod, SubsidyUntil};
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_version() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            DrainDeprecatedStorage::<Runtime>::on_runtime_upgrade();
+            assert_eq!(
+                StorageVersion::get::<PredictionMarkets<Runtime>>(),
+                PREDICTION_MARKETS_NEXT_STORAGE_VERSION
+            );
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_works() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version();
+            set_up_storage();
+            DrainDeprecatedStorage::<Runtime>::on_runtime_upgrade();
+            assert_eq!(MarketIdsPerOpenBlock::<Runtime>::iter().count(), 0);
+            assert_eq!(MarketIdsPerOpenTimeFrame::<Runtime>::iter().count(), 0);
+            assert!(!MarketsCollectingSubsidy::<Runtime>::exists());
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION)
+                .put::<PredictionMarkets<Runtime>>();
+            set_up_storage();
+            let tmp = storage_root(StateVersion::V1);
+            DrainDeprecatedStorage::<Runtime>::on_runtime_upgrade();
+            assert_eq!(tmp, storage_root(StateVersion::V1));
+        });
+    }
+
+    fn set_up_version() {
+        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION)
+            .put::<PredictionMarkets<Runtime>>();
+    }
+
+    fn set_up_storage() {
+        let market_ids_per_open_block: BoundedVec<_, CacheSize> = vec![1, 2, 3].try_into().unwrap();
+        MarketIdsPerOpenBlock::<Runtime>::insert(1, market_ids_per_open_block);
+        let market_ids_per_open_time_frame: BoundedVec<_, CacheSize> =
+            vec![4, 5, 6].try_into().unwrap();
+        MarketIdsPerOpenTimeFrame::<Runtime>::insert(2, market_ids_per_open_time_frame);
+        let subsidy_until: BoundedVec<_, ConstU32<16>> =
+            vec![SubsidyUntil { market_id: 7, period: MarketPeriod::Block(8..9) }]
+                .try_into()
+                .unwrap();
+        MarketsCollectingSubsidy::<Runtime>::put(subsidy_until);
+    }
 
     #[allow(unused)]
     fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
@@ -37,30 +164,11 @@ mod tests {
     }
 }
 
-// We use these utilities to prevent having to make the swaps pallet a dependency of
-// prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
-// https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
-// and previous migrations.
 mod utility {
-    use crate::{BalanceOf, Config, MarketIdOf};
     use alloc::vec::Vec;
-    use frame_support::{
-        migration::{get_storage_value, put_storage_value},
-        storage::{storage_prefix, unhashed},
-        traits::StorageVersion,
-        Blake2_128Concat, StorageHasher,
-    };
+    use frame_support::StorageHasher;
     use parity_scale_codec::Encode;
-    use zeitgeist_primitives::types::{Pool, PoolId};
 
-    #[allow(unused)]
-    const SWAPS: &[u8] = b"Swaps";
-    #[allow(unused)]
-    const POOLS: &[u8] = b"Pools";
-    #[allow(unused)]
-    fn storage_prefix_of_swaps_pallet() -> [u8; 32] {
-        storage_prefix(b"Swaps", b":__STORAGE_VERSION__:")
-    }
     #[allow(unused)]
     pub fn key_to_hash<H, K>(key: K) -> Vec<u8>
     where
@@ -68,27 +176,5 @@ mod utility {
         K: Encode,
     {
         key.using_encoded(H::hash).as_ref().to_vec()
-    }
-    #[allow(unused)]
-    pub fn get_on_chain_storage_version_of_swaps_pallet() -> StorageVersion {
-        let key = storage_prefix_of_swaps_pallet();
-        unhashed::get_or_default(&key)
-    }
-    #[allow(unused)]
-    pub fn put_storage_version_of_swaps_pallet(value: u16) {
-        let key = storage_prefix_of_swaps_pallet();
-        unhashed::put(&key, &StorageVersion::new(value));
-    }
-    #[allow(unused)]
-    pub fn get_pool<T: Config>(pool_id: PoolId) -> Option<Pool<BalanceOf<T>, MarketIdOf<T>>> {
-        let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
-        let pool_maybe =
-            get_storage_value::<Option<Pool<BalanceOf<T>, MarketIdOf<T>>>>(SWAPS, POOLS, &hash);
-        pool_maybe.unwrap_or(None)
-    }
-    #[allow(unused)]
-    pub fn set_pool<T: Config>(pool_id: PoolId, pool: Pool<BalanceOf<T>, MarketIdOf<T>>) {
-        let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
-        put_storage_value(SWAPS, POOLS, &hash, Some(pool));
     }
 }

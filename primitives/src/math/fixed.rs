@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -197,13 +197,13 @@ where
     }
 
     fn bmul_bdiv_floor(&self, _multiplier: Self, _divisor: Self) -> Result<Self, DispatchError> {
-        // FIXME Untested!
+        // TODO(#1217): Commented mplementation below should work, but remains untested!
         // bmul_bdiv_common(self, multiplier, divisor, Zero::zero())
         Err(DispatchError::Other("not implemented"))
     }
 
     fn bmul_bdiv_ceil(&self, _multiplier: Self, _divisor: Self) -> Result<Self, DispatchError> {
-        // FIXME Untested!
+        // TODO(#1217): Commented mplementation below should work, but remains untested!
         // let adjustment = ZeitgeistBase::<T>::get()?.checked_sub_res(&1u8.into())?;
         // bmul_bdiv_common(self, multiplier, divisor, adjustment)
         Err(DispatchError::Other("not implemented"))

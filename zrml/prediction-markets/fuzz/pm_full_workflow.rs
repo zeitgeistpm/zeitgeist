@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -57,7 +57,7 @@ fuzz_target!(|data: Data| {
             market_creation(data.create_scalar_market_creation),
             MarketType::Scalar(data.create_scalar_market_outcome_range),
             market_dispute_mechanism(data.create_scalar_market_dispute_mechanism),
-            ScoringRule::CPMM,
+            ScoringRule::Lmsr,
         );
 
         let _ = PredictionMarkets::on_initialize(2);

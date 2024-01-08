@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,7 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{CategoryIndex, PoolId, SerdeWrapper};
+#[cfg(feature = "runtime-benchmarks")]
+use crate::traits::ZeitgeistAssetEnumerator;
+use crate::{
+    traits::PoolSharesId,
+    types::{CategoryIndex, PoolId, SerdeWrapper},
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
@@ -51,6 +56,19 @@ pub enum Asset<MI: MaxEncodedLen> {
     Ztg,
     ForeignAsset(u32),
     ParimutuelShare(MI, CategoryIndex),
+}
+
+impl<MI: MaxEncodedLen> PoolSharesId<SerdeWrapper<PoolId>> for Asset<MI> {
+    fn pool_shares_id(pool_id: SerdeWrapper<PoolId>) -> Self {
+        Self::PoolShare(pool_id)
+    }
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<MI: MaxEncodedLen> ZeitgeistAssetEnumerator<MI> for Asset<MI> {
+    fn create_asset_id(t: MI) -> Self {
+        Asset::CategoricalOutcome(t, 0)
+    }
 }
 
 /// In a scalar market, users can either choose a `Long` position,

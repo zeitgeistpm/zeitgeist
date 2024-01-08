@@ -15,6 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod checked_ops_res;
-pub mod fixed;
-pub mod root;
+mod pool;
+
+pub(crate) use pool::*;
