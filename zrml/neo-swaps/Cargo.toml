@@ -106,4 +106,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-neo-swaps"
-version = "0.4.2"
+version = "0.4.3"
