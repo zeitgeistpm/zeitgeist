@@ -105,9 +105,6 @@ pub type MarketAsset = MarketAssetClass<MarketId>;
 /// ID type for asset classes that anyone can create
 pub type AssetId = u128;
 
-/// ID type for the asset classes are used within the prediction market protocol
-pub type MarketAsset = PredictionMarketAsset<MarketId>;
-
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.
 /// Since the polkadot extension and wallets can't handle custom asset ids other than just u32,

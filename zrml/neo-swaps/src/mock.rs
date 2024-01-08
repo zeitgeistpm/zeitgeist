@@ -317,7 +317,13 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
-    type BaseCallFilter // Copyright 2022-2024 Forecasting Technologies LTD.;
+    type BaseCallFilter = Everything;
+    type BlockHashCount = BlockHashCount;
+    type BlockLength = ();
+    type BlockNumber = BlockNumber;
+    type BlockWeights = ();
+    type RuntimeCall = RuntimeCall;
+    type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
