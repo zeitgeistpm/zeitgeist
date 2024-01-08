@@ -67,6 +67,7 @@ function download_zombienet {
     fi
 
     mkdir -p ./tmp/
+    mkdir -p ./integration-tests/tmp/
 
     # Download the file
     echo "Downloading ${FILE_NAME} from ${DOWNLOAD_URL}"
