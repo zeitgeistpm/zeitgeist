@@ -40,7 +40,6 @@ Useful for integration testing:
 - `./integration-tests/scripts/deploy-zombienet.sh` - Deploy a local relay-parachain network for zombienet.
 - `pnpm chopsticks xcm -r polkadot -p ./configs/hydradx.yml -p ./configs/zeitgeist.yml` - Deploy a local relay-parachain fork network via chopsticks to test XCM.
 - `./integration-tests/scripts/deploy-zombienet.sh --test` - Run ZNDSL zombienet tests on a local relay-parachain network.
-- `pnpm exec moonwall test chopsticks_zeitgeist_hydra_xcm_tests` - XCM Tests from Zeitgeist to HydraDX.
 - `pnpm exec moonwall test zombienet_zeitgeist_upgrade` - Test Zeitgeist runtime upgrade on zombienet for the local network.
 - `pnpm exec moonwall test chopsticks_zeitgeist_upgrade` - Test Zeitgeist runtime upgrade on chopsticks for the live network.
 - `pnpm exec moonwall test chopsticks_battery_station_upgrade` - Test Battery Station runtime upgrade on chopsticks for the test network.
