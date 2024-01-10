@@ -1341,9 +1341,10 @@ benchmarks! {
         assert!(range_end < now as u64);
 
         let range_end_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_end);
-        for i in 0..o {
+        let range_end_time_frame = Pallet::<T>::calculate_time_frame_of_moment(range_end);
+        for i in 1..o {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(range_end_time_frame, |ids| {
-                ids.try_push((i).into())
+                ids.try_push((i + 1).into())
             }).unwrap();
         }
 
