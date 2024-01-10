@@ -1496,6 +1496,7 @@ mod pallet {
                     },
                 )?;
                 Self::on_market_close(&market_id, market)?;
+                Self::set_market_end(&market_id)?;
                 close_ids_len
             } else {
                 return Err(Error::<T>::MarketPeriodEndNotAlreadyReachedYet.into());

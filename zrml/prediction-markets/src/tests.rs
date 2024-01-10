@@ -1408,6 +1408,8 @@ fn manually_close_market_after_long_stall() {
             end + (crate::MAX_RECOVERY_TIME_FRAMES + 1) * MILLISECS_PER_BLOCK as u64,
         );
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
+        let new_end = <zrml_market_commons::Pallet<Runtime>>::now();
+        assert_ne!(end, new_end);
 
         // still active, not closed, because recovery limit reached
         let market_after_close = MarketCommons::market(&0).unwrap();
@@ -1424,10 +1426,12 @@ fn manually_close_market_after_long_stall() {
         let market_after_manual_close = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_manual_close.status, MarketStatus::Closed);
 
+        assert_eq!(market_after_manual_close.period, MarketPeriod::Timestamp(0..new_end));
         assert_ok!(PredictionMarkets::manually_close_market(RuntimeOrigin::signed(ALICE), 1));
         assert_eq!(MarketIdsPerCloseTimeFrame::<Runtime>::get(range_end_time_frame), vec![]);
         let market_after_manual_close = MarketCommons::market(&1).unwrap();
         assert_eq!(market_after_manual_close.status, MarketStatus::Closed);
+        assert_eq!(market_after_manual_close.period, MarketPeriod::Timestamp(0..new_end));
     });
 }
 
