@@ -19,6 +19,7 @@
 #![cfg(all(feature = "mock", test))]
 
 mod buy_complete_set;
+mod sell_complete_set;
 
 use crate::{mock::*, AssetOf, Config, Error, Event};
 use core::ops::Range;
