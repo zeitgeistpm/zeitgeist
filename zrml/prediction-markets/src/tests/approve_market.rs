@@ -18,7 +18,8 @@
 
 use super::*;
 
-use sp_runtime::DispatchError;use crate::MarketIdsForEdit;
+use crate::MarketIdsForEdit;
+use sp_runtime::DispatchError;
 
 #[test]
 fn it_allows_advisory_origin_to_approve_markets() {

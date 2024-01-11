@@ -22,7 +22,7 @@ use test_case::test_case;
 use core::ops::RangeInclusive;
 use zeitgeist_primitives::{
     constants::MILLISECS_PER_BLOCK,
-    types::{AccountIdTest, Balance, BlockNumber, Bond, Moment, MarketBonds},
+    types::{AccountIdTest, Balance, BlockNumber, Bond, MarketBonds, Moment},
 };
 
 #[test_case(std::ops::RangeInclusive::new(7, 6); "empty range")]

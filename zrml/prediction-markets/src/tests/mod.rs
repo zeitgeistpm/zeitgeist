@@ -24,9 +24,10 @@ mod approve_market;
 mod buy_complete_set;
 mod create_market;
 mod edit_market;
+mod reject_market;
 mod sell_complete_set;
 
-use crate::{mock::*, AssetOf, BalanceOf, AccountIdOf, Config, Error, Event};
+use crate::{mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event};
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
