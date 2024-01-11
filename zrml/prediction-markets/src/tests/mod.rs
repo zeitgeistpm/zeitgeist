@@ -20,11 +20,12 @@
 
 mod admin_move_market_to_closed;
 mod admin_move_market_to_resolved;
+mod approve_market;
 mod buy_complete_set;
 mod create_market;
 mod sell_complete_set;
 
-use crate::{mock::*, AssetOf, Config, Error, Event};
+use crate::{mock::*, AssetOf, BalanceOf, AccountIdOf, Config, Error, Event};
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
@@ -95,4 +96,28 @@ fn simple_create_scalar_market(
         Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule
     ));
+}
+
+fn check_reserve(account: &AccountIdOf<Runtime>, expected: BalanceOf<Runtime>) {
+    assert_eq!(Balances::reserved_balance(account), SENTINEL_AMOUNT + expected);
+}
+
+fn reserve_sentinel_amounts() {
+    // Reserve a sentinel amount to check that we don't unreserve too much.
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &ALICE, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &BOB, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(
+        &PredictionMarkets::reserve_id(),
+        &CHARLIE,
+        SENTINEL_AMOUNT
+    ));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &DAVE, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &EVE, SENTINEL_AMOUNT));
+    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &FRED, SENTINEL_AMOUNT));
+    assert_eq!(Balances::reserved_balance(ALICE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(BOB), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(CHARLIE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(DAVE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(EVE), SENTINEL_AMOUNT);
+    assert_eq!(Balances::reserved_balance(FRED), SENTINEL_AMOUNT);
 }

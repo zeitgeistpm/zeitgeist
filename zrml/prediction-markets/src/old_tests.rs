@@ -142,35 +142,6 @@ fn simple_create_scalar_market(
 }
 
 #[test]
-fn it_allows_advisory_origin_to_approve_markets() {
-    ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::Lmsr,
-        );
-
-        // make sure it's in status proposed
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
-
-        // Make sure it fails from the random joe
-        assert_noop!(
-            PredictionMarkets::approve_market(RuntimeOrigin::signed(BOB), 0),
-            DispatchError::BadOrigin
-        );
-
-        // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
-
-        let after_market = MarketCommons::market(&0);
-        assert_eq!(after_market.unwrap().status, MarketStatus::Active);
-    });
-}
-
-#[test]
 fn it_allows_request_edit_origin_to_request_edits_for_markets() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -256,33 +227,6 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
         assert_noop!(
             PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason),
             Error::<Runtime>::EditReasonLengthExceedsMaxEditReasonLen
-        );
-    });
-}
-
-#[test]
-fn market_with_edit_request_cannot_be_approved() {
-    ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::Lmsr,
-        );
-
-        // make sure it's in status proposed
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
-
-        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
-
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
-
-        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
-        assert_noop!(
-            PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0),
-            Error::<Runtime>::MarketEditRequestAlreadyInProgress
         );
     });
 }
@@ -3380,42 +3324,6 @@ fn authorized_correctly_resolves_disputed_market() {
 
         assert!(market_after.bonds.creation.unwrap().is_settled);
         assert!(market_after.bonds.oracle.unwrap().is_settled);
-    };
-    ExtBuilder::default().build().execute_with(|| {
-        test(Asset::Ztg);
-    });
-    #[cfg(feature = "parachain")]
-    ExtBuilder::default().build().execute_with(|| {
-        test(Asset::ForeignAsset(100));
-    });
-}
-
-#[test]
-fn approve_market_correctly_unreserves_advisory_bond() {
-    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: Asset<MarketId>| {
-        reserve_sentinel_amounts();
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            base_asset,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Block(0..100),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Advised,
-            MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
-        ));
-        let market_id = 0;
-        let alice_balance_before = Balances::free_balance(ALICE);
-        check_reserve(&ALICE, AdvisoryBond::get() + OracleBond::get());
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), market_id));
-        check_reserve(&ALICE, OracleBond::get());
-        assert_eq!(Balances::free_balance(ALICE), alice_balance_before + AdvisoryBond::get());
-        let market = MarketCommons::market(&market_id).unwrap();
-        assert!(market.bonds.creation.unwrap().is_settled);
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
