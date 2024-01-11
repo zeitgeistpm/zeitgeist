@@ -82,6 +82,11 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
+    /// The maximum number of blocks between the [`LastTimeFrame`]
+    /// and the current timestamp in block number allowed to recover
+    /// the automatic market openings and closings from a chain stall.
+    /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
+    pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
 
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -1448,6 +1453,57 @@ mod pallet {
             Self::set_market_end(&market_id)?;
             Ok(Some(T::WeightInfo::close_trusted_market(close_ids_len)).into())
         }
+
+        /// Allows the manual closing for "broken" markets.
+        /// A market is "broken", if an unexpected chain stall happened
+        /// and the auto close was scheduled during this time.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`,
+        /// and `n` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::call_index(22)]
+        #[pallet::weight(T::WeightInfo::manually_close_market(CacheSize::get()))]
+        #[transactional]
+        pub fn manually_close_market(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            let market = zrml_market_commons::Pallet::<T>::market(&market_id)?;
+            let now = zrml_market_commons::Pallet::<T>::now();
+            let range = match &market.period {
+                MarketPeriod::Block(_) => {
+                    return Err(Error::<T>::NotAllowedForBlockBasedMarkets.into());
+                }
+                MarketPeriod::Timestamp(ref range) => range,
+            };
+
+            let close_ids_len = if range.end <= now {
+                let range_end_time_frame = Self::calculate_time_frame_of_moment(range.end);
+                let close_ids_len = MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    range_end_time_frame,
+                    |ids| -> Result<u32, DispatchError> {
+                        let ids_len = ids.len() as u32;
+                        let position = ids
+                            .iter()
+                            .position(|i| i == &market_id)
+                            .ok_or(Error::<T>::MarketNotInCloseTimeFrameList)?;
+                        let _ = ids.swap_remove(position);
+                        Ok(ids_len)
+                    },
+                )?;
+                Self::on_market_close(&market_id, market)?;
+                Self::set_market_end(&market_id)?;
+                close_ids_len
+            } else {
+                return Err(Error::<T>::MarketPeriodEndNotAlreadyReachedYet.into());
+            };
+
+            Ok(Some(T::WeightInfo::manually_close_market(close_ids_len)).into())
+        }
     }
 
     #[pallet::config]
@@ -1792,6 +1848,12 @@ mod pallet {
         CallerNotMarketCreator,
         /// The market is not trusted.
         MarketIsNotTrusted,
+        /// The operation is not allowed for market with a block period.
+        NotAllowedForBlockBasedMarkets,
+        /// The market is not in the close time frame list.
+        MarketNotInCloseTimeFrameList,
+        /// The market period end was not already reached yet.
+        MarketPeriodEndNotAlreadyReachedYet,
     }
 
     #[pallet::event]
@@ -1850,6 +1912,8 @@ mod pallet {
         ),
         /// The global dispute was started. \[market_id\]
         GlobalDisputeStarted(MarketIdOf<T>),
+        /// The recovery limit for timestamp based markets was reached due to a prolonged chain stall.
+        RecoveryLimitReached { last_time_frame: TimeFrame, limit_time_frame: TimeFrame },
     }
 
     #[pallet::hooks]
@@ -2787,7 +2851,25 @@ mod pallet {
             MarketIdsPerBlock::remove(block_number);
 
             let mut time_frame_ids_len = 0u32;
-            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
+            let start = last_time_frame.saturating_add(1);
+            let end = current_time_frame;
+            let diff = end.saturating_sub(start);
+            let start = if diff > MAX_RECOVERY_TIME_FRAMES {
+                log::warn!(
+                    target: LOG_TARGET,
+                    "Could not recover all time frames since the last time frame {:?}.",
+                    last_time_frame,
+                );
+                let limit_time_frame = end.saturating_sub(MAX_RECOVERY_TIME_FRAMES);
+                Self::deposit_event(Event::RecoveryLimitReached {
+                    last_time_frame,
+                    limit_time_frame,
+                });
+                limit_time_frame
+            } else {
+                start
+            };
+            for time_frame in start..=end {
                 let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
                 time_frame_ids_len =
                     time_frame_ids_len.saturating_add(market_ids_per_time_frame.len() as u32);

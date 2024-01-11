@@ -87,6 +87,7 @@ pub trait WeightInfoZeitgeist {
     fn reject_early_close_after_authority(o: u32, n: u32) -> Weight;
     fn reject_early_close_after_dispute() -> Weight;
     fn close_trusted_market(c: u32) -> Weight;
+    fn manually_close_market(o: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -863,6 +864,26 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Minimum execution time: 66_780 nanoseconds.
         Weight::from_parts(80_781_000, 6877)
             .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().writes(2))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:1)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(542), added: 3017, mode: MaxEncodedLen)
+    /// Storage: Timestamp Now (r:1 w:0)
+    /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+    /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
+    /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
+    /// Storage: MarketCommons MarketPool (r:1 w:0)
+    /// Proof: MarketCommons MarketPool (max_values: None, max_size: Some(48), added: 2523, mode: MaxEncodedLen)
+    /// The range of component `o` is `[1, 63]`.
+    fn manually_close_market(o: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `2255`
+        //  Estimated: `9568`
+        // Minimum execution time: 29_000 nanoseconds.
+        Weight::from_parts(31_439_103, 9568)
+            // Standard Error: 431
+            .saturating_add(Weight::from_parts(756, 0).saturating_mul(o.into()))
+            .saturating_add(T::DbWeight::get().reads(4))
             .saturating_add(T::DbWeight::get().writes(2))
     }
     fn close_trusted_market(c: u32) -> Weight {
