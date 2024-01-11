@@ -18,6 +18,7 @@
 
 #![cfg(all(feature = "mock", test))]
 
+mod admin_move_market_to_closed;
 mod buy_complete_set;
 mod sell_complete_set;
 
