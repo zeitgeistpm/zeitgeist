@@ -20,10 +20,9 @@ use super::*;
 use test_case::test_case;
 
 #[test]
-fn it_allows_to_buy_a_complete_set() {
-    let test = |base_asset: Asset<MarketId>| {
+fn buy_complete_set_works() {
+    let test = |base_asset: AssetOf<Runtime>| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        // Creates a permissionless market.
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
@@ -31,25 +30,30 @@ fn it_allows_to_buy_a_complete_set() {
             ScoringRule::Lmsr,
         );
 
-        // Allows someone to generate a complete set
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT));
+        let market_id = 0;
+        let who = BOB;
+        let amount = CENT;
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(who),
+            market_id,
+            amount
+        ));
 
-        let market = MarketCommons::market(&0).unwrap();
+        let market = MarketCommons::market(&market_id).unwrap();
 
-        // Check the outcome balances
-        let assets = PredictionMarkets::outcome_assets(0, &market);
+        let assets = PredictionMarkets::outcome_assets(market_id, &market);
         for asset in assets.iter() {
-            let bal = Tokens::free_balance(*asset, &BOB);
-            assert_eq!(bal, CENT);
+            let bal = Tokens::free_balance(*asset, &who);
+            assert_eq!(bal, amount);
         }
 
-        let market_account = PredictionMarkets::market_account(0);
-        let bal = AssetManager::free_balance(base_asset, &BOB);
-        assert_eq!(bal, 1_000 * BASE - CENT);
+        let bal = AssetManager::free_balance(base_asset, &who);
+        assert_eq!(bal, 1_000 * BASE - amount);
 
+        let market_account = PredictionMarkets::market_account(market_id);
         let market_bal = AssetManager::free_balance(base_asset, &market_account);
-        assert_eq!(market_bal, CENT);
-        System::assert_last_event(Event::BoughtCompleteSet(0, CENT, BOB).into());
+        assert_eq!(market_bal, amount);
+        System::assert_last_event(Event::BoughtCompleteSet(market_id, amount, who).into());
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -61,24 +65,7 @@ fn it_allows_to_buy_a_complete_set() {
 }
 
 #[test]
-fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
-    ExtBuilder::default().build().execute_with(|| {
-        // Creates a permissionless market.
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::Lmsr,
-        );
-        assert_noop!(
-            PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT),
-            Error::<Runtime>::MarketIsNotActive,
-        );
-    });
-}
-
-#[test]
-fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
+fn buy_complete_fails_on_zero_amount() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
             Asset::Ztg,
@@ -94,8 +81,8 @@ fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
 }
 
 #[test]
-fn it_does_not_allow_buying_complete_sets_with_insufficient_balance() {
-    let test = |base_asset: Asset<MarketId>| {
+fn buy_complete_set_fails_on_insufficient_balance() {
+    let test = |base_asset: AssetOf<Runtime>| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,

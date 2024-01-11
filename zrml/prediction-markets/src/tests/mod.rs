@@ -20,7 +20,7 @@
 
 mod buy_complete_set;
 
-use crate::{mock::*, Config, Error, Event};
+use crate::{mock::*, AssetOf, Config, Error, Event};
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
@@ -28,8 +28,8 @@ use sp_arithmetic::Perbill;
 use zeitgeist_primitives::{
     constants::mock::{BASE, CENT},
     types::{
-        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod,
-        MarketStatus, MarketType, MultiHash, ScoringRule,
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, MultiHash, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -50,7 +50,7 @@ fn gen_metadata(byte: u8) -> MultiHash {
 }
 
 fn simple_create_categorical_market(
-    base_asset: Asset<MarketId>,
+    base_asset: AssetOf<Runtime>,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,

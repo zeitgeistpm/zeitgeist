@@ -84,26 +84,27 @@ mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
 
-    pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type NegativeImbalanceOf<T> =
-        <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
-    pub(crate) type TimeFrame = u64;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
+    pub(crate) type CacheSize = ConstU32<64>;
+    pub(crate) type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
+    pub(crate) type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type MarketIdOf<T> = <T as zrml_market_commons::Config>::MarketId;
-    pub(crate) type MomentOf<T> =
-        <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
-    pub type MarketOf<T> = Market<
+    pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        Asset<MarketIdOf<T>>,
+        AssetOf<T>,
     >;
+    pub(crate) type MomentOf<T> =
+        <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
+    pub(crate) type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
     pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, <T as frame_system::Config>::BlockNumber>;
-    pub type CacheSize = ConstU32<64>;
-    pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
-    pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
-    type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type TimeFrame = u64;
 
     macro_rules! impl_unreserve_bond {
         ($fn_name:ident, $bond_type:ident) => {
@@ -588,7 +589,7 @@ mod pallet {
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -640,7 +641,7 @@ mod pallet {
         #[transactional]
         pub fn edit_market(
             origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             market_id: MarketIdOf<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -1059,7 +1060,7 @@ mod pallet {
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
             origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -1842,13 +1843,7 @@ mod pallet {
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// An amount of winning outcomes have been redeemed.
         /// \[market_id, currency_id, amount_redeemed, payout, who\]
-        TokensRedeemed(
-            MarketIdOf<T>,
-            Asset<MarketIdOf<T>>,
-            BalanceOf<T>,
-            BalanceOf<T>,
-            AccountIdOf<T>,
-        ),
+        TokensRedeemed(MarketIdOf<T>, AssetOf<T>, BalanceOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// The global dispute was started. \[market_id\]
         GlobalDisputeStarted(MarketIdOf<T>),
     }
@@ -2059,7 +2054,7 @@ mod pallet {
         #[require_transactional]
         fn do_create_market(
             who: T::AccountId,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -2117,10 +2112,7 @@ mod pallet {
             Ok((ids_amount, market_id))
         }
 
-        pub fn outcome_assets(
-            market_id: MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Vec<Asset<MarketIdOf<T>>> {
+        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
@@ -2837,7 +2829,7 @@ mod pallet {
         }
 
         fn construct_market(
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator: T::AccountId,
             creator_fee: Perbill,
             oracle: T::AccountId,
