@@ -31,15 +31,15 @@ pub enum CurrencyClass<MI> {
     #[codec(index = 1)]
     OldScalarOutcome(MI, ScalarPosition),
 
-    #[codec(index = 6)]
-    OldParimutuelShare(MI, CategoryIndex),
-
     #[codec(index = 3)]
     OldPoolShare(PoolId),
 
     // Type can not be compacted as it is already used uncompacted in the storage
     #[codec(index = 5)]
     ForeignAsset(u32),
+
+    #[codec(index = 6)]
+    OldParimutuelShare(MI, CategoryIndex),
 }
 
 impl<MI> Default for CurrencyClass<MI> {

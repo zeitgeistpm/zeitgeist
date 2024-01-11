@@ -35,11 +35,11 @@ pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
     #[codec(index = 1)]
     OldScalarOutcome(MI, ScalarPosition),
 
-    #[codec(index = 6)]
-    OldParimutuelShare(MI, CategoryIndex),
-
     #[codec(index = 3)]
     OldPoolShare(PoolId),
+
+    #[codec(index = 6)]
+    OldParimutuelShare(MI, CategoryIndex),
 
     #[codec(index = 7)]
     CategoricalOutcome(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
