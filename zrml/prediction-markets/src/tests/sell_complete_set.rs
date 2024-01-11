@@ -19,36 +19,46 @@
 use super::*;
 use test_case::test_case;
 
-#[test]
-fn it_allows_to_sell_a_complete_set() {
+#[test_case(ScoringRule::Lmsr)]
+#[test_case(ScoringRule::Orderbook)]
+fn sell_complete_set_works(scoring_rule: ScoringRule) {
     let test = |base_asset: AssetOf<Runtime>| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        // Creates a permissionless market.
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            scoring_rule,
         );
+        let market_id = 0;
+        let buy_amount = 5 * CENT;
+        let sell_amount = 3 * CENT;
+        let expected_amount = 2 * CENT;
+        let who = BOB;
 
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT));
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(who),
+            market_id,
+            buy_amount
+        ));
 
-        assert_ok!(PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, CENT));
+        assert_ok!(PredictionMarkets::sell_complete_set(
+            RuntimeOrigin::signed(who),
+            market_id,
+            sell_amount
+        ));
 
-        let market = MarketCommons::market(&0).unwrap();
-
-        // Check the outcome balances
-        let assets = PredictionMarkets::outcome_assets(0, &market);
+        let market = MarketCommons::market(&market_id).unwrap();
+        let assets = PredictionMarkets::outcome_assets(market_id, &market);
         for asset in assets.iter() {
-            let bal = Tokens::free_balance(*asset, &BOB);
-            assert_eq!(bal, 0);
+            let bal = AssetManager::free_balance(*asset, &who);
+            assert_eq!(bal, expected_amount);
         }
 
-        // also check native balance
-        let bal = Balances::free_balance(BOB);
-        assert_eq!(bal, 1_000 * BASE);
+        let bal = AssetManager::free_balance(base_asset, &who);
+        assert_eq!(bal, 1_000 * BASE - expected_amount);
 
-        System::assert_last_event(Event::SoldCompleteSet(0, CENT, BOB).into());
+        System::assert_last_event(Event::SoldCompleteSet(market_id, sell_amount, who).into());
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);
@@ -60,7 +70,7 @@ fn it_allows_to_sell_a_complete_set() {
 }
 
 #[test]
-fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
+fn sell_complete_set_fails_on_zero_amount() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
             Asset::Ztg,
@@ -76,7 +86,7 @@ fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
 }
 
 #[test]
-fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
+fn sell_complete_set_fails_on_insufficient_share_balance() {
     let test = |base_asset: AssetOf<Runtime>| {
         simple_create_categorical_market(
             base_asset,
@@ -84,10 +94,17 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
             0..1,
             ScoringRule::Lmsr,
         );
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT));
-        assert_eq!(AssetManager::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
+        let market_id = 0;
+        let amount = 2 * CENT;
+        let who = BOB;
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            RuntimeOrigin::signed(who),
+            market_id,
+            amount
+        ));
+        assert_eq!(AssetManager::slash(Asset::CategoricalOutcome(market_id, 1), &who, 1), 0);
         assert_noop!(
-            PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 2 * CENT),
+            PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(who), market_id, amount),
             Error::<Runtime>::InsufficientShareBalance
         );
     };
