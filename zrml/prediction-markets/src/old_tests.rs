@@ -142,37 +142,6 @@ fn simple_create_scalar_market(
 }
 
 #[test]
-fn it_creates_binary_markets() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Permissionless,
-            0..2,
-            ScoringRule::Lmsr,
-        );
-
-        // check the correct amount was reserved
-        let alice_reserved = Balances::reserved_balance(ALICE);
-        assert_eq!(alice_reserved, ValidityBond::get() + OracleBond::get());
-
-        // Creates an advised market.
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            0..2,
-            ScoringRule::Lmsr,
-        );
-
-        let new_alice_reserved = Balances::reserved_balance(ALICE);
-        assert_eq!(new_alice_reserved, AdvisoryBond::get() + OracleBond::get() + alice_reserved);
-
-        // Make sure that the market id has been incrementing
-        let market_id = MarketCommons::latest_market_id().unwrap();
-        assert_eq!(market_id, 1);
-    });
-}
-
-#[test]
 fn create_categorical_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
