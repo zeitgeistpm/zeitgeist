@@ -53,16 +53,16 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CurrencyClass<MI> {
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
-            Asset::<MI>::CategoricalOutcome(marketid, catid) => {
-                Ok(Self::OldCategoricalOutcome(marketid, catid))
+            Asset::<MI>::CategoricalOutcome(market_id, cat_id) => {
+                Ok(Self::OldCategoricalOutcome(market_id, cat_id))
             }
-            Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
-                Ok(Self::OldScalarOutcome(marketid, scalarpos))
+            Asset::<MI>::ScalarOutcome(market_id, scalar_pos) => {
+                Ok(Self::OldScalarOutcome(market_id, scalar_pos))
             }
-            Asset::<MI>::ParimutuelShare(marketid, catid) => {
-                Ok(Self::OldParimutuelShare(marketid, catid))
+            Asset::<MI>::ParimutuelShare(market_id, cat_id) => {
+                Ok(Self::OldParimutuelShare(market_id, cat_id))
             }
-            Asset::<MI>::PoolShare(poolid) => Ok(Self::OldPoolShare(poolid)),
+            Asset::<MI>::PoolShare(pool_id) => Ok(Self::OldPoolShare(pool_id)),
             Asset::<MI>::ForeignAsset(id) => Ok(Self::ForeignAsset(id)),
             _ => Err(()),
         }

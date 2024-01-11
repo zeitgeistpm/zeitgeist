@@ -59,26 +59,26 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for MarketAssetClass<MI>
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
-            Asset::<MI>::NewCategoricalOutcome(marketid, catid) => {
-                Ok(Self::CategoricalOutcome(marketid, catid))
+            Asset::<MI>::NewCategoricalOutcome(market_id, cat_id) => {
+                Ok(Self::CategoricalOutcome(market_id, cat_id))
             }
-            Asset::<MI>::NewScalarOutcome(marketid, scalarpos) => {
-                Ok(Self::ScalarOutcome(marketid, scalarpos))
+            Asset::<MI>::NewScalarOutcome(market_id, scalar_pos) => {
+                Ok(Self::ScalarOutcome(market_id, scalar_pos))
             }
-            Asset::<MI>::NewParimutuelShare(marketid, catid) => {
-                Ok(Self::ParimutuelShare(marketid, catid))
+            Asset::<MI>::NewParimutuelShare(market_id, cat_id) => {
+                Ok(Self::ParimutuelShare(market_id, cat_id))
             }
-            Asset::<MI>::NewPoolShare(poolid) => Ok(Self::PoolShare(poolid)),
-            Asset::<MI>::CategoricalOutcome(marketid, catid) => {
-                Ok(Self::OldCategoricalOutcome(marketid, catid))
+            Asset::<MI>::NewPoolShare(pool_id) => Ok(Self::PoolShare(pool_id)),
+            Asset::<MI>::CategoricalOutcome(market_id, cat_id) => {
+                Ok(Self::OldCategoricalOutcome(market_id, cat_id))
             }
-            Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
-                Ok(Self::OldScalarOutcome(marketid, scalarpos))
+            Asset::<MI>::ScalarOutcome(market_id, scalar_pos) => {
+                Ok(Self::OldScalarOutcome(market_id, scalar_pos))
             }
-            Asset::<MI>::ParimutuelShare(marketid, catid) => {
-                Ok(Self::OldParimutuelShare(marketid, catid))
+            Asset::<MI>::ParimutuelShare(market_id, cat_id) => {
+                Ok(Self::OldParimutuelShare(market_id, cat_id))
             }
-            Asset::<MI>::PoolShare(poolid) => Ok(Self::OldPoolShare(poolid)),
+            Asset::<MI>::PoolShare(pool_id) => Ok(Self::OldPoolShare(pool_id)),
             _ => Err(()),
         }
     }
