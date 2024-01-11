@@ -19,13 +19,14 @@
 #![cfg(all(feature = "mock", test))]
 
 mod admin_move_market_to_closed;
+mod admin_move_market_to_resolved;
 mod buy_complete_set;
 mod create_market;
 mod sell_complete_set;
 
 use crate::{mock::*, AssetOf, Config, Error, Event};
 use core::ops::Range;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Perbill;
 use zeitgeist_primitives::{
@@ -36,6 +37,8 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+
+const SENTINEL_AMOUNT: u128 = BASE;
 
 fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
     Deadlines {
