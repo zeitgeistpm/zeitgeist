@@ -28,6 +28,7 @@ pub mod migrations;
 pub mod mock;
 mod old_tests;
 pub mod orml_asset_registry;
+mod tests;
 pub mod weights;
 
 pub use pallet::*;
