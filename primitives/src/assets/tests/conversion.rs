@@ -32,11 +32,6 @@ use test_case::test_case;
     "scalar_outcome"
 )]
 #[test_case(
-    Asset::<MarketId>::CombinatorialOutcome,
-    MarketAssetClass::<MarketId>::OldCombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     Asset::<MarketId>::PoolShare(7),
     MarketAssetClass::<MarketId>::OldPoolShare(7);
     "pool_share"
@@ -55,11 +50,6 @@ use test_case::test_case;
     Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long),
     MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "new_calar_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::NewCombinatorialOutcome,
-    MarketAssetClass::<MarketId>::CombinatorialOutcome;
-    "new_combinatorial_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::NewPoolShare(7),
@@ -90,11 +80,6 @@ fn from_all_assets_to_market_assets(
     "scalar_outcome"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldCombinatorialOutcome,
-    Asset::<MarketId>::CombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     MarketAssetClass::<MarketId>::OldPoolShare(7),
     Asset::<MarketId>::PoolShare(7);
     "pool_share"
@@ -113,11 +98,6 @@ fn from_all_assets_to_market_assets(
     MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
     Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long);
     "new_calar_outcome"
-)]
-#[test_case(
-    MarketAssetClass::<MarketId>::CombinatorialOutcome,
-    Asset::<MarketId>::NewCombinatorialOutcome;
-    "new_combinatorial_outcome"
 )]
 #[test_case(
     MarketAssetClass::<MarketId>::PoolShare(7),
@@ -149,11 +129,6 @@ fn from_market_assets_to_all_assets(
     "scalar_outcome"
 )]
 #[test_case(
-    Asset::<MarketId>::CombinatorialOutcome,
-    CurrencyClass::<MarketId>::OldCombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     Asset::<MarketId>::PoolShare(7),
     CurrencyClass::<MarketId>::OldPoolShare(7);
     "pool_share"
@@ -182,11 +157,6 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
     CurrencyClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long),
     Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "scalar_outcome"
-)]
-#[test_case(
-    CurrencyClass::<MarketId>::OldCombinatorialOutcome,
-    Asset::<MarketId>::CombinatorialOutcome;
-    "combinatorial_outcome"
 )]
 #[test_case(
     CurrencyClass::<MarketId>::OldPoolShare(7),

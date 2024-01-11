@@ -32,11 +32,6 @@ use test_case::test_case;
     "scalar_outcome"
 )]
 #[test_case(
-    Asset::<MarketId>::CombinatorialOutcome,
-    MarketAssetClass::<MarketId>::OldCombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     Asset::<MarketId>::PoolShare(7),
     MarketAssetClass::<MarketId>::OldPoolShare(7);
     "pool_share"
@@ -55,11 +50,6 @@ use test_case::test_case;
     Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long),
     MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "new_calar_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::NewCombinatorialOutcome,
-    MarketAssetClass::<MarketId>::CombinatorialOutcome;
-    "new_combinatorial_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::NewPoolShare(7),
@@ -91,11 +81,6 @@ fn index_matching_works_for_market_assets(
     Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
     CurrencyClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long);
     "scalar_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::CombinatorialOutcome,
-    CurrencyClass::<MarketId>::OldCombinatorialOutcome;
-    "combinatorial_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::PoolShare(7),

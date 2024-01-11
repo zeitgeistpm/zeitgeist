@@ -500,7 +500,6 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
@@ -522,9 +521,8 @@ parameter_type_with_key! {
 
             // The following assets are irrelevant, as they are managed by pallet-assets
             Asset::NewParimutuelShare(_,_) | Asset::NewCategoricalOutcome(_, _)
-            | Asset::NewCombinatorialOutcome | Asset::NewPoolShare(_)
             | Asset::NewScalarOutcome(_,_) | Asset::CustomAssetClass(_)
-            | Asset::CampaignAssetClass(_) => ExistentialDeposit::get(),
+            | Asset::CampaignAssetClass(_) | Asset::NewPoolShare(_) => ExistentialDeposit::get(),
         }
     };
 }

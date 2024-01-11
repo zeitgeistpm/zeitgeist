@@ -25,15 +25,12 @@ use super::*;
 /// * `MI`: Market Id
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
 pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
     // All "Old" variants will be removed once the lazy migration from
     // orml-tokens to pallet-assets is complete
     #[codec(index = 0)]
     OldCategoricalOutcome(MI, CategoryIndex),
-
-    #[codec(index = 2)]
-    OldCombinatorialOutcome,
 
     #[codec(index = 1)]
     OldScalarOutcome(MI, ScalarPosition),
@@ -46,10 +43,6 @@ pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
 
     #[codec(index = 7)]
     CategoricalOutcome(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
-
-    #[codec(index = 8)]
-    #[default]
-    CombinatorialOutcome,
 
     #[codec(index = 9)]
     ScalarOutcome(#[codec(compact)] MI, ScalarPosition),
@@ -69,7 +62,6 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for MarketAssetClass<MI>
             Asset::<MI>::NewCategoricalOutcome(marketid, catid) => {
                 Ok(Self::CategoricalOutcome(marketid, catid))
             }
-            Asset::<MI>::NewCombinatorialOutcome => Ok(Self::CombinatorialOutcome),
             Asset::<MI>::NewScalarOutcome(marketid, scalarpos) => {
                 Ok(Self::ScalarOutcome(marketid, scalarpos))
             }
@@ -80,7 +72,6 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for MarketAssetClass<MI>
             Asset::<MI>::CategoricalOutcome(marketid, catid) => {
                 Ok(Self::OldCategoricalOutcome(marketid, catid))
             }
-            Asset::<MI>::CombinatorialOutcome => Ok(Self::OldCombinatorialOutcome),
             Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
                 Ok(Self::OldScalarOutcome(marketid, scalarpos))
             }

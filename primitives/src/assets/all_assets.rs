@@ -56,10 +56,10 @@ use super::*;
 pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     #[codec(index = 0)]
     CategoricalOutcome(MI, CategoryIndex),
+
     #[codec(index = 1)]
     ScalarOutcome(MI, ScalarPosition),
-    #[codec(index = 2)]
-    CombinatorialOutcome,
+
     #[codec(index = 3)]
     PoolShare(PoolId),
 
@@ -77,9 +77,6 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     // migration completed
     #[codec(index = 7)]
     NewCategoricalOutcome(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
-
-    #[codec(index = 8)]
-    NewCombinatorialOutcome,
 
     #[codec(index = 9)]
     NewScalarOutcome(#[codec(compact)] MI, ScalarPosition),
@@ -103,7 +100,6 @@ impl<MI: HasCompact + MaxEncodedLen> From<MarketAssetClass<MI>> for Asset<MI> {
             MarketAssetClass::<MI>::OldCategoricalOutcome(marketid, catid) => {
                 Self::CategoricalOutcome(marketid, catid)
             }
-            MarketAssetClass::<MI>::OldCombinatorialOutcome => Self::CombinatorialOutcome,
             MarketAssetClass::<MI>::OldScalarOutcome(marketid, scalarpos) => {
                 Self::ScalarOutcome(marketid, scalarpos)
             }
@@ -114,7 +110,6 @@ impl<MI: HasCompact + MaxEncodedLen> From<MarketAssetClass<MI>> for Asset<MI> {
             MarketAssetClass::<MI>::CategoricalOutcome(marketid, catid) => {
                 Self::NewCategoricalOutcome(marketid, catid)
             }
-            MarketAssetClass::<MI>::CombinatorialOutcome => Self::NewCombinatorialOutcome,
             MarketAssetClass::<MI>::ScalarOutcome(marketid, scalarpos) => {
                 Self::NewScalarOutcome(marketid, scalarpos)
             }
@@ -144,7 +139,6 @@ impl<MI: HasCompact + MaxEncodedLen> From<CurrencyClass<MI>> for Asset<MI> {
             CurrencyClass::<MI>::OldCategoricalOutcome(marketid, catid) => {
                 Self::CategoricalOutcome(marketid, catid)
             }
-            CurrencyClass::<MI>::OldCombinatorialOutcome => Self::CombinatorialOutcome,
             CurrencyClass::<MI>::OldScalarOutcome(marketid, scalarpos) => {
                 Self::ScalarOutcome(marketid, scalarpos)
             }

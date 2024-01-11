@@ -28,9 +28,6 @@ pub enum CurrencyClass<MI> {
     #[codec(index = 0)]
     OldCategoricalOutcome(MI, CategoryIndex),
 
-    #[codec(index = 2)]
-    OldCombinatorialOutcome,
-
     #[codec(index = 1)]
     OldScalarOutcome(MI, ScalarPosition),
 
@@ -59,7 +56,6 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CurrencyClass<MI> {
             Asset::<MI>::CategoricalOutcome(marketid, catid) => {
                 Ok(Self::OldCategoricalOutcome(marketid, catid))
             }
-            Asset::<MI>::CombinatorialOutcome => Ok(Self::OldCombinatorialOutcome),
             Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
                 Ok(Self::OldScalarOutcome(marketid, scalarpos))
             }
