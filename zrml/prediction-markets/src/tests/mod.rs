@@ -20,6 +20,7 @@
 
 mod admin_move_market_to_closed;
 mod buy_complete_set;
+mod create_market;
 mod sell_complete_set;
 
 use crate::{mock::*, AssetOf, Config, Error, Event};
