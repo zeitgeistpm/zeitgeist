@@ -602,3 +602,37 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
         );
     });
 }
+
+#[test]
+fn create_categorical_market_deposits_the_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let market_account = PredictionMarkets::market_account(market_id);
+        System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
+    });
+}
+
+#[test]
+fn create_scalar_market_deposits_the_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_scalar_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let market_account = PredictionMarkets::market_account(market_id);
+        System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
+    });
+}

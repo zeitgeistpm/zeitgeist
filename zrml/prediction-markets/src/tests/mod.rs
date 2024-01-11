@@ -75,3 +75,24 @@ fn simple_create_categorical_market(
         scoring_rule
     ));
 }
+
+fn simple_create_scalar_market(
+    base_asset: AssetOf<Runtime>,
+    creation: MarketCreation,
+    period: Range<u64>,
+    scoring_rule: ScoringRule,
+) {
+    assert_ok!(PredictionMarkets::create_market(
+        RuntimeOrigin::signed(ALICE),
+        base_asset,
+        Perbill::zero(),
+        BOB,
+        MarketPeriod::Block(period),
+        get_deadlines(),
+        gen_metadata(2),
+        creation,
+        MarketType::Scalar(100..=200),
+        Some(MarketDisputeMechanism::SimpleDisputes),
+        scoring_rule
+    ));
+}
