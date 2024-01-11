@@ -23,6 +23,7 @@ mod admin_move_market_to_resolved;
 mod approve_market;
 mod buy_complete_set;
 mod create_market;
+mod edit_market;
 mod sell_complete_set;
 
 use crate::{mock::*, AssetOf, BalanceOf, AccountIdOf, Config, Error, Event};
