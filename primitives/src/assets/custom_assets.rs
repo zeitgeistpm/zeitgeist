@@ -25,14 +25,14 @@ use super::*;
 )]
 pub struct CustomAssetClass(#[codec(compact)] pub(super) CustomAssetId);
 
-impl From<Compact<CampaignAssetId>> for CustomAssetClass {
-    fn from(value: Compact<CampaignAssetId>) -> CustomAssetClass {
+impl From<Compact<CustomAssetId>> for CustomAssetClass {
+    fn from(value: Compact<CustomAssetId>) -> CustomAssetClass {
         CustomAssetClass(value.into())
     }
 }
 
-impl From<CustomAssetClass> for Compact<CampaignAssetId> {
-    fn from(value: CustomAssetClass) -> Compact<CampaignAssetId> {
+impl From<CustomAssetClass> for Compact<CustomAssetId> {
+    fn from(value: CustomAssetClass) -> Compact<CustomAssetId> {
         value.0.into()
     }
 }

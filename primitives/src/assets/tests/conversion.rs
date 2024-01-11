@@ -213,3 +213,21 @@ fn from_custom_assets_to_all_assets() {
     let new_asset_converted: Asset<MarketId> = old_asset.into();
     assert_eq!(new_asset, new_asset_converted);
 }
+
+// CampaignAssetId <> CampaignAssetClass
+#[test]
+fn from_campaign_asset_id_to_campaign_asset() {
+    let campaign_asset_id = Compact(7);
+    let campaign_asset = CampaignAssetClass::from(campaign_asset_id);
+    let campaign_asset_id_converted = campaign_asset.into();
+    assert_eq!(campaign_asset_id, campaign_asset_id_converted);
+}
+
+// CustomAssetId <> CustomAssetClass
+#[test]
+fn from_custom_asset_id_to_custom_asset() {
+    let custom_asset_id = Compact(7);
+    let custom_asset = CustomAssetClass::from(custom_asset_id);
+    let custom_asset_id_converted = custom_asset.into();
+    assert_eq!(custom_asset_id, custom_asset_id_converted);
+}
