@@ -22,8 +22,8 @@ use test_case::test_case;
 
 // Assets <> MarketAssetClass
 #[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 7),
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7);
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -37,13 +37,13 @@ use test_case::test_case;
     "pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 7),
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7);
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
-    Asset::<MarketId>::NewCategoricalOutcome(7, 7),
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7);
+    Asset::<MarketId>::NewCategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
     "new_categorical_outcome"
 )]
 #[test_case(
@@ -57,8 +57,8 @@ use test_case::test_case;
     "new_pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::NewParimutuelShare(7, 7),
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 7);
+    Asset::<MarketId>::NewParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8);
     "new_parimutuel_share"
 )]
 fn index_matching_works_for_market_assets(
@@ -73,8 +73,8 @@ fn index_matching_works_for_market_assets(
 
 // Assets <> CurrencyClass
 #[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 7),
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7);
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -88,8 +88,8 @@ fn index_matching_works_for_market_assets(
     "pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 7),
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 7);
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(

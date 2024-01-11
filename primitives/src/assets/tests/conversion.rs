@@ -22,8 +22,8 @@ use test_case::test_case;
 
 // Assets <> MarketAssetClass
 #[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 7),
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7);
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -37,13 +37,13 @@ use test_case::test_case;
     "pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 7),
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7);
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
-    Asset::<MarketId>::NewCategoricalOutcome(7, 7),
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7);
+    Asset::<MarketId>::NewCategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
     "new_categorical_outcome"
 )]
 #[test_case(
@@ -57,8 +57,8 @@ use test_case::test_case;
     "new_pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::NewParimutuelShare(7, 7),
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 7);
+    Asset::<MarketId>::NewParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8);
     "new_parimutuel_share"
 )]
 fn from_all_assets_to_market_assets(
@@ -70,8 +70,8 @@ fn from_all_assets_to_market_assets(
 }
 
 #[test_case(
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7),
-    Asset::<MarketId>::CategoricalOutcome(7, 7);
+    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8),
+    Asset::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -85,13 +85,13 @@ fn from_all_assets_to_market_assets(
     "pool_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7),
-    Asset::<MarketId>::ParimutuelShare(7, 7);
+    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8),
+    Asset::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7),
-    Asset::<MarketId>::NewCategoricalOutcome(7, 7);
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8),
+    Asset::<MarketId>::NewCategoricalOutcome(7, 8);
     "new_categorical_outcome"
 )]
 #[test_case(
@@ -105,8 +105,8 @@ fn from_all_assets_to_market_assets(
     "new_pool_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 7),
-    Asset::<MarketId>::NewParimutuelShare(7, 7);
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8),
+    Asset::<MarketId>::NewParimutuelShare(7, 8);
     "new_parimutuel_share"
 )]
 fn from_market_assets_to_all_assets(
@@ -119,8 +119,8 @@ fn from_market_assets_to_all_assets(
 
 // Assets <> CurrencyClass
 #[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 7),
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7);
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -134,8 +134,8 @@ fn from_market_assets_to_all_assets(
     "pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 7),
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 7);
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
@@ -149,8 +149,8 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
 }
 
 #[test_case(
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7),
-    Asset::<MarketId>::CategoricalOutcome(7, 7);
+    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8),
+    Asset::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -164,8 +164,8 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
     "pool_share"
 )]
 #[test_case(
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 7),
-    Asset::<MarketId>::ParimutuelShare(7, 7);
+    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8),
+    Asset::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
