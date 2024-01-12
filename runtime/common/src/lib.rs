@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -686,10 +686,7 @@ macro_rules! impl_config_traits {
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
             type Extra = ();
-            type ForceOrigin = EitherOfDiverse<
-                EnsureRootOrTwoThirdsCouncil,
-                EnsureRootOrAllTechnicalCommittee,
-            >;
+            type ForceOrigin = EnsureRootOrTwoThirdsCouncil;
             type Freezer = ();
             type MetadataDepositBase = CampaignAssetsMetadataDepositBase;
             type MetadataDepositPerByte = CampaignAssetsMetadataDepositPerByte;
@@ -726,7 +723,7 @@ macro_rules! impl_config_traits {
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
             type Extra = ();
-            type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
             type Freezer = ();
             type MetadataDepositBase = MarketAssetsMetadataDepositBase;
             type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;
@@ -1498,7 +1495,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
-                    list_benchmark!(list, extra, pallet_assets, CustomAsset);
+                    list_benchmark!(list, extra, pallet_assets, CustomAssets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
@@ -1603,7 +1600,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
-                    add_benchmark!(params, batches, pallet_assets, CustomAsset);
+                    add_benchmark!(params, batches, pallet_assets, CustomAssets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);

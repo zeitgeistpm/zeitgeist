@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -87,13 +87,13 @@ pub type Assets = Asset<MarketId>;
 /// Asset type representing campaign assets
 pub type CampaignAsset = CampaignAssetClass;
 
-// ID type for campaign asset class
+// ID type of the campaign asset class
 pub type CampaignAssetId = u128;
 
 /// Asset type representing custom assets
 pub type CustomAsset = CustomAssetClass;
 
-// ID type for campaign asset class
+// ID type of the custom asset class
 pub type CustomAssetId = u128;
 
 // Asset type representing currencies (excluding ZTG)

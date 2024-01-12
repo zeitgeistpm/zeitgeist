@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -68,7 +68,7 @@ parameter_types! {
     pub const CampaignAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
     /// The amount of native currency that is frozen during the whole lifetime
     /// if an asset class. Freezing happens at asset class creation.
-    /// Irrelevant - No origin can successfully call the associated dispatchable call..
+    /// Irrelevant - No origin can successfully call the associated dispatchable call.
     pub const CampaignAssetsDeposit: Balance = BASE;
     pub const CampaignAssetsStringLimit: u32 = 256;
     pub const CampaignAssetsMetadataDepositBase: Balance = deposit(1, 68);
@@ -78,7 +78,7 @@ parameter_types! {
     pub const CustomAssetsAccountDeposit: Balance = deposit(1, 16);
     pub const CustomAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
     /// The amount of native currency that is frozen during the whole lifetime
-    /// if an asset class. Freezing happens at asset class creation.
+    /// of an asset class. Freezing happens at asset class creation.
     pub const CustomAssetsDeposit: Balance = BASE;
     pub const CustomAssetsStringLimit: u32 = 50;
     pub const CustomAssetsMetadataDepositBase: Balance = deposit(1, 68);
@@ -88,7 +88,7 @@ parameter_types! {
     pub const MarketAssetsAccountDeposit: Balance = deposit(1, 16);
     pub const MarketAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
     /// The amount of native currency that is frozen during the whole lifetime
-    /// if an asset class. Freezing happens at asset class creation.
+    /// of an asset class. Freezing happens at asset class creation.
     /// Irrelevant - No origin can successfully call the associated dispatchable call.
     pub const MarketAssetsDeposit: Balance = BASE;
     pub const MarketAssetsStringLimit: u32 = 50;
@@ -500,7 +500,6 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: Currencies| -> Balance {
         match currency_id {
             Currencies::OldCategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Currencies::OldCombinatorialOutcome => ExistentialDeposit::get(),
             Currencies::OldParimutuelShare(_,_)  => ExistentialDeposit::get(),
             Currencies::OldPoolShare(_)  => ExistentialDeposit::get(),
             Currencies::OldScalarOutcome(_,_)  => ExistentialDeposit::get(),

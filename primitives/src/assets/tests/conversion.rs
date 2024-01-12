@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -22,8 +22,8 @@ use test_case::test_case;
 
 // Assets <> MarketAssetClass
 #[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 7),
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7);
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -32,23 +32,18 @@ use test_case::test_case;
     "scalar_outcome"
 )]
 #[test_case(
-    Asset::<MarketId>::CombinatorialOutcome,
-    MarketAssetClass::<MarketId>::OldCombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     Asset::<MarketId>::PoolShare(7),
     MarketAssetClass::<MarketId>::OldPoolShare(7);
     "pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 7),
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7);
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
-    Asset::<MarketId>::NewCategoricalOutcome(7, 7),
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7);
+    Asset::<MarketId>::NewCategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
     "new_categorical_outcome"
 )]
 #[test_case(
@@ -57,18 +52,13 @@ use test_case::test_case;
     "new_calar_outcome"
 )]
 #[test_case(
-    Asset::<MarketId>::NewCombinatorialOutcome,
-    MarketAssetClass::<MarketId>::CombinatorialOutcome;
-    "new_combinatorial_outcome"
-)]
-#[test_case(
     Asset::<MarketId>::NewPoolShare(7),
     MarketAssetClass::<MarketId>::PoolShare(7);
     "new_pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::NewParimutuelShare(7, 7),
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 7);
+    Asset::<MarketId>::NewParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8);
     "new_parimutuel_share"
 )]
 fn from_all_assets_to_market_assets(
@@ -80,8 +70,8 @@ fn from_all_assets_to_market_assets(
 }
 
 #[test_case(
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 7),
-    Asset::<MarketId>::CategoricalOutcome(7, 7);
+    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8),
+    Asset::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -90,23 +80,18 @@ fn from_all_assets_to_market_assets(
     "scalar_outcome"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldCombinatorialOutcome,
-    Asset::<MarketId>::CombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     MarketAssetClass::<MarketId>::OldPoolShare(7),
     Asset::<MarketId>::PoolShare(7);
     "pool_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 7),
-    Asset::<MarketId>::ParimutuelShare(7, 7);
+    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8),
+    Asset::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 7),
-    Asset::<MarketId>::NewCategoricalOutcome(7, 7);
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8),
+    Asset::<MarketId>::NewCategoricalOutcome(7, 8);
     "new_categorical_outcome"
 )]
 #[test_case(
@@ -115,18 +100,13 @@ fn from_all_assets_to_market_assets(
     "new_calar_outcome"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::CombinatorialOutcome,
-    Asset::<MarketId>::NewCombinatorialOutcome;
-    "new_combinatorial_outcome"
-)]
-#[test_case(
     MarketAssetClass::<MarketId>::PoolShare(7),
     Asset::<MarketId>::NewPoolShare(7);
     "new_pool_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 7),
-    Asset::<MarketId>::NewParimutuelShare(7, 7);
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8),
+    Asset::<MarketId>::NewParimutuelShare(7, 8);
     "new_parimutuel_share"
 )]
 fn from_market_assets_to_all_assets(
@@ -139,8 +119,8 @@ fn from_market_assets_to_all_assets(
 
 // Assets <> CurrencyClass
 #[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 7),
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7);
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -149,18 +129,13 @@ fn from_market_assets_to_all_assets(
     "scalar_outcome"
 )]
 #[test_case(
-    Asset::<MarketId>::CombinatorialOutcome,
-    CurrencyClass::<MarketId>::OldCombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     Asset::<MarketId>::PoolShare(7),
     CurrencyClass::<MarketId>::OldPoolShare(7);
     "pool_share"
 )]
 #[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 7),
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 7);
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
@@ -174,8 +149,8 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
 }
 
 #[test_case(
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 7),
-    Asset::<MarketId>::CategoricalOutcome(7, 7);
+    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8),
+    Asset::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
@@ -184,18 +159,13 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
     "scalar_outcome"
 )]
 #[test_case(
-    CurrencyClass::<MarketId>::OldCombinatorialOutcome,
-    Asset::<MarketId>::CombinatorialOutcome;
-    "combinatorial_outcome"
-)]
-#[test_case(
     CurrencyClass::<MarketId>::OldPoolShare(7),
     Asset::<MarketId>::PoolShare(7);
     "pool_share"
 )]
 #[test_case(
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 7),
-    Asset::<MarketId>::ParimutuelShare(7, 7);
+    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8),
+    Asset::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
@@ -242,4 +212,22 @@ fn from_custom_assets_to_all_assets() {
     let new_asset = Asset::<MarketId>::CampaignAssetClass(7);
     let new_asset_converted: Asset<MarketId> = old_asset.into();
     assert_eq!(new_asset, new_asset_converted);
+}
+
+// CampaignAssetId <> CampaignAssetClass
+#[test]
+fn from_campaign_asset_id_to_campaign_asset() {
+    let campaign_asset_id = Compact(7);
+    let campaign_asset = CampaignAssetClass::from(campaign_asset_id);
+    let campaign_asset_id_converted = campaign_asset.into();
+    assert_eq!(campaign_asset_id, campaign_asset_id_converted);
+}
+
+// CustomAssetId <> CustomAssetClass
+#[test]
+fn from_custom_asset_id_to_custom_asset() {
+    let custom_asset_id = Compact(7);
+    let custom_asset = CustomAssetClass::from(custom_asset_id);
+    let custom_asset_id_converted = custom_asset.into();
+    assert_eq!(custom_asset_id, custom_asset_id_converted);
 }

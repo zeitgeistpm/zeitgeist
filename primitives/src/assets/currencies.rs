@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -30,14 +30,8 @@ pub enum CurrencyClass<MI> {
     #[codec(index = 0)]
     OldCategoricalOutcome(MI, CategoryIndex),
 
-    #[codec(index = 2)]
-    OldCombinatorialOutcome,
-
     #[codec(index = 1)]
     OldScalarOutcome(MI, ScalarPosition),
-
-    #[codec(index = 6)]
-    OldParimutuelShare(MI, CategoryIndex),
 
     #[codec(index = 3)]
     OldPoolShare(PoolId),
@@ -45,6 +39,9 @@ pub enum CurrencyClass<MI> {
     // Type can not be compacted as it is already used uncompacted in the storage
     #[codec(index = 5)]
     ForeignAsset(u32),
+
+    #[codec(index = 6)]
+    OldParimutuelShare(MI, CategoryIndex),
 }
 
 impl<MI> Default for CurrencyClass<MI> {
@@ -58,17 +55,16 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CurrencyClass<MI> {
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
-            Asset::<MI>::CategoricalOutcome(marketid, catid) => {
-                Ok(Self::OldCategoricalOutcome(marketid, catid))
+            Asset::<MI>::CategoricalOutcome(market_id, cat_id) => {
+                Ok(Self::OldCategoricalOutcome(market_id, cat_id))
             }
-            Asset::<MI>::CombinatorialOutcome => Ok(Self::OldCombinatorialOutcome),
-            Asset::<MI>::ScalarOutcome(marketid, scalarpos) => {
-                Ok(Self::OldScalarOutcome(marketid, scalarpos))
+            Asset::<MI>::ScalarOutcome(market_id, scalar_pos) => {
+                Ok(Self::OldScalarOutcome(market_id, scalar_pos))
             }
-            Asset::<MI>::ParimutuelShare(marketid, catid) => {
-                Ok(Self::OldParimutuelShare(marketid, catid))
+            Asset::<MI>::ParimutuelShare(market_id, cat_id) => {
+                Ok(Self::OldParimutuelShare(market_id, cat_id))
             }
-            Asset::<MI>::PoolShare(poolid) => Ok(Self::OldPoolShare(poolid)),
+            Asset::<MI>::PoolShare(pool_id) => Ok(Self::OldPoolShare(pool_id)),
             Asset::<MI>::ForeignAsset(id) => Ok(Self::ForeignAsset(id)),
             _ => Err(()),
         }
