@@ -25,6 +25,7 @@ mod buy_complete_set;
 mod create_market;
 mod edit_market;
 mod manually_close_market;
+mod on_initialize;
 mod on_market_close;
 mod reject_market;
 mod sell_complete_set;

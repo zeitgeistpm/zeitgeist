@@ -22,15 +22,12 @@
 extern crate alloc;
 
 use crate::{
-    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock,
-    MarketIdsPerCloseTimeFrame, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, TimeFrame,
+    mock::*, Config, Error, Event, MarketIdsPerCloseBlock, MarketIdsPerCloseTimeFrame,
+    MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, TimeFrame,
 };
 use alloc::collections::BTreeMap;
 use core::ops::Range;
-use frame_support::{
-    assert_noop, assert_ok,
-    traits::{NamedReservableCurrency, OnInitialize},
-};
+use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use sp_runtime::{traits::BlakeTwo256, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::types::{EarlyClose, EarlyCloseState};
@@ -47,8 +44,8 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Asset, Balance, Bond, Deadlines, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
-        MultiHash, OutcomeReport, Report, ScalarPosition, ScoringRule,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, MultiHash,
+        OutcomeReport, Report, ScalarPosition, ScoringRule,
     },
 };
 use zrml_global_disputes::{
@@ -138,44 +135,6 @@ fn simple_create_scalar_market(
         Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule
     ));
-}
-
-#[test]
-fn on_initialize_skips_the_genesis_block() {
-    // We ensure that a timestamp of zero will not be stored at genesis into LastTimeFrame storage.
-    let blocks = 5;
-    let end: Moment = (blocks * MILLISECS_PER_BLOCK).into();
-    ExtBuilder::default().build().execute_with(|| {
-        let category_count = 3;
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            ALICE,
-            MarketPeriod::Timestamp(0..end),
-            get_deadlines(),
-            gen_metadata(50),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
-        ));
-
-        // Blocknumber = 0
-        assert_eq!(Timestamp::get(), 0);
-        PredictionMarkets::on_initialize(0);
-        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
-
-        // Blocknumber = 1
-        assert_eq!(Timestamp::get(), 0);
-        PredictionMarkets::on_initialize(1);
-        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
-
-        // Blocknumer != 0, 1
-        set_timestamp_for_on_initialize(end);
-        PredictionMarkets::on_initialize(2);
-        assert_eq!(LastTimeFrame::<Runtime>::get(), Some(blocks.into()));
-    });
 }
 
 #[test]
