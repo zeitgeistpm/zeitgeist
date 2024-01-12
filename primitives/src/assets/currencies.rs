@@ -17,8 +17,7 @@
 
 use super::*;
 
-/// The `CurrencyClass` enum represents all non-ztg CurrencyClass
-// used in orml-tokens
+/// The `CurrencyClass` enum represents all non-ztg currencies.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
