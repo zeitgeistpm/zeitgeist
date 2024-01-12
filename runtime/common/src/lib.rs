@@ -569,7 +569,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_asset_registry::Config for Runtime {
-            type AssetId = Assets;
+            type AssetId = Currencies;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
             type Balance = Balance;
@@ -2107,18 +2107,18 @@ macro_rules! create_common_benchmark_logic {
                     impl_benchmark_test_suite!(new_test_ext(),);
                 }
             }
-
+            
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
-                use crate::{AccountId, Balance, Assets, Tokens, Runtime};
+                use crate::{AccountId, Balance, Tokens, Runtime};
                 use frame_benchmarking::{account, vec, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
-                use zeitgeist_primitives::{constants::BASE, types::Asset};
+                use zeitgeist_primitives::{constants::BASE, types::Currencies};
 
                 const SEED: u32 = 0;
-                const ASSET: Assets = Asset::CategoricalOutcome(0, 0);
+                const ASSET: Currencies = Currencies::ForeignAsset(7);
 
                 runtime_benchmarks! {
                     { Runtime, orml_tokens }
@@ -2127,7 +2127,7 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = BASE;
 
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, amount);
+                        update_balance(ASSET.into(), &from, amount);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2140,7 +2140,7 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = BASE;
 
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, amount);
+                        update_balance(ASSET.into(), &from, amount);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to);
@@ -2151,7 +2151,7 @@ macro_rules! create_common_benchmark_logic {
 
                     transfer_keep_alive {
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, 2 * BASE);
+                        update_balance(ASSET.into(), &from, 2 * BASE);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2163,7 +2163,7 @@ macro_rules! create_common_benchmark_logic {
                     force_transfer {
                         let from: AccountId = account("from", 0, SEED);
                         let from_lookup = lookup_of_account(from.clone());
-                        update_balance(ASSET, &from, 2 * BASE);
+                        update_balance(ASSET.into(), &from, 2 * BASE);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());

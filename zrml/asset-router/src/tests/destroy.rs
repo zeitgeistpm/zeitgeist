@@ -74,7 +74,7 @@ fn destroy_routes_market_assets_correctly() {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
         assert_ok!(
             pallet_assets::Call::<Runtime, MarketAssetsInstance>::approve_transfer {
-                id: MARKET_ASSET_INTERNAL.into(),
+                id: MARKET_ASSET_INTERNAL,
                 delegate: BOB,
                 amount: 1
             }
