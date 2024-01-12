@@ -23,6 +23,7 @@ mod admin_move_market_to_resolved;
 mod approve_market;
 mod buy_complete_set;
 mod create_market;
+mod dispute;
 mod edit_market;
 mod manually_close_market;
 mod on_initialize;
