@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -35,8 +35,8 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, Market, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
+        BlockTest, Hash, Index, Market, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -171,7 +171,7 @@ impl orml_currencies::Config for Runtime {
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = CurrencyId;
+    type CurrencyId = Assets;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = ();
     type ExistentialDeposits = ExistentialDeposits;

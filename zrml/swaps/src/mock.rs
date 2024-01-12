@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -49,10 +49,10 @@ use zeitgeist_primitives::{
         PmPalletId, SwapsPalletId, BASE,
     },
     types::{
-        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
+        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
+        BlockTest, Deadlines, Hash, Index, Market, MarketBonds, MarketCreation,
         MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment, PoolId,
-        ScoringRule, SerdeWrapper, UncheckedExtrinsicTest,
+        ScoringRule, UncheckedExtrinsicTest,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -168,7 +168,7 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
             &BASE_ASSET => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
@@ -205,7 +205,7 @@ where
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = CurrencyId;
+    type CurrencyId = Assets;
     type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -306,16 +306,16 @@ sp_api::mock_impl_runtime_apis! {
             asset_in: &Asset<MarketId>,
             asset_out: &Asset<MarketId>,
             with_fees: bool,
-        ) -> SerdeWrapper<Balance> {
-            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
+        ) -> Balance {
+            Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0)
         }
 
         fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
-            Asset::PoolShare(SerdeWrapper(pool_id))
+        fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId> {
+            Asset::PoolShare(pool_id)
         }
 
         fn get_all_spot_prices(

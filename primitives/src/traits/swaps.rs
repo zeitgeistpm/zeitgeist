@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -21,11 +21,11 @@ use crate::types::{
 };
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 
 pub trait Swaps<AccountId> {
     type Balance: MaxEncodedLen;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + HasCompact;
 
     /// Creates an initial active pool.
     ///

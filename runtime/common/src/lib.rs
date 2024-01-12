@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -289,7 +289,7 @@ macro_rules! create_runtime {
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
-                Assets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
+                CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
                 CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
                 MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>} = 19,
 
@@ -568,7 +568,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_asset_registry::Config for Runtime {
-            type AssetId = CurrencyId;
+            type AssetId = Assets;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
             type Balance = Balance;
@@ -585,7 +585,7 @@ macro_rules! impl_config_traits {
         }
 
         pub struct CurrencyHooks<R>(sp_std::marker::PhantomData<R>);
-        impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, CurrencyId, Balance> for CurrencyHooks<C> {
+        impl<C: orml_tokens::Config> orml_traits::currency::MutationHooks<AccountId, Assets, Balance> for CurrencyHooks<C> {
             type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
             type OnKilledTokenAccount = ();
             type OnNewTokenAccount = ();
@@ -600,7 +600,7 @@ macro_rules! impl_config_traits {
             type Amount = Amount;
             type Balance = Balance;
             type CurrencyHooks = CurrencyHooks<Runtime>;
-            type CurrencyId = CurrencyId;
+            type CurrencyId = Assets;
             type DustRemovalWhitelist = DustRemovalWhitelist;
             type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposits = ExistentialDeposits;
@@ -620,7 +620,7 @@ macro_rules! impl_config_traits {
             type AccountIdToMultiLocation = AccountIdToMultiLocation;
             type Balance = Balance;
             type BaseXcmWeight = BaseXcmWeight;
-            type CurrencyId = CurrencyId;
+            type CurrencyId = Assets;
             type CurrencyIdConvert = AssetConvert;
             type RuntimeEvent = RuntimeEvent;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -635,10 +635,10 @@ macro_rules! impl_config_traits {
 
         // Required for runtime benchmarks
         pallet_assets::runtime_benchmarks_enabled! {
-            pub struct CustomAssetsBenchmarkHelper;
+            pub struct AssetsBenchmarkHelper;
 
             impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
-                for CustomAssetsBenchmarkHelper
+                for AssetsBenchmarkHelper
             where
                 AssetIdParameter: From<u128>,
             {
@@ -652,11 +652,11 @@ macro_rules! impl_config_traits {
             type ApprovalDeposit = CustomAssetsApprovalDeposit;
             type AssetAccountDeposit = CustomAssetsAccountDeposit;
             type AssetDeposit = CustomAssetsDeposit;
-            type AssetId = AssetId;
-            type AssetIdParameter = Compact<AssetId>;
+            type AssetId = CustomAsset;
+            type AssetIdParameter = Compact<CustomAssetId>;
             type Balance = Balance;
             #[cfg(feature = "runtime-benchmarks")]
-            type BenchmarkHelper = CustomAssetsBenchmarkHelper;
+            type BenchmarkHelper = AssetsBenchmarkHelper;
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
             type Currency = Balances;
@@ -676,11 +676,11 @@ macro_rules! impl_config_traits {
             type ApprovalDeposit = CampaignAssetsApprovalDeposit;
             type AssetAccountDeposit = CampaignAssetsAccountDeposit;
             type AssetDeposit = CampaignAssetsDeposit;
-            type AssetId = AssetId;
-            type AssetIdParameter = Compact<AssetId>;
+            type AssetId = CampaignAsset;
+            type AssetIdParameter = Compact<CampaignAssetId>;
             type Balance = Balance;
             #[cfg(feature = "runtime-benchmarks")]
-            type BenchmarkHelper = CustomAssetsBenchmarkHelper;
+            type BenchmarkHelper = AssetsBenchmarkHelper;
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
@@ -1481,7 +1481,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
-                    list_benchmark!(list, extra, pallet_assets, Assets);
+                    list_benchmark!(list, extra, pallet_assets, CustomAssets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
@@ -1586,7 +1586,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
-                    add_benchmark!(params, batches, pallet_assets, Assets);
+                    add_benchmark!(params, batches, pallet_assets, CustomAssets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
@@ -1895,16 +1895,16 @@ macro_rules! create_runtime_api {
                     asset_in: &Asset<MarketId>,
                     asset_out: &Asset<MarketId>,
                     with_fees: bool,
-                ) -> SerdeWrapper<Balance> {
-                    SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
+                ) -> Balance {
+                    Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0)
                 }
 
                 fn pool_account_id(pool_id: &PoolId) -> AccountId {
                     Swaps::pool_account_id(pool_id)
                 }
 
-                fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
-                    Asset::PoolShare(SerdeWrapper(pool_id))
+                fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId> {
+                    Asset::PoolShare(pool_id)
                 }
 
                 fn get_all_spot_prices(
@@ -1981,7 +1981,7 @@ macro_rules! create_common_benchmark_logic {
             pub(crate) mod currencies {
                 use super::utils::{lookup_of_account, set_balance};
                 use crate::{
-                    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit,
+                    AccountId, Amount, AssetManager, Balance, Assets, ExistentialDeposit,
                     GetNativeCurrencyId, Runtime
                 };
                 use frame_benchmarking::{account, vec, whitelisted_caller};
@@ -1995,8 +1995,8 @@ macro_rules! create_common_benchmark_logic {
                 };
 
                 const SEED: u32 = 0;
-                const NATIVE: CurrencyId = GetNativeCurrencyId::get();
-                const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
+                const NATIVE: Assets = GetNativeCurrencyId::get();
+                const ASSET: Assets = Asset::CategoricalOutcome(0, 0);
 
                 runtime_benchmarks! {
                     { Runtime, orml_currencies }
@@ -2096,7 +2096,7 @@ macro_rules! create_common_benchmark_logic {
 
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
-                use crate::{AccountId, Balance, CurrencyId, Tokens, Runtime};
+                use crate::{AccountId, Balance, Assets, Tokens, Runtime};
                 use frame_benchmarking::{account, vec, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
@@ -2104,7 +2104,7 @@ macro_rules! create_common_benchmark_logic {
                 use zeitgeist_primitives::{constants::BASE, types::Asset};
 
                 const SEED: u32 = 0;
-                const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
+                const ASSET: Assets = Asset::CategoricalOutcome(0, 0);
 
                 runtime_benchmarks! {
                     { Runtime, orml_tokens }
@@ -2179,7 +2179,7 @@ macro_rules! create_common_benchmark_logic {
             }
 
             pub(crate) mod utils {
-                use crate::{AccountId, AssetManager, Balance, CurrencyId, Runtime,
+                use crate::{AccountId, AssetManager, Balance, Assets, Runtime,
                 };
                 use frame_support::assert_ok;
                 use orml_traits::MultiCurrencyExtended;
@@ -2191,7 +2191,7 @@ macro_rules! create_common_benchmark_logic {
                     <Runtime as frame_system::Config>::Lookup::unlookup(who)
                 }
 
-                pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) {
+                pub fn set_balance(currency_id: Assets, who: &AccountId, balance: Balance) {
                     assert_ok!(<AssetManager as MultiCurrencyExtended<_>>::update_balance(
                         currency_id,
                         who,

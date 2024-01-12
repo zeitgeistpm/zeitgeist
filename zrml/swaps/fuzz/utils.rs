@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -29,7 +29,7 @@ use zeitgeist_primitives::{
         MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
-    types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
+    types::{Asset, PoolId, ScalarPosition, ScoringRule},
 };
 use zrml_swaps::mock::{Swaps, DEFAULT_MARKET_ID};
 
@@ -43,7 +43,7 @@ pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
                 if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
             Asset::ScalarOutcome(seed0, scalar_position)
         }
-        2 => Asset::PoolShare(SerdeWrapper(seed0)),
+        2 => Asset::PoolShare(seed0),
         _ => Asset::Ztg,
     }
 }

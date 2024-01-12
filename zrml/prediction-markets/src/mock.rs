@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -59,8 +59,8 @@ use zeitgeist_primitives::{
     },
     traits::DeployPoolApi,
     types::{
-        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
+        BlockTest, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -271,7 +271,7 @@ impl orml_currencies::Config for Runtime {
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = CurrencyId;
+    type CurrencyId = Assets;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -285,7 +285,7 @@ impl orml_tokens::Config for Runtime {
 #[cfg(feature = "parachain")]
 crate::orml_asset_registry::impl_mock_registry! {
     MockRegistry,
-    CurrencyId,
+    Assets,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
@@ -488,7 +488,7 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
-                .map(|idx| (idx, CurrencyId::ForeignAsset(100), INITIAL_BALANCE))
+                .map(|idx| (idx, Assets::ForeignAsset(100), INITIAL_BALANCE))
                 .collect(),
         }
         .assimilate_storage(&mut t)
@@ -502,7 +502,7 @@ impl ExtBuilder {
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![
                 (
-                    CurrencyId::ForeignAsset(100),
+                    Assets::ForeignAsset(100),
                     AssetMetadata {
                         decimals: 18,
                         name: "ACALA USD".as_bytes().to_vec(),
@@ -513,7 +513,7 @@ impl ExtBuilder {
                     },
                 ),
                 (
-                    CurrencyId::ForeignAsset(420),
+                    Assets::ForeignAsset(420),
                     AssetMetadata {
                         decimals: 18,
                         name: "FANCY_TOKEN".as_bytes().to_vec(),
@@ -559,7 +559,7 @@ pub fn set_timestamp_for_on_initialize(time: Moment) {
 sp_api::mock_impl_runtime_apis! {
     impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<BlockTest<Runtime>, MarketId, Hash> for Runtime {
         fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
-            Asset::PoolShare(SerdeWrapper(1))
+            Asset::PoolShare(1)
         }
     }
 }

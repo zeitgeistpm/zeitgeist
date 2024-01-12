@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -41,7 +41,7 @@ mod pallet {
         traits::{Get, Hooks, StorageVersion, Time},
         Blake2_128Concat, PalletId, Parameter,
     };
-    use parity_scale_codec::{FullCodec, MaxEncodedLen};
+    use parity_scale_codec::{FullCodec, HasCompact, MaxEncodedLen};
     use sp_runtime::{
         traits::{
             AccountIdConversion, AtLeast32Bit, AtLeast32BitUnsigned, CheckedAdd,
@@ -83,6 +83,7 @@ mod pallet {
         type MarketId: AtLeast32Bit
             + Copy
             + Default
+            + HasCompact
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + Member

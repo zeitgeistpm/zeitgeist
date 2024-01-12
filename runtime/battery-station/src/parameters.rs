@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -227,7 +227,7 @@ parameter_types! {
     pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
 
     // ORML
-    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
+    pub const GetNativeCurrencyId: Assets = Asset::Ztg;
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
@@ -497,10 +497,9 @@ parameter_type_with_key! {
     // are cleaned up automatically. In case of scalar outcomes, the market account can have dust.
     // Unless LPs use `pool_exit_with_exact_asset_amount`, there can be some dust pool shares remaining.
     // Explicit match arms are used to ensure new asset types are respected.
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
@@ -519,6 +518,14 @@ parameter_type_with_key! {
             Asset::ForeignAsset(_) => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
             Asset::ParimutuelShare(_,_) => ExistentialDeposit::get(),
+
+            // The following assets are irrelevant, as they are managed by pallet-assets
+            Asset::NewParimutuelShare(_,_)
+            | Asset::NewCategoricalOutcome(_, _)
+            | Asset::NewScalarOutcome(_,_)
+            | Asset::NewPoolShare(_)
+            | Asset::CustomAssetClass(_)
+            | Asset::CampaignAssetClass(_)  => ExistentialDeposit::get(),
         }
     };
 }

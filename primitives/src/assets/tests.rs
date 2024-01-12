@@ -15,26 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode, HasCompact, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
-use zeitgeist_primitives::types::Asset;
+#![cfg(test)]
 
-pub type OrderId = u128;
+use super::*;
+use crate::types::MarketId;
 
-#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum OrderSide {
-    Bid,
-    Ask,
-}
-
-#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + HasCompact> {
-    pub market_id: MarketId,
-    pub side: OrderSide,
-    pub maker: AccountId,
-    pub outcome_asset: Asset<MarketId>,
-    pub base_asset: Asset<MarketId>,
-    pub outcome_asset_amount: Balance,
-    pub base_asset_amount: Balance,
-}
+mod conversion;
+mod scale_codec;

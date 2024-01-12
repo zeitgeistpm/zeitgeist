@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,8 +17,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub use crate::{
-    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
-    pool_status::PoolStatus, proxy_type::*, serde_wrapper::*,
+    assets::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
+    pool_status::PoolStatus, proxy_type::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
@@ -82,13 +82,28 @@ impl<'a> Arbitrary<'a> for MultiHash {
 pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
 
 /// ID type for any asset class
-pub type CurrencyId = Asset<MarketId>;
+pub type Assets = Asset<MarketId>;
+
+/// Asset type representing campaign assets
+pub type CampaignAsset = CampaignAssetClass;
+
+// ID type for campaign asset class
+pub type CampaignAssetId = u128;
+
+/// Asset type representing custom assets
+pub type CustomAsset = CustomAssetClass;
+
+// ID type for campaign asset class
+pub type CustomAssetId = u128;
+
+// Asset type representing currencies (excluding ZTG)
+pub type Currencies = CurrencyClass<MarketId>;
+
+/// Asset type representing assets used by prediction markets
+pub type MarketAsset = MarketAssetClass<MarketId>;
 
 /// ID type for asset classes that anyone can create
 pub type AssetId = u128;
-
-/// ID type for the asset classes are used within the prediction market protocol
-pub type MarketAsset = PredictionMarketAsset<MarketId>;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.

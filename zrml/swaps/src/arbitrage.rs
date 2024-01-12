@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -19,7 +19,7 @@
 
 use crate::{math::calc_spot_price, root::calc_preimage};
 use alloc::collections::btree_map::BTreeMap;
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::{
     traits::{AtLeast32Bit, AtLeast32BitUnsigned},
     SaturatedConversion,
@@ -38,7 +38,7 @@ const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 /// All calculations depend on on-chain, which are passed using the `balances` parameter.
 pub(crate) trait ArbitrageForCpmm<Balance, MarketId>
 where
-    MarketId: MaxEncodedLen,
+    MarketId: HasCompact + MaxEncodedLen,
 {
     /// Calculate the total spot price (sum of all spot prices of outcome tokens).
     ///
@@ -78,7 +78,7 @@ where
 impl<Balance, MarketId> ArbitrageForCpmm<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+    MarketId: HasCompact + MaxEncodedLen + AtLeast32Bit + Copy,
     Pool<Balance, MarketId>: ArbitrageForCpmmHelper<Balance, MarketId>,
 {
     fn calc_total_spot_price(
@@ -137,7 +137,7 @@ where
 
 trait ArbitrageForCpmmHelper<Balance, MarketId>
 where
-    MarketId: MaxEncodedLen,
+    MarketId: HasCompact + MaxEncodedLen,
 {
     /// Common code of `Arbitrage::calc_arbitrage_amount_*`.
     ///
@@ -163,7 +163,7 @@ where
 impl<Balance, MarketId> ArbitrageForCpmmHelper<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+    MarketId: HasCompact + MaxEncodedLen + AtLeast32Bit + Copy,
 {
     fn calc_arbitrage_amount_common<F>(
         &self,
