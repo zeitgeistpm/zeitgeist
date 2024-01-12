@@ -31,6 +31,7 @@ mod on_market_close;
 mod reject_market;
 mod report;
 mod sell_complete_set;
+mod schedule_early_close;
 
 use crate::{mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event};
 use core::ops::Range;
