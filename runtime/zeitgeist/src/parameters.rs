@@ -518,7 +518,6 @@ parameter_type_with_key! {
             Asset::ParimutuelShare(_,_) => ExistentialDeposit::get(),
 
             // The following assets are irrelevant, as they are managed by pallet-assets
-            // The following assets are irrelevant, as they are managed by pallet-assets
             Asset::NewParimutuelShare(_,_)
             | Asset::NewCategoricalOutcome(_, _)
             | Asset::NewScalarOutcome(_,_)
