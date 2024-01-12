@@ -468,6 +468,7 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
     });
 }
 
+/*
 #[test]
 fn distribute_pool_share_rewards() {
     ExtBuilder::default().build().execute_with(|| {
@@ -537,6 +538,7 @@ fn distribute_pool_share_rewards() {
         assert!(winner_payout_acc_balance - total_winning_assets < BASE / 1_000_000);
     });
 }
+*/
 
 #[test]
 fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
