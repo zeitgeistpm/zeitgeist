@@ -332,15 +332,15 @@ macro_rules! fee_tests {
             t.execute_with(|| {
                 let fee_and_tip_balance = 10 * ExistentialDeposit::get();
                 let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(
-                    Asset::ForeignAsset(0),
+                    Currencies::ForeignAsset(0),
                     fee_and_tip_balance,
                 );
                 assert!(
-                    Tokens::free_balance(Asset::ForeignAsset(0), &Treasury::account_id()).is_zero()
+                    Tokens::free_balance(Currencies::ForeignAsset(0), &Treasury::account_id()).is_zero()
                 );
                 DealWithForeignFees::on_unbalanced(fees_and_tips);
                 assert_eq!(
-                    Tokens::free_balance(Asset::ForeignAsset(0), &Treasury::account_id()),
+                    Tokens::free_balance(Currencies::ForeignAsset(0), &Treasury::account_id()),
                     fee_and_tip_balance,
                 );
             });
@@ -386,7 +386,7 @@ macro_rules! fee_tests {
                             location: Some(xcm::VersionedMultiLocation::V3(xcm::latest::MultiLocation::parent())),
                             additional: custom_metadata,
                         };
-                        let dot = Asset::ForeignAsset(0);
+                        let dot = Currencies::ForeignAsset(0);
 
                         assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(dot)));
 

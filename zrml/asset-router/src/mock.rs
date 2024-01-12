@@ -49,8 +49,8 @@ pub(super) const CAMPAIGN_ASSET: Assets = Assets::CampaignAssetClass(0);
 pub(super) const CAMPAIGN_ASSET_INTERNAL: CampaignAssetClass = CampaignAssetClass(0);
 pub(super) const CUSTOM_ASSET: Assets = Assets::CustomAssetClass(0);
 pub(super) const CUSTOM_ASSET_INTERNAL: CustomAssetClass = CustomAssetClass(0);
-pub(super) const MARKET_ASSET: Assets = Assets::NewCombinatorialOutcome;
-pub(super) const MARKET_ASSET_INTERNAL: MarketAsset = MarketAsset::CombinatorialOutcome;
+pub(super) const MARKET_ASSET: Assets = Assets::NewCategoricalOutcome(7, 8);
+pub(super) const MARKET_ASSET_INTERNAL: MarketAsset = MarketAsset::CategoricalOutcome(7, 8);
 pub(super) const CURRENCY: Assets = Assets::ForeignAsset(0);
 
 pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 1;
@@ -208,6 +208,8 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
 
 // Required for runtime benchmarks
 pallet_assets::runtime_benchmarks_enabled! {
+    use zeitgeist_primitives::types::CategoryIndex;
+    
     pub struct MarketAssetsBenchmarkHelper;
 
     impl pallet_assets::BenchmarkHelper<MarketAsset>
