@@ -19,7 +19,7 @@
 use super::*;
 use test_case::test_case;
 
-use zeitgeist_primitives::types::OutcomeReport;
+use zeitgeist_primitives::types::{OutcomeReport, ScalarPosition};
 
 #[test]
 fn it_allows_to_redeem_shares() {
@@ -90,4 +90,87 @@ fn redeem_shares_fails_if_invalid_resolution_mechanism(scoring_rule: ScoringRule
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::ForeignAsset(100));
     });
+}
+
+#[test]
+fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
+    let test = |base_asset: AssetOf<Runtime>| {
+        scalar_market_correctly_resolves_common(base_asset, 50);
+        assert_eq!(AssetManager::free_balance(base_asset, &CHARLIE), 900 * BASE);
+        assert_eq!(AssetManager::free_balance(base_asset, &EVE), 1100 * BASE);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
+    let test = |base_asset: AssetOf<Runtime>| {
+        scalar_market_correctly_resolves_common(base_asset, 250);
+        assert_eq!(AssetManager::free_balance(base_asset, &CHARLIE), 1000 * BASE);
+        assert_eq!(AssetManager::free_balance(base_asset, &EVE), 1000 * BASE);
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(Asset::ForeignAsset(100));
+    });
+}
+
+// Common code of `scalar_market_correctly_resolves_*`
+fn scalar_market_correctly_resolves_common(base_asset: AssetOf<Runtime>, reported_value: u128) {
+    let end = 100;
+    simple_create_scalar_market(
+        base_asset,
+        MarketCreation::Permissionless,
+        0..end,
+        ScoringRule::Lmsr,
+    );
+    assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, 100 * BASE));
+    assert_ok!(Tokens::transfer(
+        RuntimeOrigin::signed(CHARLIE),
+        EVE,
+        Asset::ScalarOutcome(0, ScalarPosition::Short),
+        100 * BASE
+    ));
+    // (Eve now has 100 SHORT, Charlie has 100 LONG)
+
+    let market = MarketCommons::market(&0).unwrap();
+    let grace_period = end + market.deadlines.grace_period;
+    run_to_block(grace_period + 1);
+    assert_ok!(PredictionMarkets::report(
+        RuntimeOrigin::signed(BOB),
+        0,
+        OutcomeReport::Scalar(reported_value)
+    ));
+    let market_after_report = MarketCommons::market(&0).unwrap();
+    assert!(market_after_report.report.is_some());
+    let report = market_after_report.report.unwrap();
+    assert_eq!(report.at, grace_period + 1);
+    assert_eq!(report.by, BOB);
+    assert_eq!(report.outcome, OutcomeReport::Scalar(reported_value));
+
+    run_blocks(market.deadlines.dispute_duration);
+    let market_after_resolve = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
+
+    // Check balances before redeeming (just to make sure that our tests are based on correct
+    // assumptions)!
+    assert_eq!(AssetManager::free_balance(base_asset, &CHARLIE), 900 * BASE);
+    assert_eq!(AssetManager::free_balance(base_asset, &EVE), 1000 * BASE);
+
+    assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
+    assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(EVE), 0));
+    let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
+    for asset in assets.iter() {
+        assert_eq!(AssetManager::free_balance(*asset, &CHARLIE), 0);
+        assert_eq!(AssetManager::free_balance(*asset, &EVE), 0);
+    }
 }
