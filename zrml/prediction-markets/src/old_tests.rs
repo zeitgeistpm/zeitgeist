@@ -887,49 +887,6 @@ fn it_appeals_a_court_market_to_global_dispute() {
 }
 
 #[test]
-fn start_global_dispute_fails_on_wrong_mdm() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 2;
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Block(0..2),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
-            Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::Lmsr,
-        ));
-        let market_id = MarketCommons::latest_market_id().unwrap();
-
-        let market = MarketCommons::market(&market_id).unwrap();
-        let grace_period = market.deadlines.grace_period;
-        run_to_block(end + grace_period + 1);
-        assert_ok!(PredictionMarkets::report(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            OutcomeReport::Categorical(0)
-        ));
-        let dispute_at_0 = end + grace_period + 2;
-        run_to_block(dispute_at_0);
-
-        // only one dispute allowed for authorized mdm
-        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), market_id,));
-        run_blocks(1);
-        let market = MarketCommons::market(&market_id).unwrap();
-        assert_eq!(market.status, MarketStatus::Disputed);
-
-        assert_noop!(
-            PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id),
-            Error::<Runtime>::InvalidDisputeMechanism
-        );
-    });
-}
-
-#[test]
 fn it_allows_to_redeem_shares() {
     let test = |base_asset: Asset<MarketId>| {
         let end = 2;

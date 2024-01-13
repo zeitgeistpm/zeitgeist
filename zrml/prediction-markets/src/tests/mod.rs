@@ -35,6 +35,7 @@ mod reject_market;
 mod report;
 mod schedule_early_close;
 mod sell_complete_set;
+mod start_global_dispute;
 
 use crate::{mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event};
 use core::ops::Range;
