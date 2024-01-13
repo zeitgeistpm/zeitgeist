@@ -231,3 +231,190 @@ fn dispute_early_close_fails_if_already_rejected() {
         );
     });
 }
+
+#[test]
+fn settles_early_close_bonds_with_resolution_in_state_disputed() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::Lmsr
+        ));
+
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        let alice_free = Balances::free_balance(ALICE);
+        let alice_reserved = Balances::reserved_balance(ALICE);
+
+        run_blocks(1);
+
+        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
+
+        let bob_free = Balances::free_balance(BOB);
+        let bob_reserved = Balances::reserved_balance(BOB);
+
+        run_to_block(end + 1);
+
+        // verify the market doesn't close after proposed new market period end
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+
+        let alice_free_after = Balances::free_balance(ALICE);
+        let alice_reserved_after = Balances::reserved_balance(ALICE);
+        // moved <Runtime as Config>::CloseEarlyRequestBond from reserved to free
+        assert_eq!(
+            alice_reserved - alice_reserved_after,
+            <Runtime as Config>::CloseEarlyRequestBond::get()
+        );
+        assert_eq!(
+            alice_free_after - alice_free,
+            <Runtime as Config>::CloseEarlyRequestBond::get()
+        );
+
+        let bob_free_after = Balances::free_balance(BOB);
+        let bob_reserved_after = Balances::reserved_balance(BOB);
+        // moved <Runtime as Config>::CloseEarlyDisputeBond from reserved to free
+        assert_eq!(
+            bob_reserved - bob_reserved_after,
+            <Runtime as Config>::CloseEarlyDisputeBond::get()
+        );
+        assert_eq!(bob_free_after - bob_free, <Runtime as Config>::CloseEarlyDisputeBond::get());
+    });
+}
+
+#[test]
+fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creator() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::Lmsr
+        ));
+
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        let alice_free = Balances::free_balance(ALICE);
+        let alice_reserved = Balances::reserved_balance(ALICE);
+
+        run_to_block(end + 1);
+
+        // verify the market doesn't close after proposed new market period end
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+
+        let alice_free_after = Balances::free_balance(ALICE);
+        let alice_reserved_after = Balances::reserved_balance(ALICE);
+        // moved <Runtime as Config>::CloseEarlyRequestBond from reserved to free
+        assert_eq!(
+            alice_reserved - alice_reserved_after,
+            <Runtime as Config>::CloseEarlyRequestBond::get()
+        );
+        assert_eq!(
+            alice_free_after - alice_free,
+            <Runtime as Config>::CloseEarlyRequestBond::get()
+        );
+    });
+}
+
+#[test]
+fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        let old_period = MarketPeriod::Block(0..end);
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            old_period.clone(),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::Lmsr
+        ));
+
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+        ));
+
+        run_blocks(1);
+
+        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
+
+        let reserved_bob = Balances::reserved_balance(BOB);
+        let reserved_alice = Balances::reserved_balance(ALICE);
+        let free_bob = Balances::free_balance(BOB);
+        let free_alice = Balances::free_balance(ALICE);
+
+        assert_ok!(
+            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
+        );
+
+        let reserved_bob_after = Balances::reserved_balance(BOB);
+        let reserved_alice_after = Balances::reserved_balance(ALICE);
+        let free_bob_after = Balances::free_balance(BOB);
+        let free_alice_after = Balances::free_balance(ALICE);
+
+        assert_eq!(
+            reserved_alice - reserved_alice_after,
+            <Runtime as Config>::CloseEarlyRequestBond::get()
+        );
+        assert_eq!(
+            reserved_bob - reserved_bob_after,
+            <Runtime as Config>::CloseEarlyDisputeBond::get()
+        );
+        // market creator Alice gets the bonds
+        assert_eq!(
+            free_alice_after - free_alice,
+            <Runtime as Config>::CloseEarlyRequestBond::get()
+                + <Runtime as Config>::CloseEarlyDisputeBond::get()
+        );
+        assert_eq!(free_bob_after - free_bob, 0);
+
+        let now = <frame_system::Pallet<Runtime>>::block_number();
+        let new_end = now + <Runtime as Config>::CloseEarlyProtectionBlockPeriod::get();
+        let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
+        assert_eq!(market_ids_at_new_end, vec![market_id]);
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let new_period = MarketPeriod::Block(0..new_end);
+        assert_eq!(
+            market.early_close.unwrap(),
+            EarlyClose {
+                old: old_period,
+                new: new_period,
+                state: EarlyCloseState::ScheduledAsOther,
+            }
+        );
+    });
+}

@@ -21,16 +21,11 @@
 
 extern crate alloc;
 
-use crate::{
-    mock::*, Config, Error, Event, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
-    MarketIdsPerReportBlock,
-};
+use crate::{mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
 use alloc::collections::BTreeMap;
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use sp_runtime::{traits::BlakeTwo256, Perquintill};
-use test_case::test_case;
-use zeitgeist_primitives::types::{EarlyClose, EarlyCloseState};
 use zrml_court::{types::*, Error as CError};
 
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -38,9 +33,8 @@ use sp_arithmetic::Perbill;
 use sp_runtime::traits::{Hash, Zero};
 use zeitgeist_primitives::{
     constants::mock::{
-        CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod, CloseEarlyRequestBond, MaxAppeals,
-        MaxSelectedDraws, MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        MaxAppeals, MaxSelectedDraws, MinJurorStake, OutcomeBond, OutcomeFactor, OutsiderBond,
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Asset, Balance, Bond, Deadlines, MarketBonds, MarketCreation,
@@ -135,171 +129,6 @@ fn simple_create_scalar_market(
         Some(MarketDisputeMechanism::SimpleDisputes),
         scoring_rule
     ));
-}
-
-#[test]
-fn settles_early_close_bonds_with_resolution_in_state_disputed() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 100;
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Block(0..end),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
-        ));
-
-        let market_id = 0;
-        assert_ok!(PredictionMarkets::schedule_early_close(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-        ));
-
-        let alice_free = Balances::free_balance(ALICE);
-        let alice_reserved = Balances::reserved_balance(ALICE);
-
-        run_blocks(1);
-
-        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
-
-        let bob_free = Balances::free_balance(BOB);
-        let bob_reserved = Balances::reserved_balance(BOB);
-
-        run_to_block(end + 1);
-
-        // verify the market doesn't close after proposed new market period end
-        let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Closed);
-
-        let alice_free_after = Balances::free_balance(ALICE);
-        let alice_reserved_after = Balances::reserved_balance(ALICE);
-        // moved CloseEarlyRequestBond from reserved to free
-        assert_eq!(alice_reserved - alice_reserved_after, CloseEarlyRequestBond::get());
-        assert_eq!(alice_free_after - alice_free, CloseEarlyRequestBond::get());
-
-        let bob_free_after = Balances::free_balance(BOB);
-        let bob_reserved_after = Balances::reserved_balance(BOB);
-        // moved CloseEarlyDisputeBond from reserved to free
-        assert_eq!(bob_reserved - bob_reserved_after, CloseEarlyDisputeBond::get());
-        assert_eq!(bob_free_after - bob_free, CloseEarlyDisputeBond::get());
-    });
-}
-
-#[test]
-fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creator() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 100;
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            MarketPeriod::Block(0..end),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
-        ));
-
-        let market_id = 0;
-        assert_ok!(PredictionMarkets::schedule_early_close(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-        ));
-
-        let alice_free = Balances::free_balance(ALICE);
-        let alice_reserved = Balances::reserved_balance(ALICE);
-
-        run_to_block(end + 1);
-
-        // verify the market doesn't close after proposed new market period end
-        let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Closed);
-
-        let alice_free_after = Balances::free_balance(ALICE);
-        let alice_reserved_after = Balances::reserved_balance(ALICE);
-        // moved CloseEarlyRequestBond from reserved to free
-        assert_eq!(alice_reserved - alice_reserved_after, CloseEarlyRequestBond::get());
-        assert_eq!(alice_free_after - alice_free, CloseEarlyRequestBond::get());
-    });
-}
-
-#[test]
-fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 100;
-        let old_period = MarketPeriod::Block(0..end);
-        assert_ok!(PredictionMarkets::create_market(
-            RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
-            Perbill::zero(),
-            BOB,
-            old_period.clone(),
-            get_deadlines(),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
-            Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
-        ));
-
-        let market_id = 0;
-        assert_ok!(PredictionMarkets::schedule_early_close(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-        ));
-
-        run_blocks(1);
-
-        assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
-
-        let reserved_bob = Balances::reserved_balance(BOB);
-        let reserved_alice = Balances::reserved_balance(ALICE);
-        let free_bob = Balances::free_balance(BOB);
-        let free_alice = Balances::free_balance(ALICE);
-
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
-
-        let reserved_bob_after = Balances::reserved_balance(BOB);
-        let reserved_alice_after = Balances::reserved_balance(ALICE);
-        let free_bob_after = Balances::free_balance(BOB);
-        let free_alice_after = Balances::free_balance(ALICE);
-
-        assert_eq!(reserved_alice - reserved_alice_after, CloseEarlyRequestBond::get());
-        assert_eq!(reserved_bob - reserved_bob_after, CloseEarlyDisputeBond::get());
-        // market creator Alice gets the bonds
-        assert_eq!(
-            free_alice_after - free_alice,
-            CloseEarlyRequestBond::get() + CloseEarlyDisputeBond::get()
-        );
-        assert_eq!(free_bob_after - free_bob, 0);
-
-        let now = <frame_system::Pallet<Runtime>>::block_number();
-        let new_end = now + CloseEarlyProtectionBlockPeriod::get();
-        let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
-        assert_eq!(market_ids_at_new_end, vec![market_id]);
-
-        let market = MarketCommons::market(&market_id).unwrap();
-        let new_period = MarketPeriod::Block(0..new_end);
-        assert_eq!(
-            market.early_close.unwrap(),
-            EarlyClose {
-                old: old_period,
-                new: new_period,
-                state: EarlyCloseState::ScheduledAsOther,
-            }
-        );
-    });
 }
 
 #[test]
@@ -875,77 +704,6 @@ fn it_appeals_a_court_market_to_global_dispute() {
         assert_noop!(
             PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(CHARLIE), market_id),
             Error::<Runtime>::GlobalDisputeExistsAlready
-        );
-    };
-    ExtBuilder::default().build().execute_with(|| {
-        test(Asset::Ztg);
-    });
-    #[cfg(feature = "parachain")]
-    ExtBuilder::default().build().execute_with(|| {
-        test(Asset::ForeignAsset(100));
-    });
-}
-
-#[test]
-fn it_allows_to_redeem_shares() {
-    let test = |base_asset: Asset<MarketId>| {
-        let end = 2;
-        simple_create_categorical_market(
-            base_asset,
-            MarketCreation::Permissionless,
-            0..end,
-            ScoringRule::Lmsr,
-        );
-
-        assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
-        let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period;
-        run_to_block(grace_period + 1);
-
-        assert_ok!(PredictionMarkets::report(
-            RuntimeOrigin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        run_blocks(market.deadlines.dispute_duration);
-        let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Resolved);
-
-        assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
-        let bal = Balances::free_balance(CHARLIE);
-        assert_eq!(bal, 1_000 * BASE);
-        System::assert_last_event(
-            Event::TokensRedeemed(0, Asset::CategoricalOutcome(0, 1), CENT, CENT, CHARLIE).into(),
-        );
-    };
-    ExtBuilder::default().build().execute_with(|| {
-        test(Asset::Ztg);
-    });
-    #[cfg(feature = "parachain")]
-    ExtBuilder::default().build().execute_with(|| {
-        test(Asset::ForeignAsset(100));
-    });
-}
-
-#[test_case(ScoringRule::Parimutuel; "parimutuel")]
-fn redeem_shares_fails_if_invalid_resolution_mechanism(scoring_rule: ScoringRule) {
-    let test = |base_asset: Asset<MarketId>| {
-        let end = 2;
-        simple_create_categorical_market(
-            base_asset,
-            MarketCreation::Permissionless,
-            0..end,
-            scoring_rule,
-        );
-
-        assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
-            market_inner.status = MarketStatus::Resolved;
-            Ok(())
-        }));
-
-        assert_noop!(
-            PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0),
-            Error::<Runtime>::InvalidResolutionMechanism
         );
     };
     ExtBuilder::default().build().execute_with(|| {
