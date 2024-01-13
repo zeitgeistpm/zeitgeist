@@ -17,9 +17,10 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use test_case::test_case;
 
 use crate::MarketIdsPerDisputeBlock;
-use zeitgeist_primitives::types::OutcomeReport;
+use zeitgeist_primitives::types::{Bond, OutcomeReport};
 
 #[test]
 fn it_allows_to_dispute_the_outcome_of_a_market() {
@@ -189,5 +190,118 @@ fn dispute_reserves_dispute_bond() {
 
         let reserved_charlie = Balances::reserved_balance(CHARLIE);
         assert_eq!(reserved_charlie, DisputeBond::get());
+    });
+}
+
+#[test]
+fn dispute_updates_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Authorized),
+            ScoringRule::Lmsr,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Reported);
+        assert_eq!(market.bonds.dispute, None);
+
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+        assert_eq!(
+            market.bonds.dispute,
+            Some(Bond { who: CHARLIE, value: DisputeBond::get(), is_settled: false })
+        );
+    });
+}
+
+#[test]
+fn dispute_emits_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            Asset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Authorized),
+            ScoringRule::Lmsr,
+        ));
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
+
+        System::assert_last_event(
+            Event::MarketDisputed(0u32.into(), MarketStatus::Disputed, CHARLIE).into(),
+        );
+    });
+}
+
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::Lmsr,
+        );
+
+        assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
+            market_inner.status = status;
+            Ok(())
+        }));
+
+        assert_noop!(
+            PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0),
+            Error::<Runtime>::InvalidMarketStatus
+        );
     });
 }
