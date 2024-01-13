@@ -24,15 +24,13 @@ use sp_runtime::DispatchError;
 #[test]
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
-        // make sure it's in status proposed
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
@@ -57,7 +55,7 @@ fn market_with_edit_request_cannot_be_approved() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 

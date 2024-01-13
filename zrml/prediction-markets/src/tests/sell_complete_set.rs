@@ -23,7 +23,6 @@ use test_case::test_case;
 #[test_case(ScoringRule::Orderbook)]
 fn sell_complete_set_works(scoring_rule: ScoringRule) {
     let test = |base_asset: AssetOf<Runtime>| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
@@ -75,7 +74,7 @@ fn sell_complete_set_fails_on_zero_amount() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         assert_noop!(
@@ -91,7 +90,7 @@ fn sell_complete_set_fails_on_insufficient_share_balance() {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         let market_id = 0;
@@ -123,7 +122,7 @@ fn sell_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: Scorin
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             scoring_rule,
         );
         assert_noop!(

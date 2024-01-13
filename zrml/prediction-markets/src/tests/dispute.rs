@@ -290,7 +290,7 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 

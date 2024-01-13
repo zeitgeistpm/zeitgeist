@@ -32,9 +32,6 @@ fn reject_early_close_emits_event() {
             ScoringRule::Lmsr,
         );
 
-        // just to ensure events are emitted
-        run_blocks(2);
-
         let market_id = 0;
 
         assert_ok!(PredictionMarkets::schedule_early_close(

@@ -113,7 +113,7 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: Mark
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         let market_id = 0;

@@ -606,7 +606,6 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
 #[test]
 fn create_categorical_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
@@ -623,7 +622,6 @@ fn create_categorical_market_deposits_the_correct_event() {
 #[test]
 fn create_scalar_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         simple_create_scalar_market(
             Asset::Ztg,
             MarketCreation::Permissionless,

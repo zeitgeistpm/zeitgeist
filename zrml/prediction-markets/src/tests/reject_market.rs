@@ -23,8 +23,6 @@ use crate::{MarketIdsForEdit, MarketIdsPerCloseBlock};
 #[test]
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        run_to_block(2);
-        // Creates an advised market.
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
@@ -32,13 +30,11 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
             ScoringRule::Lmsr,
         );
 
-        // make sure it's in status proposed
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        // Now it should work from SUDO
         assert_ok!(PredictionMarkets::reject_market(
             RuntimeOrigin::signed(SUDO),
             0,
@@ -61,7 +57,7 @@ fn reject_errors_if_reject_reason_is_too_long() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
@@ -85,7 +81,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
@@ -115,7 +111,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
@@ -212,7 +208,7 @@ fn reject_market_fails_on_permissionless_market() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         let reject_reason: Vec<u8> =
@@ -231,7 +227,7 @@ fn reject_market_fails_on_approved_market() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));

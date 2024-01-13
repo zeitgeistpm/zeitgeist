@@ -24,8 +24,6 @@ use sp_runtime::DispatchError;
 #[test]
 fn it_allows_request_edit_origin_to_request_edits_for_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        // Creates an advised market.
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
@@ -94,11 +92,10 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
-        // make sure it's in status proposed
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
@@ -114,11 +111,10 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
 #[test]
 fn only_creator_can_edit_market() {
     ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
@@ -140,7 +136,7 @@ fn only_creator_can_edit_market() {
                 Asset::Ztg,
                 0,
                 CHARLIE,
-                MarketPeriod::Block(0..1),
+                MarketPeriod::Block(0..2),
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
@@ -155,8 +151,6 @@ fn only_creator_can_edit_market() {
 #[test]
 fn edit_cycle_for_proposed_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
-        run_to_block(1);
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
@@ -164,7 +158,6 @@ fn edit_cycle_for_proposed_markets() {
             ScoringRule::Lmsr,
         );
 
-        // make sure it's in status proposed
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
@@ -206,7 +199,7 @@ fn edit_market_with_foreign_asset() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Advised,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
 
@@ -229,7 +222,7 @@ fn edit_market_with_foreign_asset() {
                 Asset::ForeignAsset(50),
                 0,
                 CHARLIE,
-                MarketPeriod::Block(0..1),
+                MarketPeriod::Block(0..2),
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
@@ -245,7 +238,7 @@ fn edit_market_with_foreign_asset() {
                 Asset::ForeignAsset(420),
                 0,
                 CHARLIE,
-                MarketPeriod::Block(0..1),
+                MarketPeriod::Block(0..2),
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
@@ -260,7 +253,7 @@ fn edit_market_with_foreign_asset() {
             Asset::ForeignAsset(100),
             0,
             CHARLIE,
-            MarketPeriod::Block(0..1),
+            MarketPeriod::Block(0..2),
             get_deadlines(),
             gen_metadata(2),
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),

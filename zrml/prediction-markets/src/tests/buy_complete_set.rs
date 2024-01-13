@@ -22,7 +22,6 @@ use test_case::test_case;
 #[test]
 fn buy_complete_set_works() {
     let test = |base_asset: AssetOf<Runtime>| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
@@ -70,7 +69,7 @@ fn buy_complete_fails_on_zero_amount() {
         simple_create_categorical_market(
             Asset::Ztg,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         assert_noop!(
@@ -86,7 +85,7 @@ fn buy_complete_set_fails_on_insufficient_balance() {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::Lmsr,
         );
         assert_noop!(
