@@ -28,6 +28,7 @@ mod create_market_and_deploy_pool;
 mod dispute;
 mod dispute_early_close;
 mod edit_market;
+mod integration;
 mod manually_close_market;
 mod on_initialize;
 mod on_market_close;
@@ -40,18 +41,22 @@ mod schedule_early_close;
 mod sell_complete_set;
 mod start_global_dispute;
 
-use crate::{mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event};
+use crate::{
+    mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event, MarketIdsPerDisputeBlock,
+};
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Perbill;
+use sp_runtime::traits::{BlakeTwo256, Zero, Hash};
 use zeitgeist_primitives::{
     constants::mock::{BASE, CENT},
     types::{
-        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, ScoringRule,
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod,
+        MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
     },
 };
+use zrml_court::types::VoteItem;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 const SENTINEL_AMOUNT: u128 = BASE;
@@ -135,4 +140,48 @@ fn reserve_sentinel_amounts() {
     assert_eq!(Balances::reserved_balance(DAVE), SENTINEL_AMOUNT);
     assert_eq!(Balances::reserved_balance(EVE), SENTINEL_AMOUNT);
     assert_eq!(Balances::reserved_balance(FRED), SENTINEL_AMOUNT);
+}
+
+fn simulate_appeal_cycle(market_id: MarketId) {
+    let court = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
+    let vote_start = court.round_ends.pre_vote + 1;
+
+    run_to_block(vote_start);
+
+    let salt = <Runtime as frame_system::Config>::Hash::default();
+
+    let wrong_outcome = OutcomeReport::Categorical(1);
+    let wrong_vote_item = VoteItem::Outcome(wrong_outcome);
+
+    let draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
+    for draw in &draws {
+        let commitment =
+            BlakeTwo256::hash_of(&(draw.court_participant, wrong_vote_item.clone(), salt));
+        assert_ok!(Court::vote(
+            RuntimeOrigin::signed(draw.court_participant),
+            market_id,
+            commitment
+        ));
+    }
+
+    let aggregation_start = court.round_ends.vote + 1;
+    run_to_block(aggregation_start);
+
+    for draw in draws {
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(draw.court_participant),
+            market_id,
+            wrong_vote_item.clone(),
+            salt,
+        ));
+    }
+
+    let resolve_at = court.round_ends.appeal;
+    let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at);
+    assert_eq!(market_ids.len(), 1);
+
+    run_to_block(resolve_at - 1);
+
+    let market_after = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after.status, MarketStatus::Disputed);
 }

@@ -16,128 +16,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(all(feature = "mock", test))]
-#![allow(clippy::reversed_empty_ranges)]
+use super::*;
 
-extern crate alloc;
-
-use crate::{mock::*, Config, Error, Event, MarketIdsPerDisputeBlock};
 use alloc::collections::BTreeMap;
-use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
-use sp_runtime::traits::BlakeTwo256;
-use zrml_court::{types::*, Error as CError};
+use zeitgeist_primitives::types::OutcomeReport;
 
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_arithmetic::Perbill;
-use sp_runtime::traits::{Hash, Zero};
+use crate::MarketIdsPerDisputeBlock;
+use orml_traits::MultiReservableCurrency;
 use zeitgeist_primitives::{
-    constants::mock::{
-        MaxAppeals, MaxSelectedDraws, MinJurorStake, OutsiderBond, BASE, CENT, MILLISECS_PER_BLOCK,
-    },
-    types::{
-        AccountIdTest, Asset, Balance, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId,
-        MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, ScalarPosition,
-        ScoringRule,
-    },
+    constants::{mock::OutsiderBond, MILLISECS_PER_BLOCK},
+    types::ScalarPosition,
 };
 use zrml_global_disputes::{
     types::{OutcomeInfo, Possession},
     GlobalDisputesPalletApi, Outcomes, PossessionOf,
 };
-use zrml_market_commons::MarketCommonsPalletApi;
-
-const SENTINEL_AMOUNT: u128 = BASE;
-
-fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
-    Deadlines {
-        grace_period: 1_u32.into(),
-        oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
-        dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
-    }
-}
-
-fn gen_metadata(byte: u8) -> MultiHash {
-    let mut metadata = [byte; 50];
-    metadata[0] = 0x15;
-    metadata[1] = 0x30;
-    MultiHash::Sha3_384(metadata)
-}
-
-fn reserve_sentinel_amounts() {
-    // Reserve a sentinel amount to check that we don't unreserve too much.
-    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &ALICE, SENTINEL_AMOUNT));
-    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &BOB, SENTINEL_AMOUNT));
-    assert_ok!(Balances::reserve_named(
-        &PredictionMarkets::reserve_id(),
-        &CHARLIE,
-        SENTINEL_AMOUNT
-    ));
-    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &DAVE, SENTINEL_AMOUNT));
-    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &EVE, SENTINEL_AMOUNT));
-    assert_ok!(Balances::reserve_named(&PredictionMarkets::reserve_id(), &FRED, SENTINEL_AMOUNT));
-    assert_eq!(Balances::reserved_balance(ALICE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(BOB), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(CHARLIE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(DAVE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(EVE), SENTINEL_AMOUNT);
-    assert_eq!(Balances::reserved_balance(FRED), SENTINEL_AMOUNT);
-}
-
-fn check_reserve(account: &AccountIdTest, expected: Balance) {
-    assert_eq!(Balances::reserved_balance(account), SENTINEL_AMOUNT + expected);
-}
-
-fn simulate_appeal_cycle(market_id: MarketId) {
-    let court = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
-    let vote_start = court.round_ends.pre_vote + 1;
-
-    run_to_block(vote_start);
-
-    let salt = <Runtime as frame_system::Config>::Hash::default();
-
-    let wrong_outcome = OutcomeReport::Categorical(1);
-    let wrong_vote_item = VoteItem::Outcome(wrong_outcome);
-
-    let draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
-    for draw in &draws {
-        let commitment =
-            BlakeTwo256::hash_of(&(draw.court_participant, wrong_vote_item.clone(), salt));
-        assert_ok!(Court::vote(
-            RuntimeOrigin::signed(draw.court_participant),
-            market_id,
-            commitment
-        ));
-    }
-
-    let aggregation_start = court.round_ends.vote + 1;
-    run_to_block(aggregation_start);
-
-    for draw in draws {
-        assert_ok!(Court::reveal_vote(
-            RuntimeOrigin::signed(draw.court_participant),
-            market_id,
-            wrong_vote_item.clone(),
-            salt,
-        ));
-    }
-
-    let resolve_at = court.round_ends.appeal;
-    let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at);
-    assert_eq!(market_ids.len(), 1);
-
-    run_to_block(resolve_at - 1);
-
-    let market_after = MarketCommons::market(&0).unwrap();
-    assert_eq!(market_after.status, MarketStatus::Disputed);
-}
 
 #[test]
 fn it_appeals_a_court_market_to_global_dispute() {
-    let test = |base_asset: Asset<MarketId>| {
+    let test = |base_asset: AssetOf<Runtime>| {
         let mut free_before = BTreeMap::new();
-        let jurors = 1000..(1000 + MaxSelectedDraws::get() as u128);
+        let jurors =
+            1000..(1000 + <Runtime as zrml_court::Config>::MaxSelectedDraws::get() as u128);
         for j in jurors {
-            let amount = MinJurorStake::get() + j;
+            let amount = <Runtime as zrml_court::Config>::MinJurorStake::get() + j;
             assert_ok!(AssetManager::deposit(Asset::Ztg, &j, amount + SENTINEL_AMOUNT));
             assert_ok!(Court::join_court(RuntimeOrigin::signed(j), amount));
             free_before.insert(j, Balances::free_balance(j));
@@ -172,14 +74,17 @@ fn it_appeals_a_court_market_to_global_dispute() {
 
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), market_id,));
 
-        for _ in 0..(MaxAppeals::get() - 1) {
+        for _ in 0..(<Runtime as zrml_court::Config>::MaxAppeals::get() - 1) {
             simulate_appeal_cycle(market_id);
             assert_ok!(Court::appeal(RuntimeOrigin::signed(BOB), market_id));
         }
 
         let court = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
         let appeals = court.appeals;
-        assert_eq!(appeals.len(), (MaxAppeals::get() - 1) as usize);
+        assert_eq!(
+            appeals.len(),
+            (<Runtime as zrml_court::Config>::MaxAppeals::get() - 1) as usize
+        );
 
         assert_noop!(
             PredictionMarkets::start_global_dispute(RuntimeOrigin::signed(BOB), market_id),
@@ -191,7 +96,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
 
         assert_noop!(
             Court::appeal(RuntimeOrigin::signed(BOB), market_id),
-            CError::<Runtime>::MaxAppealsReached
+            zrml_court::Error::<Runtime>::MaxAppealsReached
         );
 
         assert!(!GlobalDisputes::does_exist(&market_id));
@@ -275,7 +180,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
 
 #[test]
 fn full_scalar_market_lifecycle() {
-    let test = |base_asset: Asset<MarketId>| {
+    let test = |base_asset: AssetOf<Runtime>| {
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             base_asset,
@@ -413,7 +318,7 @@ fn full_scalar_market_lifecycle() {
 #[test]
 fn authorized_correctly_resolves_disputed_market() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: Asset<MarketId>| {
+    let test = |base_asset: AssetOf<Runtime>| {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -559,7 +464,7 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn outsider_reports_wrong_outcome() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: Asset<MarketId>| {
+    let test = |base_asset: AssetOf<Runtime>| {
         reserve_sentinel_amounts();
 
         let end = 100;
