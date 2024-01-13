@@ -29,6 +29,7 @@ mod edit_market;
 mod manually_close_market;
 mod on_initialize;
 mod on_market_close;
+mod reject_early_close;
 mod reject_market;
 mod report;
 mod schedule_early_close;
