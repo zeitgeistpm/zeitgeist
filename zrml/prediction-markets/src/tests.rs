@@ -1535,7 +1535,7 @@ fn it_allows_to_buy_a_complete_set() {
         // Check the outcome balances
         let assets = PredictionMarkets::outcome_assets(0, &market);
         for asset in assets.iter() {
-            let bal = Tokens::free_balance(*asset, &BOB);
+            let bal = AssetManager::free_balance(*asset, &BOB);
             assert_eq!(bal, CENT);
         }
 
@@ -1817,7 +1817,7 @@ fn it_allows_to_sell_a_complete_set() {
         // Check the outcome balances
         let assets = PredictionMarkets::outcome_assets(0, &market);
         for asset in assets.iter() {
-            let bal = Tokens::free_balance(*asset, &BOB);
+            let bal = AssetManager::free_balance(*asset, &BOB);
             assert_eq!(bal, 0);
         }
 
@@ -3312,22 +3312,22 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         // Check balance of winning outcome asset.
         let share_b = Asset::CategoricalOutcome(0, 1);
-        let share_b_total = Tokens::total_issuance(share_b);
+        let share_b_total = AssetManager::total_issuance(share_b);
         assert_eq!(share_b_total, CENT);
-        let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
+        let share_b_bal = AssetManager::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, CENT);
 
         // TODO(#792): Remove other assets.
         let share_a = Asset::CategoricalOutcome(0, 0);
-        let share_a_total = Tokens::total_issuance(share_a);
+        let share_a_total = AssetManager::total_issuance(share_a);
         assert_eq!(share_a_total, CENT);
-        let share_a_bal = Tokens::free_balance(share_a, &CHARLIE);
+        let share_a_bal = AssetManager::free_balance(share_a, &CHARLIE);
         assert_eq!(share_a_bal, CENT);
 
         let share_c = Asset::CategoricalOutcome(0, 2);
-        let share_c_total = Tokens::total_issuance(share_c);
+        let share_c_total = AssetManager::total_issuance(share_c);
         assert_eq!(share_c_total, 0);
-        let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
+        let share_c_bal = AssetManager::free_balance(share_c, &CHARLIE);
         assert_eq!(share_c_bal, 0);
 
         assert!(market.bonds.creation.unwrap().is_settled);
@@ -4034,15 +4034,15 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         let market_id = 0;
 
         let pool_account = Swaps::pool_account_id(&pool_id);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
 
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), amount);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), amount);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), amount);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), amount);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
+        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
         assert_eq!(AssetManager::free_balance(base_asset, &pool_account), amount);
 
         let pool = Pools::<Runtime>::get(0).unwrap();
@@ -4449,7 +4449,7 @@ fn full_scalar_market_lifecycle() {
         let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
         assert_eq!(assets.len(), 2);
         for asset in assets.iter() {
-            let bal = Tokens::free_balance(*asset, &CHARLIE);
+            let bal = AssetManager::free_balance(*asset, &CHARLIE);
             assert_eq!(bal, 100 * BASE);
         }
         let market = MarketCommons::market(&0).unwrap();
@@ -4492,7 +4492,7 @@ fn full_scalar_market_lifecycle() {
         assert_eq!(disputes.len(), 0);
 
         // give EVE some shares
-        assert_ok!(Tokens::transfer(
+        assert_ok!(AssetManager::transfer(
             RuntimeOrigin::signed(CHARLIE),
             EVE,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
@@ -4500,13 +4500,13 @@ fn full_scalar_market_lifecycle() {
         ));
 
         assert_eq!(
-            Tokens::free_balance(Asset::ScalarOutcome(0, ScalarPosition::Short), &CHARLIE),
+            AssetManager::free_balance(Asset::ScalarOutcome(0, ScalarPosition::Short), &CHARLIE),
             50 * BASE
         );
 
         assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
         for asset in assets.iter() {
-            let bal = Tokens::free_balance(*asset, &CHARLIE);
+            let bal = AssetManager::free_balance(*asset, &CHARLIE);
             assert_eq!(bal, 0);
         }
 
@@ -6372,7 +6372,7 @@ fn scalar_market_correctly_resolves_common(base_asset: Asset<MarketId>, reported
         ScoringRule::CPMM,
     );
     assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, 100 * BASE));
-    assert_ok!(Tokens::transfer(
+    assert_ok!(AssetManager::transfer(
         RuntimeOrigin::signed(CHARLIE),
         EVE,
         Asset::ScalarOutcome(0, ScalarPosition::Short),
