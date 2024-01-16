@@ -27,7 +27,7 @@ use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
 };
-use zeitgeist_primitives::types::{Asset, Currencies, CustomMetadata};
+use zeitgeist_primitives::types::{Currencies, CustomMetadata};
 
 pub(super) struct ExtBuilder {
     balances: Vec<(AccountId, Assets, Balance)>,
@@ -71,6 +71,9 @@ impl ExtBuilder {
                 .balances
                 .into_iter()
                 .filter(|(_, currency_id, _)| *currency_id != native_currency_id)
+                .map(|(account_id, currency_id, initial_balance)| {
+                    (account_id, currency_id.try_into().unwrap(), initial_balance)
+                })
                 .collect::<Vec<_>>(),
         }
         .assimilate_storage(&mut t)
