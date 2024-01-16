@@ -223,7 +223,7 @@ impl<
         let (asset_id, amount) =
             if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
                 if let Fungible(amount) = asset.fun {
-                    (asset_id.clone(), amount)
+                    (*asset_id, amount)
                 } else {
                     return asset.clone();
                 }

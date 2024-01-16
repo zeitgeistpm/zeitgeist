@@ -185,10 +185,8 @@ parameter_type_with_key! {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDepositsNew: |currency_id: Currencies| -> Balance {
-        match currency_id {
-            _ => 1
-        }
+    pub ExistentialDepositsNew: |_currency_id: Currencies| -> Balance {
+        1
     };
 }
 
