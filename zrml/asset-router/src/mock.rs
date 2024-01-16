@@ -145,6 +145,21 @@ impl orml_tokens::Config for Runtime {
     type WeightInfo = ();
 }
 
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+    pub struct AssetsBenchmarkHelper;
+
+    impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
+        for AssetsBenchmarkHelper
+    where
+        AssetIdParameter: From<u128>,
+    {
+        fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+            (id as u128).into()
+        }
+    }
+}
+
 impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
     type ApprovalDeposit = ConstU128<0>;
     type AssetAccountDeposit = ConstU128<0>;
@@ -152,6 +167,8 @@ impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
     type AssetId = CustomAsset;
     type AssetIdParameter = Compact<CustomAssetId>;
     type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
     type CallbackHandle = ();
     type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
     type Currency = Balances;
@@ -173,6 +190,8 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
     type AssetId = CampaignAsset;
     type AssetIdParameter = Compact<CampaignAssetId>;
     type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
     type CallbackHandle = ();
     type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
     type Currency = Balances;
@@ -187,6 +206,21 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
     type WeightInfo = ();
 }
 
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+    use zeitgeist_primitives::types::CategoryIndex;
+
+    pub struct MarketAssetsBenchmarkHelper;
+
+    impl pallet_assets::BenchmarkHelper<MarketAsset>
+        for MarketAssetsBenchmarkHelper
+    {
+        fn create_asset_id_parameter(id: u32) -> MarketAsset {
+            MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
+        }
+    }
+}
+
 impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
     type ApprovalDeposit = ConstU128<0>;
     type AssetAccountDeposit = ConstU128<0>;
@@ -194,6 +228,8 @@ impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
     type AssetId = MarketAsset;
     type AssetIdParameter = MarketAsset;
     type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = MarketAssetsBenchmarkHelper;
     type CallbackHandle = ();
     type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountIdTest>>;
     type Currency = Balances;

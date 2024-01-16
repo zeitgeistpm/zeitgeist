@@ -17,7 +17,7 @@ zeitgeist-primitives = { workspace = true, features = ["default", "mock"] }
 
 [features]
 default = ["std"]
-runtime-benchmarks = []
+runtime-benchmarks = ["pallet-assets/runtime-benchmarks"]
 std = [
     "frame-support/std",
     "frame-system/std",
