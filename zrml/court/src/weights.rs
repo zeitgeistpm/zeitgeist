@@ -297,13 +297,16 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `j` is `[1, 1000]`.
     fn handle_inflation(j: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `147`
-        //  Estimated: `499`
-        // Minimum execution time: 5_390 nanoseconds.
-        Weight::from_parts(7_473_674, 499)
-            // Standard Error: 121
-            .saturating_add(Weight::from_parts(3_263, 0).saturating_mul(j.into()))
-            .saturating_add(T::DbWeight::get().reads(1))
+        //  Measured:  `0 + j * (243 ±0)`
+        //  Estimated: `72996 + j * (2607 ±0)`
+        // Minimum execution time: 33_280 nanoseconds.
+        Weight::from_parts(34_480_000, 72996)
+            // Standard Error: 9_174
+            .saturating_add(Weight::from_parts(19_968_654, 0).saturating_mul(j.into()))
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(j.into())))
+            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(j.into())))
+            .saturating_add(Weight::from_parts(0, 2607).saturating_mul(j.into()))
     }
     /// Storage: Court CourtPool (r:1 w:1)
     /// Proof: Court CourtPool (max_values: Some(1), max_size: Some(72002), added: 72497, mode: MaxEncodedLen)
