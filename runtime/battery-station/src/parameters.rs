@@ -507,7 +507,7 @@ parameter_type_with_key! {
             Currencies::ForeignAsset(id) => {
                 let maybe_metadata = <
                     orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
-                >::metadata(&Asset::ForeignAsset(*id));
+                >::metadata(&Currencies::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {
                     return metadata.existential_deposit;

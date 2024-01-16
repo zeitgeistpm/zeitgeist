@@ -2107,7 +2107,7 @@ macro_rules! create_common_benchmark_logic {
                     impl_benchmark_test_suite!(new_test_ext(),);
                 }
             }
-            
+
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
                 use crate::{AccountId, Balance, Tokens, Runtime};

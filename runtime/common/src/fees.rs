@@ -119,9 +119,9 @@ macro_rules! impl_foreign_fees {
 
         #[cfg(feature = "parachain")]
         pub(crate) fn get_fee_factor(
-            currency_id: Assets,
+            currency: Currencies,
         ) -> Result<Balance, TransactionValidityError> {
-            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id).ok_or(
+            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency).ok_or(
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::NoAssetMetadata as u8,
                 )),
@@ -139,12 +139,12 @@ macro_rules! impl_foreign_fees {
 
             fn to_asset_balance(
                 native_fee: Balance,
-                asset_id: TxPaymentAssetId,
+                currency_id: TxPaymentAssetId,
             ) -> Result<Balance, Self::Error> {
                 #[cfg(feature = "parachain")]
                 {
-                    let currency_id = Currencies::ForeignAsset(asset_id);
-                    let fee_factor = get_fee_factor(currency_id)?;
+                    let currency = Currencies::ForeignAsset(currency_id);
+                    let fee_factor = get_fee_factor(currency)?;
                     let converted_fee = calculate_fee(native_fee, fee_factor)?;
                     Ok(converted_fee)
                 }

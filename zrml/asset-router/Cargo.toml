@@ -17,6 +17,7 @@ zeitgeist-primitives = { workspace = true, features = ["default", "mock"] }
 
 [features]
 default = ["std"]
+runtime-benchmarks = []
 std = [
     "frame-support/std",
     "frame-system/std",
@@ -25,7 +26,6 @@ std = [
     "parity-scale-codec/std",
     "zeitgeist-primitives/std",
 ]
-runtime-benchmarks = []
 try-runtime = []
 
 [package]

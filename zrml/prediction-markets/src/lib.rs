@@ -52,7 +52,10 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
     #[cfg(feature = "parachain")]
-    use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
+    use {
+        orml_traits::asset_registry::Inspect,
+        zeitgeist_primitives::types::{CurrencyClass, CustomMetadata},
+    };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
@@ -1715,7 +1718,7 @@ mod pallet {
 
         #[cfg(feature = "parachain")]
         type AssetRegistry: Inspect<
-                AssetId = Asset<MarketIdOf<Self>>,
+                AssetId = CurrencyClass<MarketIdOf<Self>>,
                 Balance = BalanceOf<Self>,
                 CustomMetadata = CustomMetadata,
             >;
@@ -3444,7 +3447,11 @@ mod pallet {
                 Asset::Ztg => true,
                 #[cfg(feature = "parachain")]
                 Asset::ForeignAsset(fa) => {
-                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
+                    if let Some(metadata) =
+                        T::AssetRegistry::metadata(&CurrencyClass::<MarketIdOf<T>>::ForeignAsset(
+                            fa,
+                        ))
+                    {
                         metadata.additional.allow_as_base_asset
                     } else {
                         return Err(Error::<T>::UnregisteredForeignAsset.into());

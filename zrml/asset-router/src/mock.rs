@@ -209,7 +209,7 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
 // Required for runtime benchmarks
 pallet_assets::runtime_benchmarks_enabled! {
     use zeitgeist_primitives::types::CategoryIndex;
-    
+
     pub struct MarketAssetsBenchmarkHelper;
 
     impl pallet_assets::BenchmarkHelper<MarketAsset>
