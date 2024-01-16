@@ -24,24 +24,26 @@
 
 use crate as prediction_markets;
 use frame_support::{
-    construct_runtime, ord_parameter_types, parameter_types,  
-    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize, AsEnsureOriginWithArg},
+    construct_runtime, ord_parameter_types, parameter_types,
+    traits::{AsEnsureOriginWithArg, Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
-use frame_system::{EnsureRoot, EnsureSignedBy, EnsureSigned};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
-use sp_arithmetic::{per_things::Percent};
+use parity_scale_codec::Compact;
+use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
-    traits::{ConstU32, BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, ConstU32, IdentityLookup},
     DispatchError, DispatchResult,
 };
-use parity_scale_codec::Compact;
 use std::cell::RefCell;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
+        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
+        AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
+        AssetsMetadataDepositPerByte, AssetsStringLimit, AuthorizedPalletId,
         BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod,
         CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
         CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, CloseEarlyTimeFramePeriod,
@@ -56,12 +58,13 @@ use zeitgeist_primitives::{
         MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
         OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
         SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
-        BASE, CENT, MILLISECS_PER_BLOCK, AssetsApprovalDeposit, AssetsAccountDeposit, AssetsDeposit, AssetsMetadataDepositBase, AssetsMetadataDepositPerByte, AssetsStringLimit, 
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
-        AccountIdTest, Amount, Assets, Currencies, Balance, BasicCurrencyAdapter, BlockNumber,
-        BlockTest, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest, CampaignAsset, CustomAsset, MarketAsset, CustomAssetId, CampaignAssetId
+        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
+        MarketAsset, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
