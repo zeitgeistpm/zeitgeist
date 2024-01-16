@@ -21,7 +21,7 @@ zrml-simple-disputes = { workspace = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
-pallet-assets = { workspace = true }
+pallet-assets = { workspace = true, optional = true  }
 pallet-balances = { workspace = true, optional = true }
 pallet-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
