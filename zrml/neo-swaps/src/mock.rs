@@ -64,7 +64,7 @@ use zeitgeist_primitives::{
     traits::{DeployPoolApi, DistributeFees},
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, Hash,
-        Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest, Currencies,
     },
 };
 use zrml_neo_swaps::BalanceOf;
@@ -462,7 +462,7 @@ impl pallet_treasury::Config for Runtime {
 #[cfg(feature = "parachain")]
 zrml_prediction_markets::impl_mock_registry! {
     MockRegistry,
-    Assets,
+    Currencies,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
@@ -501,7 +501,7 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![(
-                FOREIGN_ASSET,
+                Currencies::try_from(FOREIGN_ASSET).unwrap(),
                 AssetMetadata {
                     decimals: 18,
                     name: "MKL".as_bytes().to_vec(),
