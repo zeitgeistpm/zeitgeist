@@ -30,7 +30,7 @@ pub use pallet::*;
 pub mod pallet {
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
-        pallet_prelude::{DispatchError, DispatchResult},
+        pallet_prelude::{DispatchError, DispatchResult, Hooks},
         traits::{
             tokens::{
                 fungibles::{Create, Destroy, Inspect, Mutate, Transfer},
@@ -162,7 +162,7 @@ pub mod pallet {
             + TypeInfo;
     }
 
-    use frame_support::pallet_prelude::Hooks;
+    const LOG_TARGET: &str = "runtime::asset-router";
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
@@ -242,7 +242,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         #[inline]
         fn log_unsupported(asset: T::AssetType, function: &str) {
-            log::warn!("[AssetRouter] Asset {:?} not supported in function {:?}", asset, function);
+            log::warn!(target: LOG_TARGET, "Asset {:?} not supported in function {:?}", asset, function);
         }
     }
 
