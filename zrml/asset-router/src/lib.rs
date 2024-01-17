@@ -346,7 +346,6 @@ pub mod pallet {
             who: &T::AccountId,
             value: Self::Balance,
         ) -> bool {
-            // TODO
             if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::can_slash(currency, who, value)
             } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
