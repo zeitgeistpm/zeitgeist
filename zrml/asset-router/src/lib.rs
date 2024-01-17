@@ -216,6 +216,7 @@ pub mod pallet {
             if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
                 <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
             } else {
+                Self::log_unsupported($currency_id, stringify!($currency_method));
                 $error
             }
         };
@@ -232,9 +233,17 @@ pub mod pallet {
             } else if let Ok(asset) = T::CustomAssetType::try_from($asset_id)  {
                 T::CustomAssets::$asset_method(asset, $($args),*)
             } else {
+                Self::log_unsupported($asset_id, stringify!($asset_method));
                 $error
             }
         };
+    }
+
+    impl<T: Config> Pallet<T> {
+        #[inline]
+        fn log_unsupported(asset: T::AssetType, function: &str) {
+            log::warn!("[AssetRouter] Asset {:?} not supported in function {:?}", asset, function);
+        }
     }
 
     impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
@@ -243,17 +252,26 @@ pub mod pallet {
 
         fn minimum_balance(currency_id: Self::CurrencyId) -> Self::Balance {
             let min_balance = route_call!(currency_id, minimum_balance, minimum_balance,);
-            min_balance.unwrap_or(0u8.into())
+            min_balance.unwrap_or_else(|_b| {
+                Self::log_unsupported(currency_id, "minimum_balance");
+                Self::Balance::zero()
+            })
         }
 
         fn total_issuance(currency_id: Self::CurrencyId) -> Self::Balance {
             let total_issuance = route_call!(currency_id, total_issuance, total_issuance,);
-            total_issuance.unwrap_or(0u8.into())
+            total_issuance.unwrap_or_else(|_b| {
+                Self::log_unsupported(currency_id, "total_issuance");
+                Self::Balance::zero()
+            })
         }
 
         fn total_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
             let total_balance = route_call!(currency_id, total_balance, balance, who);
-            total_balance.unwrap_or(0u8.into())
+            total_balance.unwrap_or_else(|_b| {
+                Self::log_unsupported(currency_id, "total_balance");
+                Self::Balance::zero()
+            })
         }
 
         fn free_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
@@ -266,7 +284,8 @@ pub mod pallet {
             } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
                 T::CustomAssets::reducible_balance(asset, who, false)
             } else {
-                0u8.into()
+                Self::log_unsupported(currency_id, "free_balance");
+                Self::Balance::zero()
             }
         }
 
@@ -355,6 +374,7 @@ pub mod pallet {
             } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
                 T::CustomAssets::reducible_balance(asset, who, false) >= value
             } else {
+                Self::log_unsupported(currency_id, "can_slash");
                 false
             }
         }
@@ -379,6 +399,7 @@ pub mod pallet {
                     .map(|b| amount.saturating_sub(b))
                     .unwrap_or_else(|_| amount)
             } else {
+                Self::log_unsupported(currency_id, "slash");
                 amount
             }
         }
@@ -553,6 +574,7 @@ pub mod pallet {
                 );
             }
 
+            Self::log_unsupported(currency_id, "reserved_balance_named");
             Zero::zero()
         }
 
@@ -583,6 +605,7 @@ pub mod pallet {
                 );
             }
 
+            Self::log_unsupported(currency_id, "unreserve_named");
             value
         }
 
@@ -598,6 +621,7 @@ pub mod pallet {
                 );
             }
 
+            Self::log_unsupported(currency_id, "slash_reserved_named");
             value
         }
 

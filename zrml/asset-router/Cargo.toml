@@ -1,6 +1,7 @@
 [dependencies]
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+log = { workspace = true }
 orml-traits = { workspace = true }
 pallet-assets = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }

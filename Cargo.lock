@@ -14539,6 +14539,7 @@ version = "0.4.1"
 dependencies = [
  "frame-support",
  "frame-system",
+ "log",
  "orml-tokens",
  "orml-traits",
  "pallet-assets",
