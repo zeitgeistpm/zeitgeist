@@ -483,6 +483,22 @@ mod pallet {
             )?;
             Ok(Some(weight).into())
         }
+
+        #[pallet::call_index(11)]
+        #[pallet::weight(T::WeightInfo::pool_exit(
+            min_assets_out.len().min(T::MaxAssets::get().into()) as u32
+        ))]
+        #[transactional]
+        pub fn force_pool_exit(
+            origin: OriginFor<T>,
+            who: T::AccountId,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            min_assets_out: Vec<BalanceOf<T>>,
+        ) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_pool_exit(who, pool_id, pool_amount, min_assets_out)
+        }
     }
 
     #[pallet::config]
