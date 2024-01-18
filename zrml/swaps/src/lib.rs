@@ -129,36 +129,7 @@ mod pallet {
             min_assets_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let who_clone = who.clone();
-            let pool = Self::pool_by_id(pool_id)?;
-            // If the pool is still in use, prevent a pool drain.
-            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            let params = PoolParams {
-                asset_bounds: min_assets_out,
-                event: |evt| Self::deposit_event(Event::PoolExit(evt)),
-                pool_account_id: &pool_account_id,
-                pool_amount,
-                pool_id,
-                pool: &pool,
-                transfer_asset: |amount, amount_bound, asset| {
-                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
-                    ensure!(amount >= amount_bound, Error::<T>::LimitOut);
-                    T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
-                    Ok(())
-                },
-                transfer_pool: || {
-                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
-                    Ok(())
-                },
-                fee: |amount: BalanceOf<T>| {
-                    let exit_fee_amount = amount.bmul(Self::calc_exit_fee(&pool))?;
-                    Ok(exit_fee_amount)
-                },
-                who: who_clone,
-            };
-            crate::utils::pool::<_, _, _, _, T>(params)
+            Self::do_pool_exit(who, pool_id, pool_amount, min_assets_out)
         }
 
         /// Pool - Exit with exact pool amount
@@ -512,6 +483,22 @@ mod pallet {
             )?;
             Ok(Some(weight).into())
         }
+
+        #[pallet::call_index(11)]
+        #[pallet::weight(T::WeightInfo::pool_exit(
+            min_assets_out.len().min(T::MaxAssets::get().into()) as u32
+        ))]
+        #[transactional]
+        pub fn force_pool_exit(
+            origin: OriginFor<T>,
+            who: T::AccountId,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            min_assets_out: Vec<BalanceOf<T>>,
+        ) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_pool_exit(who, pool_id, pool_amount, min_assets_out)
+        }
     }
 
     #[pallet::config]
@@ -747,6 +734,44 @@ mod pallet {
     pub(crate) type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
+        fn do_pool_exit(
+            who: T::AccountId,
+            pool_id: PoolId,
+            pool_amount: BalanceOf<T>,
+            min_assets_out: Vec<BalanceOf<T>>,
+        ) -> DispatchResult {
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
+            let who_clone = who.clone();
+            let pool = Self::pool_by_id(pool_id)?;
+            // If the pool is still in use, prevent a pool drain.
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+            let params = PoolParams {
+                asset_bounds: min_assets_out,
+                event: |evt| Self::deposit_event(Event::PoolExit(evt)),
+                pool_account_id: &pool_account_id,
+                pool_amount,
+                pool_id,
+                pool: &pool,
+                transfer_asset: |amount, amount_bound, asset| {
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
+                    ensure!(amount >= amount_bound, Error::<T>::LimitOut);
+                    T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
+                    Ok(())
+                },
+                transfer_pool: || {
+                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
+                    Ok(())
+                },
+                fee: |amount: BalanceOf<T>| {
+                    let exit_fee_amount = amount.bmul(Self::calc_exit_fee(&pool))?;
+                    Ok(exit_fee_amount)
+                },
+                who: who_clone,
+            };
+            crate::utils::pool::<_, _, _, _, T>(params)
+        }
+
         pub fn get_spot_price(
             pool_id: &PoolId,
             asset_in: &AssetOf<T>,

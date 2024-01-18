@@ -27,7 +27,7 @@ use crate::{
     types::{CourtParticipantInfo, CourtPoolItem, CourtStatus, Draw, Vote},
     AppealInfo, BalanceOf, Call, Config, CourtId, CourtPool, Courts, DelegatedStakesOf,
     MarketIdToCourtId, MarketOf, Pallet as Court, Pallet, Participants, RequestBlock,
-    SelectedDraws, VoteItem,
+    SelectedDraws, VoteItem, YearlyInflation,
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
@@ -672,6 +672,7 @@ benchmarks! {
 
         <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get());
         let now = <frame_system::Pallet<T>>::block_number();
+        YearlyInflation::<T>::put(Perbill::from_percent(2));
     }: {
         Court::<T>::handle_inflation(now);
     }

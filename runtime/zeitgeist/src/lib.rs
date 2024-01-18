@@ -123,6 +123,7 @@ impl Contains<RuntimeCall> for IsCallable {
         use zrml_prediction_markets::Call::{
             admin_move_market_to_closed, admin_move_market_to_resolved, create_market, edit_market,
         };
+        use zrml_swaps::Call::force_pool_exit;
 
         #[allow(clippy::match_like_matches_macro)]
         match runtime_call {
@@ -170,6 +171,10 @@ impl Contains<RuntimeCall> for IsCallable {
                 }
             }
             RuntimeCall::SimpleDisputes(_) => false,
+            RuntimeCall::Swaps(inner_call) => match inner_call {
+                force_pool_exit { .. } => true,
+                _ => false,
+            },
             RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
