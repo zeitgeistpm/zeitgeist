@@ -705,6 +705,17 @@ fn pool_join_or_exit_raises_on_zero_value() {
         );
 
         assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                ALICE,
+                DEFAULT_POOL_ID,
+                0,
+                vec!(_1, _1, _1, _1)
+            ),
+            Error::<Runtime>::ZeroAmount
+        );
+
+        assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_A, 0, 0),
             Error::<Runtime>::ZeroAmount
         );
@@ -806,6 +817,113 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
 
         assert_ok!(Swaps::pool_exit(
             RuntimeOrigin::signed(BOB),
+            DEFAULT_POOL_ID,
+            _10,
+            vec!(_1, _1, _1, _1),
+        ));
+
+        let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+        let pool_shares_id = Swaps::pool_shares_id(DEFAULT_POOL_ID);
+        assert_eq!(Currencies::free_balance(ASSET_A, &BOB), _9);
+        assert_eq!(Currencies::free_balance(ASSET_B, &BOB), _9);
+        assert_eq!(Currencies::free_balance(ASSET_C, &BOB), _9);
+        assert_eq!(Currencies::free_balance(ASSET_D, &BOB), _9);
+        assert_eq!(Currencies::free_balance(pool_shares_id, &BOB), DEFAULT_LIQUIDITY - _10);
+        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account), DEFAULT_LIQUIDITY - _9);
+        assert_eq!(Currencies::total_issuance(pool_shares_id), DEFAULT_LIQUIDITY - _10);
+
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![_1, _1, _1, _1],
+                cpep: CommonPoolEventParams { pool_id: DEFAULT_POOL_ID, who: BOB },
+                transferred: vec![_9, _9, _9, _9],
+                pool_amount: _10,
+            })
+            .into(),
+        );
+    })
+}
+
+#[test]
+fn force_pool_exit_decreases_correct_pool_parameters() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0u128);
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(0, true);
+
+        assert_ok!(Swaps::pool_join(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1, _1, _1),));
+
+        assert_ok!(Swaps::force_pool_exit(
+            RuntimeOrigin::signed(CHARLIE),
+            ALICE,
+            DEFAULT_POOL_ID,
+            _1,
+            vec!(_1, _1, _1, _1),
+        ));
+
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![_1, _1, _1, _1],
+                cpep: CommonPoolEventParams { pool_id: DEFAULT_POOL_ID, who: 0 },
+                transferred: vec![_1 + 1, _1 + 1, _1 + 1, _1 + 1],
+                pool_amount: _1,
+            })
+            .into(),
+        );
+        assert_all_parameters(
+            [_25 + 1, _25 + 1, _25 + 1, _25 + 1],
+            0,
+            [
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY - 1,
+                DEFAULT_LIQUIDITY - 1,
+            ],
+            DEFAULT_LIQUIDITY,
+        );
+    })
+}
+
+#[test]
+fn force_pool_exit_emits_correct_events() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(0, true);
+        assert_ok!(Swaps::force_pool_exit(
+            RuntimeOrigin::signed(CHARLIE),
+            BOB,
+            DEFAULT_POOL_ID,
+            _1,
+            vec!(1, 2, 3, 4),
+        ));
+        let amount = _1 - BASE / 10; // Subtract 10% fees!
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![1, 2, 3, 4],
+                cpep: CommonPoolEventParams { pool_id: DEFAULT_POOL_ID, who: BOB },
+                transferred: vec![amount; 4],
+                pool_amount: _1,
+            })
+            .into(),
+        );
+    });
+}
+
+#[test]
+fn force_pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(0, true);
+
+        assert_ok!(Swaps::force_pool_exit(
+            RuntimeOrigin::signed(CHARLIE),
+            BOB,
             DEFAULT_POOL_ID,
             _10,
             vec!(_1, _1, _1, _1),
@@ -982,6 +1100,39 @@ fn pool_exit_is_not_allowed_with_insufficient_funds() {
 }
 
 #[test]
+fn force_pool_exit_is_not_allowed_with_insufficient_funds() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(0, true);
+
+        // Alice has no pool shares!
+        assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                ALICE,
+                DEFAULT_POOL_ID,
+                _1,
+                vec!(0, 0, 0, 0)
+            ),
+            Error::<Runtime>::InsufficientBalance,
+        );
+
+        // Now Alice has 25 pool shares!
+        let _ = Currencies::deposit(Swaps::pool_shares_id(DEFAULT_POOL_ID), &ALICE, _25);
+        assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                ALICE,
+                DEFAULT_POOL_ID,
+                _26,
+                vec!(0, 0, 0, 0)
+            ),
+            Error::<Runtime>::InsufficientBalance,
+        );
+    })
+}
+
+#[test]
 fn pool_join_increases_correct_pool_parameters() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -1118,6 +1269,16 @@ fn provided_values_len_must_equal_assets_len() {
         );
         assert_noop!(
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _5, vec![]),
+            Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
+        );
+        assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                ALICE,
+                DEFAULT_POOL_ID,
+                _5,
+                vec![]
+            ),
             Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
         );
     });
@@ -1540,6 +1701,44 @@ fn join_pool_exit_pool_does_not_create_extra_tokens() {
 }
 
 #[test]
+fn join_pool_force_exit_pool_does_not_create_extra_tokens() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(0, true);
+
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &CHARLIE, _100);
+        });
+
+        let amount = 123_456_789_123; // Strange number to force rounding errors!
+        assert_ok!(Swaps::pool_join(
+            RuntimeOrigin::signed(CHARLIE),
+            DEFAULT_POOL_ID,
+            amount,
+            vec![_10000, _10000, _10000, _10000]
+        ));
+        assert_ok!(Swaps::force_pool_exit(
+            RuntimeOrigin::signed(DAVE),
+            CHARLIE,
+            DEFAULT_POOL_ID,
+            amount,
+            vec![0, 0, 0, 0]
+        ));
+
+        // Check that the pool retains more tokens than before, and that Charlie loses some tokens
+        // due to fees.
+        let pool_account_id = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+        assert_ge!(Currencies::free_balance(ASSET_A, &pool_account_id), _100);
+        assert_ge!(Currencies::free_balance(ASSET_B, &pool_account_id), _100);
+        assert_ge!(Currencies::free_balance(ASSET_C, &pool_account_id), _100);
+        assert_ge!(Currencies::free_balance(ASSET_D, &pool_account_id), _100);
+        assert_le!(Currencies::free_balance(ASSET_A, &CHARLIE), _100);
+        assert_le!(Currencies::free_balance(ASSET_B, &CHARLIE), _100);
+        assert_le!(Currencies::free_balance(ASSET_C, &CHARLIE), _100);
+        assert_le!(Currencies::free_balance(ASSET_D, &CHARLIE), _100);
+    });
+}
+
+#[test]
 fn create_pool_fails_on_weight_below_minimum_weight() {
     ExtBuilder::default().build().execute_with(|| {
         ASSETS.iter().cloned().for_each(|asset| {
@@ -1807,6 +2006,16 @@ fn pool_exit_fails_if_min_assets_out_is_violated() {
             Swaps::pool_exit(alice_signed(), DEFAULT_POOL_ID, _1, vec!(_1, _1, _1 + 1, _1)),
             Error::<Runtime>::LimitOut,
         );
+        assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                ALICE,
+                DEFAULT_POOL_ID,
+                _1,
+                vec!(_1, _1, _1 + 1, _1)
+            ),
+            Error::<Runtime>::LimitOut,
+        );
     });
 }
 
@@ -2047,6 +2256,79 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
         assert_noop!(
             Swaps::pool_exit(
                 RuntimeOrigin::signed(BOB),
+                DEFAULT_POOL_ID,
+                _100 - Swaps::min_balance(Swaps::pool_shares_id(DEFAULT_POOL_ID)) + 1,
+                vec![0; 4]
+            ),
+            Error::<Runtime>::PoolDrain,
+        );
+    });
+}
+
+#[test]
+fn force_pool_exit_fails_if_balances_drop_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        // We drop the balances below `Swaps::min_balance(...)`, but liquidity remains above
+        // `Swaps::min_balance(...)`.
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(1, true);
+        let pool_account_id = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_A)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_B,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_B)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_C,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_C)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_D,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_D)
+        ));
+
+        // We withdraw 99% of it, leaving 0.01 of each asset, which is below minimum balance.
+        assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                BOB,
+                DEFAULT_POOL_ID,
+                _10,
+                vec![0; 4]
+            ),
+            Error::<Runtime>::PoolDrain,
+        );
+    });
+}
+
+#[test]
+fn force_pool_exit_fails_if_liquidity_drops_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        // We drop the liquidity below `Swaps::min_balance(...)`, but balances remains above
+        // `Swaps::min_balance(...)`.
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(1, true);
+        let pool_account_id = Swaps::pool_account_id(&DEFAULT_POOL_ID);
+
+        // There's 1000 left of each asset.
+        assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _900));
+        assert_ok!(Currencies::deposit(ASSET_B, &pool_account_id, _900));
+        assert_ok!(Currencies::deposit(ASSET_C, &pool_account_id, _900));
+        assert_ok!(Currencies::deposit(ASSET_D, &pool_account_id, _900));
+
+        // We withdraw too much liquidity but leave enough of each asset.
+        assert_noop!(
+            Swaps::force_pool_exit(
+                RuntimeOrigin::signed(CHARLIE),
+                BOB,
                 DEFAULT_POOL_ID,
                 _100 - Swaps::min_balance(Swaps::pool_shares_id(DEFAULT_POOL_ID)) + 1,
                 vec![0; 4]
