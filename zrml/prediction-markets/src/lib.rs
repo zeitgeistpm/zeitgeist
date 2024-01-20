@@ -94,6 +94,7 @@ mod pallet {
     pub(crate) type CacheSize = ConstU32<64>;
     pub(crate) type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub(crate) type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type MarketIdOf<T> = <T as zrml_market_commons::Config>::MarketId;
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
@@ -2923,7 +2924,7 @@ mod pallet {
             scoring_rule: ScoringRule,
             report: Option<ReportOf<T>>,
             resolved_outcome: Option<OutcomeReport>,
-            bonds: MarketBonds<T::AccountId, BalanceOf<T>>,
+            bonds: MarketBondsOf<T>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let valid_base_asset = match base_asset {
                 Asset::Ztg => true,

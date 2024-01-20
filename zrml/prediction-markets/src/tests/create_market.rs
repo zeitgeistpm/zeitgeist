@@ -19,10 +19,11 @@
 use super::*;
 use test_case::test_case;
 
+use crate::MarketBondsOf;
 use core::ops::RangeInclusive;
 use zeitgeist_primitives::{
     constants::MILLISECS_PER_BLOCK,
-    types::{AccountIdTest, Balance, BlockNumber, Bond, MarketBonds, Moment},
+    types::{BlockNumber, Bond, MarketBonds, Moment},
 };
 
 #[test_case(std::ops::RangeInclusive::new(7, 6); "empty range")]
@@ -530,7 +531,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
     creation: MarketCreation,
     scoring_rule: ScoringRule,
     status: MarketStatus,
-    bonds: MarketBonds<AccountIdTest, Balance>,
+    bonds: MarketBondsOf<Runtime>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
         let creator = ALICE;

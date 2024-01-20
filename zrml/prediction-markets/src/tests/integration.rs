@@ -23,10 +23,7 @@ use zeitgeist_primitives::types::OutcomeReport;
 
 use crate::MarketIdsPerDisputeBlock;
 use orml_traits::MultiReservableCurrency;
-use zeitgeist_primitives::{
-    constants::{mock::OutsiderBond, MILLISECS_PER_BLOCK},
-    types::ScalarPosition,
-};
+use zeitgeist_primitives::{constants::MILLISECS_PER_BLOCK, types::ScalarPosition};
 use zrml_global_disputes::{
     types::{OutcomeInfo, Possession},
     GlobalDisputesPalletApi, Outcomes, PossessionOf,
@@ -353,10 +350,13 @@ fn authorized_correctly_resolves_disputed_market() {
 
         if base_asset == Asset::Ztg {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+            assert_eq!(
+                charlie_balance,
+                1_000 * BASE - CENT - <Runtime as Config>::DisputeBond::get()
+            );
         } else {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            assert_eq!(charlie_balance, 1_000 * BASE - <Runtime as Config>::DisputeBond::get());
             let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
             assert_eq!(charlie_balance, 1_000 * BASE - CENT);
         }
@@ -378,7 +378,7 @@ fn authorized_correctly_resolves_disputed_market() {
 
         // check everyone's deposits
         let charlie_reserved = Balances::reserved_balance(CHARLIE);
-        assert_eq!(charlie_reserved, DisputeBond::get());
+        assert_eq!(charlie_reserved, <Runtime as Config>::DisputeBond::get());
 
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
             dispute_at + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
@@ -387,10 +387,13 @@ fn authorized_correctly_resolves_disputed_market() {
 
         if base_asset == Asset::Ztg {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+            assert_eq!(
+                charlie_balance,
+                1_000 * BASE - CENT - <Runtime as Config>::DisputeBond::get()
+            );
         } else {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            assert_eq!(charlie_balance, 1_000 * BASE - <Runtime as Config>::DisputeBond::get());
             let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
             assert_eq!(charlie_balance, 1_000 * BASE - CENT);
         }
@@ -402,10 +405,13 @@ fn authorized_correctly_resolves_disputed_market() {
 
         if base_asset == Asset::Ztg {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - CENT - DisputeBond::get());
+            assert_eq!(
+                charlie_balance,
+                1_000 * BASE - CENT - <Runtime as Config>::DisputeBond::get()
+            );
         } else {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - DisputeBond::get());
+            assert_eq!(charlie_balance, 1_000 * BASE - <Runtime as Config>::DisputeBond::get());
             let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
             assert_eq!(charlie_balance, 1_000 * BASE - CENT);
         }
@@ -414,10 +420,13 @@ fn authorized_correctly_resolves_disputed_market() {
 
         if base_asset == Asset::Ztg {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE - CENT + OracleBond::get());
+            assert_eq!(
+                charlie_balance,
+                1_000 * BASE - CENT + <Runtime as Config>::OracleBond::get()
+            );
         } else {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            assert_eq!(charlie_balance, 1_000 * BASE + <Runtime as Config>::OracleBond::get());
             let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
             assert_eq!(charlie_balance, 1_000 * BASE - CENT);
         }
@@ -431,10 +440,10 @@ fn authorized_correctly_resolves_disputed_market() {
 
         if base_asset == Asset::Ztg {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            assert_eq!(charlie_balance, 1_000 * BASE + <Runtime as Config>::OracleBond::get());
         } else {
             let charlie_balance = AssetManager::free_balance(Asset::Ztg, &CHARLIE);
-            assert_eq!(charlie_balance, 1_000 * BASE + OracleBond::get());
+            assert_eq!(charlie_balance, 1_000 * BASE + <Runtime as Config>::OracleBond::get());
             let charlie_balance = AssetManager::free_balance(base_asset, &CHARLIE);
             assert_eq!(charlie_balance, 1_000 * BASE);
         }
@@ -442,7 +451,7 @@ fn authorized_correctly_resolves_disputed_market() {
         assert_eq!(charlie_reserved_2, 0);
 
         let alice_balance = AssetManager::free_balance(Asset::Ztg, &ALICE);
-        assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
+        assert_eq!(alice_balance, 1_000 * BASE - <Runtime as Config>::OracleBond::get());
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
@@ -496,12 +505,12 @@ fn outsider_reports_wrong_outcome() {
         ));
 
         let outsider_balance_before = Balances::free_balance(outsider);
-        check_reserve(&outsider, OutsiderBond::get());
+        check_reserve(&outsider, <Runtime as Config>::OutsiderBond::get());
 
         let dispute_at_0 = report_at + 1;
         run_to_block(dispute_at_0);
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
-        check_reserve(&EVE, DisputeBond::get());
+        check_reserve(&EVE, <Runtime as Config>::DisputeBond::get());
 
         assert_ok!(SimpleDisputes::suggest_outcome(
             RuntimeOrigin::signed(DAVE),
@@ -519,15 +528,21 @@ fn outsider_reports_wrong_outcome() {
         // on_resolution called
         run_blocks(market.deadlines.dispute_duration);
 
-        assert_eq!(Balances::free_balance(ALICE), alice_balance_before - OracleBond::get());
+        assert_eq!(
+            Balances::free_balance(ALICE),
+            alice_balance_before - <Runtime as Config>::OracleBond::get()
+        );
 
         check_reserve(&outsider, 0);
         assert_eq!(Balances::free_balance(outsider), outsider_balance_before);
 
-        // disputor EVE gets the OracleBond and OutsiderBond and DisputeBond
+        // disputor EVE gets the OracleBond and <Runtime as Config>::OutsiderBond and DisputeBond
         assert_eq!(
             Balances::free_balance(EVE),
-            eve_balance_before + DisputeBond::get() + OutsiderBond::get() + OracleBond::get()
+            eve_balance_before
+                + <Runtime as Config>::DisputeBond::get()
+                + <Runtime as Config>::OutsiderBond::get()
+                + <Runtime as Config>::OracleBond::get()
         );
         // DAVE gets his outcome bond back
         assert_eq!(Balances::free_balance(DAVE), dave_balance_before + outcome_bond);
