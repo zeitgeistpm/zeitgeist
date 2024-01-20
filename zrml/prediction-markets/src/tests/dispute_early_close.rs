@@ -58,7 +58,7 @@ fn dispute_early_close_from_market_creator_works() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -132,7 +132,7 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -164,7 +164,7 @@ fn dispute_early_close_fails_if_already_disputed() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -202,7 +202,7 @@ fn dispute_early_close_fails_if_already_rejected() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -242,7 +242,7 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -305,7 +305,7 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -353,7 +353,7 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));

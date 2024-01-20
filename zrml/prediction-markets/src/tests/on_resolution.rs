@@ -275,7 +275,7 @@ fn it_resolves_a_disputed_court_market() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr,
         ));
@@ -946,7 +946,7 @@ fn trusted_market_complete_lifecycle() {
             MarketPeriod::Block(0..end),
             Deadlines {
                 grace_period: 0,
-                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
                 dispute_duration: Zero::zero(),
             },
             gen_metadata(0x99),

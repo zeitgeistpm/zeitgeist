@@ -55,7 +55,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr,
         ));

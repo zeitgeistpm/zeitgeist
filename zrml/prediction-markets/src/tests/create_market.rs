@@ -52,9 +52,9 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
 fn create_market_fails_on_min_dispute_period() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
-            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() - 1,
+            grace_period: <Runtime as Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as Config>::MinDisputeDuration::get() - 1,
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -79,9 +79,9 @@ fn create_market_fails_on_min_dispute_period() {
 fn create_market_fails_on_min_oracle_duration() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
-            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() - 1,
-            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+            grace_period: <Runtime as Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as Config>::MinOracleDuration::get() - 1,
+            dispute_duration: <Runtime as Config>::MinDisputeDuration::get(),
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -106,9 +106,9 @@ fn create_market_fails_on_min_oracle_duration() {
 fn create_market_fails_on_max_dispute_period() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
-            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get() + 1,
+            grace_period: <Runtime as Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as Config>::MaxDisputeDuration::get() + 1,
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -133,9 +133,9 @@ fn create_market_fails_on_max_dispute_period() {
 fn create_market_fails_on_max_grace_period() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get() + 1,
-            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
+            grace_period: <Runtime as Config>::MaxGracePeriod::get() + 1,
+            oracle_duration: <Runtime as Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as Config>::MaxDisputeDuration::get(),
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -160,9 +160,9 @@ fn create_market_fails_on_max_grace_period() {
 fn create_market_fails_on_max_oracle_duration() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
-            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get() + 1,
-            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
+            grace_period: <Runtime as Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as Config>::MaxOracleDuration::get() + 1,
+            dispute_duration: <Runtime as Config>::MaxDisputeDuration::get(),
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -188,9 +188,9 @@ fn create_market_fails_on_max_oracle_duration() {
 fn create_market_with_foreign_assets() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
-            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
+            grace_period: <Runtime as Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as Config>::MaxDisputeDuration::get(),
         };
 
         // As per Mock asset_registry genesis ForeignAsset(420) has allow_as_base_asset set to false.
@@ -538,8 +538,8 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let period = MarketPeriod::Block(1..2);
         let deadlines = Deadlines {
             grace_period: 1,
-            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
-            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+            oracle_duration: <Runtime as Config>::MinOracleDuration::get() + 2,
+            dispute_duration: <Runtime as Config>::MinDisputeDuration::get() + 3,
         };
         let metadata = gen_metadata(0x99);
         let MultiHash::Sha3_384(multihash) = metadata;
@@ -589,8 +589,8 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
                 MarketPeriod::Block(1..2),
                 Deadlines {
                     grace_period: 1,
-                    oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
-                    dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+                    oracle_duration: <Runtime as Config>::MinOracleDuration::get() + 2,
+                    dispute_duration: <Runtime as Config>::MinDisputeDuration::get() + 3,
                 },
                 gen_metadata(0x99),
                 MarketCreation::Permissionless,

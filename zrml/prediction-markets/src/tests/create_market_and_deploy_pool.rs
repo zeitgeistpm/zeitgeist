@@ -29,8 +29,8 @@ fn create_market_and_deploy_pool_works() {
         let period = MarketPeriod::Block(1..2);
         let deadlines = Deadlines {
             grace_period: 1,
-            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() + 2,
-            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() + 3,
+            oracle_duration: <Runtime as Config>::MinOracleDuration::get() + 2,
+            dispute_duration: <Runtime as Config>::MinDisputeDuration::get() + 3,
         };
         let metadata = gen_metadata(0x99);
         let MultiHash::Sha3_384(multihash) = metadata;

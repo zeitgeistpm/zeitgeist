@@ -68,7 +68,7 @@ fn sudo_schedule_early_close_at_block_works() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -139,7 +139,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -208,7 +208,7 @@ fn schedule_early_close_block_fails_if_early_close_request_too_late() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -240,7 +240,7 @@ fn schedule_early_close_timestamp_fails_if_early_close_request_too_late() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -269,7 +269,7 @@ fn schedule_early_close_as_market_creator_works() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));

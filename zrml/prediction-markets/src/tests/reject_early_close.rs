@@ -117,7 +117,7 @@ fn reject_early_close_resets_to_old_market_period() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));
@@ -157,7 +157,7 @@ fn reject_early_close_settles_bonds() {
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
             ScoringRule::Lmsr
         ));

@@ -66,7 +66,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
             get_deadlines(),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::Lmsr
         ));

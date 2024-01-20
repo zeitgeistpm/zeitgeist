@@ -48,7 +48,7 @@ use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Perbill;
-use sp_runtime::traits::{BlakeTwo256, Zero, Hash};
+use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
 use zeitgeist_primitives::{
     constants::mock::{BASE, CENT},
     types::{

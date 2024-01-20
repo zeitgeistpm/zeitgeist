@@ -35,7 +35,7 @@ fn close_trusted_market_works() {
             MarketPeriod::Block(0..end),
             Deadlines {
                 grace_period: 0,
-                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
                 dispute_duration: Zero::zero(),
             },
             gen_metadata(0x99),
@@ -90,8 +90,8 @@ fn close_trusted_market_fails_if_not_trusted() {
             MarketPeriod::Block(0..end),
             Deadlines {
                 grace_period: 0,
-                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
-                dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+                oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
+                dispute_duration: <Runtime as Config>::MinDisputeDuration::get(),
             },
             gen_metadata(0x99),
             MarketCreation::Permissionless,
@@ -136,7 +136,7 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
             MarketPeriod::Block(0..end),
             Deadlines {
                 grace_period: 0,
-                oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
+                oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
                 dispute_duration: Zero::zero(),
             },
             gen_metadata(0x99),
