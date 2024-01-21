@@ -34,8 +34,7 @@
 //
 //     Original source: https://github.com/encointer/substrate-fixed
 //
-// The changes applied are: 1) Used same design for definition of `exp`
-// as in the source. 2) Re-used and extended tests for `exp` and other
+// The changes applied are: Re-used and extended tests for `exp` and other
 // functions.
 
 use crate::{
@@ -308,22 +307,7 @@ mod detail {
 }
 
 mod transcendental {
-    use fixed::traits::FixedUnsigned;
-    pub(crate) use hydra_dx_math::transcendental::{exp as inner_exp, ln};
-    use sp_runtime::traits::One;
-
-    pub(crate) fn exp<S, D>(operand: S, neg: bool) -> Result<D, ()>
-    where
-        S: FixedUnsigned + PartialOrd<D> + One,
-        D: FixedUnsigned + PartialOrd<S> + From<S> + One,
-    {
-        if operand == S::one() && neg {
-            let e_inverse =
-                S::from_str("0.367879441171442321595523770161460867445").map_err(|_| ())?;
-            return Ok(D::from(e_inverse));
-        }
-        inner_exp(operand, neg)
-    }
+    pub(crate) use hydra_dx_math::transcendental::{exp, ln};
 
     #[cfg(test)]
     mod tests {
@@ -337,7 +321,7 @@ mod transcendental {
 
         #[test_case("0", false, "1")]
         #[test_case("0", true, "1")]
-        #[test_case("1", false, "2.718281828459045235360287471352662497757")]
+        #[test_case("1", false, "2.7182818284590452353")]
         #[test_case("1", true, "0.367879441171442321595523770161460867445")]
         #[test_case("2", false, "7.3890560989306502265")]
         #[test_case("2", true, "0.13533528323661269186")]
