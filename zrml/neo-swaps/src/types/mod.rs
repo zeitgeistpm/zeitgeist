@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,8 +17,6 @@
 
 mod fee_distribution;
 mod pool;
-mod solo_lp;
 
 pub(crate) use fee_distribution::*;
 pub(crate) use pool::*;
-pub(crate) use solo_lp::*;
