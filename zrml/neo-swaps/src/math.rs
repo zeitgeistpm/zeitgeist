@@ -276,6 +276,10 @@ mod detail {
         amount: FixedType,
         spot_prices: Vec<FixedType>,
     ) -> Option<(FixedType, Vec<FixedType>)> {
+        if amount.is_zero() {
+            // Ensure that if the amount is zero, we don't accidentally return meaningless results.
+            return None;
+        }
         let tmp_reserves = spot_prices
             .iter()
             // Drop the bool (second tuple component) as ln(p) is always negative.
@@ -395,6 +399,7 @@ mod tests {
     use super::*;
     use crate::{consts::*, mock::Runtime as MockRuntime};
     use alloc::str::FromStr;
+    use frame_support::assert_err;
     use test_case::test_case;
 
     type MockBalance = BalanceOf<MockRuntime>;
@@ -440,6 +445,22 @@ mod tests {
         );
     }
 
+    #[test_case(_1, _1, 0)] // Division by zero
+    #[test_case(_1, 1_000 * _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, _1, u128::MAX)] // to_fixed error
+    fn calculate_swap_amount_out_for_buy_throws_math_error(
+        reserve: MockBalance,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
     #[test_case(_10, _10, 144_269_504_088, 41_503_749_928)]
     #[test_case(_1, _1, _1, 2_646_743_359)]
     #[test_case(_2, _2, _2, 5_293_486_719)]
@@ -476,9 +497,21 @@ mod tests {
         );
     }
 
-    #[test]
-    fn calculate_swap_amount_out_for_sell_fails_if_reserve_is_zero() {
-        assert!(MockMath::calculate_swap_amount_out_for_sell(0, _1, _1).is_err());
+    #[test_case(0, _1, _1)]
+    #[test_case(_1, _1, 0)] // Division by zero
+    #[test_case(1000 * _1, _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, _1, u128::MAX)] // to_fixed error
+    fn calculate_swap_amount_out_for_sell_throws_math_error(
+        reserve: MockBalance,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_swap_amount_out_for_sell(reserve, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
+        );
     }
 
     #[test_case(_10, 144_269_504_088, _1_2)]
@@ -490,6 +523,20 @@ mod tests {
         expected: MockBalance,
     ) {
         assert_eq!(MockMath::calculate_spot_price(reserve, liquidity).unwrap(), expected);
+    }
+
+    #[test_case(_1, 0)] // Division by zero
+    #[test_case(1_000 * _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX)] // to_fixed error
+    fn calculate_spot_price_throws_math_error(
+        reserve: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_spot_price(reserve, liquidity),
+            Error::<MockRuntime>::MathError
+        );
     }
 
     #[test_case(_10, vec![_1_2, _1_2], vec![_10, _10], 144_269_504_089)]
@@ -524,19 +571,33 @@ mod tests {
         assert_eq!(reserves, expected_reserves);
     }
 
-    #[test_case(_10, _10, 144_269_504_088, _1 + _1_2)]
-    #[test_case(_10, _1, 144_269_504_088, 5_717_734_625)]
-    #[test_case(_1, _1, _1, 20_861_612_696)]
-    #[test_case(_444, _1, _11, 951_694_399; "underflow_to_zero")]
+    #[test_case(0, vec![_1_10, _2_10, _3_10, _4_10])]
+    #[test_case(u128::MAX, vec![_1_10, _2_10, _3_10, _4_10])] // to_fixed error
+    #[test_case(_1, vec![u128::MAX, 0, 0])] // to_fixed error
+    #[test_case(_1, vec![_1, 0])] // ln out of range
+    fn calculate_reserves_from_spot_prices_throws_math_error(
+        amount: MockBalance,
+        spot_prices: Vec<MockBalance>,
+    ) {
+        assert_err!(
+            MockMath::calculate_reserves_from_spot_prices(amount, spot_prices),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
+    #[test_case(_1, _1, 0)] // Division by zero
+    #[test_case(_1, 1_000 * _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, _1, u128::MAX)] // to_fixed error
     fn calculate_buy_ln_argument_fixed_works(
         reserve: MockBalance,
         amount_in: MockBalance,
         liquidity: MockBalance,
-        expected: MockBalance,
     ) {
-        assert_eq!(
-            MockMath::calculate_buy_ln_argument(reserve, amount_in, liquidity).unwrap(),
-            expected
+        assert_err!(
+            MockMath::calculate_buy_ln_argument(reserve, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
         );
     }
 
