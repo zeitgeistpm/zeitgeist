@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -38,16 +38,15 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Get, Hooks, StorageVersion, Time},
-        Blake2_128Concat, PalletId, Parameter,
+        traits::{Hooks, StorageVersion, Time},
+        Blake2_128Concat, Parameter,
     };
     use parity_scale_codec::{FullCodec, MaxEncodedLen};
     use sp_runtime::{
         traits::{
-            AccountIdConversion, AtLeast32Bit, AtLeast32BitUnsigned, MaybeSerializeDeserialize,
-            Member, Saturating,
+            AtLeast32Bit, AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, Saturating,
         },
-        DispatchError, SaturatedConversion,
+        DispatchError,
     };
     use zeitgeist_primitives::{
         math::checked_ops_res::CheckedAddRes,
@@ -55,16 +54,14 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(7);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(10);
 
-    type BalanceOf<T> = <T as Config>::Balance;
-    type MarketOf<T> = Market<
-        <T as frame_system::Config>::AccountId,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        Asset<MarketIdOf<T>>,
-    >;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type BalanceOf<T> = <T as Config>::Balance;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+    pub(crate) type MarketOf<T> =
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, AssetOf<T>>;
     pub type MarketIdOf<T> = <T as Config>::MarketId;
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
@@ -90,11 +87,6 @@ mod pallet {
             + MaybeSerializeDeserialize
             + Member
             + Parameter;
-
-        // TODO(#837): Remove when on-chain arbitrage is removed!
-        /// The prefix used to calculate the prize pool accounts.
-        #[pallet::constant]
-        type PredictionMarketsPalletId: Get<PalletId>;
 
         /// Time tracker
         type Timestamp: Time<Moment = u64>;
@@ -145,7 +137,7 @@ mod pallet {
         T: Config,
         <T as Config>::Timestamp: Time,
     {
-        type AccountId = T::AccountId;
+        type AccountId = AccountIdOf<T>;
         type BlockNumber = T::BlockNumber;
         type Balance = T::Balance;
         type MarketId = T::MarketId;
@@ -197,13 +189,6 @@ mod pallet {
             Ok(())
         }
 
-        // TODO(#837): Remove when on-chain arbitrage is removed!
-        #[inline]
-        fn market_account(market_id: Self::MarketId) -> Self::AccountId {
-            T::PredictionMarketsPalletId::get()
-                .into_sub_account_truncating(market_id.saturated_into::<u128>())
-        }
-
         // MarketPool
 
         fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) -> DispatchResult {
@@ -242,8 +227,10 @@ mod pallet {
     #[pallet::storage]
     pub type MarketCounter<T: Config> = StorageValue<_, T::MarketId, ValueQuery>;
 
-    /// Maps a market id to a related pool id. It is up to the caller to keep and sync valid
+    /// Maps a market ID to a related pool ID. It is up to the caller to keep and sync valid
     /// existent markets with valid existent pools.
+    ///
+    /// Beware! DEPRECATED as of v0.5.0.
     #[pallet::storage]
     pub type MarketPool<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, PoolId>;
 }

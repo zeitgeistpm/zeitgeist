@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -24,38 +24,32 @@
 
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
-    BalanceOf, Config, Error, MarketIdOf, Pallet,
+    AssetOf, BalanceOf, Config, Error, Pallet, PoolOf,
 };
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure};
 use orml_traits::MultiCurrency;
-use sp_runtime::{
-    traits::{Saturating, Zero},
-    DispatchError,
-};
+use sp_runtime::{traits::Zero, DispatchError};
 use zeitgeist_primitives::{
     math::{
         checked_ops_res::CheckedSubRes,
         fixed::{FixedDiv, FixedMul},
     },
-    types::{Asset, Pool, PoolId, ScoringRule},
+    types::PoolId,
 };
-use zrml_rikiddo::traits::RikiddoMVPallet;
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
-pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, F5, T>(
-    mut p: PoolExitWithExactAmountParams<'_, F1, F2, F3, F4, F5, T>,
+pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, T>(
+    mut p: PoolExitWithExactAmountParams<'_, F1, F2, F3, F4, T>,
 ) -> DispatchResult
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
-    F2: FnMut(),
-    F3: FnMut(BalanceOf<T>) -> DispatchResult,
-    F4: FnMut(PoolAssetEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
-    F5: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
+    F2: FnMut(BalanceOf<T>) -> DispatchResult,
+    F3: FnMut(PoolAssetEvent<T::AccountId, AssetOf<T>, BalanceOf<T>>),
+    F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    Pallet::<T>::check_if_pool_is_active(p.pool)?;
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
+    Pallet::<T>::ensure_pool_is_active(p.pool)?;
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(&p.pool_id);
 
@@ -71,7 +65,6 @@ where
     Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount)?;
     T::AssetManager::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
-    (p.cache_for_arbitrage)();
     (p.event)(PoolAssetEvent {
         asset: p.asset,
         bound: p.bound,
@@ -84,18 +77,16 @@ where
 }
 
 // Common code for `pool_join_with_exact_asset_amount` and `pool_join_with_exact_pool_amount` methods.
-pub(crate) fn pool_join_with_exact_amount<F1, F2, F3, F4, T>(
-    mut p: PoolJoinWithExactAmountParams<'_, F1, F2, F3, F4, T>,
+pub(crate) fn pool_join_with_exact_amount<F1, F2, F3, T>(
+    mut p: PoolJoinWithExactAmountParams<'_, F1, F2, F3, T>,
 ) -> DispatchResult
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
-    F2: FnMut(),
-    F3: FnMut(PoolAssetEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
-    F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
+    F2: FnMut(PoolAssetEvent<T::AccountId, AssetOf<T>, BalanceOf<T>>),
+    F3: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
-    Pallet::<T>::check_if_pool_is_active(p.pool)?;
+    Pallet::<T>::ensure_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(&p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
@@ -109,7 +100,6 @@ where
     Pallet::<T>::mint_pool_shares(p.pool_id, &p.who, pool_amount)?;
     T::AssetManager::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
 
-    (p.cache_for_arbitrage)();
     (p.event)(PoolAssetEvent {
         asset: p.asset,
         bound: p.bound,
@@ -124,13 +114,12 @@ where
 // Common code for `pool_join` and `pool_exit` methods.
 pub(crate) fn pool<F1, F2, F3, F4, T>(mut p: PoolParams<'_, F1, F2, F3, F4, T>) -> DispatchResult
 where
-    F1: FnMut(PoolAssetsEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
-    F2: FnMut(BalanceOf<T>, BalanceOf<T>, Asset<MarketIdOf<T>>) -> DispatchResult,
+    F1: FnMut(PoolAssetsEvent<T::AccountId, AssetOf<T>, BalanceOf<T>>),
+    F2: FnMut(BalanceOf<T>, BalanceOf<T>, AssetOf<T>) -> DispatchResult,
     F3: FnMut() -> DispatchResult,
     F4: FnMut(BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
@@ -153,7 +142,7 @@ where
     (p.transfer_pool)()?;
 
     (p.event)(PoolAssetsEvent {
-        assets: p.pool.assets.clone(),
+        assets: p.pool.assets.clone().into_inner(),
         bounds: p.asset_bounds,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred,
@@ -164,23 +153,19 @@ where
 }
 
 // Common code for `swap_exact_amount_in` and `swap_exact_amount_out` methods.
-pub(crate) fn swap_exact_amount<F1, F2, F3, T>(
-    mut p: SwapExactAmountParams<'_, F1, F2, F3, T>,
+pub(crate) fn swap_exact_amount<F1, F2, T>(
+    mut p: SwapExactAmountParams<'_, F1, F2, T>,
 ) -> DispatchResult
 where
     F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
-    F2: FnMut(),
-    F3: FnMut(SwapEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
+    F2: FnMut(SwapEvent<T::AccountId, AssetOf<T>, BalanceOf<T>>),
     T: crate::Config,
 {
-    Pallet::<T>::check_if_pool_is_active(p.pool)?;
+    Pallet::<T>::ensure_pool_is_active(p.pool)?;
     ensure!(p.pool.assets.binary_search(&p.asset_in).is_ok(), Error::<T>::AssetNotInPool);
     ensure!(p.pool.assets.binary_search(&p.asset_out).is_ok(), Error::<T>::AssetNotInPool);
-
-    if p.pool.scoring_rule == ScoringRule::CPMM {
-        ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
-        ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
-    }
+    ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
+    ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
 
     let spot_price_before =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
@@ -194,74 +179,22 @@ where
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    match p.pool.scoring_rule {
-        ScoringRule::CPMM => {
-            T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-            T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
-            (p.cache_for_arbitrage)();
-        }
-        ScoringRule::RikiddoSigmoidFeeMarketEma => {
-            let base_asset = p.pool.base_asset;
-
-            if p.asset_in == base_asset {
-                T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-                T::AssetManager::deposit(p.asset_out, &p.who, asset_amount_out)?;
-            } else if p.asset_out == base_asset {
-                // We can use the lightweight withdraw here, since event assets are not reserved.
-                T::AssetManager::withdraw(p.asset_in, &p.who, asset_amount_in)?;
-                T::AssetManager::transfer(
-                    p.asset_out,
-                    p.pool_account_id,
-                    &p.who,
-                    asset_amount_out,
-                )?;
-            } else {
-                // Just for safety, should already be checked in p.asset_amounts.
-                return Err(Error::<T>::UnsupportedTrade.into());
-            }
-        }
-        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-            return Err(Error::<T>::InvalidScoringRule.into());
-        }
-    }
+    T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+    T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
 
     let spot_price_after =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;
 
-    // Allow little tolerance
-    match p.pool.scoring_rule {
-        ScoringRule::CPMM => {
-            ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation)
-        }
-        ScoringRule::RikiddoSigmoidFeeMarketEma => ensure!(
-            spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
-            Error::<T>::MathApproximation
-        ),
-        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-            return Err(Error::<T>::InvalidScoringRule.into());
-        }
-    }
+    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
 
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
     }
 
-    match p.pool.scoring_rule {
-        ScoringRule::CPMM => ensure!(
-            spot_price_before_without_fees <= asset_amount_in.bdiv(asset_amount_out)?,
-            Error::<T>::MathApproximation
-        ),
-        ScoringRule::RikiddoSigmoidFeeMarketEma => {
-            // Currently the only allowed trades are base_currency <-> event asset. We count the
-            // volume in base_currency.
-            let base_asset = p.pool.base_asset;
-            let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
-            T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
-        }
-        ScoringRule::Lmsr | ScoringRule::Parimutuel | ScoringRule::Orderbook => {
-            return Err(Error::<T>::InvalidScoringRule.into());
-        }
-    }
+    ensure!(
+        spot_price_before_without_fees <= asset_amount_in.bdiv(asset_amount_out)?,
+        Error::<T>::MathApproximation
+    );
 
     (p.event)(SwapEvent {
         asset_amount_in,
@@ -276,36 +209,34 @@ where
     Ok(())
 }
 
-pub(crate) struct PoolExitWithExactAmountParams<'a, F1, F2, F3, F4, F5, T>
+pub(crate) struct PoolExitWithExactAmountParams<'a, F1, F2, F3, F4, T>
 where
     T: Config,
 {
     pub(crate) asset_amount: F1,
-    pub(crate) asset: Asset<MarketIdOf<T>>,
+    pub(crate) asset: AssetOf<T>,
     pub(crate) bound: BalanceOf<T>,
-    pub(crate) cache_for_arbitrage: F2,
-    pub(crate) ensure_balance: F3,
-    pub(crate) event: F4,
-    pub(crate) who: T::AccountId,
-    pub(crate) pool_amount: F5,
-    pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
-}
-
-pub(crate) struct PoolJoinWithExactAmountParams<'a, F1, F2, F3, F4, T>
-where
-    T: Config,
-{
-    pub(crate) asset: Asset<MarketIdOf<T>>,
-    pub(crate) asset_amount: F1,
-    pub(crate) bound: BalanceOf<T>,
-    pub(crate) cache_for_arbitrage: F2,
+    pub(crate) ensure_balance: F2,
     pub(crate) event: F3,
     pub(crate) who: T::AccountId,
-    pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_amount: F4,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
+    pub(crate) pool: &'a PoolOf<T>,
+}
+
+pub(crate) struct PoolJoinWithExactAmountParams<'a, F1, F2, F3, T>
+where
+    T: Config,
+{
+    pub(crate) asset: AssetOf<T>,
+    pub(crate) asset_amount: F1,
+    pub(crate) bound: BalanceOf<T>,
+    pub(crate) event: F2,
+    pub(crate) who: T::AccountId,
+    pub(crate) pool_account_id: &'a T::AccountId,
+    pub(crate) pool_amount: F3,
+    pub(crate) pool_id: PoolId,
+    pub(crate) pool: &'a PoolOf<T>,
 }
 
 pub(crate) struct PoolParams<'a, F1, F2, F3, F4, T>
@@ -317,26 +248,25 @@ where
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_amount: BalanceOf<T>,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
+    pub(crate) pool: &'a PoolOf<T>,
     pub(crate) transfer_asset: F2,
     pub(crate) transfer_pool: F3,
     pub(crate) fee: F4,
     pub(crate) who: T::AccountId,
 }
 
-pub(crate) struct SwapExactAmountParams<'a, F1, F2, F3, T>
+pub(crate) struct SwapExactAmountParams<'a, F1, F2, T>
 where
     T: Config,
 {
     pub(crate) asset_amounts: F1,
     pub(crate) asset_bound: Option<BalanceOf<T>>,
-    pub(crate) asset_in: Asset<MarketIdOf<T>>,
-    pub(crate) asset_out: Asset<MarketIdOf<T>>,
-    pub(crate) cache_for_arbitrage: F2,
-    pub(crate) event: F3,
+    pub(crate) asset_in: AssetOf<T>,
+    pub(crate) asset_out: AssetOf<T>,
+    pub(crate) event: F2,
     pub(crate) max_price: Option<BalanceOf<T>>,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
+    pub(crate) pool: &'a PoolOf<T>,
     pub(crate) who: T::AccountId,
 }

@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -34,7 +34,6 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
-use std::collections::BTreeMap;
 use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
@@ -77,14 +76,6 @@ where
         with_fees: bool,
         blocks: Vec<BlockNumber>,
     ) -> RpcResult<Vec<SerdeWrapper<Balance>>>;
-
-    #[method(name = "swaps_getAllSpotPrices")]
-    async fn get_all_spot_prices(
-        &self,
-        pool_id: PoolId,
-        with_fees: bool,
-        blocks: Vec<BlockNumber>,
-    ) -> RpcResult<BTreeMap<BlockNumber, Vec<(Asset<MarketId>, Balance)>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -215,39 +206,5 @@ where
                 Ok(res)
             })
             .collect()
-    }
-
-    async fn get_all_spot_prices(
-        &self,
-        pool_id: PoolId,
-        with_fees: bool,
-        blocks: Vec<NumberFor<Block>>,
-    ) -> RpcResult<BTreeMap<NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>>> {
-        let api = self.client.runtime_api();
-        Ok(blocks
-            .into_iter()
-            .map(
-                |block| -> Result<(NumberFor<Block>, Vec<(Asset<MarketId>, Balance)>), CallError> {
-                    let hash = BlockId::number(block);
-                    let prices: Vec<(Asset<MarketId>, Balance)> = api
-                        .get_all_spot_prices(&hash, &pool_id, with_fees)
-                        .map_err(|e| {
-                            CallError::Custom(ErrorObject::owned(
-                                Error::RuntimeError.into(),
-                                "Unable to get_all_spot_prices: ApiError.",
-                                Some(format!("{:?}", e)),
-                            ))
-                        })?
-                        .map_err(|e| {
-                            CallError::Custom(ErrorObject::owned(
-                                Error::RuntimeError.into(),
-                                "Unable to get_all_spot_prices: DispatchError.",
-                                Some(format!("{:?}", e)),
-                            ))
-                        })?;
-                    Ok((block, prices))
-                },
-            )
-            .collect::<Result<BTreeMap<_, _>, _>>()?)
     }
 }

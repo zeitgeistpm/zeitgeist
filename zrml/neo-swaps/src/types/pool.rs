@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -118,6 +118,8 @@ where
     }
 }
 
+// TODO(#1214): Replace BTreeMap with BoundedBTreeMap and remove the unnecessary `MaxEncodedLen`
+// implementation.
 impl<T: Config, LSM: LiquiditySharesManager<T>> MaxEncodedLen for Pool<T, LSM>
 where
     T::AccountId: MaxEncodedLen,

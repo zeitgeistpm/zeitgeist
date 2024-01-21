@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -27,7 +27,7 @@ use crate::{
     types::{CourtParticipantInfo, CourtPoolItem, CourtStatus, Draw, Vote},
     AppealInfo, BalanceOf, Call, Config, CourtId, CourtPool, Courts, DelegatedStakesOf,
     MarketIdToCourtId, MarketOf, Pallet as Court, Pallet, Participants, RequestBlock,
-    SelectedDraws, VoteItem,
+    SelectedDraws, VoteItem, YearlyInflation,
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
@@ -77,7 +77,7 @@ where
         }),
         resolved_outcome: None,
         status: MarketStatus::Disputed,
-        scoring_rule: ScoringRule::CPMM,
+        scoring_rule: ScoringRule::Lmsr,
         bonds: MarketBonds {
             creation: None,
             oracle: None,
@@ -672,6 +672,7 @@ benchmarks! {
 
         <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get());
         let now = <frame_system::Pallet<T>>::block_number();
+        YearlyInflation::<T>::put(Perbill::from_percent(2));
     }: {
         Court::<T>::handle_inflation(now);
     }

@@ -53,6 +53,7 @@
     - [ ] The try-runtime passes without any warnings (substrate storage
           operations often just log a warning instead of failing, so these
           warnings usually point to problem which could break the storage).
+- [ ] Ensure that the [STYLE_GUIDE] is observed.
 
 ## Events
 
@@ -85,3 +86,4 @@ Additional info (similar to the remark emitted by
 anywhere in the chain storage.
 
 [docs.zeitgeist.pm]: docs.zeitgeist.pm
+[STYLE_GUIDE]: ./STYLE_GUIDE.md

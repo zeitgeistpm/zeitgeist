@@ -12,6 +12,7 @@ env_logger = { workspace = true }
 pallet-balances = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
+test-case = { workspace = true }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
 
 [features]
@@ -32,4 +33,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-market-commons"
-version = "0.4.2"
+version = "0.4.3"
