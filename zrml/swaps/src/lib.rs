@@ -60,9 +60,9 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure,
-        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletError, PalletId, Parameter, Twox64Concat,
+        transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -717,17 +717,6 @@ mod pallet {
     #[pallet::getter(fn pools)]
     pub(crate) type Pools<T: Config> =
         StorageMap<_, Blake2_128Concat, PoolId, PoolOf<T>, OptionQuery>;
-
-    // TODO(#1212): Remove in v0.5.1.
-    #[pallet::storage]
-    #[pallet::getter(fn pools_cached_for_arbitrage)]
-    pub type PoolsCachedForArbitrage<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
-
-    // TODO(#1212): Remove in v0.5.1.
-    #[pallet::storage]
-    #[pallet::getter(fn subsidy_providers)]
-    pub type SubsidyProviders<T: Config> =
-        StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, T::AccountId, BalanceOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
