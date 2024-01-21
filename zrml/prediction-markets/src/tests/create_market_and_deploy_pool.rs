@@ -17,8 +17,11 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-
 use zeitgeist_primitives::types::{Bond, MarketBonds};
+
+// TODO(#1239) Issue: Separate integration tests and other; use mocks for unit testing
+// TODO(#1239) do_buy_complete_set failure
+// TODO(#1239) deploy_pool failure
 
 #[test]
 fn create_market_and_deploy_pool_works() {

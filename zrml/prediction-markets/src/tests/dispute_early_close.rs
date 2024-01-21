@@ -21,6 +21,10 @@ use super::*;
 use crate::MarketIdsPerCloseBlock;
 use zeitgeist_primitives::types::{Bond, EarlyClose, EarlyCloseState};
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) MarketIsNotActive
+// TODO(#1239) dispute bond failure
+
 #[test]
 fn dispute_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {

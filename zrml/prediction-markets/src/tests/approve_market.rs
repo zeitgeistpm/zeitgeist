@@ -21,6 +21,9 @@ use super::*;
 use crate::MarketIdsForEdit;
 use sp_runtime::DispatchError;
 
+// TODO(#1239) Be more granular with regards to origins
+// TODO(#1239) Approve fails if market status is not proposed
+
 #[test]
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
@@ -34,7 +37,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        // Make sure it fails from the random joe
+        // Make sure it fails for the random joe
         assert_noop!(
             PredictionMarkets::approve_market(RuntimeOrigin::signed(BOB), 0),
             DispatchError::BadOrigin

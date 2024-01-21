@@ -21,6 +21,9 @@ use super::*;
 use crate::MarketIdsPerCloseBlock;
 use zeitgeist_primitives::types::EarlyCloseState;
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) NoEarlyCloseScheduled
+
 #[test]
 fn reject_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {

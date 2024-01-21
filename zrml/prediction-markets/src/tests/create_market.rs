@@ -26,6 +26,10 @@ use zeitgeist_primitives::{
     types::{BlockNumber, Bond, MarketBonds, Moment},
 };
 
+// TODO(#1239) FeeTooHigh not verified
+// TODO(#1239) InvalidMultihash not verified
+// TODO(#1239) Creation fails if user can't afford the bonds
+
 #[test_case(std::ops::RangeInclusive::new(7, 6); "empty range")]
 #[test_case(555..=555; "one element as range")]
 fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
@@ -184,6 +188,7 @@ fn create_market_fails_on_max_oracle_duration() {
     });
 }
 
+// TODO(#1239) split this test
 #[cfg(feature = "parachain")]
 #[test]
 fn create_market_with_foreign_assets() {
@@ -288,28 +293,6 @@ fn it_does_not_create_market_with_too_many_categories() {
                 ScoringRule::Lmsr
             ),
             Error::<Runtime>::TooManyCategories
-        );
-    });
-}
-
-#[test]
-fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            PredictionMarkets::create_market(
-                RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
-                Perbill::zero(),
-                BOB,
-                MarketPeriod::Block(3..3),
-                get_deadlines(),
-                gen_metadata(0),
-                MarketCreation::Permissionless,
-                MarketType::Categorical(3),
-                Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::Lmsr,
-            ),
-            Error::<Runtime>::InvalidMarketPeriod,
         );
     });
 }

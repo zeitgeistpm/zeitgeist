@@ -21,6 +21,9 @@ use super::*;
 use crate::{LastTimeFrame, MarketIdsPerCloseTimeFrame};
 use zeitgeist_primitives::constants::MILLISECS_PER_BLOCK;
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) MarketPeriodEndNotAlreadyReachedYet
+
 #[test]
 fn manually_close_market_after_long_stall() {
     // We check that `on_market_close` works correctly even if a block takes much longer than 12sec

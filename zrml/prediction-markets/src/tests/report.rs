@@ -20,6 +20,13 @@ use super::*;
 
 use zeitgeist_primitives::{constants::MILLISECS_PER_BLOCK, types::OutcomeReport};
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) MarketAlreadyReported
+// TODO(#1239) Trusted markets resolve immediately
+// TODO(#1239) NotAllowedToReport with timestamps
+// TODO(#1239) Reports are allowed after the oracle duration
+// TODO(#1239) Outsider can't report if they can't pay for the bond
+
 #[test]
 fn it_allows_to_report_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
@@ -90,6 +97,8 @@ fn report_fails_before_grace_period_is_over() {
     });
 }
 
+// TODO(#1239) This test is misnamed - this does NOT ensure that reports outside of the oracle duration are
+// not allowed.
 #[test]
 fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duration_blocks() {
     ExtBuilder::default().build().execute_with(|| {
@@ -172,6 +181,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
     });
 }
 
+// TODO(#1239) Use test_case!
 #[test]
 fn report_fails_on_mismatched_outcome_for_categorical_market() {
     ExtBuilder::default().build().execute_with(|| {
@@ -278,6 +288,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
     });
 }
 
+// TODO(#1239) Use `test_case`
 #[test]
 fn report_fails_on_market_state_proposed() {
     ExtBuilder::default().build().execute_with(|| {

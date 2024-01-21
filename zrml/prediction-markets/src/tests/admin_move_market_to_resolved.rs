@@ -91,6 +91,8 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
     });
 }
 
+// TODO(#1239) resolves disputed market
+
 #[test_case(MarketStatus::Active)]
 #[test_case(MarketStatus::Closed)]
 #[test_case(MarketStatus::Resolved)]

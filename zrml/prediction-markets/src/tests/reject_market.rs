@@ -20,6 +20,9 @@ use super::*;
 
 use crate::{MarketIdsForEdit, MarketIdsPerCloseBlock};
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) Fails if market is not proposed
+
 #[test]
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {

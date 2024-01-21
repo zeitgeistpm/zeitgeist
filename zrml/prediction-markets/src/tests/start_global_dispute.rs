@@ -20,6 +20,13 @@ use super::*;
 
 use zeitgeist_primitives::types::OutcomeReport;
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) NoDisputeMechanism
+// TODO(#1239) InvalidMarketStatus
+// TODO(#1239) GlobalDisputeExistsAlready
+// TODO(#1239) MarketIsNotReported
+// TODO(#1239) MarketDisputeMechanismNotFailed
+
 #[test]
 fn start_global_dispute_fails_on_wrong_mdm() {
     ExtBuilder::default().build().execute_with(|| {

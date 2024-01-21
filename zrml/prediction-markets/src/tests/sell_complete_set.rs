@@ -19,6 +19,8 @@
 use super::*;
 use test_case::test_case;
 
+// TODO(#1239) MarketDoesNotExist
+
 #[test_case(ScoringRule::Lmsr)]
 #[test_case(ScoringRule::Orderbook)]
 fn sell_complete_set_works(scoring_rule: ScoringRule) {

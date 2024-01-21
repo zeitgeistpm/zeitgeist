@@ -36,6 +36,7 @@ mod on_resolution;
 mod redeem_shares;
 mod reject_early_close;
 mod reject_market;
+mod request_edit;
 mod report;
 mod schedule_early_close;
 mod sell_complete_set;

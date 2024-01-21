@@ -19,94 +19,11 @@
 use super::*;
 
 use crate::MarketIdsForEdit;
-use sp_runtime::DispatchError;
 
-#[test]
-fn it_allows_request_edit_origin_to_request_edits_for_markets() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            2..4,
-            ScoringRule::Lmsr,
-        );
-
-        // make sure it's in status proposed
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
-
-        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
-        // Make sure it fails from the random joe
-        assert_noop!(
-            PredictionMarkets::request_edit(RuntimeOrigin::signed(BOB), 0, edit_reason.clone()),
-            DispatchError::BadOrigin
-        );
-
-        // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::request_edit(
-            RuntimeOrigin::signed(SUDO),
-            0,
-            edit_reason.clone()
-        ));
-        System::assert_last_event(
-            Event::MarketRequestedEdit(
-                0,
-                edit_reason.try_into().expect("Conversion to BoundedVec failed"),
-            )
-            .into(),
-        );
-
-        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
-    });
-}
-
-#[test]
-fn request_edit_fails_on_bad_origin() {
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        // Creates an advised market.
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            2..4,
-            ScoringRule::Lmsr,
-        );
-
-        // make sure it's in status proposed
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
-
-        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
-        // Make sure it fails from the random joe
-        assert_noop!(
-            PredictionMarkets::request_edit(RuntimeOrigin::signed(BOB), 0, edit_reason),
-            DispatchError::BadOrigin
-        );
-    });
-}
-
-#[test]
-fn edit_request_fails_if_edit_reason_is_too_long() {
-    ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
-        simple_create_categorical_market(
-            Asset::Ztg,
-            MarketCreation::Advised,
-            0..2,
-            ScoringRule::Lmsr,
-        );
-
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
-
-        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize + 1];
-
-        assert_noop!(
-            PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason),
-            Error::<Runtime>::EditReasonLengthExceedsMaxEditReasonLen
-        );
-    });
-}
+// TODO(#1239) MarketEditNotRequested
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) InvalidMarketStatus
+// TODO(#1239) All failures that need to be ensured for `create_market`
 
 #[test]
 fn only_creator_can_edit_market() {

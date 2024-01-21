@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::MarketIdsPerCloseBlock;
+use crate::{MarketIdsPerCloseBlock, MomentOf};
 use test_case::test_case;
 use zeitgeist_primitives::constants::MILLISECS_PER_BLOCK;
 
@@ -52,7 +52,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
 fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp() {
     ExtBuilder::default().build().execute_with(|| {
         let start_block = 7;
-        set_timestamp_for_on_initialize(start_block * MILLISECS_PER_BLOCK as u64);
+        set_timestamp_for_on_initialize(start_block * MILLISECS_PER_BLOCK as MomentOf<Runtime>);
         run_blocks(start_block);
         let start = <zrml_market_commons::Pallet<Runtime>>::now();
 

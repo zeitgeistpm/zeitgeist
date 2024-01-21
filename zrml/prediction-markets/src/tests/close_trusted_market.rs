@@ -22,6 +22,9 @@ use test_case::test_case;
 use crate::MarketIdsPerCloseBlock;
 use sp_runtime::traits::Zero;
 
+// TODO(#1239) MarketDoesNotExist
+
+// TODO(#1239) Split test
 #[test]
 fn close_trusted_market_works() {
     ExtBuilder::default().build().execute_with(|| {

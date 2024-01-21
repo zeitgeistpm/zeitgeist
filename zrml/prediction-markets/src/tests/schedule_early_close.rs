@@ -24,6 +24,13 @@ use zeitgeist_primitives::{
     types::{EarlyClose, EarlyCloseState},
 };
 
+// TODO(#1239) MarketDoesNotExist
+// TODO(#1239) RequesterNotCreator
+// TODO(#1239) MarketIsNotActive
+// TODO(#1239) OnlyAuthorizedCanScheduleEarlyClose
+// TODO(#1239) Correct repatriations
+// TODO(#1239) reserve_named failure
+
 #[test]
 fn schedule_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {

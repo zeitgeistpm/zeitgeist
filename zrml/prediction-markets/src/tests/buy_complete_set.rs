@@ -19,6 +19,8 @@
 use super::*;
 use test_case::test_case;
 
+// TODO(#1239) buy_complete_set fails if market doesn't exist
+
 #[test]
 fn buy_complete_set_works() {
     let test = |base_asset: AssetOf<Runtime>| {

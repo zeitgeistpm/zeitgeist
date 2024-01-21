@@ -21,6 +21,10 @@ use test_case::test_case;
 
 use zeitgeist_primitives::types::{OutcomeReport, ScalarPosition};
 
+// TODO(#1239) MarketIsNotResolved
+// TODO(#1239) NoWinningBalance
+// TODO(#1239) MarketDoesNotExist
+
 #[test]
 fn it_allows_to_redeem_shares() {
     let test = |base_asset: AssetOf<Runtime>| {

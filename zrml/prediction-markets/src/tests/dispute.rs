@@ -22,6 +22,10 @@ use test_case::test_case;
 use crate::MarketIdsPerDisputeBlock;
 use zeitgeist_primitives::types::{Bond, OutcomeReport};
 
+// TODO(#1239) fails if market doesn't exist
+// TODO(#1239) fails if market is trusted
+// TODO(#1239) fails if user can't afford the bond
+
 #[test]
 fn it_allows_to_dispute_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
