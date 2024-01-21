@@ -529,10 +529,7 @@ mod tests {
     #[test_case(1_000 * _1, _1)] // Overflow
     #[test_case(u128::MAX, _1)] // to_fixed error
     #[test_case(_1, u128::MAX)] // to_fixed error
-    fn calculate_spot_price_throws_math_error(
-        reserve: MockBalance,
-        liquidity: MockBalance,
-    ) {
+    fn calculate_spot_price_throws_math_error(reserve: MockBalance, liquidity: MockBalance) {
         assert_err!(
             MockMath::calculate_spot_price(reserve, liquidity),
             Error::<MockRuntime>::MathError
