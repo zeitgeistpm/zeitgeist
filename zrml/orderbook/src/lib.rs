@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -39,7 +39,7 @@ use sp_runtime::traits::{Get, Zero};
 use zeitgeist_primitives::{
     math::{
         checked_ops_res::{CheckedAddRes, CheckedSubRes},
-        fixed::{FixedDiv, FixedMul},
+        fixed::FixedMulDiv,
     },
     traits::{DistributeFees, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
@@ -295,10 +295,7 @@ mod pallet {
             // This ensures that the reserve of the maker
             // is always enough to repatriate successfully!
             // `maker_full_fill` is ensured to be never zero in `ensure_ratio_quotient_valid`
-            let ratio = maker_fill.bdiv_floor(maker_full_fill)?;
-            // returns the (partial) amount of what the taker gets from the maker's amount
-            // respected the partial fill from the taker of what the maker wants to get filled
-            ratio.bmul_floor(taker_full_fill)
+            maker_fill.bmul_bdiv_floor(taker_full_fill, maker_full_fill)
         }
 
         fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
