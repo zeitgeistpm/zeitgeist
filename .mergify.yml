@@ -35,7 +35,8 @@ pull_request_rules:
             - s:in-progress
             - s:review-needed
   - name: Set in-progress label after changes are pushed
-    conditions: []
+    conditions:
+      -  commits[-1].date_committer>=0 days 00:01 ago
     actions:
         label:
           add:
@@ -51,10 +52,11 @@ pull_request_rules:
     conditions:
       - commits[-1].author=mergify[bot]
       - label=s:in-progress
+      - queue-position=0
     actions:
         label:
           remove:
             - s:in-progress
           add:
             - s:accepted
-
+            
