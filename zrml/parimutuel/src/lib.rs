@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -44,11 +44,10 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchResult, SaturatedConversion,
+        DispatchResult,
     };
     use zeitgeist_primitives::{
-        constants::BASE,
-        math::fixed::{FixedDiv, FixedMul},
+        math::fixed::FixedMulDiv,
         traits::DistributeFees,
         types::{Asset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
     };
@@ -260,7 +259,6 @@ mod pallet {
             winning_balance: BalanceOf<T>,
             pot_total: BalanceOf<T>,
             outcome_total: BalanceOf<T>,
-            payoff_ratio_mul_base: BalanceOf<T>,
             payoff: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(
@@ -275,13 +273,6 @@ mod pallet {
                     InconsistentStateError::OutcomeIssuanceGreaterCollateral
                 )
             );
-            if payoff_ratio_mul_base < BASE.saturated_into() {
-                log::debug!(
-                    target: LOG_TARGET,
-                    "The payoff ratio should be greater than or equal to BASE!"
-                );
-                debug_assert!(false);
-            }
             if payoff < winning_balance {
                 log::debug!(
                     target: LOG_TARGET,
@@ -406,16 +397,9 @@ mod pallet {
 
             let pot_account = Self::pot_account(market_id);
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
-            let payoff_ratio_mul_base = pot_total.bdiv_floor(outcome_total)?;
-            let payoff = payoff_ratio_mul_base.bmul_floor(winning_balance)?;
+            let payoff = pot_total.bmul_bdiv(winning_balance, outcome_total)?;
 
-            Self::check_values(
-                winning_balance,
-                pot_total,
-                outcome_total,
-                payoff_ratio_mul_base,
-                payoff,
-            )?;
+            Self::check_values(winning_balance, pot_total, outcome_total, payoff)?;
 
             let withdrawn_asset_balance = winning_balance;
 

@@ -196,17 +196,13 @@ where
         bmul_bdiv_common(self, multiplier, divisor, adjustment)
     }
 
-    fn bmul_bdiv_floor(&self, _multiplier: Self, _divisor: Self) -> Result<Self, DispatchError> {
-        // TODO(#1217): Commented mplementation below should work, but remains untested!
-        // bmul_bdiv_common(self, multiplier, divisor, Zero::zero())
-        Err(DispatchError::Other("not implemented"))
+    fn bmul_bdiv_floor(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
+        bmul_bdiv_common(self, multiplier, divisor, Zero::zero())
     }
 
-    fn bmul_bdiv_ceil(&self, _multiplier: Self, _divisor: Self) -> Result<Self, DispatchError> {
-        // TODO(#1217): Commented mplementation below should work, but remains untested!
-        // let adjustment = ZeitgeistBase::<T>::get()?.checked_sub_res(&1u8.into())?;
-        // bmul_bdiv_common(self, multiplier, divisor, adjustment)
-        Err(DispatchError::Other("not implemented"))
+    fn bmul_bdiv_ceil(&self, multiplier: Self, divisor: Self) -> Result<Self, DispatchError> {
+        let adjustment = ZeitgeistBase::<T>::get()?.checked_sub_res(&1u8.into())?;
+        bmul_bdiv_common(self, multiplier, divisor, adjustment)
     }
 }
 
@@ -647,14 +643,176 @@ mod tests {
     #[test_case(1_234_567 * _1, 9_876_543 * _1, 123_456, 9876599000357212286158412534)]
     #[test_case(1_000_000 * _1, 9_876_543 * _1, 1_000_000 * _1, 9_876_543 * _1)]
 
-    fn fixed_mul_div_works(lhs: u128, multiplier: u128, divisor: u128, expected: u128) {
+    fn bmul_bdiv_works(lhs: u128, multiplier: u128, divisor: u128, expected: u128) {
         assert_eq!(lhs.bmul_bdiv(multiplier, divisor).unwrap(), expected);
     }
 
     #[test_case(_1, u128::MAX, u128::MAX, DispatchError::Arithmetic(ArithmeticError::Overflow))]
     #[test_case(_1, _2, 0, DispatchError::Arithmetic(ArithmeticError::DivisionByZero))]
-    fn fixed_mul_div_fails(lhs: u128, multiplier: u128, divisor: u128, expected: DispatchError) {
+    fn bmul_bdiv_fails(lhs: u128, multiplier: u128, divisor: u128, expected: DispatchError) {
         assert_eq!(lhs.bmul_bdiv(multiplier, divisor), Err(expected));
+    }
+
+    // bmul tests
+    #[test_case(0, 0, _1, 0)]
+    #[test_case(0, _1, _1, 0)]
+    #[test_case(0, _2, _1, 0)]
+    #[test_case(0, _3, _1, 0)]
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_1, _1, _1, _1)]
+    #[test_case(_1, _2, _1, _2)]
+    #[test_case(_1, _3, _1, _3)]
+    #[test_case(_2, 0, _1, 0)]
+    #[test_case(_2, _1, _1, _2)]
+    #[test_case(_2, _2, _1, _4)]
+    #[test_case(_2, _3, _1, _6)]
+    #[test_case(_3, 0, _1, 0)]
+    #[test_case(_3, _1, _1, _3)]
+    #[test_case(_3, _2, _1, _6)]
+    #[test_case(_3, _3, _1, _9)]
+    #[test_case(_4, _1_2, _1, _2)]
+    #[test_case(_5, _1 + _1_2, _1, _7 + _1_2)]
+    #[test_case(_1 + 1, _2, _1, _2 + 2)]
+    #[test_case(9_999_999_999, _2, _1, 19_999_999_998)]
+    #[test_case(9_999_999_999, _10, _1, 99_999_999_990)]
+    // Rounding behavior when multiplying with small numbers
+    #[test_case(9_999_999_999, _1_2, _1, _1_2 - 1)] // 4999999999.5
+    #[test_case(9_999_999_997, _1_4, _1, 2_499_999_999)] // 2499999999.25
+    #[test_case(9_999_999_996, _1_3, _1, 3_333_333_331)] // 3333333331.666...
+    #[test_case(10_000_000_001, _1_10, _1, _1_10)]
+    #[test_case(10_000_000_005, _1_10, _1, _1_10)]
+    #[test_case(10_000_000_009, _1_10, _1, _1_10)] //
+
+    // bdiv tests
+    #[test_case(0, _1, _3, 0)]
+    #[test_case(_1, _1, _2, _1_2)]
+    #[test_case(_2, _1, _2, _1)]
+    #[test_case(_3,_1,  _2, _1 + _1_2)]
+    #[test_case(_3, _1, _3, _1)]
+    #[test_case(_3 + _1_2, _1, _1_2, _7)]
+    #[test_case(99_999_999_999, _1, 1, 99_999_999_999 * _1)]
+    // Rounding behavior
+    #[test_case(_2, _1, _3, _2_3)] // 0.6666...
+    #[test_case(99_999_999_999, _1, _10, 9_999_999_999)]
+    #[test_case(99_999_999_994, _1, _10, 9_999_999_999)]
+    #[test_case(9, _1, _10, 0)] // 0.0...09 (less than precision)
+    #[test_case(4, _1, _10, 0)] // 0.0...04 (less than precision)
+
+    // Normal Cases
+    #[test_case(_2, _2, _2, _2)]
+    #[test_case(_1, _2, _3, _2_3)] // 0.6666...
+    #[test_case(_2, _3, _4, _1 + _1_2)]
+    #[test_case(_1 + 1, _2, _3, (_2 + 2) / 3)]
+    #[test_case(_5, _6, _7, _5 * _6 / _7)]
+    #[test_case(_100, _101, _20, _100 * _101 / _20)] //
+
+    // Boundary cases
+    #[test_case(u128::MAX / _1, _1, _2, u128::MAX / _2)]
+    #[test_case(0, _1, _2, 0)]
+    #[test_case(_1, u128::MAX / _1, u128::MAX / _1, _1)] //
+
+    // Special rounding cases
+    #[test_case(_1, _1_2, _1, _1_2)]
+    #[test_case(_1, _1_3, _1, _1_3)]
+    #[test_case(_1, _2_3, _1, _2_3)]
+    #[test_case(_9, _1_2, _1, _9 / 2)]
+    #[test_case(_9, _1_3, _1, 29_999_999_997)]
+    #[test_case(_9, _2_3, _1, 59_999_999_994)] //
+
+    // Divide-first value
+    #[test_case(1_000_000 * _1, 1_000_000 * _1, _10, 100000000000 * _1)]
+    #[test_case(1_234_567 * _1, 9_876_543 * _1, 123_456, 9876599000357212286158412534)]
+    #[test_case(1_000_000 * _1, 9_876_543 * _1, 1_000_000 * _1, 9_876_543 * _1)]
+
+    fn bmul_bdiv_floor_works(lhs: u128, multiplier: u128, divisor: u128, expected: u128) {
+        assert_eq!(lhs.bmul_bdiv_floor(multiplier, divisor).unwrap(), expected);
+    }
+
+    #[test_case(_1, u128::MAX, u128::MAX, DispatchError::Arithmetic(ArithmeticError::Overflow))]
+    #[test_case(_1, _2, 0, DispatchError::Arithmetic(ArithmeticError::DivisionByZero))]
+    fn bmul_bdiv_floor_fails(lhs: u128, multiplier: u128, divisor: u128, expected: DispatchError) {
+        assert_eq!(lhs.bmul_bdiv_floor(multiplier, divisor), Err(expected));
+    }
+
+    // bmul tests
+    #[test_case(0, 0, _1, 0)]
+    #[test_case(0, _1, _1, 0)]
+    #[test_case(0, _2, _1, 0)]
+    #[test_case(0, _3, _1, 0)]
+    #[test_case(_1, 0, _1, 0)]
+    #[test_case(_1, _1, _1, _1)]
+    #[test_case(_1, _2, _1, _2)]
+    #[test_case(_1, _3, _1, _3)]
+    #[test_case(_2, 0, _1, 0)]
+    #[test_case(_2, _1, _1, _2)]
+    #[test_case(_2, _2, _1, _4)]
+    #[test_case(_2, _3, _1, _6)]
+    #[test_case(_3, 0, _1, 0)]
+    #[test_case(_3, _1, _1, _3)]
+    #[test_case(_3, _2, _1, _6)]
+    #[test_case(_3, _3, _1, _9)]
+    #[test_case(_4, _1_2, _1, _2)]
+    #[test_case(_5, _1 + _1_2, _1, _7 + _1_2)]
+    #[test_case(_1 + 1, _2, _1, _2 + 2)]
+    #[test_case(9_999_999_999, _2, _1, 19_999_999_998)]
+    #[test_case(9_999_999_999, _10, _1, 99_999_999_990)]
+    // Rounding behavior when multiplying with small numbers
+    #[test_case(9_999_999_999, _1_2, _1, _1_2)] // 4999999999.5
+    #[test_case(9_999_999_997, _1_4, _1, 2_500_000_000)] // 2499999999.25
+    #[test_case(9_999_999_996, _1_3, _1, 3_333_333_332)] // 3333333331.666...
+    #[test_case(10_000_000_001, _1_10, _1, _1_10 + 1)]
+    #[test_case(10_000_000_005, _1_10, _1, _1_10 + 1)]
+    #[test_case(10_000_000_009, _1_10, _1, _1_10 + 1)] //
+
+    // bdiv tests
+    #[test_case(0, _1, _3, 0)]
+    #[test_case(_1, _1, _2, _1_2)]
+    #[test_case(_2, _1, _2, _1)]
+    #[test_case(_3,_1,  _2, _1 + _1_2)]
+    #[test_case(_3, _1, _3, _1)]
+    #[test_case(_3 + _1_2, _1, _1_2, _7)]
+    #[test_case(99_999_999_999, _1, 1, 99_999_999_999 * _1)]
+    // Rounding behavior
+    #[test_case(_2, _1, _3, _2_3 + 1)] // 0.6666...
+    #[test_case(99_999_999_999, _1, _10, _1)]
+    #[test_case(99_999_999_991, _1, _10, _1)]
+    #[test_case(9, _1, _10, 1)] // 0.0...09 (less than precision)
+    #[test_case(4, _1, _10, 1)] // 0.0...04 (less than precision)
+
+    // Normal Cases
+    #[test_case(_2, _2, _2, _2)]
+    #[test_case(_1, _2, _3, _2_3 + 1)] // 0.6666...
+    #[test_case(_2, _3, _4, _1 + _1_2)]
+    #[test_case(_1 + 1, _2, _3, 6_666_666_668)] // 0.6666666667333333
+    #[test_case(_5, _6, _7, 42_857_142_858)]
+    #[test_case(_100, _101, _20, _100 * _101 / _20)] //
+
+    // Boundary cases
+    #[test_case(u128::MAX / _1, _1, _2, u128::MAX / _2)]
+    #[test_case(0, _1, _2, 0)]
+    #[test_case(_1, u128::MAX / _1, u128::MAX / _1, _1)] //
+
+    // Special rounding cases
+    #[test_case(_1, _1_2, _1, _1_2)]
+    #[test_case(_1, _1_3, _1, _1_3)]
+    #[test_case(_1, _2_3, _1, _2_3)]
+    #[test_case(_9, _1_2, _1, _9 / 2)]
+    #[test_case(_9, _1_3, _1, 29_999_999_997)]
+    #[test_case(_9, _2_3, _1, 59_999_999_994)] //
+
+    // Divide-first value
+    #[test_case(1_000_000 * _1, 1_000_000 * _1, _10, 100000000000 * _1)]
+    #[test_case(1_234_567 * _1, 9_876_543 * _1, 123_456, 9876599000357212286158412534)]
+    #[test_case(1_000_000 * _1, 9_876_543 * _1, 1_000_000 * _1, 9_876_543 * _1)]
+
+    fn bmul_bdiv_ceil_works(lhs: u128, multiplier: u128, divisor: u128, expected: u128) {
+        assert_eq!(lhs.bmul_bdiv_ceil(multiplier, divisor).unwrap(), expected);
+    }
+
+    #[test_case(_1, u128::MAX, u128::MAX, DispatchError::Arithmetic(ArithmeticError::Overflow))]
+    #[test_case(_1, _2, 0, DispatchError::Arithmetic(ArithmeticError::DivisionByZero))]
+    fn bmul_bdiv_ceil_fails(lhs: u128, multiplier: u128, divisor: u128, expected: DispatchError) {
+        assert_eq!(lhs.bmul_bdiv_ceil(multiplier, divisor), Err(expected));
     }
 
     #[test_case(0, 10, 0.0)]
