@@ -35,6 +35,7 @@ fn multicurrency_test_helper(
     assert_ok!(AssetRouter::ensure_can_withdraw(asset, &ALICE, initial_amount));
     assert!(AssetRouter::ensure_can_withdraw(asset, &ALICE, initial_amount + 1).is_err());
     assert_ok!(AssetRouter::transfer(asset, &ALICE, &BOB, min_balance));
+    assert_eq!(AssetRouter::free_balance(asset, &BOB), min_balance);
     assert_eq!(AssetRouter::free_balance(asset, &ALICE), initial_amount - min_balance);
     assert_ok!(AssetRouter::withdraw(asset, &ALICE, 1));
     assert_eq!(AssetRouter::free_balance(asset, &ALICE), initial_amount - min_balance - 1);
