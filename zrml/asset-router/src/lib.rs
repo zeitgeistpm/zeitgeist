@@ -300,7 +300,7 @@ pub mod pallet {
                 );
             }
 
-            let withdraw_reason = if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            let withdraw_consequence = if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
                 T::MarketAssets::can_withdraw(asset, who, amount)
             } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
                 T::CampaignAssets::can_withdraw(asset, who, amount)
@@ -310,7 +310,7 @@ pub mod pallet {
                 return Err(Error::<T>::UnknownAsset.into());
             };
 
-            withdraw_reason.into_result().map(|_| ())
+            withdraw_consequence.into_result().map(|_| ())
         }
 
         fn transfer(
