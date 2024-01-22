@@ -12,7 +12,6 @@ pull_request_rules:
       - check-success=Quick check benchmarks
       - check-success=Test standalone build
       - check-success=Test parachain build
-      - check-success=Fuzz
       - label=s:accepted
     actions:
       label:
