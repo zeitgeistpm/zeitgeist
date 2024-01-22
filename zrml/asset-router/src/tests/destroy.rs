@@ -93,9 +93,9 @@ fn destroy_routes_currencies_correctly() {
             &ALICE,
             CURRENCY_INITIAL_AMOUNT
         ));
-        assert_err!(AssetRouter::start_destroy(CURRENCY, None), Error::<Runtime>::Unsupported);
-        assert_err!(AssetRouter::destroy_accounts(CURRENCY, 100), Error::<Runtime>::Unsupported);
-        assert_err!(AssetRouter::destroy_approvals(CURRENCY, 100), Error::<Runtime>::Unsupported);
-        assert_err!(AssetRouter::finish_destroy(CURRENCY), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::start_destroy(CURRENCY, None), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::destroy_accounts(CURRENCY, 100), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::destroy_approvals(CURRENCY, 100), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::finish_destroy(CURRENCY), Error::<Runtime>::Unsupported);
     });
 }
