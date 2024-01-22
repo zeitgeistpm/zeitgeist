@@ -46,7 +46,7 @@ pull_request_rules:
             - s:on-hold
             - s:review-needed
             - s:revision-needed
-  - name: Trigger CI after Mergify merged the base branch
+  - name: Trigger CI after Mergify merged the base branch (fix merge queue)
     conditions:
       - commits[-1].author=mergify[bot]
       - label=s:in-progress
