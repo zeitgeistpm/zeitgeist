@@ -19,6 +19,8 @@
 
 use super::*;
 use orml_traits::MultiCurrency;
+use test_case::test_case;
+use zeitgeist_primitives::types::{Amount, Balance};
 
 fn multicurrency_test_helper(
     asset: Assets,
@@ -51,7 +53,7 @@ fn multicurrency_test_helper(
 #[test]
 fn multicurrency_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE,));
+        assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
 
         multicurrency_test_helper(
             CAMPAIGN_ASSET,
@@ -68,7 +70,7 @@ fn multicurrency_routes_campaign_assets_correctly() {
 #[test]
 fn multicurrency_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE,));
+        assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
 
         multicurrency_test_helper(
             CUSTOM_ASSET,
@@ -85,7 +87,7 @@ fn multicurrency_routes_custom_assets_correctly() {
 #[test]
 fn multicurrency_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
+        assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE));
 
         multicurrency_test_helper(
             MARKET_ASSET,
@@ -107,5 +109,40 @@ fn multicurrency_routes_currencies_correctly() {
         assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
         assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
         assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
+    });
+}
+
+#[test_case(0, Some(0); "zero")]
+#[test_case(Amount::max_value(), Some(Amount::max_value().abs() as Balance); "max")]
+#[test_case(Amount::min_value(), None; "min")]
+#[test_case(Amount::min_value() + 1, Some((Amount::min_value() + 1).abs() as Balance); "min_plus_one")]
+fn multicurrency_update_balance_handles_overflows_correctly(
+    update: Amount,
+    expected: Option<Balance>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+
+        if update.is_negative() {
+            assert_ok!(AssetRouter::update_balance(CAMPAIGN_ASSET, &ALICE, Amount::max_value()));
+        }
+
+        if let Some(expected_inner) = expected {
+            assert_ok!(AssetRouter::update_balance(CAMPAIGN_ASSET, &ALICE, update));
+
+            if update.is_negative() {
+                assert_eq!(
+                    AssetRouter::free_balance(CAMPAIGN_ASSET, &ALICE),
+                    Amount::max_value() as Balance - expected_inner
+                );
+            } else {
+                assert_eq!(AssetRouter::free_balance(CAMPAIGN_ASSET, &ALICE), expected_inner);
+            }
+        } else {
+            assert_noop!(
+                AssetRouter::update_balance(CAMPAIGN_ASSET, &ALICE, update),
+                Error::<Runtime>::AmountIntoBalanceFailed
+            );
+        }
     });
 }

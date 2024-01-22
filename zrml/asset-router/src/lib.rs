@@ -300,7 +300,8 @@ pub mod pallet {
                 );
             }
 
-            let withdraw_consequence = if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            let withdraw_consequence = if let Ok(asset) = T::MarketAssetType::try_from(currency_id)
+            {
                 T::MarketAssets::can_withdraw(asset, who, amount)
             } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
                 T::CampaignAssets::can_withdraw(asset, who, amount)
@@ -423,10 +424,9 @@ pub mod pallet {
                 return Ok(());
             }
 
-            // Ensure this doesn't overflow. There isn't any traits that exposes
-            // `saturating_abs` so we need to do it manually.
+            // Ensure that no overflows happen during abs().
             let by_amount_abs = if by_amount == Self::Amount::min_value() {
-                Self::Amount::max_value()
+                return Err(Error::<T>::AmountIntoBalanceFailed.into());
             } else {
                 by_amount.abs()
             };
