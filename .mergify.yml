@@ -19,8 +19,8 @@ pull_request_rules:
         remove:
           - s:in-progress
           - s:review-needed
-      merge:
-        method: squash
+      queue:
+        merge_method: squash
   - name: ask to resolve conflict
     conditions:
       - conflict
