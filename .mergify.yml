@@ -35,7 +35,7 @@ pull_request_rules:
             - s:in-progress
             - s:review-needed
   - name: Set in-progress label after changes are pushed
-    conditions:
+    conditions: []
     actions:
         label:
           add:
