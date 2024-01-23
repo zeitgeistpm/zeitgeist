@@ -54,6 +54,8 @@ fn multicurrency_test_helper(
 #[test]
 fn multicurrency_routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use frame_support::traits::tokens::fungibles::Inspect;
+
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
 
         multicurrency_test_helper(
@@ -62,15 +64,17 @@ fn multicurrency_routes_campaign_assets_correctly() {
             CAMPAIGN_ASSET_MIN_BALANCE,
         );
 
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
+        assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
+        assert_eq!(<Tokens as MultiCurrency<AccountId>>::total_issuance(CURRENCY_INTERNAL), 0);
     });
 }
 
 #[test]
 fn multicurrency_routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use frame_support::traits::tokens::fungibles::Inspect;
+
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
 
         multicurrency_test_helper(
@@ -79,15 +83,20 @@ fn multicurrency_routes_custom_assets_correctly() {
             CUSTOM_ASSET_MIN_BALANCE,
         );
 
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(
+            <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
+            0
+        );
+        assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
+        assert_eq!(<Tokens as MultiCurrency<AccountId>>::total_issuance(CURRENCY_INTERNAL), 0);
     });
 }
 
 #[test]
 fn multicurrency_routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use frame_support::traits::tokens::fungibles::Inspect;
+
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE));
 
         multicurrency_test_helper(
@@ -96,20 +105,28 @@ fn multicurrency_routes_market_assets_correctly() {
             MARKET_ASSET_MIN_BALANCE,
         );
 
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(
+            <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
+            0
+        );
+        assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
+        assert_eq!(<Tokens as MultiCurrency<AccountId>>::total_issuance(CURRENCY_INTERNAL), 0);
     });
 }
 
 #[test]
 fn multicurrency_routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use frame_support::traits::tokens::fungibles::Inspect;
+
         multicurrency_test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT, CURRENCY_MIN_BALANCE);
 
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
+        assert_eq!(
+            <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
+            0
+        );
+        assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
+        assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
     });
 }
 

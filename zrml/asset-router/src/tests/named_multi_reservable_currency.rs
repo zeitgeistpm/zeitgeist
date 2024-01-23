@@ -25,12 +25,12 @@ fn named_multi_reserveable_currency_unroutable_test_helper(
     initial_amount: <Runtime as crate::Config>::Balance,
 ) {
     assert_ok!(AssetRouter::deposit(asset, &ALICE, initial_amount));
-    assert_err!(
+    assert_noop!(
         AssetRouter::reserve_named(&Default::default(), asset, &ALICE, initial_amount),
         Error::<Runtime>::Unsupported
     );
     assert_eq!(AssetRouter::slash_reserved_named(&Default::default(), asset, &ALICE, 1), 1);
-    assert_err!(
+    assert_noop!(
         AssetRouter::repatriate_reserved_named(
             &Default::default(),
             asset,

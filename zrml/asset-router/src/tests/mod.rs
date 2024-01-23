@@ -19,7 +19,7 @@
 
 use super::{mock::*, Error};
 use frame_support::{
-    assert_err, assert_noop, assert_ok,
+    assert_noop, assert_ok,
     dispatch::RawOrigin::Signed,
     traits::{
         tokens::{

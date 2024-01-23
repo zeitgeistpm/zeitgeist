@@ -52,6 +52,7 @@ pub(super) const CUSTOM_ASSET_INTERNAL: CustomAssetClass = CustomAssetClass(0);
 pub(super) const MARKET_ASSET: Assets = Assets::NewCategoricalOutcome(7, 8);
 pub(super) const MARKET_ASSET_INTERNAL: MarketAsset = MarketAsset::CategoricalOutcome(7, 8);
 pub(super) const CURRENCY: Assets = Assets::ForeignAsset(0);
+pub(super) const CURRENCY_INTERNAL: Currencies = Currencies::ForeignAsset(0);
 
 pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 1;
 pub(super) const CUSTOM_ASSET_MIN_BALANCE: Balance = 2;

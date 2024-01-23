@@ -26,10 +26,13 @@ fn multi_reserveable_currency_unroutable_test_helper(
 ) {
     assert_ok!(AssetRouter::deposit(asset, &ALICE, initial_amount));
     assert!(!AssetRouter::can_reserve(asset, &ALICE, initial_amount));
-    assert_err!(AssetRouter::reserve(asset, &ALICE, initial_amount), Error::<Runtime>::Unsupported);
+    assert_noop!(
+        AssetRouter::reserve(asset, &ALICE, initial_amount),
+        Error::<Runtime>::Unsupported
+    );
     assert_eq!(AssetRouter::reserved_balance(asset, &ALICE), 0);
     assert_eq!(AssetRouter::slash_reserved(asset, &ALICE, 1), 1);
-    assert_err!(
+    assert_noop!(
         AssetRouter::repatriate_reserved(asset, &ALICE, &BOB, 1, BalanceStatus::Reserved),
         Error::<Runtime>::Unsupported
     );
