@@ -131,9 +131,9 @@ fn multicurrency_routes_currencies_correctly() {
 }
 
 #[test_case(0, Some(0); "zero")]
-#[test_case(Amount::max_value(), Some(Amount::max_value().abs() as Balance); "max")]
+#[test_case(Amount::max_value(), Some(Amount::max_value().unsigned_abs() as Balance); "max")]
 #[test_case(Amount::min_value(), None; "min")]
-#[test_case(Amount::min_value() + 1, Some((Amount::min_value() + 1).abs() as Balance); "min_plus_one")]
+#[test_case(Amount::min_value() + 1, Some((Amount::min_value() + 1).unsigned_abs() as Balance); "min_plus_one")]
 fn multicurrency_update_balance_handles_overflows_correctly(
     update: Amount,
     expected: Option<Balance>,

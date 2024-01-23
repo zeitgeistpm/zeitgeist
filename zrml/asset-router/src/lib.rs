@@ -668,7 +668,7 @@ pub mod pallet {
             who: &T::AccountId,
             keep_alive: bool,
         ) -> Self::Balance {
-            if let Ok(_currency) = T::CurrencyType::try_from(asset) {
+            if T::CurrencyType::try_from(asset).is_ok() {
                 <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who)
             } else {
                 only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
@@ -681,7 +681,7 @@ pub mod pallet {
             amount: Self::Balance,
             mint: bool,
         ) -> DepositConsequence {
-            if let Err(_) = T::CurrencyType::try_from(asset) {
+            if T::CurrencyType::try_from(asset).is_err() {
                 return only_asset!(
                     asset,
                     DepositConsequence::UnknownAsset,
@@ -708,7 +708,7 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> WithdrawConsequence<Self::Balance> {
-            if let Err(_) = T::CurrencyType::try_from(asset) {
+            if T::CurrencyType::try_from(asset).is_err() {
                 return only_asset!(
                     asset,
                     WithdrawConsequence::UnknownAsset,
@@ -738,7 +738,7 @@ pub mod pallet {
         }
 
         fn asset_exists(asset: Self::AssetId) -> bool {
-            if let Ok(_currency) = T::CurrencyType::try_from(asset) {
+            if T::CurrencyType::try_from(asset).is_ok() {
                 true
             } else {
                 only_asset!(asset, false, Inspect, asset_exists,)
