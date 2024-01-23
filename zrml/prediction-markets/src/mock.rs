@@ -482,7 +482,10 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut t)
         .unwrap();
-        t.into()
+
+        let mut test_ext: sp_io::TestExternalities = t.into();
+        test_ext.execute_with(|| System::set_block_number(1));
+        test_ext
     }
 }
 
