@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -34,8 +34,7 @@
 //
 //     Original source: https://github.com/encointer/substrate-fixed
 //
-// The changes applied are: 1) Used same design for definition of `exp`
-// as in the source. 2) Re-used and extended tests for `exp` and other
+// The changes applied are: Re-used and extended tests for `exp` and other
 // functions.
 
 use crate::{
@@ -277,6 +276,10 @@ mod detail {
         amount: FixedType,
         spot_prices: Vec<FixedType>,
     ) -> Option<(FixedType, Vec<FixedType>)> {
+        if amount.is_zero() {
+            // Ensure that if the amount is zero, we don't accidentally return meaningless results.
+            return None;
+        }
         let tmp_reserves = spot_prices
             .iter()
             // Drop the bool (second tuple component) as ln(p) is always negative.
@@ -308,22 +311,7 @@ mod detail {
 }
 
 mod transcendental {
-    use fixed::traits::FixedUnsigned;
-    pub(crate) use hydra_dx_math::transcendental::{exp as inner_exp, ln};
-    use sp_runtime::traits::One;
-
-    pub(crate) fn exp<S, D>(operand: S, neg: bool) -> Result<D, ()>
-    where
-        S: FixedUnsigned + PartialOrd<D> + One,
-        D: FixedUnsigned + PartialOrd<S> + From<S> + One,
-    {
-        if operand == S::one() && neg {
-            let e_inverse =
-                S::from_str("0.367879441171442321595523770161460867445").map_err(|_| ())?;
-            return Ok(D::from(e_inverse));
-        }
-        inner_exp(operand, neg)
-    }
+    pub(crate) use hydra_dx_math::transcendental::{exp, ln};
 
     #[cfg(test)]
     mod tests {
@@ -337,7 +325,7 @@ mod transcendental {
 
         #[test_case("0", false, "1")]
         #[test_case("0", true, "1")]
-        #[test_case("1", false, "2.718281828459045235360287471352662497757")]
+        #[test_case("1", false, "2.7182818284590452353")]
         #[test_case("1", true, "0.367879441171442321595523770161460867445")]
         #[test_case("2", false, "7.3890560989306502265")]
         #[test_case("2", true, "0.13533528323661269186")]
@@ -411,6 +399,7 @@ mod tests {
     use super::*;
     use crate::{consts::*, mock::Runtime as MockRuntime};
     use alloc::str::FromStr;
+    use frame_support::assert_err;
     use test_case::test_case;
 
     type MockBalance = BalanceOf<MockRuntime>;
@@ -431,6 +420,19 @@ mod tests {
     #[test_case(_30, _30, _1 - 100_000, _30)]
     #[test_case(_1_10, _30, _1 - 100_000, _1_10)]
     #[test_case(_30, _1_10, _1 - 100_000, 276_478_645_689)]
+    #[test_case(10_000_000 * _1, _1, 144_269_504_088_896_352, 9_999_999_307)]
+    #[test_case(
+        100_000_000 * _1,
+        100_000_000 * _1,
+        434_294_481_903_251_840,
+        959_041_392_321_093_596
+    )]
+    #[test_case(
+        45_757_490_560_675_120,
+        100_000_000 * _1,
+        434_294_481_903_251_840,
+        41_392_685_158_225_036
+    )]
     fn calculate_swap_amount_out_for_buy_works(
         reserve: MockBalance,
         amount_in: MockBalance,
@@ -440,6 +442,22 @@ mod tests {
         assert_eq!(
             MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity).unwrap(),
             expected
+        );
+    }
+
+    #[test_case(_1, _1, 0)] // Division by zero
+    #[test_case(_1, 1_000 * _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, _1, u128::MAX)] // to_fixed error
+    fn calculate_swap_amount_out_for_buy_throws_math_error(
+        reserve: MockBalance,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_swap_amount_out_for_buy(reserve, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
         );
     }
 
@@ -454,6 +472,19 @@ mod tests {
     #[test_case(_30, _30, _1 - 100_000, 0)]
     #[test_case(_1_10, _30, _1 - 100_000, 23_521_354_311)]
     #[test_case(_30, _1_10, _1 - 100_000, 0)]
+    #[test_case(10_000_000 * _1, _1, 144_269_504_088_896_352, 4_999_999_913)]
+    #[test_case(
+        100_000_000 * _1,
+        100_000_000 * _1,
+        434_294_481_903_251_840,
+        40_958_607_678_906_404
+    )]
+    #[test_case(
+        45_757_490_560_675_120,
+        100_000_000 * _1,
+        434_294_481_903_251_840,
+        721_246_399_047_171_074
+    )]
     fn calculate_swap_amount_out_for_sell_works(
         reserve: MockBalance,
         amount_in: MockBalance,
@@ -466,9 +497,21 @@ mod tests {
         );
     }
 
-    #[test]
-    fn calculate_swap_amount_out_for_sell_fails_if_reserve_is_zero() {
-        assert!(MockMath::calculate_swap_amount_out_for_sell(0, _1, _1).is_err());
+    #[test_case(0, _1, _1)]
+    #[test_case(_1, _1, 0)] // Division by zero
+    #[test_case(1000 * _1, _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, _1, u128::MAX)] // to_fixed error
+    fn calculate_swap_amount_out_for_sell_throws_math_error(
+        reserve: MockBalance,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_swap_amount_out_for_sell(reserve, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
+        );
     }
 
     #[test_case(_10, 144_269_504_088, _1_2)]
@@ -480,6 +523,17 @@ mod tests {
         expected: MockBalance,
     ) {
         assert_eq!(MockMath::calculate_spot_price(reserve, liquidity).unwrap(), expected);
+    }
+
+    #[test_case(_1, 0)] // Division by zero
+    #[test_case(1_000 * _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX)] // to_fixed error
+    fn calculate_spot_price_throws_math_error(reserve: MockBalance, liquidity: MockBalance) {
+        assert_err!(
+            MockMath::calculate_spot_price(reserve, liquidity),
+            Error::<MockRuntime>::MathError
+        );
     }
 
     #[test_case(_10, vec![_1_2, _1_2], vec![_10, _10], 144_269_504_089)]
@@ -496,6 +550,12 @@ mod tests {
         vec![_100, _100, _100, 30_673_687_183],
         188_739_165_818
     )]
+    #[test_case(
+        100_000_000 * _1,
+        vec![_1_10, _9_10],
+        vec![100_000_000 * _1, 45_757_490_560_675_125],
+        434_294_481_903_251_828
+    )]
     fn calculate_reserves_from_spot_prices_works(
         amount: MockBalance,
         spot_prices: Vec<MockBalance>,
@@ -508,19 +568,33 @@ mod tests {
         assert_eq!(reserves, expected_reserves);
     }
 
-    #[test_case(_10, _10, 144_269_504_088, _1 + _1_2)]
-    #[test_case(_10, _1, 144_269_504_088, 5_717_734_625)]
-    #[test_case(_1, _1, _1, 20_861_612_696)]
-    #[test_case(_444, _1, _11, 951_694_399; "underflow_to_zero")]
+    #[test_case(0, vec![_1_10, _2_10, _3_10, _4_10])]
+    #[test_case(u128::MAX, vec![_1_10, _2_10, _3_10, _4_10])] // to_fixed error
+    #[test_case(_1, vec![u128::MAX, 0, 0])] // to_fixed error
+    #[test_case(_1, vec![_1, 0])] // ln out of range
+    fn calculate_reserves_from_spot_prices_throws_math_error(
+        amount: MockBalance,
+        spot_prices: Vec<MockBalance>,
+    ) {
+        assert_err!(
+            MockMath::calculate_reserves_from_spot_prices(amount, spot_prices),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
+    #[test_case(_1, _1, 0)] // Division by zero
+    #[test_case(_1, 1_000 * _1, _1)] // Overflow
+    #[test_case(u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(_1, u128::MAX, _1)] // to_fixed error
+    #[test_case(_1, _1, u128::MAX)] // to_fixed error
     fn calculate_buy_ln_argument_fixed_works(
         reserve: MockBalance,
         amount_in: MockBalance,
         liquidity: MockBalance,
-        expected: MockBalance,
     ) {
-        assert_eq!(
-            MockMath::calculate_buy_ln_argument(reserve, amount_in, liquidity).unwrap(),
-            expected
+        assert_err!(
+            MockMath::calculate_buy_ln_argument(reserve, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
         );
     }
 
