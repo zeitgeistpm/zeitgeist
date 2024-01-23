@@ -338,7 +338,7 @@ mod pallet {
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
         #[pallet::call_index(1)]
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get()), Pays::No))]
+        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get())))]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -370,8 +370,7 @@ mod pallet {
                 T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(CacheSize::get())
             ).max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(CacheSize::get())
-            ),
-            Pays::No,
+            )
         ))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
@@ -423,7 +422,7 @@ mod pallet {
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(3)]
-        #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
+        #[pallet::weight((T::WeightInfo::approve_market()))]
         #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
@@ -464,14 +463,13 @@ mod pallet {
         #[pallet::call_index(4)]
         #[pallet::weight((
             T::WeightInfo::request_edit(edit_reason.len() as u32),
-            Pays::No,
         ))]
         #[transactional]
         pub fn request_edit(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             edit_reason: Vec<u8>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::RequestEditOrigin::ensure_origin(origin)?;
             let edit_reason: EditReason<T> = edit_reason
                 .try_into()
@@ -487,7 +485,7 @@ mod pallet {
                 }
             })?;
             Self::deposit_event(Event::MarketRequestedEdit(market_id, edit_reason));
-            Ok(())
+            Ok((None, Pays::No).into())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -854,7 +852,6 @@ mod pallet {
         #[pallet::call_index(13)]
         #[pallet::weight((
             T::WeightInfo::reject_market(CacheSize::get(), reject_reason.len() as u32),
-            Pays::No,
         ))]
         #[transactional]
         pub fn reject_market(
