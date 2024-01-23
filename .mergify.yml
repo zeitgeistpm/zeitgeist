@@ -36,7 +36,8 @@ pull_request_rules:
             - s:review-needed
   - name: Set in-progress label after changes are pushed
     conditions:
-      -  commits[-1].date_committer>=0 days 00:01 ago
+      - commits[-1].author!=mergify[bot]
+      - commits[-1].date_committer>=0 days 00:01 ago
     actions:
         label:
           add:
@@ -51,12 +52,19 @@ pull_request_rules:
   - name: Trigger CI after Mergify merged the base branch (fix merge queue)
     conditions:
       - commits[-1].author=mergify[bot]
-      - label=s:in-progress
+      - commits[-1].date_committer>=0 days 00:01 ago
+      - queue-position=0
+    actions:
+        label:
+          add:
+            - s:review-needed
+  - name: Remove CI trigger label
+    conditions:
+      - commits[-1].author=mergify[bot]
+      - label=s:review-needed
       - queue-position=0
     actions:
         label:
           remove:
-            - s:in-progress
-          add:
-            - s:accepted
-            
+            - s:review-needed
+
