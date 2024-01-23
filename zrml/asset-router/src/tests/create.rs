@@ -27,7 +27,6 @@ fn create_routes_campaign_assets_correctly() {
         assert!(AssetRouter::asset_exists(CAMPAIGN_ASSET));
         assert!(!AssetRouter::asset_exists(CUSTOM_ASSET));
         assert!(!AssetRouter::asset_exists(MARKET_ASSET));
-        assert!(!AssetRouter::asset_exists(CURRENCY));
     });
 }
 
@@ -38,7 +37,6 @@ fn create_routes_custom_assets_correctly() {
         assert!(AssetRouter::asset_exists(CUSTOM_ASSET));
         assert!(!AssetRouter::asset_exists(CAMPAIGN_ASSET));
         assert!(!AssetRouter::asset_exists(MARKET_ASSET));
-        assert!(!AssetRouter::asset_exists(CURRENCY));
     });
 }
 
@@ -49,7 +47,6 @@ fn create_routes_market_assets_correctly() {
         assert!(AssetRouter::asset_exists(MARKET_ASSET));
         assert!(!AssetRouter::asset_exists(CAMPAIGN_ASSET));
         assert!(!AssetRouter::asset_exists(CUSTOM_ASSET));
-        assert!(!AssetRouter::asset_exists(CURRENCY));
     });
 }
 

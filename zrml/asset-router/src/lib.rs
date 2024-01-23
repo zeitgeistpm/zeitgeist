@@ -649,15 +649,18 @@ pub mod pallet {
         type Balance = T::Balance;
 
         fn total_issuance(asset: Self::AssetId) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, total_issuance,)
+            route_call!(asset, total_issuance, total_issuance,).unwrap_or(Zero::zero())
+            // only_asset!(asset, Zero::zero(), Inspect, total_issuance,)
         }
 
         fn minimum_balance(asset: Self::AssetId) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, minimum_balance,)
+            route_call!(asset, minimum_balance, minimum_balance,).unwrap_or(Zero::zero())
+            //only_asset!(asset, Zero::zero(), Inspect, minimum_balance,)
         }
 
         fn balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, balance, who)
+            route_call!(asset, total_balance, balance, who).unwrap_or(Zero::zero())
+            //only_asset!(asset, Zero::zero(), Inspect, balance, who)
         }
 
         fn reducible_balance(
@@ -665,7 +668,11 @@ pub mod pallet {
             who: &T::AccountId,
             keep_alive: bool,
         ) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
+            if let Ok(_currency) = T::CurrencyType::try_from(asset) {
+                <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who)
+            } else {
+                only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
+            }
         }
 
         fn can_deposit(
@@ -674,15 +681,26 @@ pub mod pallet {
             amount: Self::Balance,
             mint: bool,
         ) -> DepositConsequence {
-            only_asset!(
-                asset,
-                DepositConsequence::UnknownAsset,
-                Inspect,
-                can_deposit,
-                who,
-                amount,
-                mint
-            )
+            if let Err(_) = T::CurrencyType::try_from(asset) {
+                return only_asset!(
+                    asset,
+                    DepositConsequence::UnknownAsset,
+                    Inspect,
+                    can_deposit,
+                    who,
+                    amount,
+                    mint
+                );
+            }
+
+            let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
+            let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+
+            if total_balance.saturating_add(amount) < min_balance {
+                DepositConsequence::BelowMinimum
+            } else {
+                DepositConsequence::Success
+            }
         }
 
         fn can_withdraw(
@@ -690,18 +708,41 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> WithdrawConsequence<Self::Balance> {
-            only_asset!(
-                asset,
-                WithdrawConsequence::UnknownAsset,
-                Inspect,
-                can_withdraw,
-                who,
-                amount
-            )
+            if let Err(_) = T::CurrencyType::try_from(asset) {
+                return only_asset!(
+                    asset,
+                    WithdrawConsequence::UnknownAsset,
+                    Inspect,
+                    can_withdraw,
+                    who,
+                    amount
+                );
+            }
+
+            let can_withdraw =
+                <Self as MultiCurrency<T::AccountId>>::ensure_can_withdraw(asset, who, amount);
+
+            if let Err(_e) = can_withdraw {
+                return WithdrawConsequence::NoFunds;
+            }
+
+            let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
+            let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+            let remainder = total_balance.saturating_sub(amount);
+
+            if remainder < min_balance {
+                WithdrawConsequence::ReducedToZero(remainder)
+            } else {
+                WithdrawConsequence::Success
+            }
         }
 
         fn asset_exists(asset: Self::AssetId) -> bool {
-            only_asset!(asset, false, Inspect, asset_exists,)
+            if let Ok(_currency) = T::CurrencyType::try_from(asset) {
+                true
+            } else {
+                only_asset!(asset, false, Inspect, asset_exists,)
+            }
         }
     }
 
