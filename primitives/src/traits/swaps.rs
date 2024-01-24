@@ -23,7 +23,6 @@ use frame_support::dispatch::{DispatchError, Weight};
 pub trait Swaps<AccountId> {
     type Asset;
     type Balance;
-    // TODO(#1216): Add weight type which implements `Into<Balance>` and `From<Balance>`
 
     /// Creates an initial active pool.
     ///
@@ -44,7 +43,7 @@ pub trait Swaps<AccountId> {
         assets: Vec<Self::Asset>,
         swap_fee: Self::Balance,
         amount: Self::Balance,
-        weights: Vec<u128>,
+        weights: Vec<Self::Balance>,
     ) -> Result<PoolId, DispatchError>;
 
     /// Close the specified pool.
