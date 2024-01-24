@@ -497,16 +497,17 @@ parameter_type_with_key! {
     // are cleaned up automatically. In case of scalar outcomes, the market account can have dust.
     // Unless LPs use `pool_exit_with_exact_asset_amount`, there can be some dust pool shares remaining.
     // Explicit match arms are used to ensure new asset types are respected.
-    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
+    pub ExistentialDeposits: |currency_id: Currencies| -> Balance {
         match currency_id {
-            Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::PoolShare(_)  => ExistentialDeposit::get(),
-            Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
+            Currencies::OldCategoricalOutcome(_,_) => ExistentialDeposit::get(),
+            Currencies::OldParimutuelShare(_,_)  => ExistentialDeposit::get(),
+            Currencies::OldPoolShare(_)  => ExistentialDeposit::get(),
+            Currencies::OldScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
-            Asset::ForeignAsset(id) => {
+            Currencies::ForeignAsset(id) => {
                 let maybe_metadata = <
                     orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
-                >::metadata(&Asset::ForeignAsset(*id));
+                >::metadata(&Currencies::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {
                     return metadata.existential_deposit;
@@ -515,17 +516,7 @@ parameter_type_with_key! {
                 1
             }
             #[cfg(not(feature = "parachain"))]
-            Asset::ForeignAsset(_) => ExistentialDeposit::get(),
-            Asset::Ztg => ExistentialDeposit::get(),
-            Asset::ParimutuelShare(_,_) => ExistentialDeposit::get(),
-
-            // The following assets are irrelevant, as they are managed by pallet-assets
-            Asset::NewParimutuelShare(_,_)
-            | Asset::NewCategoricalOutcome(_, _)
-            | Asset::NewScalarOutcome(_,_)
-            | Asset::NewPoolShare(_)
-            | Asset::CustomAssetClass(_)
-            | Asset::CampaignAssetClass(_)  => ExistentialDeposit::get(),
+            Currencies::ForeignAsset(_) => ExistentialDeposit::get(),
         }
     };
 }

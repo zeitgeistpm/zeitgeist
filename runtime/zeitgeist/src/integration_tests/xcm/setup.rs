@@ -27,7 +27,7 @@ use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
 };
-use zeitgeist_primitives::types::{Asset, CustomMetadata};
+use zeitgeist_primitives::types::{Currencies, CustomMetadata};
 
 pub(super) struct ExtBuilder {
     balances: Vec<(AccountId, Assets, Balance)>,
@@ -71,6 +71,9 @@ impl ExtBuilder {
                 .balances
                 .into_iter()
                 .filter(|(_, currency_id, _)| *currency_id != native_currency_id)
+                .map(|(account_id, currency_id, initial_balance)| {
+                    (account_id, currency_id.try_into().unwrap(), initial_balance)
+                })
                 .collect::<Vec<_>>(),
         }
         .assimilate_storage(&mut t)
@@ -103,11 +106,11 @@ pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const PARA_ID_SIBLING: u32 = 3000;
 
 /// IDs that are used to represent tokens from other chains
-pub const FOREIGN_ZTG_ID: Asset<u128> = Assets::ForeignAsset(0);
-pub const FOREIGN_PARENT_ID: Asset<u128> = Assets::ForeignAsset(1);
-pub const FOREIGN_SIBLING_ID: Asset<u128> = Assets::ForeignAsset(2);
-pub const BTC_ID: Asset<u128> = Assets::ForeignAsset(3);
-pub const ETH_ID: Asset<u128> = Assets::ForeignAsset(4);
+pub const FOREIGN_ZTG_ID: Currencies = Currencies::ForeignAsset(0);
+pub const FOREIGN_PARENT_ID: Currencies = Currencies::ForeignAsset(1);
+pub const FOREIGN_SIBLING_ID: Currencies = Currencies::ForeignAsset(2);
+pub const BTC_ID: Currencies = Currencies::ForeignAsset(3);
+pub const ETH_ID: Currencies = Currencies::ForeignAsset(4);
 
 #[inline]
 pub(super) const fn ztg(amount: Balance) -> Balance {

@@ -6,6 +6,7 @@ default-members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
+    "zrml/asset-router",
     "zrml/court",
     "zrml/global-disputes",
     "zrml/liquidity-mining",
@@ -29,6 +30,7 @@ members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
+    "zrml/asset-router",
     "zrml/court",
     "zrml/global-disputes",
     "zrml/liquidity-mining",
@@ -229,6 +231,7 @@ zrml-swaps-rpc = { path = "zrml/swaps/rpc" }
 # Zeitgeist (wasm)
 common-runtime = { path = "runtime/common", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
+zrml-asset-router = { path = "zrml/asset-router", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }

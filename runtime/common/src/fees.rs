@@ -96,7 +96,7 @@ macro_rules! impl_foreign_fees {
         // It does calculate foreign fees by extending transactions to include an optional
         // `AssetId` that specifies the asset to be used for payment (defaulting to the native
         // token on `None`), such that for each transaction the asset id can be specified.
-        // For real ZTG `None` is used and for DOT `Some(Asset::Foreign(0))` is used.
+        // For real ZTG `None` is used and for DOT `Some(Currencies::Foreign(0))` is used.
 
         pub(crate) fn calculate_fee(
             native_fee: Balance,
@@ -119,9 +119,9 @@ macro_rules! impl_foreign_fees {
 
         #[cfg(feature = "parachain")]
         pub(crate) fn get_fee_factor(
-            currency_id: Assets,
+            currency: Currencies,
         ) -> Result<Balance, TransactionValidityError> {
-            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id).ok_or(
+            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency).ok_or(
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::NoAssetMetadata as u8,
                 )),
@@ -139,12 +139,12 @@ macro_rules! impl_foreign_fees {
 
             fn to_asset_balance(
                 native_fee: Balance,
-                asset_id: TxPaymentAssetId,
+                currency_id: TxPaymentAssetId,
             ) -> Result<Balance, Self::Error> {
                 #[cfg(feature = "parachain")]
                 {
-                    let currency_id = Asset::ForeignAsset(asset_id);
-                    let fee_factor = get_fee_factor(currency_id)?;
+                    let currency = Currencies::ForeignAsset(currency_id);
+                    let fee_factor = get_fee_factor(currency)?;
                     let converted_fee = calculate_fee(native_fee, fee_factor)?;
                     Ok(converted_fee)
                 }
@@ -187,7 +187,7 @@ macro_rules! impl_foreign_fees {
                 let converted_fee =
                     TTCBalanceToAssetBalance::to_asset_balance(native_fee, asset_id)?
                         .max(min_converted_fee);
-                let currency_id = Asset::ForeignAsset(asset_id);
+                let currency_id = Currencies::ForeignAsset(asset_id);
                 let can_withdraw =
                     <Tokens as Inspect<AccountId>>::can_withdraw(currency_id, who, converted_fee);
                 if can_withdraw != WithdrawConsequence::Success {
@@ -208,7 +208,7 @@ macro_rules! impl_foreign_fees {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
                 let asset_id = match paid.asset() {
-                    Asset::ForeignAsset(asset_id) => asset_id,
+                    Currencies::ForeignAsset(asset_id) => asset_id,
                     _ => {
                         return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
                             CustomTxError::NonForeignAssetPaid as u8,
@@ -332,15 +332,15 @@ macro_rules! fee_tests {
             t.execute_with(|| {
                 let fee_and_tip_balance = 10 * ExistentialDeposit::get();
                 let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(
-                    Asset::ForeignAsset(0),
+                    Currencies::ForeignAsset(0),
                     fee_and_tip_balance,
                 );
                 assert!(
-                    Tokens::free_balance(Asset::ForeignAsset(0), &Treasury::account_id()).is_zero()
+                    Tokens::free_balance(Currencies::ForeignAsset(0), &Treasury::account_id()).is_zero()
                 );
                 DealWithForeignFees::on_unbalanced(fees_and_tips);
                 assert_eq!(
-                    Tokens::free_balance(Asset::ForeignAsset(0), &Treasury::account_id()),
+                    Tokens::free_balance(Currencies::ForeignAsset(0), &Treasury::account_id()),
                     fee_and_tip_balance,
                 );
             });
@@ -386,7 +386,7 @@ macro_rules! fee_tests {
                             location: Some(xcm::VersionedMultiLocation::V3(xcm::latest::MultiLocation::parent())),
                             additional: custom_metadata,
                         };
-                        let dot = Asset::ForeignAsset(0);
+                        let dot = Currencies::ForeignAsset(0);
 
                         assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(dot)));
 
@@ -455,7 +455,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot_asset_id = 0u32;
-                    let dot = Asset::ForeignAsset(dot_asset_id);
+                    let dot = Currencies::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -477,7 +477,7 @@ macro_rules! fee_tests {
                     {
                         // no registering of dot
                         assert_noop!(
-                            get_fee_factor(Asset::ForeignAsset(0)),
+                            get_fee_factor(Currencies::ForeignAsset(0)),
                             TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8))
                         );
                     }
@@ -506,7 +506,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot_asset_id = 0u32;
-                    let dot = Asset::ForeignAsset(dot_asset_id);
+                    let dot = Currencies::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -540,7 +540,7 @@ macro_rules! fee_tests {
                         location: None,
                         additional: custom_metadata,
                     };
-                    let non_location_token = Asset::ForeignAsset(1);
+                    let non_location_token = Currencies::ForeignAsset(1);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -575,7 +575,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot_asset_id = 0u32;
-                    let dot = Asset::ForeignAsset(dot_asset_id);
+                    let dot = Currencies::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),

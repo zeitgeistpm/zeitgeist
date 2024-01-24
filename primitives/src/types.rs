@@ -87,13 +87,13 @@ pub type Assets = Asset<MarketId>;
 /// Asset type representing campaign assets
 pub type CampaignAsset = CampaignAssetClass;
 
-// ID type for campaign asset class
+// ID type of the campaign asset class
 pub type CampaignAssetId = u128;
 
 /// Asset type representing custom assets
 pub type CustomAsset = CustomAssetClass;
 
-// ID type for campaign asset class
+// ID type of the custom asset class
 pub type CustomAssetId = u128;
 
 // Asset type representing currencies (excluding ZTG)
@@ -101,9 +101,6 @@ pub type Currencies = CurrencyClass<MarketId>;
 
 /// Asset type representing assets used by prediction markets
 pub type MarketAsset = MarketAssetClass<MarketId>;
-
-/// ID type for asset classes that anyone can create
-pub type AssetId = u128;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.

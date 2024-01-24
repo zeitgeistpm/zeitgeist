@@ -51,7 +51,10 @@ use xcm_builder::{
     TakeWeightCredit,
 };
 use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets, Config};
-use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::Asset};
+use zeitgeist_primitives::{
+    constants::BalanceFractionalDecimals,
+    types::{Asset, Currencies},
+};
 
 pub mod battery_station {
     #[cfg(test)]
@@ -204,7 +207,7 @@ pub struct AlignedFractionalTransactAsset<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = Assets>,
+    AssetRegistry: Inspect<AssetId = Currencies>,
     FracDecPlaces: Get<u8>,
     CurrencyIdConvert: Convert<MultiAsset, Option<Assets>>,
     TransactAssetDelegate: TransactAsset,
@@ -217,29 +220,41 @@ impl<
     >
 {
     fn adjust_fractional_places(asset: &MultiAsset) -> MultiAsset {
-        if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
-            if let Fungible(amount) = asset.fun {
-                let mut asset_updated = asset.clone();
-                let native_decimals = u32::from(FracDecPlaces::get());
-                let metadata = AssetRegistry::metadata(asset_id);
-
-                if let Some(metadata) = metadata {
-                    let decimals = metadata.decimals;
-
-                    asset_updated.fun = if decimals > native_decimals {
-                        let power = decimals.saturating_sub(native_decimals);
-                        let adjust_factor = 10u128.saturating_pow(power);
-                        // Floors the adjusted token amount, thus no tokens are generated
-                        Fungible(amount.saturating_div(adjust_factor))
-                    } else {
-                        let power = native_decimals.saturating_sub(decimals);
-                        let adjust_factor = 10u128.saturating_pow(power);
-                        Fungible(amount.saturating_mul(adjust_factor))
-                    };
-
-                    return asset_updated;
+        let (asset_id, amount) =
+            if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
+                if let Fungible(amount) = asset.fun {
+                    (*asset_id, amount)
+                } else {
+                    return asset.clone();
                 }
-            }
+            } else {
+                return asset.clone();
+            };
+
+        let currency = if let Ok(currency) = Currencies::try_from(asset_id) {
+            currency
+        } else {
+            return asset.clone();
+        };
+
+        let metadata = AssetRegistry::metadata(&currency);
+        if let Some(metadata) = metadata {
+            let mut asset_adjusted = asset.clone();
+            let decimals = metadata.decimals;
+            let native_decimals = u32::from(FracDecPlaces::get());
+
+            asset_adjusted.fun = if decimals > native_decimals {
+                let power = decimals.saturating_sub(native_decimals);
+                let adjust_factor = 10u128.saturating_pow(power);
+                // Floors the adjusted token amount, thus no tokens are generated
+                Fungible(amount.saturating_div(adjust_factor))
+            } else {
+                let power = native_decimals.saturating_sub(decimals);
+                let adjust_factor = 10u128.saturating_pow(power);
+                Fungible(amount.saturating_mul(adjust_factor))
+            };
+
+            return asset_adjusted;
         }
 
         asset.clone()
@@ -247,7 +262,7 @@ impl<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = Assets>,
+    AssetRegistry: Inspect<AssetId = Currencies>,
     CurrencyIdConvert: Convert<MultiAsset, Option<Assets>>,
     FracDecPlaces: Get<u8>,
     TransactAssetDelegate: TransactAsset,
@@ -335,7 +350,10 @@ impl Convert<Assets, Option<MultiLocation>> for AssetConvert {
                     general_key(battery_station::KEY),
                 ),
             )),
-            Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
+            Asset::ForeignAsset(_) => {
+                let currency = Currencies::try_from(id).ok()?;
+                AssetRegistry::multilocation(&currency).ok()?
+            }
             _ => None,
         }
     }
@@ -370,9 +388,9 @@ impl xcm_executor::traits::Convert<MultiLocation, Assets> for AssetConvert {
                     return Err(location);
                 }
 
-                AssetRegistry::location_to_asset_id(location).ok_or(location)
+                AssetRegistry::location_to_asset_id(location).ok_or(location).map(|a| a.into())
             }
-            _ => AssetRegistry::location_to_asset_id(location).ok_or(location),
+            _ => AssetRegistry::location_to_asset_id(location).ok_or(location).map(|a| a.into()),
         }
     }
 }

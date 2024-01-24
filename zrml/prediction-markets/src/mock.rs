@@ -25,26 +25,29 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
+    traits::{AsEnsureOriginWithArg, Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
-use frame_system::{EnsureRoot, EnsureSignedBy};
+use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
+use parity_scale_codec::Compact;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, ConstU32, IdentityLookup},
     DispatchError, DispatchResult,
 };
 use std::cell::RefCell;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
+        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
+        AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
+        AssetsMetadataDepositPerByte, AssetsStringLimit, AuthorizedPalletId,
         BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod,
         CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
         CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, CloseEarlyTimeFramePeriod,
-        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDepositsNew, ExitFee,
         GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
         InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
         MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
@@ -59,8 +62,9 @@ use zeitgeist_primitives::{
     },
     traits::DeployPoolApi,
     types::{
-        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
-        BlockTest, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
+        MarketAsset, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -157,6 +161,10 @@ parameter_types! {
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
+type CustomAssetsInstance = pallet_assets::Instance1;
+type CampaignAssetsInstance = pallet_assets::Instance2;
+type MarketAssetsInstance = pallet_assets::Instance3;
+
 construct_runtime!(
     pub enum Runtime
     where
@@ -164,11 +172,15 @@ construct_runtime!(
         NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
+        AssetRouter: zrml_asset_router::{Pallet},
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
+        CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
@@ -263,7 +275,7 @@ impl frame_system::Config for Runtime {
 
 impl orml_currencies::Config for Runtime {
     type GetNativeCurrencyId = GetNativeCurrencyId;
-    type MultiCurrency = Tokens;
+    type MultiCurrency = AssetRouter;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
@@ -271,10 +283,10 @@ impl orml_currencies::Config for Runtime {
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Assets;
+    type CurrencyId = Currencies;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposits = ExistentialDeposits;
+    type ExistentialDeposits = ExistentialDepositsNew;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type CurrencyHooks = ();
@@ -285,7 +297,7 @@ impl orml_tokens::Config for Runtime {
 #[cfg(feature = "parachain")]
 crate::orml_asset_registry::impl_mock_registry! {
     MockRegistry,
-    Assets,
+    Currencies,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
@@ -313,6 +325,116 @@ impl pallet_timestamp::Config for Runtime {
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
+}
+
+pallet_assets::runtime_benchmarks_enabled! {
+    pub struct AssetsBenchmarkHelper;
+
+    impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
+        for AssetsBenchmarkHelper
+    where
+        AssetIdParameter: From<u128>,
+    {
+        fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+            (id as u128).into()
+        }
+    }
+}
+
+pallet_assets::runtime_benchmarks_enabled! {
+    use zeitgeist_primitives::types::CategoryIndex;
+
+    pub struct MarketAssetsBenchmarkHelper;
+
+    impl pallet_assets::BenchmarkHelper<MarketAsset>
+        for MarketAssetsBenchmarkHelper
+    {
+        fn create_asset_id_parameter(id: u32) -> MarketAsset {
+            MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
+        }
+    }
+}
+
+impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
+    type ApprovalDeposit = AssetsApprovalDeposit;
+    type AssetAccountDeposit = AssetsAccountDeposit;
+    type AssetDeposit = AssetsDeposit;
+    type AssetId = CampaignAsset;
+    type AssetIdParameter = Compact<CampaignAssetId>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureRoot<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = AssetsMetadataDepositBase;
+    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = AssetsStringLimit;
+    type WeightInfo = ();
+}
+
+impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
+    type ApprovalDeposit = AssetsApprovalDeposit;
+    type AssetAccountDeposit = AssetsAccountDeposit;
+    type AssetDeposit = AssetsDeposit;
+    type AssetId = CustomAsset;
+    type AssetIdParameter = Compact<CustomAssetId>;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = AssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureRoot<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = AssetsMetadataDepositBase;
+    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = AssetsStringLimit;
+    type WeightInfo = ();
+}
+
+impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
+    type ApprovalDeposit = AssetsApprovalDeposit;
+    type AssetAccountDeposit = AssetsAccountDeposit;
+    type AssetDeposit = AssetsDeposit;
+    type AssetId = MarketAsset;
+    type AssetIdParameter = MarketAsset;
+    type Balance = Balance;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = MarketAssetsBenchmarkHelper;
+    type CallbackHandle = ();
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
+    type Currency = Balances;
+    type Extra = ();
+    type ForceOrigin = EnsureRoot<AccountIdTest>;
+    type Freezer = ();
+    type MetadataDepositBase = AssetsMetadataDepositBase;
+    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
+    type RemoveItemsLimit = ConstU32<50>;
+    type RuntimeEvent = RuntimeEvent;
+    type StringLimit = AssetsStringLimit;
+    type WeightInfo = ();
+}
+
+impl zrml_asset_router::Config for Runtime {
+    type AssetType = Assets;
+    type Balance = Balance;
+    type CurrencyType = Currencies;
+    type Currencies = Tokens;
+    type CampaignAssetType = CampaignAsset;
+    type CampaignAssets = CampaignAssets;
+    type CustomAssetType = CustomAsset;
+    type CustomAssets = CustomAssets;
+    type MarketAssetType = MarketAsset;
+    type MarketAssets = MarketAssets;
 }
 
 impl zrml_authorized::Config for Runtime {
@@ -488,7 +610,7 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
-                .map(|idx| (idx, Assets::ForeignAsset(100), INITIAL_BALANCE))
+                .map(|idx| (idx, Currencies::ForeignAsset(100), INITIAL_BALANCE))
                 .collect(),
         }
         .assimilate_storage(&mut t)
@@ -502,7 +624,7 @@ impl ExtBuilder {
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![
                 (
-                    Assets::ForeignAsset(100),
+                    Currencies::ForeignAsset(100),
                     AssetMetadata {
                         decimals: 18,
                         name: "ACALA USD".as_bytes().to_vec(),
@@ -513,7 +635,7 @@ impl ExtBuilder {
                     },
                 ),
                 (
-                    Assets::ForeignAsset(420),
+                    Currencies::ForeignAsset(420),
                     AssetMetadata {
                         decimals: 18,
                         name: "FANCY_TOKEN".as_bytes().to_vec(),
@@ -558,8 +680,8 @@ pub fn set_timestamp_for_on_initialize(time: Moment) {
 
 sp_api::mock_impl_runtime_apis! {
     impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<BlockTest<Runtime>, MarketId, Hash> for Runtime {
-        fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
-            Asset::PoolShare(1)
+        fn market_outcome_share_id(_: MarketId, _: u16) -> Assets {
+            Assets::PoolShare(1)
         }
     }
 }

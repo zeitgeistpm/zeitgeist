@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -52,7 +52,10 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
     #[cfg(feature = "parachain")]
-    use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
+    use {
+        orml_traits::asset_registry::Inspect,
+        zeitgeist_primitives::types::{CurrencyClass, CustomMetadata},
+    };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
@@ -64,7 +67,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, Swaps, ZeitgeistAssetManager,
+            DisputeResolutionApi, Swaps,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -81,6 +84,7 @@ mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
 
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type NegativeImbalanceOf<T> =
@@ -1704,16 +1708,17 @@ mod pallet {
         type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
+        type AssetManager: MultiCurrency<Self::AccountId, Balance = BalanceOf<Self>, CurrencyId = AssetOf<Self>>
+            + NamedMultiReservableCurrency<
                 Self::AccountId,
                 Balance = BalanceOf<Self>,
-                CurrencyId = Asset<MarketIdOf<Self>>,
+                CurrencyId = AssetOf<Self>,
                 ReserveIdentifier = [u8; 8],
             >;
 
         #[cfg(feature = "parachain")]
         type AssetRegistry: Inspect<
-                AssetId = Asset<MarketIdOf<Self>>,
+                AssetId = CurrencyClass<MarketIdOf<Self>>,
                 Balance = BalanceOf<Self>,
                 CustomMetadata = CustomMetadata,
             >;
@@ -3442,7 +3447,11 @@ mod pallet {
                 Asset::Ztg => true,
                 #[cfg(feature = "parachain")]
                 Asset::ForeignAsset(fa) => {
-                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
+                    if let Some(metadata) =
+                        T::AssetRegistry::metadata(&CurrencyClass::<MarketIdOf<T>>::ForeignAsset(
+                            fa,
+                        ))
+                    {
                         metadata.additional.allow_as_base_asset
                     } else {
                         return Err(Error::<T>::UnregisteredForeignAsset.into());

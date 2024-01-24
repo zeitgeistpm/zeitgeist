@@ -100,8 +100,8 @@ pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
     ExtBuilder::default()
         .set_balances(vec![
             (ALICE, Assets::Ztg, ztg(10)),
-            (ALICE, FOREIGN_PARENT_ID, dot(10)),
-            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, dot(10)),
+            (ALICE, FOREIGN_PARENT_ID.into(), dot(10)),
+            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID.into(), dot(10)),
         ])
         .set_parachain_id(parachain_id)
         .build()

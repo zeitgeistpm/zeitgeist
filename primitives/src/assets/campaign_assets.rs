@@ -25,7 +25,7 @@ use super::*;
 #[derive(
     Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
 )]
-pub struct CampaignAssetClass(#[codec(compact)] pub(super) CampaignAssetId);
+pub struct CampaignAssetClass(#[codec(compact)] pub CampaignAssetId);
 
 impl From<Compact<CampaignAssetId>> for CampaignAssetClass {
     fn from(value: Compact<CampaignAssetId>) -> CampaignAssetClass {

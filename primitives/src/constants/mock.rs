@@ -21,11 +21,21 @@
 pub use super::*;
 use crate::{
     assets::Asset,
-    types::{Assets, Balance, Moment},
+    types::{Assets, Balance, Currencies, Moment},
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
 use sp_arithmetic::Perbill;
+
+// Assets
+parameter_types! {
+    pub const AssetsAccountDeposit: Balance = 0;
+    pub const AssetsApprovalDeposit: Balance = 0;
+    pub const AssetsDeposit: Balance = 0;
+    pub const AssetsStringLimit: u32 = 256;
+    pub const AssetsMetadataDepositBase: Balance = 0;
+    pub const AssetsMetadataDepositPerByte: Balance = 0;
+}
 
 // Authorized
 parameter_types! {
@@ -164,12 +174,19 @@ parameter_types! {
     pub const GetNativeCurrencyId: Assets = Asset::Ztg;
 }
 
+// Will be removed once asset-system is completely integerated
 parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
             Asset::Ztg => ExistentialDeposit::get(),
             _ => 10
         }
+    };
+}
+
+parameter_type_with_key! {
+    pub ExistentialDepositsNew: |_currency_id: Currencies| -> Balance {
+        1
     };
 }
 

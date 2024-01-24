@@ -619,6 +619,7 @@ dependencies = [
  "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -14495,6 +14496,7 @@ dependencies = [
  "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -14529,6 +14531,25 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.28",
+]
+
+[[package]]
+name = "zrml-asset-router"
+version = "0.4.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "test-case",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -14736,6 +14757,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
@@ -14751,6 +14773,7 @@ dependencies = [
  "test-case",
  "xcm",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",

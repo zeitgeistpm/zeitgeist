@@ -23,7 +23,7 @@ use super::*;
 #[derive(
     Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
 )]
-pub struct CustomAssetClass(#[codec(compact)] pub(super) CustomAssetId);
+pub struct CustomAssetClass(#[codec(compact)] pub CustomAssetId);
 
 impl From<Compact<CustomAssetId>> for CustomAssetClass {
     fn from(value: Compact<CustomAssetId>) -> CustomAssetClass {
